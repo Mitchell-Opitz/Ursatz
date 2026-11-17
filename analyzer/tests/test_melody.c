@@ -16,6 +16,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The melody of the report, for Bach 114 (Minuet in G, BWV Anh. 114).
@@ -375,7 +376,7 @@ int main(int argc, char **argv) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
     ImportedNotes notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
+    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }

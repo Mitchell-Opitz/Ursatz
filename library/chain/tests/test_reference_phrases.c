@@ -10,6 +10,7 @@
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The chain's phrases against Michelle's readings of the Clementi and Mozart reference pieces (R-393; the readings are
@@ -84,6 +85,7 @@ static AnalysisChain *run_chain(const Piece *piece, WeightedPipeline *p, Analysi
         assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
     }
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
     config.home_key_index = test_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);

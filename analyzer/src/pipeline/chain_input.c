@@ -58,7 +58,7 @@ static int find_slot(const void *key, const void *entry) {
     return strcmp((const char *)key, ((const ChainInputSlot *)entry)->id);
 }
 
-static bool build_key_events(const ImportedNotes *notes, ChainInput *out) {
+static bool build_key_events(const ImportedNotes *notes, const CommonPracticeMaterials *materials, ChainInput *out) {
     size_t count = notes->key_signature_events.count;
     out->key_events = calloc(count > 0 ? count : 1, sizeof(AnalysisKeyEvent));
     if (!out->key_events) {
@@ -67,8 +67,8 @@ static bool build_key_events(const ImportedNotes *notes, ChainInput *out) {
     for (size_t i = 0; i < count; i++) {
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
         out->key_events[i].time = event->position;
-        /* The file's mode hint never reached the chain: every key is the major one. TRANSITIONAL until the snapshot reaches here (P58 B10). */
-        if (!analysis_key_from_fifths_material(event->sharps_flats, common_practice_materials_builtin()->major,
+        /* The file's mode hint never reached the chain: every key is the major one. */
+        if (!analysis_key_from_fifths_material(event->sharps_flats, materials->major,
                                                &out->key_events[i].key)) {
             return false;
         }
@@ -77,7 +77,7 @@ static bool build_key_events(const ImportedNotes *notes, ChainInput *out) {
     return true;
 }
 
-bool chain_input_build(const ImportedNotes *notes, ChainInput *out) {
+bool chain_input_build(const ImportedNotes *notes, const CommonPracticeMaterials *materials, ChainInput *out) {
     memset(out, 0, sizeof(*out));
     out->set.map = notes->meter.meter_map;
     if (notes->count > 0) {
@@ -110,7 +110,7 @@ bool chain_input_build(const ImportedNotes *notes, ChainInput *out) {
         free(indexed);
         qsort(out->by_id, notes->count, sizeof(ChainInputSlot), compare_slots);
     }
-    if (!build_key_events(notes, out)) {
+    if (!build_key_events(notes, materials, out)) {
         chain_input_destroy(out);
         return false;
     }

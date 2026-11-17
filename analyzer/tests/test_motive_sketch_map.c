@@ -13,6 +13,7 @@
 #include "pipeline/motive_sketch_map.h"
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The one mapping from motive features to a MotiveSketch (motive_features_to_sketch). Every family of Mozart 545 is
@@ -64,7 +65,7 @@ int main(void) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
     ImportedNotes notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
+    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }

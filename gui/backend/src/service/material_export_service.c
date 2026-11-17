@@ -10,6 +10,7 @@
 #include <ursatz_analyzer/text_export.h>
 
 #include "composer_client.h"
+#include "knowledge_service.h"
 #include "material_service.h"
 #include "motif_service.h"
 #include "util/json_util.h"
@@ -594,6 +595,7 @@ static UrsatzGuiMaterialExportResult write_text(Build *build, const char *kind, 
       .fact_count = build->material_facts.count,
       .sections = sections,
       .section_count = build->draft_count,
+      .knowledge = ursatz_gui_knowledge(),
   };
   AnalyzerStatus status = analyzer_text_export_material(&material, text);
   free(sections);

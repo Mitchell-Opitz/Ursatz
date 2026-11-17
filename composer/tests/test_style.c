@@ -26,6 +26,7 @@
 #include "util/request_parse.h"
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 #include "ursatz_test.h"
 
 /*
@@ -197,7 +198,9 @@ static void analyze(const PiecePlan *plan, Heard *heard) {
     hearing.key_tonic_pitch_class = 0;
     hearing.key_minor = false;
     hearing.streams = heard->rendered.part_index;
-    assert(analyzer_hear(&hearing, NULL, &heard->result) == ANALYZER_OK);
+    AnalyzerHearingOptions options = analyzer_hearing_options_default();
+    options.analysis.knowledge = test_knowledge();
+    assert(analyzer_hear(&hearing, &options, &heard->result) == ANALYZER_OK);
 }
 
 /* The profile of a heard analysis: the Analyzer's document of the result, counted. */

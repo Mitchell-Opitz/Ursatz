@@ -14,6 +14,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The meter check: Bach 114 as the file declares it (4/4) is offered 3/4 at scale 2; read as 3/4 at scale 2 it is
@@ -44,7 +45,7 @@ static void analyze(const char *name, const NotationReading *reading, Analysis *
     if (reading) {
         assert(notation_reading_apply(&analysis->notes, reading) == NOTATION_READING_OK);
     }
-    assert(run_analysis_pipeline(&analysis->notes, &analysis->report));
+    assert(run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report));
     char *json = test_render_document(musicxml(name), &analysis->notes, &analysis->report);
     assert(json);
     analysis->document = cJSON_Parse(json);
@@ -178,7 +179,7 @@ static void test_empty_score(void) {
         return; /* the importer refuses an empty score: nothing to check */
     }
     AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, &report));
+    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     assert(!report.meter_check.present);
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);

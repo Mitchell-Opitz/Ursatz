@@ -117,7 +117,7 @@ static void test_mozart_545(void) {
     HarmonyCadences hand = hand_cadences_make(analysis_chain_segments(p.chain), map, ends, end_count);
     ChainFormInput build;
     assert(chain_build_motive_input(&p.set, analysis_chain_segments(p.chain), annotation.range_first, annotation.range_last, 0,
-                                    COMMON_PRACTICE_KEY_MAJOR, &hand, &build) == CHAIN_INPUT_OK);
+                                    COMMON_PRACTICE_KEY_MAJOR, test_materials(), &hand, &build) == CHAIN_INPUT_OK);
     printf("Mozart 545, measures %d-%d: %zu soprano notes\n", annotation.range_first, annotation.range_last, build.input.note_count);
 
     StandardFormPhrases phrases;

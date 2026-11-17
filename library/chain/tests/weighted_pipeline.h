@@ -15,6 +15,7 @@
 #include "theory/meter/segmentation_beat_grid.h"
 #include "chain/analysis_chain.h"
 #include "tests/rational_test_util.h"
+#include "test_knowledge.h"
 
 /*
  * Test helper for weighted chord identification: imports a corpus MIDI file and runs the segment and outer-voice stages of the analysis
@@ -86,6 +87,7 @@ static inline WeightedPipeline pipeline_run(const char *corpus_dir, const char *
     p.set.map = map;
     const AnalysisNoteSet *set = &p.set;
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_SEGMENTS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES;
     config.first_measure = 0;
     assert(analysis_chain_run(set, NULL, 0, &config, &p.chain) == ANALYSIS_CHAIN_OK);

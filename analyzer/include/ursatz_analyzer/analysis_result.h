@@ -7,6 +7,8 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/imported_notes.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
+
 /*
  * The analysis as library results (R-220, R-530): one run over imported notes gives the library chain's results and the
  * report view the document is exported from. The document JSON
@@ -43,15 +45,19 @@ typedef struct {
     /* true (the default) reads the chords on harmonic spans (Ursatz AnalysisChainConfig.harmonic_spans); false reads one chord
        per segment, as before Ursatz P39. The Composer's hearing sets it false until P41 (R-378). */
     bool harmonic_spans;
+    /* The knowledge snapshot the analysis reads its pitch materials from (borrowed). Required: the defaults carry none, so
+       analyzer_analyze with no knowledge is ANALYZER_ERR_ARGUMENT. It must outlive the result: the keys of the result point into it. */
+    const KnowledgeSnapshot *knowledge;
 } AnalyzerOptions;
 
-/* All stages. */
+/* All stages, harmonic spans, no knowledge snapshot (the caller sets one). */
 AnalyzerOptions analyzer_options_default(void);
 
 /*
- * Analyzes notes. options may be NULL for the defaults. On ANALYZER_OK *out is the result, which the caller releases with
+ * Analyzes notes. options may be NULL for the defaults, which have no knowledge snapshot, so every caller passes options with one
+ * (ANALYZER_ERR_ARGUMENT otherwise). On ANALYZER_OK *out is the result, which the caller releases with
  * analyzer_result_destroy and which borrows notes: notes must outlive it. On any other status *out is left NULL and
- * nothing is kept: ANALYZER_ERR_ARGUMENT for a NULL notes, options with no stages or out, ANALYZER_ERR_ALLOC,
+ * nothing is kept: ANALYZER_ERR_ARGUMENT for a NULL notes, options with no stages, no knowledge or out, ANALYZER_ERR_ALLOC,
  * ANALYZER_ERR_LIBRARY when the chain refuses the notes.
  */
 AnalyzerStatus analyzer_analyze(const ImportedNotes *notes, const AnalyzerOptions *options, AnalyzerResult **out);

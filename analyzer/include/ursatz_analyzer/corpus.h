@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
+
 /*
  * Corpus mode: analyzes every piece in a folder, one analysis document
  * each, written under an output directory.
@@ -29,6 +31,8 @@ typedef struct {
     /* Optional progress callback (NULL for none) and its user pointer. */
     CorpusPieceCallback on_piece;
     void *user;
+    /* The knowledge snapshot every piece is analyzed with (borrowed); required (CORPUS_RUN_ERR_ARGUMENT without it). */
+    const KnowledgeSnapshot *knowledge;
 } CorpusRunOptions;
 
 typedef struct {

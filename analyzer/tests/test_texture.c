@@ -8,6 +8,7 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The texture of the report, against the hand reading of Field 1 (Nocturne No. 1 in E-flat major, in 12/8), the same
@@ -134,7 +135,7 @@ int main(void) {
         fprintf(stderr, "cannot import %s\n", path);
         return 1;
     }
-    if (!run_analysis_pipeline(&notes, &report)) {
+    if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         imported_notes_destroy(&notes);
         return 1;

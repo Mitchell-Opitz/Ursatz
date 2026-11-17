@@ -120,6 +120,8 @@ uses analyzer      model theory analysis chain io analyzer-api cjson ezxml
 uses composer      model theory analysis chain io analyzer-api composer-api cjson
 uses composer-cli  composer-api cjson
 uses gui           analyzer-api composer-api cjson civetweb
+allow gui/backend/src/service/knowledge_service.h theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
+allow gui/backend/src/service/knowledge_service.c theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
 
 # Tests: a test folder may include its module and what that module may include, plus the rows below.

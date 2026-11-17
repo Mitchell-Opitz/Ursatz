@@ -8,6 +8,7 @@
 
 #include "analysis/notes/analysis_key.h"
 #include "analysis/notes/analysis_note.h"
+#include "theory/tonality/common_practice_materials.h"
 
 /*
  * The neutral input of the library chain (analysis_chain_run), built from imported notes: one AnalysisNote per
@@ -36,9 +37,9 @@ typedef struct {
     size_t key_event_count;
 } ChainInput;
 
-/* False on allocation failure or a note the library cannot take (a zero-length span, a pitch outside 0 to 127);
+/* The key events are made with the major material of `materials` (the file's mode hint never reached the chain). False on allocation failure or a note the library cannot take (a zero-length span, a pitch outside 0 to 127);
    *out is then empty. A piece with no notes gives a valid empty input. */
-bool chain_input_build(const ImportedNotes *notes, ChainInput *out);
+bool chain_input_build(const ImportedNotes *notes, const CommonPracticeMaterials *materials, ChainInput *out);
 void chain_input_destroy(ChainInput *input);
 
 /* The ImportedNotes index of the note with this id, or (size_t)-1. */

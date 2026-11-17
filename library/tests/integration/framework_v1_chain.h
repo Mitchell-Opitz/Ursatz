@@ -21,6 +21,7 @@
 #include "io/midi_importer.h"
 #include "chain/analysis_chain.h"
 #include "../key_index_test_util.h"
+#include "test_knowledge.h"
 
 /* --- the expected values --- */
 
@@ -329,6 +330,7 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     }
     AnalysisNoteSet set = {c->p.notes, c->p.note_count, c->map};
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = x->keys_first;
     config.last_measure = x->keys_last;

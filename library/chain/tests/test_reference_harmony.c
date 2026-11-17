@@ -9,6 +9,7 @@
 #include "analysis/notes/analysis_key.h"
 #include "chain/analysis_chain.h"
 #include "tests/key_index_test_util.h"
+#include "test_knowledge.h"
 
 /*
  * The chain's harmony against Michelle's hand harmony of the Clementi and Mozart reference pieces
@@ -306,6 +307,7 @@ static int report_piece(const Piece *piece) {
         assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
     }
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
     config.home_key_index = test_key_index_of(ref.home, COMMON_PRACTICE_KEY_MAJOR);

@@ -8,6 +8,7 @@
 #include "theory/tonality/chord_vocabulary.h"
 #include "theory/tonality/chord_vocabulary_seventh.h"
 #include "theory/tonality/key_vocabulary.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "analysis/notes/analysis_note.h"
 #include "theory/vocabulary/beat_strength.h"
 #include "analysis/notes/tone_line.h"
@@ -98,6 +99,9 @@ typedef struct {
        rounded to 1/960 of a whole note. */
     NonChordToneClassifier classifier;
     void *classifier_context;
+    /* The common-practice materials the applied-chord scale reads (borrowed). The chain sets its own; NULL (the default) reads the
+       built-in ones, a remaining site until P58 B13 gives every caller of a stage the snapshot's. */
+    const CommonPracticeMaterials *materials;
 } CommonPracticeWeightedConfig;
 
 /* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.1, missing-third penalty

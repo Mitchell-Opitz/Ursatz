@@ -4,6 +4,7 @@
 
 #include "analysis/form/thematic_return_detection.h"
 #include "relationship_test_access.h"
+#include "test_knowledge.h"
 
 /*
  * Framework v1 verification, thematic returns (Mozart K. 545 and Clementi Op. 36 No. 1), and the Bach regression for PR #37.
@@ -273,7 +274,7 @@ static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
 static void fv1_bach_minimum_window(const Chain *c) {
     /* the note-level soprano of the first strain and its written-out repeat (measures 1-16): at each attack the highest sounding note */
     ChainFormInput soprano;
-    assert(chain_build_motive_input(&c->p.set, analysis_chain_segments(c->chain), 1, 16, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &soprano) ==
+    assert(chain_build_motive_input(&c->p.set, analysis_chain_segments(c->chain), 1, 16, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), NULL, &soprano) ==
            CHAIN_INPUT_OK);
     size_t n = soprano.input.note_count;
     const NoteEvent **events = (const NoteEvent **)calloc(n > 0 ? n : 1, sizeof(NoteEvent *));

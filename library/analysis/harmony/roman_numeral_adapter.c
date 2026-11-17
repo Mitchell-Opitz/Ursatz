@@ -47,13 +47,14 @@ static const SeventhShape SEVENTHS[] = {{{0, 4, 7, 11}, STANDARD_TONALITY_SEVENT
 
 /* The degree 1..7 of the root `offset` semitones above the tonic, or 0; *raised set for minor's raised 7th,
    *raised_sixth for its raised 6th (melodic minor). */
-static int degree_of_offset(StandardTonalityRomanKeyMode mode, int offset, bool *raised, bool *raised_sixth) {
+static int degree_of_offset(const StandardTonalityChordInput *input, int offset, bool *raised, bool *raised_sixth) {
+    StandardTonalityRomanKeyMode mode = input->mode;
     *raised = false;
     *raised_sixth = false;
     int degree = 0;
     int alteration = 0;
-    /* TRANSITIONAL until the adapter's config carries the snapshot's materials (P58 B10). */
-    const CommonPracticeMaterials *materials = common_practice_materials_builtin();
+    const CommonPracticeMaterials *materials =
+        input->materials != NULL ? input->materials : common_practice_materials_builtin();
     if (!standard_tonality_material_degree_of_semitone(
             offset, mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? materials->major : materials->natural_minor, &degree,
             &alteration)) {
@@ -138,7 +139,7 @@ static bool read_diatonic(const StandardTonalityChordInput *input, StandardTonal
     int offset = pitch_class_of_midi(input->root_pitch_class - input->tonic_pitch_class);
     bool raised = false;
     bool raised_sixth = false;
-    int degree = degree_of_offset(input->mode, offset, &raised, &raised_sixth);
+    int degree = degree_of_offset(input, offset, &raised, &raised_sixth);
     if (degree == 0) {
         return false;
     }

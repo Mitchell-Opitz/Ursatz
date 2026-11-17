@@ -36,6 +36,9 @@ struct ComposerHearing {
     HeardSpan *spans;
     size_t span_count;
     size_t span_capacity;
+    /* The snapshot the Analyzer reads its materials from, built per hearing until the Composer holds its own (P58 B13). It outlives
+       every span's result, which is released first. */
+    KnowledgeSnapshot *knowledge;
 };
 
 static void heard_span_release(HeardSpan *heard) {
@@ -58,6 +61,7 @@ void hearing_destroy(ComposerHearing *hearing) {
     free(hearing->starts);
     free(hearing->midi);
     rendered_plan_destroy(&hearing->rendered);
+    knowledge_snapshot_destroy(hearing->knowledge);
     free(hearing);
 }
 
@@ -74,6 +78,11 @@ HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out) {
         return HEARING_ERR_ALLOC;
     }
     hearing->plan = plan;
+    char message[256];
+    if (knowledge_snapshot_build(NULL, 0, &hearing->knowledge, message, sizeof(message)) != KNOWLEDGE_OK) {
+        free(hearing);
+        return HEARING_ERR_ANALYSIS;
+    }
     PlanRenderResult drawn = plan_render(plan, &hearing->rendered);
     if (drawn != PLAN_RENDER_OK) {
         hearing_destroy(hearing);
@@ -124,9 +133,10 @@ static HeardSpan *find_heard(ComposerHearing *hearing, PlanSpan span) {
     return NULL;
 }
 
-AnalyzerHearingOptions hearing_analyzer_options(void) {
+AnalyzerHearingOptions hearing_analyzer_options(const KnowledgeSnapshot *knowledge) {
     AnalyzerHearingOptions options = analyzer_hearing_options_default();
     options.analysis.harmonic_spans = false;
+    options.analysis.knowledge = knowledge;
     return options;
 }
 
@@ -211,7 +221,7 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
     input.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
     input.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
     input.streams = heard.streams;
-    AnalyzerHearingOptions options = hearing_analyzer_options();
+    AnalyzerHearingOptions options = hearing_analyzer_options(hearing->knowledge);
     atomic_fetch_add(&hearing_analyzer_calls_made, 1);
     AnalyzerStatus status = analyzer_hear(&input, &options, &heard.result);
     if (status != ANALYZER_OK) {

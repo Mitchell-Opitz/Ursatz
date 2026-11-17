@@ -5,7 +5,7 @@ gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test h
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_reset  # test hook: test_analyzer_route resets the import counter
 gui/backend/src/service/piece_lock.c ursatz_gui_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
-library/model/pitch/pitch_material.c pitch_material_contains  # no app calls pitch material until P58 B10 (keys carry materials); its tests call it
+library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P58 B11 (regions); its tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/model/time/meter_arithmetic.c meter_map_time_of  # the inverse of meter_map_position_of has no app caller until P59 reads the performer parts' local maps; its tests call it
 library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
@@ -14,53 +14,17 @@ library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo m
 library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/time_span.c time_span_length  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
-library/theory/knowledge/knowledge_snapshot.c alias_matches  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c chord_role  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c compare_slots  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c fail  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c find_slot  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c fnv  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c hex16  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c in_range  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c is_integer  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_build  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_of  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_destroy  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_at  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_count  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material_at  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material_count  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material_named  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation_named  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c linked_material  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c lowercase_words  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c member  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c nocase_equal  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c own  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_aliases  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_anchor  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_chord_type  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_color_note  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_details  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_entry  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_file  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_material_details  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_material_links  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_modal  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_neo_riemannian  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_relation  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_set  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_status  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_steps  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/knowledge_snapshot.c read_tonal  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c resolve_links  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c slot_release  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c string_of  # the snapshot loaders for materials, chord types and relations have no app caller until P58 B10; its tests call it
-library/theory/knowledge/knowledge_snapshot.c text_field  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c alias_matches  # helper of the by-word material lookup, which no app calls until P58 B13; its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app reads a chord type until P58 B16 (chord readings); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_of  # no app reads a chord type until P58 B16 (chord readings); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_at  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_count  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material_at  # no app looks a material up by word or lists them until P58 B13 (key text); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material_count  # no app looks a material up by word or lists them until P58 B13 (key text); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material_named  # no app looks a material up by word or lists them until P58 B13 (key text); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation  # no app resolves a relation until P58 B11 (region relations) and B13 (forms); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation_named  # no app resolves a relation until P58 B11 (region relations) and B13 (forms); its tests call it
+library/theory/knowledge/knowledge_snapshot.c nocase_equal  # helper of the by-word material lookup, which no app calls until P58 B13; its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
-library/theory/tonality/common_practice_materials.c common_practice_materials_resolve  # the chain resolves the materials from the snapshot in P58 B10 commit 5; its tests (commit 6) call it

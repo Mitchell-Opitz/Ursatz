@@ -95,8 +95,7 @@ CommonPracticeKeyRegionsStatus key_regions_build_region(const CommonPracticeKeyR
     if (entity_id_create(context, &context_id) != ENTITY_ID_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
     }
-    const CommonPracticeMaterials *materials = config->materials != NULL ? config->materials : common_practice_materials_builtin();
-    KeyResult built = common_practice_build_key(common_practice_material(materials, common_practice_key_index_mode(key_index)),
+    KeyResult built = common_practice_build_key(common_practice_material(config->materials, common_practice_key_index_mode(key_index)),
                                                 common_practice_key_index_tonic_name(key_index), context_id, &out->key);
     if (built != KEY_OK) {
         entity_id_destroy(context_id);

@@ -6,12 +6,14 @@
 
 #include "pipeline/analysis_result_internal.h"
 
-bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
+bool run_analysis_pipeline(const ImportedNotes *notes, const KnowledgeSnapshot *knowledge, AnalysisReport *report) {
     memset(report, 0, sizeof(*report));
     report->home_duration_denominator = 1;
 
     AnalyzerResult *result = NULL;
-    if (analyzer_analyze(notes, NULL, &result) != ANALYZER_OK) {
+    AnalyzerOptions options = analyzer_options_default();
+    options.knowledge = knowledge;
+    if (analyzer_analyze(notes, &options, &result) != ANALYZER_OK) {
         return false;
     }
     analyzer_result_take_report(result, report);

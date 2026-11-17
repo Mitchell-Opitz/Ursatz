@@ -8,6 +8,7 @@
 #include <ursatz_analyzer/musicxml_pipeline.h>
 
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The voice leading of the report, on a constructed four-part chorale (tests/musicxml/chorale-voice-leading.musicxml,
@@ -28,7 +29,7 @@ static void check_chorale(const char *dir) {
     snprintf(path, sizeof(path), "%s/chorale-voice-leading.musicxml", dir);
     ImportedNotes notes;
     AnalysisReport report;
-    if (musicxml_pipeline_import_file(path, &notes) != MUSICXML_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
+    if (musicxml_pipeline_import_file(path, &notes) != MUSICXML_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return;

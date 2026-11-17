@@ -138,7 +138,7 @@ typedef struct {
     size_t phrase_count;                       /* default 0 */
     const CommonPracticeKeyRepeat *repeats;    /* optional: written-out repeats whose measures share keys; borrowed */
     size_t repeat_count;                       /* default 0 */
-    const CommonPracticeMaterials *materials;  /* default common_practice_materials_builtin() until P58 B10 passes the snapshot's; NULL means that default; borrowed */
+    const CommonPracticeMaterials *materials;  /* the chain sets the snapshot's; NULL (the default) reads common_practice_materials_builtin(), a remaining site until P58 B13; borrowed */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix

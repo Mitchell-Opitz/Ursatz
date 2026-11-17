@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * MusicXML input: format choice, the notated metadata, a pickup, multi-part
@@ -43,7 +44,7 @@ static cJSON *analyze(const char *path, ImportedNotes *notes_out) {
     ImportedNotes notes;
     assert(input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK);
     AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, &report));
+    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
     analysis_report_destroy(&report);

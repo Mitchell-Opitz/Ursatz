@@ -110,6 +110,9 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     }
     CommonPracticeKeyRegionsConfig effective =
         config != NULL ? *config : common_practice_key_regions_config_default();
+    if (effective.materials == NULL) {
+        effective.materials = common_practice_materials_builtin(); /* a remaining site until P58 B13: a caller without the snapshot's */
+    }
     CommonPracticeKeyRegionsStatus status = key_regions_validate_inputs(segments, segment_count, map, &effective);
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
         return status;
@@ -196,7 +199,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         for (size_t sp = 1; sp < plan.count; sp++) {
             fixed[plan.start[sp]] = true;
         }
-        key_regions_hold_home_keys(segments, segment_count, &measures, fixed, effective.hold_tolerance, measure_key);
+        key_regions_hold_home_keys(segments, segment_count, &measures, fixed, effective.hold_tolerance, measure_key, effective.materials);
     }
     if (status == COMMON_PRACTICE_KEY_REGIONS_OK && !phrase_mode && effective.phrase_boundary_count > 0) {
         size_t *slots = (size_t *)calloc(effective.phrase_boundary_count, sizeof(size_t));
@@ -292,7 +295,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
             status = key_regions_find_pivot(segments, segment_count, &measures, into->first_measure,
                                 into->span.start, result.regions[change->from_region].key_index,
                                 into->key_index, effective.pivot_search_measures, phrase_mode, &change->has_pivot,
-                                &change->pivot_segment);
+                                &change->pivot_segment, effective.materials);
         }
     }
 

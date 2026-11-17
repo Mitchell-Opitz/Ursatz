@@ -7,6 +7,7 @@
 #include "analysis/harmony/outer_scale_degrees.h"
 #include "theory/meter/segmentation_beat_grid.h"
 #include "chain/analysis_chain.h"
+#include "test_knowledge.h"
 
 /*
  * The chain's input builders, each on a small constructed piece (chain_test_piece.h): the results, the error paths (a NULL argument, an
@@ -195,6 +196,7 @@ static void test_pitches(TestPiece *piece) {
 /* The stage inputs, from a chain run over the piece. */
 static void test_stage_inputs(TestPiece *piece) {
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_CADENCES | ANALYSIS_CHAIN_STAGE_MELODY | ANALYSIS_CHAIN_STAGE_SCHEMAS;
     config.refine_keys = false;
     MusicalTime zero;
@@ -293,7 +295,7 @@ static void test_stage_inputs(TestPiece *piece) {
     chain_segments_destroy(&aligned);
 
     /* the motive input: a note-level soprano with its degrees */
-    assert(chain_build_motive_input(&piece->set, segments, 1, 4, 0, COMMON_PRACTICE_KEY_MAJOR, &cadences, &form) == CHAIN_INPUT_OK);
+    assert(chain_build_motive_input(&piece->set, segments, 1, 4, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &cadences, &form) == CHAIN_INPUT_OK);
     assert(form.input.note_count == 16 && form.input.degrees[0] == 3 && form.input.degrees[1] == 2 &&
            form.input.degrees[2] == 1);
     chain_form_input_destroy(&form);
@@ -355,11 +357,11 @@ static void test_stage_inputs(TestPiece *piece) {
     /* the melody line: one note per soprano note, degrees in C major, a chord tone on the downbeat */
     ChainMelodyLine melody;
     memset(&melody, 0, sizeof(melody));
-    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, NULL) ==
+    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), NULL) ==
            CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    assert(chain_build_melody_line(segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) ==
+    assert(chain_build_melody_line(segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &melody) ==
            CHAIN_INPUT_ERR_BAD_NOTES);
-    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) == CHAIN_INPUT_OK);
+    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &melody) == CHAIN_INPUT_OK);
     assert(melody.line.count > 0 && melody.line.notes[0].present && melody.line.notes[0].degree == 3 &&
            melody.line.notes[0].alteration == 0 && melody.segment[0] == 0);
     assert(melody.line.notes[0].has_strength && melody.line.notes[0].strength == BEAT_STRENGTH_STRONG);
@@ -370,16 +372,16 @@ static void test_stage_inputs(TestPiece *piece) {
        each on the chord segment holding its onset; the chord results are read there */
     ChainMelodyLine voiced;
     memset(&voiced, 0, sizeof(voiced));
-    assert(chain_build_melody_line(NULL, lines->count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &voiced) ==
+    assert(chain_build_melody_line(NULL, lines->count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &voiced) ==
            CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    assert(chain_build_melody_line(voice_segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &voiced) ==
+    assert(chain_build_melody_line(voice_segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &voiced) ==
            CHAIN_INPUT_ERR_BAD_NOTES);
     assert(chain_build_melody_line(voice_segments, lines->count + 1, lines->soprano, segments, count, results, 0,
-                                   COMMON_PRACTICE_KEY_MAJOR, &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
+                                   COMMON_PRACTICE_KEY_MAJOR, test_materials(), &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
     assert(chain_build_melody_line(voice_segments, lines->count, lines->soprano, segments, 0, results, 0, COMMON_PRACTICE_KEY_MAJOR,
-                                   &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
+                                   test_materials(), &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
     assert(chain_build_melody_line(voice_segments, lines->count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR,
-                                   &voiced) == CHAIN_INPUT_OK);
+                                   test_materials(), &voiced) == CHAIN_INPUT_OK);
     size_t runs = 0;
     const char *previous = NULL;
     for (size_t v = 0; v < lines->count; v++) {

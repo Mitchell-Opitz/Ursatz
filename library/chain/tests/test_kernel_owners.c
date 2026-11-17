@@ -264,6 +264,7 @@ static void test_relabelling_a_melody_line(void) {
 
 static void test_the_chain_injects_by_default(void) {
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     assert(config.weighting.classifier == NULL && config.form.relation_match == NULL); /* set when the chain runs */
 }
 

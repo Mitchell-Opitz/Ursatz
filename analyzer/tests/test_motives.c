@@ -11,6 +11,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The motive families of the report, for Mozart 545.
@@ -304,14 +305,14 @@ int main(void) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
     ImportedNotes notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
+    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }
     ImportedNotes notes_again;
     AnalysisReport report_again;
     if (midi_pipeline_import_file(path, &notes_again) != MIDI_PIPELINE_OK ||
-        !run_analysis_pipeline(&notes_again, &report_again)) {
+        !run_analysis_pipeline(&notes_again, test_knowledge(), &report_again)) {
         fprintf(stderr, "cannot analyze %s again\n", path);
         return 1;
     }

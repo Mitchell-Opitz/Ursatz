@@ -307,10 +307,15 @@ static bool read_numerals(AnalysisChain *chain) {
     }
     StandardTonalityAppliedConfig applied = standard_tonality_applied_config_default();
     applied.recheck_diatonic = false; /* identified applied chords are read directly, no re-check (R-380) */
-    return standard_tonality_build_chord_inputs(p->segment_inputs, count, p->region_inputs, p->regions.region_count,
-                                                &p->tonal_inputs, &p->tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK &&
-           standard_tonality_build_roman_numerals_with_config(p->tonal_inputs, p->tonal_count, &applied, &p->romans) ==
-               STANDARD_TONALITY_ROMAN_OK;
+    if (standard_tonality_build_chord_inputs(p->segment_inputs, count, p->region_inputs, p->regions.region_count, &p->tonal_inputs,
+                                             &p->tonal_count) != STANDARD_TONALITY_CHORD_INPUT_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < p->tonal_count; i++) {
+        p->tonal_inputs[i].materials = &chain->materials; /* the numerals read the chain's materials */
+    }
+    return standard_tonality_build_roman_numerals_with_config(p->tonal_inputs, p->tonal_count, &applied, &p->romans) ==
+           STANDARD_TONALITY_ROMAN_OK;
 }
 
 static int resolved_home(const AnalysisChain *chain) {
@@ -517,15 +522,14 @@ static AnalysisChainStatus motive_stage(AnalysisChain *chain) {
     int home = chain->home;
     if (home < 0 ||
         chain_build_motive_input(chain->notes, &chain->segs, chain->config.first_measure, last, common_practice_key_index_tonic(home),
-                                 common_practice_key_index_mode(home), &chain->pass.cadences, &chain->motive_input) != CHAIN_INPUT_OK) {
+                                 common_practice_key_index_mode(home), &chain->materials, &chain->pass.cadences, &chain->motive_input) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     chain->have_motive_input = true;
     chain->relation_context.has_key = true;
     chain->relation_context.tonic_pitch_class = common_practice_key_index_tonic(home);
-    /* TRANSITIONAL until the chain resolves the snapshot's materials (P58 B10) */
     chain->relation_context.material =
-        common_practice_material(common_practice_materials_builtin(), common_practice_key_index_mode(home));
+        common_practice_material(&chain->materials, common_practice_key_index_mode(home));
     const StandardFormInput *input = &chain->motive_input.input;
     if (standard_form_segment_phrases(input, &chain->config.form, chain_form_boundary_detect, NULL, &chain->motive_phrases) !=
         STANDARD_FORM_ANALYSIS_OK) {
@@ -633,7 +637,7 @@ static AnalysisChainStatus melody_stage(AnalysisChain *chain) {
     if (home < 0 ||
         chain_build_melody_line(&chain->voice_segs, chain->voice_segs.count, chain->lines.soprano, &chain->segs, chain->count,
                                 chain->pass.chords, common_practice_key_index_tonic(home), common_practice_key_index_mode(home),
-                                &chain->melody.line) != CHAIN_INPUT_OK) {
+                                &chain->materials, &chain->melody.line) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_MELODY;
     }
     chain->have_melody_line = true;
@@ -1005,11 +1009,20 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
     if (!analysis_note_set_valid(notes) || notes->count == 0) {
         return ANALYSIS_CHAIN_ERR_NOTES;
     }
+    CommonPracticeMaterials materials;
+    char message[160];
+    if (config->knowledge == NULL || !common_practice_materials_resolve(config->knowledge, &materials, message, sizeof(message))) {
+        return ANALYSIS_CHAIN_ERR_KNOWLEDGE;
+    }
     AnalysisChain *chain = calloc(1, sizeof(AnalysisChain));
     if (chain == NULL) {
         return ANALYSIS_CHAIN_ERR_ALLOC;
     }
     chain->config = *config;
+    chain->materials = materials;
+    /* Every stage on the chain's path reads the chain's materials, not the stage defaults. */
+    chain->config.key_regions.materials = &chain->materials;
+    chain->config.weighting.materials = &chain->materials;
     if (chain->config.weighting.classifier == NULL) {
         chain->config.weighting.classifier = chain_classify_tones;
     }

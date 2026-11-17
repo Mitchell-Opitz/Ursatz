@@ -515,6 +515,7 @@ ChoraleChainStatus chorale_chain_run(const char *piece_dir, ChoraleScore *out, c
        (cadence ends). Pass 2: the key regions again with those chords as evidence and the cadence ends as boundaries, and everything after
        them once more. No further iteration. */
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_NUMERALS;
     config.first_measure = 0;
     config.refine_keys = false;

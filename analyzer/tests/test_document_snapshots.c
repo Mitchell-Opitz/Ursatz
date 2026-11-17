@@ -11,6 +11,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Golden snapshots of the analysis document of the five reference pieces
@@ -39,7 +40,7 @@ static char *render_piece(const char *fixture) {
         return NULL;
     }
     AnalysisReport report;
-    if (!run_analysis_pipeline(&notes, &report)) {
+    if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         imported_notes_destroy(&notes);
         return NULL;
     }

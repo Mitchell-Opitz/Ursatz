@@ -13,6 +13,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Meter and measure/beat location test. The five reference pieces
@@ -158,7 +159,7 @@ static void check_piece(const char *path, const char *display_name, const Expect
     ImportedNotes notes;
     assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
     AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, &report));
+    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     AnalysisDocument *built = analysis_document_build(display_name, &notes, &report);
     assert(built != NULL);
     char *json = analysis_document_to_json(built);

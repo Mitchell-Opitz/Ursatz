@@ -86,6 +86,7 @@ bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate,
     MeterMap *map = NULL;
     RenderedPlan rendered;
     AnalyzerResult *result = NULL;
+    KnowledgeSnapshot *knowledge = NULL;
     int *midi = NULL;
     size_t count = 0;
     memset(&rendered, 0, sizeof(rendered));
@@ -119,9 +120,12 @@ bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate,
         input.midi = midi;
         input.meter = map;
         input.streams = rendered.part_index;
-        AnalyzerHearingOptions options = hearing_analyzer_options();
+        /* A snapshot for this one hearing (P58 B10 until B13 gives the Composer its own); the result is released with it. */
+        char message[256];
+        ok = knowledge_snapshot_build(NULL, 0, &knowledge, message, sizeof(message)) == KNOWLEDGE_OK;
+        AnalyzerHearingOptions options = hearing_analyzer_options(knowledge);
         options.analysis.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
-        ok = analyzer_hear(&input, &options, &result) == ANALYZER_OK;
+        ok = ok && analyzer_hear(&input, &options, &result) == ANALYZER_OK;
     }
     const StandardTextureAnalysis *analysis = ok ? analysis_chain_texture(analyzer_result_chain(result)) : NULL;
     ok = ok && analysis;
@@ -132,6 +136,7 @@ bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate,
         }
     }
     analyzer_result_destroy(result);
+    knowledge_snapshot_destroy(knowledge);
     free(midi);
     rendered_plan_destroy(&rendered);
     meter_map_destroy(map);

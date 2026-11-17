@@ -46,6 +46,7 @@ static void thread_join(thread_t thread) {
 #include "service/link_service.h"
 #include "service/piece_lock.h"
 #include "gui_check.h"
+#include "test_knowledge.h"
 #include "test_http.h"
 
 #ifndef URSATZ_GUI_TEST_SOURCE
@@ -411,6 +412,7 @@ static void test_service_reads(void) {
 }
 
 int main(void) {
+  test_knowledge();
   test_lock_table();
   test_concurrent_writers();
   test_delete_during_reads();

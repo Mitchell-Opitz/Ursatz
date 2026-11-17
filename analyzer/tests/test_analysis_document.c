@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Analysis document test: the test_analysis_pipeline fixture (C-E-G,
@@ -105,7 +106,7 @@ int main(void) {
     ImportedNotes notes;
     assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
     AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, &report));
+    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
 
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);

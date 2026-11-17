@@ -9,6 +9,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The material export (text_export.h) and the in-memory import it reads through (input_pipeline.h).
@@ -182,7 +183,7 @@ static void test_motif(void) {
         {"variant 1: invert", variant_1, variant_facts, 1, NULL, 0},
         {"variant 2: rhythm", variant_2, variant_facts, 1, NULL, 0},
     };
-    AnalyzerTextExportMaterial material = {"motif", "motif-7", "Rising arch", 3, material_facts, 2, sections, 3};
+    AnalyzerTextExportMaterial material = {"motif", "motif-7", "Rising arch", 3, material_facts, 2, sections, 3, test_knowledge()};
 
     char *text = NULL;
     AnalyzerStatus status = analyzer_text_export_material(&material, &text);
@@ -248,7 +249,7 @@ static void test_theme(void) {
         {"slot 1: Rising arch v1", slot_a, NULL, 0, NULL, 0},
         {"slot 2: Falling arch v2", slot_b, NULL, 0, NULL, 0},
     };
-    AnalyzerTextExportMaterial material = {"theme", "theme-3", "Opening theme", 2, material_facts, 3, sections, 3};
+    AnalyzerTextExportMaterial material = {"theme", "theme-3", "Opening theme", 2, material_facts, 3, sections, 3, test_knowledge()};
     char *text = NULL;
     AnalyzerStatus status = analyzer_text_export_material(&material, &text);
     CHECKF(status == ANALYZER_OK && text, "theme export: status %d", (int)status);
@@ -294,7 +295,7 @@ static void test_piece(void) {
         {"loop", loop, NULL, 0, NULL, 0},
         {"ending", ending, NULL, 0, NULL, 0},
     };
-    AnalyzerTextExportMaterial material = {"piece", "piece-2", "Night piece", 4, material_facts, 2, sections, 2};
+    AnalyzerTextExportMaterial material = {"piece", "piece-2", "Night piece", 4, material_facts, 2, sections, 2, test_knowledge()};
     char *text = NULL;
     AnalyzerStatus status = analyzer_text_export_material(&material, &text);
     CHECKF(status == ANALYZER_OK && text, "piece export: status %d", (int)status);
@@ -311,10 +312,10 @@ static void test_piece(void) {
 
 static void test_material_refusals(void) {
     char *text = NULL;
-    AnalyzerTextExportMaterial no_kind = {NULL, "id", "name", 1, NULL, 0, NULL, 0};
+    AnalyzerTextExportMaterial no_kind = {NULL, "id", "name", 1, NULL, 0, NULL, 0, test_knowledge()};
     CHECKF(analyzer_text_export_material(NULL, &text) == ANALYZER_ERR_ARGUMENT, "NULL material");
     CHECKF(analyzer_text_export_material(&no_kind, &text) == ANALYZER_ERR_ARGUMENT && !text, "NULL kind");
-    AnalyzerTextExportMaterial empty = {"motif", "id", "name", 1, NULL, 0, NULL, 0};
+    AnalyzerTextExportMaterial empty = {"motif", "id", "name", 1, NULL, 0, NULL, 0, test_knowledge()};
     CHECKF(analyzer_text_export_material(&empty, NULL) == ANALYZER_ERR_ARGUMENT, "NULL text");
     CHECKF(analyzer_text_export_material(&empty, &text) == ANALYZER_OK && text &&
                strncmp(text, "# Ursatz export v2: motif\nname: name\nid: id\nversion: 1\n", 53) == 0,
@@ -323,11 +324,11 @@ static void test_material_refusals(void) {
     text = NULL;
 
     AnalyzerTextExportSection no_label = {NULL, NULL, NULL, 0, NULL, 0};
-    AnalyzerTextExportMaterial unlabelled = {"motif", "id", "name", 1, NULL, 0, &no_label, 1};
+    AnalyzerTextExportMaterial unlabelled = {"motif", "id", "name", 1, NULL, 0, &no_label, 1, test_knowledge()};
     CHECKF(analyzer_text_export_material(&unlabelled, &text) == ANALYZER_ERR_ARGUMENT && !text, "NULL section label");
 
     AnalyzerTextExportSection garbage = {"bad", "this is not music", NULL, 0, NULL, 0};
-    AnalyzerTextExportMaterial bad = {"motif", "id", "name", 1, NULL, 0, &garbage, 1};
+    AnalyzerTextExportMaterial bad = {"motif", "id", "name", 1, NULL, 0, &garbage, 1, test_knowledge()};
     CHECKF(analyzer_text_export_material(&bad, &text) == ANALYZER_ERR_LIBRARY && !text, "section that is not music");
 }
 

@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Cadences, boundary cadences and cadence-confirmed key changes on the five reference pieces (Ursatz's
@@ -247,7 +248,7 @@ static void run_piece(const Piece *piece) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
     ImportedNotes notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
+    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return;

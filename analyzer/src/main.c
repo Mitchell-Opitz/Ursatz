@@ -14,6 +14,8 @@
 #include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/style_profile.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
+
 #include "pipeline/corpus_walk.h"
 #include "pipeline/run_file.h"
 #include "util/file_util.h"
@@ -74,8 +76,8 @@ static void print_corpus_piece(const char *path, CorpusPieceStatus status, const
     }
 }
 
-static int run_corpus(const char *input_dir, const char *output_dir, bool resume) {
-    CorpusRunOptions options = {input_dir, output_dir, resume, print_corpus_piece, NULL};
+static int run_corpus(const char *input_dir, const char *output_dir, bool resume, const KnowledgeSnapshot *knowledge) {
+    CorpusRunOptions options = {input_dir, output_dir, resume, print_corpus_piece, NULL, knowledge};
     CorpusRunSummary summary;
     if (corpus_run(&options, &summary) != CORPUS_RUN_OK) {
         return 2;
@@ -366,9 +368,9 @@ static void print_similar_text(const SimilarQuery *query, const SimilarResults *
 }
 
 static int run_similar(const char *corpus_output_dir, const char *motive_file, const char *progression, const SimilarOptions *options,
-                       bool json) {
+                       bool json, const KnowledgeSnapshot *knowledge) {
     SimilarQuery query = {0};
-    SimilarResult read = motive_file ? similar_query_from_file(motive_file, &query)
+    SimilarResult read = motive_file ? similar_query_from_file(motive_file, knowledge, &query)
                                      : similar_query_from_numerals(progression, &query);
     if (read == SIMILAR_ERR_QUERY || read == SIMILAR_ERR_ARGUMENT) {
         fprintf(stderr, "Error: %s\n",
@@ -548,7 +550,7 @@ static bool parse_measure_range(const char *text, int *first, int *last) {
 
 /* ursatz-analyzer export: analyzes a file as the default command does and prints the text export (text_export.h) to
    standard output; nothing is written next to the input. */
-static int run_export(int argc, char *argv[]) {
+static int run_export(int argc, char *argv[], const KnowledgeSnapshot *knowledge) {
     const char *path = NULL;
     InputFormat input_format = INPUT_FORMAT_AUTO;
     AnalyzerTextExportOptions options = analyzer_text_export_options_default();
@@ -587,7 +589,7 @@ static int run_export(int argc, char *argv[]) {
 
     ImportedNotes notes;
     AnalyzerResult *result = NULL;
-    switch (analyzer_run_file(path, input_format, NULL, &notes, &result, NULL, NULL)) {
+    switch (analyzer_run_file(path, input_format, NULL, knowledge, &notes, &result, NULL, NULL)) {
     case RUN_FILE_OK:
         break;
     case RUN_FILE_ERR_ALLOC:
@@ -626,9 +628,9 @@ static int run_export(int argc, char *argv[]) {
     return 0;
 }
 
-int main(int argc, char *argv[]) {
+static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) {
     if (argc >= 2 && strcmp(argv[1], "export") == 0) {
-        return run_export(argc, argv);
+        return run_export(argc, argv, knowledge);
     }
     const char *path = NULL;
     const char *compare_a = NULL;
@@ -776,7 +778,7 @@ int main(int argc, char *argv[]) {
             print_usage(argv[0]);
             return 1;
         }
-        return run_similar(similar_dir, motive_file, progression, &similar_options, format_json);
+        return run_similar(similar_dir, motive_file, progression, &similar_options, format_json, knowledge);
     }
     if (compare_a) {
         if (style_dir || style_name || corpus_dir || corpus_out || path || want_json || corpus_resume ||
@@ -807,7 +809,7 @@ int main(int argc, char *argv[]) {
             print_usage(argv[0]);
             return 1;
         }
-        return run_corpus(corpus_dir, corpus_out, corpus_resume);
+        return run_corpus(corpus_dir, corpus_out, corpus_resume, knowledge);
     }
     if (corpus_out || corpus_resume) {
         print_usage(argv[0]);
@@ -821,7 +823,7 @@ int main(int argc, char *argv[]) {
     AnalyzerResult *result = NULL;
     InputPipelineResult import_status;
     NotationReadingResult reading_status = NOTATION_READING_OK;
-    switch (analyzer_run_file(path, input_format, reading_set ? &reading : NULL, &notes, &result, &import_status,
+    switch (analyzer_run_file(path, input_format, reading_set ? &reading : NULL, knowledge, &notes, &result, &import_status,
                               &reading_status)) {
     case RUN_FILE_OK:
         break;
@@ -849,4 +851,18 @@ int main(int argc, char *argv[]) {
 
     analysis_document_destroy(document);
     return ok ? 0 : 1;
+}
+
+/* The knowledge snapshot every analysis of this run reads its pitch materials from: built once here, kept until the run ends (the
+   results of the run point into it). */
+int main(int argc, char *argv[]) {
+    KnowledgeSnapshot *knowledge = NULL;
+    char message[256];
+    if (knowledge_snapshot_build(NULL, 0, &knowledge, message, sizeof(message)) != KNOWLEDGE_OK) {
+        fprintf(stderr, "Error: cannot read the knowledge: %s\n", message);
+        return 1;
+    }
+    int status = run_main(argc, argv, knowledge);
+    knowledge_snapshot_destroy(knowledge);
+    return status;
 }

@@ -11,6 +11,7 @@
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
+#include "test_knowledge.h"
 
 /*
  * Chord coverage: the fraction of the piece's sounding notes, by duration,
@@ -102,7 +103,7 @@ int main(int argc, char **argv) {
         ImportedNotes notes;
         assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
         AnalysisReport report;
-        assert(run_analysis_pipeline(&notes, &report));
+        assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
 
         size_t matched_chords = 0;
         double fraction = coverage(&notes, &report, &matched_chords);

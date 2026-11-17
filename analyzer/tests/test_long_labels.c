@@ -6,6 +6,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/midi_pipeline.h>
+#include "test_knowledge.h"
 
 /*
  * Labels are owned strings, not fixed 32-byte buffers: a report whose
@@ -32,7 +33,7 @@ int main(void) {
     assert(midi_pipeline_import_file(URSATZ_FIXTURES_DIR "/framework-v1-corpus/Mozart 545.mid", &notes) ==
            MIDI_PIPELINE_OK);
     AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, &report));
+    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     assert(report.key_region_count > 0);
     assert(report.entry_count > 0);
 

@@ -8,6 +8,7 @@
 #include "model/interpretation/key.h"
 #include "theory/tonality/roman_numeral_analysis_rules.h"
 #include "model/time/musical_time.h"
+#include "theory/tonality/common_practice_materials.h"
 
 /*
  * The standard-tonality analysis adapter (L3): turns L2 facts into this framework's inputs. This file is
@@ -82,6 +83,9 @@ typedef struct {
     double key_uncertainty;
     bool has_weights;
     double weights[12];
+    /* The common-practice materials the numeral reading takes the key's scale from (borrowed). The chain sets its own after building
+       the inputs; NULL (the built inputs' default) reads the built-in ones, a remaining site until P58 B13. */
+    const CommonPracticeMaterials *materials;
 } StandardTonalityChordInput;
 
 typedef enum {

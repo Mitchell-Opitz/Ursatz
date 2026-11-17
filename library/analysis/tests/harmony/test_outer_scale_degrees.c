@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analysis/harmony/outer_scale_degrees.h"
+#include "test_knowledge.h"
 
 /*
  * Scale degree label tests: the label of a pitch class under a tonic and a mode (outer_scale_degrees.h), in a major and a
@@ -10,12 +11,13 @@
  */
 
 static void test_the_label_function_directly(void) {
-    assert(strcmp(common_practice_scale_degree_label(0, 0, COMMON_PRACTICE_KEY_MAJOR), "1") == 0);
-    assert(strcmp(common_practice_scale_degree_label(6, 0, COMMON_PRACTICE_KEY_MAJOR), "#4") == 0);
-    assert(strcmp(common_practice_scale_degree_label(2, 9, COMMON_PRACTICE_KEY_MINOR), "4") == 0);
-    assert(common_practice_scale_degree_label(12, 0, COMMON_PRACTICE_KEY_MAJOR) == NULL);
-    assert(common_practice_scale_degree_label(0, -1, COMMON_PRACTICE_KEY_MAJOR) == NULL);
-    assert(common_practice_scale_degree_label(0, 0, (CommonPracticeKeyMode)7) == NULL);
+    assert(strcmp(common_practice_scale_degree_label(0, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials()), "1") == 0);
+    assert(strcmp(common_practice_scale_degree_label(6, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials()), "#4") == 0);
+    assert(strcmp(common_practice_scale_degree_label(2, 9, COMMON_PRACTICE_KEY_MINOR, test_materials()), "4") == 0);
+    assert(common_practice_scale_degree_label(12, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials()) == NULL);
+    assert(common_practice_scale_degree_label(0, -1, COMMON_PRACTICE_KEY_MAJOR, test_materials()) == NULL);
+    assert(common_practice_scale_degree_label(0, 0, (CommonPracticeKeyMode)7, test_materials()) == NULL);
+    assert(common_practice_scale_degree_label(0, 0, COMMON_PRACTICE_KEY_MAJOR, NULL) == NULL);
 }
 
 int main(void) {

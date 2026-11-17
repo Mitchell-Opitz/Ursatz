@@ -10,6 +10,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Golden snapshots of the text export of the five reference pieces (Ursatz framework-v1 corpus, MIDI files). Each piece
@@ -45,7 +46,7 @@ static char *export_piece(const char *fixture) {
         return NULL;
     }
     AnalyzerResult *result = NULL;
-    if (analyzer_analyze(&notes, NULL, &result) != ANALYZER_OK) {
+    if (analyzer_analyze(&notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
         imported_notes_destroy(&notes);
         return NULL;
     }

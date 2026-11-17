@@ -20,6 +20,7 @@
 #include <ursatz_analyzer/style_profile.h>
 
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The API the Composer calls (composer_api.h), through analyzer_hear. A constructed four-voice fragment with a parallel
@@ -143,7 +144,7 @@ static void test_parallel_fifth(void) {
     char *before = fingerprint((const NoteEvent *const *)events, 8);
     AnalyzerHearing hearing = {(const NoteEvent *const *)events, 8, midi, NULL, true, 0, false, streams};
     AnalyzerResult *heard = NULL;
-    CHECKF(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "hearing");
+    CHECKF(analyzer_hear(&hearing, test_hearing_defaults(), &heard) == ANALYZER_OK && heard, "hearing");
     AnalyzerViolation *violations = NULL;
     size_t count = 0;
     CHECKF(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK, "violations");
@@ -174,7 +175,7 @@ static void test_parallel_fifth(void) {
 static void test_refusals(void) {
     AnalyzerHearing empty = {NULL, 0, NULL, NULL, false, 0, false, NULL};
     AnalyzerResult *heard = NULL;
-    CHECKF(analyzer_hear(&empty, NULL, &heard) == ANALYZER_OK && heard, "an empty hearing");
+    CHECKF(analyzer_hear(&empty, test_hearing_defaults(), &heard) == ANALYZER_OK && heard, "an empty hearing");
     CHECKF(analyzer_result_report(heard)->entry_count == 0, "no chords");
     AnalyzerViolation *violations = NULL;
     size_t count = 7;
@@ -182,8 +183,8 @@ static void test_refusals(void) {
            "no violations");
     analyzer_result_destroy(heard);
     AnalyzerHearing bad_key = {NULL, 0, NULL, NULL, true, 12, false, NULL};
-    CHECKF(analyzer_hear(&bad_key, NULL, &heard) == ANALYZER_ERR_ARGUMENT && heard == NULL, "tonic out of range");
-    CHECKF(analyzer_hear(NULL, NULL, &heard) == ANALYZER_ERR_ARGUMENT, "no hearing");
+    CHECKF(analyzer_hear(&bad_key, test_hearing_defaults(), &heard) == ANALYZER_ERR_ARGUMENT && heard == NULL, "tonic out of range");
+    CHECKF(analyzer_hear(NULL, test_hearing_defaults(), &heard) == ANALYZER_ERR_ARGUMENT, "no hearing");
 }
 
 /* ---- style distance ---- */
@@ -199,7 +200,7 @@ static StyleModel *corpus_model_without(const char *name, size_t pieces, const c
     char input[1024], output[1024], file[1024];
     snprintf(input, sizeof(input), "%s/%s", URSATZ_CORPORA_DIR, name);
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
-    CorpusRunOptions options = {input, output, false, NULL, NULL};
+    CorpusRunOptions options = {input, output, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
     CHECKF(corpus_run(&options, &summary) == CORPUS_RUN_OK && summary.analyzed == pieces && summary.failed == 0,
            "%s analyzed", name);
@@ -296,7 +297,7 @@ static void test_style_distance(void) {
                                notes.key_signature.is_minor,
                                notes.streams};
     AnalyzerResult *analysis = NULL;
-    CHECKF(analyzer_hear(&hearing, NULL, &analysis) == ANALYZER_OK && analysis, "hearing");
+    CHECKF(analyzer_hear(&hearing, test_hearing_defaults(), &analysis) == ANALYZER_OK && analysis, "hearing");
     StyleComparison near_style = {0}, far_style = {0};
     if (sonatinas && chorales) {
         CHECKF(distance(analysis, sonatinas, NULL, 0, &near_style) == ANALYZER_OK, "near");
@@ -338,7 +339,7 @@ static void test_style_distance(void) {
     NoteEvent *events[2] = {make_event(tuning, 0, 60, 0, 1), make_event(tuning, 1, 62, 1, 1)};
     const int tiny_midi[2] = {60, 62};
     AnalyzerHearing tiny = {(const NoteEvent *const *)events, 2, tiny_midi, NULL, false, 0, false, NULL};
-    CHECKF(analyzer_hear(&tiny, NULL, &analysis) == ANALYZER_OK && analysis, "tiny fragment");
+    CHECKF(analyzer_hear(&tiny, test_hearing_defaults(), &analysis) == ANALYZER_OK && analysis, "tiny fragment");
     StyleComparison tiny_style = {0};
     if (sonatinas) {
         CHECKF(distance(analysis, sonatinas, NULL, 0, &tiny_style) == ANALYZER_OK, "tiny distance");

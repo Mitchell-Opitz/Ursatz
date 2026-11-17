@@ -118,7 +118,7 @@ static AnalyzerStatus build_marks(const ScoreTextScore *score, const AnalyzerTex
 
 /* ---- one section ---- */
 
-static AnalyzerStatus write_section(Text *out, const AnalyzerTextExportSection *section) {
+static AnalyzerStatus write_section(Text *out, const AnalyzerTextExportSection *section, const KnowledgeSnapshot *knowledge) {
     export_text_addf(out, "\n## %s\n", section->label);
     add_facts(out, section->facts, section->fact_count);
     if (!section->musicxml) {
@@ -132,6 +132,7 @@ static AnalyzerStatus write_section(Text *out, const AnalyzerTextExportSection *
         return ANALYZER_ERR_LIBRARY;
     }
     AnalyzerOptions options = analyzer_options_default();
+    options.knowledge = knowledge;
     AnalyzerResult *result = NULL;
     AnalyzerStatus status = analyzer_analyze(&notes, &options, &result);
     char *document_json = NULL;
@@ -182,7 +183,7 @@ AnalyzerStatus analyzer_text_export_material(const AnalyzerTextExportMaterial *m
     if (text) {
         *text = NULL;
     }
-    if (!material || !material->kind || !text) {
+    if (!material || !material->kind || !material->knowledge || !text) {
         return ANALYZER_ERR_ARGUMENT;
     }
     for (size_t i = 0; i < material->section_count; i++) {
@@ -205,7 +206,7 @@ AnalyzerStatus analyzer_text_export_material(const AnalyzerTextExportMaterial *m
 
     AnalyzerStatus status = ANALYZER_OK;
     for (size_t i = 0; i < material->section_count && status == ANALYZER_OK; i++) {
-        status = write_section(&out, &material->sections[i]);
+        status = write_section(&out, &material->sections[i], material->knowledge);
     }
     if (status == ANALYZER_OK && out.failed) {
         status = ANALYZER_ERR_ALLOC;

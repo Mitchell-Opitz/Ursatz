@@ -24,6 +24,7 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.weigh_resolved_accents = false;
     config.classifier = NULL;
     config.classifier_context = NULL;
+    config.materials = NULL;
     return config;
 }
 
@@ -277,7 +278,7 @@ static unsigned key_scale_mask(const CommonPracticeMaterials *materials, CommonP
 /* True when the entry, rooted at pitch class `root`, may be ranked on its own merits (the bass aside): its root sounds
    and, for an applied chord, a tone outside the key sounds too. */
 static bool entry_eligible(const VocabularyEntry *entry, int root, int tonic_pitch_class, CommonPracticeKeyMode mode,
-                           const CommonPracticeWeights *weights) {
+                           const CommonPracticeWeights *weights, const CommonPracticeMaterials *materials) {
     if (weights->pitch_class[root] <= 0.0) {
         return false; /* the root does not sound: not a reading the notes support */
     }
@@ -290,8 +291,7 @@ static bool entry_eligible(const VocabularyEntry *entry, int root, int tonic_pit
     chord.seventh = entry->seventh;
     int intervals[4];
     size_t count = common_practice_ranked_chord_intervals(&chord, intervals);
-    /* TRANSITIONAL until the stage's config carries the snapshot's materials (P58 B10). */
-    unsigned scale = key_scale_mask(common_practice_materials_builtin(), mode);
+    unsigned scale = key_scale_mask(materials, mode);
     for (size_t i = 0; i < count; i++) {
         int pitch_class = (root + intervals[i]) % 12;
         if ((scale & (1u << ((pitch_class - tonic_pitch_class + 12) % 12))) == 0 && weights->pitch_class[pitch_class] > 0.0) {
@@ -327,6 +327,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
                           : mode == COMMON_PRACTICE_KEY_MAJOR ? COMMON_PRACTICE_MAJOR_APPLIED_COUNT
                                                               : COMMON_PRACTICE_MINOR_APPLIED_COUNT;
     size_t entry_count = vocabulary_size + applied_size;
+    const CommonPracticeMaterials *materials = config->materials != NULL ? config->materials : common_practice_materials_builtin();
 
     /* Holding the bass is required only when some candidate the call ranks can: otherwise every candidate stays eligible. */
     bool bass_required = false;
@@ -334,7 +335,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         for (size_t k = 0; k < entry_count && !bass_required; k++) {
             const VocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
             int root = (tonic_pitch_class + entry->offset) % 12;
-            bass_required = entry_eligible(entry, root, tonic_pitch_class, mode, weights) &&
+            bass_required = entry_eligible(entry, root, tonic_pitch_class, mode, weights, materials) &&
                             entry_holds(entry, root, weights->bass_pitch_class);
         }
     }
@@ -344,7 +345,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     for (size_t k = 0; k < entry_count; k++) {
         const VocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
         int root = (tonic_pitch_class + entry->offset) % 12;
-        if (!entry_eligible(entry, root, tonic_pitch_class, mode, weights)) {
+        if (!entry_eligible(entry, root, tonic_pitch_class, mode, weights, materials)) {
             continue; /* the root does not sound (or no tone outside the key does, for an applied chord) */
         }
         if (bass_required && !entry_holds(entry, root, weights->bass_pitch_class)) {

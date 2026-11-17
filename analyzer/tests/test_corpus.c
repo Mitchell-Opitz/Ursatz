@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Corpus mode over the corpora CMake builds in the build tree: "reference" (the five framework-v1 pieces) and "mixed"
@@ -65,7 +66,7 @@ static unsigned long long fnv1a(const char *data, size_t length) {
 }
 
 static CorpusRunSummary run(const char *input, const char *output, bool resume, CorpusRunResult *result) {
-    CorpusRunOptions options = {input, output, resume, NULL, NULL};
+    CorpusRunOptions options = {input, output, resume, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
     *result = corpus_run(&options, &summary);
     return summary;
@@ -132,7 +133,7 @@ static char *render_single(const char *path) {
         return NULL;
     }
     AnalysisReport report;
-    if (!run_analysis_pipeline(&notes, &report)) {
+    if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         imported_notes_destroy(&notes);
         return NULL;
     }
@@ -361,7 +362,7 @@ static void test_resume_changes(const char *work) {
 
 static void test_arguments(const char *work) {
     CorpusRunResult result;
-    CorpusRunOptions options = {NULL, NULL, false, NULL, NULL};
+    CorpusRunOptions options = {NULL, NULL, false, NULL, NULL, test_knowledge()};
     CHECKF(corpus_run(&options, NULL) == CORPUS_RUN_ERR_ARGUMENT, "NULL input_dir");
     CHECKF(corpus_run(NULL, NULL) == CORPUS_RUN_ERR_ARGUMENT, "NULL options");
     char missing[1024];

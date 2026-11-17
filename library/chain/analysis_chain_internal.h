@@ -3,6 +3,7 @@
 
 #include "chain/analysis_chain.h"
 #include "chain/kernel_owners.h"
+#include "theory/tonality/common_practice_materials.h"
 
 /*
  * The fields of an AnalysisChain: analysis_chain.c writes them; tests read the meter results through
@@ -79,6 +80,7 @@ extern const AnalysisChainStage analysis_chain_stages[ANALYSIS_CHAIN_STAGE_COUNT
 
 struct AnalysisChain {
     AnalysisChainConfig config;
+    CommonPracticeMaterials materials; /* resolved once from config.knowledge; the stage configs point here */
     ChainRelationContext relation_context; /* the key the motive stage reads generic shapes in */
     unsigned stages;
     const AnalysisNoteSet *notes;

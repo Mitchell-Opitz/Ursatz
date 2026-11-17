@@ -286,7 +286,14 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
         return CORPUS_SEED_ERR_ARGUMENT;
     }
     SimilarQuery query;
-    SimilarResult read = similar_query_from_file(passage_path, &query);
+    /* A snapshot for reading the passage (P58 B10 until B13 gives the Composer its own); the query holds nothing from it. */
+    KnowledgeSnapshot *knowledge = NULL;
+    char message[256];
+    if (knowledge_snapshot_build(NULL, 0, &knowledge, message, sizeof(message)) != KNOWLEDGE_OK) {
+        return CORPUS_SEED_ERR_QUERY;
+    }
+    SimilarResult read = similar_query_from_file(passage_path, knowledge, &query);
+    knowledge_snapshot_destroy(knowledge);
     if (read == SIMILAR_ERR_ALLOC) {
         return CORPUS_SEED_ERR_ALLOC;
     }

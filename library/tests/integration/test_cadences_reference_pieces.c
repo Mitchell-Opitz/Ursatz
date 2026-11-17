@@ -19,6 +19,7 @@
 #include "chain/analysis_chain.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "../key_index_test_util.h"
+#include "test_knowledge.h"
 
 /*
  * Cadences from real music for the five reference pieces (Bach 114, Mozart 545, Clementi 36, Field 1, Field 5), against
@@ -447,6 +448,7 @@ static AnalysisChain *run_analysis_chain(const WeightedPipeline *p, const MeterM
     }
     AnalysisNoteSet set = {p->notes, p->note_count, map};
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
     config.home_key_index = test_key_index_of(a->home, COMMON_PRACTICE_KEY_MAJOR);

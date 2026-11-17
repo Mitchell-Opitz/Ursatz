@@ -31,6 +31,7 @@
 #include "service/style_service.h"
 #include "service/subject_service.h"
 #include "gui_check.h"
+#include "test_knowledge.h"
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
@@ -250,6 +251,7 @@ static void test_link(const char *id, const char *other) {
 }
 
 int main(void) {
+  test_knowledge();
     snprintf(g_materials, sizeof(g_materials), "materials_%d", (int)time(NULL));
     snprintf(g_subjects, sizeof(g_subjects), "subjects_%d", (int)time(NULL));
 #ifdef _WIN32

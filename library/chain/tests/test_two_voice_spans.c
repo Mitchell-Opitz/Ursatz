@@ -8,6 +8,7 @@
 #include "chain/analysis_chain.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
+#include "test_knowledge.h"
 
 /*
  * The two-voice check of the harmonic span rules (R-379, R-382, R-384), with the values phrases first gives (P41, R-391). The Composer's
@@ -93,6 +94,8 @@ static Run run_fixture(const char *file, bool spans) {
     int tonic = minor ? (major_tonic + 9) % 12 : major_tonic;
 
     AnalysisChainConfig config = analysis_chain_config_default();
+
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
     config.home_key_index = test_key_index_of(tonic, minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);

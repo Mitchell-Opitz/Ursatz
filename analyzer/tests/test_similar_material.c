@@ -10,6 +10,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The similar material search over the "reference" corpus CMake builds in the build tree (the five framework-v1
@@ -215,7 +216,7 @@ static void test_queries(void) {
     char path[1100];
     snprintf(path, sizeof path, "%s/motive.mid", work_dir);
     CHECKF(write_motive_midi(path), "cannot write %s", path);
-    CHECKF(similar_query_from_file(path, &query) == SIMILAR_OK && query.kind == SIMILAR_QUERY_MOTIVE && query.note_count == 4,
+    CHECKF(similar_query_from_file(path, test_knowledge(), &query) == SIMILAR_OK && query.kind == SIMILAR_QUERY_MOTIVE && query.note_count == 4,
            "the motive file reads wrongly");
     if (query.note_count == 4) {
         CHECKF(query.notes[0].pitch == 72 && query.notes[1].pitch == 76 && query.notes[2].pitch == 79 && query.notes[3].pitch == 71,
@@ -302,7 +303,7 @@ int main(int argc, char **argv) {
         free(bytes);
     }
 
-    CorpusRunOptions run = {corpus_dir, work_dir, false, NULL, NULL};
+    CorpusRunOptions run = {corpus_dir, work_dir, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
     if (corpus_run(&run, &summary) != CORPUS_RUN_OK || summary.analyzed != corpus_pieces) {
         fprintf(stderr, "cannot analyze the reference corpus\n");

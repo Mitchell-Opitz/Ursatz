@@ -201,8 +201,9 @@ static bool motive_soprano(const AnalysisNoteSet *notes, int first_measure, int 
 
 ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const ChainSegments *segments, int first_measure,
                                           int last_measure, int tonic_pitch_class, CommonPracticeKeyMode mode,
-                                          const HarmonyCadences *cadences, ChainFormInput *out) {
-    if (notes == NULL || segments == NULL || out == NULL) {
+                                          const CommonPracticeMaterials *materials, const HarmonyCadences *cadences,
+                                          ChainFormInput *out) {
+    if (notes == NULL || segments == NULL || materials == NULL || out == NULL) {
         return CHAIN_INPUT_ERR_NULL_ARGUMENT;
     }
     if (!analysis_note_set_valid(notes) || notes->count == 0) {
@@ -230,7 +231,7 @@ ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const Ch
         int pitch_class = pitch_class_of_midi((int)line[k].semitone);
         int degree = 0;
         int alteration = 0;
-        if (!chain_parse_degree(common_practice_scale_degree_label(pitch_class, tonic_pitch_class, mode), &degree, &alteration)) {
+        if (!chain_parse_degree(common_practice_scale_degree_label(pitch_class, tonic_pitch_class, mode, materials), &degree, &alteration)) {
             status = CHAIN_INPUT_ERR_BAD_NOTES;
             break;
         }

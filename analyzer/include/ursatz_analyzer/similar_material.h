@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "analysis/similarity/similarity_scoring.h"
+#include "theory/knowledge/knowledge_snapshot.h"
 
 /*
  * Similar material: passages of an analyzed corpus that look like a motive or a progression. A motive is a short
@@ -44,10 +45,11 @@ typedef struct {
 
 /*
  * A motive from the highest line of the MIDI or MusicXML file at path: the file is analyzed and its soprano notes
- * (a note held across several chord segments is one note) are the query. On any result other than SIMILAR_OK
+ * (a note held across several chord segments is one note) are the query. `knowledge` is the snapshot the analysis reads its pitch
+ * materials from (SIMILAR_ERR_ARGUMENT without it). On any result other than SIMILAR_OK
  * *query is untouched; SIMILAR_ERR_IO also writes a message to stderr.
  */
-SimilarResult similar_query_from_file(const char *path, SimilarQuery *query);
+SimilarResult similar_query_from_file(const char *path, const KnowledgeSnapshot *knowledge, SimilarQuery *query);
 
 /*
  * A progression from numerals separated by spaces or '-' ("I IV V7 I", "ii-V7-I"). Each token must be a Roman

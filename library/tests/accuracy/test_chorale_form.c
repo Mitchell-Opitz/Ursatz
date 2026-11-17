@@ -10,6 +10,7 @@
 #include "analysis/notes/analysis_key.h"
 #include "chain/analysis_chain.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Every corpus chorale runs the whole analysis chain to the form stage. P41 B6 found chorale 16 failing there (its last note,
@@ -43,6 +44,7 @@ static void check_piece(const char *name) {
 
     AnalysisNoteSet set = {notes, note_count, map};
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.first_measure = 0;
     AnalysisChain *chain = NULL;
     AnalysisChainStatus status = analysis_chain_run(&set, key_events, key_count, &config, &chain);

@@ -13,6 +13,7 @@
 #include "service/collection_service.h"
 #include "service/data_check.h"
 #include "service/job_queue.h"
+#include "service/knowledge_service.h"
 #include "service/link_service.h"
 #include "service/material_service.h"
 #include "service/subject_service.h"
@@ -33,17 +34,24 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
       NULL,
   };
 
+  /* The knowledge snapshot every analysis reads its pitch materials from (service/knowledge_service.h), built once here. */
+  if (!ursatz_gui_knowledge_init()) {
+    return NULL;
+  }
+
   /* A data folder the one-time migrations of the GUI before the overhaul never ran on is refused (service/data_check.h),
    * before any store is opened. */
   char data_message[2048];
   if (!ursatz_gui_data_check(kDataDir, data_message, sizeof(data_message))) {
     fprintf(stderr, "ursatz-gui-backend: %s\n", data_message);
+    ursatz_gui_knowledge_shutdown();
     return NULL;
   }
 
   /* Collections are files under collections/ (see
    * service/collection_service.h); the store is prepared once here. */
   if (!ursatz_gui_collection_service_init(kCollectionsDir)) {
+    ursatz_gui_knowledge_shutdown();
     return NULL;
   }
 
@@ -51,11 +59,13 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
    * service/subject_service.h), prepared beside collections. */
   if (!ursatz_gui_material_service_init(kMaterialsDir)) {
     ursatz_gui_collection_service_shutdown();
+    ursatz_gui_knowledge_shutdown();
     return NULL;
   }
   if (!ursatz_gui_subject_service_init(kSubjectsDir)) {
     ursatz_gui_material_service_shutdown();
     ursatz_gui_collection_service_shutdown();
+    ursatz_gui_knowledge_shutdown();
     return NULL;
   }
 
@@ -64,6 +74,7 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
     ursatz_gui_subject_service_shutdown();
     ursatz_gui_material_service_shutdown();
     ursatz_gui_collection_service_shutdown();
+    ursatz_gui_knowledge_shutdown();
     return NULL;
   }
 
@@ -73,6 +84,7 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
     ursatz_gui_subject_service_shutdown();
     ursatz_gui_material_service_shutdown();
     ursatz_gui_collection_service_shutdown();
+    ursatz_gui_knowledge_shutdown();
     return NULL;
   }
 
@@ -83,6 +95,7 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
     ursatz_gui_subject_service_shutdown();
     ursatz_gui_material_service_shutdown();
     ursatz_gui_collection_service_shutdown();
+    ursatz_gui_knowledge_shutdown();
     return NULL;
   }
 
@@ -108,4 +121,5 @@ void ursatz_gui_server_stop(struct mg_context *ctx) {
   ursatz_gui_subject_service_shutdown();
   ursatz_gui_material_service_shutdown();
   ursatz_gui_collection_service_shutdown();
+  ursatz_gui_knowledge_shutdown();
 }

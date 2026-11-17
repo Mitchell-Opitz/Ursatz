@@ -37,6 +37,7 @@
 #include "analysis/texture/texture_analysis_classify.h"
 #include "chain/chain_inputs.h"
 #include "analysis/harmony/weighted_chord_identification.h"
+#include "theory/knowledge/knowledge_snapshot.h"
 
 /*
  * The production analysis chain (R-217, R-241): one run from neutral notes to every analysis the libraries own, in the order of
@@ -150,6 +151,9 @@ typedef struct {
     int last_measure;                  /* test and harness hook */
     int home_key_index;                /* test and harness hook */
     bool harmonic_spans;
+    /* The knowledge snapshot the run reads its pitch materials from (borrowed; it outlives the run and every key made from it).
+       Required: the default config has none, so a run without it is ANALYSIS_CHAIN_ERR_KNOWLEDGE. */
+    const KnowledgeSnapshot *knowledge;
 } AnalysisChainConfig;
 
 AnalysisChainConfig analysis_chain_config_default(void);
@@ -159,6 +163,7 @@ typedef enum {
     ANALYSIS_CHAIN_ERR_NULL_ARGUMENT,
     ANALYSIS_CHAIN_ERR_BAD_CONFIG,
     ANALYSIS_CHAIN_ERR_NOTES,          /* an invalid note set, a note without its event or with an unknown pitch, or a scope with no segment */
+    ANALYSIS_CHAIN_ERR_KNOWLEDGE,      /* a config without a knowledge snapshot, or a snapshot without the four common-practice materials */
     ANALYSIS_CHAIN_ERR_SEGMENTS,
     ANALYSIS_CHAIN_ERR_KEYS,
     ANALYSIS_CHAIN_ERR_CHORDS,
@@ -178,7 +183,7 @@ typedef struct AnalysisChain AnalysisChain;
 
 /*
  * Runs the chain. `notes` is sorted (analysis_note_set_valid) and every note has its NoteEvent and a known pitch. key_events may be NULL
- * with key_event_count 0. config may be NULL for the defaults. On OK, *out is owned by the caller (analysis_chain_destroy); on an error
+ * with key_event_count 0. config may be NULL for the defaults, which carry no knowledge snapshot (ANALYSIS_CHAIN_ERR_KNOWLEDGE). On OK, *out is owned by the caller (analysis_chain_destroy); on an error
  * *out is untouched and the status names the failing stage.
  */
 AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const AnalysisKeyEvent *key_events, size_t key_event_count,

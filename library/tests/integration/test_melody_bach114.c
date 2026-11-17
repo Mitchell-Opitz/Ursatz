@@ -7,6 +7,7 @@
 #include "model/pitch/tuning_system.h"
 #include "model/time/meter_map.h"
 #include "reference_pieces.h"
+#include "test_knowledge.h"
 
 /*
  * Melody analysis of Bach 114 (Minuet in G, BWV Anh. 114), measures 1-8: the soprano the outer-voice extractor produces from
@@ -70,7 +71,7 @@ static void melody_build_from_chain(const WeightedPipeline *p, const OuterVoiceE
     }
     ChainMelodyLine line;
     assert(chain_build_melody_line(analysis_chain_segments(p->chain), count, entries, analysis_chain_segments(p->chain), count,
-                                   results->items, tonic_pitch_class, mode, &line) == CHAIN_INPUT_OK);
+                                   results->items, tonic_pitch_class, mode, test_materials(), &line) == CHAIN_INPUT_OK);
     memset(out, 0, sizeof(*out));
     out->line = line.line;
     out->segment = line.segment;
@@ -281,7 +282,7 @@ static void written_build(WrittenBuild *w) {
         note.note_id = w->ids[v];
         note.pitch = w->values[v];
         note.confidence = 1.0;
-        melody_parse_degree(common_practice_scale_degree_label((int)(notes[top].pitch % 12), 7, COMMON_PRACTICE_KEY_MAJOR),
+        melody_parse_degree(common_practice_scale_degree_label((int)(notes[top].pitch % 12), 7, COMMON_PRACTICE_KEY_MAJOR, test_materials()),
                             &note.degree, &note.alteration);
         assert(standard_counterpoint_melody_line_add_note(&w->build.line, &note) == STANDARD_COUNTERPOINT_MELODY_OK);
     }

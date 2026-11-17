@@ -201,12 +201,13 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
  * The form input for the motive analysis (analysis_motive.h): a NOTE-LEVEL soprano, which the outer-voice line (one note per segment)
  * cannot give. The soprano is the highest sounding note at each attack: at every onset, among the notes sounding then, the highest (the
  * later attack among equals); it is a soprano note when it is attacked then. Each note carries its scale degree in the key on
- * `tonic_pitch_class` (a chromatic note its altered degree). Only notes starting in the measures [first_measure, last_measure]. The
+ * `tonic_pitch_class` and `mode`, read in the scale of `materials` (a chromatic note its altered degree). Only notes starting in the measures [first_measure, last_measure]. The
  * cadences (NULL for none) are added over the windows of `segments`. Finished.
  */
 ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const ChainSegments *segments, int first_measure,
                                           int last_measure, int tonic_pitch_class, CommonPracticeKeyMode mode,
-                                          const HarmonyCadences *cadences, ChainFormInput *out);
+                                          const CommonPracticeMaterials *materials, const HarmonyCadences *cadences,
+                                          ChainFormInput *out);
 void chain_form_input_destroy(ChainFormInput *input);
 
 /*
@@ -297,7 +298,8 @@ typedef struct {
 
 ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, size_t line_count, const OuterVoiceEntry *entries,
                                          const ChainSegments *segments, size_t count, const CommonPracticeWeightedResult *results,
-                                         int tonic_pitch_class, CommonPracticeKeyMode mode, ChainMelodyLine *out);
+                                         int tonic_pitch_class, CommonPracticeKeyMode mode, const CommonPracticeMaterials *materials,
+                                         ChainMelodyLine *out);
 void chain_melody_line_destroy(ChainMelodyLine *melody);
 
 /*

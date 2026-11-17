@@ -21,7 +21,7 @@ static const struct {
     {7, STANDARD_TONALITY_NUMERAL_HALF_DIMINISHED_SEVENTH},
 };
 
-/* The material of a key mode: TRANSITIONAL until the snapshot's materials reach here (P58 B10). */
+/* The material of a key mode, from the built-in materials: a remaining site until P58 B13 (the Composer's labels have no config to carry the snapshot's). */
 static const PitchMaterial *tonality_material(HarmonyMode mode) {
     const CommonPracticeMaterials *materials = common_practice_materials_builtin();
     return mode == HARMONY_MODE_MAJOR ? materials->major : materials->natural_minor;

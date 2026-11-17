@@ -30,6 +30,7 @@
 #include "service/piece_metadata.h"
 #include "service/subject_service.h"
 #include "gui_check.h"
+#include "test_knowledge.h"
 #include "test_http.h"
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
@@ -447,6 +448,7 @@ static void test_interrupted(void) {
 }
 
 int main(void) {
+  test_knowledge();
     snprintf(g_materials, sizeof(g_materials), "materials_%d", (int)time(NULL));
     snprintf(g_subjects, sizeof(g_subjects), "subjects_%d", (int)time(NULL));
 

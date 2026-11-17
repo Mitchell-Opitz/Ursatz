@@ -12,6 +12,7 @@
 
 #include "analysis/voices/outer_voice.h"
 #include "pipeline/chain_input.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "pipeline/chord_pipeline.h"
 #include "pipeline/form_pipeline.h"
 #include "pipeline/harmony_pipeline.h"
@@ -33,6 +34,7 @@
 typedef struct AnalyzerPass {
     const ImportedNotes *notes;
     AnalyzerOptions options;         /* the stages of this run */
+    CommonPracticeMaterials materials; /* the four common-practice materials of options.knowledge, resolved once per pass */
     ChainInput input;                /* the library chain's neutral notes and key events */
     AnalysisChain *library;          /* owned; NULL for a piece with no notes */
     AnalysisReport report;           /* the pass's results: entries, non-chord tones, key regions and changes */

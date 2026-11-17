@@ -13,6 +13,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Style labels and profiles over the corpora CMake builds in the build tree: "reference" (the five framework-v1
@@ -117,7 +118,7 @@ static StyleProfile *profile_of(const char *name, size_t expected_pieces) {
     char input[1024], output[1024];
     snprintf(input, sizeof(input), "%s/%s", URSATZ_CORPORA_DIR, name);
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
-    CorpusRunOptions options = {input, output, false, NULL, NULL};
+    CorpusRunOptions options = {input, output, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
     CHECKF(corpus_run(&options, &summary) == CORPUS_RUN_OK, "%s run failed", name);
     CHECKF(summary.analyzed == expected_pieces && summary.failed == 0, "%s: %zu analyzed, %zu failed", name, summary.analyzed,

@@ -10,6 +10,7 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The schemas and sequences of the report, on the hand-written galant fixture of Ursatz's tests/integration/
@@ -235,7 +236,7 @@ typedef struct {
 static bool analyze(const char *path, Analysis *analysis) {
     memset(analysis, 0, sizeof(*analysis));
     if (midi_pipeline_import_file(path, &analysis->notes) != MIDI_PIPELINE_OK ||
-        !run_analysis_pipeline(&analysis->notes, &analysis->report)) {
+        !run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return false;

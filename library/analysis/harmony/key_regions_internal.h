@@ -79,14 +79,15 @@ CommonPracticeKeyRegionsStatus key_regions_plan_spans(const CommonPracticeKeySig
 
 /* key_regions_refine.c */
 void key_regions_hold_home_keys(const CommonPracticeKeySegment *segments, size_t segment_count,
-                           const MeasureWeights *measures, const bool *fixed, double tolerance, int *measure_key);
+                           const MeasureWeights *measures, const bool *fixed, double tolerance, int *measure_key,
+                           const CommonPracticeMaterials *materials);
 CommonPracticeKeyRegionsStatus key_regions_snap_edges(int *measure_key, const bool *fixed, size_t measure_count,
                                                   const size_t *boundaries, size_t boundary_count, size_t reach);
 CommonPracticeKeyRegionsStatus key_regions_find_pivot(const CommonPracticeKeySegment *segments, size_t segment_count,
                                                   const MeasureWeights *measures, int boundary_measure,
                                                   MusicalTime boundary_start, int old_key, int new_key,
                                                   size_t search_measures, bool strictly_before, bool *found,
-                                                  size_t *pivot);
+                                                  size_t *pivot, const CommonPracticeMaterials *materials);
 
 /* key_regions_phrases.c */
 CommonPracticeKeyRegionsStatus key_regions_place_keys_on_phrases(const CommonPracticeKeyRegionsConfig *config,

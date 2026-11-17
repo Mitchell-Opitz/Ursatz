@@ -12,6 +12,7 @@
 #include "links/links_internal.h"
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Motive links over the four pieces of tests/fixtures/links: a (C major) and b (G major, a's motive transposed and augmented 2:1)
@@ -34,7 +35,7 @@ static bool analyze_fixtures(void) {
             fprintf(stderr, "cannot import %s\n", path);
             return false;
         }
-        if (!run_analysis_pipeline(&notes, &report)) {
+        if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
             fprintf(stderr, "cannot analyze %s\n", path);
             imported_notes_destroy(&notes);
             return false;

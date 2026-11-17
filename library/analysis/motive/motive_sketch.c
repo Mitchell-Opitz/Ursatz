@@ -325,7 +325,7 @@ bool motive_sketch_contour_normalize(const MotiveSketch *in, MotiveSketch *out) 
     if (!scale.has_scale) {
         scale.has_scale = true;
         scale.tonic_pc = 0;
-        scale.material = common_practice_materials_builtin()->major; /* TRANSITIONAL until the snapshot reaches the stages (P58 B10) */
+        scale.material = common_practice_materials_builtin()->major; /* a remaining site until P58 B13: a sketch with no scale has no material to read */
     }
     for (size_t i = 0; i < in->note_count; i++) {
         if (ranks[i] >= 64) {

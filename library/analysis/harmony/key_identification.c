@@ -51,7 +51,7 @@ bool common_practice_identify_key_mode(const int *tonic_relative_pitch_classes, 
     int distinct[12];
     size_t distinct_count = count_distinct(tonic_relative_pitch_classes, pitch_class_count, distinct, 12);
 
-    /* TRANSITIONAL until the caller holds the snapshot's materials (P58 B10). */
+    /* The built-in materials: a remaining site until P58 B13 (the Composer's motive import is the one caller and holds no snapshot). */
     const CommonPracticeMaterials *materials = common_practice_materials_builtin();
     if (matches_collection(distinct, distinct_count, materials->major)) {
         *out = COMMON_PRACTICE_KEY_MAJOR;

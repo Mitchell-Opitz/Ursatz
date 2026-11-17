@@ -14,6 +14,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The analysis result API (analysis_result.h) on the five reference pieces (Ursatz framework-v1 corpus):
@@ -97,7 +98,8 @@ static void check_piece(const char *fixture, const char *slug) {
     }
 
     AnalyzerResult *result = NULL;
-    AnalyzerStatus status = analyzer_analyze(&notes, NULL, &result);
+    AnalyzerOptions options = test_analyzer_options();
+    AnalyzerStatus status = analyzer_analyze(&notes, &options, &result);
     CHECKF(status == ANALYZER_OK && result != NULL, "%s: analyze returned %d", slug, (int)status);
     if (result) {
         const AnalysisReport *report = analyzer_result_report(result);
@@ -128,20 +130,25 @@ static void check_options(const char *fixture) {
 
     /* The defaults: all stages, chords on harmonic spans. */
     AnalyzerOptions defaults = analyzer_options_default();
-    CHECKF(defaults.stages == ANALYZER_STAGE_ALL && defaults.harmonic_spans, "the default options are not all stages on spans");
+    CHECKF(defaults.stages == ANALYZER_STAGE_ALL && defaults.harmonic_spans && defaults.knowledge == NULL,
+           "the default options are not all stages on spans with no knowledge");
 
     /* Arguments. */
     AnalyzerResult *result = (AnalyzerResult *)0x1;
     CHECKF(analyzer_analyze(NULL, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "NULL notes");
-    CHECKF(analyzer_analyze(&notes, NULL, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out");
-    AnalyzerOptions none = analyzer_options_default();
+    AnalyzerOptions with_knowledge = test_analyzer_options();
+    CHECKF(analyzer_analyze(&notes, &with_knowledge, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out");
+    CHECKF(analyzer_analyze(&notes, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no options, no knowledge");
+    AnalyzerOptions no_knowledge = analyzer_options_default();
+    CHECKF(analyzer_analyze(&notes, &no_knowledge, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no knowledge");
+    AnalyzerOptions none = test_analyzer_options();
     none.stages = 0;
     CHECKF(analyzer_analyze(&notes, &none, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no stages");
     analyzer_result_destroy(NULL);
     CHECKF(analyzer_result_chain(NULL) == NULL && analyzer_result_report(NULL) == NULL, "chain or report of NULL");
 
     /* A partial stage set: the chain's results, an empty report view, no export. */
-    AnalyzerOptions texture = analyzer_options_default();
+    AnalyzerOptions texture = test_analyzer_options();
     texture.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
     result = NULL;
     CHECKF(analyzer_analyze(&notes, &texture, &result) == ANALYZER_OK && result, "texture stage only");

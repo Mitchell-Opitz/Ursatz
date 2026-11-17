@@ -14,12 +14,13 @@ typedef enum {
     RUN_FILE_ERR_ALLOC
 } RunFileResult;
 
-/* Imports path, applies reading when it is not NULL, and analyzes the notes (analyzer_analyze, all stages). On
+/* Imports path, applies reading when it is not NULL, and analyzes the notes (analyzer_analyze, all stages) with the pitch materials of
+   `knowledge`, which must outlive the result. On
    RUN_FILE_OK the caller owns *notes and *result (the result borrows the notes); on any other result both are already
    released. import_status and reading_status may be NULL; they receive the importer's and the reading's own result when
    that step fails. */
 RunFileResult analyzer_run_file(const char *path, InputFormat format, const NotationReading *reading,
-                                ImportedNotes *notes, AnalyzerResult **result, InputPipelineResult *import_status,
+                                const KnowledgeSnapshot *knowledge, ImportedNotes *notes, AnalyzerResult **result, InputPipelineResult *import_status,
                                 NotationReadingResult *reading_status);
 
 /* Builds the analysis document of a run and releases *result and *notes. NULL on allocation failure. */

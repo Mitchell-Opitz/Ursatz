@@ -7,6 +7,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/input_pipeline.h>
+#include "test_knowledge.h"
 
 static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
     memcpy(buf + *pos, bytes, len);
@@ -69,7 +70,7 @@ cJSON *test_analyze_midi(const char *path) {
     ImportedNotes notes;
     assert(input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK);
     AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, &report));
+    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
     analysis_report_destroy(&report);
