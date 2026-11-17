@@ -1,7 +1,5 @@
 #include "model/time/meter_arithmetic.h"
 
-#include <limits.h>
-
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/time_signature.h"
@@ -88,38 +86,89 @@ MeterMapResult meter_map_beat_length(const MeterMap *map, int measure, Rational 
     return METER_MAP_OK;
 }
 
-MeterMapResult meter_map_beat_of(const MeterMap *map, Rational time, int *measure, int *beat, Rational *offset) {
-    if (map == NULL) {
+/* The measure that holds `time`, its start, and the signature that lays it. */
+static MeterMapResult locate_measure(const MeterMap *map, Rational time, int *index, Rational *start,
+                                     const TimeSignature **signature) {
+    const MeterMapRegion *region = NULL;
+    TRY(measure_index_at(map, time, index));
+    TRY(meter_map_measure_bounds(map, *index, start, NULL));
+    TRY(meter_map_region_of_measure(map, *index, &region));
+    *signature = meter_map_region_time_signature(region);
+    return *signature == NULL ? METER_MAP_ERR_NOT_FOUND : METER_MAP_OK;
+}
+
+/* The distance from the start of a measure of `signature` to the start of its beat group `index` (0 based). */
+static MeterMapResult group_start(const TimeSignature *signature, size_t index, Rational *start) {
+    Duration unit;
+    if (time_signature_unit_duration(signature, &unit) != DURATION_OK) {
+        return METER_MAP_ERR_NOT_FOUND;
+    }
+    unsigned units = 0;
+    for (size_t i = 0; i < index; i++) {
+        units += time_signature_group_at(signature, i);
+    }
+    return from_rational(rational_mul_int(unit.value, (long long)units, start));
+}
+
+MeterMapResult meter_map_position_of(const MeterMap *map, MusicalTime t, NotatedPosition *out) {
+    if (map == NULL || out == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;
     }
     int index = 0;
     Rational start;
-    Rational length;
+    const TimeSignature *signature = NULL;
+    TRY(locate_measure(map, t.value, &index, &start, &signature));
     Rational delta;
-    Rational steps;
-    Rational whole_beats;
-    Rational rest;
-    long long number = 0;
-    TRY(measure_index_at(map, time, &index));
-    TRY(meter_map_measure_bounds(map, index, &start, NULL));
-    TRY(meter_map_beat_length(map, index, &length));
-    TRY(from_rational(rational_sub(time, start, &delta)));
-    TRY(from_rational(rational_div(delta, length, &steps)));
-    TRY(from_rational(rational_floor(steps, &number)));
-    if (number >= INT_MAX) {
-        return METER_MAP_ERR_OVERFLOW;
+    TRY(from_rational(rational_sub(t.value, start, &delta)));
+    size_t count = time_signature_group_count(signature);
+    size_t group = 0;
+    Rational begin = {0, 1};
+    for (;;) {
+        Rational next;
+        if (group + 1 >= count) {
+            break;
+        }
+        TRY(group_start(signature, group + 1, &next));
+        if (rational_cmp(delta, next) < 0) {
+            break;
+        }
+        begin = next;
+        group++;
     }
-    TRY(from_rational(rational_mul_int(length, number, &whole_beats)));
-    TRY(from_rational(rational_sub(delta, whole_beats, &rest)));
-    if (measure != NULL) {
-        *measure = index;
+    Rational offset;
+    TRY(from_rational(rational_sub(delta, begin, &offset)));
+    out->measure = index;
+    out->beat = (int)group + 1;
+    out->offset = offset;
+    return METER_MAP_OK;
+}
+
+MeterMapResult meter_map_time_of(const MeterMap *map, NotatedPosition p, MusicalTime *out) {
+    if (map == NULL || out == NULL) {
+        return METER_MAP_ERR_NULL_ARGUMENT;
     }
-    if (beat != NULL) {
-        *beat = (int)number + 1;
+    Rational start;
+    Rational end;
+    const MeterMapRegion *region = NULL;
+    TRY(meter_map_measure_bounds(map, p.measure, &start, &end));
+    TRY(meter_map_region_of_measure(map, p.measure, &region));
+    const TimeSignature *signature = meter_map_region_time_signature(region);
+    if (signature == NULL) {
+        return METER_MAP_ERR_NOT_FOUND;
     }
-    if (offset != NULL) {
-        *offset = rest;
+    if (p.beat < 1 || (size_t)p.beat > time_signature_group_count(signature) || rational_is_negative(p.offset)) {
+        return METER_MAP_ERR_INDEX_OUT_OF_RANGE;
     }
+    Rational begin;
+    Rational in_measure;
+    Rational time;
+    TRY(group_start(signature, (size_t)p.beat - 1, &begin));
+    TRY(from_rational(rational_add(begin, p.offset, &in_measure)));
+    TRY(from_rational(rational_add(start, in_measure, &time)));
+    if (rational_cmp(time, end) >= 0) {
+        return METER_MAP_ERR_INDEX_OUT_OF_RANGE;
+    }
+    *out = musical_time_of(time);
     return METER_MAP_OK;
 }
 
@@ -152,12 +201,14 @@ MeterMapResult meter_map_snap_to_beat(const MeterMap *map, int measure, Rational
 
 bool meter_map_on_beat(const MeterMap *map, Rational time) {
     int measure = 0;
+    Rational start;
     Rational offset;
     Rational length;
     Rational steps;
-    if (meter_map_beat_of(map, time, &measure, NULL, &offset) != METER_MAP_OK ||
+    if (map == NULL || measure_index_at(map, time, &measure) != METER_MAP_OK ||
+        meter_map_measure_bounds(map, measure, &start, NULL) != METER_MAP_OK ||
         meter_map_beat_length(map, measure, &length) != METER_MAP_OK ||
-        rational_div(offset, length, &steps) != RATIONAL_OK) {
+        rational_sub(time, start, &offset) != RATIONAL_OK || rational_div(offset, length, &steps) != RATIONAL_OK) {
         return false;
     }
     return steps.den == 1;

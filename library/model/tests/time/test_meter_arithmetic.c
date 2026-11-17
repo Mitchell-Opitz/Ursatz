@@ -79,11 +79,9 @@ static void expect_bounds(const MeterMap *map, int measure, Rational start, Rati
 }
 
 static void expect_beat(const MeterMap *map, Rational time, int measure, int beat, Rational offset) {
-    int m = -99;
-    int b = -99;
-    Rational o;
-    assert(meter_map_beat_of(map, time, &m, &b, &o) == METER_MAP_OK);
-    assert(m == measure && b == beat && rational_equals(o, offset));
+    NotatedPosition p;
+    assert(meter_map_position_of(map, musical_time_of(time), &p) == METER_MAP_OK);
+    assert(p.measure == measure && p.beat == beat && rational_equals(p.offset, offset));
 }
 
 static void expect_snap(const MeterMap *map, int measure, Rational time, Rational expected) {
@@ -242,12 +240,11 @@ static void test_errors_and_overflow(void) {
     assert(meter_map_first_counted_measure(NULL) == 1);
 
     /* A time whose measure number does not fit an int or whose beat count overflows is an error, not a wrap. */
-    int beat = 7;
-    Rational offset = q(5, 7);
-    MeterMapResult result = meter_map_beat_of(map, huge, &measure, &beat, &offset);
+    NotatedPosition position = {7, 7, q(5, 7)};
+    MeterMapResult result = meter_map_position_of(map, musical_time_of(huge), &position);
     assert(result == METER_MAP_OK || result == METER_MAP_ERR_OVERFLOW || result == METER_MAP_ERR_INDEX_OUT_OF_RANGE);
     if (result != METER_MAP_OK) {
-        assert(beat == 7 && rational_equals(offset, q(5, 7)));
+        assert(position.measure == 7 && position.beat == 7 && rational_equals(position.offset, q(5, 7)));
     }
     meter_map_destroy(map);
 }

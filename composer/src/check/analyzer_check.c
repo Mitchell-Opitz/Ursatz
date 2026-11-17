@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <model/identity/entity_id.h>
+#include <model/time/meter_arithmetic.h>
+#include <model/time/meter_map.h>
 #include <theory/harmony/harmony_cadence_rules.h>
 
 #include <ursatz_analyzer/analysis_result.h>
@@ -14,6 +17,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "check/hearing_result.h"
+#include "util/plan_util.h"
 #include "util/util.h"
 
 #define MAX_CADENCES 2
@@ -108,13 +112,39 @@ static bool cadence_agrees(CadenceType planned, const char *heard) {
     return strcmp(name, heard) == 0;
 }
 
-/* The bar (0-based from the fragment's start) a time in whole notes falls in. */
-static size_t bar_of(long numerator, unsigned long denominator, const PlanMeter *meter) {
+/* The number of bars a length in whole notes holds. */
+static size_t bars_in(long numerator, unsigned long denominator, const PlanMeter *meter) {
     if (numerator < 0) {
         return 0;
     }
     return (size_t)(((unsigned long)numerator * (unsigned long)meter->beat_unit) /
                     (denominator * (unsigned long)meter->beats_per_bar));
+}
+
+/* The bar (0-based from the fragment's start) a time in whole notes falls in, read through a meter map of the plan's
+   meter (0 before the start). SIZE_MAX when the meter or the time is not one a map holds. */
+static size_t bar_of(Rational at, const PlanMeter *meter) {
+    if (rational_is_negative(at)) {
+        return 0;
+    }
+    size_t bar = (size_t)-1;
+    TimeSignature *signature = NULL;
+    EntityID *id = NULL;
+    MeterMap *map = NULL;
+    if (plan_meter_signature(*meter, &signature) && entity_id_create("analyzer-check-meter", &id) == ENTITY_ID_OK) {
+        MeterMapChangePoint start = {signature, musical_time_of(rational_ratio(0, 1))};
+        NotatedPosition position;
+        if (meter_map_create(id, &start, 1, &map) != METER_MAP_OK) {
+            entity_id_destroy(id);
+        } else {
+            if (meter_map_position_of(map, musical_time_of(at), &position) == METER_MAP_OK) {
+                bar = (size_t)(position.measure - meter_map_first_measure_number(map));
+            }
+            meter_map_destroy(map);
+        }
+    }
+    time_signature_destroy(signature);
+    return bar;
 }
 
 /* The bar (0-based from the section's start) the chord of a report entry starts in; SIZE_MAX before the section. */
@@ -125,7 +155,7 @@ static size_t entry_bar(const AnalysisReportEntry *entry, Rational origin, const
         rational_sub(at, origin, &from_origin) != RATIONAL_OK || rational_is_negative(from_origin)) {
         return (size_t)-1;
     }
-    return bar_of(from_origin.num, from_origin.den, meter);
+    return bar_of(from_origin, meter);
 }
 
 static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars, Rational origin, const PlanMeter *meter,
@@ -264,7 +294,7 @@ AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId s
         ((unsigned long)span.length.num * (unsigned long)meter.beat_unit) % (span.length.den * bar_units) != 0) {
         return ANALYZER_CHECK_ERR_PLAN;
     }
-    size_t bars = bar_of(span.length.num, span.length.den, &meter);
+    size_t bars = bars_in(span.length.num, span.length.den, &meter);
 
     const AnalyzerResult *heard = NULL;
     AnalyzerCheckResult hear_status = result_of(hearing_section(hearing, span, &heard));
@@ -282,7 +312,7 @@ AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId s
     }
     out->contradicts = out->agreed != out->planned;
     bool contradicts = false;
-    if (!add_violations(hearing, heard, bar_of(span.start.num, span.start.den, &meter), &items, &contradicts)) {
+    if (!add_violations(hearing, heard, bar_of(span.start, &meter), &items, &contradicts)) {
         items.failed = true;
     }
     out->contradicts = out->contradicts || contradicts;
@@ -372,7 +402,7 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
         Rational last_beat;
         Rational one_beat = {1, (unsigned long)meter->beat_unit};
         size_t bar = rational_sub(end, one_beat, &last_beat) == RATIONAL_OK && last_beat.num > 0
-                         ? bar_of(last_beat.num, last_beat.den, meter)
+                         ? bar_of(last_beat, meter)
                          : 0;
         const char *heard = "none";
         bool agreed = false;

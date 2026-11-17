@@ -16,10 +16,10 @@
  * Barlines. A barline time belongs to the measure that starts there ([start, end) measures), as in
  * meter_map_measure_index_at.
  *
- * Beats. A beat is the unit of the measure's time signature, or three units in a compound meter: a
- * top number of 6, 9 or 12 over an eighth or smaller unit. Beats are counted from 1 at the start of
- * the measure, so a short measure holds the beats that start inside it and a pickup counts its own
- * beats from the pickup's start.
+ * Beats. The beat length is the time signature's (time_signature_beat_length): its group when every
+ * group has the same size, else its bottom unit. Beats are counted from 1 at the start of the measure,
+ * so a short measure holds the beats that start inside it and a pickup counts its own beats from the
+ * pickup's start. A notated position counts the signature's groups (3+2 over 8 has two beats).
  */
 
 /* The measure that contains `time`. */
@@ -35,9 +35,22 @@ MeterMapResult meter_map_measure_bounds(const MeterMap *map, int measure, Ration
 /* The length of one beat in measure `measure`. */
 MeterMapResult meter_map_beat_length(const MeterMap *map, int measure, Rational *beat);
 
-/* The measure of `time`, its beat (1-based) and the offset from the start of that beat, in whole notes.
-   Any output may be NULL. */
-MeterMapResult meter_map_beat_of(const MeterMap *map, Rational time, int *measure, int *beat, Rational *offset);
+/* A notated position (R-588): the measure, the beat group (counted from 1 within the measure) and the offset from
+   that beat's start, in whole notes. The beat is the signature's group, so 3+2 over 8 has beat 2 at three eighths. */
+typedef struct {
+    int measure;
+    int beat;
+    Rational offset;
+} NotatedPosition;
+
+/* The notated position of `t`: the one conversion from absolute time to a score position. A pickup counts its own beats
+   from its start, as meter_map_measure_of finds its measure. METER_MAP_ERR_TIME_BEFORE_START before 0. */
+MeterMapResult meter_map_position_of(const MeterMap *map, MusicalTime t, NotatedPosition *out);
+
+/* The time of a notated position, the inverse of meter_map_position_of: METER_MAP_ERR_INDEX_OUT_OF_RANGE for a
+   measure below the first, a beat outside the measure's groups, a negative offset, or a position that falls at or past
+   the measure's end. */
+MeterMapResult meter_map_time_of(const MeterMap *map, NotatedPosition p, MusicalTime *out);
 
 /* The first beat of measure `measure` at or after `time`, never later than the measure's end. A time
    at or before the start of the measure snaps to the start. */
