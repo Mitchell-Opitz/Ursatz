@@ -13,6 +13,7 @@ documents). Code that needs the whole stack lives in the analysis chain (`chain/
 | `framework/` | The `Framework` type and `framework_singleton_get` | kernel `theory` |
 | `style/` | Style models from corpus statistics | kernel `theory` |
 | `rules/` | `Rule`, `Constraint`, `Preference`, `Context` | kernel `rules`, `context` |
+| `knowledge/` | The knowledge snapshot: the entries of `knowledge/` embedded in the build, and the pitch material read from them | none (new, R-536) |
 | `vocabulary/` | Shared theory enums (`CadenceType`, `VoicePart`, ...) | kernel `semantics` |
 | `tonality/` | Roman numeral grammar, keys, triad and seventh rules, chord and key vocabulary | standard-tonality, common-practice-minimal (vocabulary) |
 | `harmony/` | Function, cadence, six-four and prolongation rules | standard-harmony |
@@ -85,6 +86,10 @@ A framework builds its durable claims through the kernel helpers in `interpretat
 ## Singleton and rule table
 
 A framework declares its `Framework` with `static FrameworkSingleton g_singleton = FRAMEWORK_SINGLETON_INIT("<framework>-v1");` and an accessor that returns `framework_singleton_get(&g_singleton)` (`theory/framework_singleton.h`). A rule table with scoring callbacks (standard-harmony and standard-counterpoint) is declared with `static UrsatzOnce g_built[N];` and its pairs are built once under `ursatz_once` (`core/once.h`), so the first call may come from any thread. Any other lazily built static in a framework uses `ursatz_once` the same way; never a bare `static bool` check-then-set.
+
+## Knowledge
+
+`knowledge/` at the repository root holds music-theory knowledge as JSON entries. The build embeds every file in `ursatz_theory` (`cmake/embed_knowledge.py` writes `knowledge_embedded.c` into the build folder; no binary reads `knowledge/` at run time). `knowledge_snapshot_build` parses the embedded files and any user files the caller gives it into an immutable `KnowledgeSnapshot` (entries in id order, each with a content hash, and a hash of the whole). Whoever calls the library builds the snapshot and passes it on; the library keeps no global copy. `pitch_material.h` is the K1 entry read as steps above a center. Until P58 passes the snapshot to where a key is made, the four tonality modes reach `tonal_key.c` through the generated `knowledge_tonality_mode_steps` rows (`knowledge_modes.h`, R-579), which come from the `omt.material.*` entries. No header of this area is staged: no application includes it yet.
 
 ## Building and testing
 

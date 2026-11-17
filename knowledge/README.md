@@ -55,3 +55,12 @@ python3 tools/ci/check-knowledge.py knowledge
 ```
 
 It prints one line per problem, `knowledge: <file>: <id>: <what>`, and exits 0 when clean. It needs python3 with `jsonschema`. The tests `knowledge_validate` and `knowledge_validate_fixtures` run it in CI.
+
+## In code
+
+The build embeds every `*.json` of this folder except `schema/` in `ursatz_theory` (`cmake/embed_knowledge.py`; the file is regenerated when an entry changes). Nothing reads this folder at run time.
+
+- `theory/knowledge/knowledge_snapshot.h`: `knowledge_snapshot_build` parses the embedded files, then each user file the caller passes, into an immutable `KnowledgeSnapshot`: every entry by its common fields (unknown kinds kept), the pitch materials with their steps, a hash per entry and one for the whole snapshot. A broken entry, a repeated id or an id in the wrong namespace (`user.` is for a user's own files only) is refused with `<file>: <id>: <field>: <problem>`.
+- Whoever calls the library builds the snapshot and hands it on. The library holds no global copy, so two snapshots in one process are independent. No application builds one yet (P58).
+- Until then the four tonality modes (major, natural minor, harmonic minor, melodic minor) reach `theory/tonality/tonal_key.c` as generated rows, `knowledge_tonality_mode_steps` in `theory/knowledge/knowledge_modes.h`, taken from the `omt.material.*` entries by the same build step. They are `active` because that code uses them; there is no other table of their steps in the repository.
+
