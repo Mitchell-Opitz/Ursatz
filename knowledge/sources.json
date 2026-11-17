@@ -1,0 +1,34 @@
+{
+  "schema": "ursatz-knowledge-sources",
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "fux",
+      "title": "Fux, The Study of Counterpoint (Gradus ad Parnassum)"
+    },
+    {
+      "id": "hindemith",
+      "title": "Hindemith, The Craft of Musical Composition"
+    },
+    {
+      "id": "omt",
+      "title": "Open Music Theory, version 2"
+    },
+    {
+      "id": "persichetti",
+      "title": "Persichetti, Twentieth-Century Harmony: Creative Aspects and Practice"
+    },
+    {
+      "id": "rimsky-korsakov",
+      "title": "Rimsky-Korsakov, Principles of Orchestration"
+    },
+    {
+      "id": "schoenberg",
+      "title": "Schoenberg, Fundamentals of Musical Composition"
+    },
+    {
+      "id": "tchaikovsky",
+      "title": "Tchaikovsky, Guide to the Practical Study of Harmony"
+    }
+  ]
+}

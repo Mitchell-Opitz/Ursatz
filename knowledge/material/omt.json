@@ -1,0 +1,52 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.material.major", "kind": "material", "subtype": "unordered", "name": "major",
+      "aliases": ["major scale", "ionian"],
+      "content": { "steps": [0, 2, 4, 5, 7, 9, 11], "family": "diatonic" },
+      "citations": [{ "source": "omt", "part": "I", "chapter": 12, "example": 1,
+                      "note": "the major scale as the ascending succession whole, whole, half, whole, whole, whole, half" }],
+      "status": "active",
+      "examples": [{ "center": "C", "pitches": ["C", "D", "E", "F", "G", "A", "B"] },
+                   { "center": "Bb", "pitches": ["Bb", "C", "D", "Eb", "F", "G", "A"] }],
+      "version": 1
+    },
+    {
+      "id": "omt.material.natural-minor", "kind": "material", "subtype": "unordered", "name": "natural minor",
+      "aliases": ["natural minor scale", "aeolian", "minor"],
+      "content": { "steps": [0, 2, 3, 5, 7, 8, 10], "family": "diatonic" },
+      "relations": [{ "type": "variant-of", "target": "omt.material.major" }],
+      "citations": [{ "source": "omt", "part": "I", "chapter": 13, "example": 1,
+                      "note": "the natural minor form: whole, half, whole, whole, half, whole, whole, the same both ways; minor keys and signatures are named from it" }],
+      "status": "active",
+      "examples": [{ "center": "G", "pitches": ["G", "A", "Bb", "C", "D", "Eb", "F"] }],
+      "version": 1
+    },
+    {
+      "id": "omt.material.harmonic-minor", "kind": "material", "subtype": "unordered", "name": "harmonic minor",
+      "aliases": ["harmonic minor scale"],
+      "content": { "steps": [0, 2, 3, 5, 7, 8, 11], "family": "minor" },
+      "relations": [{ "type": "variant-of", "target": "omt.material.natural-minor" }],
+      "citations": [{ "source": "omt", "part": "I", "chapter": 13, "example": 2,
+                      "note": "the harmonic minor form: the natural form with a raised seventh, a step of three half steps between sixth and seventh, the same both ways" }],
+      "status": "active",
+      "examples": [{ "center": "G", "pitches": ["G", "A", "Bb", "C", "D", "Eb", "F#"] }],
+      "version": 1
+    },
+    {
+      "id": "omt.material.melodic-minor", "kind": "material", "subtype": "unordered", "name": "melodic minor",
+      "aliases": ["melodic minor scale"],
+      "content": { "steps": [0, 2, 3, 5, 7, 9, 11], "descending_steps": [0, 2, 3, 5, 7, 8, 10], "family": "minor" },
+      "relations": [{ "type": "variant-of", "target": "omt.material.natural-minor" }],
+      "citations": [{ "source": "omt", "part": "I", "chapter": 13, "example": 3,
+                      "note": "the melodic minor form: raised sixth and seventh ascending, the natural form descending" }],
+      "status": "active",
+      "examples": [{ "center": "G", "pitches": ["G", "A", "Bb", "C", "D", "E", "F#"],
+                     "descending": ["G", "F", "Eb", "D", "C", "Bb", "A"] }],
+      "version": 1
+    }
+  ]
+}
