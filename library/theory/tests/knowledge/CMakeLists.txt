@@ -1,0 +1,3 @@
+ursatz_test(knowledge_snapshot SOURCES test_knowledge_snapshot.c LIBS ursatz_theory VALGRIND)
+
+ursatz_test(knowledge_tonality_modes SOURCES test_knowledge_tonality_modes.c LIBS ursatz_theory)
