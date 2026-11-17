@@ -24,6 +24,7 @@ module theory-style        library/theory/style        prefix theory/style/
 module theory-rules        library/theory/rules        prefix theory/rules/
 module theory-vocabulary   library/theory/vocabulary   prefix theory/vocabulary/
 module theory-tonality     library/theory/tonality     prefix theory/tonality/
+module theory-knowledge    library/theory/knowledge    prefix theory/knowledge/
 module theory-harmony      library/theory/harmony      prefix theory/harmony/
 module theory-voicing      library/theory/voicing      prefix theory/voicing/
 module theory-counterpoint library/theory/counterpoint prefix theory/counterpoint/
@@ -38,7 +39,7 @@ group L0-L1 identity core
 group L0-L2 L0-L1 time pitch
 group L0-L5 L0-L2 events containers structure
 group model identity core time pitch events containers structure relationship interpretation
-group theory theory-framework theory-style theory-rules theory-vocabulary theory-tonality theory-harmony theory-voicing theory-counterpoint theory-form theory-meter theory-galant theory-markings
+group theory theory-framework theory-style theory-rules theory-vocabulary theory-knowledge theory-tonality theory-harmony theory-voicing theory-counterpoint theory-form theory-meter theory-galant theory-markings
 
 uses core            identity
 uses time            L0-L1
@@ -53,6 +54,7 @@ uses theory-framework    model
 uses theory-style        model
 uses theory-rules        model theory-framework
 uses theory-vocabulary   model
+uses theory-knowledge    model cjson
 uses theory-tonality     model theory-framework
 uses theory-harmony      model theory-framework theory-rules theory-tonality theory-vocabulary
 uses theory-voicing      model theory-framework theory-vocabulary
