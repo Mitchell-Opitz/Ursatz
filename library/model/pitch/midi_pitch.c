@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+#include "model/pitch/pitch_arithmetic.h"
+
 #define KEY_SIGNATURE_MAX_ACCIDENTALS 7
 
 static const PitchLetter SHARP_LETTER[12] = {PITCH_LETTER_C, PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_D,
@@ -14,6 +16,7 @@ static const PitchLetter FLAT_LETTER[12] = {PITCH_LETTER_C, PITCH_LETTER_D, PITC
 static const int FLAT_ACCIDENTAL[12] = {0, -1, 0, -1, 0, 0, -1, 0, -1, 0, -1, 0};
 
 static const char *const TONIC_NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
+static const char *const MINOR_TONIC_NAMES[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"};
 
 int pitch_class_of_midi(int midi) {
     return ((midi % 12) + 12) % 12;
@@ -29,6 +32,14 @@ bool pitch_spelling_of_midi(int midi, int key_fifths, PitchSpelling **out) {
     PitchLetter letter = flats ? FLAT_LETTER[pitch_class] : SHARP_LETTER[pitch_class];
     int accidental = flats ? FLAT_ACCIDENTAL[pitch_class] : SHARP_ACCIDENTAL[pitch_class];
     return pitch_spelling_create(letter, accidental, octave, out) == PITCH_SPELLING_OK;
+}
+
+int pitch_spelling_midi(const PitchSpelling *spelling) {
+    if (spelling == NULL) {
+        return 0;
+    }
+    return 12 * (pitch_spelling_octave(spelling) + 1) + pitch_letter_semitone(pitch_spelling_letter(spelling)) +
+           pitch_spelling_accidental(spelling);
 }
 
 bool key_signature_from_fifths(int fifths, KeySignature **out) {
@@ -49,4 +60,8 @@ bool key_signature_from_fifths(int fifths, KeySignature **out) {
 
 const char *key_tonic_name(int tonic_pitch_class) {
     return TONIC_NAMES[pitch_class_of_midi(tonic_pitch_class)];
+}
+
+const char *key_tonic_name_minor(int tonic_pitch_class) {
+    return MINOR_TONIC_NAMES[pitch_class_of_midi(tonic_pitch_class)];
 }

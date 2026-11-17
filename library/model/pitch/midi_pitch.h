@@ -24,6 +24,12 @@ int pitch_class_of_midi(int midi);
 bool pitch_spelling_of_midi(int midi, int key_fifths, PitchSpelling **out);
 
 /*
+ * The MIDI number of a written pitch: 12 * (octave + 1) + the letter's semitone + the accidental, so octave 4
+ * C is 60. The inverse of pitch_spelling_of_midi for the spellings it writes. 0 for a NULL spelling.
+ */
+int pitch_spelling_midi(const PitchSpelling *spelling);
+
+/*
  * The conventional key signature with the given number of sharps (positive) or flats (negative):
  * sharps in the order F C G D A E B, flats in the reverse. fifths 0 is the empty signature.
  * Returns false (*out untouched) for fifths outside -7 to 7, a NULL out, or an allocation failure.
@@ -36,5 +42,12 @@ bool key_signature_from_fifths(int fifths, KeySignature **out);
  * F#, G, Ab, A, Bb, B. A static string; never NULL.
  */
 const char *key_tonic_name(int tonic_pitch_class);
+
+/*
+ * The name of a minor key's tonic with that pitch class (0 to 11, any int is reduced): C, C#, D, Eb, E, F,
+ * F#, G, G#, A, Bb, B. A static string; never NULL. Where the major name and this one differ, the tonic is
+ * the one a minor key is written with (C# minor, not Db minor).
+ */
+const char *key_tonic_name_minor(int tonic_pitch_class);
 
 #endif

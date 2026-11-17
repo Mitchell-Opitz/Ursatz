@@ -109,6 +109,31 @@ static void test_tonic_names(void) {
     }
 }
 
+static void test_pitch_spelling_midi(void) {
+    assert(pitch_spelling_midi(NULL) == 0);
+    for (int key_fifths = -1; key_fifths <= 1; key_fifths += 2) {
+        for (int midi = -12; midi < 140; midi++) {
+            PitchSpelling *spelling = NULL;
+            assert(pitch_spelling_of_midi(midi, key_fifths, &spelling));
+            assert(pitch_spelling_midi(spelling) == midi);
+            pitch_spelling_destroy(spelling);
+        }
+    }
+    PitchSpelling *double_flat = NULL;
+    assert(pitch_spelling_create(PITCH_LETTER_B, -2, 3, &double_flat) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_midi(double_flat) == 57);
+    pitch_spelling_destroy(double_flat);
+}
+
+static void test_minor_tonic_names(void) {
+    static const char *const NAMES[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"};
+    for (int pc = 0; pc < 12; pc++) {
+        assert(strcmp(key_tonic_name_minor(pc), NAMES[pc]) == 0);
+        assert(strcmp(key_tonic_name_minor(pc + 12), NAMES[pc]) == 0);
+        assert(strcmp(key_tonic_name_minor(pc - 12), NAMES[pc]) == 0);
+    }
+}
+
 int main(void) {
     test_pitch_class();
     test_spelling_sharps_and_flats();
@@ -118,5 +143,7 @@ int main(void) {
     test_key_signature_from_fifths();
     test_key_signature_rejects();
     test_tonic_names();
+    test_pitch_spelling_midi();
+    test_minor_tonic_names();
     return 0;
 }

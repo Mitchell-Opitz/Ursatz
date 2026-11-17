@@ -159,6 +159,47 @@ static void test_pitch_class_names(void) {
     assert(pitch_class_name(12, true) == NULL);
 }
 
+static void test_letter_from_char(void) {
+    static const char CHARS[7] = {'C', 'D', 'E', 'F', 'G', 'A', 'B'};
+    for (int i = 0; i < 7; i++) {
+        PitchLetter letter = PITCH_LETTER_A;
+        assert(pitch_letter_from_char(CHARS[i], &letter));
+        assert(pitch_letter_index(letter) == i);
+    }
+    PitchLetter untouched = PITCH_LETTER_D;
+    assert(!pitch_letter_from_char('H', &untouched));
+    assert(!pitch_letter_from_char('c', &untouched));
+    assert(!pitch_letter_from_char('@', &untouched));
+    assert(untouched == PITCH_LETTER_D);
+    assert(!pitch_letter_from_char('A', NULL));
+}
+
+static void test_step_number_and_generic_size(void) {
+    PitchSpelling *c4 = NULL;
+    PitchSpelling *g4 = NULL;
+    PitchSpelling *c5 = NULL;
+    PitchSpelling *b3_flat = NULL;
+    assert(pitch_spelling_create(PITCH_LETTER_C, 0, 4, &c4) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_create(PITCH_LETTER_G, 1, 4, &g4) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_create(PITCH_LETTER_C, -1, 5, &c5) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_create(PITCH_LETTER_B, -1, 3, &b3_flat) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_step_number(c4) == 28);
+    assert(pitch_spelling_step_number(g4) == 32);
+    assert(pitch_spelling_step_number(c5) == 35);
+    assert(pitch_spelling_step_number(b3_flat) == 27);
+    assert(pitch_spelling_step_number(NULL) == 0);
+    assert(pitch_spelling_generic_size(c4, c4) == 1);
+    assert(pitch_spelling_generic_size(c4, g4) == 5);
+    assert(pitch_spelling_generic_size(g4, c4) == 5);
+    assert(pitch_spelling_generic_size(c4, c5) == 8);
+    assert(pitch_spelling_generic_size(b3_flat, c4) == 2);
+    assert(pitch_spelling_generic_size(NULL, c4) == 1);
+    pitch_spelling_destroy(c4);
+    pitch_spelling_destroy(g4);
+    pitch_spelling_destroy(c5);
+    pitch_spelling_destroy(b3_flat);
+}
+
 int main(void) {
     test_letter_semitone_and_index();
     test_letter_offset_wraps_both_ways();
@@ -170,6 +211,8 @@ int main(void) {
     test_parse_accepts();
     test_parse_rejects();
     test_pitch_class_names();
+    test_letter_from_char();
+    test_step_number_and_generic_size();
     printf("test_pitch_arithmetic: ok\n");
     return 0;
 }

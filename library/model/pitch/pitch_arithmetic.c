@@ -63,6 +63,29 @@ static int floor_div(int value, int divisor) {
     return quotient;
 }
 
+bool pitch_letter_from_char(char c, PitchLetter *out) {
+    if (out == NULL || c < 'A' || c > 'G') {
+        return false;
+    }
+    *out = LETTERS_BY_INDEX[(c - 'A' + 5) % PITCH_LETTER_COUNT];
+    return true;
+}
+
+int pitch_spelling_step_number(const PitchSpelling *spelling) {
+    if (spelling == NULL) {
+        return 0;
+    }
+    return 7 * pitch_spelling_octave(spelling) + pitch_letter_index(pitch_spelling_letter(spelling));
+}
+
+int pitch_spelling_generic_size(const PitchSpelling *a, const PitchSpelling *b) {
+    if (a == NULL || b == NULL) {
+        return 1;
+    }
+    int difference = pitch_spelling_step_number(a) - pitch_spelling_step_number(b);
+    return (difference < 0 ? -difference : difference) + 1;
+}
+
 PitchLetter pitch_letter_offset(PitchLetter letter, int steps) {
     return LETTERS_BY_INDEX[floor_mod(
         pitch_letter_index(letter) + floor_mod(steps, PITCH_LETTER_COUNT), PITCH_LETTER_COUNT)];

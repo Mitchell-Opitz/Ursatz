@@ -29,6 +29,17 @@ int pitch_letter_index(PitchLetter letter);
 /* The letter `steps` places along C D E F G A B. Wraps both ways. */
 PitchLetter pitch_letter_offset(PitchLetter letter, int steps);
 
+/* The letter named by an upper-case character A to G. False (*out untouched) for any other character or a NULL out. */
+bool pitch_letter_from_char(char c, PitchLetter *out);
+
+/* Position in the loop of letters counted over octaves: 7 * octave + the letter's index (C=0 ... B=6), so C4 is 28. 0 for a NULL
+ * spelling. Differences of these numbers are letter steps whatever the accidentals. */
+int pitch_spelling_step_number(const PitchSpelling *spelling);
+
+/* The generic size of the interval from a to b in letter steps, |step difference| + 1, so a unison is 1 and C4 to G4 is 5.
+ * Direction and accidentals are ignored. 1 when either spelling is NULL. */
+int pitch_spelling_generic_size(const PitchSpelling *a, const PitchSpelling *b);
+
 /* 0 to 11 for a letter and accidental, whatever the octave. */
 int pitch_class_of_letter(PitchLetter letter, int accidental);
 
