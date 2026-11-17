@@ -4,6 +4,8 @@ The backend and frontend tests and the checks CI runs. [Docs index](README.md).
 
 Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): a backend test is `ursatz_test(<name> LIBS ursatz_gui_core ... WORKING_DIRECTORY <its own build folder>)`, a frontend test is `ursatz_test(frontend_<name> COMMAND node <file>)`. The timeout is 120 s, or 1800 s for a `slow` test.
 
+One rule: a fast-set test over 10 s is sped up or labeled `slow`. `tools/ci/slowest-tests.sh build/gui` (from the repository root) warns about any fast-set test over 10 s.
+
 The frontend tests share `frontend/tests/support/check.js` (`check`, `same`, `near`, `finish`: call `finish()` last, it sets the exit code) and `frontend/tests/support/fixtures.js` (`generated(name)` and `analyzerSnapshot(name)`, below). The backend tests use `tests/support/ursatz_test.h` and the HTTP client `tests/support/test_http.h` at the repository root.
 
 The reference pieces and the link fixtures come from the root `tests/fixtures/` (`URSATZ_FIXTURES_DIR`).

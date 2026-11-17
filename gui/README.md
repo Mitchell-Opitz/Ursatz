@@ -22,7 +22,7 @@ The Library, Tags panel, Collections, Subjects, Motifs, Themes, Pieces, Motive l
 
 ## Test
 
-The tests are split into a fast set and a slow set. The `slow` label is new: a test carries it when it takes over 10 s.
+The tests are split into a fast set and a slow set (the `slow` label).
 
 - Fast set (every test without the `slow` label), what a pull request runs:
 
@@ -42,7 +42,7 @@ The tests are split into a fast set and a slow set. The `slow` label is new: a t
   ctest --test-dir build/gui -j$(nproc)
   ```
 
-A fast-set test that takes over 10 s is sped up or labeled `slow`. `tools/ci/slowest-tests.sh build/gui` (from the repository root) prints the ten slowest tests of the last run and warns about any fast-set test over 10 s.
+One rule: a fast-set test over 10 s is sped up or labeled `slow`. `tools/ci/slowest-tests.sh build/gui` (from the repository root) prints the ten slowest tests of the last run and warns about any fast-set test over 10 s.
 
 Each test gets its timeout when it is registered with `ursatz_test()`: 120 s for a test without the `slow` label, 1800 s for a slow one. The `Nightly` workflow runs the full suite, so the slow set runs nightly in CI.
 

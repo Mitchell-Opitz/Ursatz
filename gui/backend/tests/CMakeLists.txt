@@ -111,8 +111,8 @@ ursatz_test_executable(test_theme_route LIBS ursatz_gui_core ursatz_test_http
     DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links")
 ursatz_test(theme_route TARGET test_theme_route LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
-# Slow: every theme the real Composer composes now measures its developments (Composer API 1.10, about 1 s a theme), which
-# took the test to about 30 s (R-307).
+# Slow: about 32 s at -j4, 2026-11-17. Every theme the real Composer composes measures its developments (Composer API
+# 1.10, about 1 s a theme) (R-307).
 # The test composes with the Composer API in its own working directory (materials/, subjects/ and pieces/ are created
 # there), uploads the link fixtures for the brief and checks the stored files and the served playback (version_check.h).
 # theme_route_smoke (argument smoke, port 18777, its own working directory) saves the motifs and runs the real Composer
