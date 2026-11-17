@@ -8,7 +8,7 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "pipeline/chord_pipeline.h"
-#include "analysis/outer_voice.h"
+#include "analysis/voices/outer_voice.h"
 #include "pipeline/segmentation.h"
 
 /*

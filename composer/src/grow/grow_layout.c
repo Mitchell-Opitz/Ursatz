@@ -7,6 +7,7 @@
 #include <ursatz_composer/motive_develop.h>
 
 #include "grow/grow_internal.h"
+#include "util/util.h"
 
 _Static_assert(PLAN_CONSTRUCTION_IDEAS == GROW_IDEA_COUNT, "a construction holds the bars of every idea");
 
@@ -316,7 +317,7 @@ static bool addition_motive(const Motive *last, Rational room, int want, Motive 
         step.value[1] = (long)notes;
         step.value[2] = 1;
         if (motive_develop(last, &step, &result) == MOTIVE_DEV_OK && rational_cmp(result.length, room) <= 0 &&
-            (want < 0 || ((motive_pitch(&result, result.note_count - 1) % 12) + 12) % 12 == want)) {
+            (want < 0 || util_pitch_class(motive_pitch(&result, result.note_count - 1)) == want)) {
             *out = result;
             return true;
         }

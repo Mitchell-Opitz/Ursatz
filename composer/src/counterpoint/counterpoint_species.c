@@ -5,8 +5,8 @@
 #include "counterpoint/counterpoint_internal.h"
 #include "util/util.h"
 
-#include <standard-counterpoint/harmonic_rules.h>
-#include <standard-counterpoint/melodic_rules.h>
+#include <theory/counterpoint/harmonic_rules.h>
+#include <theory/counterpoint/melodic_rules.h>
 
 /*
  * The beam search of the counterpoint operator. A state is the counter-melody written so far, in slots (counterpoint_
@@ -58,7 +58,7 @@ typedef struct {
 } Gen;
 
 static bool on_tonic(const CounterpointContext *context, int pitch) {
-    return ((pitch - analysis_key_tonic_pitch_class(&context->key)) % 12 + 12) % 12 == 0;
+    return util_pitch_class(pitch - analysis_key_tonic_pitch_class(&context->key)) == 0;
 }
 
 /* A step a strict counterpoint allows between two notes of the line: no tritone, no seventh, no sixth but the rising minor one. */
@@ -379,7 +379,7 @@ static size_t assemble(const CounterpointContext *context, const State *state, u
         if (slots < 2 * context->count) {
             /* A leading tone goes up to the tonic, so the stand-in bar after it sounds the tonic. */
             int stand_in = pitch[slots - 1];
-            if (((stand_in + 1 - analysis_key_tonic_pitch_class(&context->key)) % 12 + 12) % 12 == 0) {
+            if (util_pitch_class(stand_in + 1 - analysis_key_tonic_pitch_class(&context->key)) == 0) {
                 stand_in++;
             }
             kind[slots] = CP_SLOT_ATTACK;

@@ -4,9 +4,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "events/note_event.h"
-#include "identity/entity_id.h"
-#include "time/musical_time.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
+#include "model/time/musical_time.h"
 
 #define FNV1A_OFFSET_BASIS 14695981039346656037ULL
 

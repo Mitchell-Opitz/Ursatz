@@ -5,12 +5,14 @@
 
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/variant_registry.h>
+#include <theory/tonality/tonal_key.h>
 
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "util/plan_util.h"
 #include "util/position.h"
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 /*
  * The weights of the choices of a continuation by GrowDevelopment (ch. VIII, XI); the balanced rows are the default. A 0
@@ -301,15 +303,15 @@ static bool draw_accelerating_fragments(FillRng *rng, const GrowThemeRequest *re
  * seventh). A residue keeps to the scale when m0 does (liquid_diatonic); a chromatic m0's residue keeps to the range only.
  */
 static bool liquid_in_range(const Motive *motive, bool in_scale) {
-    static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
-    static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
+    unsigned scale = standard_tonality_mode_pitch_classes_with_leading_tone(
+        0, motive->minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
     for (size_t i = 0; i < motive->note_count; i++) {
         int pitch = motive_pitch(motive, i);
         if (pitch < LIQUID_LOW || pitch > LIQUID_HIGH) {
             return false;
         }
         if (in_scale && motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
-            !(motive->minor ? MINOR : MAJOR)[((pitch - motive->tonic_pc) % 12 + 12) % 12]) {
+            !((scale >> util_pitch_class(pitch - motive->tonic_pc)) & 1u)) {
             return false;
         }
     }
@@ -345,7 +347,7 @@ static bool liquid_take_cadence(Motive *motive, bool has_cadence, CadenceType ca
     int want = (motive->tonic_pc + (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? 0 : (motive->minor ? 3 : 4))) % 12;
     MotiveSketchNote *last = &motive->notes[motive->note_count - 1];
     int pitch = motive_pitch(motive, motive->note_count - 1);
-    int shift = (((want - pitch) % 12) + 12) % 12;
+    int shift = util_pitch_class(want - pitch);
     int nearest = shift > 6 ? shift - 12 : shift;
     last->pitch = pitch + (other ? (nearest > 0 ? nearest - 12 : nearest + 12) : nearest);
     return true;
@@ -566,7 +568,7 @@ static bool head_residue(const GrowThemeSpec *spec, const Motive *base, int allo
                 Motive moved = residue;
                 if (other == 2) {
                     int from = moved.notes[1].pitch;
-                    int shift = ((moved.notes[2].pitch - from) % 12 + 12) % 12;
+                    int shift = util_pitch_class(moved.notes[2].pitch - from);
                     moved.notes[2].pitch = from + (shift > 6 ? shift - 12 : shift);
                 }
                 if (!liquid_take_cadence(&moved, has_cadence, cadence, other == 1)) {

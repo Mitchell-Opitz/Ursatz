@@ -1,0 +1,96 @@
+#include "theory/harmony/harmony_cadence_rules.h"
+
+#include "theory/harmony/harmony_cadence_kinds.h"
+#include "theory/harmony/harmony_framework.h"
+#include "theory/rules/rule_table.h"
+
+static const char *const NAMES[HARMONY_CADENCE_RULE_COUNT] = {"cadential-progression", "half-without-seventh"};
+
+static bool table_is_hard(int which) {
+    return which == HARMONY_CADENCE_CADENTIAL_PROGRESSION;
+}
+
+static RulePair g_pairs[HARMONY_CADENCE_RULE_COUNT];
+static UrsatzOnce g_built[HARMONY_CADENCE_RULE_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                                    const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
+static const RuleTable TABLE = {
+    "standard-harmony", standard_harmony_framework, "standard-harmony",
+    "cadence", NAMES, HARMONY_CADENCE_RULE_COUNT, table_is_hard, g_pairs, g_built,
+                                       evaluate_candidate, score_candidate};
+
+const Preference *harmony_cadence_preference(HarmonyCadenceRule which) {
+    return rule_table_preference(&TABLE, (int)which);
+}
+
+bool harmony_cadence_valid(const HarmonyCadence *cadence) {
+    return cadence != NULL && harmony_chord_valid(&cadence->from) && harmony_chord_valid(&cadence->to) &&
+           cadence->soprano_degree >= 1 && cadence->soprano_degree <= 7;
+}
+
+/* V to I, or x to V. */
+static bool is_authentic(const HarmonyCadence *c) {
+    return c->from.degree == 5 && c->to.degree == 1;
+}
+
+static bool is_half(const HarmonyCadence *c) {
+    return c->to.degree == 5;
+}
+
+bool harmony_cadence_rule_holds(HarmonyCadenceRule which, const HarmonyCadence *cadence) {
+    if (!rule_table_valid(&TABLE, (int)which) || !harmony_cadence_valid(cadence)) {
+        return false;
+    }
+    if (which == HARMONY_CADENCE_HALF_WITHOUT_SEVENTH) {
+        return !(is_half(cadence) && cadence->to.seventh);
+    }
+    return is_authentic(cadence) || is_half(cadence);
+}
+
+static bool holds_adapter(int which, const void *subject) {
+    return harmony_cadence_rule_holds((HarmonyCadenceRule)which, subject);
+}
+
+RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, HarmonyCadence)
+RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, HarmonyCadence)
+
+bool harmony_cadence_check(const HarmonyCadence *cadence, unsigned *hard_violations, unsigned *soft_violations) {
+    if (hard_violations == NULL || soft_violations == NULL || !harmony_cadence_valid(cadence)) {
+        return false;
+    }
+    rule_table_check(&TABLE, holds_adapter, cadence, hard_violations, soft_violations);
+    return true;
+}
+
+bool harmony_cadence_classify(const HarmonyCadence *cadence, CadenceType *out) {
+    if (out == NULL || !harmony_cadence_valid(cadence)) {
+        return false;
+    }
+    if (is_authentic(cadence)) {
+        if (cadence->subverted) {
+            *out = CADENCE_TYPE_SUBVERTED;
+        } else if (cadence->from.inversion == 0 && cadence->to.inversion == 0 && cadence->soprano_degree == 1) {
+            *out = CADENCE_TYPE_PERFECT_AUTHENTIC;
+        } else {
+            *out = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
+        }
+        return true;
+    }
+    if (is_half(cadence)) {
+        *out = cadence->subverted ? CADENCE_TYPE_SUBVERTED : CADENCE_TYPE_HALF;
+        return true;
+    }
+    return false;
+}
+
+int harmony_cadence_strength(CadenceType type) {
+    const HarmonyCadenceKind *kind = harmony_cadence_kind_of(type);
+    return kind != NULL ? kind->strength : -1;
+}
+
+int harmony_cadence_compare(CadenceType a, CadenceType b) {
+    int strength_a = harmony_cadence_strength(a);
+    int strength_b = harmony_cadence_strength(b);
+    return (strength_a > strength_b) - (strength_a < strength_b);
+}

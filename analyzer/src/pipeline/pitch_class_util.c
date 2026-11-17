@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "standard-tonality/tonal_key.h"
+#include "theory/tonality/tonal_key.h"
 
 int pitch_class_of(long midi_note_number) {
     long remainder = midi_note_number % PITCH_SEMITONES_PER_OCTAVE;

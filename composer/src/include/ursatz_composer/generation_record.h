@@ -1,9 +1,9 @@
 #ifndef URSATZ_COMPOSER_GENERATION_RECORD_H
 #define URSATZ_COMPOSER_GENERATION_RECORD_H
 
-#include <core/provenance_reference.h>
-#include <core/value.h>
-#include <identity/entity_id.h>
+#include <model/core/provenance_reference.h>
+#include <model/core/value.h>
+#include <model/identity/entity_id.h>
 
 /*
  * GenerationRecord (TDD Sec163): the durable record of a fill run: its seed and its versions, kept for

@@ -6,7 +6,7 @@
 
 #include <io/midi_importer.h>
 #include <io/midi_renderer.h>
-#include <time/tempo_map.h>
+#include <model/time/tempo_map.h>
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>

@@ -7,6 +7,7 @@
 
 #include "style/style_internal.h"
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 typedef struct {
     char *category;
@@ -208,7 +209,7 @@ bool composer_style_labels_add_motive(ComposerStyleLabels *labels, const Motive 
     const char *duration_parts[MOTIVE_MAX_NOTES];
     int steps[MOTIVE_MAX_NOTES];
     for (size_t i = 0; i < count; i++) {
-        int pitch_class = ((motive_pitch(motive, i) % 12) + 12) % 12;
+        int pitch_class = util_pitch_class(motive_pitch(motive, i));
         degrees[i] = style_label_degree(pitch_class, tonic_pc);
         Rational length = motive->notes[i].duration;
         style_label_duration((unsigned long)(length.num < 0 ? 0 : length.num), length.den, durations[i],

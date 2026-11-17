@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "romantext.h"
-#include "time/note_value.h"
-#include "time/time_signature.h"
+#include "model/time/note_value.h"
+#include "model/time/time_signature.h"
 
 static MeterMap *make_map(unsigned top, int bottom_exponent, bool pickup) {
     NoteValue *unit = NULL;

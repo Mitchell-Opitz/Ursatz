@@ -7,15 +7,15 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include "standard-harmony/analysis/analysis_cadence.h"
-#include "standard-harmony/analysis/analysis_function.h"
-#include "standard-harmony/analysis/analysis_prolongation.h"
-#include "standard-harmony/analysis/analysis_six_four.h"
-#include "common-practice-minimal/key_regions.h"
-#include "standard-harmony/analysis/analysis_input.h"
-#include <ursatz_chain/analysis_chain.h>
-#include <ursatz_chain/chain_inputs.h>
-#include "time/meter_map.h"
+#include "analysis/harmony/analysis_cadence.h"
+#include "analysis/harmony/analysis_function.h"
+#include "analysis/harmony/analysis_prolongation.h"
+#include "analysis/harmony/analysis_six_four.h"
+#include "analysis/harmony/key_regions.h"
+#include "analysis/harmony/analysis_input.h"
+#include <chain/analysis_chain.h>
+#include <chain/chain_inputs.h>
+#include "model/time/meter_map.h"
 
 /*
  * Ursatz's standard-harmony analysis over the library chain's chord segments. The cadences are the chain's

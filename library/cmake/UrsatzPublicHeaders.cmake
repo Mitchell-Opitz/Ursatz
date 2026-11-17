@@ -46,20 +46,14 @@ function(ursatz_public_headers target)
         URSATZ_SOURCE_DIRS "${ARG_SOURCE_DIRS}")
 endfunction()
 
-# A test sees the internals of the code it tests: the kernel sources, the
-# framework folders, the chain, the test access headers (tests/support), and
-# the folder it sits beside. An app does not.
+# A test sees the internals of the code it tests: library/ (every header by its path from there), the test access
+# headers (tests/support), and the folder it sits beside. An app does not.
 # Call it first in a tests/CMakeLists.txt.
 macro(ursatz_test_includes)
     include_directories(
-        ${PROJECT_SOURCE_DIR}/src
-        ${PROJECT_SOURCE_DIR}/frameworks
-        ${PROJECT_SOURCE_DIR}/chain
+        ${PROJECT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/tests/support
         ${CMAKE_CURRENT_SOURCE_DIR}/..)
-    if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../analysis")
-        include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../analysis)
-    endif()
 endmacro()
 
 # Writes ${PROJECT_BINARY_DIR}/public/manifest.txt, one line per target that

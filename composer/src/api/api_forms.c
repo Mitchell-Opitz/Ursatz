@@ -1,4 +1,4 @@
-#include <standard-harmony/harmony_cadence_kinds.h>
+#include <theory/harmony/harmony_cadence_kinds.h>
 #include <stdio.h>
 #include <string.h>
 

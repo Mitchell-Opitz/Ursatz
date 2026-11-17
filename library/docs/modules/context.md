@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Layer L6 (`music-context`). Path `src/context/`, tests `tests/context/`. One of four L6 siblings (with `semantics`, `relationship`, `interpretation`). Depends on `identity`, `core`, `time`, `pitch`, `events`, `containers`, and `structure` only, and does not depend on its three L6 siblings.
+Layer L6 (`music-context`). Path `theory/rules/`, tests `tests/context/`. One of four L6 siblings (with `semantics`, `relationship`, `interpretation`). Depends on `identity`, `core`, `time`, `pitch`, `events`, `containers`, and `structure` only, and does not depend on its three L6 siblings.
 
 ## Provides
 

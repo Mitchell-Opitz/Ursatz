@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "query/similarity_scoring.h"
+#include "analysis/similarity/similarity_scoring.h"
 
 /*
  * Similar material: passages of an analyzed corpus that look like a motive or a progression. A motive is a short

@@ -1,0 +1,104 @@
+ursatz_test(standard_counterpoint_framework SOURCES test_framework.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_consonance_rules SOURCES test_consonance_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_motion_rules SOURCES test_motion_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_cantus_firmus_rules SOURCES test_cantus_firmus_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_melodic_rules SOURCES test_melodic_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_harmonic_rules SOURCES test_harmonic_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_tendency_rules SOURCES test_tendency_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_counterpoint_rules SOURCES test_counterpoint_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_first_species_harmony_rules SOURCES test_first_species_harmony_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_first_species_ends_rules SOURCES test_first_species_ends_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_first_species_independence_rules SOURCES test_first_species_independence_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_first_species_motion_rules SOURCES test_first_species_motion_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_first_species_line_rules SOURCES test_first_species_line_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_first_species_rules SOURCES test_first_species_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_second_species_exercise SOURCES test_second_species_exercise.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_second_species_pattern SOURCES test_second_species_pattern.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_second_species_strong_rules SOURCES test_second_species_strong_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_second_species_weak_rules SOURCES test_second_species_weak_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_second_species_ends_rules SOURCES test_second_species_ends_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_second_species_line_rules SOURCES test_second_species_line_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_second_species_rules SOURCES test_second_species_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_third_species_exercise SOURCES test_third_species_exercise.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_third_species_figure SOURCES test_third_species_figure.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_third_species_strong_rules SOURCES test_third_species_strong_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_third_species_beat_rules SOURCES test_third_species_beat_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_third_species_ends_rules SOURCES test_third_species_ends_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_third_species_line_rules SOURCES test_third_species_line_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_third_species_rules SOURCES test_third_species_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_fourth_species_exercise SOURCES test_fourth_species_exercise.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_fourth_species_suspension SOURCES test_fourth_species_suspension.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_fourth_species_suspension_rules SOURCES test_fourth_species_suspension_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_fourth_species_weak_rules SOURCES test_fourth_species_weak_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_species_break_rules SOURCES test_species_break_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_fourth_species_ends_rules SOURCES test_fourth_species_ends_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_fourth_species_line_rules SOURCES test_fourth_species_line_rules.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_fourth_species_rules SOURCES test_fourth_species_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_fux_cantus_conformance SOURCES test_fux_cantus_conformance.c
+    LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_rule_table SOURCES test_rule_table.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_motion_type SOURCES test_motion_type.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_melodic_semitones SOURCES test_melodic_semitones.c LIBS ursatz_theory)
+
+ursatz_test(standard_counterpoint_imperfect_run SOURCES test_imperfect_run.c LIBS ursatz_theory)

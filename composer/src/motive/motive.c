@@ -8,13 +8,14 @@
 #include <string.h>
 
 #include <cJSON.h>
-#include <common-practice-minimal/key_identification.h>
+#include <analysis/harmony/key_identification.h>
 
 #include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "motive/motive_internal.h"
 #include "plan/plan_json_internal.h"
+#include "util/util.h"
 
 /* ----------------------------------------------------------------- scores */
 
@@ -131,7 +132,7 @@ AnalysisKey motive_key_from_signature(int sharps_flats, KeyStructureMode mode) {
     if (analysis_key_from_fifths(sharps_flats, mode, &key)) {
         return key;
     }
-    int major_tonic = ((sharps_flats * 7) % 12 + 12) % 12;
+    int major_tonic = util_pitch_class(sharps_flats * 7);
     return plan_key_of_pitch_class(mode == KEY_STRUCTURE_MODE_MINOR ? (major_tonic + 9) % 12 : major_tonic, mode);
 }
 

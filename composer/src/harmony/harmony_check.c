@@ -10,15 +10,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-harmony/analysis/analysis_cadence.h>
-#include <standard-harmony/analysis/analysis_prolongation.h>
-#include <standard-harmony/analysis/analysis_six_four.h>
-#include <standard-harmony/harmony_cadence_rules.h>
-#include <standard-harmony/harmony_deceptive.h>
-#include <standard-harmony/harmony_phrase_rules.h>
-#include <standard-harmony/harmony_plagal.h>
-#include <standard-harmony/harmony_predominant_seventh.h>
-#include <standard-harmony/harmony_strong_predominants.h>
+#include <analysis/harmony/analysis_cadence.h>
+#include <analysis/harmony/analysis_prolongation.h>
+#include <analysis/harmony/analysis_six_four.h>
+#include <theory/harmony/harmony_cadence_rules.h>
+#include <theory/harmony/harmony_deceptive.h>
+#include <theory/harmony/harmony_phrase_rules.h>
+#include <theory/harmony/harmony_plagal.h>
+#include <theory/harmony/harmony_predominant_seventh.h>
+#include <theory/harmony/harmony_strong_predominants.h>
 
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>

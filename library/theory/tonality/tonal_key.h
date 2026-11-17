@@ -1,0 +1,96 @@
+#ifndef URSATZ_FRAMEWORKS_STANDARD_TONALITY_TONAL_KEY_H
+#define URSATZ_FRAMEWORKS_STANDARD_TONALITY_TONAL_KEY_H
+
+#include <stdbool.h>
+
+#include "model/pitch/key_signature.h"
+#include "model/pitch/pitch_spelling.h"
+#include "theory/tonality/roman_numeral_analysis_rules.h"
+
+/*
+ * Degrees, spellings, and signatures of a key, for standard-tonality-v1.
+ *
+ * A key is a tonic (letter and accidental) and a mode. The four modes are
+ * the major scale and the three minor forms; a bare "minor" is never
+ * implied, the caller names the form. Melodic minor is the ascending
+ * form (the descending form is the natural minor).
+ *
+ * Degrees are 1 to 7, counted by letter from the tonic. An alteration is
+ * the distance in semitones from the mode's own scale degree: 0 for the
+ * note in the scale, +1 for a note a semitone above it, -1 below it.
+ */
+
+typedef enum {
+    STANDARD_TONALITY_MODE_MAJOR = 0,
+    STANDARD_TONALITY_MODE_NATURAL_MINOR,
+    STANDARD_TONALITY_MODE_HARMONIC_MINOR,
+    STANDARD_TONALITY_MODE_MELODIC_MINOR
+} StandardTonalityMode;
+
+/* Semitones above the tonic of `degree` (1 to 7) in the mode: 0 for degree 1. -1 for an invalid
+ * mode or degree. */
+int standard_tonality_degree_semitone(StandardTonalityMode mode, int degree);
+
+/*
+ * The signature of a key as sharps (positive) or flats (negative). The
+ * tonic's place on the line of fifths, less 3 for a minor key. Harmonic and
+ * melodic minor use the natural-minor signature. Imaginary keys (beyond
+ * +-7) have a count too. False for a NULL output or an invalid letter.
+ */
+bool standard_tonality_key_fifths(PitchLetter tonic_letter, int tonic_accidental, bool minor,
+                                  int *fifths);
+
+/* The signature as a KeySignature (sharps F C G D A E B, flats reversed). False for imaginary keys
+ * (beyond +-7), invalid input, or allocation failure. */
+bool standard_tonality_key_signature_of(PitchLetter tonic_letter, int tonic_accidental, bool minor,
+                                        KeySignature **out);
+
+/* The tonic of the key with that signature count. False for NULL outputs. */
+bool standard_tonality_key_of_fifths(int fifths, bool minor, PitchLetter *letter, int *accidental);
+
+/* The tonic of the key on `pitch_class` (0..11) spelled with the fewer accidentals in its signature, sharps on a
+ * tie (F# major, D# minor). A minor key is judged by its relative major. False (outputs untouched) for a
+ * pitch class outside 0..11 or NULL outputs. */
+bool standard_tonality_key_tonic_of_pitch_class(int pitch_class, bool minor, PitchLetter *letter,
+                                                int *accidental);
+
+/* The label of the chromatic scale degree `semitones_above_tonic` (any integer, reduced mod 12): "1" "b2" "2"
+ * "b3" "3" "4" "#4" "5" "b6" "6" "b7" "7". */
+const char *standard_tonality_chromatic_degree_label(int semitones_above_tonic);
+
+/*
+ * The scale of a mode on a tonic as a 12-bit mask over pitch classes (bit n is pitch class n), for a
+ * caller that holds MIDI numbers and no spellings. 0 for a tonic outside 0..11 or an invalid mode.
+ * A minor set a caller needs beyond one form is a union of masks:
+ *
+ *   counterpoint minor  natural | melodic    (the raised sixth and seventh beside the natural ones)
+ *   chord with a raised seventh  natural | (1u << ((tonic + 11) % 12)), or the harmonic mask
+ */
+unsigned standard_tonality_mode_pitch_classes(int tonic_pitch_class, StandardTonalityMode mode);
+
+/* The same mask plus the leading tone, pitch class tonic + 11 (a minor set that holds the raised seventh as well as
+ * the mode's own). 0 for a tonic outside 0..11 or an invalid mode. */
+unsigned standard_tonality_mode_pitch_classes_with_leading_tone(int tonic_pitch_class, StandardTonalityMode mode);
+
+/*
+ * The degree (1 to 7) at or below a chromatic semitone above the tonic in the mode, and the semitones
+ * above that degree: 0 for a note of the scale, else the note read as the next lower degree raised (+1;
+ * +2 where the mode has a gap of a minor third, as the harmonic minor's sixth to seventh). Any whole
+ * number of semitones is taken mod 12. False (outputs untouched) for NULL outputs or an invalid mode.
+ * standard_tonality_degree_of_semitone adds the lowered readings to this.
+ */
+bool standard_tonality_degree_at_or_below_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
+                                                   int *alteration);
+
+/*
+ * The degree (1 to 7) a chromatic semitone above the tonic is read as in the mode, and its
+ * alteration from that degree: 0 for a note of the scale. With no context a chromatic note is read
+ * as the next lower degree raised (+1; +2 where the mode has a gap of a minor third, as the harmonic
+ * minor's sixth to seventh), except the lowered readings (-1 on the next degree up): semitone 1 in
+ * every mode (b2, R-285), and in major also semitones 3, 8 and 10 (b3, b6, b7). Any whole number of
+ * semitones is taken mod 12. False (outputs untouched) for NULL outputs or an invalid mode.
+ */
+bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
+                                          int *alteration);
+
+#endif

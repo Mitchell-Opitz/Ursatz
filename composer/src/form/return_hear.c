@@ -9,14 +9,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <analysis/thematic_return_detection.h>
-#include <core/value.h>
-#include <identity/entity_id.h>
-#include <pitch/pitch_identity.h>
-#include <relationship/relationship.h>
-#include <semantics/contour.h>
-#include <semantics/rhythmic_pattern.h>
-#include <time/duration.h>
+#include <analysis/form/thematic_return_detection.h>
+#include <model/core/value.h>
+#include <model/identity/entity_id.h>
+#include <model/pitch/pitch_identity.h>
+#include <model/relationship/relationship.h>
+#include <analysis/notes/contour.h>
+#include <analysis/notes/rhythmic_pattern.h>
+#include <model/time/duration.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_hear.h>

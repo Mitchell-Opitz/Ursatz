@@ -3,15 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/provenance_reference.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_identity.h"
-#include "pitch/pitch_arithmetic.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/pitch_spelling.h"
-#include "pitch/tuning_system.h"
-#include "time/duration.h"
-#include "time/temporal_anchor.h"
+#include "model/core/provenance_reference.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_identity.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/pitch_spelling.h"
+#include "model/pitch/tuning_system.h"
+#include "model/time/duration.h"
+#include "model/time/temporal_anchor.h"
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/composer_api.h>

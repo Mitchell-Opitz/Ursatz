@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "time/duration.h"
-#include "time/temporal_anchor.h"
+#include "model/time/duration.h"
+#include "model/time/temporal_anchor.h"
 
 #define FNV1A_PRIME 1099511628211ULL
 

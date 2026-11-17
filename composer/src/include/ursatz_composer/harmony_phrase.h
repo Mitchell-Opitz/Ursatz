@@ -3,9 +3,9 @@
 
 #include <stdbool.h>
 
-#include <standard-harmony/harmony_applied.h>
-#include <standard-harmony/harmony_chord.h>
-#include <semantics/cadence_type.h>
+#include <theory/harmony/harmony_applied.h>
+#include <theory/harmony/harmony_chord.h>
+#include <theory/vocabulary/cadence_type.h>
 
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>

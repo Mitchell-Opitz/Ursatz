@@ -7,9 +7,11 @@ if(URSATZ_TESTS)
     add_subdirectory(tests)
 endif()
 
-add_subdirectory(src)
-add_subdirectory(frameworks)
+add_subdirectory(model)
+add_subdirectory(theory)
+add_subdirectory(analysis)
 add_subdirectory(chain)
+add_subdirectory(io)
 
 ursatz_write_public_manifest()
 if(URSATZ_TESTS)

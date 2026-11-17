@@ -2,10 +2,10 @@
 #include "test_cadences_reference_pieces.c"
 #undef main
 
-#include "galant-schemas/analysis/galant_analysis_match.h"
-#include "scale-harmonization/analysis/scale_analysis_detect.h"
+#include "analysis/galant/galant_analysis_match.h"
+#include "analysis/galant/scale_analysis_detect.h"
 #include "schema_util.h"
-#include "ursatz_chain/chain_inputs.h"
+#include "chain/chain_inputs.h"
 #include "../key_index_test_util.h"
 
 /*
@@ -77,8 +77,8 @@ static void describe(const MeterMap *map, const GalantSegmentList *list, int fir
     int m2 = 0;
     double b1 = 0.0;
     double b2 = 0.0;
-    schema_where(map, time_span_start(list->items[first].span), &m1, &b1);
-    schema_where(map, time_span_start(list->items[last].span), &m2, &b2);
+    schema_where(map, time_span_start(list->items[first].segment.span), &m1, &b1);
+    schema_where(map, time_span_start(list->items[last].segment.span), &m2, &b2);
     snprintf(out, size, "measure %d beat %.2f to measure %d beat %.2f", m1, b1, m2, b2);
 }
 
@@ -102,15 +102,15 @@ static Outcome score(const char *label, const MeterMap *map, const GalantSegment
             for (size_t k = 0; k < schemas->count; k++) {
                 const GalantSchemaClaim *c = &schemas->items[k].claim;
                 found = found || (strcmp(c->name, p->name) == 0 &&
-                                  near_planted(p, beats_of(time_span_start(list->items[c->first_segment].span)),
-                                               beats_of(time_span_end(list->items[c->last_segment].span))));
+                                  near_planted(p, beats_of(time_span_start(list->items[c->first_segment].segment.span)),
+                                               beats_of(time_span_end(list->items[c->last_segment].segment.span))));
             }
         } else {
             for (size_t k = 0; k < sequences->count; k++) {
                 const ScaleSequenceClaim *c = &sequences->items[k].claim;
                 found = found || (strcmp(c->kind_name, p->name) == 0 &&
-                                  near_planted(p, beats_of(time_span_start(list->items[c->first_segment].span)),
-                                               beats_of(time_span_end(list->items[c->last_segment].span))));
+                                  near_planted(p, beats_of(time_span_start(list->items[c->first_segment].segment.span)),
+                                               beats_of(time_span_end(list->items[c->last_segment].segment.span))));
             }
         }
         outcome.found += found ? 1 : 0;
@@ -123,8 +123,8 @@ static Outcome score(const char *label, const MeterMap *map, const GalantSegment
         bool planted_one = false;
         for (size_t i = 0; i < planted->count; i++) {
             planted_one = planted_one || (planted->items[i].schema && strcmp(c->name, planted->items[i].name) == 0 &&
-                                          near_planted(&planted->items[i], beats_of(time_span_start(list->items[c->first_segment].span)),
-                                                       beats_of(time_span_end(list->items[c->last_segment].span))));
+                                          near_planted(&planted->items[i], beats_of(time_span_start(list->items[c->first_segment].segment.span)),
+                                                       beats_of(time_span_end(list->items[c->last_segment].segment.span))));
         }
         if (!planted_one) {
             outcome.extras++;
@@ -140,8 +140,8 @@ static Outcome score(const char *label, const MeterMap *map, const GalantSegment
         bool planted_one = false;
         for (size_t i = 0; i < planted->count; i++) {
             planted_one = planted_one || (!planted->items[i].schema && strcmp(c->kind_name, planted->items[i].name) == 0 &&
-                                          near_planted(&planted->items[i], beats_of(time_span_start(list->items[c->first_segment].span)),
-                                                       beats_of(time_span_end(list->items[c->last_segment].span))));
+                                          near_planted(&planted->items[i], beats_of(time_span_start(list->items[c->first_segment].segment.span)),
+                                                       beats_of(time_span_end(list->items[c->last_segment].segment.span))));
         }
         if (!planted_one) {
             outcome.extras++;

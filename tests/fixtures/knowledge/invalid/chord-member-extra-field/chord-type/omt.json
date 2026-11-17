@@ -1,0 +1,50 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.chord-type.major-triad",
+      "kind": "chord-type",
+      "name": "major triad",
+      "content": {
+        "construction": "tertian",
+        "members": [
+          {
+            "role": "root",
+            "semitones": 0
+          },
+          {
+            "role": "third",
+            "semitones": 4,
+            "octave": 1
+          },
+          {
+            "role": "fifth",
+            "semitones": 7
+          }
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "root": "C",
+          "pitches": [
+            "C",
+            "E",
+            "G"
+          ],
+          "symbol": "C"
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

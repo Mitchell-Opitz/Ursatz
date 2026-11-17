@@ -2,31 +2,27 @@
 
 The layer table, the dependency rule that holds it together, and the open and resolved dependency issues. [Docs index](README.md)
 
-## Layers
+## Groups
 
-| Layer | Modules |
-|---|---|
-| L0 | `identity` |
-| L1 | `core` |
-| L2 | `time`, `pitch` (siblings, do not depend on each other) |
-| L3 | `events` |
-| L4 | `containers` |
-| L5 | `structure` |
-| L6 | `context`, `semantics`, `relationship`, `interpretation` (four mutually-restricted siblings) |
-| L7 | `theory`, `rules` (`rules` depends on `theory`; `theory` never depends back) |
-| L8 | `analysis` |
-| L9 | `io` (MIDI import), `export` (MusicXML), `query` |
-| Extensions | `frameworks/<name>/`: 11 Theory Frameworks built on L7 (see `frameworks/README.md`); `chain/`: the analysis chain (`ursatz_chain`), above the kernel and the frameworks |
+The library is five groups, each one folder under `library/` and one CMake target (R-546, R-578). Inside a group, one folder per area.
+
+| Group | Target | Areas |
+|---|---|---|
+| `model/` | `ursatz_model` | `identity`, `core`, `time`, `pitch`, `events`, `containers`, `structure`, `relationship`, `interpretation`: the value types (the former layers L0 to L6 without `context` and `semantics`, in that order) |
+| `theory/` | `ursatz_theory` | `framework` (the Framework type and singleton), `style`, `rules` (Rule, Constraint, Preference, Context), `vocabulary` (shared theory enums), `tonality`, `harmony`, `voicing`, `counterpoint`, `form`, `meter`, `galant`, `markings`: the rule libraries and vocabularies |
+| `analysis/` | `ursatz_analysis` | `notes` (the neutral analysis types and segmentation), `motive`, `voices`, `harmony`, `form`, `meter`, `texture`, `counterpoint`, `galant`, `similarity`: the analyses and the framework adapters |
+| `chain/` | `ursatz_chain` | the analysis chain, one folder |
+| `io/` | `ursatz_io` | MIDI and MusicXML import, MIDI and MusicXML export |
+
+Headers are included by their path from `library/` (`model/time/meter_map.h`, `theory/harmony/harmony_chord.h`, `analysis/motive/motive_sketch.h`, `chain/analysis_chain.h`, `io/midi_importer.h`).
 
 ## Dependency rule
 
-A module in layer N may depend only on modules in layers 0 through N. It must never depend sideways within its own layer unless that specific dependency is documented, and never depend upward on a higher layer. The documented sideways edges are `rules` on `theory` (L7), `interpretation` on `relationship` through `claim_interpretation.h` (L6), and in L9 no sideways edge. No `src/` module includes a framework header. Frameworks never compile kernel sources (`architecture_framework_sources` checks every `frameworks/*/CMakeLists.txt` and `chain/CMakeLists.txt`); code that needs both a framework and the kernel lives in `chain/`. The former exception, `analysis`'s `ChordIdentification` and `KeyEstimation`, is gone (R-010 finished, R-241).
+The groups depend downward only: `model`, then `theory` (on `model`), then `analysis` (on `theory`), then `chain` (on `analysis`); `io` depends on `model` alone and nothing depends on `io` but the chain's tests and the applications. Inside `model` the old layer order holds: `identity`, `core`, `time` and `pitch`, `events`, `containers`, `structure`, `relationship` and `interpretation`, each only on the ones before it (`interpretation` on `relationship` through `claim_interpretation.h`). Inside `theory`, `rules` and the area libraries depend on `framework` and `vocabulary`; `harmony` on `rules`; `form` on `harmony`; `galant` on `counterpoint`. Inside `analysis`, every area depends on `notes`; `form` on `motive`; `voices` on `meter`. The former frameworks are gone as targets: their rule libraries are theory areas and their adapters are analysis areas. Their identities stay (`standard-harmony-v1` and the others), one `Framework` singleton per former framework ([theory/README.md](../theory/README.md), [analysis/README.md](../analysis/README.md)).
 
-The analysis chain (`chain/`, target `ursatz_chain`) is an extension above the numbered stack. It may include kernel L0 to L8 and the framework headers named in the `chain` row of `cmake/layer-table.txt`, and never L9 (`io`, `export`, `query`). Headers are included as `ursatz_chain/<name>.h`. A framework test may link the chain; a framework library may not. The chain keeps the stage inputs it builds (harmony inputs, prepared harmony, form and motive inputs, voice grid, galant segments) and exposes them through `analysis_chain_*` accessors, and it reads the outer lines on the chord segments (`chain_build_segment_lines`) alongside the lines on the voice segments (`analysis_chain_outer_voices`).
+The analysis chain (`chain/`, target `ursatz_chain`) joins `analysis` and everything below it; a theory or analysis file never includes it. Headers are included as `chain/<name>.h`. The chain keeps the stage inputs it builds (harmony inputs, prepared harmony, form and motive inputs, voice grid, galant segments) and exposes them through `analysis_chain_*` accessors, and it reads the outer lines on the chord segments (`chain_build_segment_lines`) alongside the lines on the voice segments (`analysis_chain_outer_voices`).
 
-A framework may depend on L0 to L6, on `theory/framework.h`, `theory/framework_singleton.h`, `rules/rule.h`, `rules/constraint.h` and `rules/preference.h`, and on another framework only where that edge is recorded in `frameworks/README.md`.
-
-The rules are enforced by `cmake/layer-table.txt` (test `layer_table`, in the fast set): every C file belongs to a module, and each module row lists what it may include, with a reason for each exception. A disallowed include fails the test. Test sources follow the same rules (the `tests` rows). No framework test reaches kernel L8; framework sources never include L8.
+The rules are enforced by `cmake/layer-table.txt` (test `layer_table`, in the fast set): every C file belongs to a module, each module row lists what it may include, with a reason for each exception, and a disallowed include fails the test. The `target` rows name the modules one CMake target builds; an include between two targets (or from an application) must name a staged header, and a staged header that nothing outside its target includes fails as well ([public-surface.md](public-surface.md)). Test sources follow the same rules (the `tests-*` rows, one per test folder).
 
 ## Open issues
 

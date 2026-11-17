@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-form/hybrid_rules.h>
-#include <standard-tonality/tonal_key.h>
-#include <standard-form/phrase_beginning.h>
-#include <standard-form/phrase_ending.h>
-#include <standard-form/phrase_level_form.h>
+#include <theory/form/hybrid_rules.h>
+#include <theory/tonality/tonal_key.h>
+#include <theory/form/phrase_beginning.h>
+#include <theory/form/phrase_ending.h>
+#include <theory/form/phrase_level_form.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/grow.h>

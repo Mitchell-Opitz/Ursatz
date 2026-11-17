@@ -1,8 +1,8 @@
 # standard-meter metric position
 
-The metric position rules of `frameworks/standard-meter/`. [Docs index](../README.md)
+The metric position rules of `theory/meter/`. [Docs index](../README.md)
 
-Framework overview: [frameworks/standard-meter/README.md](../../frameworks/standard-meter/README.md).
+Framework overview: [theory/meter/README.md](../../theory/meter/README.md).
 
 - **Metric position** (`metric_position_rules.h`): reads a `MetricalPosition`
   (`time/metrical_position.h`: a measure number and an exact offset in whole

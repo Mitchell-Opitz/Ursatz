@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_report.h>
 
-#include "analysis/motive_sketch.h"
+#include "analysis/motive/motive_sketch.h"
 
 /*
  * The features of a motive family (AnalysisMotiveFeatures) as a library MotiveSketch: the prototype's notes, the

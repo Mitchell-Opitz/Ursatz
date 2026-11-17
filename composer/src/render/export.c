@@ -5,13 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <core/rational.h>
-#include <export/musicxml_export.h>
-#include <identity/entity_id.h>
+#include <model/core/rational.h>
+#include <io/musicxml_export.h>
+#include <model/identity/entity_id.h>
 #include <io/midi_renderer.h>
-#include <time/musical_time.h>
-#include <time/time_rational.h>
-#include <time/tempo_map.h>
+#include <model/time/musical_time.h>
+#include <model/time/time_rational.h>
+#include <model/time/tempo_map.h>
 
 #define PREFERRED_DIVISION 480u
 #define MIDI_NAME_TEXT_MAX 48

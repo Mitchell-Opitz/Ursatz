@@ -1,6 +1,6 @@
 # Analysis: repeats and returns
 
-`standard_form_find_repeats` (`frameworks/standard-form/analysis/analysis_repeats.h`) finds written-out repeats and melodic returns over measures, and `standard_form_phrase_grid_follow_repeats` (`analysis_phrase_grid.h`) lets a phrase grid follow the repeats (R-400). Nothing in the chain calls either yet.
+`standard_form_find_repeats` (`analysis/form/analysis_repeats.h`) finds written-out repeats and melodic returns over measures, and `standard_form_phrase_grid_follow_repeats` (`analysis_phrase_grid.h`) lets a phrase grid follow the repeats (R-400). Nothing in the chain calls either yet.
 
 ## Input
 

@@ -3,10 +3,10 @@
 
 #include <stddef.h>
 
-#include <events/note_event.h>
-#include <pitch/pitch_numeric_value.h>
-#include <time/meter_map.h>
-#include <time/musical_time.h>
+#include <model/events/note_event.h>
+#include <model/pitch/pitch_numeric_value.h>
+#include <model/time/meter_map.h>
+#include <model/time/musical_time.h>
 
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>

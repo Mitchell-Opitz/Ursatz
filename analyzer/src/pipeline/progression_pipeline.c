@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/progression_patterns.h"
+#include "analysis/harmony/progression_patterns.h"
 
 /* A pattern's numerals are joined with this. */
 #define PROGRESSION_SEPARATOR " > "

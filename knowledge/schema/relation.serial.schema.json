@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K6 relation, serial: a row form (schema only)",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "form",
+        "n"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "form": {
+          "enum": [
+            "P",
+            "I",
+            "R",
+            "RI"
+          ]
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 11
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "anchor",
+          "target"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "anchor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

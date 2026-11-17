@@ -6,14 +6,14 @@
 #include <io/midi_importer.h>
 #include <io/midi_key_signature.h>
 #include <io/musicxml_importer.h>
-#include <pitch/pitch_arithmetic.h>
-#include <pitch/pitch_numeric_value.h>
-#include <pitch/pitch_spelling.h>
-#include <time/duration.h>
-#include <time/meter_map.h>
-#include <time/musical_time.h>
-#include <time/temporal_anchor.h>
-#include <time/time_signature.h>
+#include <model/pitch/pitch_arithmetic.h>
+#include <model/pitch/pitch_numeric_value.h>
+#include <model/pitch/pitch_spelling.h>
+#include <model/time/duration.h>
+#include <model/time/meter_map.h>
+#include <model/time/musical_time.h>
+#include <model/time/temporal_anchor.h>
+#include <model/time/time_signature.h>
 
 #include "motive/motive_internal.h"
 

@@ -6,12 +6,13 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 
 - [README.md](../README.md): What Ursatz is and how to build and use it.
 - [docs/architecture.md](architecture.md): What the library is for, its module map, public API and data flow.
-- [docs/layers-and-dependency-rules.md](layers-and-dependency-rules.md): The layer table, the dependency rule, open and resolved dependency issues.
-- [docs/public-surface.md](public-surface.md): Which headers each library target exposes and the tests that guard it.
-- [docs/placement-rule.md](placement-rule.md): Where an analysis algorithm lives: kernel, framework, chain or app.
-- [docs/vocabulary-enums.md](vocabulary-enums.md): Shared theory enums in src/semantics and when a new one is admitted.
+- [docs/layers-and-dependency-rules.md](layers-and-dependency-rules.md): The five groups, the dependency rule, open and resolved dependency issues.
+- [docs/public-surface.md](public-surface.md): Which headers each library group stages, the narrowing rule and the tests that guard it.
+- [docs/placement-rule.md](placement-rule.md): Where an analysis algorithm lives: model, theory, analysis, chain or app.
+- [docs/vocabulary-enums.md](vocabulary-enums.md): Shared theory enums in theory/vocabulary and when a new one is admitted.
 - [docs/module-status.md](module-status.md): Implementation status and doc of each kernel module.
-- [frameworks/README.md](../frameworks/README.md): Catalog of the 11 Theory Frameworks and their shared conventions.
+- [theory/README.md](../theory/README.md): The theory group: its areas, the former framework each holds, the catalog of the 11 Theory Frameworks and their shared conventions.
+- [analysis/README.md](../analysis/README.md): The analysis group: its areas and the former framework adapters each holds.
 - [chain/README.md](../chain/README.md): The analysis chain: stages, owners and how to call it.
 
 ## Build and test
@@ -56,17 +57,17 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/standard-tonality-chords.md](modules/standard-tonality-chords.md): standard-tonality triad and seventh quality rules.
 - [docs/modules/standard-tonality-numerals-and-keys.md](modules/standard-tonality-numerals-and-keys.md): standard-tonality Roman numerals, adapter and key functions.
 - [docs/modules/common-practice-minimal-weighted.md](modules/common-practice-minimal-weighted.md): common-practice-minimal weighted identification and chords in context.
-- [frameworks/common-practice-minimal/README.md](../frameworks/common-practice-minimal/README.md): Diatonic triads and sevenths, major and minor keys, scope and boundaries.
-- [frameworks/galant-schemas/README.md](../frameworks/galant-schemas/README.md): Galant schema prototypes.
-- [frameworks/scale-harmonization/README.md](../frameworks/scale-harmonization/README.md): Rule of the octave and sequences over a bass scale.
-- [frameworks/standard-counterpoint/README.md](../frameworks/standard-counterpoint/README.md): Species counterpoint framework: scope, adding a rule module, Fux conformance.
-- [frameworks/standard-form/README.md](../frameworks/standard-form/README.md): Form framework: phrases, sentence, period.
-- [frameworks/standard-harmony/README.md](../frameworks/standard-harmony/README.md): Harmony framework: scope list and what is not covered.
-- [frameworks/standard-markings/README.md](../frameworks/standard-markings/README.md): Dynamics and tempo rules.
-- [frameworks/standard-meter/README.md](../frameworks/standard-meter/README.md): Meter framework: scope, accented beats, what is not covered.
-- [frameworks/standard-texture/README.md](../frameworks/standard-texture/README.md): Texture rules and classification.
-- [frameworks/standard-tonality/README.md](../frameworks/standard-tonality/README.md): Tonality framework: key functions, chord qualities, Roman numerals.
-- [frameworks/standard-voicing/README.md](../frameworks/standard-voicing/README.md): SATB voicing of one chord.
+- [analysis/harmony/README.md](../analysis/harmony/README.md): Diatonic triads and sevenths, major and minor keys, scope and boundaries.
+- [theory/galant/README.md](../theory/galant/README.md): Galant schema prototypes.
+- [theory/galant/sequences.md](../theory/galant/sequences.md): Rule of the octave and sequences over a bass scale.
+- [theory/counterpoint/README.md](../theory/counterpoint/README.md): Species counterpoint framework: scope, adding a rule module, Fux conformance.
+- [theory/form/README.md](../theory/form/README.md): Form framework: phrases, sentence, period.
+- [theory/harmony/README.md](../theory/harmony/README.md): Harmony framework: scope list and what is not covered.
+- [theory/markings/README.md](../theory/markings/README.md): Dynamics and tempo rules.
+- [theory/meter/README.md](../theory/meter/README.md): Meter framework: scope, accented beats, what is not covered.
+- [analysis/texture/README.md](../analysis/texture/README.md): Texture rules and classification.
+- [theory/tonality/README.md](../theory/tonality/README.md): Tonality framework: key functions, chord qualities, Roman numerals.
+- [theory/voicing/README.md](../theory/voicing/README.md): SATB voicing of one chord.
 
 ## Formats and schemas
 

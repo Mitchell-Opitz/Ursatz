@@ -1,0 +1,40 @@
+#include "model/pitch/pitch_identity.h"
+
+#include <stdlib.h>
+#include <string.h>
+#include "model/core/value.h"
+
+struct PitchIdentity {
+    Value *value;
+};
+
+PitchIdentityResult pitch_identity_create(const void *token, size_t token_size, PitchIdentity **out) {
+    if (token == NULL) {
+        return PITCH_IDENTITY_ERR_NULL_TOKEN;
+    }
+
+    PitchIdentity *identity = (PitchIdentity *)malloc(sizeof(PitchIdentity));
+    if (identity == NULL) {
+        return PITCH_IDENTITY_ERR_ALLOC;
+    }
+
+    if (value_create("PitchIdentity", token, token_size, &identity->value) != VALUE_OK) {
+        free(identity);
+        return PITCH_IDENTITY_ERR_ALLOC;
+    }
+
+    *out = identity;
+    return PITCH_IDENTITY_OK;
+}
+
+void pitch_identity_destroy(PitchIdentity *identity) {
+    if (identity == NULL) {
+        return;
+    }
+    value_destroy(identity->value);
+    free(identity);
+}
+
+const void *pitch_identity_token(const PitchIdentity *identity, size_t *out_size) {
+    return value_content(identity->value, out_size);
+}

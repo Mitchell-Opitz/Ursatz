@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
+#include "model/events/note_event.h"
 #include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/tempo_map.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/tempo_map.h"
 
 #include <ursatz_analyzer/notation_reading.h>
 

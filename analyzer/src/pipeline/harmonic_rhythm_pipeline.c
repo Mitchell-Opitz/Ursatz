@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
-#include "standard-meter/analysis/meter_analysis_check.h"
-#include "time/meter_map.h"
-#include "time/metrical_position.h"
-#include "time/musical_time.h"
+#include "model/core/rational.h"
+#include "analysis/meter/meter_analysis_check.h"
+#include "model/time/meter_map.h"
+#include "model/time/metrical_position.h"
+#include "model/time/musical_time.h"
 
 /* The measure the time lies in on the meter map, or false when the map cannot place it. */
 static bool measure_at(const MeterMap *map, long numerator, unsigned long denominator, int *measure) {

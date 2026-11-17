@@ -18,7 +18,7 @@ for root, dirs, names in os.walk("."):
 files.sort()
 
 def is_readme(p):
-    return p == "README.md" or (p.startswith("frameworks/") and os.path.basename(p) == "README.md"
+    return p == "README.md" or (p.startswith(("theory/", "analysis/")) and os.path.basename(p) == "README.md"
                                 and p.count("/") == 2)
 
 for p in files:

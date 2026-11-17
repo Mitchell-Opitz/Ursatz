@@ -1,0 +1,26 @@
+ursatz_test(phrase_boundary_detection LIBS ursatz_analysis)
+
+ursatz_test(form_structure_detection LIBS ursatz_analysis)
+
+ursatz_test(thematic_return_detection LIBS ursatz_analysis)
+
+ursatz_test(standard_form_analysis_phrase SOURCES test_analysis_phrase.c LIBS ursatz_analysis ursatz_chain)
+
+ursatz_test(standard_form_analysis_phrase_grid SOURCES test_analysis_phrase_grid.c LIBS ursatz_analysis ursatz_chain
+    VALGRIND)
+
+ursatz_test(standard_form_analysis_repeats SOURCES test_analysis_repeats.c LIBS ursatz_analysis ursatz_chain VALGRIND)
+
+ursatz_test(standard_form_analysis_similarity SOURCES test_analysis_similarity.c LIBS ursatz_analysis ursatz_chain)
+
+ursatz_test(standard_form_analysis_ideas SOURCES test_analysis_ideas.c LIBS ursatz_analysis ursatz_chain)
+
+ursatz_test(standard_form_analysis_theme SOURCES test_analysis_theme.c LIBS ursatz_analysis ursatz_chain)
+
+ursatz_test(standard_form_analysis_expansion SOURCES test_analysis_expansion.c LIBS ursatz_analysis ursatz_chain)
+
+ursatz_test(standard_form_analysis_motive SOURCES test_analysis_motive.c LIBS ursatz_analysis ursatz_chain)
+
+ursatz_test(standard_form_analysis_motive_match SOURCES test_analysis_motive_match.c LIBS ursatz_analysis ursatz_chain)
+
+ursatz_test(standard_form_analysis_note SOURCES test_form_analysis_note.c LIBS ursatz_analysis VALGRIND)

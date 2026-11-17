@@ -4,11 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <standard-harmony/harmony_cadence_rules.h>
-#include <standard-texture/texture_rules.h>
+#include <theory/harmony/harmony_cadence_rules.h>
+#include <analysis/texture/texture_rules.h>
 
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
+#include <theory/tonality/roman_numeral_rules.h>
 
 #include "util/plan_util.h"
 #include "grow/grow_internal.h"
@@ -529,25 +530,15 @@ static GrowResult theme_refusal(const GrowRequest *request, CadenceType first, G
 
 /* The degree (1 to 7) a numeral is built on, ignoring accidentals and case; 0 when it cannot be read. */
 static int numeral_degree(const char *numeral, bool *inverted) {
-    static const char *const ROMANS[] = {"VII", "VI", "IV", "V", "III", "II", "I"};
-    static const int DEGREES[] = {7, 6, 4, 5, 3, 2, 1};
-    char upper[16];
-    size_t length = 0;
     const char *at = numeral;
     while (*at == 'b' || *at == '#') {
         at++;
     }
-    while (*at && length + 1 < sizeof(upper) && strchr("ivIV", *at)) {
-        upper[length++] = (char)(*at >= 'a' ? *at - 'a' + 'A' : *at);
+    const char *letters = at;
+    while (*at && strchr("ivIV", *at)) {
         at++;
     }
-    upper[length] = '\0';
-    int degree = 0;
-    for (size_t i = 0; i < sizeof(DEGREES) / sizeof(DEGREES[0]); i++) {
-        if (strcmp(upper, ROMANS[i]) == 0) {
-            degree = DEGREES[i];
-        }
-    }
+    int degree = standard_tonality_roman_numeral_degree_of(letters, (size_t)(at - letters));
     /* The figures after the roman numeral: a 6, 64, 65, 43, 42 or 2 is an inversion; 7 and none are root position. */
     while (*at == 'o' || *at == '+' || *at == '/' || *at == '\xc2' || *at == '\xb0') {
         at++;

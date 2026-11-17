@@ -1,20 +1,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-texture/analysis/texture_analysis_classify.h>
-#include <standard-texture/texture_rules.h>
+#include <analysis/texture/texture_analysis_classify.h>
+#include <analysis/texture/texture_rules.h>
 
-#include <identity/entity_id.h>
-#include <time/meter_map.h>
-#include <time/musical_time.h>
-#include <time/note_value.h>
-#include <time/time_signature.h>
-#include <time/time_rational.h>
+#include <model/identity/entity_id.h>
+#include <model/time/meter_map.h>
+#include <model/time/musical_time.h>
+#include <model/time/note_value.h>
+#include <model/time/time_signature.h>
+#include <model/time/time_rational.h>
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/result_chain.h>
-#include <ursatz_chain/analysis_chain.h>
+#include <chain/analysis_chain.h>
 
 #include "check/hearing_result.h"
 #include "render/render_notes.h"

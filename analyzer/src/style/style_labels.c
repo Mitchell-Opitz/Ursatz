@@ -5,10 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "style/style_profile_internal.h"
-#include "standard-tonality/roman_numeral_grammar.h"
-#include "standard-tonality/tonal_key.h"
+#include "theory/tonality/roman_numeral_grammar.h"
+#include "theory/tonality/tonal_key.h"
 
 static const char *const dimension_names[STYLE_DIMENSION_COUNT] = {"harmony", "rhythm", "melody", "form"};
 

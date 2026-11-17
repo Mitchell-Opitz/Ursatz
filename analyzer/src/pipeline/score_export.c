@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "export/musicxml_export.h"
-#include "export/score_quantize.h"
-#include "events/note_event.h"
-#include "identity/entity_id.h"
-#include "time/meter_map.h"
+#include "io/musicxml_export.h"
+#include "io/score_quantize.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
+#include "model/time/meter_map.h"
 
 /* The longest base id the export writes (its buffer is 64 bytes). */
 #define XML_ID_EXPORT_LIMIT 63

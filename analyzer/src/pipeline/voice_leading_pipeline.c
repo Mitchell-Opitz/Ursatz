@@ -5,27 +5,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/voice_separation.h"
-#include "core/rational.h"
-#include "events/note_event.h"
+#include "analysis/voices/voice_separation.h"
+#include "model/core/rational.h"
+#include "model/events/note_event.h"
 #include "pipeline/spelling_util.h"
 #include "pipeline/voicing_check.h"
-#include <ursatz_chain/chain_inputs.h>
+#include <chain/chain_inputs.h>
 
-#include "pitch/midi_pitch.h"
-#include "pitch/pitch_numeric_value.h"
-#include "standard-counterpoint/analysis/analysis_grid.h"
-#include "standard-counterpoint/analysis/analysis_motion.h"
-#include "standard-counterpoint/analysis/analysis_perfects.h"
-#include "standard-counterpoint/framework.h"
-#include "standard-harmony/analysis/analysis_resolution.h"
-#include "standard-voicing/doubling_reading.h"
-#include "standard-harmony/analysis/analysis_voices.h"
-#include "standard-meter/segmentation_beat_grid.h"
-#include "theory/framework.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
+#include "model/pitch/midi_pitch.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "analysis/counterpoint/analysis_grid.h"
+#include "analysis/counterpoint/analysis_motion.h"
+#include "analysis/counterpoint/analysis_perfects.h"
+#include "theory/counterpoint/framework.h"
+#include "analysis/harmony/analysis_resolution.h"
+#include "theory/voicing/doubling_reading.h"
+#include "analysis/harmony/analysis_voices.h"
+#include "theory/meter/segmentation_beat_grid.h"
+#include "theory/framework/framework.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
 #include "util/misc_util.h"
 
 #define NO_NOTE SIZE_MAX

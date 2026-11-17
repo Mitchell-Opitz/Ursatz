@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Layer L8 (`music-analysis`). Path `src/analysis/`, tests `tests/analysis/`. The only L8 module (`generation` left the library in P55); see `docs/modules/l8-notes.md` for the sibling rule and shared L8 notes.
+Layer L8 (`music-analysis`). Path `analysis/motive/`, tests `tests/analysis/`. The only L8 module (`generation` left the library in P55); see `docs/modules/l8-notes.md` for the sibling rule and shared L8 notes.
 
 ## Provides
 
@@ -20,7 +20,7 @@ The analyzers are documented by topic:
 - [Analysis: phrases and form](analysis-phrase-form.md): phrase boundaries, period, form structure, thematic return.
 - [Motive link](motive-link.md): choosing and grouping linked motives across pieces.
 
-**Real (wired to `frameworks/common-practice-minimal/`):**
+**Real (wired to `theory/tonality/`):**
 
 - **Progression patterns** (`analysis/progression_patterns.h`) -- the chord progressions a piece repeats: held chords merged, runs of 2 to 6 chords inside blocks (a NULL label or group -1 ends a block, a change of group ends one), patterns that occur at least twice, a pattern dropped when a longer one with as many occurrences contains it, ordered by occurrences, length, then earliest. Labels are compared as text; no theory. Port of Analyzer `progression_pipeline.c` without file-scope state.
 

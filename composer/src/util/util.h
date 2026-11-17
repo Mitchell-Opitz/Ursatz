@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <standard-harmony/harmonic_function.h>
+#include <theory/harmony/harmonic_function.h>
 
 /* Small helpers the sources share. Private: not installed, not part of the API. */
 

@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "A knowledge entry: the anatomy every kind shares (target architecture 5.1)",
+  "type": "object",
+  "required": [
+    "id",
+    "kind",
+    "name",
+    "content",
+    "citations",
+    "status",
+    "version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "kind": {
+      "enum": [
+        "material",
+        "chord-type",
+        "voicing",
+        "vocabulary",
+        "schema",
+        "relation",
+        "function",
+        "theme-type",
+        "form",
+        "operation",
+        "pattern",
+        "instrument",
+        "rule",
+        "preset",
+        "term"
+      ]
+    },
+    "subtype": {
+      "type": "string",
+      "pattern": "^[a-z]+(-[a-z]+)*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "aliases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "content": {
+      "type": "object"
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "target"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "pattern": "^[a-z]+(-[a-z]+)*$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source",
+          "chapter",
+          "note"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[a-z]+(-[a-z]+)*$"
+          },
+          "part": {
+            "type": "string"
+          },
+          "chapter": {
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "section": {
+            "type": "string"
+          },
+          "example": {
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "reference",
+        "active",
+        "retired"
+      ]
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "pattern": "^user\\."
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "citations": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "active"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "examples"
+        ],
+        "properties": {
+          "examples": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "material",
+              "relation"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "subtype"
+        ]
+      }
+    }
+  ]
+}

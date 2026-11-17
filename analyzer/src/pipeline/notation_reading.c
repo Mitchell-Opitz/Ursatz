@@ -6,14 +6,14 @@
 
 #include <ursatz_analyzer/imported_notes.h>
 
-#include "core/rational.h"
-#include "identity/entity_id.h"
-#include "time/duration.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/note_value.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
+#include "model/core/rational.h"
+#include "model/identity/entity_id.h"
+#include "model/time/duration.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/note_value.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_signature.h"
 #include "util/misc_util.h"
 
 /* One unsigned decimal number from *text, advancing past it; false when there is none or it overflows. */

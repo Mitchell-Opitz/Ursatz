@@ -8,8 +8,8 @@
 
 #include <cJSON.h>
 
-#include "identity/entity_id.h"
-#include "theory/style_model_build.h"
+#include "model/identity/entity_id.h"
+#include "theory/style/style_model_build.h"
 #include "util/file_util.h"
 #include "util/misc_util.h"
 

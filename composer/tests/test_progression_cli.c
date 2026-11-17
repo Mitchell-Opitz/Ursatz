@@ -6,9 +6,9 @@
 
 #include <io/midi_importer.h>
 #include <io/musicxml_importer.h>
-#include <pitch/pitch_numeric_value.h>
+#include <model/pitch/pitch_numeric_value.h>
 
-#include <galant-schemas/galant_prototypes.h>
+#include <theory/galant/galant_prototypes.h>
 
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>

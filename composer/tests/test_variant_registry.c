@@ -8,7 +8,7 @@
 
 #include "util/request_parse.h"
 
-#include <analysis/motive_relation.h>
+#include <analysis/motive/motive_relation.h>
 
 /*
  * The variant registry and chains: the 9 development operations with their categories and citations, chains applied

@@ -4,7 +4,7 @@
 
 #include <cJSON.h>
 
-#include <standard-harmony/harmony_chord.h>
+#include <theory/harmony/harmony_chord.h>
 
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/explain.h>

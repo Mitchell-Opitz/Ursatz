@@ -3,13 +3,13 @@
 
 #include <math.h>
 
-#include "interpretation/chord.h"
-#include "standard-meter/analysis/meter_analysis_density.h"
-#include "standard-meter/analysis/meter_analysis_hemiola.h"
-#include "standard-meter/analysis/meter_analysis_hypermeter.h"
-#include "standard-meter/analysis/meter_analysis_syncopation.h"
-#include "standard-meter/analysis/meter_analysis_input.h"
-#include "ursatz_chain/chain_inputs.h"
+#include "model/interpretation/chord.h"
+#include "analysis/meter/meter_analysis_density.h"
+#include "analysis/meter/meter_analysis_hemiola.h"
+#include "analysis/meter/meter_analysis_hypermeter.h"
+#include "analysis/meter/meter_analysis_syncopation.h"
+#include "analysis/meter/meter_analysis_input.h"
+#include "chain/chain_inputs.h"
 
 /*
  * The rhythm and meter analysis of Field 5 (Nocturne No. 5 in B-flat major, in 12/8), the measures of tests/fixtures/annotations/field5_rhythm.txt:

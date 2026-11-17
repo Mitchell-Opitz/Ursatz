@@ -6,7 +6,7 @@
 
 #include <io/midi_importer.h>
 #include <io/musicxml_importer.h>
-#include <pitch/pitch_numeric_value.h>
+#include <model/pitch/pitch_numeric_value.h>
 #include "support/test_support.h"
 #include "ursatz_test.h"
 

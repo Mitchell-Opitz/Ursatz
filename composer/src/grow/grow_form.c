@@ -7,9 +7,11 @@
 #include <ursatz_composer/motive_connect.h>
 #include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/variant_registry.h>
+#include <theory/tonality/tonal_key.h>
 
 #include "grow/grow_internal.h"
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 #define FORM_MAGIC 0x47464d31UL
 /* The pitches a form may use, so the melody has room to place it (the contrasting ideas' range). */
@@ -259,16 +261,16 @@ typedef struct {
 
 /* Every pitch within the range, and in the key's scale (a minor key also has the raised seventh). */
 static bool within_range(const Motive *motive) {
-    static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
-    static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
+    unsigned scale = standard_tonality_mode_pitch_classes_with_leading_tone(
+        0, motive->minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
     for (size_t i = 0; i < motive->note_count; i++) {
         int pitch = motive_pitch(motive, i);
         if (pitch < FORM_LOW || pitch > FORM_HIGH) {
             return false;
         }
         if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
-            int degree = ((pitch - motive->tonic_pc) % 12 + 12) % 12;
-            if (!(motive->minor ? MINOR : MAJOR)[degree]) {
+            int degree = util_pitch_class(pitch - motive->tonic_pc);
+            if (!((scale >> degree) & 1u)) {
                 return false;
             }
         }
@@ -349,7 +351,7 @@ static bool cadence_tone_holds(const Request *request, const Motive *motive) {
         return true;
     }
     int tonic = motive->tonic_pc;
-    int last = ((motive_pitch(motive, motive->note_count - 1) - tonic) % 12 + 12) % 12;
+    int last = util_pitch_class(motive_pitch(motive, motive->note_count - 1) - tonic);
     int third = motive->minor ? 3 : 4;
     return !((request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && last != 0) || (request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC && last != third));
 }

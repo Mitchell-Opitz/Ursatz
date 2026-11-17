@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
-#include "time/meter_map.h"
+#include "model/events/note_event.h"
+#include "model/time/meter_map.h"
 
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/analysis_result.h>

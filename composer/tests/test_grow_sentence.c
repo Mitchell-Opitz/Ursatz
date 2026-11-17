@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-form/hybrid_rules.h>
-#include <standard-form/phrase_beginning.h>
-#include <standard-form/phrase_ending.h>
-#include <standard-form/phrase_level_form.h>
-#include <semantics/subphrase_role.h>
-#include <standard-form/sentence_rules.h>
+#include <theory/form/hybrid_rules.h>
+#include <theory/form/phrase_beginning.h>
+#include <theory/form/phrase_ending.h>
+#include <theory/form/phrase_level_form.h>
+#include <theory/vocabulary/subphrase_role.h>
+#include <theory/form/sentence_rules.h>
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/variant_registry.h>

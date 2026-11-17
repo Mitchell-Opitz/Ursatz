@@ -1,0 +1,11 @@
+ursatz_test_includes()
+
+add_subdirectory(identity)
+add_subdirectory(core)
+add_subdirectory(time)
+add_subdirectory(pitch)
+add_subdirectory(events)
+add_subdirectory(containers)
+add_subdirectory(structure)
+add_subdirectory(relationship)
+add_subdirectory(interpretation)

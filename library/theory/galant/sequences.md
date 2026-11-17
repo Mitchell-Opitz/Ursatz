@@ -1,0 +1,76 @@
+# scale-harmonization
+
+Theory Framework instance `scale-harmonization-v1`: harmonizing a bass scale in
+the schema and partimento tradition (Open Music Theory, Galant schemas: the
+Rule of the Octave and Harmonizing the Scale with Sequences). Where it lives: the rules are in `library/theory/galant/` (tests `library/theory/tests/galant/`) and the analysis adapter is in `library/analysis/galant/` (tests `library/analysis/tests/galant/`). A Framework extension module physically
+separate from `theory/style/`, the same shape as `theory/counterpoint/`.
+
+The dependencies on other frameworks are one way: this module reads the pitch
+arithmetic and intervals of `standard-counterpoint` and the scale degrees of
+`galant-schemas` (`galant_degree.h`), and neither knows anything of this one.
+File names carry a `scale_` prefix so they never collide with the other
+frameworks' headers on the include path.
+
+## Scope
+
+The subject of every rule is `ScaleHarmonization` (`scale_harmonization.h`): a
+run of stages, one for each bass note (or for each harmony, where two sit over one
+bass note), each with the bass and the upper voices, and the direction the bass
+runs (`ScaleDirection`, `scale_direction.h`) and the tonic. Rhythm
+is not modeled.
+
+The Rule of the Octave is a cheat sheet for harmonizing bass lines, one chord for
+each scale degree, in an ascending and a descending form. A sequence
+(`SequenceKind`, `sequence_kind.h`) is a pattern of one or more
+harmonies that repeats in the direction of the scale.
+
+Every rule is a pure check function. A rule that states what the pattern requires
+is hard; "avoid" and "usually" features are soft. No rule builds a `Rule` or
+`Constraint`.
+
+- **Sequence patterns** (`scale_patterns.h`), as the Harmonizing the Scale with
+  Sequences chapter describes them. A pattern is a repeating unit of stages over
+  a bass that runs by step in a direction; each stage says whether the bass moves,
+  which intervals above the bass (generic sizes, octaves removed) the upper voice
+  may make, and whether the upper voice is suspended (held from the stage
+  before while the bass moves):
+  - *Parallel chords* (both directions): a third, a sixth, or an octave above the
+    bass at every stage, the same at each (a first inversion chord on each note).
+  - *5-6 ascending*, and *5-6 descending* note by note: over each bass note a
+    fifth and then a sixth.
+  - *5-6 descending, alternating*: the fifth on one bass note and the sixth on the
+    next.
+  - *7-6 descending*: a chain of suspensions. At each new bass note the upper voice
+    is held (a seventh), then resolves down a step (a sixth); the pattern is the
+    parallel chords with the top line delayed.
+- **Sequence rules** (`scale_sequence_rules.h`), a harmonization against a pattern
+  (`ScaleSequence`), on the bass and the lowest upper voice. Hard: the direction is
+  one the pattern allows; the bass moves by a step in the direction where the
+  pattern's bass moves, and stays where it does not; the upper voice makes an
+  interval the pattern allows at every stage; each stage repeats the interval one
+  unit before it (so the sequence repeats); and a suspended upper voice holds its
+  pitch. Soft: the harmonization is a whole number of units.
+
+## Not covered
+
+- **The Rule of the Octave.** Its four-voice realization and its chord table, in
+  the ascending and descending forms, are not encoded.
+- **Other sequences.** The ascending 7-6 and 2-3 patterns (which need a leap up an
+  octave to restart: 7-6-8 and 2-3-1, or 9-8-10 with the bass), the descending 2-3
+  pattern, the three descending cycles of fifths (triads; sevenths and
+  suspensions; the zigzag with its outer-voice canon), and the ascending cycle
+  with 4-3 suspensions.
+- **Rhythm.** A harmonization is stages, not durations.
+- **Finding the stages.** The caller says which pitches are the bass and the upper
+  voices at each stage.
+
+## Analysis of real music
+
+`analysis/` detects harmonic sequences (a model repeated transposed by a constant diatonic interval) in the outer voices and Roman numerals of a run of segments, and assigns their kind with the patterns and rules above. It reads galant-schemas' neutral segment struct. A cycle of fifths has no pattern here, so it is reported with its existing kind and marked as not rule-backed. See `docs/modules/schema-sequence-analysis.md`.
+
+## Vocabulary enums
+
+Owned here (moved from `theory/vocabulary/`; type names and values unchanged):
+
+- `ScaleDirection` is a plain enum value naming the direction a scale or a bass line runs: ascending or descending. It carries no `EntityID`, pitches, or framework claim, and is not `ContourDirection` (`semantics/contour.h`), which also has a "same" direction and describes the change between two pitches of a `Contour`.
+- `SequenceKind` is a plain enum value naming a kind of sequential harmonization of a bass scale, a pattern of one or more harmonies that repeats in the direction of the scale: parallel chords, 5-6, 7-6 (a chain of suspensions), cycle of fifths, or 2-3 (the inversion of the 7-6, also a chain of suspensions). It carries no `EntityID`, pitches, or framework claim. Which patterns a framework encodes, and their intervals above the bass, are its own convention (`theory/galant`).

@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-`src/export/musicxml_export.h` (the interface) and `src/export/musicxml_score.c` (the layout and writer), tests `tests/export/`. Layer L9 (`music-export`). Depends on `identity`, `time`, `pitch` and `events` only; the importer's types (`io/`) are not used, so the caller copies an import's members into the input struct.
+`io/musicxml_export.h` (the interface) and `io/musicxml_score.c` (the layout and writer), tests `tests/export/`. Layer L9 (`music-export`). Depends on `identity`, `time`, `pitch` and `events` only; the importer's types (`io/`) are not used, so the caller copies an import's members into the input struct.
 
 ## Entry points
 
@@ -77,7 +77,7 @@ Every note and rest is written as values a player can read: after the cuts above
 
 ## Round trip
 
-`tests/export/test_musicxml_score_fixtures.c` and `test_musicxml_score_reference.c` import, export through `musicxml_export_write_score` and import again, and compare notes (position, duration, sounding pitch, spelling, part, staff), parts, `MeterMap` regions and measure count, `TempoMap` regions, key signatures, tempo markings and dynamics. The five reference pieces go MIDI import to MusicXML. Clementi 36 and Field 1 are two-channel files with no voices, so the test gives each hand its own staff by colouring notes greedily; the library does not do this for a caller. A map's `defaulted` flag is not compared (a defaulted region comes back as a declared one). `test_musicxml_score_overlaps.c` covers chords and overlaps: a chord, a held note under two notes, a partial overlap, lane voice numbering, Clementi 36 and Field 1 with no staff or part arrays, and `chords_backup.musicxml`; it compares count and the multiset of (onset, duration, pitch) after a re-import, not voices.
+`io/tests/export/test_musicxml_score_fixtures.c` and `test_musicxml_score_reference.c` import, export through `musicxml_export_write_score` and import again, and compare notes (position, duration, sounding pitch, spelling, part, staff), parts, `MeterMap` regions and measure count, `TempoMap` regions, key signatures, tempo markings and dynamics. The five reference pieces go MIDI import to MusicXML. Clementi 36 and Field 1 are two-channel files with no voices, so the test gives each hand its own staff by colouring notes greedily; the library does not do this for a caller. A map's `defaulted` flag is not compared (a defaulted region comes back as a declared one). `test_musicxml_score_overlaps.c` covers chords and overlaps: a chord, a held note under two notes, a partial overlap, lane voice numbering, Clementi 36 and Field 1 with no staff or part arrays, and `chords_backup.musicxml`; it compares count and the multiset of (onset, duration, pitch) after a re-import, not voices.
 
 ## Not exported
 

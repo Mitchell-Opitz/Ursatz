@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <analysis/motive_relation.h>
-#include <semantics/cadence_type.h>
+#include <analysis/motive/motive_relation.h>
+#include <theory/vocabulary/cadence_type.h>
 
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>

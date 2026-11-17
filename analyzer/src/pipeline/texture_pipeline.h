@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
-#include <ursatz_chain/analysis_chain.h>
+#include <chain/analysis_chain.h>
 
 /*
  * The texture of the piece, from the library chain (analysis_chain_texture: Ursatz's standard-texture analysis over every

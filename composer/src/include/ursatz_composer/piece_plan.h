@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <core/rational.h>
+#include <model/core/rational.h>
 
 /*
  * The piece plan: a tree of Form > Section > Phrase > Subphrase/Idea > Motive

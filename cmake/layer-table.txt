@@ -9,31 +9,37 @@ module civetweb  third_party/civetweb  prefix civetweb.h
 free cjson ezxml civetweb
 
 # Library kernel, layers L0 to L9 (library/docs/layers-and-dependency-rules.md).
-module identity        library/src/identity        prefix identity/
-module core            library/src/core            prefix core/
-module time            library/src/time            prefix time/
-module pitch           library/src/pitch           prefix pitch/
-module events          library/src/events          prefix events/
-module containers      library/src/containers      prefix containers/
-module structure       library/src/structure       prefix structure/
-module context         library/src/context         prefix context/
-module semantics       library/src/semantics       prefix semantics/
-module relationship    library/src/relationship    prefix relationship/
-module interpretation  library/src/interpretation  prefix interpretation/
-module theory          library/src/theory          prefix theory/
-module rules           library/src/rules           prefix rules/
-module analysis        library/src/analysis        prefix analysis/
-module io              library/src/io              prefix io/
-module export          library/src/export          prefix export/
-module query           library/src/query           prefix query/
+module identity        library/model/identity        prefix model/identity/
+module core            library/model/core            prefix model/core/
+module time            library/model/time            prefix model/time/
+module pitch           library/model/pitch           prefix model/pitch/
+module events          library/model/events          prefix model/events/
+module containers      library/model/containers      prefix model/containers/
+module structure       library/model/structure       prefix model/structure/
+module relationship    library/model/relationship    prefix model/relationship/
+module interpretation  library/model/interpretation  prefix model/interpretation/
+# The theory group (library/theory, A20261115-507).
+module theory-framework    library/theory/framework    prefix theory/framework/
+module theory-style        library/theory/style        prefix theory/style/
+module theory-rules        library/theory/rules        prefix theory/rules/
+module theory-vocabulary   library/theory/vocabulary   prefix theory/vocabulary/
+module theory-tonality     library/theory/tonality     prefix theory/tonality/
+module theory-knowledge    library/theory/knowledge    prefix theory/knowledge/
+module theory-harmony      library/theory/harmony      prefix theory/harmony/
+module theory-voicing      library/theory/voicing      prefix theory/voicing/
+module theory-counterpoint library/theory/counterpoint prefix theory/counterpoint/
+module theory-form         library/theory/form         prefix theory/form/
+module theory-meter        library/theory/meter        prefix theory/meter/
+module theory-galant       library/theory/galant       prefix theory/galant/
+module theory-markings     library/theory/markings     prefix theory/markings/
+
+module io              library/io                  prefix io/
 
 group L0-L1 identity core
 group L0-L2 L0-L1 time pitch
 group L0-L5 L0-L2 events containers structure
-group L0-L6 L0-L5 context semantics relationship interpretation
-group L0-L7 L0-L6 theory rules
-group L0-L8 L0-L7 analysis
-group kernel L0-L8 io export query
+group model identity core time pitch events containers structure relationship interpretation
+group theory theory-framework theory-style theory-rules theory-vocabulary theory-knowledge theory-tonality theory-harmony theory-voicing theory-counterpoint theory-form theory-meter theory-galant theory-markings
 
 uses core            identity
 uses time            L0-L1
@@ -41,50 +47,55 @@ uses pitch           L0-L1
 uses events          L0-L2
 uses containers      L0-L2 events
 uses structure       L0-L2 events containers
-uses context         L0-L5
-uses semantics       L0-L5
-uses relationship    L0-L5
-uses interpretation  L0-L5
-uses theory          L0-L6
-uses rules           L0-L6 theory
-uses analysis        L0-L7
-uses io              L0-L2 events ezxml
-uses export          identity time pitch events core/rational.h
-uses query           L0-L1 semantics
-uses semantics       interpretation/key.h -- the analysis key holds a key (semantics/analysis_key.h)
-allow library/src/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
-only ezxml library/src/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
+uses relationship    model
+uses interpretation  model
+uses io              model ezxml
+uses theory-framework    model
+uses theory-style        model
+uses theory-rules        model theory-framework
+uses theory-vocabulary   model
+uses theory-knowledge    model cjson
+uses theory-tonality     model theory-framework theory-knowledge
+uses theory-harmony      model theory-framework theory-rules theory-tonality theory-vocabulary
+uses theory-voicing      model theory-framework theory-vocabulary
+uses theory-counterpoint model theory-framework theory-rules theory-tonality theory-vocabulary
+uses theory-form         model theory-framework theory-harmony theory-vocabulary
+uses theory-meter        model theory-framework theory-vocabulary
+uses theory-galant       model theory-framework theory-rules theory-tonality theory-vocabulary
+uses theory-markings     model theory-framework
 
-# Library frameworks: L0 to L6 and the framework and rule interfaces of L7 (R-007, R-025).
-module common-practice-minimal  library/frameworks/common-practice-minimal  prefix common-practice-minimal/  root library/frameworks/common-practice-minimal
-module galant-schemas           library/frameworks/galant-schemas           prefix galant-schemas/           root library/frameworks/galant-schemas
-module scale-harmonization      library/frameworks/scale-harmonization      prefix scale-harmonization/      root library/frameworks/scale-harmonization
-module standard-counterpoint    library/frameworks/standard-counterpoint    prefix standard-counterpoint/    root library/frameworks/standard-counterpoint
-module standard-form            library/frameworks/standard-form            prefix standard-form/            root library/frameworks/standard-form
-module standard-harmony         library/frameworks/standard-harmony         prefix standard-harmony/         root library/frameworks/standard-harmony
-module standard-markings        library/frameworks/standard-markings        prefix standard-markings/        root library/frameworks/standard-markings
-module standard-meter           library/frameworks/standard-meter           prefix standard-meter/           root library/frameworks/standard-meter
-module standard-texture         library/frameworks/standard-texture         prefix standard-texture/         root library/frameworks/standard-texture
-module standard-tonality        library/frameworks/standard-tonality        prefix standard-tonality/        root library/frameworks/standard-tonality
-module standard-voicing         library/frameworks/standard-voicing         prefix standard-voicing/         root library/frameworks/standard-voicing
-group frameworks common-practice-minimal galant-schemas scale-harmonization standard-counterpoint standard-form standard-harmony standard-markings standard-meter standard-texture standard-tonality standard-voicing
-group framework-base L0-L6 theory/framework.h theory/framework_singleton.h rules/rule.h rules/constraint.h
+# The analysis group (library/analysis, A20261115-507).
+module analysis-notes        library/analysis/notes        prefix analysis/notes/
+module analysis-motive       library/analysis/motive       prefix analysis/motive/
+module analysis-voices       library/analysis/voices       prefix analysis/voices/
+module analysis-harmony      library/analysis/harmony      prefix analysis/harmony/
+module analysis-form         library/analysis/form         prefix analysis/form/
+module analysis-meter        library/analysis/meter        prefix analysis/meter/
+module analysis-texture      library/analysis/texture      prefix analysis/texture/
+module analysis-counterpoint library/analysis/counterpoint prefix analysis/counterpoint/
+module analysis-galant       library/analysis/galant       prefix analysis/galant/
+module analysis-similarity   library/analysis/similarity   prefix analysis/similarity/
+group analysis analysis-notes analysis-motive analysis-voices analysis-harmony analysis-form analysis-meter analysis-texture analysis-counterpoint analysis-galant analysis-similarity
+uses analysis-notes        model theory
+uses analysis-motive       model theory analysis-notes
+uses analysis-voices       model analysis-notes analysis-meter
+uses analysis-harmony      model theory analysis-notes
+uses analysis-form         model theory analysis-notes analysis-motive
+uses analysis-meter        model theory analysis-notes
+uses analysis-texture      model theory analysis-notes
+uses analysis-counterpoint model theory analysis-notes
+uses analysis-galant       model theory analysis-notes
+uses analysis-similarity   model analysis-notes
+allow library/model/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
+only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
+only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge -- only the snapshot reads the embedded files
+only library/theory/knowledge/knowledge_modes.h library/theory/knowledge library/theory/tonality/tonal_key.c library/theory/tests/knowledge -- the generated mode rows, until P58 (R-579)
 
-uses common-practice-minimal framework-base standard-tonality/tonal_key.h
-uses galant-schemas          framework-base standard-counterpoint
-uses scale-harmonization     framework-base standard-counterpoint galant-schemas
-uses standard-counterpoint   framework-base rules/preference.h
-uses standard-form           framework-base standard-harmony
-uses standard-harmony        framework-base rules/preference.h
-uses standard-markings       framework-base
-uses standard-meter          framework-base
-uses standard-texture        framework-base
-uses standard-tonality       framework-base
-uses standard-voicing        framework-base
 
-# The analysis chain: L0 to L8 and the nine frameworks it links, never L9.
-module chain library/chain/ursatz_chain prefix ursatz_chain/
-uses chain L0-L8 common-practice-minimal standard-tonality standard-harmony standard-form standard-meter standard-texture standard-counterpoint galant-schemas scale-harmonization
+
+# The analysis chain: the model, theory and analysis groups, never an application.
+module chain library/chain prefix chain/
+uses chain model theory analysis
 
 # Applications. A library header an application includes is a staged public header.
 module analyzer-api  analyzer/include  prefix ursatz_analyzer/
@@ -93,13 +104,20 @@ module composer-api  composer/include  prefix ursatz_composer/composer_api.h
 module composer      composer/src      prefix ursatz_composer/  root composer/src composer/src/include composer/include
 module composer-cli  composer/cli
 module gui           gui/backend/src   root gui/backend/src
-staged analyzer-api analyzer composer
+# A CMake target builds these modules; an include between two modules of one target needs no staging, one between targets (or from
+# an application) must name a staged header, and a staged header nothing outside its target includes is an error.
+target ursatz_model model
+target ursatz_theory theory
+target ursatz_analysis analysis
+target ursatz_chain chain
+target ursatz_io io
+staged model theory analysis chain io analyzer-api analyzer composer
 generated analyzer version.h ursatz_analyzer_producer_key.h
 
-uses analyzer-api  kernel
-allow analyzer/include/ursatz_analyzer/result_chain.h chain frameworks -- the chain's claims, for a consumer that links ursatz_analyzer::chain
-uses analyzer      kernel chain frameworks analyzer-api cjson ezxml
-uses composer      kernel chain frameworks analyzer-api composer-api cjson
+uses analyzer-api  model theory analysis io
+allow analyzer/include/ursatz_analyzer/result_chain.h chain -- the chain's claims, for a consumer that links ursatz_analyzer::chain
+uses analyzer      model theory analysis chain io analyzer-api cjson ezxml
+uses composer      model theory analysis chain io analyzer-api composer-api cjson
 uses composer-cli  composer-api cjson
 uses gui           analyzer-api composer-api cjson civetweb
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
@@ -114,23 +132,17 @@ module tests-accuracy        library/tests/accuracy
 free test-support root-tests library-tests library-test-support tests-integration tests-accuracy
 group test-helpers library-tests library-test-support test-support
 
-module tests-identity        library/tests/identity        root library/tests library/tests/support
-module tests-core            library/tests/core            root library/tests library/tests/support
-module tests-time            library/tests/time            root library/tests library/tests/support
-module tests-pitch           library/tests/pitch           root library/tests library/tests/support
-module tests-events          library/tests/events          root library/tests library/tests/support
-module tests-containers      library/tests/containers      root library/tests library/tests/support
-module tests-structure       library/tests/structure       root library/tests library/tests/support
-module tests-context         library/tests/context         root library/tests library/tests/support
-module tests-semantics       library/tests/semantics       root library/tests library/tests/support
-module tests-relationship    library/tests/relationship    root library/tests library/tests/support
-module tests-interpretation  library/tests/interpretation  root library/tests library/tests/support
-module tests-theory          library/tests/theory          root library/tests library/tests/support
-module tests-rules           library/tests/rules           root library/tests library/tests/support
-module tests-analysis        library/tests/analysis        root library/tests library/tests/support
-module tests-io              library/tests/io              root library/tests library/tests/support
-module tests-export          library/tests/export          root library/tests library/tests/support
-module tests-query           library/tests/query           root library/tests library/tests/support
+module tests-identity        library/model/tests/identity        root library/tests library/tests/support
+module tests-core            library/model/tests/core            root library/tests library/tests/support
+module tests-time            library/model/tests/time            root library/tests library/tests/support
+module tests-pitch           library/model/tests/pitch           root library/tests library/tests/support
+module tests-events          library/model/tests/events          root library/tests library/tests/support
+module tests-containers      library/model/tests/containers      root library/tests library/tests/support
+module tests-structure       library/model/tests/structure       root library/tests library/tests/support
+module tests-relationship    library/model/tests/relationship    root library/tests library/tests/support
+module tests-interpretation  library/model/tests/interpretation  root library/tests library/tests/support
+module tests-io              library/io/tests/io          root library/tests library/tests/support library
+module tests-export          library/io/tests/export      root library/tests library/tests/support library
 like tests-identity identity
 like tests-core core
 like tests-time time
@@ -138,16 +150,10 @@ like tests-pitch pitch
 like tests-events events
 like tests-containers containers
 like tests-structure structure
-like tests-context context
-like tests-semantics semantics
 like tests-relationship relationship
 like tests-interpretation interpretation
-like tests-theory theory
-like tests-rules rules
-like tests-analysis analysis
 like tests-io io
-like tests-export export
-like tests-query query
+like tests-export io
 uses tests-identity test-helpers
 uses tests-core test-helpers
 uses tests-time test-helpers
@@ -155,64 +161,95 @@ uses tests-pitch test-helpers
 uses tests-events test-helpers
 uses tests-containers test-helpers
 uses tests-structure test-helpers
-uses tests-context test-helpers
-uses tests-semantics test-helpers
 uses tests-relationship test-helpers
 uses tests-interpretation test-helpers
-uses tests-theory test-helpers
-uses tests-rules test-helpers
-uses tests-analysis test-helpers
 uses tests-io test-helpers
 uses tests-export test-helpers
-uses tests-query test-helpers
 
-module tests-common-practice-minimal  library/frameworks/common-practice-minimal/tests  root library/tests library/tests/support library/frameworks/common-practice-minimal library/frameworks/common-practice-minimal/analysis
-module tests-galant-schemas           library/frameworks/galant-schemas/tests           root library/tests library/tests/support library/frameworks/galant-schemas library/frameworks/galant-schemas/analysis
-module tests-scale-harmonization      library/frameworks/scale-harmonization/tests      root library/tests library/tests/support library/frameworks/scale-harmonization library/frameworks/scale-harmonization/analysis
-module tests-standard-counterpoint    library/frameworks/standard-counterpoint/tests    root library/tests library/tests/support library/frameworks/standard-counterpoint library/frameworks/standard-counterpoint/analysis
-module tests-standard-form            library/frameworks/standard-form/tests            root library/tests library/tests/support library/frameworks/standard-form library/frameworks/standard-form/analysis
-module tests-standard-harmony         library/frameworks/standard-harmony/tests         root library/tests library/tests/support library/frameworks/standard-harmony library/frameworks/standard-harmony/analysis
-module tests-standard-markings        library/frameworks/standard-markings/tests        root library/tests library/tests/support library/frameworks/standard-markings library/frameworks/standard-markings/analysis
-module tests-standard-meter           library/frameworks/standard-meter/tests           root library/tests library/tests/support library/frameworks/standard-meter library/frameworks/standard-meter/analysis
-module tests-standard-texture         library/frameworks/standard-texture/tests         root library/tests library/tests/support library/frameworks/standard-texture library/frameworks/standard-texture/analysis
-module tests-standard-tonality        library/frameworks/standard-tonality/tests        root library/tests library/tests/support library/frameworks/standard-tonality library/frameworks/standard-tonality/analysis
-module tests-standard-voicing         library/frameworks/standard-voicing/tests         root library/tests library/tests/support library/frameworks/standard-voicing library/frameworks/standard-voicing/analysis
-like tests-common-practice-minimal common-practice-minimal
-like tests-galant-schemas galant-schemas
-like tests-scale-harmonization scale-harmonization
-like tests-standard-counterpoint standard-counterpoint
-like tests-standard-form standard-form
-like tests-standard-harmony standard-harmony
-like tests-standard-markings standard-markings
-like tests-standard-meter standard-meter
-like tests-standard-texture standard-texture
-like tests-standard-tonality standard-tonality
-like tests-standard-voicing standard-voicing
-uses tests-common-practice-minimal test-helpers
-uses tests-galant-schemas test-helpers
-uses tests-scale-harmonization test-helpers
-uses tests-standard-counterpoint test-helpers
-uses tests-standard-form test-helpers
-uses tests-standard-harmony test-helpers
-uses tests-standard-markings test-helpers
-uses tests-standard-meter test-helpers
-uses tests-standard-texture test-helpers
-uses tests-standard-tonality test-helpers
-uses tests-standard-voicing test-helpers
+module tests-theory-framework    library/theory/tests/framework    root library/tests library/tests/support library
+module tests-theory-style        library/theory/tests/style        root library/tests library/tests/support library
+module tests-theory-rules        library/theory/tests/rules        root library/tests library/tests/support library
+module tests-theory-vocabulary   library/theory/tests/vocabulary   root library/tests library/tests/support library
+module tests-theory-tonality     library/theory/tests/tonality     root library/tests library/tests/support library
+module tests-theory-harmony      library/theory/tests/harmony      root library/tests library/tests/support library
+module tests-theory-voicing      library/theory/tests/voicing      root library/tests library/tests/support library
+module tests-theory-counterpoint library/theory/tests/counterpoint root library/tests library/tests/support library
+module tests-theory-form         library/theory/tests/form         root library/tests library/tests/support library
+module tests-theory-meter        library/theory/tests/meter        root library/tests library/tests/support library
+module tests-theory-galant       library/theory/tests/galant       root library/tests library/tests/support library
+module tests-theory-markings     library/theory/tests/markings     root library/tests library/tests/support library
+module tests-theory-knowledge    library/theory/tests/knowledge    root library/tests library/tests/support library
+like tests-theory-framework theory-framework
+like tests-theory-style theory-style
+like tests-theory-rules theory-rules
+like tests-theory-vocabulary theory-vocabulary
+like tests-theory-tonality theory-tonality
+like tests-theory-harmony theory-harmony
+like tests-theory-voicing theory-voicing
+like tests-theory-counterpoint theory-counterpoint
+like tests-theory-form theory-form
+like tests-theory-meter theory-meter
+like tests-theory-galant theory-galant
+like tests-theory-markings theory-markings
+like tests-theory-knowledge theory-knowledge
+uses tests-theory-framework test-helpers
+uses tests-theory-style test-helpers
+uses tests-theory-rules test-helpers
+uses tests-theory-vocabulary test-helpers
+uses tests-theory-tonality test-helpers
+uses tests-theory-harmony test-helpers
+uses tests-theory-voicing test-helpers
+uses tests-theory-counterpoint test-helpers
+uses tests-theory-form test-helpers
+uses tests-theory-meter test-helpers
+uses tests-theory-galant test-helpers
+uses tests-theory-markings test-helpers
+uses tests-theory-knowledge test-helpers theory-tonality
+uses tests-theory-harmony theory-tonality -- Roman numeral grammar cases
+uses tests-theory-meter io tests-io -- metric position tests import MIDI
 
-module tests-chain  library/chain/tests  root library/tests library/tests/support
+
+# Analysis tests, one folder per area.
+module tests-analysis-notes        library/analysis/tests/notes        root library/tests library/tests/support library
+module tests-analysis-motive       library/analysis/tests/motive       root library/tests library/tests/support library
+module tests-analysis-voices       library/analysis/tests/voices       root library/tests library/tests/support library
+module tests-analysis-harmony      library/analysis/tests/harmony      root library/tests library/tests/support library
+module tests-analysis-form         library/analysis/tests/form         root library/tests library/tests/support library
+module tests-analysis-meter        library/analysis/tests/meter        root library/tests library/tests/support library
+module tests-analysis-texture      library/analysis/tests/texture      root library/tests library/tests/support library
+module tests-analysis-counterpoint library/analysis/tests/counterpoint root library/tests library/tests/support library
+module tests-analysis-galant       library/analysis/tests/galant       root library/tests library/tests/support library
+module tests-analysis-similarity   library/analysis/tests/similarity   root library/tests library/tests/support library
+like tests-analysis-notes analysis-notes
+like tests-analysis-motive analysis-motive
+like tests-analysis-voices analysis-voices
+like tests-analysis-harmony analysis-harmony
+like tests-analysis-form analysis-form
+like tests-analysis-meter analysis-meter
+like tests-analysis-texture analysis-texture
+like tests-analysis-counterpoint analysis-counterpoint
+like tests-analysis-galant analysis-galant
+like tests-analysis-similarity analysis-similarity
+uses tests-analysis-notes test-helpers
+uses tests-analysis-motive test-helpers
+uses tests-analysis-voices test-helpers
+uses tests-analysis-harmony test-helpers
+uses tests-analysis-form test-helpers
+uses tests-analysis-meter test-helpers
+uses tests-analysis-texture test-helpers
+uses tests-analysis-counterpoint test-helpers
+uses tests-analysis-galant test-helpers
+uses tests-analysis-similarity test-helpers
+uses tests-analysis-form chain -- form_test_util.h builds the chain's form input
+uses tests-analysis-meter io tests-io tests-theory-meter -- meter tests import MIDI and share the meter helpers
+uses tests-analysis-voices io tests-io tests-integration theory-meter -- the corpus voice separation imports MIDI and reads the beat grid
+
+module tests-chain  library/chain/tests  root library/tests library/tests/support library
 like tests-chain chain
 uses tests-chain test-helpers
 
-uses tests-analysis chain common-practice-minimal standard-meter standard-tonality standard-form -- analysis tests run the chain and the framework adapters end to end
-uses tests-analysis io tests-io tests-integration -- analysis tests import the corpus through the io and integration helpers
 uses tests-export io tests-io core -- export tests round-trip through the importers
-uses tests-io export -- io tests compare imports with exports
-uses tests-chain io tests-integration -- chain tests import the corpus
-uses tests-common-practice-minimal standard-tonality -- declared dependency (the scale degree owner)
-uses tests-standard-harmony standard-tonality -- Roman numeral grammar cases
-uses tests-standard-form chain -- form_test_util.h builds the chain's form input
-uses tests-standard-meter io tests-io -- tests import MIDI to feed the meter analysis
+uses tests-chain io tests-io tests-integration -- chain tests import the corpus
 
 module analyzer-tests     analyzer/tests            root analyzer/tests analyzer/tests/support analyzer/src analyzer/include
 module analyzer-consumer  analyzer/tests/consumer
@@ -229,8 +266,6 @@ free analyzer-consumer composer-consumer -- consumer projects include what a con
 
 # Rules that are not include edges.
 forbid analyzer chain_build_ -- the Analyzer runs the chain whole, never one stage builder (it was check-chain-builds.sh)
-forbid library/frameworks (PROJECT_SOURCE_DIR\}/|CMAKE_SOURCE_DIR\}/|\.\./)src/ -- frameworks never compile kernel sources (R-241)
-forbid library/chain (PROJECT_SOURCE_DIR\}/|CMAKE_SOURCE_DIR\}/|\.\./)src/ -- the chain never compiles kernel sources (R-241)
 forbid analyzer get_target_property\([^)]*SOURCE_DIR|\.\./library/tests -- an application reads no library sources
 forbid composer get_target_property\([^)]*SOURCE_DIR|\.\./library/tests|\.\./analyzer/src -- an application reads no library or Analyzer sources
 forbid gui get_target_property\([^)]*SOURCE_DIR|\.\./library/tests -- an application reads no library sources

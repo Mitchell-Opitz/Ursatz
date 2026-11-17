@@ -3,8 +3,8 @@
 #include <string.h>
 #include "util/util.h"
 
-#include <standard-counterpoint/melodic_rules.h>
-#include <standard-tonality/tonal_key.h>
+#include <theory/counterpoint/melodic_rules.h>
+#include <theory/tonality/tonal_key.h>
 
 /* The most pitches tried for one note, and the most notes visited in one search. */
 #define TRIES_PER_NOTE 5

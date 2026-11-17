@@ -1,7 +1,7 @@
 #ifndef URSATZ_TESTS_KEY_INDEX_TEST_UTIL_H
 #define URSATZ_TESTS_KEY_INDEX_TEST_UTIL_H
 
-#include "common-practice-minimal/key_regions.h"
+#include "analysis/harmony/key_regions.h"
 
 /* The key index (0..11 major, 12..23 minor, key_regions.h) of a tonic pitch class and mode, or -1. */
 static inline int test_key_index_of(int tonic_pitch_class, CommonPracticeKeyMode mode) {

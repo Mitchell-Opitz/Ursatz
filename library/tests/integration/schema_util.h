@@ -7,11 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/outer_voice.h"
-#include "galant-schemas/analysis/galant_analysis_input.h"
-#include "standard-tonality/analysis/chord_input.h"
-#include "standard-tonality/analysis/roman_numeral_adapter.h"
-#include "weighted_pipeline.h"
+#include "analysis/voices/outer_voice.h"
+#include "analysis/galant/galant_analysis_input.h"
+#include "analysis/harmony/chord_input.h"
+#include "analysis/harmony/roman_numeral_adapter.h"
+#include "chain/tests/weighted_pipeline.h"
 
 /*
  * Helpers for the schema and sequence test: the neutral per-segment input (galant_analysis_input.h) from a hand-written fixture, and the
@@ -27,6 +27,8 @@ typedef struct {
     TimeSpan **spans; /* owned */
     size_t span_count;
     size_t span_capacity;
+    char **ids; /* the segment ids the list borrows */
+    size_t id_count;
 } SchemaBuild;
 
 static inline void schema_build_init(SchemaBuild *build) {
@@ -40,6 +42,10 @@ static inline void schema_build_destroy(SchemaBuild *build) {
         time_span_destroy(build->spans[i]);
     }
     free(build->spans);
+    for (size_t i = 0; i < build->id_count; i++) {
+        free(build->ids[i]);
+    }
+    free(build->ids);
     memset(build, 0, sizeof(*build));
 }
 
@@ -136,10 +142,16 @@ static inline void schema_build_from_fixture(SchemaBuild *build, const Fixture *
 
         GalantSegment segment;
         memset(&segment, 0, sizeof(segment));
-        snprintf(segment.id, sizeof(segment.id), "fixture-%zu", i);
+        char id[32];
+        snprintf(id, sizeof(id), "fixture-%zu", i);
+        build->ids = (char **)realloc(build->ids, (build->id_count + 1) * sizeof(char *));
+        build->ids[build->id_count] = (char *)malloc(strlen(id) + 1);
+        assert(build->ids != NULL && build->ids[build->id_count] != NULL);
+        strcpy(build->ids[build->id_count], id);
+        segment.segment.id = build->ids[build->id_count++];
         snprintf(segment.key_id, sizeof(segment.key_id), "key-%d", f->key_pc);
-        segment.span = span;
-        segment.strength = f->beat == 1.0 ? BEAT_STRENGTH_STRONG : (f->beat == 3.0 ? BEAT_STRENGTH_MEDIUM : BEAT_STRENGTH_WEAK);
+        segment.segment.span = span;
+        segment.segment.strength = f->beat == 1.0 ? BEAT_STRENGTH_STRONG : (f->beat == 3.0 ? BEAT_STRENGTH_MEDIUM : BEAT_STRENGTH_WEAK);
         segment.beat_numerator = 1;
         segment.beat_denominator = 4;
         segment.key = schema_degree_of_offset(f->key_pc - fixture->home);

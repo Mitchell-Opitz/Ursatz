@@ -2,7 +2,8 @@
 
 #include <string.h>
 
-#include <standard-tonality/roman_numeral_grammar.h>
+#include <theory/tonality/roman_numeral_grammar.h>
+#include <theory/tonality/triad_in_key_rules.h>
 
 HarmonyMode harmony_mode_of(KeyStructureMode mode) {
     return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
@@ -15,15 +16,20 @@ HarmonyMode harmony_mode_of(KeyStructureMode mode) {
  * fully diminished).
  */
 static StandardTonalityNumeralText numeral_of(KeyStructureMode mode, const HarmonyChord *chord) {
-    static const bool MAJOR_MINOR_THIRD[8] = {false, false, true, true, false, false, true, false};
-    static const bool MINOR_MINOR_THIRD[8] = {false, true, false, false, true, false, false, false};
     StandardTonalityNumeralText numeral;
     memset(&numeral, 0, sizeof(numeral));
     numeral.degree = chord->degree;
     numeral.inversion = chord->inversion;
     bool minor_mode = mode == KEY_STRUCTURE_MODE_MINOR;
     bool diminished = minor_mode ? (chord->degree == 2 || chord->leading_tone) : chord->degree == 7;
-    bool minor_third = minor_mode ? MINOR_MINOR_THIRD[chord->degree] : MAJOR_MINOR_THIRD[chord->degree];
+    /* The quality of the triad on the degree: the natural scale's, with the major dominant of the harmonic minor, as
+       harmony_applied_label picks the mode. */
+    StandardTonalityTriadKey key = !minor_mode              ? STANDARD_TONALITY_TRIAD_KEY_MAJOR
+                                   : chord->degree == 5     ? STANDARD_TONALITY_TRIAD_KEY_MINOR_HARMONIC
+                                                            : STANDARD_TONALITY_TRIAD_KEY_MINOR_NATURAL;
+    StandardTonalityTriadQuality triad = STANDARD_TONALITY_TRIAD_MAJOR;
+    standard_tonality_triad_quality_in_key(key, chord->degree, &triad);
+    bool minor_third = triad == STANDARD_TONALITY_TRIAD_MINOR;
     if (diminished) {
         numeral.quality = !chord->seventh ? STANDARD_TONALITY_NUMERAL_DIMINISHED
                           : chord->leading_tone ? STANDARD_TONALITY_NUMERAL_FULLY_DIMINISHED_SEVENTH
@@ -86,33 +92,13 @@ bool harmony_roman_parse(KeyStructureMode mode, const char *roman, HarmonyChord 
 
 bool harmony_roman_format_applied_inverted(KeyStructureMode mode, const HarmonyAppliedChord *applied, int inversion,
                                            char out[PLAN_ROMAN_NUMERAL_MAX]) {
-    static const char *const SEVENTH_FIGURES[3] = {"6/5", "4/3", "4/2"};
-    char label[PLAN_ROMAN_NUMERAL_MAX];
-    if (!applied || !out || inversion < 0 || inversion > 3 ||
-        !harmony_applied_label(harmony_mode_of(mode), applied, label, sizeof(label))) {
-        return false;
-    }
-    bool seventh = harmony_applied_quality_is_seventh(applied->quality);
-    /* A triad is written in root position or first inversion, a seventh chord in any. */
-    if (inversion > (seventh ? 3 : 1)) {
+    char text[PLAN_ROMAN_NUMERAL_MAX];
+    /* The figures go between the chord and its target: "V7/V" becomes "V6/5/V". */
+    if (!applied || !out || !harmony_applied_label_inverted(harmony_mode_of(mode), applied, inversion, text, sizeof(text))) {
         return false;
     }
     memset(out, 0, PLAN_ROMAN_NUMERAL_MAX);
-    if (inversion == 0) {
-        memcpy(out, label, strlen(label));
-        return true;
-    }
-    /* The figures go between the chord and its target: "V7/V" becomes "V6/5/V". */
-    const char *slash = strrchr(label, '/');
-    const char *figure = seventh ? SEVENTH_FIGURES[inversion - 1] : "6";
-    size_t head = (size_t)(slash - label) - (seventh ? 1 : 0);
-    size_t tail = strlen(slash);
-    if (head + strlen(figure) + tail >= PLAN_ROMAN_NUMERAL_MAX) {
-        return false;
-    }
-    memcpy(out, label, head);
-    memcpy(out + head, figure, strlen(figure));
-    memcpy(out + head + strlen(figure), slash, tail);
+    memcpy(out, text, strlen(text));
     return true;
 }
 

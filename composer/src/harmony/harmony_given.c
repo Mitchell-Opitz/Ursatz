@@ -11,6 +11,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
+#include "util/util.h"
 
 /*
  * Given material around a harmony target (R-071): what the Given bass and the Given melody over the target ask of
@@ -49,7 +50,7 @@ static int given_pitch_class(const PiecePlan *plan, PlanLaneKind lane, PlanSpan 
             }
             int from_start = rational_cmp(onset, at);
             if (start_only ? from_start == 0 : (from_start <= 0 && rational_cmp(at, end) < 0)) {
-                return ((notes->notes[n].midi % 12) + 12) % 12;
+                return util_pitch_class(notes->notes[n].midi);
             }
         }
     }

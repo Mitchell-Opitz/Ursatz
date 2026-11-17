@@ -5,7 +5,7 @@
 #include "piece/form_return_internal.h"
 #include "util/util.h"
 
-#include <standard-counterpoint/melodic_rules.h>
+#include <theory/counterpoint/melodic_rules.h>
 
 /*
  * The variations of a returning section (R-070), made on the copy form-return moved onto the target: ORNAMENT adds
@@ -53,10 +53,8 @@ static long cell_ticks(const PlanMeter *meter) {
 }
 
 static bool in_scale(AnalysisKey key, int pitch) {
-    static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
-    static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, false};
-    int degree = ((pitch - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
-    return key.mode == KEY_STRUCTURE_MODE_MAJOR ? MAJOR[degree] : MINOR[degree];
+    unsigned scale = util_scale_mask(analysis_key_tonic_pitch_class(&key), key.mode != KEY_STRUCTURE_MODE_MAJOR);
+    return (scale >> util_pitch_class(pitch)) & 1u;
 }
 
 /*

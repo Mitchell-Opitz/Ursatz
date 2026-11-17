@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K6 relation, modal: the same or another center, brighter or darker",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "center",
+        "brightness_steps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "center": {
+          "oneOf": [
+            {
+              "const": "same"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 11
+            }
+          ]
+        },
+        "brightness_steps": {
+          "type": "integer"
+        },
+        "anchor_default": {
+          "enum": [
+            "home",
+            "previous"
+          ]
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "anchor",
+          "target"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "anchor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

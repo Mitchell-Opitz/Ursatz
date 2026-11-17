@@ -6,8 +6,8 @@
 
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include "semantics/analysis_key.h"
-#include "semantics/analysis_note.h"
+#include "analysis/notes/analysis_key.h"
+#include "analysis/notes/analysis_note.h"
 
 /*
  * The neutral input of the library chain (analysis_chain_run), built from imported notes: one AnalysisNote per

@@ -1,0 +1,23 @@
+ursatz_test(galant_schemas_framework SOURCES test_framework.c LIBS ursatz_theory)
+
+ursatz_test(galant_schemas_degree SOURCES test_galant_degree.c LIBS ursatz_theory)
+
+ursatz_test(galant_schemas_prototypes SOURCES test_galant_prototypes.c LIBS ursatz_theory)
+
+ursatz_test(galant_schemas_matching_rules SOURCES test_galant_matching_rules.c LIBS ursatz_theory)
+
+ursatz_test(galant_schemas_prototypes_cadential SOURCES test_galant_prototypes_cadential.c LIBS ursatz_theory)
+
+ursatz_test(galant_schemas_schema_function SOURCES test_schema_function.c LIBS ursatz_theory)
+
+ursatz_test(scale_harmonization_framework SOURCES test_scale_framework.c LIBS ursatz_theory)
+
+ursatz_test(scale_harmonization_type SOURCES test_scale_harmonization.c LIBS ursatz_theory)
+
+ursatz_test(scale_harmonization_patterns SOURCES test_scale_patterns.c LIBS ursatz_theory)
+
+ursatz_test(scale_harmonization_sequence_rules SOURCES test_scale_sequence_rules.c LIBS ursatz_theory)
+
+ursatz_test(scale_harmonization_scale_direction SOURCES test_scale_direction.c LIBS ursatz_theory)
+
+ursatz_test(scale_harmonization_sequence_kind SOURCES test_sequence_kind.c LIBS ursatz_theory)

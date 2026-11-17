@@ -10,7 +10,7 @@
 #include <ursatz_analyzer/style_labels.h>
 
 #include "pipeline/chord_sequence_internal.h"
-#include "pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "util/json_util.h"
 
 /* ---- the join rule ---- */

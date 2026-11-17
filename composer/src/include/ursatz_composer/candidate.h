@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <core/provenance_reference.h>
-#include <core/value.h>
-#include <identity/entity_id.h>
-#include <interpretation/interpretation.h>
+#include <model/core/provenance_reference.h>
+#include <model/core/value.h>
+#include <model/identity/entity_id.h>
+#include <model/interpretation/interpretation.h>
 
 /*
  * Candidate: a proposed result before it is accepted (TDD Sec158): material, evaluations, violations, score and

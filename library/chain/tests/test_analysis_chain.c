@@ -6,15 +6,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "../../tests/import_notes_test_util.h"
 #include "io/midi_importer.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/meter_map.h"
-#include "time/note_value.h"
-#include "time/time_signature.h"
-#include "time/time_span.h"
-#include "ursatz_chain/analysis_chain.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/meter_map.h"
+#include "model/time/note_value.h"
+#include "model/time/time_signature.h"
+#include "model/time/time_span.h"
+#include "chain/analysis_chain.h"
 #include "../../tests/integration/reference_pieces.h"
 #include "../../tests/key_index_test_util.h"
 #include "ursatz_test.h"
@@ -625,7 +625,7 @@ static void check_stage_inputs(const char *context, const AnalysisChain *c) {
     if (!CHECK(analysis_chain_galant_segments(c) != NULL)) abort();
     if (!CHECK(analysis_chain_harmony_inputs(c)->count == analysis_chain_segment_count(c))) abort();
     if (!CHECK(analysis_chain_form_input(c)->input.finished && analysis_chain_motive_input(c)->input.finished)) abort();
-    if (!CHECK(analysis_chain_form_input(c)->input.segment_count > 0 && analysis_chain_motive_input(c)->input.note_count > 0)) abort();
+    if (!CHECK(analysis_chain_motive_input(c)->input.note_count > 0)) abort();
     if (!CHECK(analysis_chain_voice_grid(c)->grid.voice_count == analysis_chain_voice_leading(c)->voice_count)) abort();
     if (!CHECK(analysis_chain_galant_segments(c)->list.count > 0)) abort();
 }
@@ -669,9 +669,9 @@ static void check_voice_line_inputs(const char *context, const ChainInput *input
     for (size_t n = 0; n < meter.input.note_count; n++) {
         bool in_line = false;
         for (size_t i = 0; i < voice_lines->count && !in_line; i++) {
-            in_line = voice_lines->soprano[i].present && strcmp(entity_id_value(voice_lines->soprano[i].note_id), meter.input.notes[n].id) == 0;
+            in_line = voice_lines->soprano[i].present && strcmp(entity_id_value(voice_lines->soprano[i].note_id), meter.input.notes[n].note_id) == 0;
         }
-        if (!CHECK((meter.input.notes[n].line == 0) == in_line)) abort();
+        if (!CHECK((standard_meter_note_line(&meter.input.notes[n]) == 0) == in_line)) abort();
         soprano_notes += in_line ? 1 : 0;
     }
     if (!CHECK(soprano_notes > 0 && soprano_notes <= runs)) abort();

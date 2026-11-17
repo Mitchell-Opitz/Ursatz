@@ -1,0 +1,48 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "fux.material.test-unordered",
+      "kind": "material",
+      "subtype": "unordered",
+      "name": "test unordered",
+      "content": {
+        "steps": [
+          0,
+          2,
+          4,
+          5,
+          7,
+          9,
+          11
+        ],
+        "family": "diatonic"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "pitches": [
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "A",
+            "B"
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

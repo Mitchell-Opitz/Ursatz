@@ -4,28 +4,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_chain/analysis_chain.h>
-#include <ursatz_chain/chain_inputs.h>
+#include <chain/analysis_chain.h>
+#include <chain/chain_inputs.h>
 
-#include "core/rational.h"
-#include "galant-schemas/analysis/galant_analysis_input.h"
-#include "galant-schemas/analysis/galant_analysis_match.h"
-#include "galant-schemas/galant_framework.h"
-#include "scale-harmonization/analysis/scale_analysis_detect.h"
-#include "scale-harmonization/scale_direction.h"
-#include "scale-harmonization/scale_framework.h"
-#include "scale-harmonization/scale_patterns.h"
-#include "galant-schemas/schema_function.h"
-#include "scale-harmonization/sequence_kind.h"
-#include "semantics/beat_strength.h"
-#include "theory/framework.h"
-#include "time/duration.h"
-#include "time/meter_arithmetic.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/time_rational.h"
-#include "time/time_signature.h"
-#include "time/time_span.h"
+#include "model/core/rational.h"
+#include "analysis/galant/galant_analysis_input.h"
+#include "analysis/galant/galant_analysis_match.h"
+#include "theory/galant/galant_framework.h"
+#include "analysis/galant/scale_analysis_detect.h"
+#include "theory/galant/scale_direction.h"
+#include "theory/galant/scale_framework.h"
+#include "theory/galant/scale_patterns.h"
+#include "theory/galant/schema_function.h"
+#include "theory/galant/sequence_kind.h"
+#include "theory/vocabulary/beat_strength.h"
+#include "theory/framework/framework.h"
+#include "model/time/duration.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_rational.h"
+#include "model/time/time_signature.h"
+#include "model/time/time_span.h"
 
 /* The segments of the library's input (the chain's galant segments, borrowed) and the range of chord entries each
    segment covers (parallel to list.items). */
@@ -56,8 +56,8 @@ static bool entry_ranges(const AnalysisReport *report, SchemaBuild *build) {
     }
     size_t next = 0;
     for (size_t s = 0; s < list->count; s++) {
-        const MusicalTime *start = time_span_start(list->items[s].span);
-        const MusicalTime *end = time_span_end(list->items[s].span);
+        const MusicalTime *start = time_span_start(list->items[s].segment.span);
+        const MusicalTime *end = time_span_end(list->items[s].segment.span);
         long start_n = musical_time_numerator(start);
         unsigned long start_d = musical_time_denominator(start);
         long end_n = musical_time_numerator(end);
@@ -87,7 +87,7 @@ static bool entry_ranges(const AnalysisReport *report, SchemaBuild *build) {
    the id is not one of ours. */
 static bool segment_of_id(const SchemaBuild *build, const char *id, size_t *out) {
     for (size_t i = 0; i < build->galant.list.count; i++) {
-        if (strcmp(build->galant.list.items[i].id, id) == 0) {
+        if (strcmp(build->galant.list.items[i].segment.id, id) == 0) {
             *out = i;
             return true;
         }

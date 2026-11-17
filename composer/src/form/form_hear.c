@@ -3,13 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-form/analysis/analysis_theme.h>
-#include <standard-form/phrase_level_form.h>
-#include <time/time_rational.h>
-#include <time/time_span.h>
+#include <analysis/form/analysis_theme.h>
+#include <theory/form/phrase_level_form.h>
+#include <model/time/time_rational.h>
+#include <model/time/time_span.h>
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/result_chain.h>
-#include <ursatz_chain/analysis_chain.h>
+#include <chain/analysis_chain.h>
 
 #include <ursatz_composer/lanes.h>
 

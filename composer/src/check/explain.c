@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-form/phrase_level_form.h>
+#include <theory/form/phrase_level_form.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>

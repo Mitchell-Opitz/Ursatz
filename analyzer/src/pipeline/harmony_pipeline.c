@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "standard-harmony/harmonic_function.h"
-#include "standard-harmony/harmony_functions.h"
-#include "standard-harmony/phrase_model_label.h"
-#include "standard-harmony/analysis/analysis_phrase.h"
-#include "standard-harmony/six_four_type.h"
+#include "theory/harmony/harmonic_function.h"
+#include "theory/harmony/harmony_functions.h"
+#include "theory/harmony/phrase_model_label.h"
+#include "analysis/harmony/analysis_phrase.h"
+#include "theory/harmony/six_four_type.h"
 
 bool harmony_stage_prepare(const AnalysisChain *library, HarmonyStage *out) {
     *out = (HarmonyStage){0};

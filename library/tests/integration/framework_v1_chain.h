@@ -19,7 +19,7 @@
 #include "test_form_reference_pieces.c"
 
 #include "io/midi_importer.h"
-#include "ursatz_chain/analysis_chain.h"
+#include "chain/analysis_chain.h"
 #include "../key_index_test_util.h"
 
 /* --- the expected values --- */

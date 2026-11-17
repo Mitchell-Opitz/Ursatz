@@ -4,20 +4,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/form_structure_detection.h"
-#include "analysis/thematic_return_detection.h"
-#include "containers/section.h"
-#include "core/value.h"
-#include "events/note_event.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_identity.h"
-#include "relationship/relationship.h"
-#include "semantics/cadence_type.h"
-#include "semantics/contour.h"
-#include "semantics/rhythmic_pattern.h"
-#include "structure/phrase_occurrence.h"
-#include "structure/structure.h"
-#include "time/duration.h"
+#include "analysis/form/form_structure_detection.h"
+#include "analysis/form/thematic_return_detection.h"
+#include "model/containers/section.h"
+#include "model/core/value.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_identity.h"
+#include "model/relationship/relationship.h"
+#include "theory/vocabulary/cadence_type.h"
+#include "analysis/notes/contour.h"
+#include "analysis/notes/rhythmic_pattern.h"
+#include "model/structure/phrase_occurrence.h"
+#include "model/structure/structure.h"
+#include "model/time/duration.h"
 
 #define THEME_ID_PREFIX "theme-"
 
@@ -184,18 +184,18 @@ static bool make_contour_and_rhythm(const StandardFormInput *input, const size_t
     Duration **durations = calloc(count, sizeof(Duration *));
     bool ok = pitch_ids && directions && durations;
     for (size_t i = 0; ok && i < count; i++) {
-        const StandardFormNote *note = &input->notes[positions[i]];
+        const AnalysisNote *note = &input->notes[positions[i]];
         char token[48];
-        int length = snprintf(token, sizeof(token), "p%ld-%zu", note->semitone, i);
+        int length = snprintf(token, sizeof(token), "p%ld-%zu", (long)note->midi, i);
         const Duration *duration = note_event_duration(note->event);
         ok = pitch_identity_create(token, (size_t)length, &pitch_ids[i]) == PITCH_IDENTITY_OK &&
              duration_create(duration_numerator(duration), duration_denominator(duration), &durations[i]) ==
                  DURATION_OK;
         if (ok && i > 0) {
-            long previous = input->notes[positions[i - 1]].semitone;
-            directions[i - 1] = note->semitone > previous ? CONTOUR_DIRECTION_UP
-                                                          : (note->semitone < previous ? CONTOUR_DIRECTION_DOWN
-                                                                                       : CONTOUR_DIRECTION_SAME);
+            long previous = input->notes[positions[i - 1]].midi;
+            directions[i - 1] = note->midi > previous ? CONTOUR_DIRECTION_UP
+                                                      : (note->midi < previous ? CONTOUR_DIRECTION_DOWN
+                                                                               : CONTOUR_DIRECTION_SAME);
         }
     }
     if (ok) {

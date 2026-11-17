@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-`frameworks/standard-form/analysis/` finds phrases, ideas and subphrases, themes and phrase expansion or contraction from real cadences and the soprano. It applies standard-form's existing rules and length conventions and defines no form of its own. standard-form includes no other framework and no kernel analysis (the layer table enforces both, `analysis/` included): the input is neutral structs the caller fills, built by `chain_build_form_input` in `chain/` from the standard-harmony cadences, the L2 soprano and the `MeterMap`.
+`analysis/form/` finds phrases, ideas and subphrases, themes and phrase expansion or contraction from real cadences and the soprano. It applies standard-form's existing rules and length conventions and defines no form of its own. standard-form includes no other framework and no kernel analysis (the layer table enforces both, `analysis/` included): the input is neutral structs the caller fills, built by `chain_build_form_input` in `chain/` from the standard-harmony cadences, the L2 soprano and the `MeterMap`.
 
 Measure and beat time are `Rational` and `score_time_*` (`time/score_time.h`) over `time/meter_arithmetic.h`; an overflow skips the item or fails the read.
 
@@ -21,7 +21,7 @@ Lengths are in measures of the MeterMap. A pickup (measure 0) belongs to the fir
 
 A phrase ends at the arrival of a phrase-goal cadence (PAC, IAC, HC, and an authentic cadence with no soprano). Subverted, deceptive and unclassified cadences end nothing; they are evidence of expansion.
 
-**Reuse of kernel Phrase Boundary Detection.** The segmenter is the kernel's, not a second one. A framework may not include kernel analysis, so the caller injects it as a `StandardFormBoundaryDetector`; `chain/ursatz_chain/form_bridge.h` maps the points onto `PhraseBoundaryDetectionPoint`s (`has_cadence`, `has_discontinuity`) and calls `phrase_boundary_detect`, reading `is_boundary` and the signal per point. The kernel is unchanged.
+**Reuse of kernel Phrase Boundary Detection.** The segmenter is the kernel's, not a second one. A framework may not include kernel analysis, so the caller injects it as a `StandardFormBoundaryDetector`; `chain/form_bridge.h` maps the points onto `PhraseBoundaryDetectionPoint`s (`has_cadence`, `has_discontinuity`) and calls `phrase_boundary_detect`, reading `is_boundary` and the signal per point. The kernel is unchanged.
 
 - **Points**: one per measure with a sounding soprano note, so the kernel's default of 8 points without a cadence is 8 measures. A goal cadence goes on the point of its arrival measure (the latest point at or before it).
 - **Secondary signal**: a break after a measure (a measure with no note, a rest at the next barline, or a leap of `discontinuity_leap_semitones` or more into the next measure). The kernel counts it only after `max_length_without_cadence` points without a boundary. A break within `cadence_lookahead_measures` before a goal cadence is not reported: the cadence will close the phrase, so the break is inside it (without this, an expanded phrase of more than 8 measures is cut just before its cadence).

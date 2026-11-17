@@ -6,12 +6,12 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include <ursatz_chain/analysis_chain.h>
-#include <ursatz_chain/chain_inputs.h>
+#include <chain/analysis_chain.h>
+#include <chain/chain_inputs.h>
 
 #include "pipeline/chain_input.h"
 /* Prefixed: standard-harmony has headers of the same names. */
-#include "standard-form/analysis/analysis_motive.h"
+#include "analysis/form/analysis_motive.h"
 
 /*
  * Ursatz's standard-form motive analysis over the library chain (analysis_chain_motives). The analyzer adds no music

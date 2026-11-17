@@ -8,7 +8,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 
-#include "analysis/motive_link.h"
+#include "analysis/motive/motive_link.h"
 #include "links_internal.h"
 #include "pipeline/motive_sketch_map.h"
 #include "util/json_util.h"

@@ -2,10 +2,10 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Layer L9 (`music-io`). Path `src/io/`, tests `tests/io/`. Depends on `identity`, `core`, `time`, `pitch`, and `events` only (and, for `MusicXMLImporter`, the XML parser vendored in the repository's `third_party/ezxml/`, which nothing else may use). Must not depend on `containers` (L4) or anything above it, and must not depend on `theory`, `rules`, `transform`, `analysis`, `generation`, `frameworks/`, or `music-analysis`.
+Layer L9 (`music-io`). Path `io/`, tests `tests/io/`. Depends on `identity`, `core`, `time`, `pitch`, and `events` only (and, for `MusicXMLImporter`, the XML parser vendored in the repository's `third_party/ezxml/`, which nothing else may use). Must not depend on `containers` (L4) or anything above it, and must not depend on `theory`, `rules`, `transform`, `analysis`, `generation`, `theory/`, or `music-analysis`.
 
 ## Provides
-- `MIDIImporter` (`midi_importer_import_complete`): parses an SMF type 0 or 1 buffer once into time-ordered `NoteEvent`s (L3) with the file's meter, tempo, key signatures, track names and program changes. `MIDIRenderer` (`midi_renderer.h`, `docs/modules/midi_renderer.md`) writes them back. MusicXML export is in `src/export/`. See [io-midi.md](io-midi.md).
+- `MIDIImporter` (`midi_importer_import_complete`): parses an SMF type 0 or 1 buffer once into time-ordered `NoteEvent`s (L3) with the file's meter, tempo, key signatures, track names and program changes. `MIDIRenderer` (`midi_renderer.h`, `docs/modules/midi_renderer.md`) writes them back. MusicXML export is in `io/`. See [io-midi.md](io-midi.md).
 - `MusicXMLImporter` (`musicxml_importer.h`): an uncompressed score-partwise document into the same canonical outputs. See [io-musicxml.md](io-musicxml.md).
 
 The neutral notes the analysis chain and the framework adapters read (`semantics/analysis_note.h`, R-242) are made from an import by the test helper `tests/import_notes_test_util.h` (`midi_import_analysis_notes`, `musicxml_import_analysis_notes`, `import_analysis_notes_destroy`); no kernel source makes them.
@@ -38,4 +38,4 @@ Out of scope entirely for this module, not missing: renderers, importer formats 
 
 ## Dependencies
 
-Depends on `identity` (L0), `core` (L1), `time` and `pitch` (L2), and `events` (L3) only. `MeterMap` and `TempoMap` are in `time`; the importer does not depend on `frameworks/standard-meter` or any framework.
+Depends on `identity` (L0), `core` (L1), `time` and `pitch` (L2), and `events` (L3) only. `MeterMap` and `TempoMap` are in `time`; the importer does not depend on `theory/meter` or any framework.

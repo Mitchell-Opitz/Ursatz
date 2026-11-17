@@ -1,0 +1,124 @@
+#include "theory/counterpoint/first_species_ends_rules.h"
+
+#include <stddef.h>
+
+#include "theory/tonality/interval.h"
+#include "theory/counterpoint/motion_rules.h"
+#include "theory/counterpoint/counterpoint_subject.h"
+#include "theory/counterpoint/framework.h"
+#include "theory/rules/rule_table.h"
+#include "theory/counterpoint/species_helpers.h"
+#include "model/pitch/midi_pitch.h"
+
+static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {
+    "begin", "end-on-tonic", "contrary-stepwise-approach", "penultimate-third-or-sixth"};
+
+static RulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
+static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
+static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
+                                               const Context *context);
+static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
+static const RuleTable TABLE = {
+    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
+    "first-species-ends", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built,
+    evaluate_candidate, score_candidate};
+
+static bool valid_rule(StandardCounterpointFirstSpeciesEndsRule which) {
+    return rule_table_valid(&TABLE, (int)which);
+}
+
+static const StandardCounterpointLine *counterpoint_line(const StandardCounterpointPair *pair,
+                                                         StandardCounterpointCantusPart cantus_part) {
+    return cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER ? pair->upper : pair->lower;
+}
+
+static bool check_begin(const StandardCounterpointPair *pair, StandardCounterpointCantusPart cantus_part,
+                        const PitchSpelling *tonic) {
+    const PitchSpelling *first = counterpoint_line(pair, cantus_part)->notes[0];
+    if (cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER) {
+        return standard_counterpoint_species_is_tonic(first, tonic) || standard_counterpoint_species_is_sol(first, tonic);
+    }
+    return standard_counterpoint_species_is_tonic(first, tonic);
+}
+
+static bool check_end_on_tonic(const StandardCounterpointPair *pair, StandardCounterpointCantusPart cantus_part,
+                               const PitchSpelling *tonic) {
+    const StandardCounterpointLine *line = counterpoint_line(pair, cantus_part);
+    return standard_counterpoint_species_is_tonic(line->notes[line->count - 1], tonic);
+}
+
+static bool check_contrary_stepwise_approach(const StandardCounterpointPair *pair) {
+    size_t last = pair->lower->count - 1;
+    if (last == 0) {
+        return false;
+    }
+    MotionType motion;
+    StandardTonalityInterval lower_step, upper_step;
+    return standard_counterpoint_pair_motion(pair, last - 1, &motion) && motion == MOTION_TYPE_CONTRARY &&
+           standard_counterpoint_line_interval_at(pair->lower, last - 1, &lower_step) &&
+           standard_counterpoint_line_interval_at(pair->upper, last - 1, &upper_step) &&
+           standard_tonality_interval_is_step(&lower_step) && standard_tonality_interval_is_step(&upper_step);
+}
+
+static bool check_penultimate_third_or_sixth(const StandardCounterpointPair *pair) {
+    size_t last = pair->lower->count - 1;
+    if (last == 0) {
+        return false;
+    }
+    StandardTonalityInterval interval;
+    if (!standard_tonality_interval_between(pair->lower->notes[last - 1], pair->upper->notes[last - 1],
+                                                &interval)) {
+        return false;
+    }
+    bool major_or_minor = interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MAJOR ||
+                          interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MINOR;
+    return major_or_minor && (interval.simple_size == 3 || interval.simple_size == 6);
+}
+
+bool standard_counterpoint_first_species_ends_rule_holds(StandardCounterpointFirstSpeciesEndsRule which,
+                                                         const StandardCounterpointPair *pair,
+                                                         StandardCounterpointCantusPart cantus_part,
+                                                         const PitchSpelling *tonic) {
+    if (!valid_rule(which) || !standard_counterpoint_pair_valid(pair) || tonic == NULL ||
+        (cantus_part != STANDARD_COUNTERPOINT_CANTUS_IN_LOWER &&
+         cantus_part != STANDARD_COUNTERPOINT_CANTUS_IN_UPPER)) {
+        return false;
+    }
+    switch (which) {
+        case STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_BEGIN:
+            return check_begin(pair, cantus_part, tonic);
+        case STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_END_ON_TONIC:
+            return check_end_on_tonic(pair, cantus_part, tonic);
+        case STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_CONTRARY_STEPWISE_APPROACH:
+            return check_contrary_stepwise_approach(pair);
+        case STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_PENULTIMATE_THIRD_OR_SIXTH:
+            return check_penultimate_third_or_sixth(pair);
+        default:
+            return false;
+    }
+}
+
+typedef StandardCounterpointPairCantusTonic Subject;
+
+static bool holds_adapter(int which, const void *subject) {
+    const Subject *s = subject;
+    return standard_counterpoint_first_species_ends_rule_holds((StandardCounterpointFirstSpeciesEndsRule)which,
+                                                               s->pair, s->cantus_part, s->tonic);
+}
+
+RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
+RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
+
+bool standard_counterpoint_first_species_ends_check(const StandardCounterpointPair *pair,
+                                                    StandardCounterpointCantusPart cantus_part,
+                                                    const PitchSpelling *tonic, unsigned *violations) {
+    if (violations == NULL || !standard_counterpoint_pair_valid(pair) || tonic == NULL ||
+        (cantus_part != STANDARD_COUNTERPOINT_CANTUS_IN_LOWER &&
+         cantus_part != STANDARD_COUNTERPOINT_CANTUS_IN_UPPER)) {
+        return false;
+    }
+    Subject subject = {pair, cantus_part, tonic};
+    unsigned unused_soft;
+    rule_table_check(&TABLE, holds_adapter, &subject, violations, &unused_soft);
+    return true;
+}

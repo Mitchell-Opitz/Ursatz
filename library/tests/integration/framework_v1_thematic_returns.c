@@ -1,8 +1,8 @@
 #include "framework_v1_chain.h"
 #include "framework_v1_deviations.h"
-#include "ursatz_chain/chain_inputs.h"
+#include "chain/chain_inputs.h"
 
-#include "analysis/thematic_return_detection.h"
+#include "analysis/form/thematic_return_detection.h"
 #include "relationship_test_access.h"
 
 /*

@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "pipeline/harmonic_rhythm_pipeline.h"
-#include "standard-meter/analysis/meter_analysis_check.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
-#include "time/time_rational.h"
+#include "analysis/meter/meter_analysis_check.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_rational.h"
 
 /* The evidence the library scores: the times of the harmony changes, the times the cadences arrive and every note onset,
    on Rational. The scoring, the candidates and the choice of the reading to offer are standard_meter_check_meter's. */

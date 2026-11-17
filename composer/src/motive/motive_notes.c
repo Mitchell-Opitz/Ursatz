@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <model/pitch/pitch_arithmetic.h>
+
 #include "motive/motive_internal.h"
 
 /*
@@ -24,24 +26,8 @@ static void token_location(const Token *token, char *out, size_t size) {
 
 /* The pitch class of a letter A-G, or -1. */
 static int letter_pitch_class(char letter) {
-    switch (letter) {
-    case 'C':
-        return 0;
-    case 'D':
-        return 2;
-    case 'E':
-        return 4;
-    case 'F':
-        return 5;
-    case 'G':
-        return 7;
-    case 'A':
-        return 9;
-    case 'B':
-        return 11;
-    default:
-        return -1;
-    }
+    PitchLetter found;
+    return pitch_letter_from_char(letter, &found) ? pitch_letter_semitone(found) : -1;
 }
 
 /* Parses "D4", "F#3", "Bb5", "C-1" into a MIDI note number. On failure writes the reason to message. */

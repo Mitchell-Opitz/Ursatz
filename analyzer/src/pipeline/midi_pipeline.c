@@ -6,7 +6,7 @@
 
 #include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
-#include "export/score_staves.h"
+#include "io/score_staves.h"
 #include "pipeline/gm_names.h"
 
 static const char *midi_import_error_message(MidiImportResult result) {

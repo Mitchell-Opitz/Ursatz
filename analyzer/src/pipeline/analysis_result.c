@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_chain/analysis_chain.h>
+#include <chain/analysis_chain.h>
 
 #include "pipeline/analysis_result_internal.h"
 #include "pipeline/chain.h"

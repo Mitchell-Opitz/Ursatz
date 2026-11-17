@@ -1,0 +1,14 @@
+ursatz_test(standard_texture_framework SOURCES test_framework.c LIBS ursatz_analysis)
+
+ursatz_test(standard_texture_texture_rules SOURCES test_texture_rules.c LIBS ursatz_analysis)
+
+ursatz_test(standard_texture_texture_classification_rules SOURCES test_texture_classification_rules.c
+    LIBS ursatz_analysis)
+
+ursatz_test(standard_texture_mixed_texture_rules SOURCES test_mixed_texture_rules.c LIBS ursatz_analysis)
+
+ursatz_test(standard_texture_analysis_features SOURCES test_analysis_features.c LIBS ursatz_analysis)
+
+ursatz_test(standard_texture_analysis_classify SOURCES test_analysis_classify.c LIBS ursatz_analysis)
+
+ursatz_test(standard_texture_analysis_note SOURCES test_texture_analysis_note.c LIBS ursatz_analysis VALGRIND)

@@ -7,16 +7,16 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include "analysis/outer_voice.h"
+#include "analysis/voices/outer_voice.h"
 /* Prefixed: standard-harmony has headers of the same names (analysis_input.h, analysis_phrase.h). */
-#include "standard-form/analysis/analysis_ideas.h"
-#include "standard-form/analysis/analysis_expansion.h"
-#include "standard-form/analysis/analysis_theme.h"
-#include "standard-form/analysis/analysis_input.h"
-#include "standard-form/analysis/analysis_phrase.h"
-#include "standard-form/analysis/analysis_repeats.h"
-#include <ursatz_chain/analysis_chain.h>
-#include <ursatz_chain/chain_inputs.h>
+#include "analysis/form/analysis_ideas.h"
+#include "analysis/form/analysis_expansion.h"
+#include "analysis/form/analysis_theme.h"
+#include "analysis/form/analysis_input.h"
+#include "analysis/form/analysis_phrase.h"
+#include "analysis/form/analysis_repeats.h"
+#include <chain/analysis_chain.h>
+#include <chain/chain_inputs.h>
 
 #include "pipeline/chain_input.h"
 

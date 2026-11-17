@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "analysis/motive_link.h"
-#include "analysis/motive_relation.h"
-#include "analysis/motive_variant_recognition.h"
+#include "analysis/motive/motive_link.h"
+#include "analysis/motive/motive_relation.h"
+#include "analysis/motive/motive_variant_recognition.h"
 
 /*
  * Motive links: which motive families of different pieces are variants of one another (R-154). A family's prototype

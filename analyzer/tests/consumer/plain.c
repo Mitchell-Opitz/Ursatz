@@ -1,4 +1,4 @@
-/* A consumer that links only ursatz_analyzer: every public header but result_chain.h, and nothing of the chain or the frameworks. */
+/* A consumer that links only ursatz_analyzer: every public header but result_chain.h, and nothing of the chain. */
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>

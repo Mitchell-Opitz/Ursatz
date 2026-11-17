@@ -5,14 +5,14 @@
 #include <string.h>
 #include "reference_pieces.h"
 
-#include "standard-harmony/analysis/analysis_phrase.h"
-#include "standard-harmony/analysis/analysis_six_four.h"
-#include "standard-tonality/analysis/applied_chords.h"
-#include "standard-tonality/analysis/chord_input.h"
-#include "common-practice-minimal/key_regions.h"
-#include "standard-tonality/analysis/roman_numeral_adapter.h"
-#include "weighted_pipeline.h"
-#include "analysis/outer_voice.h"
+#include "analysis/harmony/analysis_phrase.h"
+#include "analysis/harmony/analysis_six_four.h"
+#include "analysis/harmony/applied_chords.h"
+#include "analysis/harmony/chord_input.h"
+#include "analysis/harmony/key_regions.h"
+#include "analysis/harmony/roman_numeral_adapter.h"
+#include "chain/tests/weighted_pipeline.h"
+#include "analysis/voices/outer_voice.h"
 
 /*
  * Phrase model labels for Mozart, Piano Sonata K. 545, first movement, exposition, against
@@ -213,10 +213,10 @@ static Inputs make_inputs(const WeightedPipeline *p, const MeterMap *map, size_t
         const TimeSpan *window = sonority_time_window(p->sonorities.items[s].sonority);
         assert(metrical_position_from_time(map, time_span_start(window), &in.positions[s]) == METRICAL_POSITION_OK);
         HarmonySegmentInput *input = &in.inputs[s];
-        input->segment_id = p->segment_ids[s];
-        input->span = window;
-        input->position = in.positions[s];
-        input->beat_strength = chain_attack_strength(map, time_span_start(window));
+        input->segment.id = p->segment_ids[s];
+        input->segment.span = window;
+        input->segment.position = in.positions[s];
+        input->segment.strength = chain_attack_strength(map, time_span_start(window));
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
     }

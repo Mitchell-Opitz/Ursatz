@@ -9,7 +9,7 @@
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/motive.h>
 
-#include <analysis/motive_relation.h>
+#include <analysis/motive/motive_relation.h>
 
 /*
  * Motivic development: related motives made from a source motive.

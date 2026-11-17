@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-texture/texture_rules.h>
+#include <analysis/texture/texture_rules.h>
 
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/plan_json.h>

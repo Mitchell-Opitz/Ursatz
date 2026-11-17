@@ -7,7 +7,7 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include "common-practice-minimal/key_regions.h"
+#include "analysis/harmony/key_regions.h"
 
 /*
  * The local keys of the piece, from the library chain's key regions (analysis_chain_key_regions: Ursatz's

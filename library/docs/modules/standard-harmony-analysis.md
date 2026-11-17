@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-`frameworks/standard-harmony/analysis/` turns chord segments into standard-harmony's inputs and returns Interpretations: harmonic function, phrase model labels, six-four types and prolongations. It uses the existing rules (`harmony_function_of`, `harmony_phrase_model_label`, `harmony_six_four_classify`, `harmony_prolongation_of`, `harmony_applied_function`) and does not repeat them. It detects no cadences and segments no phrases (L3.3, L3.6).
+`analysis/harmony/` turns chord segments into standard-harmony's inputs and returns Interpretations: harmonic function, phrase model labels, six-four types and prolongations. It uses the existing rules (`harmony_function_of`, `harmony_phrase_model_label`, `harmony_six_four_classify`, `harmony_prolongation_of`, `harmony_applied_function`) and does not repeat them. It detects no cadences and segments no phrases (L3.3, L3.6).
 
 ## Input
 
@@ -72,7 +72,7 @@ An inverted V or an arrival on an inverted tonic is not a cadence (it prolongs, 
 
 ## Relocated enums
 
-`HarmonicFunction`, `PhraseModelLabel` and `SixFourType` were used only by standard-harmony and moved from `src/semantics/` into it, one commit each. `AppliedChordKind` (standard-tonality), `KeyChangeExtent` (common-practice-minimal), `CadenceType` and `BeatStrength` are shared and stay.
+`HarmonicFunction`, `PhraseModelLabel` and `SixFourType` were used only by standard-harmony and moved from `theory/vocabulary/` into it, one commit each. `AppliedChordKind` (standard-tonality), `KeyChangeExtent` (common-practice-minimal), `CadenceType` and `BeatStrength` are shared and stay.
 
 ## Limits
 
@@ -134,4 +134,4 @@ returns the cadences that end phrases, as copies, in order of arrival:
    closing V to I bars give one closing cadence.
 6. A post-cadential plagal directly after a kept PAC is kept. Nothing else is.
 
-No points give no cadences. Tests: `frameworks/standard-harmony/tests/test_analysis_cadence_claims.c`.
+No points give no cadences. Tests: `analysis/tests/harmony/test_analysis_cadence_claims.c`.

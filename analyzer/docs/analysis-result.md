@@ -31,7 +31,7 @@ The result borrows `notes`, which must outlive it. `analyzer_result_destroy(NULL
 
 On any status but `ANALYZER_OK`, `*out` is NULL and nothing is kept.
 
-`AnalyzerOptions.stages` holds the `ANALYSIS_CHAIN_STAGE_*` bits of `ursatz_chain/analysis_chain.h` (bits 0 to 11) and
+`AnalyzerOptions.stages` holds the `ANALYSIS_CHAIN_STAGE_*` bits of `chain/analysis_chain.h` (bits 0 to 11) and
 the `ANALYZER_STAGE_*` bits for the Analyzer-only stages: progressions, harmonic rhythm, meter check, rhythm, markings
 and form plan. `analyzer_options_default()` selects all of them. A chain stage pulls in the stages
 it needs (see the chain header).
@@ -48,7 +48,7 @@ the result holds the chain's results of the stages that ran; `analyzer_result_re
 
 ## Library results
 
-`analyzer_result_chain(result)` (`<ursatz_analyzer/result_chain.h>`) is the `AnalysisChain` of `ursatz_chain/analysis_chain.h`,
+`analyzer_result_chain(result)` (`<ursatz_analyzer/result_chain.h>`) is the `AnalysisChain` of `chain/analysis_chain.h`,
 read through its accessors. It is NULL for a piece with no notes. The header and the chain's headers reach only a target that
 links `ursatz_analyzer::chain`; a target linking `ursatz_analyzer` alone sees no chain or framework header.
 

@@ -1,0 +1,12 @@
+ursatz_test_includes()
+
+add_subdirectory(notes)
+add_subdirectory(motive)
+add_subdirectory(voices)
+add_subdirectory(harmony)
+add_subdirectory(form)
+add_subdirectory(meter)
+add_subdirectory(texture)
+add_subdirectory(counterpoint)
+add_subdirectory(galant)
+add_subdirectory(similarity)

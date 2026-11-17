@@ -1,0 +1,100 @@
+#ifndef URSATZ_FRAMEWORKS_STANDARD_HARMONY_HARMONY_CADENCE_RULES_H
+#define URSATZ_FRAMEWORKS_STANDARD_HARMONY_HARMONY_CADENCE_RULES_H
+
+#include <stdbool.h>
+
+#include "theory/harmony/harmony_chord.h"
+#include "theory/rules/preference.h"
+#include "theory/vocabulary/cadence_type.h"
+
+/*
+ * Cadence classification rules for standard-harmony-v1. A cadence is a melodic
+ * and harmonic pattern that ends a phrase, like punctuation in a sentence.
+ * There are two primary kinds:
+ *
+ *   authentic   the progression V to I (V to i in minor), which sounds
+ *               conclusive. Perfect (PAC) when both chords are in root position
+ *               and do is in the soprano over the tonic chord; imperfect (IAC)
+ *               when either condition fails (mi or sol in the soprano, or V, I,
+ *               or both inverted)
+ *   half        a phrase that ends on V, whatever chord x came before it (the
+ *               progression x to V), which sounds inconclusive
+ *
+ * A progression that is neither is not a cadence, though it may still be some
+ * kind of ending. A potential cadence that is avoided, because what follows
+ * repeats material from the middle of the phrase, is subverted. Whether it is
+ * subverted needs the music that follows, so the caller says so (`subverted`).
+ *
+ * The strength of a cadence runs from the half cadence (weakest), through the
+ * imperfect authentic, to the perfect authentic (strongest). An imperfect
+ * authentic cadence can itself be made more or less strong (the melody, the
+ * rhythm, a rest after it); that is not modeled.
+ *
+ * V can have a seventh (V7), whose added dissonance strengthens the pull toward
+ * tonic. A V7 to I in root position with do in the soprano is still a perfect
+ * authentic cadence. V7 is much less common in a half cadence, which is already
+ * unstable and which a seventh makes more so; such a cadence appears more often
+ * in Romantic music (Schmalfeldt's "19th-century HC"). It is still a half
+ * cadence, not a type of its own.
+ *
+ * Hard:
+ *
+ *   CADENTIAL_PROGRESSION   the progression is V to I or x to V
+ *
+ * Soft:
+ *
+ *   HALF_WITHOUT_SEVENTH    a half cadence does not end on V7; this always holds
+ *                           for an authentic cadence
+ *
+ * The subject is the last two chords of the phrase and the scale degree of the
+ * soprano over the last one (1 to 7: do is 1, mi is 3).
+ */
+
+typedef struct {
+    HarmonyChord from;
+    HarmonyChord to;
+    int soprano_degree;
+    bool subverted;
+} HarmonyCadence;
+
+typedef enum {
+    HARMONY_CADENCE_CADENTIAL_PROGRESSION = 0,
+    HARMONY_CADENCE_HALF_WITHOUT_SEVENTH,
+    HARMONY_CADENCE_RULE_COUNT
+} HarmonyCadenceRule;
+
+/* True for two valid chords and a soprano degree from 1 to 7. */
+bool harmony_cadence_valid(const HarmonyCadence *cadence);
+
+/* The soft rule's Preference (scores the rule 1/1 when it holds, 0/1 when not); NULL for a hard rule. */
+const Preference *harmony_cadence_preference(HarmonyCadenceRule which);
+
+/* True when the cadence satisfies the rule. False when it does not, and for an
+   invalid cadence or an invalid rule. */
+bool harmony_cadence_rule_holds(HarmonyCadenceRule which, const HarmonyCadence *cadence);
+
+/* The rules the cadence breaks: hard_violations has bit (1u << rule) set for each
+   hard rule that fails, soft_violations for each soft rule. False (both
+   untouched) for an invalid cadence. */
+bool harmony_cadence_check(const HarmonyCadence *cadence, unsigned *hard_violations, unsigned *soft_violations);
+
+/* The type of the cadence: subverted when the progression is cadential and
+   `subverted` is set, otherwise PAC, IAC, or HC by the rules above. False (*out
+   untouched) when the progression is not cadential and for an invalid cadence. */
+bool harmony_cadence_classify(const HarmonyCadence *cadence, CadenceType *out);
+
+/*
+ * How conclusive a type is, the one strength ordering for CadenceType: 0 subverted
+ * (no cadence), 1 half, 2 deceptive, 3 plagal, 4 authentic (unspecified), 5 imperfect
+ * authentic, 6 perfect authentic. -1 for UNKNOWN and for an invalid type. Compare ranks,
+ * not the numbers themselves: only the order is part of the contract. Code outside this
+ * framework (kernel analysis) receives this function from its caller as a
+ * `int (*)(CadenceType)`.
+ */
+int harmony_cadence_strength(CadenceType type);
+
+/* -1, 0, or 1 as `a` is weaker than, equal to, or stronger than `b` by
+   harmony_cadence_strength. Two unranked types (UNKNOWN or invalid) compare equal. */
+int harmony_cadence_compare(CadenceType a, CadenceType b);
+
+#endif

@@ -1,7 +1,7 @@
 #ifndef URSATZ_ANALYZER_VOICING_CHECK_H
 #define URSATZ_ANALYZER_VOICING_CHECK_H
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Spacing of a four-part chord by Ursatz's standard-voicing rules (spacing_rules.h): no more than an octave between

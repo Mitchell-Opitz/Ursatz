@@ -1,0 +1,19 @@
+ursatz_test(standard_meter_segmentation_beat_grid SOURCES test_segmentation_beat_grid.c LIBS ursatz_analysis)
+
+ursatz_test(standard_meter_adaptive_segmentation_eval SOURCES test_adaptive_segmentation_eval.c LIBS ursatz_analysis ursatz_io ursatz_test_support
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations")
+
+ursatz_test(standard_meter_analysis_syncopation SOURCES test_analysis_syncopation.c LIBS ursatz_analysis)
+
+ursatz_test(standard_meter_analysis_hemiola SOURCES test_analysis_hemiola.c LIBS ursatz_analysis)
+
+ursatz_test(standard_meter_analysis_hypermeter SOURCES test_analysis_hypermeter.c LIBS ursatz_analysis)
+
+ursatz_test(standard_meter_analysis_density SOURCES test_analysis_density.c LIBS ursatz_analysis)
+
+ursatz_test(standard_meter_analysis_note SOURCES test_meter_analysis_note.c LIBS ursatz_analysis VALGRIND)
+
+ursatz_test(standard_meter_analysis_check SOURCES test_meter_analysis_check.c LIBS ursatz_analysis VALGRIND)
+
+ursatz_test(standard_meter_analysis_tuplet SOURCES test_meter_analysis_tuplet.c LIBS ursatz_analysis VALGRIND)

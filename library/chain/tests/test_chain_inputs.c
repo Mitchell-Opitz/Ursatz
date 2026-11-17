@@ -1,12 +1,12 @@
-#include "ursatz_chain/chain_inputs.h"
+#include "chain/chain_inputs.h"
 
 #include "chain_test_piece.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/tuning_system.h"
-#include "standard-harmony/harmony_cadence_rules.h"
-#include "common-practice-minimal/outer_scale_degrees.h"
-#include "standard-meter/segmentation_beat_grid.h"
-#include "ursatz_chain/analysis_chain.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/tuning_system.h"
+#include "theory/harmony/harmony_cadence_rules.h"
+#include "analysis/harmony/outer_scale_degrees.h"
+#include "theory/meter/segmentation_beat_grid.h"
+#include "chain/analysis_chain.h"
 
 /*
  * The chain's input builders, each on a small constructed piece (chain_test_piece.h): the results, the error paths (a NULL argument, an
@@ -241,7 +241,7 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(harmony.count == count && harmony.beat_length != NULL);
     for (size_t s = 0; s < count; s++) {
         const HarmonySegmentInput *input = &harmony.inputs[s];
-        assert(strcmp(input->segment_id, segments->ids[s]) == 0 && input->position == harmony.positions[s]);
+        assert(strcmp(input->segment.id, segments->ids[s]) == 0 && input->segment.position == harmony.positions[s]);
         assert(input->beat_length == harmony.beat_length && strcmp(input->key_ref, "key") == 0);
         if (romans[s].has_numeral) {
             assert(input->degree == romans[s].claim.degree && input->inversion == romans[s].claim.inversion);
@@ -251,7 +251,7 @@ static void test_stage_inputs(TestPiece *piece) {
             assert(input->degree == 0 && input->interval_count == 3);
         }
     }
-    assert(harmony.inputs[0].beat_strength == BEAT_STRENGTH_STRONG);
+    assert(harmony.inputs[0].segment.strength == BEAT_STRENGTH_STRONG);
     HarmonySegment *prepared = NULL;
     HarmonyCadences cadences = {0};
     assert(harmony_analysis_prepare(harmony.inputs, count, &prepared) == HARMONY_ANALYSIS_OK);
@@ -281,12 +281,12 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(chain_build_form_input(&piece->set, &aligned, NULL, &aligned_lines, 1, 4, &cadences, &form) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
     assert(chain_build_form_input(&piece->set, &aligned, &aligned, &aligned_lines, 1, 4, &cadences, &form) == CHAIN_INPUT_OK);
     assert(form.input.finished && form.input.note_count > 0 && form.input.note_count <= 16);
-    assert(form.input.segment_count == aligned.count && form.input.cadence_count == cadences.count);
-    assert(form.input.notes[0].semitone == 76); /* E5 */
+    assert(form.input.cadence_count == cadences.count);
+    assert(form.input.notes[0].midi == 76); /* E5 */
     chain_form_input_destroy(&form);
     assert(chain_build_form_input(&piece->set, &aligned, &aligned, &aligned_lines, 3, 3, NULL, &form) == CHAIN_INPUT_OK);
     assert(form.input.cadence_count == 0 && form.input.note_count > 0 && form.input.note_count <= 4);
-    assert(form.input.notes[0].semitone == 74); /* D5, the first soprano note of measure 3 */
+    assert(form.input.notes[0].midi == 74); /* D5, the first soprano note of measure 3 */
     chain_form_input_destroy(&form);
     chain_form_input_destroy(NULL);
     outer_voice_lines_destroy(&aligned_lines);
@@ -295,8 +295,8 @@ static void test_stage_inputs(TestPiece *piece) {
 
     /* the motive input: a note-level soprano with its degrees */
     assert(chain_build_motive_input(&piece->set, segments, 1, 4, 0, COMMON_PRACTICE_KEY_MAJOR, &cadences, &form) == CHAIN_INPUT_OK);
-    assert(form.input.note_count == 16 && form.input.notes[0].degree == 3 && form.input.notes[1].degree == 2 &&
-           form.input.notes[2].degree == 1);
+    assert(form.input.note_count == 16 && form.input.degrees[0] == 3 && form.input.degrees[1] == 2 &&
+           form.input.degrees[2] == 1);
     chain_form_input_destroy(&form);
 
     /* the meter input: every note of the measures, a chord change where the label changes */
@@ -314,8 +314,8 @@ static void test_stage_inputs(TestPiece *piece) {
     size_t soprano_notes = 0;
     size_t bass_notes = 0;
     for (size_t i = 0; i < meter.input.note_count; i++) {
-        soprano_notes += meter.input.notes[i].line == 0 ? 1 : 0;
-        bass_notes += meter.input.notes[i].line == 1 ? 1 : 0;
+        soprano_notes += standard_meter_note_line(&meter.input.notes[i]) == 0 ? 1 : 0;
+        bass_notes += standard_meter_note_line(&meter.input.notes[i]) == 1 ? 1 : 0;
     }
     assert(soprano_notes > 0 && bass_notes > 0);
     assert(meter.input.chord_change_count > 0 && meter.input.phrase_count == 0);
@@ -333,7 +333,7 @@ static void test_stage_inputs(TestPiece *piece) {
     memset(&texture, 0, sizeof(texture));
     assert(chain_build_texture_input(&piece->set, NULL, &texture) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
     assert(chain_build_texture_input(&piece->set, &pitches, &texture) == CHAIN_INPUT_OK);
-    assert(texture.input.note_count == piece->count && texture.assignment.count == piece->count && texture.stream_count == 1);
+    assert(texture.set.count == piece->count && texture.assignment.count == piece->count && texture.stream_count == 1);
     chain_texture_input_destroy(&texture);
     chain_texture_input_destroy(NULL);
 

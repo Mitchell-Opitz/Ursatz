@@ -4,25 +4,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <core/provenance_reference.h>
-#include <core/voice_reference.h>
-#include <identity/entity_id.h>
-#include <pitch/key_signature.h>
-#include <pitch/pitch_arithmetic.h>
-#include <pitch/pitch_identity.h>
-#include <pitch/pitch_spelling.h>
-#include <pitch/tuning_system.h>
-#include <standard-tonality/tonal_key.h>
-#include <time/duration.h>
-#include <time/time_rational.h>
-#include <time/note_value.h>
-#include <time/temporal_anchor.h>
-#include <time/time_signature.h>
+#include <model/core/provenance_reference.h>
+#include <model/core/voice_reference.h>
+#include <model/identity/entity_id.h>
+#include <model/pitch/key_signature.h>
+#include <model/pitch/pitch_arithmetic.h>
+#include <model/pitch/pitch_identity.h>
+#include <model/pitch/pitch_spelling.h>
+#include <model/pitch/tuning_system.h>
+#include <theory/tonality/tonal_key.h>
+#include <model/time/duration.h>
+#include <model/time/time_rational.h>
+#include <model/time/note_value.h>
+#include <model/time/temporal_anchor.h>
+#include <model/time/time_signature.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/plan_state.h>
 #include "render/render_notes.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 
 const char *rendered_part_lane_name(const RenderedPart *part) {
     return plan_lane_name(part->lane);
@@ -237,7 +238,7 @@ typedef struct {
  * placed on the line of fifths, its sharp spelling in a sharp key or none, its flat spelling in a flat key.
  */
 static Spelling spell(int midi, const AnalysisKey *key) {
-    int pitch_class = ((midi % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE;
+    int pitch_class = util_pitch_class(midi);
     int sharps_flats = key ? key_sharps_flats(key) : 0;
     PitchLetter tonic_letter = PITCH_LETTER_C;
     int tonic_accidental = 0;
@@ -262,7 +263,7 @@ static Spelling spell(int midi, const AnalysisKey *key) {
     }
     int lowest = sharps_flats < 0 ? FLATS_LOWEST_FIFTHS : SHARPS_LOWEST_FIFTHS;
     int fifths = lowest;
-    while (((fifths * 7) % PITCH_SEMITONES_PER_OCTAVE + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE !=
+    while (util_pitch_class(fifths * 7) !=
            pitch_class) {
         fifths++;
     }

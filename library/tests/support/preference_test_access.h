@@ -3,9 +3,9 @@
 
 #include <stdlib.h>
 
-#include "identity/entity_id.h"
-#include "rules/preference.h"
-#include "rules/preference_internal.h"
+#include "model/identity/entity_id.h"
+#include "theory/rules/preference.h"
+#include "theory/rules/preference_internal.h"
 
 /*
  * What the tests read of a Preference: its framework, its scoring callback and the rank the callback gives a candidate.

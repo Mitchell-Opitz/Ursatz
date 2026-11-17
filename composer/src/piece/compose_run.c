@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-form/phrase_level_form.h>
+#include <theory/form/phrase_level_form.h>
 
 #include "util/job.h"
 

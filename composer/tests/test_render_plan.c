@@ -6,7 +6,7 @@
 #include <io/midi_importer.h>
 #include <io/midi_key_signature.h>
 #include <io/musicxml_importer.h>
-#include <pitch/pitch_spelling.h>
+#include <model/pitch/pitch_spelling.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/export.h>

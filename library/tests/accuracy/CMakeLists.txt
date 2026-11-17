@@ -1,4 +1,4 @@
-ursatz_test_library(accuracy_support SOURCES romantext.c score_layout.c alignment.c LIBS ursatz
+ursatz_test_library(accuracy_support SOURCES romantext.c score_layout.c alignment.c LIBS ursatz_io
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 
 ursatz_test(accuracy_romantext SOURCES test_romantext.c LIBS accuracy_support LABELS accuracy)
@@ -9,8 +9,7 @@ ursatz_test(accuracy_corpus_load SOURCES test_corpus_load.c LIBS accuracy_suppor
     DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/accuracy-corpus" LABELS accuracy)
 
 # Every corpus chorale through the whole analysis chain to the form stage (P41 B6, R-396).
-ursatz_test(accuracy_chorale_form SOURCES test_chorale_form.c LIBS accuracy_support ursatz_test_support ursatz_chain standard_form
-    standard_harmony common_practice_minimal standard_meter standard_tonality
+ursatz_test(accuracy_chorale_form SOURCES test_chorale_form.c LIBS accuracy_support ursatz_test_support ursatz_chain ursatz_analysis
     DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/accuracy-corpus" VALGRIND LABELS accuracy)
 
 # The chain over the annotated corpus and the existing fixture tests, read through the harness. Each fixture
@@ -45,27 +44,24 @@ function(accuracy_fixture name test_file)
   target_link_libraries(accuracy_fixture_${name} PRIVATE ${ARGN})
 endfunction()
 
-accuracy_fixture(cadences test_cadences_reference_pieces.c ursatz_chain standard_harmony standard_tonality common_practice_minimal standard_meter)
-accuracy_fixture(form test_form_reference_pieces.c standard_form standard_harmony standard_tonality common_practice_minimal standard_meter ursatz_chain)
-accuracy_fixture(texture test_texture_field1.c ursatz_chain standard_texture standard_harmony standard_tonality common_practice_minimal standard_meter)
-accuracy_fixture(rhythm test_rhythm_field5.c standard_form standard_harmony standard_tonality common_practice_minimal standard_meter ursatz_chain)
-accuracy_fixture(melody test_melody_bach114.c ursatz_chain standard_counterpoint common_practice_minimal standard_meter)
-accuracy_fixture(motive test_motive_mozart545.c standard_form standard_harmony standard_tonality common_practice_minimal standard_meter ursatz_chain)
-accuracy_fixture(phrase_model test_mozart545_phrase_model.c ursatz_chain standard_harmony standard_tonality common_practice_minimal standard_meter)
-accuracy_fixture(schema test_schema_sequence.c ursatz_chain galant_schemas scale_harmonization standard_harmony standard_tonality common_practice_minimal
-                 standard_meter)
+accuracy_fixture(cadences test_cadences_reference_pieces.c ursatz_chain ursatz_analysis)
+accuracy_fixture(form test_form_reference_pieces.c ursatz_analysis ursatz_chain)
+accuracy_fixture(texture test_texture_field1.c ursatz_chain ursatz_analysis)
+accuracy_fixture(rhythm test_rhythm_field5.c ursatz_analysis ursatz_chain)
+accuracy_fixture(melody test_melody_bach114.c ursatz_chain ursatz_analysis)
+accuracy_fixture(motive test_motive_mozart545.c ursatz_analysis ursatz_chain)
+accuracy_fixture(phrase_model test_mozart545_phrase_model.c ursatz_chain ursatz_analysis)
+accuracy_fixture(schema test_schema_sequence.c ursatz_chain ursatz_analysis)
 
-# The chorale chain and the report: common-practice-minimal, standard-meter, standard-tonality and standard-harmony (the cadences
+# The chorale chain and the report: the analysis group (the cadences
 # that give the key regions their second pass).
 add_library(accuracy_chain STATIC chorale_chain.c)
 target_include_directories(accuracy_chain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(accuracy_chain PUBLIC accuracy_support PRIVATE ursatz_chain standard_harmony common_practice_minimal standard_meter standard_tonality)
+target_link_libraries(accuracy_chain PUBLIC accuracy_support PRIVATE ursatz_chain ursatz_analysis)
 target_compile_options(accuracy_chain PRIVATE -UNDEBUG)
 
 ursatz_test_executable(accuracy_harness SOURCES accuracy_harness.c accuracy_report.c accuracy_gate.c fixtures.c
-    LIBS accuracy_chain accuracy_fixture_cadences accuracy_fixture_form accuracy_fixture_texture
-    accuracy_fixture_rhythm accuracy_fixture_melody accuracy_fixture_motive accuracy_fixture_phrase_model
-    accuracy_fixture_schema DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/accuracy-corpus"
+    LIBS accuracy_chain accuracy_fixture_cadences accuracy_fixture_form accuracy_fixture_texture accuracy_fixture_rhythm accuracy_fixture_melody accuracy_fixture_motive accuracy_fixture_phrase_model accuracy_fixture_schema DEFINITIONS URSATZ_ACCURACY_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/accuracy-corpus"
     URSATZ_ACCURACY_DIR="${CMAKE_CURRENT_SOURCE_DIR}" URSATZ_ACCURACY_OUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 # The harness fails when an overall metric is more than the baseline's tolerance below tests/accuracy/baseline.json.
 ursatz_test(accuracy_harness TARGET accuracy_harness LABELS accuracy)

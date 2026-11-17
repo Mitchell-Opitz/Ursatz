@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <galant-schemas/galant_degree.h>
+#include <theory/galant/galant_degree.h>
+#include <theory/tonality/roman_numeral_rules.h>
 
 #include "harmony/harmony_internal.h"
 
@@ -58,25 +59,6 @@ static bool read_figures(const char *figures, bool *seventh, int *inversion) {
     return false;
 }
 
-/* The scale degree a Roman numeral names, whatever its case; 0 for anything else. */
-static int numeral_degree(const char *numeral, size_t length) {
-    static const char *const NAMES[7] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};
-    char lower[8];
-    if (length == 0 || length >= sizeof(lower)) {
-        return 0;
-    }
-    for (size_t i = 0; i < length; i++) {
-        lower[i] = (char)tolower((unsigned char)numeral[i]);
-    }
-    lower[length] = '\0';
-    for (int degree = 0; degree < 7; degree++) {
-        if (strcmp(lower, NAMES[degree]) == 0) {
-            return degree + 1;
-        }
-    }
-    return 0;
-}
-
 /* Whether the chord's bass member is what the framework's stage asks for, by the framework's own matching. */
 static bool bass_accepts(const AnalysisKey *key, const PhraseChord *chord, const GalantDegree *wanted) {
     int pc;
@@ -117,7 +99,7 @@ static bool derive_stage(const AnalysisKey *key, const GalantStage *stage, Phras
         } else {
             return false;
         }
-        applied.target = numeral_degree(slash + 1, strlen(slash + 1));
+        applied.target = standard_tonality_roman_numeral_degree_of(slash + 1, strlen(slash + 1));
         if (!harmony_applied_quality_kind(applied.quality, &applied.kind) ||
             !harmony_applied_valid(harmony_mode_of(mode), &applied) ||
             !harmony_roman_format_applied_inverted(mode, &applied, inversion, out->roman)) {
@@ -131,7 +113,7 @@ static bool derive_stage(const AnalysisKey *key, const GalantStage *stage, Phras
         out->cells = 1;
         return bass_accepts(key, out, &stage->bass);
     }
-    int degree = numeral_degree(stage->numeral, strlen(stage->numeral));
+    int degree = standard_tonality_roman_numeral_degree_of(stage->numeral, strlen(stage->numeral));
     if (degree == 0) {
         return false;
     }

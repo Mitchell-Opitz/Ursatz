@@ -5,16 +5,16 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-#include "core/voice_reference.h"
-#include "identity/entity_id.h"
+#include "model/core/voice_reference.h"
+#include "model/identity/entity_id.h"
 #include "io/midi_importer.h"
 #include "io/musicxml_importer.h"
-#include "pitch/pitch_numeric_value.h"
-#include "semantics/analysis_note.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
-#include "time/time_span.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "analysis/notes/analysis_note.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_span.h"
 
 static inline void import_analysis_notes_destroy(AnalysisNote *notes, size_t count);
 

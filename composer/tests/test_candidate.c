@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <core/provenance_reference.h>
-#include <core/value.h>
-#include <identity/entity_id.h>
-#include <interpretation/interpretation.h>
-#include <interpretation/uncertainty.h>
+#include <model/core/provenance_reference.h>
+#include <model/core/value.h>
+#include <model/identity/entity_id.h>
+#include <model/interpretation/interpretation.h>
+#include <model/interpretation/uncertainty.h>
 
 #include <ursatz_composer/candidate.h>
 

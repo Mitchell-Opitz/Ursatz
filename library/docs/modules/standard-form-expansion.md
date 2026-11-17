@@ -1,8 +1,8 @@
 # standard-form hybrids and expansion
 
-The hybrid, length, internal expansion and external expansion rule groups of `frameworks/standard-form/`. [Docs index](../README.md)
+The hybrid, length, internal expansion and external expansion rule groups of `theory/form/`. [Docs index](../README.md)
 
-Framework overview: [frameworks/standard-form/README.md](../../frameworks/standard-form/README.md).
+Framework overview: [theory/form/README.md](../../theory/form/README.md).
 
 - **Hybrids** (`hybrid_rules.h`): any beginning can pair with any ending,
   nine pairings. Presentation + continuation is a sentence and antecedent

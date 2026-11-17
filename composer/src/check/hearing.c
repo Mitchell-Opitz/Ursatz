@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <time/duration.h>
-#include <time/musical_time.h>
-#include <time/temporal_anchor.h>
-#include <time/time_rational.h>
+#include <model/time/duration.h>
+#include <model/time/musical_time.h>
+#include <model/time/temporal_anchor.h>
+#include <model/time/time_rational.h>
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>

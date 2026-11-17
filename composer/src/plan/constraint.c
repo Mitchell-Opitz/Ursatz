@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <galant-schemas/galant_prototypes.h>
-#include <standard-texture/texture_rules.h>
+#include <theory/galant/galant_prototypes.h>
+#include <analysis/texture/texture_rules.h>
 
 #include "plan/plan_internal.h"
 #include "util/plan_util.h"

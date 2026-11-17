@@ -8,9 +8,9 @@
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include <ursatz_chain/analysis_chain.h>
+#include <chain/analysis_chain.h>
 
-#include "analysis/outer_voice.h"
+#include "analysis/voices/outer_voice.h"
 #include "pipeline/chain_input.h"
 #include "pipeline/chord_pipeline.h"
 #include "pipeline/form_pipeline.h"
@@ -18,7 +18,7 @@
 #include "pipeline/motive_pipeline.h"
 #include "pipeline/roman_numeral_pipeline.h"
 #include "pipeline/segmentation.h"
-#include "time/musical_time.h"
+#include "model/time/musical_time.h"
 
 /*
  * The analyzer's pass over a piece: it runs the library's analysis chain once (analysis_chain_run of ursatz_chain,

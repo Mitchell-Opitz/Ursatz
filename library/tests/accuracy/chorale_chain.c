@@ -6,24 +6,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/outer_voice.h"
-#include "standard-harmony/analysis/analysis_cadence.h"
-#include "standard-tonality/analysis/applied_chords.h"
-#include "standard-tonality/analysis/chord_input.h"
-#include "core/rational.h"
+#include "analysis/voices/outer_voice.h"
+#include "analysis/harmony/analysis_cadence.h"
+#include "analysis/harmony/applied_chords.h"
+#include "analysis/harmony/chord_input.h"
+#include "model/core/rational.h"
 #include "../import_notes_test_util.h"
 #include "io/musicxml_importer.h"
-#include "common-practice-minimal/key_regions.h"
-#include "common-practice-minimal/key_vocabulary.h"
-#include "standard-meter/metric_position_rules.h"
-#include "standard-tonality/analysis/roman_numeral_adapter.h"
-#include "standard-meter/segmentation_beat_grid.h"
-#include "time/duration.h"
-#include "time/metrical_position.h"
-#include "time/time_rational.h"
-#include "time/time_span.h"
-#include "ursatz_chain/analysis_chain.h"
-#include "common-practice-minimal/weighted_chord_identification.h"
+#include "analysis/harmony/key_regions.h"
+#include "theory/tonality/key_vocabulary.h"
+#include "theory/meter/metric_position_rules.h"
+#include "analysis/harmony/roman_numeral_adapter.h"
+#include "theory/meter/segmentation_beat_grid.h"
+#include "model/time/duration.h"
+#include "model/time/metrical_position.h"
+#include "model/time/time_rational.h"
+#include "model/time/time_span.h"
+#include "chain/analysis_chain.h"
+#include "analysis/harmony/weighted_chord_identification.h"
 #include "../rational_test_util.h"
 #include "../key_index_test_util.h"
 
@@ -287,10 +287,10 @@ static bool find_phrase_ends(Run *r) {
             break;
         }
         HarmonySegmentInput *input = &inputs[i];
-        input->segment_id = segs->ids[i];
-        input->span = window;
-        input->position = positions[i];
-        input->beat_strength = chain_attack_strength(r->map, time_span_start(window));
+        input->segment.id = segs->ids[i];
+        input->segment.span = window;
+        input->segment.position = positions[i];
+        input->segment.strength = chain_attack_strength(r->map, time_span_start(window));
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
         input->beat_length = beat_length;
