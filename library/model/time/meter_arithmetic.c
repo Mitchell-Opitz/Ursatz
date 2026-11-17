@@ -172,6 +172,61 @@ MeterMapResult meter_map_time_of(const MeterMap *map, NotatedPosition p, Musical
     return METER_MAP_OK;
 }
 
+MeterMapResult meter_map_grid_at(const MeterMap *map, MusicalTime t, MeterGrid *out) {
+    if (map == NULL || out == NULL) {
+        return METER_MAP_ERR_NULL_ARGUMENT;
+    }
+    int index = 0;
+    Rational start;
+    const TimeSignature *signature = NULL;
+    Duration length;
+    Rational division;
+    TRY(locate_measure(map, t.value, &index, &start, &signature));
+    if (time_signature_beat_length(signature, &length) != DURATION_OK) {
+        return METER_MAP_ERR_NOT_FOUND;
+    }
+    TRY(from_rational(rational_div_int(length.value, time_signature_is_compound(signature) ? 3 : 2, &division)));
+    out->signature = signature;
+    out->measure_start = start;
+    out->beat = length.value;
+    out->division = division;
+    return METER_MAP_OK;
+}
+
+/* Whether length is a whole number of `level`, and level is at least finest. */
+static bool level_holds(Rational length, Rational level, Rational finest) {
+    Rational steps;
+    return rational_cmp(level, finest) >= 0 && rational_cmp(level, rational_ratio(0, 1)) > 0 &&
+           rational_div(length, level, &steps) == RATIONAL_OK && steps.den == 1 && steps.num > 0;
+}
+
+#define GRID_MAX_HALVINGS 64
+
+bool meter_grid_holds(const MeterGrid *grid, Rational length, Rational finest) {
+    if (grid == NULL || grid->signature == NULL || !(rational_cmp(length, rational_ratio(0, 1)) > 0) || grid->beat.den <= 0 || grid->division.den <= 0 ||
+        !(grid->beat.num > 0) || !(grid->division.num > 0) || finest.den <= 0) {
+        return false;
+    }
+    if (level_holds(length, grid->beat, finest) || level_holds(length, grid->division, finest)) {
+        return true;
+    }
+    Rational level = grid->division;
+    for (int i = 0; i < GRID_MAX_HALVINGS; i++) {
+        if (rational_div_int(level, 2, &level) != RATIONAL_OK || rational_cmp(level, finest) < 0) {
+            break;
+        }
+        if (level_holds(length, level, finest)) {
+            return true;
+        }
+    }
+    Rational tuplet;
+    if (time_signature_is_compound(grid->signature)) {
+        return rational_mul(grid->division, rational_ratio(3, 2), &tuplet) == RATIONAL_OK && level_holds(length, tuplet, finest);
+    }
+    return (rational_mul(grid->beat, rational_ratio(2, 3), &tuplet) == RATIONAL_OK && level_holds(length, tuplet, finest)) ||
+           (rational_mul(grid->division, rational_ratio(2, 3), &tuplet) == RATIONAL_OK && level_holds(length, tuplet, finest));
+}
+
 MeterMapResult meter_map_snap_to_beat(const MeterMap *map, int measure, Rational time, Rational *snapped) {
     if (snapped == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;

@@ -52,6 +52,25 @@ MeterMapResult meter_map_position_of(const MeterMap *map, MusicalTime t, Notated
    the measure's end. */
 MeterMapResult meter_map_time_of(const MeterMap *map, NotatedPosition p, MusicalTime *out);
 
+/* The local rhythmic grid at a point (R-588): the measure's signature (borrowed from the map), the measure's start, the
+   length of its beat (time_signature_beat_length) and of its division: half the beat in a simple meter, a third of it
+   in a compound one. */
+typedef struct {
+    const TimeSignature *signature;
+    Rational measure_start;
+    Rational beat;
+    Rational division;
+} MeterGrid;
+
+/* The grid of the measure that holds `t`. METER_MAP_ERR_TIME_BEFORE_START before 0. */
+MeterMapResult meter_map_grid_at(const MeterMap *map, MusicalTime t, MeterGrid *out);
+
+/* Whether `length` is a whole number of one of the grid's levels no shorter than `finest`: the beat, the division, the
+   division halved down to `finest`, and the tuplets of the beat and of the division (the 3:2 of each in a simple meter:
+   two thirds of it) or of the beat (the 2:3 in a compound meter: a half of the beat). False for a length that is not
+   positive. */
+bool meter_grid_holds(const MeterGrid *grid, Rational length, Rational finest);
+
 /* The first beat of measure `measure` at or after `time`, never later than the measure's end. A time
    at or before the start of the measure snaps to the start. */
 MeterMapResult meter_map_snap_to_beat(const MeterMap *map, int measure, Rational time, Rational *snapped);
