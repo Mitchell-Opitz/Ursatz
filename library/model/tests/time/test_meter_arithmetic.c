@@ -147,6 +147,30 @@ static void test_compound_meters(void) {
     MeterMap *six_four = single(6, 2);
     expect_length(six_four, 1, q(3, 4));
     meter_map_destroy(six_four);
+
+    /* 15/8 is five dotted quarters, 18/8 six; 9/4, 12/4 and 6/2 are compound over their own unit (OMT I ch. 10) */
+    MeterMap *fifteen = single(15, 3);
+    expect_bounds(fifteen, 1, q(0, 1), q(15, 8));
+    expect_length(fifteen, 1, q(3, 8));
+    expect_beat(fifteen, q(3, 2), 1, 5, q(0, 1));
+    expect_beat(fifteen, q(13, 8), 1, 5, q(1, 8));
+    assert(meter_map_on_beat(fifteen, q(9, 8)) && !meter_map_on_beat(fifteen, q(1, 2)));
+    meter_map_destroy(fifteen);
+
+    MeterMap *nine_four = single(9, 2);
+    expect_length(nine_four, 1, q(3, 4));
+    expect_beat(nine_four, q(3, 2), 1, 3, q(0, 1));
+    meter_map_destroy(nine_four);
+
+    MeterMap *twelve_four = single(12, 2);
+    expect_length(twelve_four, 1, q(3, 4));
+    expect_beat(twelve_four, q(9, 4), 1, 4, q(0, 1));
+    meter_map_destroy(twelve_four);
+
+    MeterMap *six_two = single(6, 1);
+    expect_length(six_two, 1, q(3, 2));
+    expect_beat(six_two, q(3, 2), 1, 2, q(0, 1));
+    meter_map_destroy(six_two);
 }
 
 static void test_changing_meters(void) {

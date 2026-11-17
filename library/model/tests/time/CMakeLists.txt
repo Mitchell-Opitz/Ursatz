@@ -14,3 +14,7 @@ ursatz_test(time_values LIBS ursatz_model VALGRIND)
 ursatz_test(meter_arithmetic LIBS ursatz_model VALGRIND)
 ursatz_test(score_time LIBS ursatz_model VALGRIND)
 
+ursatz_test(meter_groups LIBS ursatz_model VALGRIND)
+ursatz_test(notated_position LIBS ursatz_model)
+ursatz_test(meter_grid LIBS ursatz_model)
+ursatz_test(tempo_seconds LIBS ursatz_model)

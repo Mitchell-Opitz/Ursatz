@@ -11,6 +11,7 @@
 #include "model/pitch/pitch_spelling.h"
 #include "model/events/dynamics.h"
 #include "model/events/tempo_marking.h"
+#include "model/time/meter_arithmetic.h"
 #include "model/time/meter_map.h"
 #include "model/time/metronome_marking.h"
 #include "model/time/tempo_map.h"
@@ -416,6 +417,46 @@ static void test_parts_that_disagree_about_the_meter(void) {
     musicxml_import_destroy(&import);
 }
 
+/* Two parts in 3/4 and 6/8: each part keeps its own map beside the movement's, and meter_map_position_of reads whichever
+   map governs (R-588). Every measure is three quarters long, so the barlines agree and the beats do not. */
+static void test_a_polymeter_keeps_both_maps(void) {
+    MusicXmlImport import = import_fixture("polymeter.musicxml");
+    assert(import.part_count == 2 && import.count == 12);
+    assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "disagree") != NULL); /* the warning stays */
+    assert(!meter_map_is_defaulted(import.meter_map) && meter_map_region_count(import.meter_map) == 1);
+    const TimeSignature *movement = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
+    assert(time_signature_top_number(movement) == 3 && time_signature_bottom_number(movement) == 4); /* the lowest part's */
+
+    /* one entry per part: NULL where the part follows the movement's map, its own where it differs */
+    assert(import.part_meter_maps != NULL);
+    assert(import.part_meter_maps[0] == NULL);
+    const MeterMap *own = import.part_meter_maps[1];
+    assert(own != NULL && own != import.meter_map && meter_map_region_count(own) == 1);
+    const TimeSignature *six_eight = meter_map_region_time_signature(meter_map_region(own, 0));
+    assert(time_signature_top_number(six_eight) == 6 && time_signature_bottom_number(six_eight) == 8);
+    assert(time_signature_is_compound(six_eight) && !time_signature_is_compound(movement));
+
+    /* the same time has a different notated position under each map: a quarter in is the second beat of 3/4 and a
+       quarter into the first beat of 6/8, three eighths in is the second beat of 6/8, and the barlines agree */
+    NotatedPosition p;
+    assert(meter_map_position_of(import.meter_map, at(1, 4), &p) == METER_MAP_OK);
+    assert(p.measure == 1 && p.beat == 2 && p.offset.num == 0);
+    assert(meter_map_position_of(own, at(1, 4), &p) == METER_MAP_OK);
+    assert(p.measure == 1 && p.beat == 1 && p.offset.num == 1 && p.offset.den == 4);
+    assert(meter_map_position_of(own, at(3, 8), &p) == METER_MAP_OK);
+    assert(p.measure == 1 && p.beat == 2 && p.offset.num == 0);
+    assert(meter_map_position_of(import.meter_map, at(3, 4), &p) == METER_MAP_OK && p.measure == 2 && p.beat == 1);
+    assert(meter_map_position_of(own, at(3, 4), &p) == METER_MAP_OK && p.measure == 2 && p.beat == 1);
+    assert(meter_map_position_of(own, at(9, 4), &p) == METER_MAP_OK && p.measure == 4 && p.beat == 1);
+    musicxml_import_destroy(&import);
+    assert(import.part_meter_maps == NULL);
+
+    /* parts that declare no meter leave the array NULL */
+    import = import_fixture("two_parts.musicxml");
+    assert(import.part_meter_maps == NULL);
+    musicxml_import_destroy(&import);
+}
+
 /* --- parts, staves and voices --- */
 
 static const char *voice_of(const MusicXmlImport *import, size_t i) {
@@ -616,6 +657,7 @@ int main(void) {
     test_measure_length_warnings();
     test_additive_and_unsupported_meters();
     test_parts_that_disagree_about_the_meter();
+    test_a_polymeter_keeps_both_maps();
     test_two_parts();
     test_two_voices_on_one_staff();
     test_two_staves();
