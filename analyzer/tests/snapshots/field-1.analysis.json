@@ -1,5 +1,5 @@
 {
-	"schema_version":	12,
+	"schema_version":	13,
 	"metadata":	{
 		"source_file":	"Field 1.mid",
 		"note_count":	1191,
@@ -87,7 +87,7 @@
 				"uncertainty":	0.73046059066623,
 				"index":	0,
 				"tonic":	"Eb",
-				"mode":	"major",
+				"material":	"omt.material.major",
 				"measures":	{
 					"first":	1,
 					"last":	19
@@ -128,7 +128,7 @@
 				"uncertainty":	0.87828265963810126,
 				"index":	1,
 				"tonic":	"Bb",
-				"mode":	"major",
+				"material":	"omt.material.major",
 				"measures":	{
 					"first":	20,
 					"last":	27
@@ -169,7 +169,7 @@
 				"uncertainty":	0.77137223577414238,
 				"index":	2,
 				"tonic":	"F",
-				"mode":	"minor",
+				"material":	"omt.material.natural-minor",
 				"measures":	{
 					"first":	28,
 					"last":	31
@@ -210,7 +210,7 @@
 				"uncertainty":	0.73741284516702477,
 				"index":	3,
 				"tonic":	"Eb",
-				"mode":	"major",
+				"material":	"omt.material.major",
 				"measures":	{
 					"first":	32,
 					"last":	67
@@ -63154,7 +63154,7 @@
 						"duration":	"59/480"
 					}],
 				"tonic_pc":	5,
-				"minor":	true,
+				"material":	"omt.material.natural-minor",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"3/4",

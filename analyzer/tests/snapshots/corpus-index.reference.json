@@ -3,7 +3,7 @@
   "schema_version": 2,
   "analyzer_version": "0.7.0",
   "producer_key": "<producer_key>",
-  "document_schema_version": 12,
+  "document_schema_version": 13,
   "input_dir": "<input_dir>",
   "pieces": [
     {
