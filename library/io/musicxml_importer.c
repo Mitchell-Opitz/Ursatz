@@ -1014,6 +1014,10 @@ void musicxml_import_destroy(MusicXmlImport *import) {
     }
     free(import->parts);
     meter_map_destroy(import->meter_map);
+    for (size_t i = 0; import->part_meter_maps != NULL && i < import->part_count; i++) {
+        meter_map_destroy(import->part_meter_maps[i]);
+    }
+    free(import->part_meter_maps);
     tempo_map_destroy(import->tempo_map);
     for (size_t i = 0; i < import->tempo_marking_count; i++) {
         tempo_marking_destroy(import->tempo_markings[i]);
@@ -1060,41 +1064,37 @@ static bool same_signature(const TimeEvent *a, const TimeEvent *b) {
            memcmp(a->groups, b->groups, a->group_count * sizeof(unsigned)) == 0;
 }
 
-static bool build_meter_map(Ctx *ctx) {
-    MusicXmlImport *out = ctx->out;
+/* The meter map of the time events (sorted by position, then part): one signature per position, the lowest part's wins a
+   conflict, and a pickup's region ended where the pickup ends. `report` says whether to warn about what it drops (the
+   movement's map does; a part's own map has only its own events). *out is NULL on ERR_ALLOC. */
+static MeterMapResult map_of_events(Ctx *ctx, const TimeEvent *events, size_t count, bool report, const char *name,
+                                    MeterMap **out) {
     EntityID *map_id = NULL;
-    if (entity_id_create("musicxml-meter-map", &map_id) != ENTITY_ID_OK) {
-        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+    if (entity_id_create(name, &map_id) != ENTITY_ID_OK) {
+        return METER_MAP_ERR_ALLOC;
     }
-    if (ctx->time_count == 0) {
-        if (meter_map_create_defaulted(map_id, &out->meter_map) != METER_MAP_OK) {
-            entity_id_destroy(map_id);
-            return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
-        }
-        return true;
-    }
-
-    qsort(ctx->times, ctx->time_count, sizeof(TimeEvent), compare_time_events);
-    /* the signatures kept: one per position (the lowest part's wins a conflict), plus the pickup's end */
-    TimeEvent *kept = (TimeEvent *)calloc(ctx->time_count + 1, sizeof(TimeEvent));
+    /* the signatures kept: one per position, plus the pickup's end */
+    TimeEvent *kept = (TimeEvent *)calloc(count + 1, sizeof(TimeEvent));
     if (kept == NULL) {
         entity_id_destroy(map_id);
-        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+        return METER_MAP_ERR_ALLOC;
     }
     size_t kept_count = 0;
-    for (size_t i = 0; i < ctx->time_count; i++) {
-        if (kept_count > 0 && rational_cmp(kept[kept_count - 1].position, ctx->times[i].position) == 0) {
-            if (!same_signature(&kept[kept_count - 1], &ctx->times[i])) {
+    for (size_t i = 0; i < count; i++) {
+        if (kept_count > 0 && rational_cmp(kept[kept_count - 1].position, events[i].position) == 0) {
+            if (report && !same_signature(&kept[kept_count - 1], &events[i])) {
                 warn(ctx, "parts disagree about the time signature at one position; part %zu's is used",
                      kept[kept_count - 1].part);
             }
             continue;
         }
-        kept[kept_count++] = ctx->times[i];
+        kept[kept_count++] = events[i];
     }
     if (ctx->has_pickup) {
         if (kept[0].position.num != 0) {
-            warn(ctx, "the implicit first measure is not read as a pickup: no time signature starts the piece");
+            if (report) {
+                warn(ctx, "the implicit first measure is not read as a pickup: no time signature starts the piece");
+            }
         } else if (kept_count == 1 || rational_cmp(kept[1].position, ctx->pickup_length) > 0) {
             /* nothing ends the pickup's region where the pickup ends: end it there, with the same signature, which
                is what the MeterMap reads as a short first region (a pickup) */
@@ -1120,7 +1120,7 @@ static bool build_meter_map(Ctx *ctx) {
         points[i].time_signature = signatures[i];
         points[i].start = musical_time_of(kept[i].position);
     }
-    ok = ok && meter_map_create(map_id, points, kept_count, &out->meter_map) == METER_MAP_OK;
+    ok = ok && meter_map_create(map_id, points, kept_count, out) == METER_MAP_OK;
     for (size_t i = 0; signatures != NULL && i < kept_count; i++) {
         time_signature_destroy(signatures[i]);
     }
@@ -1129,9 +1129,88 @@ static bool build_meter_map(Ctx *ctx) {
     free(kept);
     if (!ok) {
         entity_id_destroy(map_id);
-        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "the time signatures could not form a meter map") == MUSICXML_IMPORT_OK;
+        return METER_MAP_ERR_ALLOC;
+    }
+    return METER_MAP_OK;
+}
+
+/* Whether two meter maps lay the same regions: the same starts, signatures and pickup. */
+static bool maps_agree(const MeterMap *a, const MeterMap *b) {
+    if (meter_map_region_count(a) != meter_map_region_count(b)) {
+        return false;
+    }
+    for (size_t i = 0; i < meter_map_region_count(a); i++) {
+        const MeterMapRegion *x = meter_map_region(a, i);
+        const MeterMapRegion *y = meter_map_region(b, i);
+        if (musical_time_cmp(meter_map_region_start(x), meter_map_region_start(y)) != 0 ||
+            !time_signature_equals(meter_map_region_time_signature(x), meter_map_region_time_signature(y)) ||
+            meter_map_region_is_pickup(x) != meter_map_region_is_pickup(y)) {
+            return false;
+        }
     }
     return true;
+}
+
+/* Each part's own meter map where it differs from the movement's: one entry per part, NULL for a part that follows the
+   movement's map or declares no time signature; the array stays NULL when every part follows it. times is sorted. */
+static bool build_part_meter_maps(Ctx *ctx) {
+    MusicXmlImport *out = ctx->out;
+    MeterMap **maps = (MeterMap **)calloc(out->part_count > 0 ? out->part_count : 1, sizeof(MeterMap *));
+    TimeEvent *own = (TimeEvent *)calloc(ctx->time_count, sizeof(TimeEvent));
+    bool ok = maps != NULL && own != NULL;
+    bool any = false;
+    for (size_t part = 0; part < out->part_count && ok; part++) {
+        size_t own_count = 0;
+        for (size_t i = 0; i < ctx->time_count; i++) {
+            if (ctx->times[i].part == part) {
+                own[own_count++] = ctx->times[i];
+            }
+        }
+        if (own_count == 0) {
+            continue;
+        }
+        char name[64];
+        snprintf(name, sizeof(name), "musicxml-meter-map-part-%zu", part);
+        MeterMap *map = NULL;
+        ok = map_of_events(ctx, own, own_count, false, name, &map) == METER_MAP_OK;
+        if (ok && maps_agree(map, out->meter_map)) {
+            meter_map_destroy(map);
+        } else if (ok) {
+            maps[part] = map;
+            any = true;
+        }
+    }
+    free(own);
+    if (!ok || !any) {
+        for (size_t part = 0; maps != NULL && part < out->part_count; part++) {
+            meter_map_destroy(maps[part]);
+        }
+        free(maps);
+        return ok || fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "the time signatures could not form a meter map") == MUSICXML_IMPORT_OK;
+    }
+    out->part_meter_maps = maps;
+    return true;
+}
+
+static bool build_meter_map(Ctx *ctx) {
+    MusicXmlImport *out = ctx->out;
+    if (ctx->time_count == 0) {
+        EntityID *map_id = NULL;
+        if (entity_id_create("musicxml-meter-map", &map_id) != ENTITY_ID_OK) {
+            return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+        }
+        if (meter_map_create_defaulted(map_id, &out->meter_map) != METER_MAP_OK) {
+            entity_id_destroy(map_id);
+            return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+        }
+        return true;
+    }
+
+    qsort(ctx->times, ctx->time_count, sizeof(TimeEvent), compare_time_events);
+    if (map_of_events(ctx, ctx->times, ctx->time_count, true, "musicxml-meter-map", &out->meter_map) != METER_MAP_OK) {
+        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "the time signatures could not form a meter map") == MUSICXML_IMPORT_OK;
+    }
+    return build_part_meter_maps(ctx);
 }
 
 static bool build_key_signatures(Ctx *ctx) {

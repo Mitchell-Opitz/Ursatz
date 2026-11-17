@@ -140,7 +140,10 @@ typedef struct {
     int *staff;                          /* owned; parallel to events: the <staff> number, 1 when none */
     MusicXmlPart *parts;                 /* owned; in document order */
     size_t part_count;
-    MeterMap *meter_map;                 /* owned */
+    MeterMap *meter_map;                 /* owned: the movement's map, the lowest part's where parts disagree */
+    MeterMap **part_meter_maps;          /* owned; NULL when every part follows meter_map, else part_count entries in
+                                            part order: a part's own map where it differs from meter_map, NULL where it
+                                            follows it (meter_map_position_of takes whichever map governs a part) */
     TempoMap *tempo_map;                 /* owned */
     TempoMarking **tempo_markings;       /* owned; in time order */
     size_t *tempo_marking_part;          /* owned; parallel to tempo_markings */
