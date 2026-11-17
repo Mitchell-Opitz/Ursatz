@@ -26,6 +26,8 @@
  * they know -- MIDI has no pitch spelling and its timing is a performance's,
  * the score's is exact -- not a target to be loosened: the measured
  * agreement is printed for every piece.
+ *
+ * With the argument "smoke" only Bach 114 runs (the fast set).
  */
 
 #define CHORD_AGREEMENT_MIN 0.90
@@ -164,8 +166,12 @@ static void compare_chords(const cJSON *midi, const cJSON *xml, const char *piec
     }
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].midi, "Bach 114.mid") != 0) {
+            continue;
+        }
         char midi_path[512];
         char xml_path[512];
         snprintf(midi_path, sizeof(midi_path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, PIECES[i].midi);

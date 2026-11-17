@@ -32,6 +32,8 @@
  *   pickup: 1/4 at tick 0, 4/4 at tick 96; a G pickup, then a C-E-G
  *           chord, D and C on beats 1-3 of measure 1.
  *   no_meter: no time signature event; five quarter notes.
+ *
+ * With the argument "smoke" only the Bach 114 entry runs (the fast set).
  */
 
 typedef struct {
@@ -230,11 +232,20 @@ static void check_piece(const char *path, const char *display_name, const Expect
     free(json);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].name, "Bach 114.mid") != 0) {
+            continue;
+        }
         char path[512];
         snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, PIECES[i].name);
         check_piece(path, PIECES[i].name, &PIECES[i]);
+    }
+
+    if (smoke) {
+        puts("test_measure_locations smoke: ok");
+        return 0;
     }
 
     char *pickup_path = test_temp_path("pickup_fixture.mid");

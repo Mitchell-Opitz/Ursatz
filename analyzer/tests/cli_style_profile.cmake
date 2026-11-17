@@ -1,5 +1,7 @@
 # Checks the --style-profile and --compare-styles flags and exit codes. Run with cmake -P and -DCLI=<ursatz-analyzer>,
-# -DCORPORA_DIR=<test corpora> and -DWORK_DIR=<scratch dir>.
+# -DCORPORA_DIR=<test corpora> and -DWORK_DIR=<scratch dir>. With -DSMOKE=1 only the corpus "small" is analyzed and
+# profiled, and only the exit codes, the files written and, with -DPYTHON, -DVALIDATOR and -DSCHEMA (the style model
+# schema), the schema are checked.
 
 foreach(var CLI CORPORA_DIR WORK_DIR)
     if(NOT DEFINED ${var})
@@ -22,6 +24,31 @@ function(expect_line label text)
         message(FATAL_ERROR "${label}: output lacks '${text}':\n${last_output}")
     endif()
 endfunction()
+
+if(SMOKE)
+    file(REMOVE_RECURSE "${WORK_DIR}")
+    set(SMALL "${WORK_DIR}/small")
+    check_case("corpus small" 0 --corpus "${CORPORA_DIR}/small" --out "${SMALL}")
+    check_case("--style-profile" 0 --style-profile "${SMALL}" --name small)
+    if(NOT EXISTS "${SMALL}/style-model.json")
+        message(FATAL_ERROR "--style-profile: expected ${SMALL}/style-model.json")
+    endif()
+    check_case("--style-profile --out" 0 --style-profile "${SMALL}" --name small --out "${WORK_DIR}/small.json")
+    if(NOT EXISTS "${WORK_DIR}/small.json")
+        message(FATAL_ERROR "--style-profile --out: expected ${WORK_DIR}/small.json")
+    endif()
+    if(PYTHON)
+        execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" "${SCHEMA}" "${SMALL}/style-model.json" RESULT_VARIABLE result)
+        if(NOT result EQUAL 0)
+            message(FATAL_ERROR "style model does not match the schema")
+        endif()
+        message(STATUS "style model: valid")
+    else()
+        message(STATUS "style model: schema check skipped, python3 with jsonschema was not found")
+    endif()
+    file(REMOVE_RECURSE "${WORK_DIR}")
+    return()
+endif()
 
 file(REMOVE_RECURSE "${WORK_DIR}")
 set(REFERENCE "${WORK_DIR}/reference")

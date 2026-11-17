@@ -15,7 +15,7 @@
 
 /*
  * Cadences, boundary cadences and cadence-confirmed key changes on the five reference pieces (Ursatz's
- * framework-v1-corpus).
+ * framework-v1-corpus). With the argument "smoke" only Bach 114 runs (the fast set).
  *
  * Every cadence claim is checked for what the document promises: valid locations, note ids that exist, once each and
  * in order, an arrival and a dominant inside the claim's span, a type the library names, a key region that exists. The
@@ -277,8 +277,12 @@ static void run_piece(const Piece *piece) {
     imported_notes_destroy(&notes);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
         run_piece(&PIECES[i]);
     }
     return test_finish("test_cadences");

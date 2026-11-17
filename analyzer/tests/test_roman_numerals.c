@@ -36,6 +36,8 @@
  * Every piece, constructed and reference, is also checked for the vocabulary's invariants: the counts of each
  * scope add up to the number of chords with a numeral, the shares add up to one, the entries are sorted, and
  * a run never exceeds its count.
+ *
+ * With the argument "smoke" only the first reference piece, Bach 114, runs (the fast set).
  */
 
 /* ---- MIDI writing ---- */
@@ -536,19 +538,22 @@ static void test_reference_piece(const char *file) {
     release(&analyzed);
 }
 
-int main(void) {
-    char *path = test_temp_path("roman_numerals.mid");
-    test_major(path);
-    test_minor(path);
-    test_inversions(path);
-    test_applied(path);
-    test_borrowed(path);
-    test_modulation(path);
-    remove(path);
-    free(path);
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     static const char *const REFERENCE[] = {"Bach 114.mid", "Mozart 545.mid", "Clementi 36.mid", "Field 1.mid",
                                             "Field 5.mid"};
-    for (size_t i = 0; i < sizeof(REFERENCE) / sizeof(REFERENCE[0]); i++) {
+    if (!smoke) {
+        char *path = test_temp_path("roman_numerals.mid");
+        test_major(path);
+        test_minor(path);
+        test_inversions(path);
+        test_applied(path);
+        test_borrowed(path);
+        test_modulation(path);
+        remove(path);
+        free(path);
+    }
+    for (size_t i = 0; i < (smoke ? 1 : sizeof(REFERENCE) / sizeof(REFERENCE[0])); i++) {
         test_reference_piece(REFERENCE[i]);
     }
     return test_finish("test_roman_numerals");

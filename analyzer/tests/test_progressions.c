@@ -28,6 +28,7 @@
  *   test_progressions            the unit cases and the structure of Bach 114 and Mozart 545
  *   test_progressions bach-top   Bach 114's most common progression ends on I. The library's numerals give I > IV7
  *                                (6 occurrences, tied with ii > iii7), so this is expected to fail.
+ *   test_progressions smoke      the structure of Bach 114 only (the fast set)
  */
 
 /* ---- Hand-built chord lists ---- */
@@ -301,6 +302,8 @@ static void check_bach_top(void) {
 int main(int argc, char **argv) {
     if (argc > 1 && strcmp(argv[1], "bach-top") == 0) {
         check_bach_top();
+    } else if (argc > 1 && strcmp(argv[1], "smoke") == 0) {
+        run_piece(&PIECES[0]);
     } else {
         test_held_chords();
         test_region_break();

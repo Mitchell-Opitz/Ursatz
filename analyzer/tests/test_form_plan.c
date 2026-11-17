@@ -23,6 +23,8 @@
  * cadence, the letters follow from the returns alone, and every return is an earlier theme recalled by a later one. The
  * measured section and return counts and the letters are pinned as the library gives them (README, Known limits): Mozart
  * 545 (first movement, measures 1 to 146) finds 6 returns, though its themes are hybrids and repeated phrases only.
+ *
+ * With the argument "smoke" only the Bach 114 entry runs (the fast set).
  */
 
 /* A repeat or return of the library (P42, R-400): the later run restates the earlier one, at a pitch level apart for a
@@ -391,10 +393,14 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
     imported_notes_destroy(&notes);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     char midi_dir[1024];
     snprintf(midi_dir, sizeof(midi_dir), "%s/framework-v1-corpus", URSATZ_FIXTURES_DIR);
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
         run_piece(&PIECES[i], midi_dir, URSATZ_MUSICXML_DIR);
     }
     return test_finish("test_form_plan");

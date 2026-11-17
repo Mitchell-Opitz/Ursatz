@@ -20,6 +20,8 @@
  * Size rule: an export is at most EXPORT_BYTES_PER_MEASURE bytes per measure plus EXPORT_BYTES_BASE bytes, checked on
  * the text as written, whatever the snapshot says. The plan was 500 bytes per measure; Field 5 (two staves, 12/8, four
  * voices) is 650 per measure with 496 of them the notes, so the rule is 700.
+ *
+ * With the argument "smoke" only the Bach 114 export runs (the fast set).
  */
 
 #define EXPORT_BYTES_PER_MEASURE 700
@@ -114,7 +116,8 @@ static void print_first_difference(const char *slug, const char *expected, const
     fprintf(stderr, "  actual:   %.*s\n", (int)strcspn(actual_line, "\n"), actual_line);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     const char *update_env = getenv("UPDATE_SNAPSHOTS");
     if (!update_env) {
         update_env = getenv("URSATZ_UPDATE_SNAPSHOTS");
@@ -123,6 +126,9 @@ int main(void) {
     int failures = 0;
 
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].slug, "bach-114") != 0) {
+            continue;
+        }
         char snapshot_path[512];
         snprintf(snapshot_path, sizeof(snapshot_path), "%s/%s.export.txt", URSATZ_SNAPSHOT_DIR, PIECES[i].slug);
 

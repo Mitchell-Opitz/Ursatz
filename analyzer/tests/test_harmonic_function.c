@@ -21,7 +21,8 @@
  * six-four has one of the library's types. Prolongations name an entry range that exists, in order, with a function
  * the library prolongs and the library's reasons. The first movement of Mozart 545 (measures 1 to 146) has 4 cadential
  * six-fours (m24, m52, m97, m142): the I6/4 before the V7 in the G and the C closing sections. Since keys are placed on
- * phrases (Ursatz P42) m22 to 24 are read in G, not A minor, and the six-four there is read.
+ * phrases (Ursatz P42) m22 to 24 are read in G, not A minor, and the six-four there is read. With the argument "smoke"
+ * only Bach 114 runs (the fast set).
  */
 
 typedef struct {
@@ -149,8 +150,12 @@ static void run_piece(const Piece *piece) {
     imported_notes_destroy(&notes);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
         run_piece(&PIECES[i]);
     }
     return test_finish("test_harmonic_function");

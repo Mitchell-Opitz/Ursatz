@@ -29,6 +29,8 @@
  * On the reference pieces (the Mozart 545 and Clementi 36 of Ursatz's own test, printed there and not asserted) the
  * matches are pinned to what the library gives, with the structure checked. The library
  * finds no schema in the Bach 114, Clementi 36, Field 1 or Field 5 outer voices.
+ *
+ * With the argument "smoke" only the Bach 114 reference piece runs (the fast set).
  */
 
 /* 3 since Ursatz P42: keys placed on phrases give the galant fixture's romanesca at beats 52 to 56 another reading, so
@@ -417,13 +419,19 @@ static void check_piece(const char *dir, const Pinned *pinned) {
     analysis_destroy(&analysis);
 }
 
-int main(void) {
-    check_fixture(URSATZ_FIXTURES_DIR);
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    if (!smoke) {
+        check_fixture(URSATZ_FIXTURES_DIR);
+    }
     static const Pinned PIECES[] = {
         {"Bach 114.mid", 0, 2, 0, 2},   {"Clementi 36.mid", 0, 0, 0, 0}, {"Mozart 545.mid", 0, 8, 4, 4},
         {"Field 1.mid", 0, 0, 0, 0},    {"Field 5.mid", 0, 0, 0, 0},
     };
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
         check_piece(URSATZ_FIXTURES_DIR, &PIECES[i]);
     }
     return test_finish("test_schemas");

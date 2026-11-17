@@ -28,6 +28,8 @@
  *
  * The phrase counts are what the chain gives (the library's, not hand readings; the hand readings are Ursatz's own
  * test, test_form_reference_pieces). They are asserted so a change in the chain shows; see the README.
+ *
+ * With the argument "smoke" only Bach 114 runs (the fast set).
  */
 
 typedef struct {
@@ -276,8 +278,12 @@ static void run_piece(const Piece *piece) {
     imported_notes_destroy(&notes);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
         run_piece(&PIECES[i]);
     }
     return test_finish("test_phrases");

@@ -23,6 +23,8 @@
  * what is checked there is structure, not counts the library cannot reach: the themes are in order, each lies inside its
  * phrases, its parts lie inside it and follow each other, a part's cadence arrives in the part, a compound period's
  * halves are themes it spans, and every expansion names a theme and a phrase that exist and lies inside its phrase.
+ *
+ * With the argument "smoke" only the Bach 114 reference piece runs (the fast set).
  */
 
 static void check_claim(const cJSON *claim, size_t note_count) {
@@ -346,11 +348,17 @@ static void check_piece(const Piece *piece) {
     imported_notes_destroy(&notes);
 }
 
-int main(void) {
-    check_sentence(URSATZ_MUSICXML_DIR);
-    check_period(URSATZ_MUSICXML_DIR);
-    check_compound_period(URSATZ_MUSICXML_DIR);
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    if (!smoke) {
+        check_sentence(URSATZ_MUSICXML_DIR);
+        check_period(URSATZ_MUSICXML_DIR);
+        check_compound_period(URSATZ_MUSICXML_DIR);
+    }
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
         check_piece(&PIECES[i]);
     }
     return test_finish("test_themes");

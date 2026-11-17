@@ -18,6 +18,10 @@
  * must find Bach 114's cadences. The motive and progression results are compared with
  * tests/snapshots/similar.reference.txt (with UPDATE_SNAPSHOTS=1 in the environment, the snapshot is rewritten
  * instead). Run with --write-motive <file> to write the four-note MIDI motive the CLI test searches for.
+ *
+ * With the argument "smoke" the corpus is Bach 114 alone (copied from the fixtures into a folder of its own); the
+ * motive is Bach 114's own opening, which must come back first at m. 1 with score 1, and the snapshot and the return of
+ * the motive in the piece are left to the full test.
  */
 
 /* C5 E5 G5 B4, eighth notes at 480 ticks to the quarter: a MIDI file of one track. */
@@ -45,6 +49,12 @@ static bool write_motive_midi(const char *path) {
 
 static char work_dir[1024];
 
+/* The corpus the queries run over: the five reference pieces, or in the smoke run Bach 114 alone. The motive is the
+   opening of motive_piece. */
+static bool smoke;
+static const char *motive_piece = "Mozart 545.mid";
+static size_t corpus_pieces = 5;
+
 /* One line per match: "<score> <piece> m.<start> b.<beat> - m.<end> b.<beat> <dimension> <score>..., numerals <n>". */
 static char *render(const SimilarResults *results) {
     size_t capacity = 512 + results->count * 512;
@@ -68,10 +78,10 @@ static char *render(const SimilarResults *results) {
     return text;
 }
 
-/* The first four soprano notes of the Mozart 545 document, as a motive moved up by transpose semitones. */
-static bool mozart_motive(SimilarQuery *query, int transpose) {
+/* The first four soprano notes of the motive piece's document, as a motive moved up by transpose semitones. */
+static bool opening_motive(SimilarQuery *query, int transpose) {
     char path[1100];
-    snprintf(path, sizeof path, "%s/Mozart 545.mid.analysis.json", work_dir);
+    snprintf(path, sizeof path, "%s/%s.analysis.json", work_dir, motive_piece);
     char *json = test_read_file(path, NULL);
     cJSON *document = json ? cJSON_Parse(json) : NULL;
     free(json);
@@ -115,21 +125,21 @@ static void check_snapshot(const char *text) {
 
 static void test_motive(void) {
     SimilarQuery query;
-    CHECKF(mozart_motive(&query, 0), "cannot read the Mozart 545 motive");
+    CHECKF(opening_motive(&query, 0), "cannot read the %s motive", motive_piece);
     SimilarResults results = {0};
     SimilarOptions options = similar_options_default();
     CHECKF(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_OK, "motive search failed");
-    CHECKF(results.pieces_searched == 5, "searched %zu pieces", results.pieces_searched);
+    CHECKF(results.pieces_searched == corpus_pieces, "searched %zu pieces", results.pieces_searched);
     CHECKF(results.count > 0 && results.count <= options.max_results, "%zu matches", results.count);
     if (results.count > 0) {
         const SimilarMatch *first = &results.matches[0];
-        CHECKF(strcmp(first->piece, "Mozart 545.mid") == 0 && first->start_measure == 1 && first->start_beat == 1.0,
+        CHECKF(strcmp(first->piece, motive_piece) == 0 && first->start_measure == 1 && first->start_beat == 1.0,
                "first match is %s m.%d b.%g", first->piece, first->start_measure, first->start_beat);
         CHECKF(first->score.similarity.numerator == first->score.similarity.denominator, "first score %lu/%lu",
                first->score.similarity.numerator, first->score.similarity.denominator);
         CHECKF(first->note_count == 4 && first->notes[0].onset_numerator == 0 && first->notes[0].pitch == query.notes[0].pitch,
                "first match notes");
-        bool returns = false;
+        bool returns = smoke; /* Bach 114 does not return to its opening notes; the full test checks Mozart 545 */
         for (size_t i = 1; i < results.count; i++) {
             const SimilarMatch *m = &results.matches[i];
             returns = returns || (strcmp(m->piece, "Mozart 545.mid") == 0 && m->start_measure > 1 &&
@@ -148,7 +158,7 @@ static void test_motive(void) {
 
     SimilarQuery higher;
     SimilarResults higher_results = {0};
-    CHECKF(mozart_motive(&higher, 5), "cannot read the transposed motive");
+    CHECKF(opening_motive(&higher, 5), "cannot read the transposed motive");
     CHECKF(similar_material_find(work_dir, &higher, &options, &higher_results) == SIMILAR_OK, "transposed search failed");
     char *higher_text = render(&higher_results);
     CHECKF(text && higher_text && strcmp(text, higher_text) == 0, "a motive moved up a fourth scores differently:\n%s\n%s",
@@ -171,7 +181,9 @@ static void test_motive(void) {
         CHECKF(both && progression_text, "cannot render the progression");
         if (both && progression_text) {
             snprintf(both, total, "motive: Mozart 545 opening\n%sprogression: I IV V I\n%s", text, progression_text);
-            check_snapshot(both);
+            if (!smoke) {
+                check_snapshot(both);
+            }
         }
         bool bach = false;
         for (size_t i = 0; i < progression_results.count; i++) {
@@ -258,22 +270,47 @@ int main(int argc, char **argv) {
     if (argc == 3 && strcmp(argv[1], "--write-motive") == 0) {
         return write_motive_midi(argv[2]) ? 0 : 1;
     }
+    smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     snprintf(work_dir, sizeof work_dir, "%s", URSATZ_SIMILAR_WORK_DIR);
-    char command[1100];
+    char command[1400];
     snprintf(command, sizeof command, "rm -rf '%s'", work_dir);
     if (system(command) != 0) {
         fprintf(stderr, "cannot clear %s\n", work_dir);
     }
     mkdir(work_dir, 0777);
 
-    CorpusRunOptions run = {URSATZ_CORPORA_DIR "/reference", work_dir, false, NULL, NULL};
+    char corpus_dir[1200];
+    snprintf(corpus_dir, sizeof corpus_dir, "%s", URSATZ_CORPORA_DIR "/reference");
+    if (smoke) {
+        motive_piece = "Bach 114.mid";
+        corpus_pieces = 1;
+        snprintf(corpus_dir, sizeof corpus_dir, "%s_smoke_input", work_dir);
+        snprintf(command, sizeof command, "rm -rf '%s'", corpus_dir);
+        if (system(command) != 0) {
+            fprintf(stderr, "cannot clear %s\n", corpus_dir);
+        }
+        mkdir(corpus_dir, 0777);
+        char source[1100];
+        char copy[1500];
+        snprintf(source, sizeof source, "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, motive_piece);
+        snprintf(copy, sizeof copy, "%s/%s", corpus_dir, motive_piece);
+        size_t size = 0;
+        char *bytes = test_read_file(source, &size);
+        if (!bytes || !test_write_file(copy, bytes, size)) {
+            fprintf(stderr, "cannot copy %s\n", source);
+            return 1;
+        }
+        free(bytes);
+    }
+
+    CorpusRunOptions run = {corpus_dir, work_dir, false, NULL, NULL};
     CorpusRunSummary summary;
-    if (corpus_run(&run, &summary) != CORPUS_RUN_OK || summary.analyzed != 5) {
+    if (corpus_run(&run, &summary) != CORPUS_RUN_OK || summary.analyzed != corpus_pieces) {
         fprintf(stderr, "cannot analyze the reference corpus\n");
         return 1;
     }
     test_queries();
     test_motive();
 
-    return test_finish("test_similar_material");
+    return test_finish(smoke ? "test_similar_material smoke" : "test_similar_material");
 }
