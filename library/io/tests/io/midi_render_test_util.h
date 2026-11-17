@@ -165,6 +165,7 @@ static inline TempoMap *test_tempo_map(const TestTempoChange *changes, size_t co
     for (size_t i = 0; i < count; i++) {
         points[i].start = test_time_value(changes[i].start_numerator, (long long)changes[i].start_denominator);
         points[i].microseconds_per_quarter = changes[i].microseconds_per_quarter;
+        points[i].kind = TEMPO_MAP_CHANGE_ABSOLUTE;
     }
     TempoMap *map = NULL;
     assert(tempo_map_create(test_id("test-tempo-map"), points, count, &map) == TEMPO_MAP_OK);

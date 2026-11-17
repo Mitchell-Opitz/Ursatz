@@ -12,8 +12,9 @@ struct TempoMapRegion {
     Rational start_r;
     Rational end_r; /* meaningful only when !open */
     bool open;
-    unsigned long microseconds_per_quarter;
-    Rational seconds_per_whole_note; /* 4 * T / 1,000,000 */
+    unsigned long microseconds_per_quarter; /* the exact tempo rounded to a whole microsecond (a modulation can leave a fraction) */
+    Rational micros_per_quarter;            /* the exact tempo: a modulation resolves against the previous region's */
+    Rational seconds_per_whole_note;        /* 4 * T / 1,000,000 */
     Rational seconds_at_start;
     bool defaulted;
 };
@@ -36,17 +37,23 @@ static void map_release(TempoMap *map, size_t filled) {
     free(map);
 }
 
-static TempoMapResult region_fill(TempoMapRegion *region, Rational start, unsigned long microseconds_per_quarter,
-                                   bool defaulted) {
+/* A region of tempo `micros` (microseconds per quarter note, exact, above 0) from `start`. */
+static TempoMapResult region_fill(TempoMapRegion *region, Rational start, Rational micros, bool defaulted) {
     Rational seconds_per_whole_note;
-    if (microseconds_per_quarter > (unsigned long)(LLONG_MAX / 4) ||
-        rational_make(4LL * (long long)microseconds_per_quarter, 1000000LL, &seconds_per_whole_note) != RATIONAL_OK) {
+    Rational half = {1, 2};
+    Rational rounded;
+    long long whole = 0;
+    if (rational_mul_int(micros, 4, &seconds_per_whole_note) != RATIONAL_OK ||
+        rational_div_int(seconds_per_whole_note, 1000000, &seconds_per_whole_note) != RATIONAL_OK ||
+        rational_add(micros, half, &rounded) != RATIONAL_OK || rational_floor(rounded, &whole) != RATIONAL_OK ||
+        whole > LLONG_MAX / 4) {
         return TEMPO_MAP_ERR_OVERFLOW;
     }
     memset(region, 0, sizeof(*region));
     region->start_r = start;
     region->open = true;
-    region->microseconds_per_quarter = microseconds_per_quarter;
+    region->microseconds_per_quarter = whole < 1 ? 1UL : (unsigned long)whole;
+    region->micros_per_quarter = micros;
     region->seconds_per_whole_note = seconds_per_whole_note;
     region->defaulted = defaulted;
     return TEMPO_MAP_OK;
@@ -90,7 +97,14 @@ TempoMapResult tempo_map_create(EntityID *id, const TempoMapChangePoint *change_
     }
 
     for (size_t i = 0; i < count; i++) {
-        if (change_points[i].microseconds_per_quarter == 0) {
+        if (change_points[i].kind == TEMPO_MAP_CHANGE_MODULATION) {
+            Rational zero_value = {0, 1};
+            if (change_points[i].old_value.den <= 0 || change_points[i].new_value.den <= 0 ||
+                rational_cmp(change_points[i].old_value, zero_value) <= 0 ||
+                rational_cmp(change_points[i].new_value, zero_value) <= 0) {
+                return TEMPO_MAP_ERR_BAD_MODULATION;
+            }
+        } else if (change_points[i].microseconds_per_quarter == 0) {
             return TEMPO_MAP_ERR_ZERO_TEMPO;
         }
         if (change_points[i].start.value.num < 0) {
@@ -118,7 +132,8 @@ TempoMapResult tempo_map_create(EntityID *id, const TempoMapChangePoint *change_
     Rational zero = {0, 1};
     Rational first = change_points[0].start.value;
     if (rational_cmp(first, zero) != 0) {
-        TempoMapResult filled = region_fill(&map->regions[0], zero, TEMPO_MAP_DEFAULT_MICROSECONDS_PER_QUARTER, true);
+        TempoMapResult filled = region_fill(&map->regions[0], zero, rational_ratio(TEMPO_MAP_DEFAULT_MICROSECONDS_PER_QUARTER, 1),
+                                            true);
         if (filled != TEMPO_MAP_OK) {
             map_release(map, 0);
             return filled;
@@ -128,8 +143,26 @@ TempoMapResult tempo_map_create(EntityID *id, const TempoMapChangePoint *change_
 
     for (size_t i = 0; i < count; i++) {
         Rational start = change_points[i].start.value;
-        TempoMapResult filled = region_fill(&map->regions[map->count], start,
-                                            change_points[i].microseconds_per_quarter, false);
+        Rational micros;
+        if (change_points[i].kind == TEMPO_MAP_CHANGE_MODULATION) {
+            /* the new tempo makes new_value last as long as old_value did at the tempo in force: T * old / new */
+            Rational scaled;
+            if (map->count == 0) {
+                map_release(map, 0);
+                return TEMPO_MAP_ERR_BAD_MODULATION; /* nothing to modulate from at the start of the piece */
+            }
+            if (rational_mul(map->regions[map->count - 1].micros_per_quarter, change_points[i].old_value, &scaled) !=
+                    RATIONAL_OK ||
+                rational_div(scaled, change_points[i].new_value, &micros) != RATIONAL_OK) {
+                map_release(map, map->count);
+                return TEMPO_MAP_ERR_OVERFLOW;
+            }
+        } else if (rational_from_int((long long)change_points[i].microseconds_per_quarter, &micros) != RATIONAL_OK ||
+                   change_points[i].microseconds_per_quarter > (unsigned long)(LLONG_MAX / 4)) {
+            map_release(map, map->count);
+            return TEMPO_MAP_ERR_OVERFLOW;
+        }
+        TempoMapResult filled = region_fill(&map->regions[map->count], start, micros, false);
         if (filled != TEMPO_MAP_OK) {
             map_release(map, map->count);
             return filled;
@@ -163,7 +196,7 @@ TempoMapResult tempo_map_create_defaulted(EntityID *id, TempoMap **out) {
         return TEMPO_MAP_ERR_ALLOC;
     }
     Rational zero = {0, 1};
-    TempoMapResult filled = region_fill(&map->regions[0], zero, TEMPO_MAP_DEFAULT_MICROSECONDS_PER_QUARTER, true);
+    TempoMapResult filled = region_fill(&map->regions[0], zero, rational_ratio(TEMPO_MAP_DEFAULT_MICROSECONDS_PER_QUARTER, 1), true);
     if (filled != TEMPO_MAP_OK) {
         map_release(map, 0);
         return filled;
@@ -215,4 +248,68 @@ unsigned long tempo_map_region_microseconds_per_quarter(const TempoMapRegion *re
 
 bool tempo_map_region_is_defaulted(const TempoMapRegion *region) {
     return region->defaulted;
+}
+
+/* The last region that starts at or before `time`. */
+static const TempoMapRegion *region_at_time(const TempoMap *map, Rational time) {
+    const TempoMapRegion *found = &map->regions[0];
+    for (size_t i = 1; i < map->count; i++) {
+        if (rational_cmp(map->regions[i].start_r, time) > 0) {
+            break;
+        }
+        found = &map->regions[i];
+    }
+    return found;
+}
+
+/* The last region that has begun by `seconds`. */
+static const TempoMapRegion *region_at_seconds(const TempoMap *map, Rational seconds) {
+    const TempoMapRegion *found = &map->regions[0];
+    for (size_t i = 1; i < map->count; i++) {
+        if (rational_cmp(map->regions[i].seconds_at_start, seconds) > 0) {
+            break;
+        }
+        found = &map->regions[i];
+    }
+    return found;
+}
+
+TempoMapResult tempo_map_seconds_at(const TempoMap *map, MusicalTime t, Rational *seconds) {
+    if (map == NULL || seconds == NULL) {
+        return TEMPO_MAP_ERR_NULL_ARGUMENT;
+    }
+    if (rational_is_negative(t.value)) {
+        return TEMPO_MAP_ERR_NEGATIVE_START;
+    }
+    const TempoMapRegion *region = region_at_time(map, t.value);
+    Rational into;
+    Rational spent;
+    Rational total;
+    if (rational_sub(t.value, region->start_r, &into) != RATIONAL_OK ||
+        rational_mul(into, region->seconds_per_whole_note, &spent) != RATIONAL_OK ||
+        rational_add(region->seconds_at_start, spent, &total) != RATIONAL_OK) {
+        return TEMPO_MAP_ERR_OVERFLOW;
+    }
+    *seconds = total;
+    return TEMPO_MAP_OK;
+}
+
+TempoMapResult tempo_map_time_at(const TempoMap *map, Rational seconds, MusicalTime *out) {
+    if (map == NULL || out == NULL) {
+        return TEMPO_MAP_ERR_NULL_ARGUMENT;
+    }
+    if (rational_is_negative(seconds)) {
+        return TEMPO_MAP_ERR_NEGATIVE_START;
+    }
+    const TempoMapRegion *region = region_at_seconds(map, seconds);
+    Rational into;
+    Rational span;
+    Rational time;
+    if (rational_sub(seconds, region->seconds_at_start, &into) != RATIONAL_OK ||
+        rational_div(into, region->seconds_per_whole_note, &span) != RATIONAL_OK ||
+        rational_add(region->start_r, span, &time) != RATIONAL_OK) {
+        return TEMPO_MAP_ERR_OVERFLOW;
+    }
+    *out = musical_time_of(time);
+    return TEMPO_MAP_OK;
 }

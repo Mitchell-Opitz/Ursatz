@@ -60,6 +60,7 @@ static PlanExportResult build_tempo_map(const PlanExportOptions *options, TempoM
     if (entity_id_create("composer-tempo-map", &id) == ENTITY_ID_OK) {
         point.start = musical_time_of(rational_ratio(0, 1));
         point.microseconds_per_quarter = (unsigned long)micros;
+        point.kind = TEMPO_MAP_CHANGE_ABSOLUTE;
         made = tempo_map_create(id, &point, 1, out);
     }
     if (made != TEMPO_MAP_OK) {

@@ -33,6 +33,7 @@ static TempoMap *build(const Change *changes, size_t count) {
     for (size_t i = 0; i < count; i++) {
         points[i].start = at(changes[i].start_n, changes[i].start_d);
         points[i].microseconds_per_quarter = changes[i].tempo;
+        points[i].kind = TEMPO_MAP_CHANGE_ABSOLUTE;
     }
     TempoMap *map = NULL;
     assert(tempo_map_create(id("tempo"), points, count, &map) == TEMPO_MAP_OK);

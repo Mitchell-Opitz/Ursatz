@@ -10,6 +10,10 @@ library/model/time/meter_arithmetic.c level_holds  # no app reads the local rhyt
 library/model/time/meter_arithmetic.c meter_grid_holds  # no app reads the local rhythmic grid until P58 B7 checks pickups and chord onsets against it; its tests call it
 library/model/time/meter_arithmetic.c meter_map_grid_at  # no app reads the local rhythmic grid until P58 B7 checks pickups and chord onsets against it; its tests call it
 library/model/time/meter_arithmetic.c meter_map_time_of  # the inverse of meter_map_position_of has no app caller until P59 reads the performer parts' local maps; its tests call it
+library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
+library/model/time/tempo_map.c region_at_time  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
+library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
+library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/time_span.c time_span_length  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/knowledge_snapshot.c compare_slots  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
