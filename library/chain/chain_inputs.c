@@ -1176,6 +1176,7 @@ void chain_meter_input_destroy(ChainMeterInput *input) {
     for (size_t i = 0; i < input->time_count; i++) {
         musical_time_destroy(input->times[i]);
     }
+    free(input->notes);
     free(input->spans);
     free(input->times);
     memset(input, 0, sizeof(*input));
@@ -1229,14 +1230,15 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
     }
     ChainMeterInput build;
     memset(&build, 0, sizeof(build));
-    if (standard_meter_input_init(&build.input, notes->map) != STANDARD_METER_ANALYSIS_OK) {
-        return CHAIN_INPUT_ERR_BAD_NOTES;
-    }
     size_t soprano_count = 0;
     size_t bass_count = 0;
     const char **soprano = line_ids(lines->soprano, lines->count, &soprano_count);
     const char **bass = line_ids(lines->bass, lines->count, &bass_count);
     ChainInputStatus status = soprano != NULL && bass != NULL ? CHAIN_INPUT_OK : CHAIN_INPUT_ERR_ALLOC;
+    build.notes = status == CHAIN_INPUT_OK ? (AnalysisNote *)calloc(notes->count, sizeof(AnalysisNote)) : NULL;
+    if (status == CHAIN_INPUT_OK && build.notes == NULL) {
+        status = CHAIN_INPUT_ERR_ALLOC;
+    }
     for (size_t i = 0; i < notes->count && status == CHAIN_INPUT_OK; i++) {
         AnalysisNote note = notes->notes[i];
         int measure = measure_of(notes->map, time_span_start(note.span));
@@ -1244,12 +1246,19 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
             continue;
         }
         note.voice = in_ids(soprano, soprano_count, note.note_id) ? 0 : (in_ids(bass, bass_count, note.note_id) ? 1 : 2);
-        if (standard_meter_input_add_analysis_note(&build.input, &note) != STANDARD_METER_ANALYSIS_OK) {
+        if (note.midi == ANALYSIS_PITCH_UNKNOWN) {
             status = CHAIN_INPUT_ERR_BAD_NOTES;
+            break;
         }
+        build.notes[build.note_count++] = note;
     }
     free(soprano);
     free(bass);
+    /* The library checks what the input must hold (ids, spans) and borrows the notes. */
+    if (status == CHAIN_INPUT_OK &&
+        standard_meter_input_init(&build.input, notes->map, build.notes, build.note_count) != STANDARD_METER_ANALYSIS_OK) {
+        status = CHAIN_INPUT_ERR_BAD_NOTES;
+    }
     for (size_t s = 1; chord_labels != NULL && s < segments->count && status == CHAIN_INPUT_OK; s++) {
         if (chord_labels[s] == NULL || chord_labels[s - 1] == NULL || strcmp(chord_labels[s], chord_labels[s - 1]) == 0) {
             continue;

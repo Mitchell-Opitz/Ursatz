@@ -17,14 +17,14 @@
  * standard-form phrases and the harmonic segments). The rules this adapter applies live in the framework proper:
  * syncopation_rules.h, hemiola_rules.h and hypermeter_rules.h.
  *
- * THE INPUT is built with the functions below: init with the MeterMap, add notes, phrases and chord changes, run an analysis,
- * destroy. Ids are copied. TimeSpans, MusicalTimes and the MeterMap are BORROWED: they must outlive the input and every
+ * THE INPUT is built with the functions below: init with the MeterMap and the AnalysisNotes (borrowed), add phrases and chord
+ * changes, run an analysis, destroy. Ids of phrases and chord changes are copied. TimeSpans, MusicalTimes and the MeterMap are BORROWED: they must outlive the input and every
  * result computed from it. Times are exact; nothing here uses floating point for a decision.
  *
- *   note          id; its TimeSpan (onset = start, end = start of the next attack or release, as the caller read it; a tied
- *                 note is the caller's to merge into one note, since a tie is a long note here); the pitch as a
- *                 PitchNumericValue (semitone number); and the `line` it belongs to (any whole number the caller picks:
- *                 0 for the soprano and 1 for the bass, say). Notes need not be sorted
+ *   note          an AnalysisNote: note_id; its TimeSpan (onset = start, end = start of the next attack or release, as the caller
+ *                 read it; a tied note is the caller's to merge into one note, since a tie is a long note here); and the
+ *                 `line` it belongs to (its voice: any whole number the caller picks, 0 for the soprano and 1 for the bass,
+ *                 say; none reads as 0). Notes need not be sorted
  *   phrase        id; its TimeSpan; the TimeSpan of its cadence arrival, or NULL for none; an expansion kind and the number
  *                 of measures it adds (internal, external) or removes (contraction), as the form adapter reports them; and
  *                 whether the cadence is elided with the next phrase (its arrival is the next phrase's first measure).
@@ -49,13 +49,6 @@ typedef enum {
     STANDARD_METER_EXPANSION_EXTERNAL,
     STANDARD_METER_EXPANSION_CONTRACTION
 } StandardMeterExpansionKind;
-
-typedef struct {
-    char id[STANDARD_METER_ID_MAX];
-    const TimeSpan *span;
-    long pitch;
-    int line;
-} StandardMeterNote;
 
 typedef struct {
     char id[STANDARD_METER_ID_MAX];
@@ -90,9 +83,8 @@ typedef struct {
 
 typedef struct {
     const MeterMap *map;
-    StandardMeterNote *notes;
+    const AnalysisNote *notes; /* borrowed, in any order */
     size_t note_count;
-    size_t note_capacity;
     StandardMeterPhrase *phrases;
     size_t phrase_count;
     size_t phrase_capacity;
@@ -108,15 +100,17 @@ bool standard_meter_config_valid(const StandardMeterConfig *config);
    moved. False when the snap does not fit a Rational; *time is then untouched. */
 bool standard_meter_snap_time(const StandardMeterConfig *config, Rational *time, bool release, bool *changed);
 
-StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input, const MeterMap *map);
+/* The line a note belongs to: its voice, or 0 when the voice is ANALYSIS_INDEX_NONE (any whole number the caller picks: 0 for
+   the soprano and 1 for the bass, say). */
+static inline int standard_meter_note_line(const AnalysisNote *note) {
+    return note->voice == ANALYSIS_INDEX_NONE ? 0 : (int)note->voice;
+}
 
-/* Adds a note. ERR_INVALID for an empty or too long id, a NULL span or one that is not ahead (end after start). */
-StandardMeterAnalysisStatus standard_meter_input_add_note(StandardMeterInput *input, const char *id, const TimeSpan *span,
-                                                          long pitch, int line);
-
-/* Adds an AnalysisNote (semantics/analysis_note.h) field for field: id, span, `pitch` is midi and `line` is voice, or 0 when voice
-   is ANALYSIS_INDEX_NONE. ERR_INVALID for an unknown pitch or what standard_meter_input_add_note rejects. */
-StandardMeterAnalysisStatus standard_meter_input_add_analysis_note(StandardMeterInput *input, const AnalysisNote *note);
+/* An input over the notes, which are borrowed (and with their ids, spans and the map must outlive the input and every result);
+   phrases and chord changes are added after and owned. ERR_INVALID for a note with an empty or too long id or a NULL span or one
+   that is not ahead (end after start); ERR_NULL_ARGUMENT for a NULL input or map, or notes NULL with a count. */
+StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input, const MeterMap *map,
+                                                      const AnalysisNote *notes, size_t note_count);
 
 /* Adds a phrase. ERR_INVALID for a bad id or span, a negative measure count, or a measure count with no expansion. */
 StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *input, const char *id, const TimeSpan *span,

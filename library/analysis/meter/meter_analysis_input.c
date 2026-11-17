@@ -32,15 +32,6 @@ bool standard_meter_snap_time(const StandardMeterConfig *config, Rational *time,
     return true;
 }
 
-StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input, const MeterMap *map) {
-    if (input == NULL || map == NULL) {
-        return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
-    }
-    memset(input, 0, sizeof(*input));
-    input->map = map;
-    return STANDARD_METER_ANALYSIS_OK;
-}
-
 static bool valid_id(const char *id) {
     return id != NULL && id[0] != '\0' && strlen(id) < STANDARD_METER_ID_MAX;
 }
@@ -59,35 +50,21 @@ static bool grow(void **items, size_t *capacity, size_t count, size_t size) {
     return true;
 }
 
-StandardMeterAnalysisStatus standard_meter_input_add_note(StandardMeterInput *input, const char *id, const TimeSpan *span,
-                                                          long pitch, int line) {
-    if (input == NULL) {
+StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input, const MeterMap *map,
+                                                      const AnalysisNote *notes, size_t note_count) {
+    if (input == NULL || map == NULL || (note_count > 0 && notes == NULL)) {
         return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (!valid_id(id) || !time_span_is_valid(span)) {
-        return STANDARD_METER_ANALYSIS_ERR_INVALID;
+    for (size_t i = 0; i < note_count; i++) {
+        if (!valid_id(notes[i].note_id) || !time_span_is_valid(notes[i].span)) {
+            return STANDARD_METER_ANALYSIS_ERR_INVALID;
+        }
     }
-    if (!grow((void **)&input->notes, &input->note_capacity, input->note_count, sizeof(StandardMeterNote))) {
-        return STANDARD_METER_ANALYSIS_ERR_ALLOC;
-    }
-    StandardMeterNote *note = &input->notes[input->note_count++];
-    memset(note, 0, sizeof(*note));
-    strcpy(note->id, id);
-    note->span = span;
-    note->pitch = pitch;
-    note->line = line;
+    memset(input, 0, sizeof(*input));
+    input->map = map;
+    input->notes = notes;
+    input->note_count = note_count;
     return STANDARD_METER_ANALYSIS_OK;
-}
-
-StandardMeterAnalysisStatus standard_meter_input_add_analysis_note(StandardMeterInput *input, const AnalysisNote *note) {
-    if (input == NULL || note == NULL) {
-        return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
-    }
-    if (note->midi == ANALYSIS_PITCH_UNKNOWN) {
-        return STANDARD_METER_ANALYSIS_ERR_INVALID;
-    }
-    return standard_meter_input_add_note(input, note->note_id, note->span, note->midi,
-                                         note->voice == ANALYSIS_INDEX_NONE ? 0 : (int)note->voice);
 }
 
 StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *input, const char *id, const TimeSpan *span,
@@ -139,7 +116,6 @@ void standard_meter_input_destroy(StandardMeterInput *input) {
     if (input == NULL) {
         return;
     }
-    free(input->notes);
     free(input->phrases);
     free(input->chord_changes);
     memset(input, 0, sizeof(*input));

@@ -669,9 +669,9 @@ static void check_voice_line_inputs(const char *context, const ChainInput *input
     for (size_t n = 0; n < meter.input.note_count; n++) {
         bool in_line = false;
         for (size_t i = 0; i < voice_lines->count && !in_line; i++) {
-            in_line = voice_lines->soprano[i].present && strcmp(entity_id_value(voice_lines->soprano[i].note_id), meter.input.notes[n].id) == 0;
+            in_line = voice_lines->soprano[i].present && strcmp(entity_id_value(voice_lines->soprano[i].note_id), meter.input.notes[n].note_id) == 0;
         }
-        if (!CHECK((meter.input.notes[n].line == 0) == in_line)) abort();
+        if (!CHECK((standard_meter_note_line(&meter.input.notes[n]) == 0) == in_line)) abort();
         soprano_notes += in_line ? 1 : 0;
     }
     if (!CHECK(soprano_notes > 0 && soprano_notes <= runs)) abort();

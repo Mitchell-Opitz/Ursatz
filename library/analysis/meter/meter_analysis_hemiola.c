@@ -84,7 +84,7 @@ static StandardMeterAnalysisStatus emit_window(const StandardMeterInput *input, 
             break;
         }
         if (pulse_index(window_start, pulse, items[i].start) >= 0) {
-            ids[n++] = input->notes[items[i].note].id;
+            ids[n++] = input->notes[items[i].note].note_id;
         }
     }
     if (n == 0) {

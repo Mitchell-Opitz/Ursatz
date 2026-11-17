@@ -20,37 +20,36 @@ static TimeSpan *make_span(long start, long end) {
     return span;
 }
 
+/* The adapter reads the neutral AnalysisNote: its id, span and voice (the line, 0 when it has none) reach the analyses. */
 int main(void) {
     EntityID *id = NULL;
     MeterMap *map = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK && meter_map_create_defaulted(id, &map) == METER_MAP_OK);
     TimeSpan *span = make_span(2, 3);
+
+    AnalysisNote notes[2] = {{"n-voiced", NULL, span, 64, NULL, NULL, 0, 2, 1.0},
+                             {"n-unvoiced", NULL, span, 48, NULL, NULL, ANALYSIS_INDEX_NONE, ANALYSIS_INDEX_NONE, 1.0}};
     StandardMeterInput input;
-    assert(standard_meter_input_init(&input, map) == STANDARD_METER_ANALYSIS_OK);
-
-    AnalysisNote voiced = {"n-voiced", NULL, span, 64, NULL, NULL, 0, 2, 1.0};
-    assert(standard_meter_input_add_analysis_note(&input, &voiced) == STANDARD_METER_ANALYSIS_OK);
-    assert(input.note_count == 1);
-    assert(strcmp(input.notes[0].id, "n-voiced") == 0);
+    assert(standard_meter_input_init(&input, map, notes, 2) == STANDARD_METER_ANALYSIS_OK);
+    assert(input.note_count == 2 && input.notes == notes && input.map == map);
+    assert(strcmp(input.notes[0].note_id, "n-voiced") == 0);
     assert(input.notes[0].span == span);
-    assert(input.notes[0].pitch == 64);
-    assert(input.notes[0].line == 2);
-
-    AnalysisNote unvoiced = {"n-unvoiced", NULL, span, 48, NULL, NULL, ANALYSIS_INDEX_NONE, ANALYSIS_INDEX_NONE, 1.0};
-    assert(standard_meter_input_add_analysis_note(&input, &unvoiced) == STANDARD_METER_ANALYSIS_OK);
-    assert(input.note_count == 2);
-    assert(input.notes[1].pitch == 48);
-    assert(input.notes[1].line == 0);
-
-    AnalysisNote unknown = {"n-unknown", NULL, span, ANALYSIS_PITCH_UNKNOWN, NULL, NULL, 0, 0, 1.0};
-    assert(standard_meter_input_add_analysis_note(&input, &unknown) == STANDARD_METER_ANALYSIS_ERR_INVALID);
-    AnalysisNote no_span = {"n-no-span", NULL, NULL, 60, NULL, NULL, 0, 0, 1.0};
-    assert(standard_meter_input_add_analysis_note(&input, &no_span) == STANDARD_METER_ANALYSIS_ERR_INVALID);
-    assert(standard_meter_input_add_analysis_note(&input, NULL) == STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT);
-    assert(standard_meter_input_add_analysis_note(NULL, &voiced) == STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT);
-    assert(input.note_count == 2);
-
+    assert(standard_meter_note_line(&input.notes[0]) == 2);
+    assert(standard_meter_note_line(&input.notes[1]) == 0);
     standard_meter_input_destroy(&input);
+
+    AnalysisNote no_span = {"n-no-span", NULL, NULL, 60, NULL, NULL, 0, 0, 1.0};
+    AnalysisNote empty_id = {"", NULL, span, 60, NULL, NULL, 0, 0, 1.0};
+    AnalysisNote no_id = {NULL, NULL, span, 60, NULL, NULL, 0, 0, 1.0};
+    assert(standard_meter_input_init(&input, map, &no_span, 1) == STANDARD_METER_ANALYSIS_ERR_INVALID);
+    assert(standard_meter_input_init(&input, map, &empty_id, 1) == STANDARD_METER_ANALYSIS_ERR_INVALID);
+    assert(standard_meter_input_init(&input, map, &no_id, 1) == STANDARD_METER_ANALYSIS_ERR_INVALID);
+    assert(standard_meter_input_init(&input, map, NULL, 1) == STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT);
+    assert(standard_meter_input_init(NULL, map, notes, 2) == STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT);
+    assert(standard_meter_input_init(&input, NULL, notes, 2) == STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT);
+    assert(standard_meter_input_init(&input, map, NULL, 0) == STANDARD_METER_ANALYSIS_OK && input.note_count == 0);
+    standard_meter_input_destroy(&input);
+
     time_span_destroy(span);
     meter_map_destroy(map);
     printf("test_meter_analysis_note: ok\n");

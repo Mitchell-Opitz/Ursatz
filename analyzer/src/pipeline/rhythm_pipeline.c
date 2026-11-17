@@ -48,6 +48,8 @@ typedef struct {
 /* The library's input and what keeps it alive: the spans and times it borrows, and the index of each id. */
 typedef struct {
     StandardMeterInput input;
+    AnalysisNote *notes; /* the input's notes, in import order: the library's input borrows them */
+    size_t note_count;
     TimeSpan **spans;
     size_t span_count;
     size_t span_capacity;
@@ -67,6 +69,7 @@ static void build_destroy(RhythmBuild *build) {
     for (size_t i = 0; i < build->time_count; i++) {
         musical_time_destroy(build->times[i]);
     }
+    free(build->notes);
     free(build->spans);
     free(build->times);
     free(build->ids);
@@ -125,11 +128,13 @@ static int compare_id_index(const void *a, const void *b) {
 /* The input's notes: every imported note with a length, in import order. A note the library refuses as invalid is left
    out (its line stays -1). */
 static bool build_notes(RhythmBuild *build, const ImportedNotes *notes, const OuterVoiceLines *lines) {
+    const MeterMap *map = notes->meter.meter_map;
     size_t soprano_count = 0;
     size_t bass_count = 0;
     const char **soprano = line_ids(lines->soprano, lines->count, &soprano_count);
     const char **bass = line_ids(lines->bass, lines->count, &bass_count);
-    bool ok = soprano && bass && (build->lines = malloc((notes->count + 1) * sizeof(int))) != NULL;
+    bool ok = soprano && bass && (build->lines = malloc((notes->count + 1) * sizeof(int))) != NULL &&
+              (build->notes = calloc(notes->count + 1, sizeof(AnalysisNote))) != NULL;
     for (size_t i = 0; ok && i < notes->count; i++) {
         build->lines[i] = -1;
         const NoteEvent *event = notes->events[i];
@@ -147,17 +152,23 @@ static bool build_notes(RhythmBuild *build, const ImportedNotes *notes, const Ou
         }
         const char *id = entity_id_value(note_event_id(event));
         int line = in_ids(soprano, soprano_count, id) ? LINE_SOPRANO : (in_ids(bass, bass_count, id) ? LINE_BASS : LINE_OTHER);
-        StandardMeterAnalysisStatus status = standard_meter_input_add_note(
-            &build->input, id, span, pitch_numeric_value_position_numerator(notes->pitch_values[i]), line);
-        if (status == STANDARD_METER_ANALYSIS_OK) {
-            build->lines[i] = line;
-        } else if (status != STANDARD_METER_ANALYSIS_ERR_INVALID) {
-            ok = false;
+        /* A note the library would refuse (an empty or too long id, a span that is not ahead) is left out. */
+        if (id[0] == '\0' || strlen(id) >= STANDARD_METER_ID_MAX || !time_span_is_valid(span)) {
+            continue;
         }
+        long pitch = pitch_numeric_value_position_numerator(notes->pitch_values[i]);
+        build->notes[build->note_count++] = (AnalysisNote){.note_id = id,
+                                                           .span = span,
+                                                           .midi = pitch >= 0 && pitch <= 127 ? (int)pitch
+                                                                                              : ANALYSIS_PITCH_UNKNOWN,
+                                                           .track = ANALYSIS_INDEX_NONE,
+                                                           .voice = (size_t)line,
+                                                           .voice_confidence = 1.0};
+        build->lines[i] = line;
     }
     free(soprano);
     free(bass);
-    if (!ok) {
+    if (!ok || standard_meter_input_init(&build->input, map, build->notes, build->note_count) != STANDARD_METER_ANALYSIS_OK) {
         return false;
     }
     build->ids = malloc((build->input.note_count + 1) * sizeof(IdIndex));
@@ -167,7 +178,7 @@ static bool build_notes(RhythmBuild *build, const ImportedNotes *notes, const Ou
     size_t next = 0;
     for (size_t i = 0; i < notes->count; i++) {
         if (build->lines[i] >= 0) {
-            build->ids[next].id = build->input.notes[next].id;
+            build->ids[next].id = build->input.notes[next].note_id;
             build->ids[next].note = i;
             next++;
         }
@@ -543,24 +554,11 @@ static const char *tuplet_level_name(TupletLevel level) {
 static bool collect_tuplets(const RhythmBuild *build, const ImportedNotes *notes, AnalysisReport *report) {
     (void)notes;
     size_t count = build->input.note_count;
-    AnalysisNote *set_notes = calloc(count + 1, sizeof(AnalysisNote));
+    const AnalysisNote *set_notes = build->input.notes;
     StandardMeterTuplets found = {NULL, 0};
     AnalysisTuplet *items = NULL;
-    bool ok = set_notes != NULL;
-    for (size_t i = 0; ok && i < count; i++) {
-        const StandardMeterNote *note = &build->input.notes[i];
-        set_notes[i] = (AnalysisNote){.note_id = note->id,
-                                      .span = note->span,
-                                      .midi = note->pitch >= 0 && note->pitch <= 127 ? (int)note->pitch
-                                                                                     : ANALYSIS_PITCH_UNKNOWN,
-                                      .track = ANALYSIS_INDEX_NONE,
-                                      .voice = ANALYSIS_INDEX_NONE,
-                                      .voice_confidence = 1.0};
-    }
-    if (ok) {
-        AnalysisNoteSet set = {set_notes, count, build->input.map};
-        ok = standard_meter_find_tuplets(&set, NULL, &found) == STANDARD_METER_ANALYSIS_OK;
-    }
+    AnalysisNoteSet set = {set_notes, count, build->input.map};
+    bool ok = standard_meter_find_tuplets(&set, NULL, &found) == STANDARD_METER_ANALYSIS_OK;
     if (ok && found.count > 0) {
         items = calloc(found.count, sizeof(AnalysisTuplet));
         ok = items != NULL;
@@ -594,7 +592,6 @@ static bool collect_tuplets(const RhythmBuild *build, const ImportedNotes *notes
     }
     size_t tuplet_count = found.count;
     standard_meter_tuplets_destroy(&found);
-    free(set_notes);
     if (!ok) {
         for (size_t i = 0; items && i < tuplet_count; i++) {
             free(items[i].note_ids);
@@ -616,9 +613,6 @@ bool rhythm_stage_collect(const ImportedNotes *notes, const OuterVoiceLines *lin
     }
     RhythmBuild build;
     memset(&build, 0, sizeof(build));
-    if (standard_meter_input_init(&build.input, map) != STANDARD_METER_ANALYSIS_OK) {
-        return false;
-    }
     bool ok = build_notes(&build, notes, lines) && build_chord_changes(&build, report) && build_phrases(&build, form) &&
               collect_densities(&build, notes, report) && collect_syncopations(&build, report) &&
               collect_hemiolas(&build, report) && collect_hypermeter(&build, notes, report) &&

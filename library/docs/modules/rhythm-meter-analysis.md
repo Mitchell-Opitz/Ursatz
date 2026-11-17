@@ -10,7 +10,7 @@ Every result follows the durable claim pattern: an Interpretation with Framework
 
 ## Input
 
-`StandardMeterInput` (`meter_analysis_input.h`) is built with `standard_meter_input_init`, `_add_note`, `_add_phrase`, `_add_chord_change` and released with `_destroy`. Ids are copied; the `TimeSpan`s, `MusicalTime`s and the `MeterMap` are borrowed and must outlive the input and every result.
+`StandardMeterInput` (`meter_analysis_input.h`) is built with `standard_meter_input_init` (the borrowed `AnalysisNote` array), `_add_phrase`, `_add_chord_change` and released with `_destroy`. Phrase and chord change ids are copied; the notes, `TimeSpan`s, `MusicalTime`s and the `MeterMap` are borrowed and must outlive the input and every result.
 
 | Struct | Fields |
 |---|---|

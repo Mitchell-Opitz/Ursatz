@@ -128,12 +128,13 @@ static StandardMeterAnalysisStatus detect_stream(const StandardMeterInput *input
             *results = grown;
             *result_capacity = next;
         }
-        const StandardMeterNote *note = &input->notes[item->note];
+        const AnalysisNote *note = &input->notes[item->note];
         StandardMeterSyncopation *result = &(*results)[*result_count];
         memset(result, 0, sizeof(*result));
         StandardMeterSyncopationClaim *claim = &result->claim;
-        memcpy(claim->note_id, note->id, sizeof(claim->note_id));
-        claim->line = note->line;
+        /* the claim is stored as raw bytes, so its id keeps zero padding after the text (the memset above) */
+        strncpy(claim->note_id, note->note_id, sizeof(claim->note_id) - 1);
+        claim->line = standard_meter_note_line(note);
         claim->attack_level = (int)attack;
         claim->through_level = (int)through;
         claim->strength = strength;
@@ -143,9 +144,9 @@ static StandardMeterAnalysisStatus detect_stream(const StandardMeterInput *input
         }
         result->uncertainty = item->snapped ? 0.1 : 0.0;
         char interpretation_id[200];
-        snprintf(interpretation_id, sizeof(interpretation_id), "standard-meter-syncopation-%s%s", note->id,
+        snprintf(interpretation_id, sizeof(interpretation_id), "standard-meter-syncopation-%s%s", note->note_id,
                  all_notes ? "-all" : "");
-        result->interpretation = standard_meter_analysis_interpretation(interpretation_id, note->id,
+        result->interpretation = standard_meter_analysis_interpretation(interpretation_id, note->note_id,
                                                                         STANDARD_METER_SYNCOPATION_CLAIM_TYPE, claim,
                                                                         sizeof(*claim), result->uncertainty, "syncopation");
         if (result->interpretation == NULL) {
@@ -199,7 +200,7 @@ StandardMeterAnalysisStatus standard_meter_find_syncopations(const StandardMeter
         items[usable].snapped = moved_start;
         items[usable].note = i;
         usable++;
-        lines[line_count++] = input->notes[i].line;
+        lines[line_count++] = standard_meter_note_line(&input->notes[i]);
     }
     qsort(lines, line_count, sizeof(int), compare_ints);
     size_t distinct = 0;
@@ -218,7 +219,7 @@ StandardMeterAnalysisStatus standard_meter_find_syncopations(const StandardMeter
     for (size_t s = 0; status == STANDARD_METER_ANALYSIS_OK && s < streams; s++) {
         size_t n = 0;
         for (size_t i = 0; i < usable; i++) {
-            if (config->syncopation_all_notes || input->notes[items[i].note].line == lines[s]) {
+            if (config->syncopation_all_notes || standard_meter_note_line(&input->notes[items[i].note]) == lines[s]) {
                 stream[n++] = items[i];
             }
         }

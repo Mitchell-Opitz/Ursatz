@@ -314,8 +314,8 @@ static void test_stage_inputs(TestPiece *piece) {
     size_t soprano_notes = 0;
     size_t bass_notes = 0;
     for (size_t i = 0; i < meter.input.note_count; i++) {
-        soprano_notes += meter.input.notes[i].line == 0 ? 1 : 0;
-        bass_notes += meter.input.notes[i].line == 1 ? 1 : 0;
+        soprano_notes += standard_meter_note_line(&meter.input.notes[i]) == 0 ? 1 : 0;
+        bass_notes += standard_meter_note_line(&meter.input.notes[i]) == 1 ? 1 : 0;
     }
     assert(soprano_notes > 0 && bass_notes > 0);
     assert(meter.input.chord_change_count > 0 && meter.input.phrase_count == 0);

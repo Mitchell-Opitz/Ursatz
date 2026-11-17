@@ -227,6 +227,8 @@ ChainInputStatus chain_build_grid_input(const AnalysisNoteSet *notes, const Chai
  */
 typedef struct {
     StandardMeterInput input;
+    AnalysisNote *notes;   /* owned: the scoped copies of the notes, each with its line (0, 1 or 2) as its voice; the input borrows them */
+    size_t note_count;
     TimeSpan **spans;      /* owned: every span the input borrows */
     size_t span_count;
     size_t span_capacity;

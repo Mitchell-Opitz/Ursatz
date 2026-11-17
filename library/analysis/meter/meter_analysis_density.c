@@ -224,8 +224,8 @@ StandardMeterAnalysisStatus standard_meter_find_densities(const StandardMeterInp
             if (rational_sub(note_end, note_start, &members[count].duration) != RATIONAL_OK) {
                 continue;
             }
-            members[count].line = input->notes[i].line;
-            lines[line_count++] = input->notes[i].line;
+            members[count].line = standard_meter_note_line(&input->notes[i]);
+            lines[line_count++] = standard_meter_note_line(&input->notes[i]);
             count++;
         }
         qsort(lines, line_count, sizeof(int), compare_ints);

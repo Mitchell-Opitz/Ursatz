@@ -89,4 +89,4 @@ Two adapters carry the rules the Analyzer used to hold (R-217, P23 B1):
 
 ## Neutral analysis input
 
-`standard_meter_input_add_analysis_note` (`analysis/meter_analysis_input.h`) takes an `AnalysisNote` (`semantics/analysis_note.h`) field for field: `line` is the note's voice (0 when it has none) and `pitch` is its `midi`. A note with an unknown pitch is rejected. The caller no longer writes the converter.
+`standard_meter_input_init` (`analysis/meter/meter_analysis_input.h`) borrows an array of `AnalysisNote` (`analysis/notes/analysis_note.h`): the line of a note is its voice (0 when it has none, `standard_meter_note_line`). A note with an empty or too long id or an invalid span is `ERR_INVALID`. The caller writes no converter.
