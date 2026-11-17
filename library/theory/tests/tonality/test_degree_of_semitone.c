@@ -157,6 +157,38 @@ static void test_invalid(void) {
     assert(degree == 99 && alteration == 99);
 }
 
+static void test_at_or_below(void) {
+    for (int mode = STANDARD_TONALITY_MODE_MAJOR; mode <= STANDARD_TONALITY_MODE_MELODIC_MINOR; mode++) {
+        for (int semitones = -24; semitones < 36; semitones++) {
+            int below_degree = 0;
+            int below_alteration = 0;
+            int degree = 0;
+            int alteration = 0;
+            assert(standard_tonality_degree_at_or_below_semitone(semitones, (StandardTonalityMode)mode, &below_degree,
+                                                                 &below_alteration));
+            assert(standard_tonality_degree_of_semitone(semitones, (StandardTonalityMode)mode, &degree, &alteration));
+            /* the reading with the lowered override is this one, or the next degree up lowered */
+            assert((degree == below_degree && alteration == below_alteration) ||
+                   (degree == below_degree + 1 && alteration == -1));
+            assert(below_degree >= 1 && below_degree <= 7 && below_alteration >= 0 && below_alteration <= 2);
+            int base = standard_tonality_degree_semitone((StandardTonalityMode)mode, below_degree);
+            assert(((semitones % 12) + 12) % 12 == base + below_alteration);
+        }
+    }
+    /* no lowered override: semitone 1 is the tonic raised in every mode, 3 in major the second raised */
+    int degree = 0;
+    int alteration = 0;
+    assert(standard_tonality_degree_at_or_below_semitone(1, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(degree == 1 && alteration == 1);
+    assert(standard_tonality_degree_at_or_below_semitone(3, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(degree == 2 && alteration == 1);
+    assert(standard_tonality_degree_at_or_below_semitone(10, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(degree == 6 && alteration == 1);
+    assert(!standard_tonality_degree_at_or_below_semitone(0, STANDARD_TONALITY_MODE_MAJOR, NULL, &alteration));
+    assert(!standard_tonality_degree_at_or_below_semitone(0, STANDARD_TONALITY_MODE_MAJOR, &degree, NULL));
+    assert(!standard_tonality_degree_at_or_below_semitone(0, (StandardTonalityMode)99, &degree, &alteration));
+}
+
 int main(void) {
     test_scale_notes();
     test_chromatic_notes();
@@ -164,6 +196,7 @@ int main(void) {
     test_composer_tables();
     test_every_offset_in_major_and_minor();
     test_invalid();
+    test_at_or_below();
     printf("standard-tonality degree of semitone tests passed\n");
     return 0;
 }

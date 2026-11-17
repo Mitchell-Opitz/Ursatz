@@ -15,6 +15,27 @@ const char *standard_tonality_roman_numeral_degree(int degree, bool uppercase) {
     return uppercase ? UPPERCASE[degree - 1] : LOWERCASE[degree - 1];
 }
 
+int standard_tonality_roman_numeral_degree_of(const char *letters, size_t length) {
+    char lower[8];
+    if (letters == NULL || length == 0 || length >= sizeof(lower)) {
+        return 0;
+    }
+    for (size_t i = 0; i < length; i++) {
+        char c = letters[i];
+        if (c != 'i' && c != 'I' && c != 'v' && c != 'V') {
+            return 0;
+        }
+        lower[i] = (char)(c | 0x20);
+    }
+    lower[length] = '\0';
+    for (int degree = 0; degree < 7; degree++) {
+        if (strcmp(lower, LOWERCASE[degree]) == 0) {
+            return degree + 1;
+        }
+    }
+    return 0;
+}
+
 const char *standard_tonality_roman_numeral_triad_symbol(StandardTonalityTriadQuality quality) {
     switch (quality) {
         case STANDARD_TONALITY_TRIAD_MAJOR:

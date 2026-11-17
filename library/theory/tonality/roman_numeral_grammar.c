@@ -229,6 +229,9 @@ static const char *mark_text(StandardTonalityNumeralQuality quality, StandardTon
             if (style == STANDARD_TONALITY_NUMERAL_STYLE_DISPLAY) {
                 return EMPTY_SET;
             }
+            if (style == STANDARD_TONALITY_NUMERAL_STYLE_PLAN) {
+                return "%";
+            }
             return style == STANDARD_TONALITY_NUMERAL_STYLE_ROMANTEXT ? "/o" : O_SLASH;
         case STANDARD_TONALITY_NUMERAL_MAJOR_SEVENTH:
             return "M";
@@ -257,7 +260,7 @@ bool standard_tonality_numeral_format_styled(const StandardTonalityNumeralText *
                                              StandardTonalityNumeralStyle style, char *buffer, size_t size) {
     if (buffer == NULL || size == 0 || !valid_numeral(numeral) ||
         (style != STANDARD_TONALITY_NUMERAL_STYLE_CANONICAL && style != STANDARD_TONALITY_NUMERAL_STYLE_DISPLAY &&
-         style != STANDARD_TONALITY_NUMERAL_STYLE_ROMANTEXT)) {
+         style != STANDARD_TONALITY_NUMERAL_STYLE_ROMANTEXT && style != STANDARD_TONALITY_NUMERAL_STYLE_PLAN)) {
         return false;
     }
     bool seventh = standard_tonality_numeral_quality_is_seventh(numeral->quality);

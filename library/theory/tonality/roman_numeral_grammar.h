@@ -71,7 +71,8 @@ typedef struct {
 typedef enum {
     STANDARD_TONALITY_NUMERAL_STYLE_CANONICAL = 0, /* viio65, viiø65 */
     STANDARD_TONALITY_NUMERAL_STYLE_DISPLAY,       /* vii° and ii∅ (UTF-8), figures 6/5 */
-    STANDARD_TONALITY_NUMERAL_STYLE_ROMANTEXT      /* viio and ii/o, figures 6/5 */
+    STANDARD_TONALITY_NUMERAL_STYLE_ROMANTEXT,     /* viio and ii/o, figures 6/5 */
+    STANDARD_TONALITY_NUMERAL_STYLE_PLAN           /* viio and vii%, figures 6/5: a plan's chord text */
 } StandardTonalityNumeralStyle;
 
 /* True for the seven-note qualities (dominant, major, minor, half-diminished, fully diminished sevenths). */

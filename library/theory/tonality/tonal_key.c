@@ -48,6 +48,14 @@ unsigned standard_tonality_mode_pitch_classes(int tonic_pitch_class, StandardTon
     return mask;
 }
 
+unsigned standard_tonality_mode_pitch_classes_with_leading_tone(int tonic_pitch_class, StandardTonalityMode mode) {
+    unsigned mask = standard_tonality_mode_pitch_classes(tonic_pitch_class, mode);
+    if (mask == 0) {
+        return 0;
+    }
+    return mask | (1u << ((tonic_pitch_class + 11) % PITCH_SEMITONES_PER_OCTAVE));
+}
+
 /* A chromatic semitone with no context is read as the next degree lowered where the two spellings are
  * a semitone from the neighbors on both sides (R-285): semitone 1 in every mode, and in major also 3, 8
  * and 10. The sharp readings that stay are the raised fourth, and the natural minor's #3, #6 and #7. */
@@ -58,8 +66,8 @@ static bool semitone_reads_lowered(StandardTonalityMode mode, int inside) {
     return mode == STANDARD_TONALITY_MODE_MAJOR && (inside == 3 || inside == 8 || inside == 10);
 }
 
-bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
-                                          int *alteration) {
+bool standard_tonality_degree_at_or_below_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
+                                                   int *alteration) {
     if (degree == NULL || alteration == NULL || !mode_valid(mode)) {
         return false;
     }
@@ -72,8 +80,16 @@ bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTon
     }
     *degree = found + 1;
     *alteration = inside - MODE_SEMITONES[mode][found];
-    if (semitone_reads_lowered(mode, inside)) {
-        *degree = found + 2;
+    return true;
+}
+
+bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
+                                          int *alteration) {
+    if (!standard_tonality_degree_at_or_below_semitone(semitones_above_tonic, mode, degree, alteration)) {
+        return false;
+    }
+    if (semitone_reads_lowered(mode, floor_mod(semitones_above_tonic, PITCH_SEMITONES_PER_OCTAVE))) {
+        *degree += 1;
         *alteration = -1;
     }
     return true;

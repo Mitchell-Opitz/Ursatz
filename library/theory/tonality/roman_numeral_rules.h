@@ -58,6 +58,13 @@ typedef struct {
    outside that range. */
 const char *standard_tonality_roman_numeral_degree(int degree, bool uppercase);
 
+/*
+ * The degree (1 to 7) a run of numeral letters names, in either case and with the case mixed (I, vii, Iv): the
+ * first `length` characters of `letters`, which must be only i, v, I or V. 0 for NULL, an empty or longer-than-seven
+ * run, any other character, or letters that name no degree.
+ */
+int standard_tonality_roman_numeral_degree_of(const char *letters, size_t length);
+
 /* TRIAD_SYMBOLS: "" for major and minor, "°" (the degree sign)
    diminished, "+" augmented. NULL for an invalid quality. */
 const char *standard_tonality_roman_numeral_triad_symbol(StandardTonalityTriadQuality quality);

@@ -240,9 +240,28 @@ static void test_styles(void) {
     assert(standard_tonality_numeral_format_styled(&text, STANDARD_TONALITY_NUMERAL_STYLE_ROMANTEXT, buffer,
                                                    sizeof(buffer)) &&
            strcmp(buffer, "viio6/4") == 0);
-    /* every display and romantext spelling reads back to the same value */
+    /* the plan style: o for diminished, % for half-diminished, slashed figures before "/target" */
+    text = parsed("ii/o6/5/V");
+    assert(standard_tonality_numeral_format_styled(&text, STANDARD_TONALITY_NUMERAL_STYLE_PLAN, buffer,
+                                                   sizeof(buffer)) &&
+           strcmp(buffer, "ii%6/5/V") == 0);
+    text = parsed("viio7/ii");
+    assert(standard_tonality_numeral_format_styled(&text, STANDARD_TONALITY_NUMERAL_STYLE_PLAN, buffer,
+                                                   sizeof(buffer)) &&
+           strcmp(buffer, "viio7/ii") == 0);
+    text = parsed("V43/V");
+    assert(standard_tonality_numeral_format_styled(&text, STANDARD_TONALITY_NUMERAL_STYLE_PLAN, buffer,
+                                                   sizeof(buffer)) &&
+           strcmp(buffer, "V4/3/V") == 0);
+    text = parsed("vii/o7");
+    assert(standard_tonality_numeral_format_styled(&text, STANDARD_TONALITY_NUMERAL_STYLE_PLAN, buffer,
+                                                   sizeof(buffer)) &&
+           strcmp(buffer, "vii%7") == 0);
+    assert(!standard_tonality_numeral_format_styled(&text, (StandardTonalityNumeralStyle)(STANDARD_TONALITY_NUMERAL_STYLE_PLAN + 1),
+                                                    buffer, sizeof(buffer)));
+    /* every display, romantext and plan spelling reads back to the same value */
     for (int quality = 0; quality < Q(QUALITY_COUNT); quality++) {
-        for (int style = 0; style <= STANDARD_TONALITY_NUMERAL_STYLE_ROMANTEXT; style++) {
+        for (int style = 0; style <= STANDARD_TONALITY_NUMERAL_STYLE_PLAN; style++) {
             Text original = plain(4, (StandardTonalityNumeralQuality)quality, 1);
             original.has_target = true;
             original.target_degree = 2;

@@ -184,8 +184,29 @@ static void test_format_rejects_invalid_arguments(void) {
     assert(!standard_tonality_roman_numeral_format(&numeral, buffer, sizeof(buffer)));
 }
 
+static void test_degree_of_letters(void) {
+    static const char *const UPPER[7] = {"I", "II", "III", "IV", "V", "VI", "VII"};
+    static const char *const LOWER[7] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};
+    for (int degree = 1; degree <= 7; degree++) {
+        assert(standard_tonality_roman_numeral_degree_of(UPPER[degree - 1], strlen(UPPER[degree - 1])) == degree);
+        assert(standard_tonality_roman_numeral_degree_of(LOWER[degree - 1], strlen(LOWER[degree - 1])) == degree);
+    }
+    /* mixed case reads as the numeral it spells, and only the first `length` characters count */
+    assert(standard_tonality_roman_numeral_degree_of("Iv", 2) == 4);
+    assert(standard_tonality_roman_numeral_degree_of("vII", 3) == 7);
+    assert(standard_tonality_roman_numeral_degree_of("V7", 1) == 5);
+    assert(standard_tonality_roman_numeral_degree_of("ii6", 2) == 2);
+    assert(standard_tonality_roman_numeral_degree_of("V7", 2) == 0);
+    assert(standard_tonality_roman_numeral_degree_of("viii", 4) == 0);
+    assert(standard_tonality_roman_numeral_degree_of("iiii", 4) == 0);
+    assert(standard_tonality_roman_numeral_degree_of("", 0) == 0);
+    assert(standard_tonality_roman_numeral_degree_of("viiiiiii", 8) == 0);
+    assert(standard_tonality_roman_numeral_degree_of(NULL, 1) == 0);
+}
+
 int main(void) {
     test_degrees();
+    test_degree_of_letters();
     test_symbols();
     test_triad_examples();
     test_seventh_examples();

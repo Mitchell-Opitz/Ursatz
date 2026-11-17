@@ -75,11 +75,30 @@ static void test_invalid(void) {
     assert(standard_tonality_mode_pitch_classes(0, (StandardTonalityMode)-1) == 0);
 }
 
+static void test_with_leading_tone(void) {
+    for (int mode = STANDARD_TONALITY_MODE_MAJOR; mode <= STANDARD_TONALITY_MODE_MELODIC_MINOR; mode++) {
+        for (int tonic = 0; tonic < 12; tonic++) {
+            unsigned plain = standard_tonality_mode_pitch_classes(tonic, (StandardTonalityMode)mode);
+            unsigned with = standard_tonality_mode_pitch_classes_with_leading_tone(tonic, (StandardTonalityMode)mode);
+            assert(with == (plain | (1u << ((tonic + 11) % 12))));
+            assert((with & plain) == plain);
+        }
+    }
+    /* major already holds its leading tone, natural minor gains one */
+    assert(standard_tonality_mode_pitch_classes_with_leading_tone(0, STANDARD_TONALITY_MODE_MAJOR) == 0xAB5u);
+    assert(standard_tonality_mode_pitch_classes_with_leading_tone(0, STANDARD_TONALITY_MODE_NATURAL_MINOR) ==
+           (standard_tonality_mode_pitch_classes(0, STANDARD_TONALITY_MODE_NATURAL_MINOR) | (1u << 11)));
+    assert(standard_tonality_mode_pitch_classes_with_leading_tone(-1, STANDARD_TONALITY_MODE_MAJOR) == 0);
+    assert(standard_tonality_mode_pitch_classes_with_leading_tone(12, STANDARD_TONALITY_MODE_MAJOR) == 0);
+    assert(standard_tonality_mode_pitch_classes_with_leading_tone(0, (StandardTonalityMode)99) == 0);
+}
+
 int main(void) {
     test_modes_on_every_tonic();
     test_composer_unions();
     test_counterpoint_union();
     test_invalid();
+    test_with_leading_tone();
     printf("standard-tonality mode pitch classes tests passed\n");
     return 0;
 }
