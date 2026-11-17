@@ -26,6 +26,7 @@ ctest --test-dir build --output-on-failure -LE slow
 ```
 
 - `-LE slow` runs the fast set (what CI runs). `-L slow` runs the slow set; the nightly workflow runs every test.
+- CI (`.github/workflows/ci.yml`) installs `python3-jsonschema`, configures with `-DURSATZ_REQUIRE="jsonschema;node"` (so no schema or frontend test is silently missing), builds, runs the boundary checks and the fast set (`accuracy_harness` runs in it and writes the report CI uploads). The nightly workflow also installs `valgrind`, requires all three tools, runs every test, and fails when no `valgrind` or `schema` test was registered.
 - `ctest --test-dir build/<part>` runs one part's tests. Each part builds only from the root.
 - Needs cmake 3.28+, and a C11 compiler.
 - The build type defaults to Debug. Release builds work for tests too (the guard `test_asserts_on`), but the default stays Debug.
