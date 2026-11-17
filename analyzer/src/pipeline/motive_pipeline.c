@@ -306,7 +306,7 @@ static bool collect_features(const MotiveStage *stage, const ImportedNotes *note
             first_start = start;
             const AnalysisKeyRegion *region = region_at(report, (long long)start.num, (long long)start.den);
             features->tonic_pc = region->tonic_pitch_class;
-            features->minor = !region->is_major;
+            features->material = region->material;
         }
         Rational onset = msk_sub(start, first_start);
         if (!msk_ok(onset)) {

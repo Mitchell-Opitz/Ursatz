@@ -25,7 +25,8 @@
  * count entries; midi, when not NULL, has count parallel MIDI note numbers 0 to 127. The library has no call that reads
  * a MIDI number from an event's pitch (a pitch identity is opaque by design), so midi is required for count > 0:
  * ANALYZER_ERR_ARGUMENT when it is NULL. A NULL meter is 4/4. has_key gives a key signature event at time 0 from
- * key_tonic_pitch_class (0 to 11, C is 0) and key_minor. streams, when not NULL, has count entries: the stream (voice
+ * key_tonic_pitch_class (0 to 11, C is 0) and key_material (a pitch material of the
+ * snapshot the analysis options carry, with a signature: ANALYZER_ERR_ARGUMENT for NULL with has_key). streams, when not NULL, has count entries: the stream (voice
  * line or part) each event belongs to; NULL puts every event in stream 0. streams is read, not kept.
  */
 typedef struct {
@@ -35,7 +36,7 @@ typedef struct {
     const MeterMap *meter;
     bool has_key;
     int key_tonic_pitch_class;
-    bool key_minor;
+    const PitchMaterial *key_material; /* NULL with has_key false */
     const size_t *streams;
 } AnalyzerHearing;
 

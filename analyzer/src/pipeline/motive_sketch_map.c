@@ -2,8 +2,6 @@
 
 #include <string.h>
 
-#include <theory/tonality/common_practice_materials.h>
-
 static Rational fraction(unsigned long long numerator, unsigned long long denominator) {
     return msk_make(numerator, denominator);
 }
@@ -31,9 +29,7 @@ bool motive_features_to_sketch(const AnalysisMotiveFeatures *features, MotiveSke
     const MotiveSketchNote *last = &sketch->notes[sketch->note_count - 1];
     sketch->has_scale = true;
     sketch->tonic_pc = features->tonic_pc;
-    /* The built-in material of the features' mode: a remaining site until P58 B12 (the features then carry a material). */
-    sketch->material = common_practice_material(common_practice_materials_builtin(),
-                                                features->minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
+    sketch->material = features->material;
     sketch->bar = fraction(features->bar_numerator, features->bar_denominator);
     sketch->beat = fraction(features->beat_numerator, features->beat_denominator);
     Rational position = fraction(features->pickup_numerator, features->pickup_denominator);

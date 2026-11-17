@@ -128,7 +128,7 @@ static Analyzed analyze(const char *name, const Note *notes, size_t count) {
     assert(midi_pipeline_import_file(path, &imported) == MIDI_PIPELINE_OK);
     AnalysisReport report;
     assert(run_analysis_pipeline(&imported, test_knowledge(), &report));
-    AnalysisDocument *built = analysis_document_build(path, &imported, &report);
+    AnalysisDocument *built = analysis_document_build(path, &imported, &report, test_knowledge());
     assert(built != NULL);
     char *json = analysis_document_to_json(built);
     assert(json != NULL);

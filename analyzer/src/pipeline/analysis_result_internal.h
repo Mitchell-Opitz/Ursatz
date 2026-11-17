@@ -10,6 +10,9 @@
 /* The notes the result borrows. */
 const ImportedNotes *analyzer_result_notes(const AnalyzerResult *result);
 
+/* The snapshot the analysis read its materials from (the options knowledge). */
+const KnowledgeSnapshot *analyzer_result_knowledge(const AnalyzerResult *result);
+
 /* True when every chain stage ran, so the report view is complete and can be exported. */
 bool analyzer_result_report_complete(const AnalyzerResult *result);
 

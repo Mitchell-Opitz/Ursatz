@@ -311,7 +311,7 @@ static UrsatzGuiAnalysisResult analyze_source_file(const char *dir_path, InputFo
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
-    AnalysisDocument *document = analysis_document_build(source_path, &notes, &report);
+    AnalysisDocument *document = analysis_document_build(source_path, &notes, &report, ursatz_gui_knowledge());
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
     if (!document) {

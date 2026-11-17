@@ -68,6 +68,10 @@ const ImportedNotes *analyzer_result_notes(const AnalyzerResult *result) {
     return result ? result->pass.notes : NULL;
 }
 
+const KnowledgeSnapshot *analyzer_result_knowledge(const AnalyzerResult *result) {
+    return result ? result->pass.options.knowledge : NULL;
+}
+
 bool analyzer_result_report_complete(const AnalyzerResult *result) {
     return result && (result->pass.options.stages & ANALYSIS_CHAIN_STAGE_ALL) == ANALYSIS_CHAIN_STAGE_ALL;
 }

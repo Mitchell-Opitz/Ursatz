@@ -10,6 +10,7 @@
 
 #include "cJSON.h"
 #include "theory/tonality/common_practice_framework.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "model/core/rational.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/analysis_result_internal.h"
@@ -50,6 +51,7 @@ static const char READING_METER_SOURCE[] = "notation-reading-meter";
    fails instead of printing a wrapped time. */
 typedef struct {
     bool overflowed;
+    CommonPracticeMaterials materials; /* the major and natural minor a notated key signature's labels are spelled with */
 } DocBuild;
 
 static Rational doc_rational(DocBuild *build, long long num, unsigned long long den) {
@@ -399,8 +401,8 @@ static cJSON *key_signatures_json(DocBuild *build, const ImportedNotes *notes) {
     for (size_t i = 0; i < notes->key_signature_events.count; i++) {
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
         int major = key_signature_major_tonic(event->sharps_flats);
-        char *major_label = key_label_create(major, true);
-        char *minor_label = key_label_create((major + 9) % 12, false);
+        char *major_label = key_label_create(major, build->materials.major);
+        char *minor_label = key_label_create((major + 9) % 12, build->materials.natural_minor);
         Rational start = event->position.value;
         cJSON *object = cJSON_CreateObject();
         bool ok = major_label && minor_label && object &&
@@ -568,7 +570,7 @@ static cJSON *key_region_json(DocBuild *build, const ImportedNotes *notes, const
     cJSON *claim = region_span_claim(build, notes, region, region->label, cJSON_CreateNumber(region->uncertainty));
     if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)index)) &&
           json_add(claim, "tonic", cJSON_CreateString(pitch_class_name(region->tonic_pitch_class, region->prefer_flats))) &&
-          json_add(claim, "mode", cJSON_CreateString(region->is_major ? "major" : "minor")) &&
+          json_add(claim, "mode", cJSON_CreateString(region->material->key_word)) &&
           json_add(claim, "measures", measures_json(region->first_measure, region->last_measure)) &&
           json_add(claim, "source", cJSON_CreateString(region_source_name(region->source))))) {
         cJSON_Delete(claim);
@@ -583,7 +585,7 @@ static cJSON *home_region_indices_json(const AnalysisReport *report) {
     cJSON *indices = cJSON_CreateArray();
     for (size_t i = 0; indices && i < report->key_region_count; i++) {
         const AnalysisKeyRegion *region = &report->key_regions[i];
-        if (region->tonic_pitch_class == home->tonic_pitch_class && region->is_major == home->is_major &&
+        if (region->tonic_pitch_class == home->tonic_pitch_class && region->material == home->material &&
             !json_append(indices, cJSON_CreateNumber((double)i))) {
             cJSON_Delete(indices);
             return NULL;
@@ -808,7 +810,12 @@ static cJSON *pivot_chords_json(DocBuild *build, const ImportedNotes *notes, con
 /* Whether a key is the major key of a notated signature or its relative minor. */
 static bool key_fits_signature(const AnalysisKeyRegion *region, int sharps_flats) {
     int major = key_signature_major_tonic(sharps_flats);
-    return region->is_major ? region->tonic_pitch_class == major : region->tonic_pitch_class == (major + 9) % 12;
+    CommonPracticeKeyMode mode;
+    if (!common_practice_key_mode_of(region->material, &mode)) {
+        return false;
+    }
+    return mode == COMMON_PRACTICE_KEY_MAJOR ? region->tonic_pitch_class == major
+                                             : region->tonic_pitch_class == (major + 9) % 12;
 }
 
 /* The region in effect at time: the one whose span holds it, the first for a time before the piece's first
@@ -825,14 +832,14 @@ static const AnalysisKeyRegion *region_at(DocBuild *build, const AnalysisReport 
 
 /* One disagreement between a notated signature and the detected keys. signature_index is -1 for a note about
    the home key, which fits no signature at all. */
-static cJSON *disagreement_json(const char *scope, long signature_index, const MidiKeySignatureEvent *event,
+static cJSON *disagreement_json(const DocBuild *build, const char *scope, long signature_index, const MidiKeySignatureEvent *event,
                                 size_t region_index, const AnalysisKeyRegion *region) {
     char notated[96] = "";
     char message[256];
     if (event) {
         int major = key_signature_major_tonic(event->sharps_flats);
-        char *major_label = key_label_create(major, true);
-        char *minor_label = key_label_create((major + 9) % 12, false);
+        char *major_label = key_label_create(major, build->materials.major);
+        char *minor_label = key_label_create((major + 9) % 12, build->materials.natural_minor);
         if (major_label && minor_label) {
             snprintf(notated, sizeof(notated), "%s or %s", major_label, minor_label);
         }
@@ -888,12 +895,12 @@ static cJSON *notes_json(DocBuild *build, const ImportedNotes *notes, const Anal
         size_t region_index = 0;
         const AnalysisKeyRegion *region = region_at(build, report, event->position.value, &region_index);
         if (region && !key_fits_signature(region, event->sharps_flats) &&
-            !json_append(list, disagreement_json("region_at_signature", (long)i, event, region_index, region))) {
+            !json_append(list, disagreement_json(build, "region_at_signature", (long)i, event, region_index, region))) {
             cJSON_Delete(list);
             return NULL;
         }
     }
-    if (!home_fits_any && !json_append(list, disagreement_json("home_key", -1, NULL, report->home_region, home))) {
+    if (!home_fits_any && !json_append(list, disagreement_json(build, "home_key", -1, NULL, report->home_region, home))) {
         cJSON_Delete(list);
         return NULL;
     }
@@ -1056,8 +1063,7 @@ static cJSON *applied_json(DocBuild *build, const AnalysisReport *report, const 
     int target_tonic = -1;
     if (in_region) {
         const AnalysisKeyRegion *local = &report->key_regions[entry->region];
-        int semitones = standard_tonality_degree_semitone(
-            local->is_major ? STANDARD_TONALITY_MODE_MAJOR : STANDARD_TONALITY_MODE_NATURAL_MINOR, roman->target_degree);
+        int semitones = standard_tonality_material_degree_semitone(local->material, roman->target_degree);
         target_tonic = semitones < 0 ? -1 : (local->tonic_pitch_class + semitones) % 12;
     }
     Rational chord_start = doc_rational(build, entry->time_numerator, entry->time_denominator);
@@ -2549,6 +2555,12 @@ static cJSON *motive_occurrence_json(DocBuild *build, const ImportedNotes *notes
    ("1 b2 2 b3 3 4 #4 5 b6 6 b7 7"), the semitone and scale-step intervals between neighbours, the rhythm (the durations),
    the non-chord-tone type of the segment each note starts in ("chord-tone" for a chord tone, null when the segment has
    no chord or the library left the tone unclassified) and the sketch's fingerprint (16 hex digits). */
+/* Whether the features' material has a minor third (schema 12 writes the mode as a flag). */
+static bool features_minor(const AnalysisMotiveFeatures *features) {
+    CommonPracticeKeyMode mode;
+    return common_practice_key_mode_of(features->material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
+}
+
 static cJSON *motive_features_json(const AnalysisMotiveFeatures *features) {
     cJSON *object = cJSON_CreateObject();
     cJSON *notes = cJSON_CreateArray();
@@ -2572,7 +2584,7 @@ static cJSON *motive_features_json(const AnalysisMotiveFeatures *features) {
     /* json_add() takes an item over, and frees it itself when it fails, so each is cleared once handed over */
     ok = ok && add_owned(object, "notes", &notes) &&
          json_add(object, "tonic_pc", cJSON_CreateNumber(features->tonic_pc)) &&
-         json_add(object, "minor", cJSON_CreateBool(features->minor)) &&
+         json_add(object, "minor", cJSON_CreateBool(features_minor(features))) &&
          json_add(object, "bar", fraction_string_json(features->bar_numerator, features->bar_denominator)) &&
          json_add(object, "beat", fraction_string_json(features->beat_numerator, features->beat_denominator)) &&
          json_add(object, "pickup", fraction_string_json(features->pickup_numerator, features->pickup_denominator)) &&
@@ -3966,13 +3978,16 @@ static bool print_value(Buffer *buffer, const cJSON *item, int depth) {
     return buffer_indent(buffer, depth) && buffer_append(buffer, close);
 }
 
-AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes,
-                                          const AnalysisReport *report) {
+AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report,
+                                          const KnowledgeSnapshot *knowledge) {
+    DocBuild build = {false, {NULL, NULL, NULL, NULL}};
+    if (!common_practice_materials_resolve(knowledge, &build.materials, NULL, 0)) {
+        return NULL;
+    }
     AnalysisDocument *document = malloc(sizeof(AnalysisDocument));
     if (!document) {
         return NULL;
     }
-    DocBuild build = {false};
     document->root = document_json(&build, input_path, notes, report);
     if (document->root && build.overflowed) {
         cJSON_Delete(document->root);
@@ -3989,7 +4004,8 @@ AnalysisDocument *analysis_document_build_from_result(const char *input_path, co
     if (!analyzer_result_report_complete(result)) {
         return NULL;
     }
-    return analysis_document_build(input_path, analyzer_result_notes(result), analyzer_result_report(result));
+    return analysis_document_build(input_path, analyzer_result_notes(result), analyzer_result_report(result),
+                                   analyzer_result_knowledge(result));
 }
 
 char *analysis_document_render_result(const char *input_path, const AnalyzerResult *result) {

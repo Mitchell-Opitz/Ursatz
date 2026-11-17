@@ -51,7 +51,7 @@ static bool analyze_fixtures(void) {
 }
 
 static MotiveLinkScope *scope_of(size_t count) {
-    MotiveLinkScope *scope = motive_link_scope_create();
+    MotiveLinkScope *scope = motive_link_scope_create(test_knowledge());
     for (size_t i = 0; scope && i < count; i++) {
         CHECK(motive_link_scope_add_document(scope, piece_ids[i], documents[i]) == MOTIVE_LINKS_OK);
     }
@@ -135,7 +135,7 @@ static void on_progress(size_t done, size_t total, void *context) {
 }
 
 static void check_scope_errors(void) {
-    MotiveLinkScope *scope = motive_link_scope_create();
+    MotiveLinkScope *scope = motive_link_scope_create(test_knowledge());
     CHECK(motive_link_scope_add_document(scope, "a.musicxml", documents[0]) == MOTIVE_LINKS_OK);
     CHECK(motive_link_scope_add_document(scope, "a.musicxml", documents[0]) == MOTIVE_LINKS_ERR_ARGUMENT);
     CHECK(motive_link_scope_add_document(scope, "x", "not json") == MOTIVE_LINKS_ERR_FORMAT);

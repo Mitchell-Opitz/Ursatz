@@ -17,7 +17,6 @@ library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo m
 library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/time_span.c time_span_length  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
-library/theory/knowledge/knowledge_snapshot.c alias_matches  # helper of the by-word material lookup, which no app calls until P58 B13; its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app reads a chord type until P58 B16 (chord readings); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_of  # no app reads a chord type until P58 B16 (chord readings); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
@@ -26,10 +25,8 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_count  # 
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material_at  # no app looks a material up by word or lists them until P58 B13 (key text); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material_count  # no app looks a material up by word or lists them until P58 B13 (key text); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material_named  # no app looks a material up by word or lists them until P58 B13 (key text); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation  # no app resolves a relation until P58 B11 (region relations) and B13 (forms); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation_named  # no app resolves a relation until P58 B11 (region relations) and B13 (forms); its tests call it
-library/theory/knowledge/knowledge_snapshot.c nocase_equal  # helper of the by-word material lookup, which no app calls until P58 B13; its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 library/theory/tonality/brightness.c brightness_rank_of  # no app asks a mode's brightness until P58 B13 (forms resolve through relations); its tests call it
 library/theory/tonality/brightness.c brightness_shift  # no app shifts a mode's brightness until P58 B13 (forms resolve through relations); its tests call it
@@ -48,3 +45,4 @@ library/theory/tonality/region_relation.c resolve_neo_riemannian  # helper of re
 library/theory/tonality/region_relation.c resolve_set  # the set branch of region_resolve: reached through it from P58 B13, the set relations themselves are used from P60 (regions in requests); its tests call it
 library/theory/tonality/region_relation.c resolve_tonal  # helper of region_resolve, which no app calls until P58 B13; its tests call it
 library/theory/tonality/region_relation.c same_material  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/roman_numeral_grammar.c standard_tonality_numeral_root_semitone  # no app calls the mode form until P58 B13 deletes it; its tests call it

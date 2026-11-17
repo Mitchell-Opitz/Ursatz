@@ -24,16 +24,20 @@ static AnalysisKeyChangeExtent change_extent(KeyChangeExtent extent) {
 
 static bool copy_region(const CommonPracticeKeyRegion *source, AnalysisKeyRegion *out) {
     int tonic = common_practice_key_index_tonic(source->key_index);
-    bool is_major = common_practice_key_index_mode(source->key_index) == COMMON_PRACTICE_KEY_MAJOR;
+    KeyStructure structure;
+    if (!source->key || !key_structure(source->key, &structure) || !structure.material) {
+        return false;
+    }
+    const PitchMaterial *material = structure.material;
     const MusicalTime start = source->span.start;
     const MusicalTime end = source->span.end;
-    out->label = key_label_create(tonic, is_major);
+    out->label = key_label_create(tonic, material);
     if (!out->label) {
         return false;
     }
     out->tonic_pitch_class = tonic;
-    out->is_major = is_major;
-    out->prefer_flats = tonic_prefers_flats(tonic, is_major);
+    out->material = material;
+    out->prefer_flats = tonic_prefers_flats(tonic, material);
     out->start_numerator = (long)start.value.num;
     out->start_denominator = (unsigned long)start.value.den;
     out->end_numerator = (long)end.value.num;

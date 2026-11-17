@@ -11,6 +11,7 @@
 #include "analysis/motive/motive_link.h"
 #include "links_internal.h"
 #include "pipeline/motive_sketch_map.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "util/json_util.h"
 #include "pipeline/corpus_walk.h"
 #include "util/misc_util.h"
@@ -58,7 +59,7 @@ static bool fraction_member(const cJSON *object, const char *name, unsigned long
 }
 
 /* The prototype's sketch from a family's "features": the document side of motive_features_to_sketch. */
-static MotiveLinksResult features_sketch(const cJSON *features, MotiveSketch *sketch) {
+static MotiveLinksResult features_sketch(const KnowledgeSnapshot *knowledge, const cJSON *features, MotiveSketch *sketch) {
     const cJSON *notes = json_member(features, "notes");
     int count = cJSON_IsArray(notes) ? cJSON_GetArraySize(notes) : 0;
     if (count <= 0 || count > MOTIVE_SKETCH_MAX_NOTES) {
@@ -87,7 +88,10 @@ static MotiveLinksResult features_sketch(const cJSON *features, MotiveSketch *sk
          fraction_member(features, "pickup", &read.pickup_numerator, &read.pickup_denominator);
     if (ok) {
         read.tonic_pc = tonic;
-        read.minor = cJSON_IsTrue(json_member(features, "minor"));
+        CommonPracticeMaterials materials;
+        ok = common_practice_materials_resolve(knowledge, &materials, NULL, 0);
+        read.material = common_practice_material(
+            &materials, cJSON_IsTrue(json_member(features, "minor")) ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
     }
     ok = ok && motive_features_to_sketch(&read, sketch);
     free(read.notes);
@@ -146,7 +150,7 @@ static void family_clear(Family *family) {
 }
 
 /* The family of one motive claim: where its prototype sits and its sketch. */
-static MotiveLinksResult read_family(const cJSON *motive, size_t piece, Family *family) {
+static MotiveLinksResult read_family(const KnowledgeSnapshot *knowledge, const cJSON *motive, size_t piece, Family *family) {
     memset(family, 0, sizeof *family);
     const cJSON *features = json_member(motive, "features");
     if (!cJSON_IsObject(features)) {
@@ -164,7 +168,7 @@ static MotiveLinksResult read_family(const cJSON *motive, size_t piece, Family *
     }
     family->family = (size_t)index->valuedouble;
     family->beat = beat;
-    MotiveLinksResult result = features_sketch(features, &family->sketch);
+    MotiveLinksResult result = features_sketch(knowledge, features, &family->sketch);
     if (result != MOTIVE_LINKS_OK) {
         return result;
     }
@@ -179,8 +183,15 @@ static MotiveLinksResult read_family(const cJSON *motive, size_t piece, Family *
     return MOTIVE_LINKS_OK;
 }
 
-MotiveLinkScope *motive_link_scope_create(void) {
-    return calloc(1, sizeof(MotiveLinkScope));
+MotiveLinkScope *motive_link_scope_create(const KnowledgeSnapshot *knowledge) {
+    if (!knowledge) {
+        return NULL;
+    }
+    MotiveLinkScope *scope = calloc(1, sizeof(MotiveLinkScope));
+    if (scope) {
+        scope->knowledge = knowledge;
+    }
+    return scope;
 }
 
 void motive_link_scope_destroy(MotiveLinkScope *scope) {
@@ -247,7 +258,7 @@ static MotiveLinksResult add_document(MotiveLinkScope *scope, const char *piece_
     MotiveLinksResult result = count && !read ? MOTIVE_LINKS_ERR_ALLOC : MOTIVE_LINKS_OK;
     size_t made = 0;
     for (; result == MOTIVE_LINKS_OK && made < count; made++) {
-        result = read_family(cJSON_GetArrayItem(motives, (int)made), scope->piece_count, &read[made]);
+        result = read_family(scope->knowledge, cJSON_GetArrayItem(motives, (int)made), scope->piece_count, &read[made]);
         if (result != MOTIVE_LINKS_OK) {
             family_clear(&read[made]);
             break;

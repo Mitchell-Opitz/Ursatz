@@ -385,7 +385,7 @@ static int run_similar(const char *corpus_output_dir, const char *motive_file, c
     }
     SimilarResults results = {0};
     report_stale_documents(corpus_output_dir);
-    SimilarResult found = similar_material_find(corpus_output_dir, &query, options, &results);
+    SimilarResult found = similar_material_find(corpus_output_dir, knowledge, &query, options, &results);
     int exit_code = 0;
     if (found == SIMILAR_ERR_QUERY) {
         fprintf(stderr, "Error: the query is not a motive or a progression this search can score\n");
@@ -437,8 +437,8 @@ static void print_links_text(const MotiveLinks *links) {
 }
 
 static int run_link_motives(const char *corpus_output_dir, const char *cache_file, size_t depth, size_t candidates,
-                            bool as_json) {
-    MotiveLinkScope *scope = motive_link_scope_create();
+                            bool as_json, const KnowledgeSnapshot *knowledge) {
+    MotiveLinkScope *scope = motive_link_scope_create(knowledge);
     if (!scope) {
         fprintf(stderr, "Error: out of memory while linking motives\n");
         return 2;
@@ -769,7 +769,7 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
             print_usage(argv[0]);
             return 1;
         }
-        return run_link_motives(link_dir, link_cache, link_depth, link_candidates, format_json);
+        return run_link_motives(link_dir, link_cache, link_depth, link_candidates, format_json, knowledge);
     }
     if (similar_dir || motive_file || progression || similar_flags) {
         if (!similar_dir || (motive_file != NULL) == (progression != NULL) || compare_a || without_count > 0 || style_dir || style_name ||

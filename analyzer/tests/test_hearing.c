@@ -45,6 +45,12 @@ typedef struct {
 static const Reading WITHOUT_SPANS[] = {{155, 0}, {606, 8}, {205, 8}, {268, 8}, {169, 2}};
 static const Reading WITH_SPANS[] = {{54, 0}, {210, 16}, {46, 4}, {107, 9}, {82, 0}};
 
+/* The material of a key the test hears: NULL without a key. */
+static const PitchMaterial *key_material_of(bool has_key, bool minor) {
+    return has_key ? knowledge_snapshot_material(test_knowledge(), minor ? "omt.material.natural-minor" : "omt.material.major")
+                   : NULL;
+}
+
 static int tonic_of(const ImportedNotes *notes) {
     int fifths = notes->key_signature.sharps_flats;
     int major = (((fifths * 7) % 12) + 12) % 12;
@@ -125,6 +131,7 @@ static void check_arguments(const AnalyzerHearing *hearing) {
     free(bad);
     AnalyzerHearing bad_key = *hearing;
     bad_key.has_key = true;
+    bad_key.key_material = knowledge_snapshot_material(test_knowledge(), "omt.material.major");
     bad_key.key_tonic_pitch_class = 12;
     CHECKF(analyzer_hear(&bad_key, test_hearing_defaults(), &result) == ANALYZER_ERR_ARGUMENT, "tonic 12");
 }
@@ -183,7 +190,7 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
                                notes.meter.meter_map,
                                notes.key_signature.found,
                                tonic_of(&notes),
-                               notes.key_signature.is_minor,
+                               key_material_of(notes.key_signature.found, notes.key_signature.is_minor),
                                notes.streams};
 
     /* The events are the caller's. */

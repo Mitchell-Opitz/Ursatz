@@ -7,6 +7,7 @@
 #include <model/time/duration.h>
 #include <model/time/musical_time.h>
 #include <model/time/temporal_anchor.h>
+#include <theory/tonality/common_practice_materials.h>
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
@@ -219,7 +220,14 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
     input.meter = rendered->meter_map;
     input.has_key = true;
     input.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
-    input.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
+    /* The Composer's keys hold only their mode until P58 B13: the mode picks the material of the hearing's snapshot. */
+    CommonPracticeMaterials materials;
+    if (!common_practice_materials_resolve(hearing->knowledge, &materials, NULL, 0)) {
+        heard_span_release(&heard);
+        return HEARING_ERR_ANALYSIS;
+    }
+    input.key_material = common_practice_material(
+        &materials, key.mode == KEY_STRUCTURE_MODE_MINOR ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
     input.streams = heard.streams;
     AnalyzerHearingOptions options = hearing_analyzer_options(hearing->knowledge);
     atomic_fetch_add(&hearing_analyzer_calls_made, 1);

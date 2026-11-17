@@ -13,6 +13,7 @@
 #include "model/pitch/pitch_numeric_value.h"
 #include "model/pitch/pitch_spelling.h"
 #include "model/pitch/tuning_system.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/tonal_key.h"
 #include "theory/style/style_model_build.h"
 #include "model/time/duration.h"
@@ -74,15 +75,18 @@ static MeterMap *copy_meter_map(const MeterMap *map) {
     return copy;
 }
 
-/* The key signature event at time 0 from a tonic and a mode, shaped as the MIDI scan gives them. */
-static bool add_key_signature(ImportedNotes *notes, int tonic, bool minor) {
+/* The key signature event at time 0 from a tonic and a material, shaped as the MIDI scan gives them (the mode byte follows the
+   material's third). */
+static bool add_key_signature(ImportedNotes *notes, int tonic, const PitchMaterial *material) {
     PitchLetter letter;
     int accidental;
     int fifths;
-    if (!standard_tonality_key_tonic_of_pitch_class(tonic, minor, &letter, &accidental) ||
-        !standard_tonality_key_fifths(letter, accidental, minor, &fifths)) {
+    if (!material || !standard_tonality_key_tonic_of_pitch_class_material(tonic, material, &letter, &accidental) ||
+        !standard_tonality_key_fifths_of(letter, accidental, material, &fifths)) {
         return false;
     }
+    CommonPracticeKeyMode mode;
+    bool minor = common_practice_key_mode_of(material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
     MidiKeySignatureEvent *event = calloc(1, sizeof *event);
     if (!event) {
         return false;
@@ -177,7 +181,7 @@ static HearingNotes *hearing_notes_build(const AnalyzerHearing *hearing) {
         ok = notes_last_end(hearing->events, hearing->count, &notes->meter.end_time) && notes->meter.meter_map;
     }
     if (ok && hearing->has_key) {
-        ok = add_key_signature(notes, hearing->key_tonic_pitch_class, hearing->key_minor);
+        ok = add_key_signature(notes, hearing->key_tonic_pitch_class, hearing->key_material);
     }
     if (!ok) {
         hearing_notes_destroy(built);

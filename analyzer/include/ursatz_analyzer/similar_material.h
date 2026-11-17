@@ -102,10 +102,11 @@ typedef struct {
 /*
  * Searches the pieces "<corpus_output_dir>/corpus-index.json" lists as analyzed. Every window of the query's length
  * is scored; in each piece the best window of any run of overlapping ones is kept, and the highest-scoring
- * max_results over all pieces are returned. options may be NULL for the defaults. No match is not an error.
+ * max_results over all pieces are returned. `knowledge` is the snapshot that gives the key words of the documents their materials
+ * (SIMILAR_ERR_ARGUMENT without it). options may be NULL for the defaults. No match is not an error.
  */
-SimilarResult similar_material_find(const char *corpus_output_dir, const SimilarQuery *query, const SimilarOptions *options,
-                                    SimilarResults *results);
+SimilarResult similar_material_find(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
+                                    const SimilarOptions *options, SimilarResults *results);
 
 /* Frees the matches; safe on a result that was never filled. */
 void similar_results_destroy(SimilarResults *results);

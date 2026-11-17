@@ -264,12 +264,13 @@ static void fill_match(const SimilarMatch *match, CorpusSeed *out) {
     out->score_denominator = match->score.similarity.denominator;
 }
 
-static CorpusSeedResult search(const char *corpus_output_dir, const SimilarQuery *query, SimilarResults *results) {
+static CorpusSeedResult search(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
+                               SimilarResults *results) {
     SimilarOptions options = similar_options_default();
     options.minimum_numerator = CORPUS_SEED_MINIMUM_NUMERATOR;
     options.minimum_denominator = CORPUS_SEED_MINIMUM_DENOMINATOR;
     options.max_results = 10;
-    SimilarResult found = similar_material_find(corpus_output_dir, query, &options, results);
+    SimilarResult found = similar_material_find(corpus_output_dir, knowledge, query, &options, results);
     if (found == SIMILAR_ERR_ALLOC) {
         return CORPUS_SEED_ERR_ALLOC;
     }
@@ -293,16 +294,18 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
         return CORPUS_SEED_ERR_QUERY;
     }
     SimilarResult read = similar_query_from_file(passage_path, knowledge, &query);
-    knowledge_snapshot_destroy(knowledge);
     if (read == SIMILAR_ERR_ALLOC) {
+        knowledge_snapshot_destroy(knowledge);
         return CORPUS_SEED_ERR_ALLOC;
     }
     if (read != SIMILAR_OK) {
+        knowledge_snapshot_destroy(knowledge);
         return CORPUS_SEED_ERR_QUERY;
     }
     SimilarResults results;
     memset(&results, 0, sizeof(results));
-    CorpusSeedResult status = search(corpus_output_dir, &query, &results);
+    CorpusSeedResult status = search(corpus_output_dir, knowledge, &query, &results);
+    knowledge_snapshot_destroy(knowledge);
     similar_query_destroy(&query);
     if (status != CORPUS_SEED_OK) {
         similar_results_destroy(&results);
@@ -423,7 +426,15 @@ CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const ch
     options.max_results = PROGRESSION_CANDIDATES;
     SimilarResults results;
     memset(&results, 0, sizeof(results));
-    SimilarResult found = similar_material_find(corpus_output_dir, &query, &options, &results);
+    /* A snapshot for reading the documents' key words (P58 B10 until B13 gives the Composer its own). */
+    KnowledgeSnapshot *knowledge = NULL;
+    char message[256];
+    if (knowledge_snapshot_build(NULL, 0, &knowledge, message, sizeof(message)) != KNOWLEDGE_OK) {
+        similar_query_destroy(&query);
+        return CORPUS_SEED_ERR_QUERY;
+    }
+    SimilarResult found = similar_material_find(corpus_output_dir, knowledge, &query, &options, &results);
+    knowledge_snapshot_destroy(knowledge);
     similar_query_destroy(&query);
     CorpusSeedResult status = found == SIMILAR_ERR_ALLOC ? CORPUS_SEED_ERR_ALLOC
                               : found != SIMILAR_OK      ? CORPUS_SEED_ERR_CORPUS

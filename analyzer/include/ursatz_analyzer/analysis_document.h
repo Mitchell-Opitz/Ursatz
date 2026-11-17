@@ -23,12 +23,15 @@ typedef struct AnalysisDocument AnalysisDocument;
  * metadata, meter, keys, chords, outer voices and notes; every other section is an empty array, or
  * null for form. Only the basename of input_path is recorded.
  *
+ * knowledge is the snapshot the report was made with: the labels of a notated key signature are spelled with its major and natural
+ * minor materials.
+ *
  * Returns a document the caller releases with analysis_document_destroy,
- * or NULL on allocation failure. It does not reference notes or report
+ * or NULL on allocation failure or a NULL or incomplete snapshot. It does not reference notes, report or knowledge
  * after returning.
  */
-AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes,
-                                          const AnalysisReport *report);
+AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report,
+                                          const KnowledgeSnapshot *knowledge);
 
 /*
  * Builds the document from an analysis result: the same content as analysis_document_build over the result's notes

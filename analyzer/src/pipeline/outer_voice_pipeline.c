@@ -56,10 +56,10 @@ static bool fill_note(const ImportedNotes *notes, const Segment *segment, const 
     if (!out->pitch_name) {
         return false;
     }
-    if (region) {
-        const char *degree = common_practice_scale_degree_label(
-            pitch_class_of(out->pitch), region->tonic_pitch_class,
-            region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR, materials);
+    CommonPracticeKeyMode mode;
+    if (region && common_practice_key_mode_of(region->material, &mode)) {
+        const char *degree =
+            common_practice_scale_degree_label(pitch_class_of(out->pitch), region->tonic_pitch_class, mode, materials);
         if (degree) {
             out->degree = strdup(degree);
             if (!out->degree) {

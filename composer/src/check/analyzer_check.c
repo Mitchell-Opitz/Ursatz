@@ -8,6 +8,7 @@
 #include <model/time/meter_arithmetic.h>
 #include <model/time/meter_map.h>
 #include <theory/harmony/harmony_cadence_rules.h>
+#include <theory/tonality/common_practice_materials.h>
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
@@ -200,8 +201,12 @@ static void compare_key(const AnalysisReport *report, AnalysisKey key, Items *it
     util_key_name(analysis_key_tonic_pitch_class(&key), key.mode == KEY_STRUCTURE_MODE_MINOR, planned, sizeof(planned));
     if (report->key_region_count > 0) {
         const AnalysisKeyRegion *region = &report->key_regions[0];
-        util_key_name(region->tonic_pitch_class, !region->is_major, heard, sizeof(heard));
-        agreed = region->tonic_pitch_class == analysis_key_tonic_pitch_class(&key) && region->is_major == (key.mode == KEY_STRUCTURE_MODE_MAJOR);
+        CommonPracticeKeyMode mode;
+        if (common_practice_key_mode_of(region->material, &mode)) {
+            util_key_name(region->tonic_pitch_class, mode == COMMON_PRACTICE_KEY_MINOR, heard, sizeof(heard));
+            agreed = region->tonic_pitch_class == analysis_key_tonic_pitch_class(&key) &&
+                     (mode == COMMON_PRACTICE_KEY_MAJOR) == (key.mode == KEY_STRUCTURE_MODE_MAJOR);
+        }
     }
     add_item(items, ANALYZER_CHECK_KEY, 0, planned, heard, agreed);
 }

@@ -29,6 +29,12 @@
  * valgrind run stays short.
  */
 
+/* The material of a key the test hears: NULL without a key. */
+static const PitchMaterial *key_material_of(bool has_key, bool minor) {
+    return has_key ? knowledge_snapshot_material(test_knowledge(), minor ? "omt.material.natural-minor" : "omt.material.major")
+                   : NULL;
+}
+
 static void piece_path(char *out, size_t size, const char *file) {
     snprintf(out, size, "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, file);
 }
@@ -142,7 +148,7 @@ static void test_parallel_fifth(void) {
         midi[i] = plan[i].midi;
     }
     char *before = fingerprint((const NoteEvent *const *)events, 8);
-    AnalyzerHearing hearing = {(const NoteEvent *const *)events, 8, midi, NULL, true, 0, false, streams};
+    AnalyzerHearing hearing = {(const NoteEvent *const *)events, 8, midi, NULL, true, 0, key_material_of(true, false), streams};
     AnalyzerResult *heard = NULL;
     CHECKF(analyzer_hear(&hearing, test_hearing_defaults(), &heard) == ANALYZER_OK && heard, "hearing");
     AnalyzerViolation *violations = NULL;
@@ -173,7 +179,7 @@ static void test_parallel_fifth(void) {
 /* ---- the argument checks ---- */
 
 static void test_refusals(void) {
-    AnalyzerHearing empty = {NULL, 0, NULL, NULL, false, 0, false, NULL};
+    AnalyzerHearing empty = {NULL, 0, NULL, NULL, false, 0, NULL, NULL};
     AnalyzerResult *heard = NULL;
     CHECKF(analyzer_hear(&empty, test_hearing_defaults(), &heard) == ANALYZER_OK && heard, "an empty hearing");
     CHECKF(analyzer_result_report(heard)->entry_count == 0, "no chords");
@@ -182,7 +188,7 @@ static void test_refusals(void) {
     CHECKF(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK && count == 0 && violations == NULL,
            "no violations");
     analyzer_result_destroy(heard);
-    AnalyzerHearing bad_key = {NULL, 0, NULL, NULL, true, 12, false, NULL};
+    AnalyzerHearing bad_key = {NULL, 0, NULL, NULL, true, 12, key_material_of(true, false), NULL};
     CHECKF(analyzer_hear(&bad_key, test_hearing_defaults(), &heard) == ANALYZER_ERR_ARGUMENT && heard == NULL, "tonic out of range");
     CHECKF(analyzer_hear(NULL, test_hearing_defaults(), &heard) == ANALYZER_ERR_ARGUMENT, "no hearing");
 }
@@ -294,7 +300,7 @@ static void test_style_distance(void) {
                                notes.meter.meter_map,
                                notes.key_signature.found,
                                tonic_of(&notes),
-                               notes.key_signature.is_minor,
+                               key_material_of(notes.key_signature.found, notes.key_signature.is_minor),
                                notes.streams};
     AnalyzerResult *analysis = NULL;
     CHECKF(analyzer_hear(&hearing, test_hearing_defaults(), &analysis) == ANALYZER_OK && analysis, "hearing");
@@ -338,7 +344,7 @@ static void test_style_distance(void) {
            "tuning system");
     NoteEvent *events[2] = {make_event(tuning, 0, 60, 0, 1), make_event(tuning, 1, 62, 1, 1)};
     const int tiny_midi[2] = {60, 62};
-    AnalyzerHearing tiny = {(const NoteEvent *const *)events, 2, tiny_midi, NULL, false, 0, false, NULL};
+    AnalyzerHearing tiny = {(const NoteEvent *const *)events, 2, tiny_midi, NULL, false, 0, NULL, NULL};
     CHECKF(analyzer_hear(&tiny, test_hearing_defaults(), &analysis) == ANALYZER_OK && analysis, "tiny fragment");
     StyleComparison tiny_style = {0};
     if (sonatinas) {

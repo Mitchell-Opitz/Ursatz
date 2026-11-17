@@ -196,7 +196,7 @@ static void analyze(const PiecePlan *plan, Heard *heard) {
     hearing.meter = heard->rendered.meter_map;
     hearing.has_key = true;
     hearing.key_tonic_pitch_class = 0;
-    hearing.key_minor = false;
+    hearing.key_material = knowledge_snapshot_material(test_knowledge(), "omt.material.major");
     hearing.streams = heard->rendered.part_index;
     AnalyzerHearingOptions options = analyzer_hearing_options_default();
     options.analysis.knowledge = test_knowledge();

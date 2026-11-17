@@ -57,7 +57,7 @@ bool test_within(const cJSON *inner, const cJSON *outer) {
 }
 
 char *test_render_document(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
-    AnalysisDocument *document = analysis_document_build(input_path, notes, report);
+    AnalysisDocument *document = analysis_document_build(input_path, notes, report, test_knowledge());
     if (!document) {
         return NULL;
     }

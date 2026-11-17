@@ -18,6 +18,7 @@
 #include "pipeline/corpus_walk.h"
 #include "pipeline/run_file.h"
 #include "analysis/similarity/similarity_model.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/roman_numeral_grammar.h"
 #include "util/json_util.h"
 
@@ -281,7 +282,7 @@ SimilarResult similar_query_from_numerals(const char *text, SimilarQuery *query)
 typedef struct {
     char *numeral;
     int root;   /* pitch class */
-    bool minor; /* the mode of its key region */
+    const PitchMaterial *material; /* the material of its key region: the label's key word, read through the snapshot */
     long run;   /* chords of one run follow each other within one key region */
     unsigned long start_n, start_d, end_n, end_d;
     int start_measure, end_measure;
@@ -310,7 +311,7 @@ static const cJSON *entry_at(const cJSON *entries, const cJSON **cursor, size_t 
 
 /* The chords in time order, from the joined chord sequence (chord_sequence.h), which is the one owner of the join rule.
    *out is NULL when *count is 0. false on allocation failure or an entry that cannot be read. */
-static bool read_chords(const cJSON *document, DocChord **out, size_t *count) {
+static bool read_chords(const KnowledgeSnapshot *knowledge, const cJSON *document, DocChord **out, size_t *count) {
     AnalyzerChord *sequence = NULL;
     size_t sequence_count = 0;
     *out = NULL;
@@ -348,10 +349,17 @@ static bool read_chords(const cJSON *document, DocChord **out, size_t *count) {
             analyzer_chord_sequence_free(sequence, sequence_count);
             return false;
         }
-        size_t key_length = cJSON_IsString(key) ? strlen(key->valuestring) : 0;
+        /* the label is "<tonic> <key word>" */
+        const char *key_word = cJSON_IsString(key) ? strrchr(key->valuestring, ' ') : NULL;
+        const PitchMaterial *material = key_word ? knowledge_snapshot_material_named(knowledge, key_word + 1) : NULL;
+        if (!material) {
+            chords_free(chords, n);
+            analyzer_chord_sequence_free(sequence, sequence_count);
+            return false;
+        }
         chords[n++] = (DocChord){chord->numeral,
                                  chord->root_pitch_class,
-                                 key_length >= 5 && strcmp(key->valuestring + key_length - 5, "minor") == 0,
+                                 material,
                                  run,
                                  (unsigned long)chord->start.num,
                                  (unsigned long)chord->start.den,
@@ -373,11 +381,11 @@ static bool read_chords(const cJSON *document, DocChord **out, size_t *count) {
 
 /* The pitch class of a numeral's root above its tonic, in a major or a minor key; false for text that is not a numeral.
  */
-static bool numeral_root_offset(const char *numeral, bool minor, int *out) {
+static bool numeral_root_offset(const char *numeral, const PitchMaterial *key_material, const CommonPracticeMaterials *materials,
+                                int *out) {
     StandardTonalityNumeralText parsed;
     return standard_tonality_numeral_parse(numeral, &parsed) &&
-           standard_tonality_numeral_root_semitone(
-               &parsed, minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR, out);
+           standard_tonality_numeral_root_semitone_of(&parsed, key_material, materials, out);
 }
 
 /* The directed semitone step from one pitch class to another, -6 to +5. */
@@ -429,6 +437,8 @@ typedef struct {
     long *intervals[2];          /* a motive: its steps, in [0]; a progression: its root steps in a major, then a minor key */
     ContourDirection *directions; /* a motive only */
     SimilarityDuration *durations;
+    const KnowledgeSnapshot *knowledge; /* reads the key word of a document's key label */
+    CommonPracticeMaterials materials;
 } Search;
 
 static void search_free(Search *search) {
@@ -439,8 +449,12 @@ static void search_free(Search *search) {
     free(search->durations);
 }
 
-static SimilarResult search_prepare(Search *search, const SimilarQuery *query, const SimilarOptions *options) {
-    *search = (Search){.query = query, .options = options};
+static SimilarResult search_prepare(Search *search, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
+                                    const SimilarOptions *options) {
+    *search = (Search){.query = query, .options = options, .knowledge = knowledge};
+    if (!common_practice_materials_resolve(knowledge, &search->materials, NULL, 0)) {
+        return SIMILAR_ERR_ARGUMENT;
+    }
     SimilarityDimensionWeight weights[3];
     size_t weight_count = 0;
     bool motive = query->kind == SIMILAR_QUERY_MOTIVE;
@@ -484,7 +498,10 @@ static SimilarResult search_prepare(Search *search, const SimilarQuery *query, c
         int previous = 0;
         for (size_t i = 0; i < search->size; i++) {
             int offset;
-            if (!numeral_root_offset(query->numerals[i], mode == 1, &offset)) {
+            if (!numeral_root_offset(query->numerals[i],
+                                     common_practice_material(&search->materials, mode == 1 ? COMMON_PRACTICE_KEY_MINOR
+                                                                                              : COMMON_PRACTICE_KEY_MAJOR),
+                                     &search->materials, &offset)) {
                 return SIMILAR_ERR_QUERY;
             }
             if (i > 0) {
@@ -562,6 +579,12 @@ static bool motive_windows(const Search *search, const DocNote *notes, size_t co
     return ok;
 }
 
+/* Whether a chord's key region reads as a minor key (a minor third above the tonic). */
+static bool chord_minor(const DocChord *chord) {
+    CommonPracticeKeyMode mode;
+    return common_practice_key_mode_of(chord->material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
+}
+
 static bool progression_windows(const Search *search, const DocChord *chords, size_t count, Candidates *candidates) {
     size_t n = search->size;
     long *intervals = malloc((n - 1) * sizeof *intervals);
@@ -585,7 +608,7 @@ static bool progression_windows(const Search *search, const DocChord *chords, si
             matches += strcmp(chord->numeral, search->query->numerals[i]) == 0;
         }
         if (measured) {
-            ok = consider_window(search, search->intervals[chords[first].minor ? 1 : 0], first, intervals, durations, matches,
+            ok = consider_window(search, search->intervals[chord_minor(&chords[first]) ? 1 : 0], first, intervals, durations, matches,
                                  candidates);
         }
     }
@@ -664,7 +687,7 @@ static SimilarResult search_document(const Search *search, const char *piece, co
     size_t note_count = 0, chord_count = 0;
     Candidates candidates = {0};
     SimilarResult result = SIMILAR_OK;
-    if (!read_notes(document, &notes, &note_count) || (!motive && !read_chords(document, &chords, &chord_count))) {
+    if (!read_notes(document, &notes, &note_count) || (!motive && !read_chords(search->knowledge, document, &chords, &chord_count))) {
         result = SIMILAR_ERR_FORMAT;
     } else if (!(motive ? motive_windows(search, notes, note_count, &candidates)
                         : progression_windows(search, chords, chord_count, &candidates))) {
@@ -753,9 +776,9 @@ static bool search_walk_document(const char *piece_path, const char *document, c
     return true;
 }
 
-SimilarResult similar_material_find(const char *corpus_output_dir, const SimilarQuery *query, const SimilarOptions *options,
-                                    SimilarResults *results) {
-    if (!corpus_output_dir || !query || !results) {
+SimilarResult similar_material_find(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
+                                    const SimilarOptions *options, SimilarResults *results) {
+    if (!corpus_output_dir || !knowledge || !query || !results) {
         return SIMILAR_ERR_ARGUMENT;
     }
     SimilarOptions defaults = similar_options_default();
@@ -771,7 +794,7 @@ SimilarResult similar_material_find(const char *corpus_output_dir, const Similar
         return SIMILAR_ERR_ARGUMENT;
     }
     Search search;
-    SimilarResult result = search_prepare(&search, query, options);
+    SimilarResult result = search_prepare(&search, knowledge, query, options);
     if (result != SIMILAR_OK) {
         search_free(&search);
         return result;
