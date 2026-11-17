@@ -2,13 +2,13 @@
 
 #include "analysis_expansion.h"
 #include "form_test_util.h"
-#include "external_expansion_rules.h"
-#include "internal_expansion_rules.h"
-#include "expansion_placement.h"
-#include "external_expansion_kind.h"
-#include "internal_expansion_technique.h"
-#include "phrase_length_change.h"
-#include "phrase_level_form.h"
+#include "theory/form/external_expansion_rules.h"
+#include "theory/form/internal_expansion_rules.h"
+#include "theory/form/expansion_placement.h"
+#include "theory/form/external_expansion_kind.h"
+#include "theory/form/internal_expansion_technique.h"
+#include "theory/form/phrase_length_change.h"
+#include "theory/form/phrase_level_form.h"
 #include "interpretation_test_access.h"
 
 /* Expansion and contraction from the theme's own balance (an ending as long as its beginning), the internal technique evidence,

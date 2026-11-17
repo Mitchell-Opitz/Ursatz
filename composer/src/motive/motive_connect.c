@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include <standard-harmony/harmonic_function.h>
+#include <theory/harmony/harmonic_function.h>
 
 
 #include "motive/motive_internal.h"

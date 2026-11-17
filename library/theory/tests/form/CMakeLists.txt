@@ -1,0 +1,41 @@
+ursatz_test(standard_form_framework SOURCES test_framework.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_phrase_rules SOURCES test_phrase_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_segmentation_rules SOURCES test_segmentation_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_sentence_rules SOURCES test_sentence_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_period_rules SOURCES test_period_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_combination_rules SOURCES test_combination_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_beginning_rules SOURCES test_beginning_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_ending_rules SOURCES test_ending_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_hybrid_rules SOURCES test_hybrid_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_length_rules SOURCES test_length_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_internal_expansion_rules SOURCES test_internal_expansion_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_external_expansion_rules SOURCES test_external_expansion_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_continuation_trait SOURCES test_continuation_trait.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_expansion_placement SOURCES test_expansion_placement.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_external_expansion_kind SOURCES test_external_expansion_kind.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_idea_label SOURCES test_idea_label.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_internal_expansion_technique SOURCES test_internal_expansion_technique.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_phrase_beginning SOURCES test_phrase_beginning.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_phrase_ending SOURCES test_phrase_ending.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_phrase_length_change SOURCES test_phrase_length_change.c LIBS ursatz_theory)
+
+ursatz_test(standard_form_phrase_level_form SOURCES test_phrase_level_form.c LIBS ursatz_theory)

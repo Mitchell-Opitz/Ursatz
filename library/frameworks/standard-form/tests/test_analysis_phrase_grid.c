@@ -2,7 +2,7 @@
 #include "analysis_phrase_grid.h"
 #include "analysis_theme.h"
 #include "form_test_util.h"
-#include "phrase_level_form.h"
+#include "theory/form/phrase_level_form.h"
 #include "model/time/meter_arithmetic.h"
 #include <math.h>
 #include <stdlib.h>

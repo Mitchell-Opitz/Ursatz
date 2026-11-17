@@ -2,7 +2,7 @@
 #define URSATZ_FRAMEWORKS_GALANT_SCHEMAS_ANALYSIS_GALANT_ANALYSIS_MATCH_H
 
 #include "galant_analysis_input.h"
-#include "galant-schemas/galant_prototype.h"
+#include "theory/galant/galant_prototype.h"
 #include "model/interpretation/interpretation.h"
 #include "model/relationship/relationship.h"
 

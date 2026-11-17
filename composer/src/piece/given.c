@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-harmony/harmonic_function.h>
-#include <standard-harmony/harmony_functions.h>
+#include <theory/harmony/harmonic_function.h>
+#include <theory/harmony/harmony_functions.h>
 
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>

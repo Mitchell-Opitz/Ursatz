@@ -7,7 +7,7 @@
 #include "analysis_claim.h"
 #include "analysis_motive_match.h"
 #include "analysis_motive_shape.h"
-#include "phrase_ending.h"
+#include "theory/form/phrase_ending.h"
 #include "model/core/occurrence.h"
 #include "model/core/rational.h"
 #include "model/core/value.h"

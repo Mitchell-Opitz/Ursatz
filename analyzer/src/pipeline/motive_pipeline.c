@@ -7,14 +7,14 @@
 #include <limits.h>
 
 #include "analysis/outer_voice.h"
-#include "common-practice-minimal/key_vocabulary.h"
+#include "theory/tonality/key_vocabulary.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "model/core/rational.h"
 #include "pipeline/motive_features.h"
 #include "pipeline/motive_sketch_map.h"
 #include "model/pitch/pitch_numeric_value.h"
 #include "semantics/analysis_note.h"
-#include "semantics/motive_occurrence_kind.h"
+#include "theory/vocabulary/motive_occurrence_kind.h"
 #include "model/time/duration.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/meter_map.h"

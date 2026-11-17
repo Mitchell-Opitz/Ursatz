@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <standard-form/analysis/analysis_theme.h>
-#include <standard-form/phrase_level_form.h>
+#include <theory/form/phrase_level_form.h>
 #include <model/time/time_rational.h>
 #include <model/time/time_span.h>
 #include <ursatz_analyzer/analysis_report.h>

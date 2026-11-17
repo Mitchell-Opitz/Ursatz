@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <model/pitch/pitch_arithmetic.h>
-#include <standard-tonality/tonal_key.h>
+#include <theory/tonality/tonal_key.h>
 
 int util_absolute(int value) {
     return value < 0 ? -value : value;

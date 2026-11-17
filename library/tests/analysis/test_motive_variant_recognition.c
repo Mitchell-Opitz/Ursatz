@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive_variant_recognition.h"
-#include "semantics/non_chord_tone.h"
+#include "theory/vocabulary/non_chord_tone.h"
 
 /*
  * Analysis-regression tests for the variant recognizer. Each relation is applied to a fixture, the

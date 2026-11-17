@@ -1,0 +1,133 @@
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "theory/harmony/harmony_prolongation.h"
+#include "theory/tests/harmony/harmony_test_util.h"
+
+#define DO_TI_DO HARMONY_PROLONGATION_DO_TI_DO
+#define DO_RE_MI HARMONY_PROLONGATION_DO_RE_MI
+#define DO_RE_DO HARMONY_PROLONGATION_DO_RE_DO
+#define DO_FA_MI HARMONY_PROLONGATION_DO_FA_MI
+
+#define I CH(1)
+#define I6 CHI(1, 1)
+#define V6 CHI(5, 1)  /* the triad in first inversion */
+#define V65 CH7I(5, 1)
+#define V43 CH7I(5, 2)
+#define V42 CH7I(5, 3)
+
+static bool line_of(HarmonyChord a, HarmonyChord b, HarmonyChord c, HarmonyProlongationLine *line) {
+    HarmonyChord chords[3] = {a, b, c};
+    return harmony_prolongation_of(chords, line);
+}
+
+static HarmonyProlongationLine classify(HarmonyChord a, HarmonyChord b, HarmonyChord c) {
+    HarmonyProlongationLine line = HARMONY_PROLONGATION_LINE_COUNT;
+    assert(line_of(a, b, c, &line));
+    return line;
+}
+
+static bool classifies(HarmonyChord a, HarmonyChord b, HarmonyChord c) {
+    HarmonyProlongationLine line = DO_FA_MI;
+    return line_of(a, b, c, &line);
+}
+
+static void test_the_four_progressions(void) {
+    assert(classify(I, V65, I) == DO_TI_DO);
+    assert(classify(I, V6, I) == DO_TI_DO); /* V6, the triad, is also possible */
+    assert(classify(I, V43, I6) == DO_RE_MI);
+    assert(classify(I, V43, I) == DO_RE_DO);
+    assert(classify(I, V42, I6) == DO_FA_MI);
+}
+
+static void test_other_progressions_are_not_classified(void) {
+    /* V4/2 does not go to root position I, and V6/5 does not go to I6. */
+    assert(!classifies(I, V42, I));
+    assert(!classifies(I, V65, I6));
+    assert(!classifies(I, V6, I6));
+    /* A V in root position, or the triad in second inversion, is not an inverted V7. */
+    assert(!classifies(I, CH(5), I));
+    assert(!classifies(I, CH7(5), I));
+    assert(!classifies(I, CHI(5, 2), I6));
+    assert(!classifies(I, CHI(5, 2), I));
+    /* The first chord is root position I, and the last I or I6. */
+    assert(!classifies(I6, V43, I6));
+    assert(!classifies(I6, V65, I));
+    assert(!classifies(CH(4), V65, I));
+    assert(!classifies(I, V65, CH(4)));
+    assert(!classifies(I, V65, CHI(1, 2)));
+    /* A seventh chord on the tonic, or the cadential 6/4, is not the tonic here. */
+    assert(!classifies(CH7(1), V65, I));
+    assert(!classifies(I, V65, CH7(1)));
+    assert(!classifies(CADENTIAL_CHORD, V65, I));
+    /* The middle chord is V. */
+    assert(!classifies(I, CH7I(4, 1), I));
+    assert(!classifies(I, CHI(2, 1), I));
+}
+
+static void test_leading_tone_chords_take_the_place_of_v(void) {
+    /* ti in the bass: vii7, in the place of V6 or V6/5. */
+    assert(classify(I, VII7(0), I) == DO_TI_DO);
+    assert(classify(I, VII_HALF(0), I) == DO_TI_DO);
+    assert(classify(I, VIIM7(0), I) == DO_TI_DO);
+    /* re in the bass: vii6 (the triad) or vii6/5, in the place of V4/3. */
+    assert(classify(I, VII(1), I6) == DO_RE_MI);
+    assert(classify(I, VII7(1), I6) == DO_RE_MI);
+    assert(classify(I, VII_HALF(1), I6) == DO_RE_MI);
+    assert(classify(I, VII(1), I) == DO_RE_DO);
+    assert(classify(I, VII7(1), I) == DO_RE_DO);
+    assert(classify(I, VIIM(1), I6) == DO_RE_MI);
+    assert(classify(I, VIIM7(1), I) == DO_RE_DO);
+    /* fa in the bass: vii4/3, in the place of V4/2. */
+    assert(classify(I, VII7(2), I6) == DO_FA_MI);
+    assert(classify(I, VII_HALF(2), I6) == DO_FA_MI);
+    assert(classify(I, VIIM7(2), I6) == DO_FA_MI);
+}
+
+static void test_each_leading_tone_chord_takes_the_line_of_its_bass(void) {
+    /* The same bass note, the same progression, with V or vii. */
+    assert(classify(I, V65, I) == classify(I, VII7(0), I));
+    assert(classify(I, V43, I6) == classify(I, VII7(1), I6));
+    assert(classify(I, V43, I) == classify(I, VII7(1), I));
+    assert(classify(I, V42, I6) == classify(I, VII7(2), I6));
+}
+
+static void test_leading_tone_chords_that_are_not_used(void) {
+    /* The triad is only in first inversion: any other inversion is a dissonance with
+       the bass that composers tend to avoid. */
+    assert(!classifies(I, VII(0), I));
+    assert(!classifies(I, VII(2), I6));
+    assert(!classifies(I, VII(2), I));
+    /* vii4/2 (le in the bass) is not an inversion of V7 and is not modeled. */
+    assert(!classifies(I, VII7(3), I6));
+    assert(!classifies(I, VII7(3), I));
+    assert(!classifies(I, VIIM7(3), I6));
+    /* Each goes with the last chord its bass note does: ti to do, not to mi; re to either; fa to mi. */
+    assert(!classifies(I, VII7(0), I6));
+    assert(!classifies(I, VII7(2), I));
+    /* The chord has to be vii: vi, or ii, are not. */
+    assert(!classifies(I, CH7I(6, 0), I));
+    assert(!classifies(I, CH7I(2, 2), I6));
+}
+
+static void test_invalid_inputs(void) {
+    HarmonyProlongationLine line = DO_FA_MI;
+    HarmonyChord bad[3] = {I, CH(9), I};
+    HarmonyChord ok[3] = {I, V65, I};
+    assert(!harmony_prolongation_of(bad, &line));
+    assert(!harmony_prolongation_of(NULL, &line));
+    assert(!harmony_prolongation_of(ok, NULL));
+    assert(line == DO_FA_MI);
+}
+
+int main(void) {
+    test_the_four_progressions();
+    test_other_progressions_are_not_classified();
+    test_leading_tone_chords_take_the_place_of_v();
+    test_each_leading_tone_chord_takes_the_line_of_its_bass();
+    test_leading_tone_chords_that_are_not_used();
+    test_invalid_inputs();
+    printf("test_harmony_prolongation: ok\n");
+    return 0;
+}

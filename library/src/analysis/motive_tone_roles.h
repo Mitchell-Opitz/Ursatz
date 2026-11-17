@@ -10,7 +10,7 @@
 #include <stddef.h>
 
 #include "analysis/motive_sketch.h"
-#include "semantics/non_chord_tone.h"
+#include "theory/vocabulary/non_chord_tone.h"
 #include "semantics/tone_line.h"
 
 /*

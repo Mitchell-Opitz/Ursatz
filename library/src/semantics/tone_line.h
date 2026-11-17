@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "model/core/rational.h"
-#include "semantics/non_chord_tone.h"
+#include "theory/vocabulary/non_chord_tone.h"
 
 /*
  * ToneLine (Value, L6): the types of an injected non-chord-tone classifier. A line is the notes of one voice in

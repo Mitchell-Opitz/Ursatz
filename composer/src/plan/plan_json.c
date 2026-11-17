@@ -7,11 +7,11 @@
 
 #include <cJSON.h>
 #include <model/pitch/pitch_arithmetic.h>
-#include <standard-harmony/harmonic_function.h>
-#include <standard-tonality/tonal_key.h>
+#include <theory/harmony/harmonic_function.h>
+#include <theory/tonality/tonal_key.h>
 #include <ursatz_analyzer/version.h>
 #include <ursatz_composer/composer.h>
-#include <galant-schemas/galant_prototypes.h>
+#include <theory/galant/galant_prototypes.h>
 #include <standard-texture/texture_rules.h>
 
 #include <ursatz_composer/constraint.h>

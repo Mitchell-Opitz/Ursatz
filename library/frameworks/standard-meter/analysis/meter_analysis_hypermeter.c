@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hypermeter_rules.h"
+#include "theory/meter/hypermeter_rules.h"
 #include "model/identity/entity_id.h"
 #include "meter_analysis_claim.h"
 #include "meter_analysis_position.h"

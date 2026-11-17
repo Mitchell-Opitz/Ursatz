@@ -14,4 +14,3 @@ ursatz_test(standard_texture_analysis_features SOURCES test_analysis_features.c 
 ursatz_test(standard_texture_analysis_classify SOURCES test_analysis_classify.c LIBS standard_texture)
 
 ursatz_test(standard_texture_analysis_note SOURCES test_texture_analysis_note.c LIBS standard_texture VALGRIND)
-

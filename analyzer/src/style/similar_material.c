@@ -18,7 +18,7 @@
 #include "pipeline/corpus_walk.h"
 #include "pipeline/run_file.h"
 #include "query/similarity_model.h"
-#include "standard-tonality/roman_numeral_grammar.h"
+#include "theory/tonality/roman_numeral_grammar.h"
 #include "util/json_util.h"
 
 /* ---- reading the document ---- */

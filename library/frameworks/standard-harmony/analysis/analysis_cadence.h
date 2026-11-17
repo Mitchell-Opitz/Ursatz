@@ -11,8 +11,8 @@
 
 #include "analysis_input.h"
 #include "model/interpretation/interpretation.h"
-#include "semantics/beat_strength.h"
-#include "semantics/cadence_type.h"
+#include "theory/vocabulary/beat_strength.h"
+#include "theory/vocabulary/cadence_type.h"
 #include "model/structure/cadence.h"
 #include "model/time/time_span.h"
 

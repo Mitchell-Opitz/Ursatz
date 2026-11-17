@@ -1,7 +1,7 @@
 #include <ursatz_composer/form_spec.h>
 
 #include <cJSON.h>
-#include <standard-harmony/harmony_cadence_kinds.h>
+#include <theory/harmony/harmony_cadence_kinds.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-form/phrase_beginning.h>
-#include <standard-form/phrase_ending.h>
-#include <standard-form/phrase_level_form.h>
+#include <theory/form/phrase_beginning.h>
+#include <theory/form/phrase_ending.h>
+#include <theory/form/phrase_level_form.h>
 
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/grow.h>

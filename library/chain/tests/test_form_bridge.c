@@ -9,7 +9,7 @@
 #include "model/events/note_event.h"
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_identity.h"
-#include "semantics/cadence_type.h"
+#include "theory/vocabulary/cadence_type.h"
 #include "semantics/contour.h"
 #include "semantics/rhythmic_pattern.h"
 #include "model/time/duration.h"

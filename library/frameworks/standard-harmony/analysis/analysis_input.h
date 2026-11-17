@@ -4,12 +4,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "standard-harmony/harmony_applied.h"
-#include "standard-harmony/harmony_chord.h"
+#include "theory/harmony/harmony_applied.h"
+#include "theory/harmony/harmony_chord.h"
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_segment.h"
-#include "semantics/applied_chord_kind.h"
-#include "semantics/beat_strength.h"
+#include "theory/vocabulary/applied_chord_kind.h"
+#include "theory/vocabulary/beat_strength.h"
 #include "model/time/duration.h"
 #include "model/time/metrical_position.h"
 #include "model/time/time_span.h"

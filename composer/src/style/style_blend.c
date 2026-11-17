@@ -8,8 +8,8 @@
 #include "style/style_internal.h"
 
 #include <model/identity/entity_id.h>
-#include <theory/style_model_blend.h>
-#include <theory/style_model_build.h>
+#include <theory/style/style_model_blend.h>
+#include <theory/style/style_model_build.h>
 
 
 /* A category's statistics are brought to one total: the least common multiple of its labels' totals when that is below

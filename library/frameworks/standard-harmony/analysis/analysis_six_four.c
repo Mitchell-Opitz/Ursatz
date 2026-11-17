@@ -6,7 +6,7 @@
 
 #include "analysis_claim.h"
 #include "model/core/value.h"
-#include "harmony_six_four.h"
+#include "theory/harmony/harmony_six_four.h"
 #include "model/identity/entity_id.h"
 
 static bool diatonic(const HarmonySegment *segment) {

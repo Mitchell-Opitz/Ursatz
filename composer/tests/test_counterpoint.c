@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-counterpoint/counterpoint_rules.h>
-#include <standard-counterpoint/counterpoint_slots.h>
-#include <standard-counterpoint/first_species_rules.h>
-#include <standard-counterpoint/fourth_species_rules.h>
+#include <theory/counterpoint/counterpoint_rules.h>
+#include <theory/counterpoint/counterpoint_slots.h>
+#include <theory/counterpoint/first_species_rules.h>
+#include <theory/counterpoint/fourth_species_rules.h>
 #include <model/pitch/pitch_spelling.h>
-#include <standard-counterpoint/second_species_rules.h>
-#include <standard-counterpoint/third_species_rules.h>
+#include <theory/counterpoint/second_species_rules.h>
+#include <theory/counterpoint/third_species_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/counterpoint.h>

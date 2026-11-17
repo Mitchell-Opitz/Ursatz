@@ -2,11 +2,11 @@
 
 #include <string.h>
 
-#include <standard-counterpoint/harmonic_rules.h>
-#include <standard-counterpoint/melodic_rules.h>
-#include <standard-harmony/harmonic_function.h>
-#include <standard-harmony/harmony_phrase_rules.h>
-#include <standard-harmony/harmony_resolution_rules.h>
+#include <theory/counterpoint/harmonic_rules.h>
+#include <theory/counterpoint/melodic_rules.h>
+#include <theory/harmony/harmonic_function.h>
+#include <theory/harmony/harmony_phrase_rules.h>
+#include <theory/harmony/harmony_resolution_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_phrase.h>

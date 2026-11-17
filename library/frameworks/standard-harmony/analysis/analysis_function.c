@@ -6,8 +6,8 @@
 
 #include "analysis_claim.h"
 #include "model/core/value.h"
-#include "harmony_applied.h"
-#include "harmony_functions.h"
+#include "theory/harmony/harmony_applied.h"
+#include "theory/harmony/harmony_functions.h"
 #include "model/identity/entity_id.h"
 
 static bool function_of(const HarmonySegment *segment, HarmonyFunctionResult *result) {

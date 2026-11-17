@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "chord_vocabulary.h"
-#include "chord_vocabulary_seventh.h"
+#include "theory/tonality/chord_vocabulary.h"
+#include "theory/tonality/chord_vocabulary_seventh.h"
 #include "model/core/rational.h"
 #include "model/identity/entity_id.h"
 #include "model/pitch/midi_pitch.h"

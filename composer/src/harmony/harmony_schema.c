@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <galant-schemas/galant_degree.h>
+#include <theory/galant/galant_degree.h>
 
 #include "harmony/harmony_internal.h"
 

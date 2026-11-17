@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <semantics/analysis_key.h>
-#include <standard-harmony/harmonic_function.h>
+#include <theory/harmony/harmonic_function.h>
 
 #include <ursatz_composer/piece_plan.h>
 

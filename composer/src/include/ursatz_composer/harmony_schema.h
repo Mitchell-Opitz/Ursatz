@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <galant-schemas/galant_prototypes.h>
+#include <theory/galant/galant_prototypes.h>
 
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/harmony_bass.h>

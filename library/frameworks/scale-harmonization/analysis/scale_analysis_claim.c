@@ -1,10 +1,10 @@
 #include "scale_analysis_claim.h"
 
 
-#include "scale_framework.h"
+#include "theory/galant/scale_framework.h"
 #include "model/identity/entity_id.h"
 #include "model/interpretation/claim_interpretation.h"
-#include "theory/framework.h"
+#include "theory/framework/framework.h"
 
 Interpretation *scale_analysis_interpretation(const char *interpretation_id, const char *target_id,
                                                       const char *claim_type, const void *content, size_t size,

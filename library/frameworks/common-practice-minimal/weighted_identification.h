@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "chord_vocabulary.h"
-#include "chord_vocabulary_seventh.h"
-#include "key_vocabulary.h"
+#include "theory/tonality/chord_vocabulary.h"
+#include "theory/tonality/chord_vocabulary_seventh.h"
+#include "theory/tonality/key_vocabulary.h"
 #include "semantics/analysis_note.h"
-#include "semantics/beat_strength.h"
+#include "theory/vocabulary/beat_strength.h"
 #include "semantics/tone_line.h"
 #include "model/time/time_span.h"
 

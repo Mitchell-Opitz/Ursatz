@@ -6,7 +6,7 @@
 
 #include "meter_analysis_claim.h"
 #include "meter_analysis_position.h"
-#include "syncopation_rules.h"
+#include "theory/meter/syncopation_rules.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/score_time.h"
 

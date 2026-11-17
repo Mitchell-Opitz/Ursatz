@@ -6,7 +6,7 @@
 
 #include "analysis_input.h"
 #include "analysis_voices.h"
-#include "standard-harmony/harmony_resolution_rules.h"
+#include "theory/harmony/harmony_resolution_rules.h"
 #include "model/interpretation/interpretation.h"
 #include "model/structure/structure.h"
 

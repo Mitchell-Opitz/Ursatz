@@ -12,7 +12,7 @@
 #include "model/pitch/pitch_identity.h"
 #include "model/pitch/pitch_spelling.h"
 #include "model/pitch/tuning_system.h"
-#include "standard-meter/segmentation_beat_grid.h"
+#include "theory/meter/segmentation_beat_grid.h"
 #include "model/time/duration.h"
 #include "model/core/rational.h"
 #include "model/time/time_rational.h"

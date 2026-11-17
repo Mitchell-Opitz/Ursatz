@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include <standard-tonality/roman_numeral_grammar.h>
+#include <theory/tonality/roman_numeral_grammar.h>
 
 HarmonyMode harmony_mode_of(KeyStructureMode mode) {
     return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;

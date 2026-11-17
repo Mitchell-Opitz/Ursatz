@@ -1,5 +1,5 @@
 #include "standard-form/analysis/analysis_motive.h"
-#include "standard-harmony/harmony_cadence_rules.h"
+#include "theory/harmony/harmony_cadence_rules.h"
 #include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/kernel_owners.h"
 #include "hand_cadences.h"

@@ -1,10 +1,10 @@
 #include "pipeline/voicing_check.h"
 
-#include "semantics/voice_part.h"
-#include "theory/framework.h"
-#include "standard-voicing/framework.h"
-#include "standard-voicing/spacing_rules.h"
-#include "standard-voicing/voicing_chord.h"
+#include "theory/vocabulary/voice_part.h"
+#include "theory/framework/framework.h"
+#include "theory/voicing/framework.h"
+#include "theory/voicing/spacing_rules.h"
+#include "theory/voicing/voicing_chord.h"
 
 
 int voicing_first_wide_spacing(const PitchSpelling *const voices[4]) {

@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-#include "harmony_functions.h"
+#include "theory/harmony/harmony_functions.h"
 #include "model/time/musical_time.h"
 
 #define SHARE_MIN 50

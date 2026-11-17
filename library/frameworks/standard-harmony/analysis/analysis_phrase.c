@@ -7,7 +7,7 @@
 #include "analysis_claim.h"
 #include "analysis_six_four.h"
 #include "model/core/value.h"
-#include "harmony_phrase_labels.h"
+#include "theory/harmony/harmony_phrase_labels.h"
 #include "model/identity/entity_id.h"
 
 static bool same_chord(const HarmonyChord *a, const HarmonyChord *b) {

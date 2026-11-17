@@ -2,9 +2,9 @@
 
 #include <stdlib.h>
 
-#include "beat_grid.h"
+#include "theory/meter/beat_grid.h"
 #include "model/core/rational.h"
-#include "meter_class_rules.h"
+#include "theory/meter/meter_class_rules.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/duration.h"
 #include "model/time/metrical_position.h"

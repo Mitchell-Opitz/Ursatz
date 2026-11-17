@@ -5,8 +5,8 @@
 #include "counterpoint/counterpoint_internal.h"
 #include "util/util.h"
 
-#include <standard-counterpoint/harmonic_rules.h>
-#include <standard-counterpoint/melodic_rules.h>
+#include <theory/counterpoint/harmonic_rules.h>
+#include <theory/counterpoint/melodic_rules.h>
 
 /*
  * The beam search of the counterpoint operator. A state is the counter-melody written so far, in slots (counterpoint_

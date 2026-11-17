@@ -2,7 +2,7 @@
 
 #include "analysis_ideas.h"
 #include "form_test_util.h"
-#include "idea_label.h"
+#include "theory/form/idea_label.h"
 #include "interpretation_test_access.h"
 
 /* Ideas and subphrases of each phrase by standard-form's length conventions, labelled by similarity to the basic idea. */

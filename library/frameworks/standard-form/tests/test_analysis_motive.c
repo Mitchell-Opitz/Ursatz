@@ -3,7 +3,7 @@
 #include "analysis_motive.h"
 #include "form_test_util.h"
 #include "model/interpretation/uncertainty.h"
-#include "phrase_ending.h"
+#include "theory/form/phrase_ending.h"
 #include "interpretation_test_access.h"
 #include "relationship_test_access.h"
 #include "structure_test_access.h"

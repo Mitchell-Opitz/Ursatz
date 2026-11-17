@@ -6,7 +6,7 @@
 #include "model/events/note_event.h"
 #include "standard-texture/framework.h"
 #include "standard-texture/analysis/texture_analysis_classify.h"
-#include "theory/framework.h"
+#include "theory/framework/framework.h"
 #include "model/core/rational.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"

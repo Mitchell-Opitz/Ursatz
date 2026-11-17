@@ -3,10 +3,10 @@
 #include <stdio.h>
 
 #include "model/core/entity.h"
-#include "framework.h"
+#include "theory/meter/framework.h"
 #include "model/identity/entity_id.h"
 #include "model/interpretation/claim_interpretation.h"
-#include "theory/framework.h"
+#include "theory/framework/framework.h"
 
 Structure *standard_meter_analysis_group(const char *shell_id, const char *const *note_ids, size_t count) {
     return claim_interpretation_note_group("standard-meter", shell_id, note_ids, count);

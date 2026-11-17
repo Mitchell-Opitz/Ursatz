@@ -12,7 +12,7 @@
 #include <model/pitch/pitch_identity.h>
 #include <model/pitch/pitch_spelling.h>
 #include <model/pitch/tuning_system.h>
-#include <standard-tonality/tonal_key.h>
+#include <theory/tonality/tonal_key.h>
 #include <model/time/duration.h>
 #include <model/time/time_rational.h>
 #include <model/time/note_value.h>

@@ -7,11 +7,11 @@
 #include "model/core/framework_reference.h"
 #include "model/core/provenance_reference.h"
 #include "model/core/value.h"
-#include "framework.h"
+#include "theory/tonality/common_practice_framework.h"
 #include "model/interpretation/interpretation.h"
 #include "model/interpretation/uncertainty.h"
 #include "model/pitch/midi_pitch.h"
-#include "standard-tonality/tonal_key.h"
+#include "theory/tonality/tonal_key.h"
 
 /* [degree - 1][alteration + 1]: flat, natural, sharp. */
 static const char *const DEGREE_LABELS[7][3] = {{"b1", "1", "#1"}, {"b2", "2", "#2"}, {"b3", "3", "#3"},

@@ -2,10 +2,10 @@
 
 #include <stdbool.h>
 
-#include "framework.h"
+#include "theory/counterpoint/framework.h"
 #include "model/identity/entity_id.h"
 #include "model/interpretation/claim_interpretation.h"
-#include "theory/framework.h"
+#include "theory/framework/framework.h"
 
 Structure *standard_counterpoint_analysis_note_group(const char *shell_id, const char *const *note_ids, size_t count) {
     return claim_interpretation_note_group("standard-counterpoint", shell_id, note_ids, count);

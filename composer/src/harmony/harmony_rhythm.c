@@ -1,6 +1,6 @@
 #include "harmony/harmony_internal.h"
 
-#include <standard-meter/metric_position_rules.h>
+#include <theory/meter/metric_position_rules.h>
 #include <model/time/note_value.h>
 #include <model/time/time_signature.h>
 

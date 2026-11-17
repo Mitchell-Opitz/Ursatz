@@ -5,8 +5,8 @@
 
 #include "io/midi_importer.h"
 #include "../../../tests/io/midi_import_split.h"
-#include "meter_test_util.h"
-#include "segmentation_beat_grid.h"
+#include "theory/tests/meter/meter_test_util.h"
+#include "theory/meter/segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
 #include "model/core/rational.h"
 #include "model/time/time_rational.h"

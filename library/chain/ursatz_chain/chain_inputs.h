@@ -19,7 +19,7 @@
 #include "standard-tonality/analysis/roman_numeral_adapter.h"
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_note.h"
-#include "semantics/beat_strength.h"
+#include "theory/vocabulary/beat_strength.h"
 #include "semantics/voice_grid.h"
 #include "semantics/sonority_segmentation.h"
 #include "model/time/meter_map.h"

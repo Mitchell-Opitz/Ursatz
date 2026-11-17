@@ -3,8 +3,8 @@
 #include <math.h>
 #include <string.h>
 
-#include "roman_numeral_analysis_rules.h"
-#include "triad_in_key_rules.h"
+#include "theory/tonality/roman_numeral_analysis_rules.h"
+#include "theory/tonality/triad_in_key_rules.h"
 #include "model/pitch/midi_pitch.h"
 
 static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};

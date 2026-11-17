@@ -11,7 +11,7 @@
 
 #include "model/identity/entity_id.h"
 #include "model/interpretation/key.h"
-#include "key_vocabulary.h"
+#include "theory/tonality/key_vocabulary.h"
 
 /*
  * Deterministic, single-answer key identification for

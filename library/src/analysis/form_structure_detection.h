@@ -5,7 +5,7 @@
 
 #include "model/containers/section.h"
 #include "model/relationship/relationship.h"
-#include "semantics/cadence_type.h"
+#include "theory/vocabulary/cadence_type.h"
 #include "model/structure/phrase_occurrence.h"
 
 /*

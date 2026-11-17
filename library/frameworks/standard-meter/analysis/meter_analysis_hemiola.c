@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hemiola_rules.h"
+#include "theory/meter/hemiola_rules.h"
 #include "meter_analysis_claim.h"
 #include "meter_analysis_position.h"
 #include "model/time/meter_arithmetic.h"

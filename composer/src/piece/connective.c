@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-counterpoint/melodic_rules.h>
+#include <theory/counterpoint/melodic_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>

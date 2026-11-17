@@ -12,7 +12,7 @@
 #include "../import_notes_test_util.h"
 #include "io/midi_importer.h"
 #include "model/pitch/pitch_arithmetic.h"
-#include "standard-meter/segmentation_beat_grid.h"
+#include "theory/meter/segmentation_beat_grid.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "../rational_test_util.h"
 

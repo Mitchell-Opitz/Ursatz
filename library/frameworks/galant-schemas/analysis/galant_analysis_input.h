@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "galant-schemas/galant_degree.h"
+#include "theory/galant/galant_degree.h"
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_segment.h"
-#include "semantics/beat_strength.h"
+#include "theory/vocabulary/beat_strength.h"
 #include "model/time/metrical_position.h"
 #include "model/time/time_span.h"
 

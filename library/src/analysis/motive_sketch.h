@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "model/core/rational.h"
-#include "semantics/non_chord_tone.h"
+#include "theory/vocabulary/non_chord_tone.h"
 #include "model/time/time_rational.h"
 
 /*

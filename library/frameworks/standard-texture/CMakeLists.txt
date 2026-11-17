@@ -22,6 +22,8 @@ ursatz_public_headers(standard_texture
         texture_rules.h
 )
 target_link_libraries(standard_texture PUBLIC ursatz)
+# An analysis file includes its former framework's theory headers by their path from library/.
+target_include_directories(standard_texture PRIVATE ${PROJECT_SOURCE_DIR})
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

@@ -7,7 +7,7 @@
 
 #include "model/interpretation/chord.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
-#include "standard-meter/segmentation_beat_grid.h"
+#include "theory/meter/segmentation_beat_grid.h"
 #include "standard-tonality/analysis/applied_chords.h"
 #include "model/time/time_span.h"
 #include "standard-form/analysis/analysis_phrase_grid.h"

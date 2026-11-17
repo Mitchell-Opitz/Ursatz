@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "outer_scale_degrees.h"
-#include "standard-tonality/tonal_key.h"
+#include "theory/tonality/tonal_key.h"
 
 /*
  * Scale degree number tests: all 12 pitch classes in major and minor over every tonic agree with the label, and

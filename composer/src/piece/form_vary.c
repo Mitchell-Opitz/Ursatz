@@ -5,7 +5,7 @@
 #include "piece/form_return_internal.h"
 #include "util/util.h"
 
-#include <standard-counterpoint/melodic_rules.h>
+#include <theory/counterpoint/melodic_rules.h>
 
 /*
  * The variations of a returning section (R-070), made on the copy form-return moved onto the target: ORNAMENT adds

@@ -7,7 +7,7 @@
 
 #include "model/identity/entity_id.h"
 #include "meter_analysis_input.h"
-#include "meter_test_util.h"
+#include "theory/tests/meter/meter_test_util.h"
 #include "model/time/meter_map.h"
 #include "model/time/musical_time.h"
 #include "model/time/time_span.h"

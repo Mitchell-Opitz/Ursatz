@@ -5,14 +5,14 @@
 #include <string.h>
 
 #include <common-practice-minimal/non_chord_tones.h>
-#include <standard-counterpoint/consonance_rules.h>
-#include <standard-counterpoint/counterpoint_limits.h>
-#include <standard-counterpoint/counterpoint_line.h>
-#include <standard-counterpoint/harmonic_rules.h>
-#include <standard-harmony/harmony_resolution_rules.h>
-#include <standard-counterpoint/melodic_rules.h>
+#include <theory/counterpoint/consonance_rules.h>
+#include <theory/counterpoint/counterpoint_limits.h>
+#include <theory/counterpoint/counterpoint_line.h>
+#include <theory/counterpoint/harmonic_rules.h>
+#include <theory/harmony/harmony_resolution_rules.h>
+#include <theory/counterpoint/melodic_rules.h>
 #include <model/pitch/pitch_spelling.h>
-#include <semantics/non_chord_tone.h>
+#include <theory/vocabulary/non_chord_tone.h>
 
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>

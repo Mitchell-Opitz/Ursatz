@@ -1,0 +1,19 @@
+ursatz_test_includes()
+
+ursatz_test(standard_voicing_framework SOURCES test_framework.c LIBS ursatz_theory)
+
+ursatz_test(standard_voicing_stem_rules SOURCES test_stem_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_voicing_construction_rules SOURCES test_construction_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_voicing_range_rules SOURCES test_range_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_voicing_spacing_rules SOURCES test_spacing_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_voicing_crossing_rules SOURCES test_crossing_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_voicing_doubling_rules SOURCES test_doubling_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_voicing_voicing_rules SOURCES test_voicing_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_voicing_doubling_reading SOURCES test_doubling_reading.c LIBS ursatz_theory)

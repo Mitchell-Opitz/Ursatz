@@ -6,8 +6,8 @@
 #include <string.h>
 
 #include "galant_analysis_claim.h"
-#include "galant_matching_rules.h"
-#include "galant_prototypes.h"
+#include "theory/galant/galant_matching_rules.h"
+#include "theory/galant/galant_prototypes.h"
 #include "model/core/rational.h"
 #include "model/core/value.h"
 #include "model/identity/entity_id.h"

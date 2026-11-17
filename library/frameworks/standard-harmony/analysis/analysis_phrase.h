@@ -6,8 +6,8 @@
 
 #include "analysis_input.h"
 #include "model/interpretation/interpretation.h"
-#include "standard-harmony/phrase_model_label.h"
-#include "semantics/cadence_type.h"
+#include "theory/harmony/phrase_model_label.h"
+#include "theory/vocabulary/cadence_type.h"
 
 /*
  * Phrase model labels per segment (the standard-harmony analysis adapter, step 2). Phrases and cadences do not

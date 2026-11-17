@@ -1,6 +1,6 @@
 #include "framework.h"
 
-#include "theory/framework_singleton.h"
+#include "theory/framework/framework_singleton.h"
 
 static FrameworkSingleton g_singleton = FRAMEWORK_SINGLETON_INIT("standard-texture-v1");
 

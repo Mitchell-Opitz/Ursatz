@@ -5,18 +5,18 @@
 #include <string.h>
 
 #include "analysis_claim.h"
-#include "beginning_rules.h"
-#include "combination_rules.h"
+#include "theory/form/beginning_rules.h"
+#include "theory/form/combination_rules.h"
 #include "model/core/value.h"
-#include "ending_rules.h"
-#include "hybrid_rules.h"
-#include "period_rules.h"
-#include "phrase_rules.h"
-#include "idea_label.h"
-#include "phrase_beginning.h"
-#include "phrase_ending.h"
-#include "phrase_level_form.h"
-#include "sentence_rules.h"
+#include "theory/form/ending_rules.h"
+#include "theory/form/hybrid_rules.h"
+#include "theory/form/period_rules.h"
+#include "theory/form/phrase_rules.h"
+#include "theory/form/idea_label.h"
+#include "theory/form/phrase_beginning.h"
+#include "theory/form/phrase_ending.h"
+#include "theory/form/phrase_level_form.h"
+#include "theory/form/sentence_rules.h"
 
 static double combine(double a, double b) {
     return 1.0 - (1.0 - a) * (1.0 - b);

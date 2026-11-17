@@ -1,0 +1,49 @@
+ursatz_test(standard_harmony_framework SOURCES test_framework.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_functions SOURCES test_harmony_functions.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_phrase_rules SOURCES test_harmony_phrase_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_cadence_rules SOURCES test_harmony_cadence_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_cadence_kinds SOURCES test_harmony_cadence_kinds.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_strong_predominants SOURCES test_harmony_strong_predominants.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_steps SOURCES test_harmony_steps.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_prolongation SOURCES test_harmony_prolongation.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_phrase_labels SOURCES test_harmony_phrase_labels.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_six_four SOURCES test_harmony_six_four.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_plagal SOURCES test_harmony_plagal.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_deceptive SOURCES test_harmony_deceptive.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_predominant_seventh SOURCES test_harmony_predominant_seventh.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_applied SOURCES test_harmony_applied.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_related_key SOURCES test_harmony_related_key.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_pivot SOURCES test_harmony_pivot.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_key_change SOURCES test_harmony_key_change.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_period_ranking SOURCES test_harmony_period_ranking.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_applied_function SOURCES test_harmony_applied_function.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_harmonic_function SOURCES test_harmonic_function.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_phrase_model_label SOURCES test_phrase_model_label.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_six_four_type SOURCES test_six_four_type.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_resolution_rules SOURCES test_harmony_resolution_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_rule_table SOURCES test_harmony_rule_table.c LIBS ursatz_theory)
+
+ursatz_test(standard_harmony_applied_label_grammar SOURCES test_harmony_applied_label_grammar.c LIBS ursatz_theory)

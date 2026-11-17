@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "analysis_input.h"
-#include "standard-harmony/harmonic_function.h"
+#include "theory/harmony/harmonic_function.h"
 #include "model/interpretation/interpretation.h"
 #include "model/relationship/relationship.h"
 

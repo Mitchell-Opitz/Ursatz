@@ -5,8 +5,8 @@
 #include <stdlib.h>
 
 #include "model/identity/entity_id.h"
-#include "theory/framework.h"
-#include "theory/framework_internal.h"
+#include "theory/framework/framework.h"
+#include "theory/framework/framework_internal.h"
 
 /* What the tests do with a Framework: destroy it and compare identities. No application does, so these are not in theory/framework.h. */
 

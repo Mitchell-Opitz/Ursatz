@@ -2,10 +2,10 @@
 
 #include "analysis_theme.h"
 #include "form_test_util.h"
-#include "hybrid_rules.h"
-#include "phrase_beginning.h"
-#include "phrase_ending.h"
-#include "phrase_level_form.h"
+#include "theory/form/hybrid_rules.h"
+#include "theory/form/phrase_beginning.h"
+#include "theory/form/phrase_ending.h"
+#include "theory/form/phrase_level_form.h"
 #include "interpretation_test_access.h"
 #include "relationship_test_access.h"
 

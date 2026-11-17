@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <semantics/cadence_type.h>
+#include <theory/vocabulary/cadence_type.h>
 #include <ursatz_analyzer/staleness.h>
 
 #include <ursatz_composer/explain.h>

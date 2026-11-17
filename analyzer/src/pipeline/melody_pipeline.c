@@ -6,22 +6,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common-practice-minimal/key_vocabulary.h"
+#include "theory/tonality/key_vocabulary.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "model/core/rational.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/spelling_util.h"
 #include <ursatz_chain/analysis_chain.h>
 #include "model/pitch/pitch_spelling.h"
-#include "semantics/beat_strength.h"
+#include "theory/vocabulary/beat_strength.h"
 #include "standard-counterpoint/analysis/analysis_melody.h"
 #include "standard-counterpoint/analysis/analysis_melody_climax.h"
 #include "standard-counterpoint/analysis/analysis_melody_leaps.h"
 #include "standard-counterpoint/analysis/analysis_melody_nct.h"
-#include "standard-counterpoint/cantus_firmus_rules.h"
-#include "standard-counterpoint/framework.h"
-#include "standard-counterpoint/tendency_rules.h"
-#include "theory/framework.h"
+#include "theory/counterpoint/cantus_firmus_rules.h"
+#include "theory/counterpoint/framework.h"
+#include "theory/counterpoint/tendency_rules.h"
+#include "theory/framework/framework.h"
 #include "util/misc_util.h"
 
 _Static_assert(NON_CHORD_TONE_COUNT == ANALYSIS_MELODY_NCT_TYPES, "the report counts every NonChordTone");

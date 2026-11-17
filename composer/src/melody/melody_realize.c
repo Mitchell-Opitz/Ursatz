@@ -4,7 +4,7 @@
 #include <string.h>
 #include "util/util.h"
 
-#include <standard-counterpoint/melodic_rules.h>
+#include <theory/counterpoint/melodic_rules.h>
 
 /* How far, in semitones, a note moves to re-form its own figure (R-335). */
 #define FIGURE_REACH 2

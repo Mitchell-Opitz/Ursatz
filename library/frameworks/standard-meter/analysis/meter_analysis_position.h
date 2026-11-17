@@ -5,7 +5,7 @@
 
 #include "model/core/rational.h"
 #include "model/time/meter_map.h"
-#include "standard-meter/metric_position_rules.h"
+#include "theory/meter/metric_position_rules.h"
 
 /*
  * Internal to the rhythm adapter: the beat grid of a measure and the metric reading of a time over a MeterMap. A time is a

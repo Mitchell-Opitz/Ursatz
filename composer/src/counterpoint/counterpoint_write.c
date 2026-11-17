@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-counterpoint/counterpoint_pitch.h>
-#include <standard-counterpoint/consonance_rules.h>
-#include <standard-voicing/range_rules.h>
-#include <standard-voicing/voicing_pitch.h>
-#include <semantics/voice_part.h>
+#include <theory/counterpoint/counterpoint_pitch.h>
+#include <theory/counterpoint/consonance_rules.h>
+#include <theory/voicing/range_rules.h>
+#include <theory/voicing/voicing_pitch.h>
+#include <theory/vocabulary/voice_part.h>
 
 #include <ursatz_composer/plan_state.h>
 

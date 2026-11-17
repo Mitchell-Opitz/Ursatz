@@ -8,8 +8,8 @@
 #include "analysis_six_four.h"
 #include "model/core/provenance_reference.h"
 #include "model/core/value.h"
-#include "harmony_functions.h"
-#include "harmony_prolongation.h"
+#include "theory/harmony/harmony_functions.h"
+#include "theory/harmony/harmony_prolongation.h"
 #include "model/identity/entity_id.h"
 
 static const char *const REASON_NAMES[HARMONY_PROLONGATION_REASON_COUNT] = {

@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "key_vocabulary.h"
+#include "theory/tonality/key_vocabulary.h"
 
 /*
  * The scale degree label of a pitch class, under common-practice-minimal-v1. A degree is "1" to "7" with a "b" or "#" for a

@@ -4,8 +4,8 @@
 #include "galant-schemas/analysis/galant_analysis_input.h"
 #include "model/interpretation/interpretation.h"
 #include "model/relationship/relationship.h"
-#include "scale-harmonization/scale_patterns.h"
-#include "scale-harmonization/sequence_kind.h"
+#include "theory/galant/scale_patterns.h"
+#include "theory/galant/sequence_kind.h"
 
 /*
  * Sequence detection (the scale-harmonization adapter): harmonic sequences found in the outer voices and Roman numerals of a run of segments,

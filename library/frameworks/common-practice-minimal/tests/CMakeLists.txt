@@ -1,11 +1,5 @@
 ursatz_test_includes()
 
-ursatz_test(common_practice_minimal_framework SOURCES test_framework.c LIBS common_practice_minimal)
-
-ursatz_test(common_practice_minimal_chord_vocabulary SOURCES test_chord_vocabulary.c LIBS common_practice_minimal)
-
-ursatz_test(common_practice_minimal_key_vocabulary SOURCES test_key_vocabulary.c LIBS common_practice_minimal)
-
 ursatz_test(common_practice_minimal_key_identification SOURCES test_key_identification.c LIBS common_practice_minimal)
 
 ursatz_test(common_practice_minimal_weighted_identification SOURCES test_weighted_identification.c
@@ -37,4 +31,3 @@ ursatz_test(common_practice_minimal_injected_classifier SOURCES test_injected_cl
     LIBS common_practice_minimal VALGRIND)
 
 ursatz_test(common_practice_minimal_harmonic_spans SOURCES test_harmonic_spans.c LIBS common_practice_minimal VALGRIND)
-

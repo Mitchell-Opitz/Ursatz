@@ -11,9 +11,9 @@
 
 #include "model/core/rational.h"
 #include "model/interpretation/key.h"
-#include "key_vocabulary.h"
+#include "theory/tonality/key_vocabulary.h"
 #include "semantics/analysis_key.h"
-#include "semantics/key_change_extent.h"
+#include "theory/vocabulary/key_change_extent.h"
 #include "model/time/time_span.h"
 #include "model/time/meter_map.h"
 #include "model/time/musical_time.h"

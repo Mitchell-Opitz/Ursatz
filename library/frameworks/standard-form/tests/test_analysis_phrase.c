@@ -3,7 +3,7 @@
 #include "model/time/meter_arithmetic.h"
 #include "model/time/meter_map.h"
 #include "model/time/score_time.h"
-#include "external_expansion_rules.h"
+#include "theory/form/external_expansion_rules.h"
 #include "form_test_util.h"
 #include "model/interpretation/uncertainty.h"
 #include "interpretation_test_access.h"

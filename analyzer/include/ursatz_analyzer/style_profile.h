@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "theory/style_features.h"
-#include "theory/style_model.h"
+#include "theory/style/style_features.h"
+#include "theory/style/style_model.h"
 
 #include <ursatz_analyzer/style_labels.h>
 

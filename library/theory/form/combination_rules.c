@@ -1,0 +1,29 @@
+#include "theory/form/combination_rules.h"
+
+bool standard_form_is_repeated_phrase(bool written_out_repeat, CadenceType first, CadenceType second) {
+    return written_out_repeat && cadence_type_valid(first) && first == second;
+}
+
+bool standard_form_is_compound_period(CadenceType antecedent, CadenceType consequent, PhraseLevelForm first_form,
+                                      PhraseLevelForm second_form) {
+    return standard_form_period_cadences_valid(antecedent, consequent) && first_form == PHRASE_LEVEL_FORM_SENTENCE &&
+           second_form == PHRASE_LEVEL_FORM_SENTENCE;
+}
+
+bool standard_form_classify_phrase_pair(CadenceType first, CadenceType second, bool second_repeats_first,
+                                        PhraseLevelForm first_form, PhraseLevelForm second_form,
+                                        PhraseLevelForm *out) {
+    if (standard_form_is_repeated_phrase(second_repeats_first, first, second)) {
+        *out = PHRASE_LEVEL_FORM_REPEATED_PHRASE;
+        return true;
+    }
+    if (standard_form_is_compound_period(first, second, first_form, second_form)) {
+        *out = PHRASE_LEVEL_FORM_COMPOUND_PERIOD;
+        return true;
+    }
+    if (standard_form_period_cadences_valid(first, second)) {
+        *out = PHRASE_LEVEL_FORM_PERIOD;
+        return true;
+    }
+    return false;
+}

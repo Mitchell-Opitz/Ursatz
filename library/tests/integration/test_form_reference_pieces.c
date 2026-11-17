@@ -35,8 +35,8 @@
 #include "ursatz_chain/form_bridge.h"
 #include "hand_cadences.h"
 #include "standard-form/analysis/analysis_input.h"
-#include "standard-harmony/harmony_cadence_rules.h"
-#include "standard-form/phrase_level_form.h"
+#include "theory/harmony/harmony_cadence_rules.h"
+#include "theory/form/phrase_level_form.h"
 
 #define FORM_TARGET_BOUNDARIES 0.80
 #define FORM_TARGET_THEMES 0.70

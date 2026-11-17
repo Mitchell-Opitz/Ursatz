@@ -12,7 +12,7 @@
 #include "model/interpretation/interpretation.h"
 #include "model/interpretation/uncertainty.h"
 #include "model/relationship/relationship.h"
-#include "semantics/cadence_type.h"
+#include "theory/vocabulary/cadence_type.h"
 #include "model/structure/phrase_occurrence.h"
 #include "relationship_test_access.h"
 

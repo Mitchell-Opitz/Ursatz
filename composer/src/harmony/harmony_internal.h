@@ -6,11 +6,11 @@
 
 #include <standard-harmony/analysis/analysis_cadence.h>
 #include <standard-harmony/analysis/analysis_input.h>
-#include <standard-harmony/harmony_chord.h>
-#include <standard-harmony/harmony_pivot.h>
+#include <theory/harmony/harmony_chord.h>
+#include <theory/harmony/harmony_pivot.h>
 #include <model/pitch/pitch_spelling.h>
-#include <semantics/beat_strength.h>
-#include <semantics/cadence_type.h>
+#include <theory/vocabulary/beat_strength.h>
+#include <theory/vocabulary/cadence_type.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_bass.h>

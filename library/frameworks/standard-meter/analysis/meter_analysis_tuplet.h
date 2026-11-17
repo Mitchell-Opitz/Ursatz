@@ -6,9 +6,9 @@
 
 #include "model/interpretation/interpretation.h"
 #include "meter_analysis_input.h"
-#include "standard-meter/meter_class_rules.h"
+#include "theory/meter/meter_class_rules.h"
 #include "semantics/analysis_note.h"
-#include "standard-meter/borrowed_rules.h"
+#include "theory/meter/borrowed_rules.h"
 #include "model/structure/structure.h"
 
 /*

@@ -8,14 +8,14 @@
 #include "model/core/occurrence.h"
 #include "model/core/rational.h"
 #include "model/core/value.h"
-#include "external_expansion_rules.h"
+#include "theory/form/external_expansion_rules.h"
 #include "model/identity/entity_id.h"
-#include "phrase_rules.h"
+#include "theory/form/phrase_rules.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/meter_map.h"
 #include "model/time/musical_time.h"
 #include "model/time/score_time.h"
-#include "external_expansion_kind.h"
+#include "theory/form/external_expansion_kind.h"
 
 #define DISCONTINUITY_UNCERTAINTY 0.25
 

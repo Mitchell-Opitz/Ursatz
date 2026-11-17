@@ -6,7 +6,7 @@
 #include <model/core/rational.h>
 #include "util/util.h"
 
-#include <standard-counterpoint/melodic_rules.h>
+#include <theory/counterpoint/melodic_rules.h>
 
 #define MAX_OPTIONS 128
 /* The widest a note after the motive moves from the one before it, in semitones. */

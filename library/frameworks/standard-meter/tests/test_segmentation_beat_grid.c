@@ -4,10 +4,10 @@
 #include <string.h>
 
 #include "model/core/provenance_reference.h"
-#include "meter_test_util.h"
+#include "theory/tests/meter/meter_test_util.h"
 #include "model/pitch/pitch_identity.h"
 #include "model/pitch/pitch_spelling.h"
-#include "segmentation_beat_grid.h"
+#include "theory/meter/segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_span.h"

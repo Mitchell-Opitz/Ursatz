@@ -1,0 +1,28 @@
+ursatz_test(common_practice_minimal_framework SOURCES test_common_practice_framework.c LIBS ursatz_theory)
+
+ursatz_test(common_practice_minimal_chord_vocabulary SOURCES test_chord_vocabulary.c LIBS ursatz_theory)
+
+ursatz_test(common_practice_minimal_key_vocabulary SOURCES test_key_vocabulary.c LIBS ursatz_theory)
+
+ursatz_test(standard_tonality_framework SOURCES test_framework.c LIBS ursatz_theory)
+
+ursatz_test(standard_tonality_triad_in_key_rules SOURCES test_triad_in_key_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_tonality_seventh_in_key_rules SOURCES test_seventh_in_key_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_tonality_roman_numeral_rules SOURCES test_roman_numeral_rules.c LIBS ursatz_theory)
+
+ursatz_test(standard_tonality_tonal_key SOURCES test_tonal_key.c LIBS ursatz_theory VALGRIND)
+
+ursatz_test(standard_tonality_roman_numeral_grammar SOURCES test_roman_numeral_grammar.c LIBS ursatz_theory
+    VALGRIND)
+
+ursatz_test(standard_tonality_quality_semitones SOURCES test_quality_semitones.c LIBS ursatz_theory)
+
+ursatz_test(standard_tonality_chromatic_degree_label SOURCES test_chromatic_degree_label.c LIBS ursatz_theory)
+
+ursatz_test(standard_tonality_key_tonic_of_pitch_class SOURCES test_key_tonic_of_pitch_class.c LIBS ursatz_theory)
+
+ursatz_test(standard_tonality_mode_pitch_classes SOURCES test_mode_pitch_classes.c LIBS ursatz_theory)
+
+ursatz_test(standard_tonality_degree_of_semitone SOURCES test_degree_of_semitone.c LIBS ursatz_theory)

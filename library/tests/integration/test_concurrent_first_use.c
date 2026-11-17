@@ -3,8 +3,8 @@
 #include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "rules/preference.h"
-#include "theory/framework.h"
+#include "theory/rules/preference.h"
+#include "theory/framework/framework.h"
 
 /*
  * Eight threads make the very first call of every framework accessor and every preference accessor an app calls at the

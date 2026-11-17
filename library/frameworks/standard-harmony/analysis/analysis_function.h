@@ -6,7 +6,7 @@
 
 #include "analysis_input.h"
 #include "model/interpretation/interpretation.h"
-#include "standard-harmony/harmonic_function.h"
+#include "theory/harmony/harmonic_function.h"
 
 /*
  * Harmonic function per segment (the standard-harmony analysis adapter, step 1). One Interpretation per valid

@@ -1,7 +1,7 @@
 #ifndef MUSIC_SEMANTICS_ANALYSIS_SEGMENT_H
 #define MUSIC_SEMANTICS_ANALYSIS_SEGMENT_H
 
-#include "semantics/beat_strength.h"
+#include "theory/vocabulary/beat_strength.h"
 #include "model/time/metrical_position.h"
 #include "model/time/time_span.h"
 

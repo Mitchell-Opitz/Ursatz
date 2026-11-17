@@ -1,13 +1,4 @@
 add_library(standard_tonality
-    framework.c
-    tonal_key.c
-    triad_rules.c
-    triad_in_key_rules.c
-    seventh_rules.c
-    seventh_in_key_rules.c
-    roman_numeral_rules.c
-    roman_numeral_grammar.c
-    roman_numeral_analysis_rules.c
     analysis/chord_input.c
     analysis/roman_numeral_adapter.c
     analysis/applied_chords.c
@@ -21,14 +12,10 @@ ursatz_public_headers(standard_tonality
         analysis/applied_chords.h
         analysis/chord_input.h
         analysis/roman_numeral_adapter.h
-        roman_numeral_analysis_rules.h
-        roman_numeral_grammar.h
-        roman_numeral_rules.h
-        seventh_rules.h
-        tonal_key.h
-        triad_rules.h
 )
 target_link_libraries(standard_tonality PUBLIC ursatz)
+# An analysis file includes its former framework's theory headers by their path from library/.
+target_include_directories(standard_tonality PRIVATE ${PROJECT_SOURCE_DIR})
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

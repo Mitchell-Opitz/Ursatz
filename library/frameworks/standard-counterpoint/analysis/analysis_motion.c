@@ -7,7 +7,7 @@
 #include "analysis_claim.h"
 #include "model/core/value.h"
 #include "model/identity/entity_id.h"
-#include "motion_rules.h"
+#include "theory/counterpoint/motion_rules.h"
 
 static double least_confidence(const StandardCounterpointVoiceCell *const cells[4]) {
     double least = 1.0;

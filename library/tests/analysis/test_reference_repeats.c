@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "semantics/analysis_key.h"
-#include "standard-form/phrase_level_form.h"
+#include "theory/form/phrase_level_form.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"
 #include "../key_index_test_util.h"

@@ -1,28 +1,4 @@
 add_library(standard_harmony
-    harmony_framework.c
-    six_four_type.c
-    phrase_model_label.c
-    harmonic_function.c
-    harmony_rule_pair.c
-    harmony_rule_table.c
-    harmony_chord.c
-    harmony_functions.c
-    harmony_phrase_rules.c
-    harmony_phrase_labels.c
-    harmony_cadence_rules.c
-    harmony_cadence_kinds.c
-    harmony_strong_predominants.c
-    harmony_steps.c
-    harmony_prolongation.c
-    harmony_six_four.c
-    harmony_resolution_rules.c
-    harmony_deceptive.c
-    harmony_predominant_seventh.c
-    harmony_applied.c
-    harmony_related_key.c
-    harmony_pivot.c
-    harmony_key_change.c
-    harmony_plagal.c
     analysis/analysis_input.c
     analysis/analysis_claim.c
     analysis/analysis_function.c
@@ -50,26 +26,10 @@ ursatz_public_headers(standard_harmony
         analysis/analysis_resolution.h
         analysis/analysis_six_four.h
         analysis/analysis_voices.h
-        harmonic_function.h
-        harmony_applied.h
-        harmony_cadence_kinds.h
-        harmony_cadence_rules.h
-        harmony_chord.h
-        harmony_deceptive.h
-        harmony_framework.h
-        harmony_functions.h
-        harmony_key_change.h
-        harmony_phrase_rules.h
-        harmony_pivot.h
-        harmony_plagal.h
-        harmony_predominant_seventh.h
-        harmony_related_key.h
-        harmony_resolution_rules.h
-        harmony_strong_predominants.h
-        phrase_model_label.h
-        six_four_type.h
 )
 target_link_libraries(standard_harmony PUBLIC ursatz)
+# An analysis file includes its former framework's theory headers by their path from library/.
+target_include_directories(standard_harmony PRIVATE ${PROJECT_SOURCE_DIR})
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

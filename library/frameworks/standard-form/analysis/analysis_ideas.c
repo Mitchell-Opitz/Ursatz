@@ -6,13 +6,13 @@
 
 #include "analysis_claim.h"
 #include "model/core/value.h"
-#include "segmentation_rules.h"
-#include "idea_label.h"
+#include "theory/form/segmentation_rules.h"
+#include "theory/form/idea_label.h"
 #include "model/core/rational.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/meter_map.h"
 #include "model/time/score_time.h"
-#include "sentence_rules.h"
+#include "theory/form/sentence_rules.h"
 
 static double combine(double a, double b) {
     return 1.0 - (1.0 - a) * (1.0 - b);

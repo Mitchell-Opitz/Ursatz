@@ -1,13 +1,4 @@
 add_library(standard_meter
-    framework.c
-    meter_class_rules.c
-    borrowed_rules.c
-    hypermeter_rules.c
-    syncopation_rules.c
-    hemiola_rules.c
-    metric_position_rules.c
-    segmentation_beat_grid.c
-    beat_grid.c
     analysis/meter_analysis_position.c
     analysis/meter_analysis_input.c
     analysis/meter_analysis_claim.c
@@ -32,15 +23,10 @@ ursatz_public_headers(standard_meter
         analysis/meter_analysis_syncopation.h
         analysis/meter_analysis_position.h
         analysis/meter_analysis_tuplet.h
-        beat_grid.h
-        borrowed_rules.h
-        framework.h
-        grouping_rules.h
-        meter_class_rules.h
-        metric_position_rules.h
-        segmentation_beat_grid.h
 )
 target_link_libraries(standard_meter PUBLIC ursatz)
+# An analysis file includes its former framework's theory headers by their path from library/.
+target_include_directories(standard_meter PRIVATE ${PROJECT_SOURCE_DIR})
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

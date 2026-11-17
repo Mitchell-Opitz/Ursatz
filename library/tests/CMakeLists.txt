@@ -1,8 +1,6 @@
 ursatz_test_includes()
 
 add_subdirectory(semantics)
-add_subdirectory(theory)
-add_subdirectory(rules)
 add_subdirectory(analysis)
 add_subdirectory(io)
 add_subdirectory(query)

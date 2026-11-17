@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include <ursatz_composer/harmony_motive.h>
-#include <standard-tonality/roman_numeral_grammar.h>
+#include <theory/tonality/roman_numeral_grammar.h>
 
 #include <ursatz_composer/plan_state.h>
 

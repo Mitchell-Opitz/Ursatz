@@ -4,10 +4,10 @@
 
 #include <stdio.h>
 
-#include <standard-harmony/harmony_chord.h>
-#include <standard-harmony/harmony_key_change.h>
-#include <standard-harmony/harmony_related_key.h>
-#include <semantics/cadence_type.h>
+#include <theory/harmony/harmony_chord.h>
+#include <theory/harmony/harmony_key_change.h>
+#include <theory/harmony/harmony_related_key.h>
+#include <theory/vocabulary/cadence_type.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_hear.h>

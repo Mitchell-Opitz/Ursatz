@@ -9,8 +9,8 @@
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_spelling.h"
 #include "scale_analysis_claim.h"
-#include "scale_harmonization.h"
-#include "scale_sequence_rules.h"
+#include "theory/galant/scale_harmonization.h"
+#include "theory/galant/scale_sequence_rules.h"
 
 #define NONE ((size_t)-1)
 

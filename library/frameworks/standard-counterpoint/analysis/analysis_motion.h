@@ -11,7 +11,7 @@
 
 #include "analysis_grid.h"
 #include "model/interpretation/interpretation.h"
-#include "standard-counterpoint/motion_type.h"
+#include "theory/counterpoint/motion_type.h"
 #include "model/structure/structure.h"
 
 /*

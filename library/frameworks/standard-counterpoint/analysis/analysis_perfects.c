@@ -6,9 +6,9 @@
 
 #include "analysis_claim.h"
 #include "model/core/value.h"
-#include "counterpoint_interval.h"
-#include "counterpoint_line.h"
-#include "harmonic_rules.h"
+#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/counterpoint/counterpoint_line.h"
+#include "theory/counterpoint/harmonic_rules.h"
 #include "model/identity/entity_id.h"
 
 static const char *const RULE_NAMES[STANDARD_COUNTERPOINT_VIOLATION_COUNT] = {"parallel-fifths", "parallel-octaves",

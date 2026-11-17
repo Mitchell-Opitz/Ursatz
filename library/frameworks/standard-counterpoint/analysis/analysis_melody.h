@@ -4,15 +4,15 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "standard-counterpoint/counterpoint_interval.h"
+#include "theory/counterpoint/counterpoint_interval.h"
 #include "model/interpretation/interpretation.h"
 #include "model/pitch/pitch_identity.h"
 #include "model/pitch/pitch_numeric_value.h"
 #include "model/pitch/pitch_spelling.h"
-#include "semantics/beat_strength.h"
+#include "theory/vocabulary/beat_strength.h"
 #include "semantics/contour.h"
 #include "semantics/interval.h"
-#include "semantics/non_chord_tone.h"
+#include "theory/vocabulary/non_chord_tone.h"
 #include "model/structure/structure.h"
 #include "model/time/metrical_position.h"
 #include "model/time/time_span.h"

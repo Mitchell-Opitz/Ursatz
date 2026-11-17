@@ -1,48 +1,4 @@
 add_library(standard_counterpoint
-    framework.c
-    motion_type.c
-    rule_pair.c
-    rule_table.c
-    species_aggregate.c
-    species_helpers.c
-    counterpoint_pitch.c
-    counterpoint_interval.c
-    consonance_rules.c
-    counterpoint_line.c
-    motion_rules.c
-    cantus_firmus_rules.c
-    melodic_rules.c
-    harmonic_rules.c
-    tendency_rules.c
-    counterpoint_rules.c
-    first_species_harmony_rules.c
-    first_species_ends_rules.c
-    first_species_independence_rules.c
-    first_species_motion_rules.c
-    first_species_line_rules.c
-    first_species_rules.c
-    second_species_exercise.c
-    second_species_pattern.c
-    second_species_strong_rules.c
-    second_species_weak_rules.c
-    second_species_ends_rules.c
-    second_species_line_rules.c
-    second_species_rules.c
-    third_species_exercise.c
-    third_species_figure.c
-    third_species_strong_rules.c
-    third_species_beat_rules.c
-    third_species_ends_rules.c
-    third_species_line_rules.c
-    third_species_rules.c
-    fourth_species_exercise.c
-    fourth_species_suspension.c
-    fourth_species_suspension_rules.c
-    fourth_species_weak_rules.c
-    species_break_rules.c
-    fourth_species_ends_rules.c
-    fourth_species_line_rules.c
-    fourth_species_rules.c
     analysis/analysis_grid.c
     analysis/analysis_claim.c
     analysis/analysis_motion.c
@@ -66,38 +22,10 @@ ursatz_public_headers(standard_counterpoint
         analysis/analysis_melody_nct.h
         analysis/analysis_motion.h
         analysis/analysis_perfects.h
-        cantus_firmus_rules.h
-        consonance_rules.h
-        counterpoint_interval.h
-        counterpoint_limits.h
-        counterpoint_line.h
-        counterpoint_pitch.h
-        counterpoint_rules.h
-        counterpoint_slots.h
-        first_species_ends_rules.h
-        first_species_harmony_rules.h
-        first_species_independence_rules.h
-        first_species_line_rules.h
-        first_species_rules.h
-        fourth_species_ends_rules.h
-        fourth_species_exercise.h
-        fourth_species_line_rules.h
-        fourth_species_rules.h
-        framework.h
-        harmonic_rules.h
-        melodic_rules.h
-        motion_type.h
-        second_species_ends_rules.h
-        second_species_exercise.h
-        second_species_line_rules.h
-        second_species_rules.h
-        tendency_rules.h
-        third_species_ends_rules.h
-        third_species_exercise.h
-        third_species_line_rules.h
-        third_species_rules.h
 )
 target_link_libraries(standard_counterpoint PUBLIC ursatz)
+# An analysis file includes its former framework's theory headers by their path from library/.
+target_include_directories(standard_counterpoint PRIVATE ${PROJECT_SOURCE_DIR})
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "standard-markings/dynamics_rules.h"
-#include "standard-markings/framework.h"
-#include "theory/framework.h"
-#include "standard-markings/tempo_rules.h"
+#include "theory/markings/dynamics_rules.h"
+#include "theory/markings/framework.h"
+#include "theory/framework/framework.h"
+#include "theory/markings/tempo_rules.h"
 #include "model/time/musical_time.h"
 
 

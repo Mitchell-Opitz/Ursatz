@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive_relation.h"
-#include "semantics/non_chord_tone.h"
+#include "theory/vocabulary/non_chord_tone.h"
 
 /*
  * Motive relation parameter metadata: every kind and index, names equal motive_relation_param_name, ranges and

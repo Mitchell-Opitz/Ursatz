@@ -1,7 +1,7 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_TEXTURE_FRAMEWORK_H
 #define URSATZ_FRAMEWORKS_STANDARD_TEXTURE_FRAMEWORK_H
 
-#include "theory/framework.h"
+#include "theory/framework/framework.h"
 
 /*
  * standard-texture-v1: Theory Framework for musical texture, the density

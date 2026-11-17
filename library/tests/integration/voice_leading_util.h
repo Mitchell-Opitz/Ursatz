@@ -17,7 +17,7 @@
 #include "standard-harmony/analysis/analysis_voices.h"
 #include "model/pitch/pitch_identity.h"
 #include "model/pitch/tuning_system.h"
-#include "standard-meter/segmentation_beat_grid.h"
+#include "theory/meter/segmentation_beat_grid.h"
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/note_value.h"

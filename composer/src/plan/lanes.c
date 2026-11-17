@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-tonality/tonal_key.h>
+#include <theory/tonality/tonal_key.h>
 
 #include "plan/plan_internal.h"
 #include "util/plan_util.h"

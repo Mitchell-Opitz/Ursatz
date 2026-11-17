@@ -3,10 +3,10 @@
 #include <stdbool.h>
 
 
-#include "harmony_framework.h"
+#include "theory/harmony/harmony_framework.h"
 #include "model/identity/entity_id.h"
 #include "model/interpretation/claim_interpretation.h"
-#include "theory/framework.h"
+#include "theory/framework/framework.h"
 
 Interpretation *harmony_analysis_make_interpretation(const char *interpretation_id, const char *target_id,
                                                       const char *claim_type, const void *content, size_t size,

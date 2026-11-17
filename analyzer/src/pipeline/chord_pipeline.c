@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common-practice-minimal/chord_vocabulary_seventh.h"
+#include "theory/tonality/chord_vocabulary_seventh.h"
 #include "common-practice-minimal/weighted_chord_identification.h"
 #include "common-practice-minimal/weighted_identification.h"
 #include "model/core/rational.h"
 #include "model/interpretation/chord.h"
 #include "pipeline/interpretation_util.h"
 #include "pipeline/pitch_class_util.h"
-#include "semantics/non_chord_tone.h"
+#include "theory/vocabulary/non_chord_tone.h"
 
 static bool fill_reading(const CommonPracticeRankedChord *candidate, const Chord *chord, double score,
                          int bass_pitch_class, bool prefer_flats, AnalysisChordReading *out) {

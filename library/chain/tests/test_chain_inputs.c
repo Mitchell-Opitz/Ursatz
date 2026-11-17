@@ -3,9 +3,9 @@
 #include "chain_test_piece.h"
 #include "model/pitch/pitch_numeric_value.h"
 #include "model/pitch/tuning_system.h"
-#include "standard-harmony/harmony_cadence_rules.h"
+#include "theory/harmony/harmony_cadence_rules.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
-#include "standard-meter/segmentation_beat_grid.h"
+#include "theory/meter/segmentation_beat_grid.h"
 #include "ursatz_chain/analysis_chain.h"
 
 /*
