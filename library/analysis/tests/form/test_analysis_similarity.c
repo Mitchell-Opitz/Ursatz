@@ -5,7 +5,7 @@
 
 /* Idea similarity: intervals (transposition allowed) and onset rhythm, over the longer idea's intervals. */
 
-static const StandardFormNote *notes_from(const FormFixture *f, size_t first) {
+static const AnalysisNote *notes_from(const FormFixture *f, size_t first) {
     return &f->input.notes[first];
 }
 

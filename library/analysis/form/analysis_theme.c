@@ -197,7 +197,7 @@ static bool two_phrase(const ThemeContext *ctx, size_t p, Candidate *out) {
 }
 
 /* The notes of phrase p's ideas (the phrase proper). */
-static bool phrase_notes(const ThemeContext *ctx, size_t p, const StandardFormNote **notes, size_t *count) {
+static bool phrase_notes(const ThemeContext *ctx, size_t p, const AnalysisNote **notes, size_t *count) {
     size_t n = 0;
     const StandardFormIdea *ideas = ideas_of(ctx, p, &n);
     if (n == 0) {
@@ -413,8 +413,8 @@ static StandardFormAnalysisStatus identify_themes(const StandardFormInput *input
         if (has_next && phrase_goal(phrase) && phrase_goal(&phrases->items[p + 1]) && pairs_in_one_unit(phrases, grid, p)) {
             const StandardFormPhrase *next = &phrases->items[p + 1];
             PhraseLevelForm pair_form;
-            const StandardFormNote *a = NULL;
-            const StandardFormNote *b = NULL;
+            const AnalysisNote *a = NULL;
+            const AnalysisNote *b = NULL;
             size_t a_count = 0;
             size_t b_count = 0;
             StandardFormSimilarity phrase_similarity;

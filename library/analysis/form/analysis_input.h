@@ -23,19 +23,16 @@
  * Lengths are in measures, counted from the MeterMap (time/meter_map.h). A pickup (a first region the MeterMap marks as measure
  * 0) belongs to the first idea and is NOT counted in any length.
  *
- * THE INPUT is built with the functions below: init with the MeterMap, add cadences, soprano notes and segments, finish. Ids
- * are copied; TimeSpans, NoteEvents, MetricalPositions and the MeterMap are BORROWED and must outlive the input and every
- * result computed from it.
+ * THE INPUT is built with the functions below: init with the MeterMap and the soprano AnalysisNotes, add cadences, finish. Cadence
+ * ids are copied; the notes (with their ids, NoteEvents and TimeSpans), the degrees and the MeterMap are BORROWED and must outlive
+ * the input and every result computed from it.
  *
  *   cadence    a cadence of standard-harmony's analysis: id; the ARRIVAL chord's TimeSpan; CadenceType; strength_rank, the
  *              standard-harmony strength rank (larger is stronger; cadences are compared by it, nothing else); post_cadential,
  *              a plagal cadence directly after a PAC (it extends the preceding phrase and starts no phrase); uncertainty [0, 1]
- *   note       a SOPRANO note, in time order (start non-decreasing): id; its NoteEvent (the kernel's point target); its TimeSpan;
- *              optionally its MetricalPosition; `semitone`, its pitch in semitones (a whole number); and, filled by
- *              standard_form_input_finish, the interval and contour to the NEXT note (has_next is false at the end of the line
- *              and across a rest: a gap between one note's end and the next one's start)
- *   segment    a harmonic segment: id, TimeSpan, the harmonic function and the phrase-model label as the caller's integer
- *              codes (carried into claims; the only use here is that segment boundaries give the harmonic rhythm)
+ *   note       an AnalysisNote of the SOPRANO line, in time order (start non-decreasing): note_id; its NoteEvent (the kernel's point
+ *              target); its TimeSpan; and `midi`, its pitch (a whole number of semitones, known). The scale degree of each note
+ *              (1..7, 0 unknown) is an optional parallel array, `degrees`
  */
 
 typedef struct {
@@ -48,29 +45,16 @@ typedef struct {
 } StandardFormCadence;
 
 typedef struct {
-    char note_id[64];
-    const NoteEvent *event;
-    const TimeSpan *span;
-    const MetricalPosition *position; /* may be NULL */
-    long semitone;
-    bool has_next;
-    long semitones_to_next;
-    int direction_to_next; /* ContourDirection; meaningful only when has_next */
-    int degree;            /* the scale degree 1..7 when known (0: unknown), set by standard_form_input_set_degree */
-    int alteration;        /* -1, 0 or +1: a flat or sharp degree */
-} StandardFormNote;
-
-typedef struct {
     const MeterMap *map;
-    StandardFormCadence *cadences;
+    StandardFormCadence *cadences; /* owned */
     size_t cadence_count;
     size_t cadence_capacity;
-    StandardFormNote *notes;
+    const AnalysisNote *notes;      /* borrowed: the soprano, in time order (start non-decreasing) */
     size_t note_count;
-    size_t note_capacity;
-    StandardFormNote *bass_notes; /* the optional bass line, same shape as the soprano's */
+    const AnalysisNote *bass_notes; /* borrowed, optional (set after init, before finish): the bass line, the same shape */
     size_t bass_count;
-    size_t bass_capacity;
+    const int *degrees;             /* borrowed, optional (set after init, before finish): one per soprano note, the scale
+                                       degree 1..7 when known, 0 when not; NULL when no degree is known */
     bool finished;
 } StandardFormInput;
 
@@ -85,25 +69,15 @@ typedef enum {
     STANDARD_FORM_ANALYSIS_ERR_ALLOC
 } StandardFormAnalysisStatus;
 
-void standard_form_input_init(StandardFormInput *input, const MeterMap *map);
+/* An input over the soprano notes, which are borrowed (with their events, spans and the map they must outlive the input and every
+   result). Cadences are added after and owned; bass_notes and degrees are set by the caller before finish. */
+void standard_form_input_init(StandardFormInput *input, const MeterMap *map, const AnalysisNote *notes, size_t note_count);
 StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *input, const char *id,
                                                            const TimeSpan *arrival, CadenceType type, int strength_rank,
                                                            bool post_cadential, double uncertainty);
-StandardFormAnalysisStatus standard_form_input_add_note(StandardFormInput *input, const char *note_id,
-                                                        const NoteEvent *event, const TimeSpan *span,
-                                                        const MetricalPosition *position, long semitone);
-/* The optional BASS line (used only when config.include_bass is set): the same as the soprano's notes, in time order. */
-StandardFormAnalysisStatus standard_form_input_add_bass_note(StandardFormInput *input, const char *note_id,
-                                                             const NoteEvent *event, const TimeSpan *span,
-                                                             const MetricalPosition *position, long semitone);
-/* Adds an AnalysisNote to the soprano line (bass false) or the bass line (bass true): `semitone` is midi, position is NULL, the next-note
-   fields are set by standard_form_input_finish. BAD_INPUT for an unknown pitch, no event, or what the line's add rejects. */
-StandardFormAnalysisStatus standard_form_input_add_analysis_note(StandardFormInput *input, const AnalysisNote *note, bool bass);
-/* The scale degree (1..7) and alteration (-1, 0, +1) of note `index` of the soprano (bass false) or the bass line. Degrees give the
-   motive analysis a generic (scale-step) interval, so a diatonic sequence matches. BAD_INPUT for an index out of range. */
-StandardFormAnalysisStatus standard_form_input_set_degree(StandardFormInput *input, bool bass, size_t index, int degree,
-                                                          int alteration);
-/* Fills the interval and contour to the next note and sorts the cadences by arrival. Call once, after the last add. */
+/* Checks the notes (each with an event, a valid span, a non-empty id under 64 characters and a known pitch; starts not decreasing;
+   the bass line the same) and the degrees (0 to 7), and sorts the cadences by arrival. BAD_INPUT for what it cannot read. Call once,
+   after the last cadence. */
 StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input);
 void standard_form_input_destroy(StandardFormInput *input);
 

@@ -33,7 +33,7 @@ typedef struct {
 } StandardFormSimilarity;
 
 /* False for a NULL argument, a similarity_min outside (0, 1], or notes with no span. */
-bool standard_form_idea_similarity(const StandardFormNote *a, size_t a_count, const StandardFormNote *b, size_t b_count,
+bool standard_form_idea_similarity(const AnalysisNote *a, size_t a_count, const AnalysisNote *b, size_t b_count,
                                    double similarity_min, StandardFormSimilarity *out);
 
 /* The uncertainty the similarity adds to a claim: 0.5 * (1 - margin). 0.5 when the ideas are not comparable. */

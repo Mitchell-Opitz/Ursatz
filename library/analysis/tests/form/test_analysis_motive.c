@@ -408,8 +408,6 @@ static void test_bad_calls_are_refused(void) {
     assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, &motive_config, chain_form_match_windows, NULL,
                                       &m) == STANDARD_FORM_ANALYSIS_OK &&
            m.family_count == 0);
-    assert(standard_form_input_set_degree(&p.f.input, false, 5, 1, 0) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
-    assert(standard_form_input_set_degree(&p.f.input, false, 0, 8, 0) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
     piece_destroy(&p);
 }
 

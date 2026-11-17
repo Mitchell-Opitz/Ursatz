@@ -24,7 +24,8 @@ typedef struct StandardFormMotiveShape {
 } StandardFormMotiveShape;
 
 typedef struct {
-    const StandardFormNote *notes; /* borrowed */
+    const AnalysisNote *notes;     /* borrowed */
+    const int *degrees;            /* borrowed: the scale degree of each note, 0 unknown; NULL when none is known */
     size_t count;
     int line;                      /* 0 soprano, 1 bass */
     Rational *start;          /* owned arrays, one entry per note */
@@ -33,6 +34,8 @@ typedef struct {
     bool *can_start;               /* the first note of an idea, or on a beat */
     bool *has_generic;             /* the generic interval to the next note is known */
     int *generic;
+    bool *has_next;                /* the next note starts at or before this one ends (no rest between) */
+    long *step;                    /* the semitones to the next note, when has_next */
 } StandardFormMotiveLine;
 
 /* Prepares a line. idea_start, when not NULL, is a count-long array marking the notes that start an idea. False on allocation

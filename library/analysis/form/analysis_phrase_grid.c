@@ -112,8 +112,8 @@ static bool melody_returns(const Evidence *ev, int m) {
                 same = false;
             }
             if (same && k > 0 &&
-                ev->input->notes[at + k].semitone - ev->input->notes[at + k - 1].semitone !=
-                    ev->input->notes[base + k].semitone - ev->input->notes[base + k - 1].semitone) {
+                ev->input->notes[at + k].midi - ev->input->notes[at + k - 1].midi !=
+                    ev->input->notes[base + k].midi - ev->input->notes[base + k - 1].midi) {
                 same = false;
             }
         }

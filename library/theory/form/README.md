@@ -95,6 +95,6 @@ Two of them look a value up by name, false with the output untouched for an unkn
 
 ## Neutral analysis input
 
-`standard_form_input_add_analysis_note` (`analysis/analysis_input.h`) adds an `AnalysisNote` to the soprano or the bass line (`semitone` is `midi`, no metrical position; the interval and contour to the next note are still set by `standard_form_input_finish`). `standard_form_input_add_analysis_segment` adds an `AnalysisSegment` with its function and phrase model label. A note with an unknown pitch is rejected.
+`standard_form_input_init` (`analysis/form/analysis_input.h`) borrows the soprano as an array of `AnalysisNote` (`midi` is the pitch, no metrical position); the optional bass line and the optional `degrees` (one per soprano note, 0 unknown) are set before `standard_form_input_finish`, which checks every note (id, event, valid span, known pitch, starts not decreasing) and the degrees, and sorts the cadences.
 
 `StandardFormConfig.relation_match` (a `StandardFormRelationMatchFn`, `analysis/analysis_input.h`) is the injected owner of every occurrence kind but varied, and is also asked about a shorter window to find a prefix or suffix fragment. It names the kind with `MotiveOccurrenceKind` (`semantics/motive_occurrence_kind.h`); `StandardFormMotiveKind` is a kept alias until the Analyzer stops using it. The motive analysis requires it: with NULL (the default) it returns `STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR`. Varied always stays the framework's.

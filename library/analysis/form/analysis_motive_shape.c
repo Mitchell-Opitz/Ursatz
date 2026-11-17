@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis/form/analysis_input_internal.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/meter_map.h"
 #include "model/time/score_time.h"
@@ -18,17 +19,19 @@ void standard_form_motive_line_destroy(StandardFormMotiveLine *line) {
     free(line->can_start);
     free(line->has_generic);
     free(line->generic);
+    free(line->has_next);
+    free(line->step);
     memset(line, 0, sizeof(*line));
 }
 
 /* The signed generic interval between two notes with known degrees: the letter distance in the direction of motion plus the octaves
    the semitones imply (7 steps to an octave). 0 for an unchanged degree. False when the degrees and the direction disagree
    (a nonzero semitone change cannot be read as a generic interval of zero). */
-static int generic_between(const StandardFormNote *a, const StandardFormNote *b, long semitones) {
+static int generic_between(int a_degree, int b_degree, long semitones) {
     if (semitones == 0) {
         return 0;
     }
-    int letters = semitones > 0 ? (((b->degree - a->degree) % 7) + 7) % 7 : (((a->degree - b->degree) % 7) + 7) % 7;
+    int letters = semitones > 0 ? (((b_degree - a_degree) % 7) + 7) % 7 : (((a_degree - b_degree) % 7) + 7) % 7;
     double distance = (double)labs(semitones);
     long octaves = (long)floor((distance - (double)letters * 12.0 / 7.0) / 12.0 + 0.5);
     if (octaves < 0) {
@@ -43,6 +46,7 @@ bool standard_form_motive_line_build(StandardFormMotiveLine *line, const Standar
     memset(line, 0, sizeof(*line));
     line->line = line_id;
     line->notes = line_id == 0 ? input->notes : input->bass_notes;
+    line->degrees = line_id == 0 ? input->degrees : NULL;
     line->count = line_id == 0 ? input->note_count : input->bass_count;
     if (line->count == 0) {
         return true;
@@ -54,7 +58,9 @@ bool standard_form_motive_line_build(StandardFormMotiveLine *line, const Standar
     line->can_start = (bool *)calloc(n, sizeof(bool));
     line->has_generic = (bool *)calloc(n, sizeof(bool));
     line->generic = (int *)calloc(n, sizeof(int));
-    if (line->start == NULL || line->end == NULL || line->first_measure == NULL || line->can_start == NULL ||
+    line->has_next = (bool *)calloc(n, sizeof(bool));
+    line->step = (long *)calloc(n, sizeof(long));
+    if (line->has_next == NULL || line->step == NULL || line->start == NULL || line->end == NULL || line->first_measure == NULL || line->can_start == NULL ||
         line->has_generic == NULL || line->generic == NULL) {
         standard_form_motive_line_destroy(line);
         return false;
@@ -66,9 +72,10 @@ bool standard_form_motive_line_build(StandardFormMotiveLine *line, const Standar
             return false;
         }
         line->can_start[i] = (idea_start != NULL && idea_start[i]) || meter_map_on_beat(input->map, line->start[i]);
-        if (line->notes[i].has_next && line->notes[i].degree > 0 && i + 1 < n && line->notes[i + 1].degree > 0) {
+        line->has_next[i] = standard_form_next_note_step(line->notes, n, i, &line->step[i]);
+        if (line->has_next[i] && line->degrees != NULL && line->degrees[i] > 0 && i + 1 < n && line->degrees[i + 1] > 0) {
             line->has_generic[i] = true;
-            line->generic[i] = generic_between(&line->notes[i], &line->notes[i + 1], line->notes[i].semitones_to_next);
+            line->generic[i] = generic_between(line->degrees[i], line->degrees[i + 1], line->step[i]);
         }
     }
     return true;
@@ -79,7 +86,7 @@ bool standard_form_motive_window_ok(const StandardFormMotiveLine *line, size_t f
         return false;
     }
     for (size_t i = first; i + 1 < first + n; i++) {
-        if (!line->notes[i].has_next || rational_cmp(line->start[i + 1], line->start[i]) <= 0) {
+        if (!line->has_next[i] || rational_cmp(line->start[i + 1], line->start[i]) <= 0) {
             return false;
         }
     }
@@ -94,13 +101,13 @@ bool standard_form_motive_shape(const StandardFormMotiveLine *line, size_t first
     memset(out, 0, sizeof(*out));
     out->generic = want_generic;
     out->intervals = n - 1;
-    out->first_semitone = line->notes[first].semitone;
+    out->first_semitone = line->notes[first].midi;
     for (size_t k = 0; k + 1 < n; k++) {
         size_t i = first + k;
         if (want_generic && !line->has_generic[i]) {
             return false;
         }
-        out->semitones[k] = (int)line->notes[i].semitones_to_next;
+        out->semitones[k] = (int)line->step[i];
         out->steps[k] = want_generic ? line->generic[i] : out->semitones[k];
         if (rational_sub(line->start[i + 1], line->start[i], &out->ioi[k]) != RATIONAL_OK) {
             return false;

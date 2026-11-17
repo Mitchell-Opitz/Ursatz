@@ -34,6 +34,9 @@ typedef struct {
     int pickup;
     StandardFormInput input;
     NoteEvent *events[FORM_MAX_NOTES];
+    AnalysisNote notes[FORM_MAX_NOTES]; /* the input borrows them */
+    char ids[FORM_MAX_NOTES][32];
+    int degrees[FORM_MAX_NOTES];
     TimeSpan *note_spans[FORM_MAX_NOTES];
     size_t note_count;
     TimeSpan *cadence_spans[FORM_MAX_CADENCES];
@@ -77,7 +80,7 @@ static inline void form_init(FormFixture *f, int top, int pickup_quarters) {
     musical_time_destroy(zero);
     musical_time_destroy(after_pickup);
     assert(meter_map_has_pickup(f->map) == (pickup_quarters > 0));
-    standard_form_input_init(&f->input, f->map);
+    standard_form_input_init(&f->input, f->map, f->notes, 0);
 }
 
 /* A soprano note of `duration` quarters starting at `start` quarters from the piece's start. */
@@ -100,16 +103,20 @@ static inline void form_note(FormFixture *f, double start_quarters, double durat
     NoteEvent **event = &f->events[f->note_count];
     assert(note_event_create(form_id(id), anchor, duration, pitch, NULL, NULL, provenance, event) == NOTE_EVENT_OK);
     f->note_spans[f->note_count] = form_span(start, start + length);
-    assert(standard_form_input_add_note(&f->input, id, *event, f->note_spans[f->note_count], NULL, midi) ==
-           STANDARD_FORM_ANALYSIS_OK);
+    memcpy(f->ids[f->note_count], id, sizeof(id));
+    AnalysisNote note = {f->ids[f->note_count], *event, f->note_spans[f->note_count], midi, NULL, NULL, 0, 0, 1.0};
+    f->notes[f->note_count] = note;
     f->note_count++;
+    f->input.notes = f->notes;
+    f->input.note_count = f->note_count;
 }
 
 /* The scale degrees of the soprano notes added so far, in order (0 for a note with none); alterations 0. */
 static inline void form_degrees(FormFixture *f, const int *degrees) {
     for (size_t i = 0; i < f->note_count; i++) {
-        assert(standard_form_input_set_degree(&f->input, false, i, degrees[i], 0) == STANDARD_FORM_ANALYSIS_OK);
+        f->degrees[i] = degrees[i];
     }
+    f->input.degrees = f->degrees;
 }
 
 /* The first quarter of measure m (1-based; 0 is the pickup). */

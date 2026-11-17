@@ -282,11 +282,11 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(chain_build_form_input(&piece->set, &aligned, &aligned, &aligned_lines, 1, 4, &cadences, &form) == CHAIN_INPUT_OK);
     assert(form.input.finished && form.input.note_count > 0 && form.input.note_count <= 16);
     assert(form.input.cadence_count == cadences.count);
-    assert(form.input.notes[0].semitone == 76); /* E5 */
+    assert(form.input.notes[0].midi == 76); /* E5 */
     chain_form_input_destroy(&form);
     assert(chain_build_form_input(&piece->set, &aligned, &aligned, &aligned_lines, 3, 3, NULL, &form) == CHAIN_INPUT_OK);
     assert(form.input.cadence_count == 0 && form.input.note_count > 0 && form.input.note_count <= 4);
-    assert(form.input.notes[0].semitone == 74); /* D5, the first soprano note of measure 3 */
+    assert(form.input.notes[0].midi == 74); /* D5, the first soprano note of measure 3 */
     chain_form_input_destroy(&form);
     chain_form_input_destroy(NULL);
     outer_voice_lines_destroy(&aligned_lines);
@@ -295,8 +295,8 @@ static void test_stage_inputs(TestPiece *piece) {
 
     /* the motive input: a note-level soprano with its degrees */
     assert(chain_build_motive_input(&piece->set, segments, 1, 4, 0, COMMON_PRACTICE_KEY_MAJOR, &cadences, &form) == CHAIN_INPUT_OK);
-    assert(form.input.note_count == 16 && form.input.notes[0].degree == 3 && form.input.notes[1].degree == 2 &&
-           form.input.notes[2].degree == 1);
+    assert(form.input.note_count == 16 && form.input.degrees[0] == 3 && form.input.degrees[1] == 2 &&
+           form.input.degrees[2] == 1);
     chain_form_input_destroy(&form);
 
     /* the meter input: every note of the measures, a chord change where the label changes */

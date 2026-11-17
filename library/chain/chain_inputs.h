@@ -180,6 +180,10 @@ void chain_pitches_destroy(ChainPitches *pitches);
  */
 typedef struct {
     StandardFormInput input;
+    AnalysisNote *notes;  /* owned: the soprano notes the input borrows (copies; their spans are the note set's or in spans) */
+    size_t note_count;
+    size_t note_capacity;
+    int *degrees;         /* owned: the scale degree of each note, for the motive input; NULL for the others */
     TimeSpan **spans;     /* owned: every span the input borrows */
     size_t span_count;
     size_t span_capacity;

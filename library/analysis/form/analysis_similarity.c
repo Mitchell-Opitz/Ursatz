@@ -5,7 +5,7 @@
 #include "model/core/rational.h"
 #include "model/time/score_time.h"
 
-bool standard_form_idea_similarity(const StandardFormNote *a, size_t a_count, const StandardFormNote *b, size_t b_count,
+bool standard_form_idea_similarity(const AnalysisNote *a, size_t a_count, const AnalysisNote *b, size_t b_count,
                                    double similarity_min, StandardFormSimilarity *out) {
     if (out == NULL || (a_count > 0 && a == NULL) || (b_count > 0 && b == NULL) || !isfinite(similarity_min) ||
         !(similarity_min > 0.0 && similarity_min <= 1.0)) {
@@ -27,7 +27,7 @@ bool standard_form_idea_similarity(const StandardFormNote *a, size_t a_count, co
                 !score_time_span(b[i].span, &b_from, NULL) || !score_time_span(b[i + 1].span, &b_to, NULL)) {
                 return false;
             }
-            bool same_interval = a[i + 1].semitone - a[i].semitone == b[i + 1].semitone - b[i].semitone;
+            bool same_interval = a[i + 1].midi - a[i].midi == b[i + 1].midi - b[i].midi;
             Rational a_length;
             Rational b_length;
             if (rational_sub(a_to, a_from, &a_length) != RATIONAL_OK || rational_sub(b_to, b_from, &b_length) != RATIONAL_OK) {

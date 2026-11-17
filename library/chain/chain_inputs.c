@@ -798,6 +798,21 @@ static const TimeSpan *form_span(ChainFormInput *build, const MusicalTime *start
     return span;
 }
 
+/* Keeps a copy of a soprano note, which the input borrows. */
+static bool form_keep_note(ChainFormInput *build, const AnalysisNote *note) {
+    if (build->note_count == build->note_capacity) {
+        size_t capacity = build->note_capacity == 0 ? 256 : build->note_capacity * 2;
+        AnalysisNote *grown = realloc(build->notes, capacity * sizeof(AnalysisNote));
+        if (grown == NULL) {
+            return false;
+        }
+        build->notes = grown;
+        build->note_capacity = capacity;
+    }
+    build->notes[build->note_count++] = *note;
+    return true;
+}
+
 void chain_form_input_destroy(ChainFormInput *input) {
     if (input == NULL) {
         return;
@@ -806,6 +821,8 @@ void chain_form_input_destroy(ChainFormInput *input) {
     for (size_t i = 0; i < input->span_count; i++) {
         time_span_destroy(input->spans[i]);
     }
+    free(input->notes);
+    free(input->degrees);
     free(input->spans);
     memset(input, 0, sizeof(*input));
 }
@@ -872,7 +889,6 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
     }
     ChainFormInput build;
     memset(&build, 0, sizeof(build));
-    standard_form_input_init(&build.input, notes->map);
     ChainInputStatus status = CHAIN_INPUT_OK;
     const char *current_id = NULL;
     const MusicalTime *current_start = NULL;
@@ -892,8 +908,8 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
             }
             AnalysisNote line_note = {current_id, source->event, span, current_semitone, NULL, NULL, ANALYSIS_INDEX_NONE,
                                       ANALYSIS_INDEX_NONE, 1.0};
-            if (standard_form_input_add_analysis_note(&build.input, &line_note, false) != STANDARD_FORM_ANALYSIS_OK) {
-                status = CHAIN_INPUT_ERR_BAD_NOTES;
+            if (!form_keep_note(&build, &line_note)) {
+                status = CHAIN_INPUT_ERR_ALLOC;
                 break;
             }
             current_id = NULL;
@@ -909,6 +925,8 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
         current_end = time_span_end(window);
     }
     free(keys);
+    /* The input borrows the notes, which are all kept now. */
+    standard_form_input_init(&build.input, notes->map, build.notes, build.note_count);
     if (status == CHAIN_INPUT_OK) {
         status = add_cadences(&build, segments, cadences);
     }
@@ -1017,24 +1035,31 @@ ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const Ch
     }
     ChainFormInput build;
     memset(&build, 0, sizeof(build));
-    standard_form_input_init(&build.input, notes->map);
     ChainInputStatus status = CHAIN_INPUT_OK;
+    build.degrees = (int *)calloc(count > 0 ? count : 1, sizeof(int));
+    if (build.degrees == NULL) {
+        status = CHAIN_INPUT_ERR_ALLOC;
+    }
     for (size_t k = 0; k < count && status == CHAIN_INPUT_OK; k++) {
         const AnalysisNote *source = &notes->notes[line[k].index];
         /* the span is the note's own, borrowed from the note set */
-        if (standard_form_input_add_analysis_note(&build.input, source, false) != STANDARD_FORM_ANALYSIS_OK) {
-            status = CHAIN_INPUT_ERR_BAD_NOTES;
+        if (!form_keep_note(&build, source)) {
+            status = CHAIN_INPUT_ERR_ALLOC;
             break;
         }
         int pitch_class = pitch_class_of_midi((int)line[k].semitone);
         int degree = 0;
         int alteration = 0;
-        if (!parse_degree(common_practice_scale_degree_label(pitch_class, tonic_pitch_class, mode), &degree, &alteration) ||
-            standard_form_input_set_degree(&build.input, false, k, degree, alteration) != STANDARD_FORM_ANALYSIS_OK) {
+        if (!parse_degree(common_practice_scale_degree_label(pitch_class, tonic_pitch_class, mode), &degree, &alteration)) {
             status = CHAIN_INPUT_ERR_BAD_NOTES;
+            break;
         }
+        build.degrees[k] = degree;
     }
     free(line);
+    /* The input borrows the notes and degrees, which are all filled in now. */
+    standard_form_input_init(&build.input, notes->map, build.notes, build.note_count);
+    build.input.degrees = build.degrees;
     if (status == CHAIN_INPUT_OK) {
         status = add_cadences(&build, segments, cadences);
     }
@@ -1100,15 +1125,16 @@ ChainInputStatus chain_build_grid_input(const AnalysisNoteSet *notes, const Chai
     }
     ChainFormInput build;
     memset(&build, 0, sizeof(build));
-    standard_form_input_init(&build.input, notes->map);
     ChainInputStatus status = CHAIN_INPUT_OK;
     for (size_t k = 0; k < count && status == CHAIN_INPUT_OK; k++) {
         /* the span is the note's own, borrowed from the note set */
-        if (standard_form_input_add_analysis_note(&build.input, &notes->notes[line[k].index], false) != STANDARD_FORM_ANALYSIS_OK) {
-            status = CHAIN_INPUT_ERR_BAD_NOTES;
+        if (!form_keep_note(&build, &notes->notes[line[k].index])) {
+            status = CHAIN_INPUT_ERR_ALLOC;
         }
     }
     free(line);
+    /* The input borrows the notes, which are all kept now. */
+    standard_form_input_init(&build.input, notes->map, build.notes, build.note_count);
     size_t serial = 0;
     if (status == CHAIN_INPUT_OK) {
         status = add_grid_cadences(&build, segments, found, &serial);

@@ -1,4 +1,5 @@
 #include "analysis/form/analysis_phrase.h"
+#include "analysis/form/analysis_input_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -293,15 +294,15 @@ static StandardFormAnalysisStatus segment_phrases(const StandardFormInput *input
                 status = STANDARD_FORM_ANALYSIS_ERR_METER;
                 break;
             }
-            const StandardFormNote *first = &input->notes[next->note];
+            long step = 0;
             if (rational_cmp(extents[next->note].start, barline) > 0) {
                 broken = true; /* a rest at the barline */
-            } else if (next->note > 0 && input->notes[next->note - 1].has_next &&
-                       labs(input->notes[next->note - 1].semitones_to_next) >= effective->discontinuity_leap_semitones &&
+            } else if (next->note > 0 &&
+                       standard_form_next_note_step(input->notes, input->note_count, next->note - 1, &step) &&
+                       labs(step) >= effective->discontinuity_leap_semitones &&
                        rational_cmp(extents[next->note].start, barline) == 0) {
                 broken = true; /* a leap into the first note */
             }
-            (void)first;
         }
         points[k].discontinuity = broken;
     }
