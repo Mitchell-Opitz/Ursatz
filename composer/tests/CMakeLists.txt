@@ -681,17 +681,16 @@ ursatz_test(test_grow_liquidate LIBS ursatz_composer composer_test_support INCLU
 ursatz_test(test_form_parts LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
 
-ursatz_test_executable(test_rondo_forms LIBS ursatz_composer)
+ursatz_test_executable(test_form_families LIBS ursatz_composer)
 # The Andante, small, large and sonata rondo forms (R-520): eight rows of key and meter, seeds 1 to 10 each tried up to 16 times; one test
 # per form, all slow.
 foreach(form andante-aba andante-abab small-rondo-ababa small-rondo-abaca large-rondo sonata-rondo)
-    ursatz_test(test_rondo_forms_${form} TARGET test_rondo_forms ARGS ${form} LABELS slow)
+    ursatz_test(test_rondo_forms_${form} TARGET test_form_families ARGS ${form} LABELS slow)
 endforeach()
 
-ursatz_test_executable(test_sonata_forms LIBS ursatz_composer)
-# The sonatina forms (R-523): eight rows of key and meter, seeds 1 to 10 each tried up to 16 times; one test per form, all slow.
+# The sonatina forms (R-523): the same rows and seeds; one test per form, all slow.
 foreach(form sonatina sonatina-tonic-major)
-    ursatz_test(test_sonata_forms_${form} TARGET test_sonata_forms ARGS ${form} LABELS slow)
+    ursatz_test(test_sonata_forms_${form} TARGET test_form_families ARGS ${form} LABELS slow)
 endforeach()
 
 ursatz_test(test_grow_development LIBS ursatz_composer cjson composer_test_support)
