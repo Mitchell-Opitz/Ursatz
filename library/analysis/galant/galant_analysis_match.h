@@ -2,6 +2,7 @@
 #define URSATZ_FRAMEWORKS_GALANT_SCHEMAS_ANALYSIS_GALANT_ANALYSIS_MATCH_H
 
 #include "analysis/galant/galant_analysis_input.h"
+#include "model/core/rational.h"
 #include "theory/galant/galant_prototype.h"
 #include "model/interpretation/interpretation.h"
 #include "model/relationship/relationship.h"
@@ -49,7 +50,7 @@
 #define GALANT_SCHEMA_CLAIM_TYPE "galant-schemas/schema"
 
 typedef struct {
-    double max_gap_beats;
+    Rational max_gap_beats;
     unsigned bass_only_allowance;
 } GalantMatchConfig;
 

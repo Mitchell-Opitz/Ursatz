@@ -109,14 +109,14 @@ static Run run_fixture(const char *file, bool spans) {
         const HarmonyCadenceResult *cadence = &cadences->items[i];
         if (cadence->type == CADENCE_TYPE_HALF) {
             assert(run.half_count < MAX_ITEMS);
-            run.half_measure[run.half_count++] = measure_of(p.set.map, segments->starts[cadence->arrival_first]);
+            run.half_measure[run.half_count++] = measure_of(p.set.map, rational_to_double(segments->starts[cadence->arrival_first]));
         }
         if (cadence->type != CADENCE_TYPE_PERFECT_AUTHENTIC) {
             continue;
         }
         assert(run.pac_count < MAX_ITEMS);
         size_t before = cadence->arrival_first > 0 ? cadence->arrival_first - 1 : 0;
-        run.pac_measure[run.pac_count] = measure_of(p.set.map, segments->starts[cadence->arrival_first]);
+        run.pac_measure[run.pac_count] = measure_of(p.set.map, rational_to_double(segments->starts[cadence->arrival_first]));
         run.bass_on_root[run.pac_count] = cadence->arrival_first > 0 && inputs[before].bass_pitch_class == inputs[before].root_pitch_class;
         run.pac_count++;
     }

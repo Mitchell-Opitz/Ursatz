@@ -70,20 +70,22 @@ static void find_neighbors(const CommonPracticeSegment *segments, size_t segment
     departure->found = false;
 
     if (tone->voice_id != NULL) {
-        double previous_onset = 0.0;
-        double next_onset = 0.0;
+        Rational previous_onset = rational_ratio(0, 1);
+        Rational next_onset = rational_ratio(0, 1);
         for (size_t s = 0; s < segment_count; s++) {
             for (size_t i = 0; i < segments[s].member_count; i++) {
                 const CommonPracticeMember *other = &segments[s].members[i];
                 if (!same_voice(other, tone) || same_note(other, tone)) {
                     continue;
                 }
-                if (other->onset < tone->onset && (!approach->found || other->onset > previous_onset)) {
+                if (rational_cmp(other->onset, tone->onset) < 0 &&
+                    (!approach->found || rational_cmp(other->onset, previous_onset) > 0)) {
                     approach->found = true;
                     approach->pitch = other->pitch;
                     previous_onset = other->onset;
                 }
-                if (other->onset > tone->onset && (!departure->found || other->onset < next_onset)) {
+                if (rational_cmp(other->onset, tone->onset) > 0 &&
+                    (!departure->found || rational_cmp(other->onset, next_onset) < 0)) {
                     departure->found = true;
                     departure->pitch = other->pitch;
                     next_onset = other->onset;

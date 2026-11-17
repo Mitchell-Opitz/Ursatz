@@ -270,7 +270,7 @@ static size_t changes_in_measure(const Reference *ref, const ChainSegments *segm
     int previous_root = 0;
     Quality previous_quality = Q_MAJOR;
     for (size_t s = 0; s < count; s++) {
-        if (segments->starts[s] < from - 1e-9 || segments->starts[s] >= to - 1e-9) {
+        if (rational_to_double(segments->starts[s]) < from - 1e-9 || rational_to_double(segments->starts[s]) >= to - 1e-9) {
             continue;
         }
         int root = 0;
@@ -326,7 +326,7 @@ static int report_piece(const Piece *piece) {
         bool found = false;
         size_t at_segment = count;
         for (size_t s = 0; s < count; s++) {
-            if (segments->starts[s] <= c->at + 1e-9 && c->at < segments->ends[s] - 1e-9) {
+            if (rational_to_double(segments->starts[s]) <= c->at + 1e-9 && c->at < rational_to_double(segments->ends[s]) - 1e-9) {
                 found = chain_chord(&chords[s], &root, &quality);
                 at_segment = s;
                 break;
@@ -366,7 +366,7 @@ static int report_piece(const Piece *piece) {
         int previous_root = 0;
         Quality previous_quality = Q_MAJOR;
         for (size_t s = 0; s < count; s++) {
-            if (segments->starts[s] < ref.chords[first].at - 1e-9 || segments->starts[s] >= ref.chords[last].until - 1e-9) {
+            if (rational_to_double(segments->starts[s]) < ref.chords[first].at - 1e-9 || rational_to_double(segments->starts[s]) >= ref.chords[last].until - 1e-9) {
                 continue;
             }
             int root = 0;
@@ -403,7 +403,7 @@ static int report_piece(const Piece *piece) {
         double at = time_of(&ref, piece->segment_starts[i].measure, piece->segment_starts[i].beat);
         bool starts = false;
         for (size_t s = 0; s < count; s++) {
-            starts = starts || fabs(segments->starts[s] - at) < 1e-9;
+            starts = starts || fabs(rational_to_double(segments->starts[s]) - at) < 1e-9;
         }
         printf("  a segment %s at measure %d beat %g\n", starts ? "starts" : "does not start", piece->segment_starts[i].measure,
                piece->segment_starts[i].beat);
@@ -416,7 +416,7 @@ static int report_piece(const Piece *piece) {
         double at = time_of(&ref, piece->no_segment_starts[i].measure, piece->no_segment_starts[i].beat);
         bool starts = false;
         for (size_t s = 0; s < count; s++) {
-            starts = starts || fabs(segments->starts[s] - at) < 1e-9;
+            starts = starts || fabs(rational_to_double(segments->starts[s]) - at) < 1e-9;
         }
         printf("  no segment starts at measure %d beat %g: %s\n", piece->no_segment_starts[i].measure, piece->no_segment_starts[i].beat,
                starts ? "FAIL" : "ok");
@@ -433,7 +433,7 @@ static int report_piece(const Piece *piece) {
         double to = time_of(&ref, measure + 1, 1.0);
         size_t seen = 0;
         for (size_t s = 0; s < count; s++) {
-            if (segments->starts[s] < from - 1e-9 || segments->starts[s] >= to - 1e-9) {
+            if (rational_to_double(segments->starts[s]) < from - 1e-9 || rational_to_double(segments->starts[s]) >= to - 1e-9) {
                 continue;
             }
             const CommonPracticeSegment *segment = &segments->segments[s];

@@ -201,7 +201,8 @@ static void test_relabelling_a_melody_line(void) {
     for (size_t i = 0; i < 3; i++) {
         members[i].note_id = ids[i];
         members[i].pitch = chord[i];
-        members[i].duration = 1.0;
+        members[i].duration = rational_ratio(1, 1);
+        members[i].onset = rational_ratio(0, 1);
         members[i].strength = BEAT_STRENGTH_STRONG;
     }
     CommonPracticeSegment segment = {members, 3, "sonority-1", 0};

@@ -21,9 +21,9 @@
 HarmonyCadenceConfig harmony_cadence_config_default(void) {
     HarmonyCadenceConfig config;
     config.min_arrival_strength = BEAT_STRENGTH_MEDIUM;
-    config.arrival_min_beats = 1.0;
+    config.arrival_min_beats = rational_ratio(1, 1);
     config.soprano_rest_counts = true;
-    config.beat_length = 0.25;
+    config.beat_length = rational_ratio(1, 4);
     config.soprano_absent_penalty = 0.3;
     config.allow_weak_arrival = true;
     config.reading_strong_arrival = 150;
@@ -34,22 +34,26 @@ HarmonyCadenceConfig harmony_cadence_config_default(void) {
     config.reading_break_after_dominant = 150;
     config.reading_pac_shape = 150;
     config.reading_short_dominant = 100;
-    config.reading_followup_beats = 8.0;
-    config.reading_long_dominant_beats = 4.0;
+    config.reading_followup_beats = rational_ratio(8, 1);
+    config.reading_long_dominant_beats = rational_ratio(4, 1);
     return config;
 }
 
+/* A time count that is a Rational (den > 0) and not negative. */
+static bool count_valid(Rational count) {
+    return count.den > 0 && !rational_is_negative(count);
+}
+
 static bool config_valid(const HarmonyCadenceConfig *config) {
-    return beat_strength_valid(config->min_arrival_strength) && isfinite(config->arrival_min_beats) &&
-           config->arrival_min_beats >= 0.0 && isfinite(config->beat_length) && config->beat_length > 0.0 &&
+    return beat_strength_valid(config->min_arrival_strength) && count_valid(config->arrival_min_beats) &&
+           config->beat_length.den > 0 && rational_cmp(config->beat_length, rational_ratio(0, 1)) > 0 &&
            isfinite(config->soprano_absent_penalty) && config->soprano_absent_penalty >= 0.0 &&
            config->soprano_absent_penalty <= 1.0 && config->reading_strong_arrival >= 0 &&
            config->reading_cadential_approach >= 0 && config->reading_followup_cadence >= 0 &&
            config->reading_tonic_continues >= 0 && config->reading_long_dominant >= 0 &&
            config->reading_break_after_dominant >= 0 && config->reading_pac_shape >= 0 &&
-           config->reading_short_dominant >= 0 && isfinite(config->reading_followup_beats) &&
-           config->reading_followup_beats >= 0.0 && isfinite(config->reading_long_dominant_beats) &&
-           config->reading_long_dominant_beats >= 0.0;
+           config->reading_short_dominant >= 0 && count_valid(config->reading_followup_beats) &&
+           count_valid(config->reading_long_dominant_beats);
 }
 
 static double whole_notes(const MusicalTime *time) {
@@ -95,13 +99,13 @@ bool harmony_cadence_is_cadential_six_four(const HarmonySegment *segment) {
 static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t first, size_t last,
                            const HarmonyCadenceConfig *config) {
     const HarmonySegmentInput *start = segments[first].input;
-    double beat = config->beat_length;
+    double beat = rational_to_double(config->beat_length);
     if (start->has_beat_length) {
         beat = (double)start->beat_length.value.num / (double)start->beat_length.value.den;
     }
     double length = whole_notes(&segments[last].input->segment.span.end) -
                     whole_notes(&segments[first].input->segment.span.start);
-    if (length + 1e-9 >= config->arrival_min_beats * beat) {
+    if (length + 1e-9 >= rational_to_double(config->arrival_min_beats) * beat) {
         return true;
     }
     return config->soprano_rest_counts && last + 1 < count && segments[last + 1].input->soprano_degree == 0;
@@ -110,7 +114,7 @@ static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t 
 /* Whether the segment starts on the beat grid (its offset in the measure is a whole number of beats). */
 static bool starts_on_beat(const HarmonySegment *segment, const HarmonyCadenceConfig *config) {
     const HarmonySegmentInput *input = segment->input;
-    double beat = config->beat_length;
+    double beat = rational_to_double(config->beat_length);
     if (input->has_beat_length) {
         beat = (double)input->beat_length.value.num / (double)input->beat_length.value.den;
     }
@@ -671,9 +675,9 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
 /* --- cadences at formal boundaries --- */
 
 /* The index of the segment that starts at `start` whole notes, from 1 on; false when none does. */
-static bool section_start_segment(const HarmonySegment *segments, size_t count, double start, size_t *out) {
+static bool section_start_segment(const HarmonySegment *segments, size_t count, Rational start, size_t *out) {
     for (size_t i = 1; i < count; i++) {
-        if (fabs(whole_notes(&segments[i].input->segment.span.start) - start) < 1e-9) {
+        if (fabs(whole_notes(&segments[i].input->segment.span.start) - rational_to_double(start)) < 1e-9) {
             *out = i;
             return true;
         }
@@ -687,7 +691,7 @@ static bool is_authentic_family(CadenceType type) {
 
 HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const HarmonySegment *segments, size_t count,
                                                                     const HarmonyCadenceConfig *config,
-                                                                    const double *section_starts, size_t section_count,
+                                                                    const Rational *section_starts, size_t section_count,
                                                                     HarmonyCadences *cadences) {
     if (cadences == NULL || (segments == NULL && count > 0) || (section_starts == NULL && section_count > 0)) {
         return HARMONY_CADENCE_ANALYSIS_ERR_NULL_ARGUMENT;
@@ -700,7 +704,7 @@ HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const Harmon
         return HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG;
     }
     for (size_t k = 0; k < section_count; k++) {
-        if (!isfinite(section_starts[k])) {
+        if (section_starts[k].den <= 0) {
             return HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG;
         }
     }

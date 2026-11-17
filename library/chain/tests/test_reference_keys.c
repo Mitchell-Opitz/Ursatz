@@ -102,10 +102,10 @@ static size_t claimed_of(const AnalysisChain *chain, const MeterMap *map, Claime
     for (size_t i = 0; i < cadences->count; i++) {
         const HarmonyCadenceResult *c = &cadences->items[i];
         memset(&out[i], 0, sizeof(out[i]));
-        out[i].measure = measure_of(map, segments->starts[c->arrival_first], &out[i].beat_one);
+        out[i].measure = measure_of(map, rational_to_double(segments->starts[c->arrival_first]), &out[i].beat_one);
         out[i].type = c->type;
         if (c->alternative.present && c->alternative.reading == HARMONY_CADENCE_READING_CADENCE) {
-            out[i].alternative_measure = measure_of(map, segments->starts[c->alternative.arrival_first], &out[i].alternative_beat_one);
+            out[i].alternative_measure = measure_of(map, rational_to_double(segments->starts[c->alternative.arrival_first]), &out[i].alternative_beat_one);
             out[i].alternative_type = c->alternative.type;
         }
     }
@@ -270,7 +270,7 @@ static size_t labels_of(const AnalysisChain *chain, const MeterMap *map, int *me
     size_t count = analysis_chain_segment_count(chain);
     assert(segments != NULL && romans != NULL);
     for (size_t i = 0; i < count; i++) {
-        measures[i] = measure_of(map, segments->starts[i], NULL);
+        measures[i] = measure_of(map, rational_to_double(segments->starts[i]), NULL);
         labels[i] = romans[i].has_numeral ? romans[i].claim.label : "";
     }
     return count;

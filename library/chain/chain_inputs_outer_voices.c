@@ -45,7 +45,7 @@ ChainInputStatus chain_build_segment_lines(const ChainSegments *voice_segments, 
     }
     size_t voice = 0; /* the next voice segment that starts after the chord segment */
     for (size_t i = 0; i < count; i++) {
-        while (voice < voice_segments->count && voice_segments->starts[voice] <= segments->starts[i] + 1e-12) {
+        while (voice < voice_segments->count && rational_to_double(voice_segments->starts[voice]) <= rational_to_double(segments->starts[i]) + 1e-12) {
             voice++;
         }
         bool has = voice > 0;

@@ -287,7 +287,7 @@ static bool related_to_home(AnalysisKey home, AnalysisKey key) {
 }
 
 /* Adds the authentic arrivals heard in `span`. False when the span is not readable. */
-static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanSpan span, double *arrivals,
+static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanSpan span, Rational *arrivals,
                           size_t *arrival_count) {
     FormHeard heard;
     if (form_hear_in(hearing, plan, span, &heard) != FORM_HEAR_OK) {
@@ -297,7 +297,7 @@ static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanS
         int type = heard.cadences[i].type;
         if (type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
             type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) {
-            arrivals[(*arrival_count)++] = rational_to_double(heard.cadences[i].arrival);
+            arrivals[(*arrival_count)++] = heard.cadences[i].arrival;
         }
     }
     form_heard_destroy(&heard);
@@ -310,7 +310,7 @@ static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanS
  * from the change, in its new key. False when a section is not readable.
  */
 static bool authentic_arrivals(ComposerHearing *hearing, const PiecePlan *plan, const KeyLane *lane, const NodeId *sections,
-                               size_t count, double *arrivals, size_t *arrival_count) {
+                               size_t count, Rational *arrivals, size_t *arrival_count) {
     *arrival_count = 0;
     for (size_t s = 0; s < count; s++) {
         PlanSpan whole = plan_node_span(plan, sections[s]);
@@ -370,7 +370,7 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
         }
     }
     KeyLane lane;
-    double arrivals[MAX_ARRIVALS + 1];
+    Rational arrivals[MAX_ARRIVALS + 1];
     size_t arrival_count;
     if (section_count == 0 || piece_end.num == 0 || !read_key_lane(plan, &lane) ||
         !authentic_arrivals(hearing, plan, &lane, sections, section_count, arrivals, &arrival_count)) {
@@ -422,7 +422,7 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
         KeyChangeExtent length_extent;
         KeyChangeExtent extent;
         if (!harmony_key_change_classify(&change, &length_extent) ||
-            !harmony_key_change_confirm(length_extent, rational_to_double(lane.span[k].start), rational_to_double(region_end), arrivals,
+            !harmony_key_change_confirm(length_extent, lane.span[k].start, region_end, arrivals,
                                         arrival_count, &extent)) {
             return false;
         }

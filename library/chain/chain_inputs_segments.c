@@ -36,8 +36,8 @@ ChainInputStatus chain_build_segments(const AnalysisNoteSet *notes, const Adapti
     }
     built.count = built.sonorities.count;
     built.ids = calloc(built.count > 0 ? built.count : 1, sizeof(char[32]));
-    built.starts = calloc(built.count > 0 ? built.count : 1, sizeof(double));
-    built.ends = calloc(built.count > 0 ? built.count : 1, sizeof(double));
+    built.starts = calloc(built.count > 0 ? built.count : 1, sizeof(Rational));
+    built.ends = calloc(built.count > 0 ? built.count : 1, sizeof(Rational));
     if (built.ids == NULL || built.starts == NULL || built.ends == NULL) {
         chain_segments_destroy(&built);
         return CHAIN_INPUT_ERR_ALLOC;
@@ -46,8 +46,8 @@ ChainInputStatus chain_build_segments(const AnalysisNoteSet *notes, const Adapti
         const TimeSpan *window = sonority_time_window(built.sonorities.items[s].sonority);
         Rational start = window->start.value;
         Rational end = window->end.value;
-        built.starts[s] = rational_to_double(start);
-        built.ends[s] = rational_to_double(end);
+        built.starts[s] = start;
+        built.ends[s] = end;
         snprintf(built.ids[s], sizeof(built.ids[s]), "seg-%zu", s);
     }
     *out = built;
@@ -321,8 +321,8 @@ ChainInputStatus chain_merge_segments(const AnalysisNoteSet *notes, ChainSegment
     memset(&built, 0, sizeof(built));
     built.sonorities.items = calloc(spans->count, sizeof(AdaptiveSonority));
     built.ids = calloc(spans->count, sizeof(char[32]));
-    built.starts = calloc(spans->count, sizeof(double));
-    built.ends = calloc(spans->count, sizeof(double));
+    built.starts = calloc(spans->count, sizeof(Rational));
+    built.ends = calloc(spans->count, sizeof(Rational));
     if (built.sonorities.items == NULL || built.ids == NULL || built.starts == NULL || built.ends == NULL) {
         chain_segments_destroy(&built);
         return CHAIN_INPUT_ERR_ALLOC;

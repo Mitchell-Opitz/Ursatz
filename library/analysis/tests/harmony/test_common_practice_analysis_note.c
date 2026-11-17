@@ -20,8 +20,8 @@ static TimeSpan make_span(long start, long end, unsigned long den) {
     return span;
 }
 
-static void near(double a, double b) {
-    assert(fabs(a - b) < 1e-12);
+static void exact(Rational value, long long num, long long den) {
+    assert(rational_equals(value, rational_ratio(num, den)));
 }
 
 static void test_member(void) {
@@ -35,8 +35,8 @@ static void test_member(void) {
     assert(strcmp(member.note_id, "inside") == 0);
     assert(member.pitch == 60);
     assert(!member.held);
-    near(member.duration, 0.25);
-    near(member.onset, 0.25);
+    exact(member.duration, 1, 4);
+    exact(member.onset, 1, 4);
     assert(member.strength == BEAT_STRENGTH_MEDIUM);
     assert(strcmp(member.voice_id, "voice-a") == 0);
 
@@ -45,8 +45,8 @@ static void test_member(void) {
     AnalysisNote held = {"held", NULL, held_span, 64, NULL, NULL, 0, 0, 1.0};
     assert(common_practice_member_from_analysis_note(&held, segment, BEAT_STRENGTH_STRONG, &member));
     assert(member.held);
-    near(member.duration, 0.25);
-    near(member.onset, 0.0);
+    exact(member.duration, 1, 4);
+    exact(member.onset, 0, 1);
     assert(member.voice_id == NULL);
 
     /* Attacked inside and running past the end: the overlap is cut at the segment's end. */
@@ -54,22 +54,22 @@ static void test_member(void) {
     AnalysisNote running = {"running", NULL, long_span, 67, NULL, NULL, 0, 0, 1.0};
     assert(common_practice_member_from_analysis_note(&running, segment, BEAT_STRENGTH_WEAK, &member));
     assert(!member.held);
-    near(member.duration, 0.25);
-    near(member.onset, 0.5);
+    exact(member.duration, 1, 4);
+    exact(member.onset, 1, 2);
 
     /* Covering the whole segment, from before to after: held, duration the segment's length. */
     TimeSpan cover_span = make_span(0, 4, 4);
     AnalysisNote cover = {"cover", NULL, cover_span, 55, NULL, NULL, 0, 0, 1.0};
     assert(common_practice_member_from_analysis_note(&cover, segment, BEAT_STRENGTH_WEAK, &member));
     assert(member.held);
-    near(member.duration, 0.5);
+    exact(member.duration, 1, 2);
 
     /* A third that does not divide a quarter is converted as a double. */
     TimeSpan third_segment = make_span(0, 1, 3);
     TimeSpan third_span = make_span(0, 1, 6);
     AnalysisNote third = {"third", NULL, third_span, 62, NULL, NULL, 0, 0, 1.0};
     assert(common_practice_member_from_analysis_note(&third, third_segment, BEAT_STRENGTH_STRONG, &member));
-    near(member.duration, 1.0 / 6.0);
+    exact(member.duration, 1, 6);
 
     /* Rejected: no overlap, unknown pitch, invalid note, NULL arguments; *out is left alone. */
     member.pitch = 99;

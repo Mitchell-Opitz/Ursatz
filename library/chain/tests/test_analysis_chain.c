@@ -184,8 +184,8 @@ static void digest_segments(Digest *d, const AnalysisChain *c) {
     digest_int(d, (long long)segs->count);
     for (size_t s = 0; s < segs->count; s++) {
         digest_string(d, segs->ids[s]);
-        digest_double(d, segs->starts[s]);
-        digest_double(d, segs->ends[s]);
+        digest_double(d, rational_to_double(segs->starts[s]));
+        digest_double(d, rational_to_double(segs->ends[s]));
         const CommonPracticeSegment *seg = &segs->segments[s];
         digest_int(d, (long long)seg->member_count);
         digest_int(d, seg->beat);
@@ -205,8 +205,8 @@ static void digest_segments(Digest *d, const AnalysisChain *c) {
                 digest_string(d, m->note_id);
                 digest_int(d, m->pitch);
                 digest_int(d, m->held);
-                digest_double(d, m->duration);
-                digest_double(d, m->onset);
+                digest_double(d, rational_to_double(m->duration));
+                digest_double(d, rational_to_double(m->onset));
                 digest_int(d, m->strength);
                 digest_string(d, m->voice_id);
             }
@@ -599,10 +599,10 @@ static void check_segment_lines(const char *context, const AnalysisChain *c) {
     if (!CHECK(lines != NULL && voice_lines != NULL && lines->count == segments->count && voice_lines->count == voice_segments->count)) abort();
     for (size_t i = 0; i < lines->count; i++) {
         size_t v = 0;
-        while (v + 1 < voice_segments->count && voice_segments->starts[v + 1] <= segments->starts[i] + 1e-12) {
+        while (v + 1 < voice_segments->count && rational_cmp(voice_segments->starts[v + 1], segments->starts[i]) <= 0) {
             v++;
         }
-        bool has = voice_segments->starts[0] <= segments->starts[i] + 1e-12;
+        bool has = rational_cmp(voice_segments->starts[0], segments->starts[i]) <= 0;
         if (!CHECK(lines->soprano[i].present == (has && voice_lines->soprano[v].present))) abort();
         if (!CHECK(lines->bass[i].present == (has && voice_lines->bass[v].present))) abort();
         if (lines->soprano[i].present) {

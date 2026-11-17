@@ -435,7 +435,7 @@ static void test_null_arguments_and_no_points(void) {
            HARMONY_CADENCE_ANALYSIS_OK && out.count == 0);
 
     HarmonyCadenceConfig bad = harmony_cadence_config_default();
-    bad.beat_length = -1.0;
+    bad.beat_length = rational_ratio(-1, 1);
     assert(harmony_analysis_half_readings(r.segments, n, &bad, &r.found, &out) == HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
     assert(harmony_analysis_claim_cadences(r.segments, n, &bad, &r.found, &r.readings, &point, 1, &out) ==
            HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);

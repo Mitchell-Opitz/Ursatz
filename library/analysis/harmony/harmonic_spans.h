@@ -91,8 +91,8 @@ typedef enum {
    lies in, equal for every segment of one measure. */
 typedef struct {
     const CommonPracticeSegment *segment;
-    double start;
-    double end;
+    Rational start;
+    Rational end;
     int measure;
     HarmonicSpanLevel level;
 } HarmonicSpanCell;
@@ -144,7 +144,7 @@ void harmonic_spans_destroy(HarmonicSpans *spans);
  * iteration. bass_pitch -1 or no candidate: every flag is false. config may be NULL for the defaults. BAD_INPUT for a non-finite
  * or empty window or a bass_pitch below -1; NULL_ARGUMENT for NULL members with a count. Deterministic.
  */
-HarmonicSpanStatus harmonic_span_mark_resolved_accents(CommonPracticeMember *members, size_t count, double start, double end,
+HarmonicSpanStatus harmonic_span_mark_resolved_accents(CommonPracticeMember *members, size_t count, Rational start, Rational end,
                                                        int bass_pitch, const CommonPracticeWeightedConfig *config);
 
 #endif

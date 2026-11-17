@@ -53,7 +53,7 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
     int bass_pitch = -1;
     bool have_bass = false;
     for (size_t i = 0; i < count; i++) {
-        if (!(members[i].duration > 0.0) || !isfinite(members[i].duration) ||
+        if (rational_cmp(members[i].duration, rational_ratio(0, 1)) <= 0 ||
             (!members[i].held && !beat_strength_valid(members[i].strength))) {
             return COMMON_PRACTICE_WEIGHTED_ERR_BAD_MEMBER;
         }
@@ -77,7 +77,7 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
             continue;
         }
         double factor = members[i].held ? config->held_factor : config->strength_factor[members[i].strength];
-        double weight = members[i].duration * factor;
+        double weight = rational_to_double(members[i].duration) * factor;
         if (pitch_class_of_midi(members[i].pitch) == pitch_class_of_midi(bass_pitch)) {
             weight *= config->bass_weight;
         }
@@ -435,10 +435,10 @@ bool common_practice_member_from_analysis_note(const AnalysisNote *note, TimeSpa
     out->note_id = note->note_id;
     out->pitch = note->midi;
     out->held = rational_cmp(onset, from) < 0;
-    out->duration = rational_to_double(overlap);
+    out->duration = overlap;
     out->strength = strength;
     out->voice_id = note->voice_id;
-    out->onset = rational_to_double(onset);
+    out->onset = onset;
     out->resolves_in_segment = false;
     return true;
 }

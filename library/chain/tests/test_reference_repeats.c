@@ -128,7 +128,7 @@ static void check_mozart(void) {
     size_t later_count = 0;
     for (size_t i = 0; i < cadences->count; i++) {
         const HarmonyCadenceResult *c = &cadences->items[i];
-        int measure = measure_of(p.set.map, segments->starts[c->arrival_first]);
+        int measure = measure_of(p.set.map, rational_to_double(segments->starts[c->arrival_first]));
         if (measure >= 57 && measure <= 101) {
             earlier[earlier_count][0] = measure + 45;
             earlier[earlier_count++][1] = c->type;

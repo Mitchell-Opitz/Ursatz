@@ -99,9 +99,9 @@
 
 typedef struct {
     BeatStrength min_arrival_strength; /* default MEDIUM */
-    double arrival_min_beats;          /* default 1 */
+    Rational arrival_min_beats;        /* default 1 */
     bool soprano_rest_counts;          /* default true */
-    double beat_length;                /* whole notes, when a segment has none: default 1/4 */
+    Rational beat_length;              /* whole notes, when a segment has none: default 1/4 */
     double soprano_absent_penalty;     /* default 0.3 */
     bool allow_weak_arrival;           /* default true */
 
@@ -114,8 +114,8 @@ typedef struct {
     int reading_break_after_dominant;  /* 150 */
     int reading_pac_shape;             /* 150 */
     int reading_short_dominant;        /* 100 */
-    double reading_followup_beats;     /* default 8 */
-    double reading_long_dominant_beats; /* default 4 */
+    Rational reading_followup_beats;   /* default 8 */
+    Rational reading_long_dominant_beats; /* default 4 */
 } HarmonyCadenceConfig;
 
 typedef enum {
@@ -221,10 +221,10 @@ void harmony_cadences_destroy(HarmonyCadences *cadences);
    dominant and an arrival starting at the section start, and a half cadence already recorded at the dominant, are
    replaced by the one two-reading result. `cadences` is the existing result, updated in place and kept in order of the
    primary's arrival. A start that is no segment's start is ignored. config may be NULL for the defaults. BAD_CONFIG for
-   a bad config or a non-finite start. */
+   a bad config or a start that is no Rational (den <= 0). */
 HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const HarmonySegment *segments, size_t count,
                                                                     const HarmonyCadenceConfig *config,
-                                                                    const double *section_starts, size_t section_count,
+                                                                    const Rational *section_starts, size_t section_count,
                                                                     HarmonyCadences *cadences);
 
 #endif

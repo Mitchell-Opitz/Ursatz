@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "member_test_util.h"
 #include "analysis/harmony/weighted_identification.h"
 
 /*
@@ -20,7 +21,8 @@ static CommonPracticeMember member(int pitch, bool held, double duration, BeatSt
     memset(&m, 0, sizeof(m));
     m.pitch = pitch;
     m.held = held;
-    m.duration = duration;
+    m.duration = member_whole_notes(duration);
+    m.onset = rational_ratio(0, 1);
     m.strength = strength;
     return m;
 }

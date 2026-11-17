@@ -39,7 +39,7 @@ typedef struct {
     CommonPracticeSegment *segments;
     size_t segment_count;
     char (*segment_ids)[32];
-    double *starts; /* each segment's window, in whole notes */
+    double *starts; /* owned; each segment's window, in whole notes as double (the tests read them as numbers) */
     double *ends;
 } WeightedPipeline;
 
@@ -97,12 +97,19 @@ static inline WeightedPipeline pipeline_run(const char *corpus_dir, const char *
     p.segments = segments->segments;
     p.segment_count = segments->count;
     p.segment_ids = segments->ids;
-    p.starts = segments->starts;
-    p.ends = segments->ends;
+    p.starts = (double *)calloc(segments->count > 0 ? segments->count : 1, sizeof(double));
+    p.ends = (double *)calloc(segments->count > 0 ? segments->count : 1, sizeof(double));
+    assert(p.starts != NULL && p.ends != NULL);
+    for (size_t s = 0; s < segments->count; s++) {
+        p.starts[s] = rational_to_double(segments->starts[s]);
+        p.ends[s] = rational_to_double(segments->ends[s]);
+    }
     return p;
 }
 
 static inline void pipeline_destroy(WeightedPipeline *p) {
+    free(p->starts);
+    free(p->ends);
     analysis_chain_destroy(p->chain);
     import_analysis_notes_destroy(p->notes, p->import.count);
     midi_import_destroy(&p->import);

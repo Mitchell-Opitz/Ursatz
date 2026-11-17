@@ -428,10 +428,10 @@ static void make_chord(CommonPracticeMember members[4], CommonPracticeSegment *s
         members[i].note_id = NULL;
         members[i].pitch = pitches[i];
         members[i].held = false;
-        members[i].duration = 1.0;
+        members[i].duration = rational_ratio(1, 1);
         members[i].strength = BEAT_STRENGTH_STRONG;
         members[i].voice_id = NULL;
-        members[i].onset = 0.0;
+        members[i].onset = rational_ratio(0, 1);
         members[i].resolves_in_segment = false;
     }
     segment->members = members;

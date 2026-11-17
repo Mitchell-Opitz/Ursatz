@@ -49,8 +49,8 @@ typedef struct {
     const CommonPracticeKeyRegions *regions;
     const StandardTonalityChordInput *chain_inputs;
     const StandardTonalityRomanResult *chain_romans;
-    const double *starts;
-    const double *ends;
+    const Rational *starts;
+    const Rational *ends;
     Key **annotation_keys;
     size_t annotation_key_count;
     StandardTonalityKeyRegionInput *annotation_region_inputs;
@@ -366,7 +366,7 @@ static const RomanTextKey *key_at(const RomanTextAnalysis *a, double t) {
 
 static long segment_at(const Run *r, double t) {
     for (size_t s = 0; s < r->segment_count; s++) {
-        if (r->starts[s] <= t + 1e-12 && t < r->ends[s] - 1e-12) {
+        if (rational_to_double(r->starts[s]) <= t + 1e-12 && t < rational_to_double(r->ends[s]) - 1e-12) {
             return (long)s;
         }
     }
@@ -392,8 +392,8 @@ static void compare(const Run *r, ChoraleScore *out) {
     cuts[n++] = first;
     cuts[n++] = end;
     for (size_t s = 0; s < r->segment_count; s++) {
-        cuts[n++] = r->starts[s];
-        cuts[n++] = r->ends[s];
+        cuts[n++] = rational_to_double(r->starts[s]);
+        cuts[n++] = rational_to_double(r->ends[s]);
     }
     for (size_t i = 0; i < r->annotation.chord_count; i++) {
         cuts[n++] = rational_to_double(test_rational_of_time(&r->annotation.chords[i].time));
@@ -415,7 +415,7 @@ static void compare(const Run *r, ChoraleScore *out) {
         long s = segment_at(r, a);
         out->annotated_time += w;
         if (key != NULL && s >= 0) {
-            const CommonPracticeKeyRegion *region = &r->regions->regions[region_at(r->regions, r->starts[s])];
+            const CommonPracticeKeyRegion *region = &r->regions->regions[region_at(r->regions, rational_to_double(r->starts[s]))];
             int tonic = common_practice_key_index_tonic(region->key_index);
             bool minor = common_practice_key_index_mode(region->key_index) == COMMON_PRACTICE_KEY_MINOR;
             if (tonic == key->tonic_pitch_class && minor == key->minor) {

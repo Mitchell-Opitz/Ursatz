@@ -124,23 +124,19 @@ void chain_harmony_inputs_destroy(ChainHarmonyInputs *inputs) {
     memset(inputs, 0, sizeof(*inputs));
 }
 
-static double time_double(MusicalTime time) {
-    return rational_to_double(time.value);
-}
-
 ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, size_t count, const CommonPracticeKeyRegions *regions,
                                              int home_key_index, HarmonyCadences *cadences) {
     if (prepared == NULL || regions == NULL || cadences == NULL) {
         return CHAIN_INPUT_ERR_NULL_ARGUMENT;
     }
-    double *starts = calloc(regions->region_count + 1, sizeof(double));
+    Rational *starts = calloc(regions->region_count + 1, sizeof(Rational));
     if (starts == NULL) {
         return CHAIN_INPUT_ERR_ALLOC;
     }
     size_t n = 0;
     for (size_t i = 1; i < regions->region_count; i++) {
         if (regions->regions[i].key_index == home_key_index && regions->regions[i - 1].key_index != home_key_index) {
-            starts[n++] = time_double(regions->regions[i].span.start);
+            starts[n++] = regions->regions[i].span.start.value;
         }
     }
     HarmonyCadenceAnalysisStatus status = harmony_analysis_add_boundary_cadences(prepared, count, NULL, starts, n, cadences);
@@ -148,11 +144,11 @@ ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, siz
     return status == HARMONY_CADENCE_ANALYSIS_OK ? CHAIN_INPUT_OK : CHAIN_INPUT_ERR_KEYS;
 }
 
-ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const double *segment_starts, const HarmonyCadences *cadences) {
+ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const Rational *segment_starts, const HarmonyCadences *cadences) {
     if (regions == NULL || segment_starts == NULL || cadences == NULL) {
         return CHAIN_INPUT_ERR_NULL_ARGUMENT;
     }
-    double *arrivals = calloc(cadences->count + 1, sizeof(double));
+    Rational *arrivals = calloc(cadences->count + 1, sizeof(Rational));
     if (arrivals == NULL) {
         return CHAIN_INPUT_ERR_ALLOC;
     }
@@ -167,8 +163,8 @@ ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, co
         }
         const CommonPracticeKeyRegion *into = &regions->regions[change->to_region];
         KeyChangeExtent confirmed = change->extent;
-        if (!harmony_key_change_confirm(change->extent, time_double(into->span.start),
-                                        time_double(into->span.end), arrivals, cadences->count, &confirmed)) {
+        if (!harmony_key_change_confirm(change->extent, into->span.start.value,
+                                        into->span.end.value, arrivals, cadences->count, &confirmed)) {
             status = CHAIN_INPUT_ERR_KEYS;
             break;
         }

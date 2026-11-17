@@ -464,7 +464,14 @@ static Score run_whole_chain(const Piece *piece) {
     AnalysisChain *chain = run_analysis_chain(&p, map, &a);
 
     printf("%s, the whole chain, the analysis chain (draft hand marks):\n", piece->name);
-    Score score = evaluate(&a, analysis_chain_segments(chain)->starts, analysis_chain_cadences(chain), true);
+    const ChainSegments *chain_segments = analysis_chain_segments(chain);
+    double *chain_starts = (double *)calloc(chain_segments->count > 0 ? chain_segments->count : 1, sizeof(double));
+    assert(chain_starts != NULL);
+    for (size_t s = 0; s < chain_segments->count; s++) {
+        chain_starts[s] = rational_to_double(chain_segments->starts[s]);
+    }
+    Score score = evaluate(&a, chain_starts, analysis_chain_cadences(chain), true);
+    free(chain_starts);
     report("chain", &score);
 
     analysis_chain_destroy(chain);

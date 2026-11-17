@@ -80,13 +80,18 @@ bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, KeyStructu
     bool ok = harmony_analysis_find_cadences(segments, segment_count, NULL, out) == HARMONY_CADENCE_ANALYSIS_OK;
     if (ok && section_count > 0) {
         /* Ursatz counts the starts in whole notes from the start of the range heard. */
-        double starts[HARMONY_MAX_CHORDS];
+        Rational starts[HARMONY_MAX_CHORDS];
         size_t used = 0;
-        double origin = (double)span.start.num / (double)span.start.den;
         for (size_t i = 0; i < section_count && used < HARMONY_MAX_CHORDS; i++) {
-            starts[used++] = (double)section_starts[i].num / (double)section_starts[i].den - origin;
+            if (rational_sub(section_starts[i], span.start, &starts[used]) != RATIONAL_OK) {
+                break;
+            }
+            used++;
         }
-        if (harmony_analysis_add_boundary_cadences(segments, segment_count, NULL, starts, used, out) !=
+        if (used < section_count && used < HARMONY_MAX_CHORDS) {
+            harmony_cadences_destroy(out);
+            ok = false;
+        } else if (harmony_analysis_add_boundary_cadences(segments, segment_count, NULL, starts, used, out) !=
             HARMONY_CADENCE_ANALYSIS_OK) {
             harmony_cadences_destroy(out);
             ok = false;

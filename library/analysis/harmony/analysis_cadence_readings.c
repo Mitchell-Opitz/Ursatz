@@ -22,7 +22,7 @@ static double beat_of(const HarmonySegment *segment, const HarmonyCadenceConfig 
         return (double)segment->input->beat_length.value.num /
                (double)segment->input->beat_length.value.den;
     }
-    return config->beat_length;
+    return rational_to_double(config->beat_length);
 }
 
 /* The length of the run [first, last] in beats. */
@@ -48,7 +48,7 @@ static bool is_tonic_six(const HarmonySegment *segment) {
 static bool authentic_follows(const HarmonySegment *segments, size_t count, const HarmonyRun *runs, size_t run_count,
                               size_t from_run, const HarmonyCadenceConfig *config) {
     double start = whole_notes(&segments[runs[from_run].first].input->segment.span.start);
-    double window = config->reading_followup_beats * beat_of(&segments[runs[from_run].first], config);
+    double window = rational_to_double(config->reading_followup_beats) * beat_of(&segments[runs[from_run].first], config);
     for (size_t r = from_run + 1; r < run_count; r++) {
         double at = whole_notes(&segments[runs[r].first].input->segment.span.start);
         if (at - start > window + 1e-9) {
@@ -112,7 +112,7 @@ int harmony_cadence_boundary_half_share(const HarmonySegment *segments, size_t c
     double beats = run_beats(segments, runs[dominant_run].first, runs[dominant_run].last, config);
     int share = 500;
 
-    if (beats + 1e-9 >= config->reading_long_dominant_beats) {
+    if (beats + 1e-9 >= rational_to_double(config->reading_long_dominant_beats)) {
         share += config->reading_long_dominant;
     }
     if (segments[runs[dominant_run].last].input->soprano_degree == 0 || tonic->input->soprano_degree == 0) {

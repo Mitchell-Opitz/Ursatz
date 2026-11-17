@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "member_test_util.h"
 #include "analysis/harmony/non_chord_tones.h"
 
 /*
@@ -22,10 +23,10 @@ static CommonPracticeMember note(const char *id, int pitch, bool held, double on
     m.note_id = id;
     m.pitch = pitch;
     m.held = held;
-    m.duration = 0.25;
+    m.duration = rational_ratio(1, 4);
     m.strength = BEAT_STRENGTH_WEAK;
     m.voice_id = voice;
-    m.onset = onset;
+    m.onset = member_whole_notes(onset);
     return m;
 }
 

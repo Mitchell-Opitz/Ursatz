@@ -56,7 +56,7 @@ static void test_segments_and_members(TestPiece *piece) {
     /* by default a melody over unchanged harmony merges into the segment before: one segment per chord */
     assert(chain_build_segments(&piece->set, NULL, &segments) == CHAIN_INPUT_OK);
     assert(segments.count == 4 && segments.members == NULL && segments.segments == NULL);
-    assert(strcmp(segments.ids[0], "seg-0") == 0 && segments.starts[0] == 0.0 && segments.ends[3] == 4.0);
+    assert(strcmp(segments.ids[0], "seg-0") == 0 && rational_equals(segments.starts[0], rational_ratio(0, 1)) && rational_equals(segments.ends[3], rational_ratio(4, 1)));
     assert(chain_build_members(&piece->set, &segments) == CHAIN_INPUT_OK);
     assert(segments.segments[0].member_count == 6 && segments.segments[1].member_count == 6);
     chain_segments_destroy(&segments);
@@ -68,10 +68,10 @@ static void test_segments_and_members(TestPiece *piece) {
     assert(segments.count == 14 && segments.members == NULL && segments.segments == NULL);
     assert(strcmp(segments.ids[13], "seg-13") == 0);
     for (size_t s = 0; s < segments.count; s++) {
-        assert(segments.ends[s] > segments.starts[s]);
-        assert(s == 0 || segments.starts[s] >= segments.ends[s - 1] - 1e-12);
+        assert(rational_cmp(segments.ends[s], segments.starts[s]) > 0);
+        assert(s == 0 || rational_cmp(segments.starts[s], segments.ends[s - 1]) >= 0);
     }
-    assert(segments.ends[13] == 4.0);
+    assert(rational_equals(segments.ends[13], rational_ratio(4, 1)));
 
     /* the members: a set missing a note a segment names fails and leaves the segments without members */
     assert(chain_build_members(&piece->set, NULL) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
@@ -84,8 +84,8 @@ static void test_segments_and_members(TestPiece *piece) {
     const CommonPracticeSegment *first = &segments.segments[0];
     assert(first->member_count == 3 && strcmp(first->id, "seg-0") == 0);
     for (size_t j = 0; j < first->member_count; j++) {
-        assert(!first->members[j].held && first->members[j].strength == BEAT_STRENGTH_STRONG && first->members[j].onset == 0.0);
-        assert(first->members[j].duration > 0.0 && first->members[j].note_id != NULL && first->members[j].voice_id != NULL);
+        assert(!first->members[j].held && first->members[j].strength == BEAT_STRENGTH_STRONG && rational_is_zero(first->members[j].onset));
+        assert(rational_cmp(first->members[j].duration, rational_ratio(0, 1)) > 0 && first->members[j].note_id != NULL && first->members[j].voice_id != NULL);
     }
     /* the second beat holds the alto and the bass, and attacks the soprano */
     const CommonPracticeSegment *second = &segments.segments[1];
@@ -93,7 +93,7 @@ static void test_segments_and_members(TestPiece *piece) {
     for (size_t j = 0; j < second->member_count; j++) {
         held += second->members[j].held ? 1 : 0;
         assert(!second->members[j].held || second->members[j].strength == BEAT_STRENGTH_STRONG);
-        assert(second->members[j].held || second->members[j].onset == 0.25);
+        assert(second->members[j].held || rational_equals(second->members[j].onset, rational_ratio(1, 4)));
     }
     assert(held == 2 && second->member_count == 3);
     /* the third beat's soprano is a medium attack */
@@ -220,7 +220,7 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(segment_lines != NULL && segment_lines->count == count && lines->count == voice_segments->count && lines->count > count);
     for (size_t i = 0; i < count; i++) {
         size_t v = 0;
-        while (v + 1 < voice_segments->count && voice_segments->starts[v + 1] <= segments->starts[i] + 1e-12) {
+        while (v + 1 < voice_segments->count && rational_cmp(voice_segments->starts[v + 1], segments->starts[i]) <= 0) {
             v++;
         }
         assert(segment_lines->soprano[i].present == lines->soprano[v].present && segment_lines->bass[i].present == lines->bass[v].present);
@@ -401,7 +401,7 @@ static void test_stage_inputs(TestPiece *piece) {
         const char *id = entry->present ? entity_id_value(entry->note_id) : NULL;
         if (id != NULL && (previous == NULL || strcmp(previous, id) != 0)) {
             size_t chord = 0;
-            while (chord + 1 < count && segments->starts[chord + 1] <= voice_segments->starts[v] + 1e-12) {
+            while (chord + 1 < count && rational_cmp(segments->starts[chord + 1], voice_segments->starts[v]) <= 0) {
                 chord++;
             }
             assert(voiced.line.notes[next_note].present && voiced.segment[next_note] == chord);
@@ -465,7 +465,7 @@ static void test_segment_lines(TestPiece *piece) {
     assert(out.count == 4);
     for (size_t i = 0; i < 4; i++) {
         size_t v = 0;
-        while (v + 1 < voice_segments.count && voice_segments.starts[v + 1] <= chord_segments.starts[i] + 1e-12) {
+        while (v + 1 < voice_segments.count && rational_cmp(voice_segments.starts[v + 1], chord_segments.starts[i]) <= 0) {
             v++;
         }
         assert(out.soprano[i].segment_index == i && out.bass[i].segment_index == i);
@@ -480,7 +480,7 @@ static void test_segment_lines(TestPiece *piece) {
     outer_voice_lines_destroy(&out);
 
     /* chord segments that start inside a note: before the first voice segment the line is absent, and two segments over one held note share it */
-    double starts[4] = {-0.5, 0.1, 0.2, 1.0};
+    Rational starts[4] = {{-1, 2}, {1, 10}, {1, 5}, {1, 1}};
     ChainSegments shifted = chord_segments;
     shifted.starts = starts;
     assert(chain_build_segment_lines(&voice_segments, &lines, &shifted, 4, &out) == CHAIN_INPUT_OK);

@@ -44,7 +44,8 @@ static void test_default_weights(void) {
            config.reading_followup_cadence == 150 && config.reading_tonic_continues == 100 &&
            config.reading_long_dominant == 150 && config.reading_break_after_dominant == 150 &&
            config.reading_pac_shape == 150 && config.reading_short_dominant == 100 &&
-           config.reading_followup_beats == 8.0 && config.reading_long_dominant_beats == 4.0);
+           rational_equals(config.reading_followup_beats, rational_ratio(8, 1)) &&
+           rational_equals(config.reading_long_dominant_beats, rational_ratio(4, 1)));
 }
 
 static void test_evaded_share_strong_arrival_after_a_predominant(void) {
@@ -104,7 +105,7 @@ static void test_evaded_share_follow_up_cadence(void) {
     assert(evaded(&p, 1, NULL) == 650); /* 500 - 150 medium + 150 predominant + 150 follow-up */
 
     HarmonyCadenceConfig near = harmony_cadence_config_default();
-    near.reading_followup_beats = 3.0; /* the PAC is 4 beats away: out of reach */
+    near.reading_followup_beats = rational_ratio(3, 1); /* the PAC is 4 beats away: out of reach */
     assert(evaded(&p, 1, &near) == 500);
     release(&p, &f);
 }
@@ -203,7 +204,7 @@ static void test_half_share_is_clamped_and_needs_the_shape(void) {
     low.reading_short_dominant = 900;
     assert(half(&p, 2, &low) == 50);
     HarmonyCadenceConfig high = harmony_cadence_config_default();
-    high.reading_long_dominant_beats = 0.0;
+    high.reading_long_dominant_beats = rational_ratio(0, 1);
     high.reading_long_dominant = 900;
     assert(half(&p, 2, &high) == 950);
     assert(half(&p, 1, NULL) == 0);     /* not a V */
@@ -238,13 +239,13 @@ static void test_config_validation(void) {
                HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
     }
     config = harmony_cadence_config_default();
-    config.reading_followup_beats = -1.0;
+    config.reading_followup_beats = rational_ratio(-1, 1);
     assert(harmony_analysis_find_cadences(segments, f.count, &config, &found) == HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
     config = harmony_cadence_config_default();
-    config.reading_long_dominant_beats = -0.5;
+    config.reading_long_dominant_beats = rational_ratio(-1, 2);
     assert(harmony_analysis_find_cadences(segments, f.count, &config, &found) == HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
     config = harmony_cadence_config_default();
-    config.reading_followup_beats = NAN;
+    config.reading_followup_beats = (Rational){1, 0}; /* no Rational: the stand-in for a non-finite beat count */
     assert(harmony_analysis_find_cadences(segments, f.count, &config, &found) == HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
     config = harmony_cadence_config_default();
     config.reading_strong_arrival = 0; /* zero is a valid weight */

@@ -18,7 +18,7 @@
 #define MAX_FRAMES 8
 
 GalantMatchConfig galant_match_config_default(void) {
-    GalantMatchConfig config = {2.0, 1};
+    GalantMatchConfig config = {rational_ratio(2, 1), 1};
     return config;
 }
 
@@ -41,8 +41,13 @@ static bool gap_from(const GalantSegmentList *s, size_t i, Rational from, Ration
     return seg_start(s, i, &start) && rational_sub(start, from, gap) == RATIONAL_OK;
 }
 
-static double seg_beat(const GalantSegmentList *s, size_t i) {
-    return (double)s->items[i].beat_numerator / (double)s->items[i].beat_denominator;
+/* The segment's beat length in whole notes; 0 when its numerator and denominator are no Rational. */
+static Rational seg_beat(const GalantSegmentList *s, size_t i) {
+    Rational beat;
+    if (rational_make(s->items[i].beat_numerator, s->items[i].beat_denominator, &beat) != RATIONAL_OK) {
+        return rational_ratio(0, 1);
+    }
+    return beat;
 }
 
 /* --- a candidate match --- */
@@ -267,7 +272,7 @@ static void extend(Search *search, Candidate *c, size_t stage, size_t from, unsi
     }
     size_t previous_last = NONE;
     Rational previous_end = rational_ratio(0, 1);
-    double previous_beat = 1.0;
+    Rational previous_beat = rational_ratio(1, 1);
     if (stage > 0) {
         previous_last = c->seg2[stage - 1] != NONE ? c->seg2[stage - 1] : c->seg[stage - 1];
         if (!seg_end(s, previous_last, &previous_end)) {
@@ -284,7 +289,7 @@ static void extend(Search *search, Candidate *c, size_t stage, size_t from, unsi
             if (rational_is_negative(gap)) {
                 continue;
             }
-            if (rational_to_double(gap) / previous_beat > search->config.max_gap_beats + 1e-9) {
+            if (rational_to_double(gap) / rational_to_double(previous_beat) > rational_to_double(search->config.max_gap_beats) + 1e-9) {
                 break;
             }
         }
@@ -307,7 +312,7 @@ static size_t frames_for(const GalantSegmentList *s, size_t start, size_t stage_
                          GalantPitchDegree *frames) {
     size_t count = 0;
     frames[count++] = (GalantPitchDegree){1, 0};
-    double limit = (double)stage_count * (config->max_gap_beats + 4.0) * seg_beat(s, start);
+    double limit = (double)stage_count * (rational_to_double(config->max_gap_beats) + 4.0) * rational_to_double(seg_beat(s, start));
     Rational begin;
     if (!seg_start(s, start, &begin)) {
         return count;
@@ -458,7 +463,7 @@ GalantAnalysisStatus galant_schema_match(const GalantSegmentList *segments, cons
     if (config == NULL) {
         config = &fallback;
     }
-    if (!(config->max_gap_beats >= 0.0)) {
+    if (config->max_gap_beats.den <= 0 || rational_is_negative(config->max_gap_beats)) {
         return GALANT_ANALYSIS_ERR_INVALID;
     }
     GalantSchemaMatches found = {NULL, 0};

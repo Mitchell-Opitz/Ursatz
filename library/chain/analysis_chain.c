@@ -215,10 +215,10 @@ static double time_double(MusicalTime time) {
 }
 
 /* The region holding the segment that starts at `start` whole notes: the last whose start is not after it. */
-static size_t region_at(const CommonPracticeKeyRegions *regions, double start) {
+static size_t region_at(const CommonPracticeKeyRegions *regions, Rational start) {
     size_t found = 0;
     for (size_t i = 0; i < regions->region_count; i++) {
-        if (time_double(regions->regions[i].span.start) <= start + 1e-12) {
+        if (time_double(regions->regions[i].span.start) <= rational_to_double(start) + 1e-12) {
             found = i;
         }
     }
@@ -705,7 +705,7 @@ static bool scope_count(AnalysisChain *chain) {
     }
     double end = time_double(last.end);
     size_t count = 0;
-    while (count < chain->segs.count && chain->segs.starts[count] < end - 1e-12) {
+    while (count < chain->segs.count && rational_to_double(chain->segs.starts[count]) < end - 1e-12) {
         count++;
     }
     chain->count = count;

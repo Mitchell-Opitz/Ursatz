@@ -51,7 +51,7 @@ ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, siz
     size_t chord = 0; /* the chord segment holding the entry's line segment: the last that starts at or before it */
     for (size_t s = 0; s < line_count; s++) {
         const OuterVoiceEntry *entry = &entries[s];
-        while (chord + 1 < count && segments->starts[chord + 1] <= line_segments->starts[s] + 1e-12) {
+        while (chord + 1 < count && rational_to_double(segments->starts[chord + 1]) <= rational_to_double(line_segments->starts[s]) + 1e-12) {
             chord++;
         }
         if (!entry->present) {

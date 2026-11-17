@@ -510,8 +510,8 @@ static CommonPracticeWeightedStatus relabel_voice(const CommonPracticeSegment *s
     for (size_t k = 0; k < n; k++) {
         const CommonPracticeMember *member = &segments[refs[k].segment].members[refs[k].member];
         notes[k].midi = member->pitch;
-        notes[k].onset = grid_time(member->onset);
-        notes[k].duration = grid_time(member->duration);
+        notes[k].onset = grid_time(rational_to_double(member->onset));
+        notes[k].duration = grid_time(rational_to_double(member->duration));
         notes[k].chord_pitch_classes = masks[refs[k].segment];
     }
     if (config->classifier(notes, n, out, config->classifier_context)) {

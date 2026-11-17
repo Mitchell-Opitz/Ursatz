@@ -54,8 +54,8 @@ typedef enum {
 typedef struct {
     AdaptiveSonorities sonorities;       /* owned */
     char (*ids)[32];                     /* owned; count ids */
-    double *starts;                      /* owned; each segment's window in whole notes */
-    double *ends;
+    Rational *starts;                    /* owned; each segment's window in whole notes */
+    Rational *ends;
     size_t count;
     CommonPracticeMember *members;       /* owned; every segment's members, one after another; NULL before chain_build_members */
     CommonPracticeSegment *segments;     /* owned; count entries viewing members; NULL before chain_build_members */
@@ -158,7 +158,7 @@ ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, siz
  * change out of an excursion takes the excursion's extent. `segment_starts` is each segment's start in whole notes
  * (ChainSegments.starts), indexed like the cadences' arrivals.
  */
-ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const double *segment_starts, const HarmonyCadences *cadences);
+ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const Rational *segment_starts, const HarmonyCadences *cadences);
 
 /*
  * The notes' events and sounding pitches as the kernel's analyses take them (outer_voice_extract, voice_separate): a NoteEvent array

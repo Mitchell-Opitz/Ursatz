@@ -194,11 +194,10 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, u
             member->note_id = ids[i];
             member->pitch = bass ? context->bass[i - melody->count].pitch : melody->notes[i].pitch;
             member->held = rational_cmp(onset, from) < 0;
-            member->duration = rational_to_double(position_sub(rational_cmp(end, to) < 0 ? end : to,
-                                                              rational_cmp(onset, from) > 0 ? onset : from));
+            member->duration = position_sub(rational_cmp(end, to) < 0 ? end : to, rational_cmp(onset, from) > 0 ? onset : from);
             member->strength = melody_on_cell(context, onset) ? BEAT_STRENGTH_STRONG : BEAT_STRENGTH_WEAK;
             member->voice_id = bass ? BASS_VOICE : MELODY_VOICE;
-            member->onset = rational_to_double(onset);
+            member->onset = onset;
             segments[s].member_count++;
         }
     }
