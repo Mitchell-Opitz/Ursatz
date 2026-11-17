@@ -778,25 +778,37 @@ void chain_pitches_destroy(ChainPitches *pitches) {
     memset(pitches, 0, sizeof(*pitches));
 }
 
-/* --- the form input --- */
+/* --- kept spans, shared by the form, meter and galant inputs --- */
 
-static const TimeSpan *form_span(ChainFormInput *build, const MusicalTime *start, const MusicalTime *end) {
-    if (build->span_count == build->span_capacity) {
-        size_t capacity = build->span_capacity == 0 ? 256 : build->span_capacity * 2;
-        TimeSpan **grown = realloc(build->spans, capacity * sizeof(TimeSpan *));
+/* Keeps a span [start, end) in a build's array of spans (the array grows from 256; capacity does not change output), or NULL on failure. */
+static const TimeSpan *chain_keep_span(TimeSpan ***spans, size_t *count, size_t *capacity, const MusicalTime *start,
+                                       const MusicalTime *end) {
+    if (*count == *capacity) {
+        size_t grown_capacity = *capacity == 0 ? 256 : *capacity * 2;
+        TimeSpan **grown = realloc(*spans, grown_capacity * sizeof(TimeSpan *));
         if (grown == NULL) {
             return NULL;
         }
-        build->spans = grown;
-        build->span_capacity = capacity;
+        *spans = grown;
+        *capacity = grown_capacity;
     }
     TimeSpan *span = NULL;
     if (time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
         return NULL;
     }
-    build->spans[build->span_count++] = span;
+    (*spans)[(*count)++] = span;
     return span;
 }
+
+/* Destroys the spans a build kept and its array. */
+static void chain_release_spans(TimeSpan **spans, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        time_span_destroy(spans[i]);
+    }
+    free(spans);
+}
+
+/* --- the form input --- */
 
 /* Keeps a copy of a soprano note, which the input borrows. */
 static bool form_keep_note(ChainFormInput *build, const AnalysisNote *note) {
@@ -818,12 +830,9 @@ void chain_form_input_destroy(ChainFormInput *input) {
         return;
     }
     standard_form_input_destroy(&input->input);
-    for (size_t i = 0; i < input->span_count; i++) {
-        time_span_destroy(input->spans[i]);
-    }
     free(input->notes);
     free(input->degrees);
-    free(input->spans);
+    chain_release_spans(input->spans, input->span_count);
     memset(input, 0, sizeof(*input));
 }
 
@@ -860,7 +869,7 @@ static ChainInputStatus add_cadences(ChainFormInput *build, const ChainSegments 
         }
         const TimeSpan *first = sonority_time_window(segments->sonorities.items[c->arrival_first].sonority);
         const TimeSpan *last = sonority_time_window(segments->sonorities.items[c->arrival_last].sonority);
-        const TimeSpan *span = form_span(build, time_span_start(first), time_span_end(last));
+        const TimeSpan *span = chain_keep_span(&build->spans, &build->span_count, &build->span_capacity, time_span_start(first), time_span_end(last));
         char id[32];
         snprintf(id, sizeof(id), "chain-%zu", i);
         if (span == NULL) {
@@ -901,7 +910,7 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
         const char *id = in_range && lines->soprano[s].present ? entity_id_value(lines->soprano[s].note_id) : NULL;
         if (current_id != NULL && (id == NULL || strcmp(id, current_id) != 0)) {
             const AnalysisNote *source = find_note(notes, keys, current_id);
-            const TimeSpan *span = source != NULL ? form_span(&build, current_start, current_end) : NULL;
+            const TimeSpan *span = source != NULL ? chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, current_start, current_end) : NULL;
             if (source == NULL || span == NULL) {
                 status = source == NULL ? CHAIN_INPUT_ERR_UNKNOWN_NOTE : CHAIN_INPUT_ERR_ALLOC;
                 break;
@@ -1081,7 +1090,7 @@ static ChainInputStatus add_grid_cadence(ChainFormInput *build, const ChainSegme
         return CHAIN_INPUT_ERR_BAD_NOTES;
     }
     const TimeSpan *window = sonority_time_window(segments->sonorities.items[arrival_first].sonority);
-    const TimeSpan *span = form_span(build, time_span_start(window), time_span_end(window));
+    const TimeSpan *span = chain_keep_span(&build->spans, &build->span_count, &build->span_capacity, time_span_start(window), time_span_end(window));
     if (span == NULL) {
         return CHAIN_INPUT_ERR_ALLOC;
     }
@@ -1155,24 +1164,6 @@ ChainInputStatus chain_build_grid_input(const AnalysisNoteSet *notes, const Chai
 
 /* --- the meter input --- */
 
-static const TimeSpan *meter_span(ChainMeterInput *build, const MusicalTime *start, const MusicalTime *end) {
-    if (build->span_count == build->span_capacity) {
-        size_t capacity = build->span_capacity == 0 ? 512 : build->span_capacity * 2;
-        TimeSpan **grown = realloc(build->spans, capacity * sizeof(TimeSpan *));
-        if (grown == NULL) {
-            return NULL;
-        }
-        build->spans = grown;
-        build->span_capacity = capacity;
-    }
-    TimeSpan *span = NULL;
-    if (time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
-        return NULL;
-    }
-    build->spans[build->span_count++] = span;
-    return span;
-}
-
 static const MusicalTime *meter_time(ChainMeterInput *build, const MusicalTime *time) {
     if (build->time_count == build->time_capacity) {
         size_t capacity = build->time_capacity == 0 ? 128 : build->time_capacity * 2;
@@ -1196,14 +1187,11 @@ void chain_meter_input_destroy(ChainMeterInput *input) {
         return;
     }
     standard_meter_input_destroy(&input->input);
-    for (size_t i = 0; i < input->span_count; i++) {
-        time_span_destroy(input->spans[i]);
-    }
     for (size_t i = 0; i < input->time_count; i++) {
         musical_time_destroy(input->times[i]);
     }
     free(input->notes);
-    free(input->spans);
+    chain_release_spans(input->spans, input->span_count);
     free(input->times);
     memset(input, 0, sizeof(*input));
 }
@@ -1303,7 +1291,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
     }
     for (size_t i = 0; phrases != NULL && form != NULL && i < phrases->count && status == CHAIN_INPUT_OK; i++) {
         const StandardFormPhrase *phrase = &phrases->items[i];
-        const TimeSpan *span = meter_span(&build, time_span_start(phrase->span), time_span_end(phrase->span));
+        const TimeSpan *span = chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, time_span_start(phrase->span), time_span_end(phrase->span));
         const TimeSpan *arrival = NULL;
         if (span == NULL) {
             status = CHAIN_INPUT_ERR_ALLOC;
@@ -1311,7 +1299,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
         }
         if (phrase->claim.cadence_index >= 0) {
             const TimeSpan *chord = form->cadences[phrase->claim.cadence_index].arrival;
-            arrival = meter_span(&build, time_span_start(chord), time_span_end(chord));
+            arrival = chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, time_span_start(chord), time_span_end(chord));
             if (arrival == NULL) {
                 status = CHAIN_INPUT_ERR_ALLOC;
                 break;
@@ -1599,29 +1587,8 @@ void chain_galant_segments_destroy(ChainGalantSegments *segments) {
         return;
     }
     galant_segments_destroy(&segments->list);
-    for (size_t i = 0; i < segments->span_count; i++) {
-        time_span_destroy(segments->spans[i]);
-    }
-    free(segments->spans);
+    chain_release_spans(segments->spans, segments->span_count);
     memset(segments, 0, sizeof(*segments));
-}
-
-static const TimeSpan *galant_span(ChainGalantSegments *build, const MusicalTime *start, const MusicalTime *end) {
-    if (build->span_count == build->span_capacity) {
-        size_t capacity = build->span_capacity == 0 ? 256 : build->span_capacity * 2;
-        TimeSpan **grown = realloc(build->spans, capacity * sizeof(TimeSpan *));
-        if (grown == NULL) {
-            return NULL;
-        }
-        build->spans = grown;
-        build->span_capacity = capacity;
-    }
-    TimeSpan *span = NULL;
-    if (time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
-        return NULL;
-    }
-    build->spans[build->span_count++] = span;
-    return span;
 }
 
 /* The length of a beat at `time`, in whole notes (a compound meter's beat is its dotted unit); a quarter when it cannot be read. */
@@ -1715,7 +1682,7 @@ ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size
         if (build.list.count > 0) {
             GalantSegment *last = &build.list.items[build.list.count - 1];
             if (same_harmony(last, &segment)) {
-                const TimeSpan *merged = galant_span(&build, time_span_start(last->segment.span), time_span_end(window));
+                const TimeSpan *merged = chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, time_span_start(last->segment.span), time_span_end(window));
                 if (merged == NULL) {
                     status = CHAIN_INPUT_ERR_ALLOC;
                     break;
