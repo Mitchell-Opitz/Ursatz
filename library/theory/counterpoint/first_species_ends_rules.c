@@ -12,7 +12,7 @@
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {
     "begin", "end-on-tonic", "contrary-stepwise-approach", "penultimate-third-or-sixth"};
 
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
+static RulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
 static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);

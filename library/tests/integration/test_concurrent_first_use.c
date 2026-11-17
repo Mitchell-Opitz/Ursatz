@@ -9,7 +9,7 @@
 /*
  * Eight threads make the very first call of every framework accessor and every preference accessor an app calls at the
  * same moment, and must all get the same pointers. Run as its own process so nothing has been initialized yet. The framework
- * headers share file names (framework.h, rule_pair.h), so the accessors are declared here; enum arguments are passed as
+ * headers share file names (framework.h), so the accessors are declared here; enum arguments are passed as
  * int, which is how they are called.
  */
 

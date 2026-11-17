@@ -11,6 +11,7 @@ add_library(ursatz_theory
     rules/constraint.c
     rules/preference.c
     rules/rule.c
+    rules/rule_pair.c
     vocabulary/applied_chord_kind.c
     vocabulary/beat_strength.c
     vocabulary/cadence_type.c
@@ -49,7 +50,6 @@ add_library(ursatz_theory
     harmony/harmony_prolongation.c
     harmony/harmony_related_key.c
     harmony/harmony_resolution_rules.c
-    harmony/harmony_rule_pair.c
     harmony/harmony_rule_table.c
     harmony/harmony_six_four.c
     harmony/harmony_steps.c
@@ -87,7 +87,6 @@ add_library(ursatz_theory
     counterpoint/melodic_rules.c
     counterpoint/motion_rules.c
     counterpoint/motion_type.c
-    counterpoint/rule_pair.c
     counterpoint/rule_table.c
     counterpoint/second_species_ends_rules.c
     counterpoint/second_species_exercise.c

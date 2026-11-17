@@ -1,23 +1,21 @@
-#include "theory/counterpoint/rule_pair.h"
+#include "theory/rules/rule_pair.h"
 
 #include <stdio.h>
 
-#include "theory/counterpoint/framework.h"
 #include "model/identity/entity_id.h"
 
-bool standard_counterpoint_build_rule_pair(const char *name, ConstraintType type, ConstraintEvaluateFn evaluate,
-                                           PreferenceScoreFn score, StandardCounterpointRulePair *out) {
+bool rule_pair_build(const Framework *framework, const char *id_prefix, const char *name, ConstraintType type,
+                     ConstraintEvaluateFn evaluate, PreferenceScoreFn score, RulePair *out) {
     if (type == CONSTRAINT_TYPE_WEIGHTED) {
         return false;
     }
-    const Framework *framework = standard_counterpoint_framework();
     if (framework == NULL) {
         return false;
     }
 
     char id_value[256];
 
-    snprintf(id_value, sizeof(id_value), "standard-counterpoint-rule-%s", name);
+    snprintf(id_value, sizeof(id_value), "%s-rule-%s", id_prefix, name);
     EntityID *rule_id;
     if (entity_id_create(id_value, &rule_id) != ENTITY_ID_OK) {
         return false;
@@ -28,7 +26,7 @@ bool standard_counterpoint_build_rule_pair(const char *name, ConstraintType type
         return false;
     }
 
-    snprintf(id_value, sizeof(id_value), "standard-counterpoint-constraint-%s", name);
+    snprintf(id_value, sizeof(id_value), "%s-constraint-%s", id_prefix, name);
     EntityID *constraint_id;
     if (entity_id_create(id_value, &constraint_id) != ENTITY_ID_OK) {
         rule_destroy(rule);
@@ -45,7 +43,7 @@ bool standard_counterpoint_build_rule_pair(const char *name, ConstraintType type
 
     Preference *preference = NULL;
     if (type == CONSTRAINT_TYPE_SOFT && score != NULL) {
-        snprintf(id_value, sizeof(id_value), "standard-counterpoint-preference-%s", name);
+        snprintf(id_value, sizeof(id_value), "%s-preference-%s", id_prefix, name);
         EntityID *preference_id;
         if (entity_id_create(id_value, &preference_id) != ENTITY_ID_OK) {
             constraint_destroy(constraint);

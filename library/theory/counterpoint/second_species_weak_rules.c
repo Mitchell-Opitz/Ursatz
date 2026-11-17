@@ -17,7 +17,7 @@ static bool table_is_hard(int which) {
     return rule_is_hard((StandardCounterpointSecondSpeciesWeakRule)which);
 }
 
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT];
+static RulePair g_pairs[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT];
 static UrsatzOnce g_built[STANDARD_COUNTERPOINT_SECOND_SPECIES_WEAK_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);

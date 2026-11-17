@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "theory/harmony/harmony_framework.h"
+
 bool harmony_rule_table_valid(const HarmonyRuleTable *table, int which) {
     return table != NULL && which >= 0 && which < table->count;
 }
@@ -24,8 +26,8 @@ static void build_pair(void *arg) {
     int which = ((const BuildPairArg *)arg)->which;
     char name[96];
     snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
-    harmony_build_rule_pair(
-        name, harmony_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
+    rule_pair_build(
+        standard_harmony_framework(), "standard-harmony", name, harmony_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
         table->evaluate, table->score, &table->pairs[which]);
 }
 

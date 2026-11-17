@@ -6,7 +6,7 @@
 #include "model/core/once.h"
 #include <stddef.h>
 
-#include "theory/counterpoint/rule_pair.h"
+#include "theory/rules/rule_pair.h"
 #include "model/core/value.h"
 #include "theory/rules/constraint.h"
 #include "theory/rules/preference.h"
@@ -15,14 +15,14 @@
 /*
  * Shared table for a group of counterpoint rules. Every rule module has the
  * same parts: the rule names, which rules are hard and which soft, one cached
- * Rule/Constraint pair for each rule (rule_pair.h), and a check that runs the
+ * Rule/Constraint pair for each rule (theory/rules/rule_pair.h), and a check that runs the
  * whole group and reports the rules a subject breaks as hard and soft bit
  * masks. This table holds those parts so a module states only what is its
  * own: its names, its hardness, and how one rule is evaluated.
  *
  * A module defines its table at file scope, with static storage for the cache:
  *
- *   static StandardCounterpointRulePair g_pairs[N];
+ *   static RulePair g_pairs[N];
  *   static UrsatzOnce g_built[N];
  *   static const StandardCounterpointRuleTable TABLE = {"prefix", NAMES, N, is_hard, g_pairs, g_built};
  *
@@ -60,7 +60,7 @@ typedef struct {
     int count;
     /* NULL when every rule is hard. */
     StandardCounterpointRuleHard is_hard;
-    StandardCounterpointRulePair *pairs;
+    RulePair *pairs;
     UrsatzOnce *built;
     /* NULL when the table registers no evaluation callback. */
     ConstraintEvaluateFn evaluate;

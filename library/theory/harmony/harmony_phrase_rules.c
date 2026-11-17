@@ -10,7 +10,7 @@ static bool table_is_hard(int which) {
     return which == HARMONY_PHRASE_TONIC_THEN_DOMINANT || which == HARMONY_PHRASE_IV_BEFORE_II;
 }
 
-static HarmonyRulePair g_pairs[HARMONY_PHRASE_RULE_COUNT];
+static RulePair g_pairs[HARMONY_PHRASE_RULE_COUNT];
 static UrsatzOnce g_built[HARMONY_PHRASE_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);

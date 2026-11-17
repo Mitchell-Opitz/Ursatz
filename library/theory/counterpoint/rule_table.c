@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "theory/counterpoint/framework.h"
+
 bool standard_counterpoint_rule_table_valid(const StandardCounterpointRuleTable *table, int which) {
     return table != NULL && which >= 0 && which < table->count;
 }
@@ -33,8 +35,8 @@ static void build_pair(void *arg) {
     } else {
         snprintf(name, sizeof(name), "%s", table->names[which]);
     }
-    standard_counterpoint_build_rule_pair(
-        name, standard_counterpoint_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
+    rule_pair_build(
+        standard_counterpoint_framework(), "standard-counterpoint", name, standard_counterpoint_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
         table->evaluate, table->score, &table->pairs[which]);
 }
 

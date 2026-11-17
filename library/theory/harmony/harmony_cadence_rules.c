@@ -9,7 +9,7 @@ static bool table_is_hard(int which) {
     return which == HARMONY_CADENCE_CADENTIAL_PROGRESSION;
 }
 
-static HarmonyRulePair g_pairs[HARMONY_CADENCE_RULE_COUNT];
+static RulePair g_pairs[HARMONY_CADENCE_RULE_COUNT];
 static UrsatzOnce g_built[HARMONY_CADENCE_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);

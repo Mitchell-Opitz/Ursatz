@@ -16,15 +16,15 @@ static bool is_hard(int which) {
     return which != BETA;
 }
 
-static StandardCounterpointRulePair g_pairs[COUNT];
+static RulePair g_pairs[COUNT];
 static UrsatzOnce g_built[COUNT];
 static const StandardCounterpointRuleTable TABLE = {"test-group", NAMES, COUNT, is_hard, g_pairs, g_built};
 
-static StandardCounterpointRulePair g_bare_pairs[COUNT];
+static RulePair g_bare_pairs[COUNT];
 static UrsatzOnce g_bare_built[COUNT];
 static const StandardCounterpointRuleTable BARE = {NULL, NAMES, COUNT, NULL, g_bare_pairs, g_bare_built};
 
-static StandardCounterpointRulePair g_soft_pairs[COUNT];
+static RulePair g_soft_pairs[COUNT];
 static UrsatzOnce g_soft_built[COUNT];
 static const StandardCounterpointRuleTable SOFT = {
     "test-soft", NAMES, COUNT, standard_counterpoint_rule_table_never_hard, g_soft_pairs, g_soft_built};
@@ -38,7 +38,7 @@ static bool holds(int which, const void *subject) {
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
-static StandardCounterpointRulePair g_eval_pairs[COUNT];
+static RulePair g_eval_pairs[COUNT];
 static UrsatzOnce g_eval_built[COUNT];
 static const StandardCounterpointRuleTable EVAL = {"test-eval", NAMES, COUNT,         is_hard,
                                                    g_eval_pairs,  g_eval_built, evaluate_candidate, score_candidate};

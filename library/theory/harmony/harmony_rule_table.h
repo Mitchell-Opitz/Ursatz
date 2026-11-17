@@ -6,7 +6,7 @@
 #include "model/core/once.h"
 #include <stddef.h>
 
-#include "theory/harmony/harmony_rule_pair.h"
+#include "theory/rules/rule_pair.h"
 #include "model/core/value.h"
 #include "theory/rules/constraint.h"
 #include "theory/rules/preference.h"
@@ -22,7 +22,7 @@
  * A module defines its table at file scope, with static storage for the
  * cache:
  *
- *   static HarmonyRulePair g_pairs[N];
+ *   static RulePair g_pairs[N];
  *   static UrsatzOnce g_built[N];
  *   static const HarmonyRuleTable TABLE = {"prefix", NAMES, N, is_hard, g_pairs, g_built};
  *
@@ -56,7 +56,7 @@ typedef struct {
     int count;
     /* NULL when every rule is hard. */
     HarmonyRuleHard is_hard;
-    HarmonyRulePair *pairs;
+    RulePair *pairs;
     UrsatzOnce *built;
     /* NULL when the table registers no evaluation callback. */
     ConstraintEvaluateFn evaluate;

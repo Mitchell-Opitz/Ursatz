@@ -21,7 +21,7 @@ static bool table_is_hard(int which) {
     return !rule_is_soft((StandardCounterpointFirstSpeciesHarmonyRule)which);
 }
 
-static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT];
+static RulePair g_pairs[STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT];
 static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_HARMONY_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
