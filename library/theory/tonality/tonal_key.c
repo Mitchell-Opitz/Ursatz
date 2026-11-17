@@ -4,18 +4,12 @@
 
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/midi_pitch.h"
+#include "theory/knowledge/knowledge_modes.h"
 
 #define KEY_MAX_ACCIDENTALS 7
 #define KEY_MINOR_FIFTHS_OFFSET 3
 #define KEY_DEGREE_COUNT 7
 #define KEY_MAX_ACCIDENTAL_OFFSET 2
-
-static const int MODE_SEMITONES[4][KEY_DEGREE_COUNT] = {
-    {0, 2, 4, 5, 7, 9, 11},
-    {0, 2, 3, 5, 7, 8, 10},
-    {0, 2, 3, 5, 7, 8, 11},
-    {0, 2, 3, 5, 7, 9, 11},
-};
 
 static bool mode_valid(StandardTonalityMode mode) {
     return mode >= STANDARD_TONALITY_MODE_MAJOR && mode <= STANDARD_TONALITY_MODE_MELODIC_MINOR;
@@ -34,7 +28,7 @@ int standard_tonality_degree_semitone(StandardTonalityMode mode, int degree) {
     if (!mode_valid(mode) || degree < 1 || degree > KEY_DEGREE_COUNT) {
         return -1;
     }
-    return MODE_SEMITONES[mode][degree - 1];
+    return knowledge_tonality_mode_steps[mode][degree - 1];
 }
 
 unsigned standard_tonality_mode_pitch_classes(int tonic_pitch_class, StandardTonalityMode mode) {
@@ -43,7 +37,7 @@ unsigned standard_tonality_mode_pitch_classes(int tonic_pitch_class, StandardTon
     }
     unsigned mask = 0;
     for (int d = 0; d < KEY_DEGREE_COUNT; d++) {
-        mask |= 1u << ((tonic_pitch_class + MODE_SEMITONES[mode][d]) % PITCH_SEMITONES_PER_OCTAVE);
+        mask |= 1u << ((tonic_pitch_class + knowledge_tonality_mode_steps[mode][d]) % PITCH_SEMITONES_PER_OCTAVE);
     }
     return mask;
 }
@@ -74,12 +68,12 @@ bool standard_tonality_degree_at_or_below_semitone(int semitones_above_tonic, St
     int inside = floor_mod(semitones_above_tonic, PITCH_SEMITONES_PER_OCTAVE);
     int found = 0;
     for (int d = 0; d < KEY_DEGREE_COUNT; d++) {
-        if (MODE_SEMITONES[mode][d] <= inside) {
+        if (knowledge_tonality_mode_steps[mode][d] <= inside) {
             found = d;
         }
     }
     *degree = found + 1;
-    *alteration = inside - MODE_SEMITONES[mode][found];
+    *alteration = inside - knowledge_tonality_mode_steps[mode][found];
     return true;
 }
 
