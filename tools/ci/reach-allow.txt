@@ -35,3 +35,16 @@ library/theory/tonality/brightness.c brightness_rank_of  # no app asks a mode's 
 library/theory/tonality/brightness.c brightness_shift  # no app shifts a mode's brightness until P58 B13 (forms resolve through relations); its tests call it
 library/theory/tonality/brightness.c name_of  # helper of the brightness functions, which no app calls until P58 B13; its tests call it
 library/theory/tonality/brightness.c say  # helper of the brightness functions, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c give  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c is_minor_form  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c major_of  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c minor_of  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c reduced  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c refuse  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c region_resolve  # no app resolves a relation to a region until P58 B13 (forms resolve through relations); its tests call it
+library/theory/tonality/region_relation.c region_resolve_named  # no app resolves a relation by word until P60 (per-section regions in requests); its tests call it
+library/theory/tonality/region_relation.c resolve_modal  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c resolve_neo_riemannian  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c resolve_set  # the set branch of region_resolve: reached through it from P58 B13, the set relations themselves are used from P60 (regions in requests); its tests call it
+library/theory/tonality/region_relation.c resolve_tonal  # helper of region_resolve, which no app calls until P58 B13; its tests call it
+library/theory/tonality/region_relation.c same_material  # helper of region_resolve, which no app calls until P58 B13; its tests call it

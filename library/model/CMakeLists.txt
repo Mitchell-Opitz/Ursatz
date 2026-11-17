@@ -84,6 +84,7 @@ ursatz_public_headers(ursatz_model
         model/pitch/pitch_identity.h
         model/pitch/pitch_material.h
         model/pitch/pitch_numeric_value.h
+        model/pitch/region.h
         model/pitch/pitch_spelling.h
         model/pitch/tuning_system.h
         model/relationship/relationship.h

@@ -29,6 +29,7 @@ add_library(ursatz_theory
     tonality/framework.c
     tonality/interval.c
     tonality/key_vocabulary.c
+    tonality/region_relation.c
     tonality/roman_numeral_analysis_rules.c
     tonality/roman_numeral_grammar.c
     tonality/roman_numeral_rules.c
