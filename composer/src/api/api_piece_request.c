@@ -722,6 +722,7 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapsho
     request->job = job;
     request->knowledge = knowledge;
     request->materials = materials;
+    request->request.knowledge = knowledge;
     request->style_path = style_path;
     if (!cJSON_IsObject(root)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, base, "the piece request must be a JSON object");

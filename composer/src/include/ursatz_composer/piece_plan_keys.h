@@ -45,18 +45,23 @@ typedef struct {
 
 /*
  * The key of a region of the form for a home key (R-485): one draw of rng picks one of the region's degrees for the home
- * key's mode. Degree 1 is the home key's parallel key (the other mode, the same tonic); any other degree is the closely
- * related key of standard-harmony on it. False when the degree names no closely related key.
+ * key's mode, and the degree names a relation entry of the snapshot (1 parallel, 2 supertonic, 3 mediant, 4 subdominant, 5 dominant,
+ * 6 submediant, 7 subtonic) that region_resolve resolves from the home key's region (R-596). Degree 1 is the home key's parallel
+ * key (the other mode, the same tonic); any other degree is the major or minor key the triad on that degree makes, which for the
+ * degrees a form lists is the closely related key of standard-harmony on it (harmony_related_key_of). False when the relation
+ * refuses the degree (a diminished triad names no key) or the snapshot lacks the entry; one draw of rng is made in any case.
  */
-bool piece_region_key(AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out);
+bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out);
 
 /*
  * Plans the keys of the plan made by form_build_plan from the form's size before its form is Given: adds the Given key lane spans to the
  * form, over the sections and the material, and sets the KEY constraint of a section that ends in another key to the
  * key it ends in. The home key is the KEY constraint of the first section. rng NULL plans no modulation (one span, the
- * home key); otherwise every choice is drawn from rng. *out is the plan made.
+ * home key); otherwise every choice is drawn from rng. knowledge resolves the regions and the parallel mode (piece_region_key); it may
+ * be NULL for a form with no section in the parallel mode that stays home. *out is the plan made.
  */
-PieceResult piece_plan_keys(PiecePlan *plan, const FormSpec *form, const FormSpecSize *size, FillRng *rng, PieceKeyPlan *out);
+PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size,
+                            FillRng *rng, PieceKeyPlan *out);
 
 typedef struct {
     bool ok;

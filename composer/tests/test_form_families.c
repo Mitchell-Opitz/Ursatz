@@ -474,6 +474,7 @@ static bool compose_try(const FormFamily *family, const Row *row, unsigned long 
     memset(&request, 0, sizeof(request));
     request.form = family->name;
     request.key = test_key_mode(row->tonic, row->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = (unsigned)row->beats;
     request.meter.beat_unit = (unsigned)row->unit;
     request.modulate = true;

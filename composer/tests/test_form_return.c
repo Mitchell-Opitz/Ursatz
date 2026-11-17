@@ -173,6 +173,7 @@ static PieceRequest request_of(const char *kind, size_t bars, size_t count, bool
     request.bars = bars;
     request.count = count;
     request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     if (accompanied) {
@@ -568,6 +569,7 @@ static size_t embellish_row(const FormSpec *form, const EmbellishRow *row, bool 
         memset(&request, 0, sizeof(request));
         request.form = form->name;
         request.key = test_key_mode(row->pitch_class, row->mode);
+        request.knowledge = test_knowledge();
         request.meter.beats_per_bar = 2;
         request.meter.beat_unit = 4;
         request.modulate = true;
@@ -667,6 +669,7 @@ static PieceRequest setting_request(const SettingRow *row) {
     memset(&request, 0, sizeof(request));
     request.form = "embellish-form";
     request.key = test_key_mode(row->pitch_class, row->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = (unsigned)row->beats;
     request.meter.beat_unit = (unsigned)row->unit;
     request.modulate = true;
@@ -978,6 +981,7 @@ static int test_home(void) {
                 memset(&request, 0, sizeof(request));
                 request.form = form->name;
                 request.key = test_key_mode(ROWS[r].pitch_class, ROWS[r].mode);
+                request.knowledge = test_knowledge();
                 request.meter.beats_per_bar = ROWS[r].beats;
                 request.meter.beat_unit = ROWS[r].unit;
                 request.modulate = true;

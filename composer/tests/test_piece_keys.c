@@ -67,6 +67,7 @@ static PieceRequest request_of(const Scenario *scenario, const char *kind, unsig
     memset(&request, 0, sizeof(request));
     request.form = kind;
     request.key = test_key_mode(scenario->tonic, scenario->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = beats_of(kind);
     request.meter.beat_unit = 4;
     request.modulate = true;
@@ -623,6 +624,7 @@ static int test_tonic_major(bool smoke) {
             memset(&request, 0, sizeof(request));
             request.form = form->name;
             request.key = home;
+            request.knowledge = test_knowledge();
             request.meter.beats_per_bar = 4;
             request.meter.beat_unit = 4;
             request.modulate = true;

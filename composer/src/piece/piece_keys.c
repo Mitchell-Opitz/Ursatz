@@ -7,6 +7,8 @@
 #include <theory/harmony/harmony_chord.h>
 #include <theory/harmony/harmony_key_change.h>
 #include <theory/harmony/harmony_related_key.h>
+#include <theory/knowledge/knowledge_snapshot.h>
+#include <theory/tonality/region_relation.h>
 #include <theory/vocabulary/cadence_type.h>
 
 #include <ursatz_composer/constraint.h>
@@ -26,39 +28,44 @@ typedef struct {
 
 #define MAX_SEGMENTS (2 * FORM_SPEC_MAX_SECTIONS + 1)
 
-/* The key of the tonic in the major or the natural minor. TRANSITIONAL: the builtin materials stand in until P58 B13 commit 5 resolves
-   the regions through the snapshot's relations. */
-static AnalysisKey key_in_mode(int tonic, HarmonyMode mode) {
-    return plan_key_of_pitch_class(tonic, composer_builtin_material(mode == HARMONY_MODE_MINOR));
+/* The relation entry each degree of a region names (R-596); index 0 is unused. */
+static const char *const DEGREE_RELATIONS[8] = {NULL,
+                                                "omt.relation.parallel",
+                                                "omt.relation.supertonic",
+                                                "omt.relation.mediant",
+                                                "omt.relation.subdominant",
+                                                "omt.relation.dominant",
+                                                "omt.relation.submediant",
+                                                "omt.relation.subtonic"};
+
+/* The key the relation of a degree (1 to 7) reaches from the home key, resolved by the snapshot against the home key's region. */
+static bool resolve_degree(const KnowledgeSnapshot *knowledge, AnalysisKey home, int degree, AnalysisKey *out) {
+    if (!knowledge || degree < 1 || degree > 7 || home.material == NULL) {
+        return false;
+    }
+    const Relation *relation = knowledge_snapshot_relation(knowledge, DEGREE_RELATIONS[degree]);
+    Region anchor = region_tonal(analysis_key_tonic_pitch_class(&home), home.material);
+    Region found;
+    if (!relation || region_resolve(knowledge, relation, &anchor, &found, NULL, 0) != REGION_RELATION_OK ||
+        found.kind != REGION_TONAL_MODAL) {
+        return false;
+    }
+    *out = plan_key_of_pitch_class(found.center, found.material);
+    return true;
 }
 
 /*
  * The key of a region of the home key (R-485): one of the region's degrees for the home key's mode, drawn from the list
- * (one draw of rng whatever the degree is). Degree 1 is the home key's parallel key, the other mode on the same tonic;
- * any other is the closely related key of standard-harmony on that degree. False when the draw is not a key
- * standard-harmony calls closely related.
+ * (one draw of rng whatever the degree is), resolved through the degree's relation entry (R-596). Degree 1 is the home key's
+ * parallel key, the other mode on the same tonic; any other is the key the triad on that degree makes, closely related for the
+ * degrees the forms list. False when the relation refuses the degree.
  */
-bool piece_region_key(AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
+bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
     bool minor = composer_key_is_minor(&home);
     const int *degrees = minor ? region->minor : region->major;
     size_t count = minor ? region->minor_count : region->major_count;
-    HarmonyMode home_mode = harmony_key_mode(&home);
-    HarmonyRelatedKey related;
-    int semitone;
     int degree = degrees[fill_rng_below(rng, count)];
-    if (degree == 1) {
-        *out = key_in_mode(analysis_key_tonic_pitch_class(&home), minor ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR);
-        return true;
-    }
-    if (!harmony_related_key_of(home_mode, degree, &related) || !harmony_key_is_closely_related(home_mode, &related)) {
-        return false;
-    }
-    semitone = harmony_related_key_semitone(home_mode, &related);
-    if (semitone < 0) {
-        return false;
-    }
-    *out = key_in_mode((analysis_key_tonic_pitch_class(&home) + semitone) % 12, related.mode);
-    return true;
+    return resolve_degree(knowledge, home, degree, out);
 }
 
 /* A region a section's keys name has no degree 1: the parallel key is for the parts of a compound form. */
@@ -79,7 +86,8 @@ static bool region_has_degree_one(const FormRegion *region, bool minor) {
  * the draw is fill_rng_below(rng, 3), 0 staying home unless the form always modulates (R-493), then one pick per
  * region in the order the form lists them.
  */
-static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKey home, FillRng *rng, PieceSectionKeys *keys,
+static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size, AnalysisKey home, FillRng *rng,
+                      PieceSectionKeys *keys,
                       bool *modulates) {
     AnalysisKey away[FORM_SPEC_MAX_REGIONS];
     bool can = false;
@@ -90,14 +98,17 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
         can = can || size->sections[i].key_start != FORM_SPEC_HOME || size->sections[i].key_end != FORM_SPEC_HOME;
         /* A section in the parallel mode (R-499) is on the home tonic in the other mode: no draw, and modulates stays as it is. */
         if (size->sections[i].parallel) {
-            keys[i].start = key_in_mode(analysis_key_tonic_pitch_class(&home),
-                                        composer_key_is_minor(&home) ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR);
+            if (!resolve_degree(knowledge, home, 1, &keys[i].start)) {
+                return false;
+            }
             keys[i].end = keys[i].start;
         }
         /* A section in the tonic major (R-517) is on the home tonic in its major key: home in a major piece, the parallel major in a
          * minor one. No draw, so the draws after it are unchanged. */
         if (size->sections[i].tonic_major && composer_key_is_minor(&home)) {
-            keys[i].start = key_in_mode(analysis_key_tonic_pitch_class(&home), HARMONY_MODE_MAJOR);
+            if (!resolve_degree(knowledge, home, 1, &keys[i].start)) {
+                return false;
+            }
             keys[i].end = keys[i].start;
         }
     }
@@ -111,7 +122,7 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
     }
     for (size_t r = 0; r < form->region_count; r++) {
         const FormRegion *region = &form->regions[r];
-        if (region_has_degree_one(region, composer_key_is_minor(&home)) || !piece_region_key(home, region, rng, &away[r])) {
+        if (region_has_degree_one(region, composer_key_is_minor(&home)) || !piece_region_key(knowledge, home, region, rng, &away[r])) {
             return false;
         }
     }
@@ -182,7 +193,8 @@ static PieceResult set_section_key(PiecePlan *plan, NodeId section, AnalysisKey 
     return PIECE_ERR_BAD_REQUEST;
 }
 
-PieceResult piece_plan_keys(PiecePlan *plan, const FormSpec *spec, const FormSpecSize *size, FillRng *rng, PieceKeyPlan *out) {
+PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *spec, const FormSpecSize *size,
+                            FillRng *rng, PieceKeyPlan *out) {
     if (!plan || !spec || !size || !out) {
         return PIECE_ERR_NULL;
     }
@@ -212,7 +224,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, const FormSpec *spec, const FormSpe
     }
     AnalysisKey home = home_key->params.key;
     out->count = count;
-    if (!draw_keys(spec, size, home, rng, out->sections, &out->modulates)) {
+    if (!draw_keys(knowledge, spec, size, home, rng, out->sections, &out->modulates)) {
         return PIECE_ERR_BAD_REQUEST;
     }
 

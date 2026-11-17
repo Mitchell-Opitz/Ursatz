@@ -184,6 +184,7 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/framework.h
         theory/tonality/interval.h
         theory/tonality/key_vocabulary.h
+        theory/tonality/region_relation.h
         theory/tonality/roman_numeral_analysis_rules.h
         theory/tonality/roman_numeral_grammar.h
         theory/tonality/roman_numeral_rules.h

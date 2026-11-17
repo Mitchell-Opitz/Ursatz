@@ -236,6 +236,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
 static void standard_structure(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
     fixture->request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    fixture->request.knowledge = test_knowledge();
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;
     fixture->request.form = "game-loop";

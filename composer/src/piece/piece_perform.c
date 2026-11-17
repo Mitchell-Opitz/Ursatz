@@ -189,7 +189,7 @@ PieceResult piece_compose_parts(const FormSpec *form, const PieceRequest *reques
             out->keys[i] = out->keys[part->again];
         } else if (part->key == FORM_SPEC_HOME) {
             out->keys[i] = request->key;
-        } else if (!piece_region_key(request->key, &form->regions[part->key], &rng, &out->keys[i])) {
+        } else if (!piece_region_key(config->knowledge, request->key, &form->regions[part->key], &rng, &out->keys[i])) {
             return PIECE_ERR_BAD_REQUEST;
         }
     }

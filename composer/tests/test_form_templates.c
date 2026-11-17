@@ -468,6 +468,7 @@ static PieceRequest scenario_request(const Scenario *scenario, const char *kind,
     memset(&request, 0, sizeof(request));
     request.form = kind;
     request.key = test_key_mode(scenario->tonic, scenario->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = 4;
     request.bars = size.bars;

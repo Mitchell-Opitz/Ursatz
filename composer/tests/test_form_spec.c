@@ -622,6 +622,7 @@ static void test_for_plan(void) {
         memset(&request, 0, sizeof(request));
         request.form = FORMS[f].name;
         request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+        request.knowledge = test_knowledge();
         request.meter.beats_per_bar = FORMS[f].meters > 0 ? 3 : 4;
         request.meter.beat_unit = 4;
         PiecePlan *plan = NULL;
@@ -886,6 +887,7 @@ static int test_meters(void) {
     memset(&request, 0, sizeof(request));
     request.form = form->name;
     request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     assert(form_build_plan(form, &request, &plan) == PIECE_ERR_BAD_REQUEST && plan == NULL);
@@ -1107,6 +1109,7 @@ static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, Compo
     memset(&request, 0, sizeof(request));
     request.form = form->name;
     request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     PiecePlan *plan = NULL;
@@ -2066,6 +2069,7 @@ static void test_parts_reader(void) {
     memset(&request, 0, sizeof(request));
     request.form = form->name;
     request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     PiecePlan *plan = NULL;
@@ -2451,6 +2455,7 @@ static PiecePlan *compose_lead(const FormSpec *form, unsigned long seed, int pit
     memset(&request, 0, sizeof(request));
     request.form = form->name;
     request.key = test_key_mode(pitch_class, mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.seed = seed;
@@ -2569,6 +2574,7 @@ static void lead_sometimes(const char *text) {
             memset(&request, 0, sizeof(request));
             request.form = form->name;
             request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+            request.knowledge = test_knowledge();
             request.meter.beats_per_bar = 3;
             request.meter.beat_unit = 4;
             request.seed = seed;

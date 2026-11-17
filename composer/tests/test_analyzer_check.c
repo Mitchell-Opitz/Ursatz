@@ -349,6 +349,7 @@ static void piece_section(PieceFixture *fixture, const char *id, PiecePart part,
 static void piece_fixture(PieceFixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
     fixture->request.key = test_key_mode(2, KEY_STRUCTURE_MODE_MINOR);
+    fixture->request.knowledge = test_knowledge();
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;
     fixture->request.form = "game-loop";

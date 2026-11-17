@@ -583,7 +583,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         FillRng rng;
         bool modulate = request->modulate || form->modulates;
         fill_rng_seed(&rng, request->seed);
-        result = piece_plan_keys(plan, form, size, modulate ? &rng : NULL, &keys);
+        result = piece_plan_keys(plan, request->knowledge, form, size, modulate ? &rng : NULL, &keys);
         result = result == PIECE_OK && modulate ? piece_plan_cadences(plan, form, size, &keys) : result;
     }
     if (result == PIECE_OK) {

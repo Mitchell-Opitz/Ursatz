@@ -45,6 +45,7 @@ static PieceRequest request(const char * form) {
     request.form = form;
     request.bars = strcmp(form, "rounded-binary") == 0 ? 24 : 0;
     request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     return request;

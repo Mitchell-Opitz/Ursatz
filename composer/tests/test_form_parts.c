@@ -143,6 +143,7 @@ static PiecePlan *compose(const FormSpec *form, const Row *row, unsigned long se
     memset(&request, 0, sizeof(request));
     request.form = form->name;
     request.key = test_key_mode(row->tonic, row->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = (unsigned)row->beats;
     request.meter.beat_unit = (unsigned)row->unit;
     request.seed = seed;
@@ -546,6 +547,7 @@ static PiecePlan *plan_only(const FormSpec *form, const Motive *motive, PieceRes
     memset(&request, 0, sizeof(request));
     request.form = form->name;
     request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = motive ? 3 : 4;
     request.meter.beat_unit = 4;
     request.seed = 1;

@@ -106,6 +106,7 @@ static PiecePlan *filled_rounded_binary(void) {
     request.form = "rounded-binary";
     request.bars = 24;
     request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     ComposeConfig config;

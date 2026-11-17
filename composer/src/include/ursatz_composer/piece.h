@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
@@ -112,6 +113,12 @@ typedef struct {
      */
     bool modulate;
     unsigned long seed;
+    /*
+     * The call context's snapshot (R-596): the keys of the form's regions and of a section in the parallel mode are resolved through its
+     * relation entries (piece_region_key). Required when the form leaves the home key or has such a section; NULL otherwise. Must
+     * outlive the build.
+     */
+    const KnowledgeSnapshot *knowledge;
     /*
      * Given melodies (given.h) the plan is to take: the material holds a bar more for each, the motive the idea that
      * has a Given melody inside it is made from (R-071). 0 for none.

@@ -158,6 +158,7 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, int beats,
     memset(&request, 0, sizeof(request));
     request.form = size->kind;
     request.key = test_key_mode(scenario->tonic, scenario->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = beats;
     request.meter.beat_unit = 4;
     request.bars = size->bars;

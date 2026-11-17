@@ -42,6 +42,7 @@ typedef struct {
 static void fixture_init(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
     fixture->request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    fixture->request.knowledge = test_knowledge();
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;
     fixture->request.form = "game-loop";
@@ -461,6 +462,7 @@ static void test_minor_half_free(void) {
     Fixture fixture;
     fixture_init(&fixture);
     fixture.request.key = test_key_mode(2, HARMONY_MODE_MINOR);
+    fixture.request.knowledge = test_knowledge();
     PieceSection *a = add_section(&fixture, "a", "A", PIECE_PART_BODY, 32, PIECE_FILL_MOTIF);
     a->has_into = true;
     a->into = PLAN_ARCHETYPE_SENTENCE;
@@ -509,6 +511,7 @@ typedef struct {
 static void function_structure(Fixture *fixture, FunctionRow *row) {
     fixture_init(fixture);
     fixture->request.key = test_key_mode(row->tonic, row->mode);
+    fixture->request.knowledge = test_knowledge();
     fixture->request.meter.beats_per_bar = row->beats;
     size_t bar = (size_t)row->beats;
     MotiveOptions options;
