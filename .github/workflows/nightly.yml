@@ -21,17 +21,26 @@ jobs:
         with:
           key: ${{ runner.os }}-ccache
 
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install -y valgrind python3-jsonschema
+
       - name: Configure
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
-        run: cmake -S . -B build
+        run: cmake -S . -B build -DURSATZ_REQUIRE="valgrind;jsonschema;node"
 
       - name: Build
         run: cmake --build build -j
 
       - name: Test
         run: ctest --test-dir build --output-on-failure --no-tests=error -j$(nproc)
+      - name: Check that the valgrind and schema tests were registered
+        run: |
+          for l in valgrind schema; do
+            n=$(ctest --test-dir build -N -L "^$l$" | sed -n 's/^Total Tests: //p')
+            [ "$n" -gt 0 ] || { echo "no $l tests registered"; exit 1; }
+          done
       - name: Ten slowest tests
         if: always()
         run: bash tools/ci/slowest-tests.sh build
