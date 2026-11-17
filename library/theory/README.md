@@ -77,7 +77,7 @@ A framework may not include kernel L8 (`analysis/`), so when a job's owner lives
 
 ## Neutral analysis input
 
-Framework adapters accept the neutral types in `analysis/notes/` (`AnalysisNote`, `AnalysisSegment`, `AnalysisKey`, `AnalysisVoiceGrid`) through mapping functions that copy field for field with no new arithmetic, so a caller no longer writes the converter. Each framework keeps its own internal types and `double` or `Q` arithmetic. The mappings are in each framework's `analysis/` input header; `docs/modules/semantics.md` describes the types.
+Framework adapters accept the neutral types in `analysis/notes/` (`AnalysisNote`, `AnalysisSegment`, `AnalysisKey`, `AnalysisVoiceGrid`) through mapping functions that copy field for field with no new arithmetic, so a caller no longer writes the converter. Time is exact `Rational` everywhere in analysis; `double` is only for scores and display (Law 19). The mappings are in each framework's `analysis/` input header; `docs/modules/semantics.md` describes the types.
 
 ## Claims and rule tables
 
