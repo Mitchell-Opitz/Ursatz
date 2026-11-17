@@ -145,10 +145,10 @@ static void test_compound_meters(void) {
     expect_beat(twelve, q(7, 16), 1, 3, q(1, 16));
     meter_map_destroy(twelve);
 
-    /* A top number of 6 over a quarter is simple: the beat is the unit. */
-    MeterMap *simple_six = single(6, 2);
-    expect_length(simple_six, 1, q(1, 4));
-    meter_map_destroy(simple_six);
+    /* 6/4 is compound too (OMT I ch. 10: two groups of three): the beat is a dotted half. */
+    MeterMap *six_four = single(6, 2);
+    expect_length(six_four, 1, q(3, 4));
+    meter_map_destroy(six_four);
 }
 
 static void test_changing_meters(void) {

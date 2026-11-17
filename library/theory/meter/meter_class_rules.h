@@ -23,15 +23,18 @@
  *
  * and the rules:
  *
- *   CLASSIFY            top number 2, 3, 4 is simple (duple, triple,
- *                       quadruple); 6, 9, 12 is compound (duple, triple,
- *                       quadruple). Any other top number -- 5/8, 7/8 --
- *                       is unclassified: neither, not invalid, because
- *                       TimeSignature allows it and irregular meters
- *                       follow other grouping conventions.
- *   BEATS_PER_MEASURE   simple: the top number counts beats. Compound:
- *                       the top number counts DIVISIONS, and divided by
- *                       three gives the beats (6, 9, 12 are 2, 3, 4).
+ *   CLASSIFY            from the signature's beat groups (OMT I ch. 10),
+ *                       the one owner of the beat: groups of three, two
+ *                       or more, make a compound meter (6/8, 6/4, 12/8,
+ *                       15/8), any other equal groups a simple one; the
+ *                       number of groups gives duple, triple or
+ *                       quadruple (none for 15/8, five beats). Unequal
+ *                       groups (3+2) and a lone beat group -- 5/8, 7/8,
+ *                       1/4 -- are unclassified: neither, not invalid,
+ *                       because irregular meters follow other grouping
+ *                       conventions.
+ *   BEATS_PER_MEASURE   the number of beat groups: the beats of a
+ *                       classified meter (6, 9, 12 over 8 are 2, 3, 4).
  *   BEAT_DIVISION       a simple beat divides into 2, then 4; a compound
  *                       beat divides into 3, then 6.
  *   COMPOUND_BEAT       because a compound beat holds three divisions it
@@ -42,9 +45,7 @@
  *   COMPOUND_BOTTOM     the bottom number of a compound meter is usually
  *                       4, 8, or 16; any bottom number 1-16 is valid.
  *
- * The compound top number is "a multiple of three" only in the 6, 9, 12
- * cases that give duple, triple, and quadruple; 3 stays a simple triple
- * and 15, 18, ... are unclassified.
+ * A top number of 3 stays a simple triple (three groups of one).
  */
 
 typedef enum {
@@ -81,10 +82,10 @@ bool standard_meter_beats_per_measure(const TimeSignature *time_signature, unsig
 bool standard_meter_beat_division(MeterType type, unsigned *out_division, unsigned *out_subdivision);
 
 /*
- * COMPOUND_BEAT / simple beat: the exact length of one beat: the bottom
- * unit for simple meter, three bottom units for compound. False, leaving
- * *out untouched, when unclassified or on allocation failure. On success
- * the caller owns *out.
+ * COMPOUND_BEAT / simple beat: the exact length of one beat, the
+ * signature's own (time_signature_beat_length): the bottom unit for
+ * simple meter, three bottom units for compound. False, leaving *out
+ * untouched, when unclassified.
  */
 bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration *out);
 

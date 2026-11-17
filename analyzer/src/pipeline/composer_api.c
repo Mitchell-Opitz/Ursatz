@@ -57,10 +57,7 @@ static MeterMap *copy_meter_map(const MeterMap *map) {
     for (size_t i = 0; ok && i < count; i++) {
         const MeterMapRegion *region = meter_map_region(map, i);
         const TimeSignature *source = meter_map_region_time_signature(region);
-        NoteValue *unit = NULL;
-        ok = note_value_create(time_signature_bottom_unit_exponent(source), &unit) == NOTE_VALUE_OK;
-        ok = ok && time_signature_create(time_signature_top_number(source), unit, &signatures[i]) == TIME_SIGNATURE_OK;
-        note_value_destroy(unit);
+        ok = time_signature_copy(source, &signatures[i]) == TIME_SIGNATURE_OK;
         points[i].time_signature = signatures[i];
         points[i].start = meter_map_region_start(region);
     }

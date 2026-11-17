@@ -121,9 +121,11 @@ static ScoreQuantizeResult locate_beat(const MeterMap *meter, Rational t, Span *
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
     }
     const TimeSignature *signature = meter_map_region_time_signature(region);
-    unsigned top = time_signature_top_number(signature);
-    unsigned bottom = time_signature_bottom_number(signature);
-    Rational len = (top > 3 && top % 3 == 0 && bottom >= 8) ? rational_ratio(3, bottom) : rational_ratio(1, bottom);
+    Duration beat_length;
+    if (time_signature_beat_length(signature, &beat_length) != DURATION_OK) {
+        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+    }
+    Rational len = beat_length.value;
 
     Rational offset;
     Rational beats;

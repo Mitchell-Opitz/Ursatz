@@ -73,14 +73,8 @@ struct MeterMap {
 };
 
 static TimeSignature *copy_time_signature(const TimeSignature *source) {
-    NoteValue *unit = NULL;
-    if (note_value_create(time_signature_bottom_unit_exponent(source), &unit) != NOTE_VALUE_OK) {
-        return NULL;
-    }
     TimeSignature *copy = NULL;
-    TimeSignatureResult r = time_signature_create(time_signature_top_number(source), unit, &copy);
-    note_value_destroy(unit);
-    return r == TIME_SIGNATURE_OK ? copy : NULL;
+    return time_signature_copy(source, &copy) == TIME_SIGNATURE_OK ? copy : NULL;
 }
 
 static TimeSignature *make_four_four(void) {

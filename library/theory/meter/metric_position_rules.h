@@ -58,11 +58,11 @@ typedef struct {
 } StandardMeterBeatPosition;
 
 /*
- * The beat grid a signature is read with here: how long one beat is and how many a measure holds. A
- * classified meter takes both from the meter class (meter_class_rules.h): the bottom unit in simple
- * meter, a dotted unit in compound. An unclassified one (5/8, 7/8) has no grouping defined, so each
- * bottom-unit pulse is a beat. False, leaving the outputs untouched, for a NULL argument or on
- * allocation failure. On success the caller owns *out_beat.
+ * The beat grid a signature is read with here: how long one beat is and how many a measure holds. The
+ * signature is the one owner of the beat (time_signature_beat_length): the length of a beat group when every
+ * group is the same size (the bottom unit in simple meter, a dotted unit in compound), else the bottom
+ * unit (3+2 over 8, 7/8: each bottom-unit pulse is a beat). False, leaving the outputs untouched, for a
+ * NULL argument or when the length does not fit.
  */
 bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration *out_beat, unsigned *out_beats);
 

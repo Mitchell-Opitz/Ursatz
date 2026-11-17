@@ -29,3 +29,5 @@ library/theory/knowledge/knowledge_snapshot.c read_steps  # the knowledge snapsh
 library/theory/knowledge/knowledge_snapshot.c text_field  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/knowledge/pitch_material.c pitch_material_contains  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/knowledge/pitch_material.c pitch_material_step  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/model/time/time_signature.c time_signature_create_grouped  # no caller until P58 B6 commit 3 (the MusicXML importer reads additive meters as groups); its tests call it
+library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it

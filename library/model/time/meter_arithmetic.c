@@ -80,16 +80,11 @@ MeterMapResult meter_map_beat_length(const MeterMap *map, int measure, Rational 
     const MeterMapRegion *region = NULL;
     TRY(meter_map_region_of_measure(map, measure, &region));
     const TimeSignature *signature = meter_map_region_time_signature(region);
-    Duration unit;
-    if (signature == NULL || time_signature_unit_duration(signature, &unit) != DURATION_OK) {
+    Duration length;
+    if (signature == NULL || time_signature_beat_length(signature, &length) != DURATION_OK) {
         return METER_MAP_ERR_NOT_FOUND;
     }
-    Rational length = unit.value;
-    unsigned top = time_signature_top_number(signature);
-    if ((top == 6 || top == 9 || top == 12) && time_signature_bottom_number(signature) >= 8) {
-        TRY(from_rational(rational_mul_int(length, 3, &length)));
-    }
-    *beat = length;
+    *beat = length.value;
     return METER_MAP_OK;
 }
 

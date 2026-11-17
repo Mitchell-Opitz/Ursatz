@@ -8,6 +8,7 @@
 
 #include "model/core/value.h"
 #include "model/time/musical_time.h"
+#include "model/time/note_value.h"
 #include "model/time/time_signature.h"
 
 /* ---- Exact time (whole notes) ---- */
@@ -61,18 +62,36 @@ typedef struct {
     bool four_beats;     /* a candidate's meter has four beats: its third beat is a secondary downbeat */
 } Grid;
 
-static bool signature_is_compound(unsigned top, unsigned bottom) {
-    return bottom == 8 && (top == 6 || top == 9 || top == 12);
-}
-
 /* Whether a signature has four beats, so that its third beat is the secondary accent. */
-static bool four_beats(unsigned top, unsigned bottom) {
-    return (top == 4 && bottom == 4) || (top == 12 && bottom == 8);
+static bool four_beats(const TimeSignature *signature) {
+    return time_signature_group_count(signature) == 4;
 }
 
-/* The beat of a signature in whole notes: the denominator's note, a dotted one in the compound meters. */
-static Rational beat_length(Calc *calc, unsigned top, unsigned bottom) {
-    return calc_make(calc, signature_is_compound(top, bottom) ? 3 : 1, (long long)bottom);
+/* The beat of a signature in whole notes: the signature's own, the one owner of the beat (a dotted unit in the compound
+   meters). */
+static Rational beat_length(Calc *calc, const TimeSignature *signature) {
+    Duration beat;
+    if (time_signature_beat_length(signature, &beat) != DURATION_OK) {
+        calc->overflow = true;
+        return rational_ratio(1, 1);
+    }
+    return beat.value;
+}
+
+/* The signature of a candidate meter shape; false (and an overflow) when it cannot be made. The caller destroys it. */
+static bool shape_signature(Calc *calc, unsigned top, unsigned bottom, TimeSignature **out) {
+    NoteValue *unit = NULL;
+    int exponent = 0;
+    for (unsigned b = bottom; b > 1; b >>= 1) {
+        exponent++;
+    }
+    bool ok = note_value_create(exponent, &unit) == NOTE_VALUE_OK;
+    ok = ok && time_signature_create(top, unit, out) == TIME_SIGNATURE_OK;
+    note_value_destroy(unit);
+    if (!ok) {
+        calc->overflow = true;
+    }
+    return ok;
 }
 
 static Rational time_rat(MusicalTime time) {
@@ -123,8 +142,8 @@ static void grid_place(Calc *calc, const Grid *grid, Rational x, bool *downbeat,
     Rational measure = calc_make(calc, (long long)top, (long long)bottom);
     Rational measures = calc_div(calc, from, measure);
     *downbeat = is_integer(measures);
-    *beat = is_integer(calc_div(calc, from, beat_length(calc, top, bottom)));
-    *secondary = four_beats(top, bottom) && is_integer(calc_sub(calc, measures, half));
+    *beat = is_integer(calc_div(calc, from, beat_length(calc, signature)));
+    *secondary = four_beats(signature) && is_integer(calc_sub(calc, measures, half));
 }
 
 /* How many downbeats the grid has from time from to time to, both inclusive; at least 1. */
@@ -319,9 +338,9 @@ static bool effective_candidate(Calc *calc, const MeterMap *map, Candidate *effe
     /* the first full measure's grid, for telling equal candidates apart */
     barlines->map = NULL;
     barlines->measure = calc_make(calc, (long long)top, (long long)bottom);
-    barlines->beat = beat_length(calc, top, bottom);
+    barlines->beat = beat_length(calc, signature);
     barlines->offset = pickup;
-    effective->grid.four_beats = four_beats(top, bottom);
+    effective->grid.four_beats = four_beats(signature);
     return true;
 }
 
@@ -360,8 +379,14 @@ StandardMeterAnalysisStatus standard_meter_check_meter(const MeterMap *map, cons
     for (size_t m = 0; m < METER_COUNT && !calc.overflow; m++) {
         unsigned top = METERS[m].top;
         unsigned bottom = METERS[m].bottom;
-        Rational beat = beat_length(&calc, top, bottom);
-        size_t beats = signature_is_compound(top, bottom) ? top / 3 : top;
+        TimeSignature *shape = NULL;
+        if (!shape_signature(&calc, top, bottom, &shape)) {
+            break;
+        }
+        Rational beat = beat_length(&calc, shape);
+        size_t beats = time_signature_group_count(shape);
+        bool shape_four_beats = four_beats(shape);
+        time_signature_destroy(shape);
         for (size_t s = 0; s < sizeof(SCALES) / sizeof(SCALES[0]); s++) {
             Rational scale = SCALES[s];
             for (size_t k = 0; k < beats; k++) {
@@ -374,7 +399,7 @@ StandardMeterAnalysisStatus standard_meter_check_meter(const MeterMap *map, cons
                 candidate.grid.measure = calc_div(&calc, calc_make(&calc, (long long)top, (long long)bottom), scale);
                 candidate.grid.beat = calc_div(&calc, beat, scale);
                 candidate.grid.offset = calc_div(&calc, candidate.pickup, scale);
-                candidate.grid.four_beats = four_beats(top, bottom);
+                candidate.grid.four_beats = shape_four_beats;
                 if (rational_cmp(candidate.grid.measure, effective_barlines.beat) <= 0) {
                     continue; /* a bar no longer than the beat already counted only adds barlines */
                 }

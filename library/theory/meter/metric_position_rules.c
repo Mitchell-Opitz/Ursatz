@@ -11,13 +11,17 @@ bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration *out
     if (time_signature == NULL || out_beat == NULL || out_beats == NULL) {
         return false;
     }
-    if (standard_meter_beat_duration(time_signature, out_beat)) {
-        return standard_meter_beats_per_measure(time_signature, out_beats);
-    }
-    if (time_signature_unit_duration(time_signature, out_beat) != DURATION_OK) {
+    /* the one owner of the beat: the signature; a measure holds a whole number of beats */
+    Duration beat;
+    Duration measure;
+    Rational beats;
+    if (time_signature_beat_length(time_signature, &beat) != DURATION_OK ||
+        time_signature_measure_duration(time_signature, &measure) != DURATION_OK ||
+        rational_div(measure.value, beat.value, &beats) != RATIONAL_OK || beats.den != 1) {
         return false;
     }
-    *out_beats = time_signature_top_number(time_signature);
+    *out_beat = beat;
+    *out_beats = (unsigned)beats.num;
     return true;
 }
 

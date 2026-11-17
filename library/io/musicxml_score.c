@@ -847,8 +847,14 @@ static MusicXmlExportResult build_measures(Prep *prep) {
             const TimeSignature *signature = meter_map_region_time_signature(region);
             unsigned top = time_signature_top_number(signature);
             unsigned bottom = time_signature_bottom_number(signature);
-            beat_d[m] = bottom > 0 ? bottom : 4;
-            beat_n[m] = (top > 3 && top % 3 == 0 && bottom >= 8) ? 3 : 1;
+            Duration beat_length;
+            if (time_signature_beat_length(signature, &beat_length) != DURATION_OK ||
+                beat_length.value.num > LONG_MAX || beat_length.value.den > LONG_MAX) {
+                result = MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+                break;
+            }
+            beat_n[m] = (unsigned long)beat_length.value.num;
+            beat_d[m] = (unsigned long)beat_length.value.den;
             prep->measure_four_four[m] = top == 4 && bottom == 4;
             time_status = time_denominator((long)beat_n[m], beat_d[m], &den);
             if (time_status == TIME_OK && !lcm_into(&divisions, den)) {

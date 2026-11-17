@@ -28,10 +28,11 @@ static void test_classify_the_six_categories(void) {
     }
 }
 
-/* Anything else -- 5/8, 7/8, 3 stays simple, 15, 18 -- is unclassified, not invalid. */
+/* Anything else -- 5/8, 7/8, 3 stays simple, 8, 64 -- is unclassified, not invalid. 15 and 18 are compound (5 and 6 groups
+   of three: beats, but no duple, triple or quadruple name). */
 static void test_unclassified_tops(void) {
-    unsigned tops[] = {1, 5, 7, 8, 10, 11, 13, 15, 18, 64};
-    for (int i = 0; i < 10; i++) {
+    unsigned tops[] = {1, 5, 7, 8, 10, 11, 13, 64};
+    for (int i = 0; i < 8; i++) {
         TimeSignature *time_signature = make_signature(tops[i], 3);
         MeterClass meter = standard_meter_classify(time_signature);
         assert(meter.type == METER_TYPE_UNCLASSIFIED);
