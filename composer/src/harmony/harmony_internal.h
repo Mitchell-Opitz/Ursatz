@@ -206,7 +206,8 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, KeyStructureMo
 /* What the recognizer hears at the end of the phrase, and whether it arrives on the last chord. */
 bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at_end);
 
-/* How many strong beats a bar of the meter has, which is where a chord may start. False for a meter not supported. */
+/* How many cells a bar of the meter has, which is where a chord may start: one per accent beat of a simple meter, one per
+   beat group of a compound one (R-590). False for a meter not supported. */
 bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells);
 /* The strength of the cell with this index in its bar: the first is strong, any other medium. */
 BeatStrength harmony_rhythm_cell_strength(size_t cell_in_bar);

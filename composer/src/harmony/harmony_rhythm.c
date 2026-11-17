@@ -7,14 +7,18 @@
 /*
  * The harmonic rhythm of the meters this operator knows. A chord changes only
  * on a beat the Composer chooses to change on (a composing decision): one cell
- * per beat of the meter, the beat being the dotted note of a compound meter,
- * and in a quadruple meter the beats the standard meter accents
- * (standard_meter_accent_beats). A cell is the time from one to the next:
+ * per accent beat of a simple meter (standard_meter_accent_beats), and one per
+ * beat group of a compound meter (time_signature_group_count: the dotted
+ * notes). Cell 0 is strong and every other cell medium. A cell is the time
+ * from one to the next:
  *   2/4  beat 1                  one cell
  *   3/4  beat 1                  one cell
  *   4/4  beats 1 and 3           two cells; beat 1 is strong, beat 3 medium
  *   6/8  beats 1 and 4 (the two  two cells; beat 1 is strong, beat 4 medium
  *        dotted quarters)
+ * R-263 (one cell per meter beat, strength by accent, the second 6/8 cell weak)
+ * is amended to this, which is what P25 B5 built (R-590): 4/4 has two cells, not
+ * four, and the second cell of 6/8 is medium, not weak.
  */
 
 #define RHYTHM_MAX_CELLS 4u
@@ -40,13 +44,15 @@ bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells) {
         return false;
     }
     bool ok = standard_meter_accent_beats(signature, beats, NULL, RHYTHM_MAX_CELLS, &count);
+    bool compound = time_signature_is_compound(signature);
+    size_t groups = time_signature_group_count(signature);
     time_signature_destroy(signature);
     if (!ok || count == 0) {
         return false;
     }
     /* The meters this operator writes: simple duple, triple and quadruple over quarters, and 6/8. */
-    if (meter->beat_unit == 8 && meter->beats_per_bar == 6) {
-        *cells = (size_t)meter->beats_per_bar / 3; /* the two dotted-quarter beats */
+    if (compound && meter->beat_unit == 8 && meter->beats_per_bar == 6) {
+        *cells = groups; /* the two dotted-quarter beats */
         return true;
     }
     if (meter->beat_unit == 4 && meter->beats_per_bar >= 2 && meter->beats_per_bar <= 4) {

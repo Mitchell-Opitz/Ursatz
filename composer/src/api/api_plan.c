@@ -16,6 +16,7 @@
 #include "api_grow.h"
 #include "api_vocabulary.h"
 #include "api_workflow.h"
+#include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
 #include "util/request_parse.h"
 
@@ -271,7 +272,8 @@ static ComposerStatus read_request(PlanBuild *state, ComposerError *error) {
 
 /* The cells of a bar of the meter, which the harmony operators place chords on (harmony_rhythm.c). */
 static unsigned long cells_in_bar(const PlanMeter *meter) {
-    return (meter->beat_unit == 4 && meter->beats_per_bar == 4) || meter->beat_unit == 8 ? 2 : 1;
+    size_t cells = 1;
+    return harmony_rhythm_cells_per_bar(meter, &cells) ? (unsigned long)cells : 1;
 }
 
 /* "B", "B:3", "A'" and "A':5": the section's letter and the bar (from 1) of it. */
