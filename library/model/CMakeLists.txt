@@ -32,6 +32,7 @@ add_library(ursatz_model
     pitch/pitch_numeric_value.c
     pitch/key_signature.c
     pitch/midi_pitch.c
+    pitch/pitch_material.c
     events/note_event.c
     events/dynamics.c
     events/tempo_marking.c
@@ -79,6 +80,7 @@ ursatz_public_headers(ursatz_model
         model/pitch/midi_pitch.h
         model/pitch/pitch_arithmetic.h
         model/pitch/pitch_identity.h
+        model/pitch/pitch_material.h
         model/pitch/pitch_numeric_value.h
         model/pitch/pitch_spelling.h
         model/pitch/tuning_system.h

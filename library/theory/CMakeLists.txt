@@ -14,7 +14,6 @@ add_library(ursatz_theory
     rules/rule_pair.c
     rules/rule_table.c
     knowledge/knowledge_snapshot.c
-    knowledge/pitch_material.c
     vocabulary/applied_chord_kind.c
     vocabulary/beat_strength.c
     vocabulary/cadence_type.c

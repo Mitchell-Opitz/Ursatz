@@ -5,6 +5,12 @@ gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test h
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_reset  # test hook: test_analyzer_route resets the import counter
 gui/backend/src/service/piece_lock.c ursatz_gui_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
+library/model/pitch/pitch_material.c pitch_material_contains  # no app calls pitch material until P58 B10 (keys carry materials); its tests call it
+library/model/pitch/pitch_material.c pitch_material_is_diatonic  # no app calls pitch material until P58 B10 (keys carry materials); its tests call it
+library/model/pitch/pitch_material.c pitch_material_mask  # no app calls pitch material until P58 B10 (keys carry materials); its tests call it
+library/model/pitch/pitch_material.c pitch_material_step  # no app calls pitch material until P58 B10 (keys carry materials); its tests call it
+library/model/pitch/pitch_material.c pitch_material_third  # no app calls pitch material until P58 B10 (keys carry materials); its tests call it
+library/model/pitch/pitch_material.c reduced  # no app calls pitch material until P58 B10 (keys carry materials); its tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/model/time/meter_arithmetic.c meter_map_time_of  # the inverse of meter_map_position_of has no app caller until P59 reads the performer parts' local maps; its tests call it
 library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
@@ -32,6 +38,4 @@ library/theory/knowledge/knowledge_snapshot.c read_file  # the knowledge snapsho
 library/theory/knowledge/knowledge_snapshot.c read_status  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/knowledge/knowledge_snapshot.c read_steps  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/knowledge/knowledge_snapshot.c text_field  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/pitch_material.c pitch_material_contains  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/theory/knowledge/pitch_material.c pitch_material_step  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it

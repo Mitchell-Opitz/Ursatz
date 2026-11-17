@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "theory/knowledge/knowledge_snapshot.h"
-#include "theory/knowledge/pitch_material.h"
+#include "model/pitch/pitch_material.h"
 
 /*
  * The knowledge snapshot: the four tonality modes the build embeds, found by id with their fields and steps; the entries it holds by

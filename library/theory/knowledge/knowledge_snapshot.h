@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "theory/knowledge/pitch_material.h"
+#include "model/pitch/pitch_material.h"
 
 /*
  * The knowledge snapshot (target architecture 5): every entry of knowledge/ as the build embedded it, plus the entries of a user's
