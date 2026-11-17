@@ -3,13 +3,16 @@
 
 #include <stddef.h>
 
+#include "model/pitch/chord_type.h"
 #include "model/pitch/pitch_material.h"
+#include "theory/knowledge/relation.h"
 
 /*
  * The knowledge snapshot (target architecture 5): every entry of knowledge/ as the build embedded it, plus the entries of a user's
  * own files, read once and then never changed. Whoever calls the library builds it and passes it on; the library keeps no copy, so
- * two snapshots built in one process are independent. The snapshot holds each entry's common fields and, for the pitch material
- * kind, its steps. Entries of other kinds are kept by their common fields until their loaders exist.
+ * two snapshots built in one process are independent. The snapshot holds each entry's common fields and, for the pitch material,
+ * chord type and relation kinds, what the entry says (every field the loader reads is checked, and a bad one refuses the build with
+ * the file, the id and the field). Entries of other kinds are kept by their common fields until their loaders exist.
  */
 
 typedef struct KnowledgeSnapshot KnowledgeSnapshot;
@@ -69,5 +72,31 @@ const KnowledgeEntry *knowledge_snapshot_entry(const KnowledgeSnapshot *snapshot
 
 /* The pitch material (kind material, subtype unordered) with this id, or NULL when there is none or the entry is another kind. */
 const PitchMaterial *knowledge_snapshot_material(const KnowledgeSnapshot *snapshot, const char *id);
+
+/*
+ * The pitch material for a word, matched without regard to case against the id, then the key word, then the name, then an alias: the
+ * first of these that matches any material decides. NULL when nothing matches or more than one material matches there.
+ */
+const PitchMaterial *knowledge_snapshot_material_named(const KnowledgeSnapshot *snapshot, const char *word);
+
+/* The pitch materials in id order: how many, and the one at `index` (NULL out of range). */
+size_t knowledge_snapshot_material_count(const KnowledgeSnapshot *snapshot);
+const PitchMaterial *knowledge_snapshot_material_at(const KnowledgeSnapshot *snapshot, size_t index);
+
+/* The chord type (kind chord-type) with this id, or NULL when there is none or the entry is another kind. */
+const ChordType *knowledge_snapshot_chord_type(const KnowledgeSnapshot *snapshot, const char *id);
+
+/*
+ * The first chord type, in id order and not retired, whose members above the root make `mask_above_root`: bit n is a member n
+ * semitones above the root, reduced to 0 to 11 (a ninth at 14 is bit 2). Bit 0 (the root) is ignored in the mask and in the
+ * members. NULL when none does.
+ */
+const ChordType *knowledge_snapshot_chord_type_of(const KnowledgeSnapshot *snapshot, unsigned mask_above_root);
+
+/* The relation (kind relation) with this id, or NULL when there is none or the entry is another kind. */
+const Relation *knowledge_snapshot_relation(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The relation for a word, matched without regard to case against the id, then the name, then an alias, as for a material. */
+const Relation *knowledge_snapshot_relation_named(const KnowledgeSnapshot *snapshot, const char *word);
 
 #endif

@@ -21,7 +21,8 @@ static const char *USER_FILE =
     "{\"schema\":\"ursatz-knowledge\",\"schema_version\":1,\"source\":\"user\",\"entries\":["
     "{\"id\":\"user.material.test\",\"kind\":\"material\",\"subtype\":\"unordered\",\"name\":\"test\","
     "\"content\":{\"steps\":[0,2,7]},\"citations\":[],\"status\":\"active\",\"version\":1},"
-    "{\"id\":\"user.chord-type.test\",\"kind\":\"chord-type\",\"name\":\"test chord\",\"content\":{},\"citations\":[],"
+    "{\"id\":\"user.chord-type.test\",\"kind\":\"chord-type\",\"name\":\"test chord\",\"content\":{\"construction\":\"tertian\",\"members\":[{\"role\":\"root\",\"semitones\":0},"
+    "{\"role\":\"third\",\"semitones\":4}]},\"citations\":[],"
     "\"status\":\"reference\",\"version\":2}]}";
 
 static KnowledgeSnapshot *build(const KnowledgeUserFile *files, size_t count) {

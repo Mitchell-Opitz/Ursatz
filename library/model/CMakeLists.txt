@@ -76,6 +76,7 @@ ursatz_public_headers(ursatz_model
         model/interpretation/key.h
         model/interpretation/texture.h
         model/interpretation/uncertainty.h
+        model/pitch/chord_type.h
         model/pitch/key_signature.h
         model/pitch/midi_pitch.h
         model/pitch/pitch_arithmetic.h
