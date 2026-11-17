@@ -36,7 +36,7 @@ The headers the apps include are the staged public headers (`build/library/publi
 |---|---|---|---|---|
 | model/identity | `entity_id.h`, `schema_version.h` | `EntityID` | Identity of every entity. | [identity](modules/identity.md) |
 | model/core | `entity.h`, `framework_reference.h` and 7 more | `Value`, `Rational`, references | Typed values, exact rationals, provenance and voice references. | [core](modules/core.md) |
-| model/time | `duration.h`, `meter_arithmetic.h` and 12 more | `MeterMap`, `TempoMap`, `MusicalTime` | Exact musical time, meter and tempo. | [time](modules/time.md) |
+| model/time | `duration.h`, `meter_arithmetic.h` and 11 more | `MeterMap`, `TempoMap`, `MusicalTime` | Exact musical time by value, meter and tempo. | [time](modules/time.md) |
 | model/pitch | `key_signature.h`, `midi_pitch.h` and 5 more | `PitchSpelling`, `pitch_arithmetic` | Pitch identity, spelling, MIDI numbers, key signatures. | [pitch](modules/pitch.md) |
 | model/events | `dynamics.h`, `note_event.h` and 1 more | `NoteEvent` | The canonical note. | [events](modules/events.md) |
 | model/containers | `section.h` | `Section` | The section container, grouping phrases. | [containers](modules/containers.md) |

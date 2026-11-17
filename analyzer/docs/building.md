@@ -9,13 +9,13 @@ Library headers are included only by their staged public paths (`time/meter_map.
 (see [Library include check](#library-include-check)). Tests read their input from `tests/fixtures/`, not from the library's own test folders (see [`tests/fixtures/README.md`](../../tests/fixtures/README.md)).
 
 The Analyzer holds no arithmetic of its own on times, pitches, key signatures or numerals. Exact times are `Rational`
-(`core/rational.h`, with the `time/time_rational.h` bridges); an overflow fails the stage that met it, and a document
+(`core/rational.h`; a time value is read as `.value`); an overflow fails the stage that met it, and a document
 build that meets one returns no document. Pitch names, letters, pitch classes and the line of fifths come from
 `pitch/pitch_arithmetic.h`; key signature counts and key tonics from `standard-tonality/tonal_key.h`; Roman numerals are
 read, formatted and resolved to a root by `standard-tonality/roman_numeral_grammar.h`. Degree semitones come from `standard-tonality/tonal_key.h`
 (`standard_tonality_degree_semitone`), a root name's pitch class from `pitch_spelling_parse_name` and `pitch_class_of_letter`, a
 MIDI pitch class from `pitch_class_of_midi`, a doubling read from `standard-voicing/doubling_reading.h`, and rhythm density's
-phrase span and onset snap from `time/score_time.h` (`score_time_span`, `score_time_snap`). Time comparisons use `rational_cmp`. `StyleRational` and the meter
+onset snap from `time/score_time.h` (`score_time_snap`), with a phrase span read from the fields of its `TimeSpan`. Time comparisons use `rational_cmp`. `StyleRational` and the meter
 check's own fraction stay until the library owns them.
 
 ## Tests
