@@ -32,15 +32,13 @@ module theory-meter        library/theory/meter        prefix theory/meter/
 module theory-galant       library/theory/galant       prefix theory/galant/
 module theory-markings     library/theory/markings     prefix theory/markings/
 
-module io              library/src/io              prefix io/
-module export          library/src/export          prefix export/
+module io              library/io                  prefix io/
 
 group L0-L1 identity core
 group L0-L2 L0-L1 time pitch
 group L0-L5 L0-L2 events containers structure
 group model identity core time pitch events containers structure relationship interpretation
 group theory theory-framework theory-style theory-rules theory-vocabulary theory-tonality theory-harmony theory-voicing theory-counterpoint theory-form theory-meter theory-galant theory-markings
-group kernel model theory analysis io export
 
 uses core            identity
 uses time            L0-L1
@@ -50,8 +48,7 @@ uses containers      L0-L2 events
 uses structure       L0-L2 events containers
 uses relationship    model
 uses interpretation  model
-uses io              L0-L2 events ezxml
-uses export          identity time pitch events model/core/rational.h
+uses io              model ezxml
 uses theory-framework    model
 uses theory-style        model
 uses theory-rules        model theory-framework
@@ -88,12 +85,12 @@ uses analysis-counterpoint model theory analysis-notes
 uses analysis-galant       model theory analysis-notes
 uses analysis-similarity   model analysis-notes
 allow library/model/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
-only ezxml library/src/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
+only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
 
 
 
 # The analysis chain: the model, theory and analysis groups, never an application.
-module chain library/chain/ursatz_chain prefix ursatz_chain/
+module chain library/chain prefix chain/
 uses chain model theory analysis
 
 # Applications. A library header an application includes is a staged public header.
@@ -106,10 +103,10 @@ module gui           gui/backend/src   root gui/backend/src
 staged analyzer-api analyzer composer
 generated analyzer version.h ursatz_analyzer_producer_key.h
 
-uses analyzer-api  kernel
+uses analyzer-api  model theory analysis io
 allow analyzer/include/ursatz_analyzer/result_chain.h chain -- the chain's claims, for a consumer that links ursatz_analyzer::chain
-uses analyzer      kernel chain analyzer-api cjson ezxml
-uses composer      kernel chain analyzer-api composer-api cjson
+uses analyzer      model theory analysis chain io analyzer-api cjson ezxml
+uses composer      model theory analysis chain io analyzer-api composer-api cjson
 uses composer-cli  composer-api cjson
 uses gui           analyzer-api composer-api cjson civetweb
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
@@ -133,9 +130,8 @@ module tests-containers      library/model/tests/containers      root library/te
 module tests-structure       library/model/tests/structure       root library/tests library/tests/support
 module tests-relationship    library/model/tests/relationship    root library/tests library/tests/support
 module tests-interpretation  library/model/tests/interpretation  root library/tests library/tests/support
-module tests-analysis        library/tests/analysis        root library/tests library/tests/support
-module tests-io              library/tests/io              root library/tests library/tests/support
-module tests-export          library/tests/export          root library/tests library/tests/support
+module tests-io              library/io/tests/io          root library/tests library/tests/support library
+module tests-export          library/io/tests/export      root library/tests library/tests/support library
 like tests-identity identity
 like tests-core core
 like tests-time time
@@ -146,7 +142,7 @@ like tests-structure structure
 like tests-relationship relationship
 like tests-interpretation interpretation
 like tests-io io
-like tests-export export
+like tests-export io
 uses tests-identity test-helpers
 uses tests-core test-helpers
 uses tests-time test-helpers
@@ -156,7 +152,6 @@ uses tests-containers test-helpers
 uses tests-structure test-helpers
 uses tests-relationship test-helpers
 uses tests-interpretation test-helpers
-uses tests-analysis test-helpers
 uses tests-io test-helpers
 uses tests-export test-helpers
 
@@ -235,14 +230,12 @@ uses tests-analysis-form chain -- form_test_util.h builds the chain's form input
 uses tests-analysis-meter io tests-io tests-theory-meter -- meter tests import MIDI and share the meter helpers
 uses tests-analysis-voices io tests-io tests-integration theory-meter -- the corpus voice separation imports MIDI and reads the beat grid
 
-module tests-chain  library/chain/tests  root library/tests library/tests/support
+module tests-chain  library/chain/tests  root library/tests library/tests/support library
 like tests-chain chain
 uses tests-chain test-helpers
 
-uses tests-analysis model theory analysis chain io tests-io tests-integration -- the chain-level analysis tests run the chain end to end and import the corpus through the io and integration helpers
 uses tests-export io tests-io core -- export tests round-trip through the importers
-uses tests-io export -- io tests compare imports with exports
-uses tests-chain io tests-integration -- chain tests import the corpus
+uses tests-chain io tests-io tests-integration -- chain tests import the corpus
 
 module analyzer-tests     analyzer/tests            root analyzer/tests analyzer/tests/support analyzer/src analyzer/include
 module analyzer-consumer  analyzer/tests/consumer
@@ -259,7 +252,6 @@ free analyzer-consumer composer-consumer -- consumer projects include what a con
 
 # Rules that are not include edges.
 forbid analyzer chain_build_ -- the Analyzer runs the chain whole, never one stage builder (it was check-chain-builds.sh)
-forbid library/chain (PROJECT_SOURCE_DIR\}/|CMAKE_SOURCE_DIR\}/|\.\./)src/ -- the chain never compiles kernel sources (R-241)
 forbid analyzer get_target_property\([^)]*SOURCE_DIR|\.\./library/tests -- an application reads no library sources
 forbid composer get_target_property\([^)]*SOURCE_DIR|\.\./library/tests|\.\./analyzer/src -- an application reads no library or Analyzer sources
 forbid gui get_target_property\([^)]*SOURCE_DIR|\.\./library/tests -- an application reads no library sources

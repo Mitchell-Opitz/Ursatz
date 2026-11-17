@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include <model/core/rational.h>
-#include <export/musicxml_export.h>
+#include <io/musicxml_export.h>
 #include <model/identity/entity_id.h>
 #include <io/midi_renderer.h>
 #include <model/time/musical_time.h>

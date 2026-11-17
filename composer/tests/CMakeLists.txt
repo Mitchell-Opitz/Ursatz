@@ -482,7 +482,7 @@ foreach(mode motive same plan progression no-match cli)
 endforeach()
 
 ursatz_test(test_variant_registry LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src
-    ${PROJECT_SOURCE_DIR}/../library/src)
+    ${PROJECT_SOURCE_DIR}/../library)
 
 # Measured 43.9 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_variants_cli LIBS ursatz_composer composer_test_support
@@ -513,7 +513,7 @@ ursatz_test(test_recognize_cli LIBS ursatz_composer composer_test_support
 add_dependencies(test_recognize_cli ursatz-composer)
 
 ursatz_test(test_motive_connect LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src
-    ${PROJECT_SOURCE_DIR}/../library/src)
+    ${PROJECT_SOURCE_DIR}/../library)
 
 ursatz_test(test_shaping LIBS ursatz_composer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 

@@ -6,8 +6,8 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include <ursatz_chain/analysis_chain.h>
-#include <ursatz_chain/chain_inputs.h>
+#include <chain/analysis_chain.h>
+#include <chain/chain_inputs.h>
 
 #include "pipeline/chain_input.h"
 /* Prefixed: standard-harmony has headers of the same names. */

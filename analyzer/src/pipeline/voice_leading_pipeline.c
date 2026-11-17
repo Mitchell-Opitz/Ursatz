@@ -10,7 +10,7 @@
 #include "model/events/note_event.h"
 #include "pipeline/spelling_util.h"
 #include "pipeline/voicing_check.h"
-#include <ursatz_chain/chain_inputs.h>
+#include <chain/chain_inputs.h>
 
 #include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_numeric_value.h"

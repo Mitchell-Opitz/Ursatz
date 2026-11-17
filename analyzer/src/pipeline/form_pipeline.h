@@ -15,8 +15,8 @@
 #include "analysis/form/analysis_input.h"
 #include "analysis/form/analysis_phrase.h"
 #include "analysis/form/analysis_repeats.h"
-#include <ursatz_chain/analysis_chain.h>
-#include <ursatz_chain/chain_inputs.h>
+#include <chain/analysis_chain.h>
+#include <chain/chain_inputs.h>
 
 #include "pipeline/chain_input.h"
 

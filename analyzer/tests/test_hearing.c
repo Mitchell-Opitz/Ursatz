@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_chain/analysis_chain.h>
+#include <chain/analysis_chain.h>
 
 #include "model/pitch/pitch_numeric_value.h"
 

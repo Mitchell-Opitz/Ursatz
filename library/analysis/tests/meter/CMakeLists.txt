@@ -1,6 +1,6 @@
 ursatz_test(standard_meter_segmentation_beat_grid SOURCES test_segmentation_beat_grid.c LIBS ursatz_analysis)
 
-ursatz_test(standard_meter_adaptive_segmentation_eval SOURCES test_adaptive_segmentation_eval.c LIBS ursatz_analysis ursatz ursatz_test_support
+ursatz_test(standard_meter_adaptive_segmentation_eval SOURCES test_adaptive_segmentation_eval.c LIBS ursatz_analysis ursatz_io ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${URSATZ_FIXTURES_DIR}/annotations")
 

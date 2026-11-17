@@ -8,7 +8,7 @@
 #include "analysis/voices/voice_separation.h"
 #include "model/core/provenance_reference.h"
 #include "io/midi_importer.h"
-#include "tests/io/midi_import_split.h"
+#include "io/tests/io/midi_import_split.h"
 #include "model/pitch/pitch_identity.h"
 #include "model/pitch/pitch_spelling.h"
 #include "model/pitch/tuning_system.h"

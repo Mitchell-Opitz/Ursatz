@@ -10,7 +10,7 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/result_chain.h>
 
-#include <ursatz_chain/analysis_chain.h>
+#include <chain/analysis_chain.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"

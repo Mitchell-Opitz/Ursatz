@@ -41,7 +41,6 @@ target_link_libraries(ursatz_gui_core PUBLIC
   ursatz_composer
   ursatz_analyzer
   cjson
-  ursatz
   civetweb-c-library
 )
 

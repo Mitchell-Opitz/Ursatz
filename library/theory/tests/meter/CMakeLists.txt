@@ -8,7 +8,7 @@ ursatz_test(standard_meter_borrowed_rules SOURCES test_borrowed_rules.c LIBS urs
 
 ursatz_test(standard_meter_metric_position_rules SOURCES test_metric_position_rules.c LIBS ursatz_theory)
 
-ursatz_test(standard_meter_metric_position_integration SOURCES test_metric_position_integration.c LIBS ursatz_theory ursatz
+ursatz_test(standard_meter_metric_position_integration SOURCES test_metric_position_integration.c LIBS ursatz_theory ursatz_io
     DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus")
 
 ursatz_test(standard_meter_hemiola_rules SOURCES test_hemiola_rules.c LIBS ursatz_theory)

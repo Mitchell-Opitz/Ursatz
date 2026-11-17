@@ -8,7 +8,7 @@
 #include "io/musicxml_importer.h"
 #include "score_layout.h"
 #include "analysis/notes/analysis_key.h"
-#include "ursatz_chain/analysis_chain.h"
+#include "chain/analysis_chain.h"
 #include "ursatz_test.h"
 
 /*

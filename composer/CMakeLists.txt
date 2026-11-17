@@ -12,7 +12,7 @@ endif()
 option(URSATZ_COMPOSER_BUILD_CLI "Build the ursatz-composer command" ${URSATZ_COMPOSER_TESTS_DEFAULT})
 
 # Library and Analyzer headers are not ours to warn about.
-foreach(submodule_target ursatz ursatz_model ursatz_theory ursatz_analysis ursatz_analyzer cjson)
+foreach(submodule_target ursatz_model ursatz_theory ursatz_analysis ursatz_io ursatz_analyzer cjson)
     get_target_property(submodule_includes ${submodule_target} INTERFACE_INCLUDE_DIRECTORIES)
     set_target_properties(${submodule_target} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${submodule_includes}")
 endforeach()

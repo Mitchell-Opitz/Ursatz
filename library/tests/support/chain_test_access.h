@@ -1,8 +1,8 @@
 #ifndef URSATZ_TESTS_SUPPORT_CHAIN_TEST_ACCESS_H
 #define URSATZ_TESTS_SUPPORT_CHAIN_TEST_ACCESS_H
 
-#include "ursatz_chain/analysis_chain.h"
-#include "ursatz_chain/analysis_chain_internal.h"
+#include "chain/analysis_chain.h"
+#include "chain/analysis_chain_internal.h"
 
 /* What the tests read of an AnalysisChain: its meter results. No application reads them, so they are not in ursatz_chain/analysis_chain.h. */
 

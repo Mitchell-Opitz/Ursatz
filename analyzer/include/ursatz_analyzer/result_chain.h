@@ -8,7 +8,7 @@
  */
 
 #include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_chain/analysis_chain.h>
+#include <chain/analysis_chain.h>
 
 /* The library's results, through the accessors of ursatz_chain/analysis_chain.h. NULL for a piece with no notes. */
 const AnalysisChain *analyzer_result_chain(const AnalyzerResult *result);

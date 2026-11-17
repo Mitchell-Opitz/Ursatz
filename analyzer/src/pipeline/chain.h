@@ -8,7 +8,7 @@
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include <ursatz_chain/analysis_chain.h>
+#include <chain/analysis_chain.h>
 
 #include "analysis/voices/outer_voice.h"
 #include "pipeline/chain_input.h"

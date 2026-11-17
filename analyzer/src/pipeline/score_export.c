@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "export/musicxml_export.h"
-#include "export/score_quantize.h"
+#include "io/musicxml_export.h"
+#include "io/score_quantize.h"
 #include "model/events/note_event.h"
 #include "model/identity/entity_id.h"
 #include "model/time/meter_map.h"

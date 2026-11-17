@@ -32,7 +32,7 @@
 #include "analysis/form/analysis_ideas.h"
 #include "analysis/form/analysis_phrase.h"
 #include "analysis/form/analysis_theme.h"
-#include "ursatz_chain/form_bridge.h"
+#include "chain/form_bridge.h"
 #include "hand_cadences.h"
 #include "analysis/form/analysis_input.h"
 #include "theory/harmony/harmony_cadence_rules.h"

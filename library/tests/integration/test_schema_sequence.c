@@ -5,7 +5,7 @@
 #include "analysis/galant/galant_analysis_match.h"
 #include "analysis/galant/scale_analysis_detect.h"
 #include "schema_util.h"
-#include "ursatz_chain/chain_inputs.h"
+#include "chain/chain_inputs.h"
 #include "../key_index_test_util.h"
 
 /*

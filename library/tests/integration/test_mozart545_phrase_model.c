@@ -11,7 +11,7 @@
 #include "analysis/harmony/chord_input.h"
 #include "analysis/harmony/key_regions.h"
 #include "analysis/harmony/roman_numeral_adapter.h"
-#include "weighted_pipeline.h"
+#include "chain/tests/weighted_pipeline.h"
 #include "analysis/voices/outer_voice.h"
 
 /*

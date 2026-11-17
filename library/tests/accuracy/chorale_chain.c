@@ -22,7 +22,7 @@
 #include "model/time/metrical_position.h"
 #include "model/time/time_rational.h"
 #include "model/time/time_span.h"
-#include "ursatz_chain/analysis_chain.h"
+#include "chain/analysis_chain.h"
 #include "analysis/harmony/weighted_chord_identification.h"
 #include "../rational_test_util.h"
 #include "../key_index_test_util.h"

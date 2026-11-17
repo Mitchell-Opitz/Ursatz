@@ -15,7 +15,7 @@
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
-#include "ursatz_chain/form_bridge.h"
+#include "chain/form_bridge.h"
 
 /*
  * The chain's two form bridges: boundary points with cadences, discontinuities and neither, a run longer than max_length, count 0

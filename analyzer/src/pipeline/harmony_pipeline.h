@@ -13,8 +13,8 @@
 #include "analysis/harmony/analysis_six_four.h"
 #include "analysis/harmony/key_regions.h"
 #include "analysis/harmony/analysis_input.h"
-#include <ursatz_chain/analysis_chain.h>
-#include <ursatz_chain/chain_inputs.h>
+#include <chain/analysis_chain.h>
+#include <chain/chain_inputs.h>
 #include "model/time/meter_map.h"
 
 /*

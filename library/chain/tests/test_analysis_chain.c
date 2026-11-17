@@ -14,7 +14,7 @@
 #include "model/time/note_value.h"
 #include "model/time/time_signature.h"
 #include "model/time/time_span.h"
-#include "ursatz_chain/analysis_chain.h"
+#include "chain/analysis_chain.h"
 #include "../../tests/integration/reference_pieces.h"
 #include "../../tests/key_index_test_util.h"
 #include "ursatz_test.h"

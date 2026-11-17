@@ -1,7 +1,7 @@
 #include "analysis/texture/texture_analysis_classify.h"
 #include "analysis/texture/texture_analysis_input.h"
-#include "ursatz_chain/chain_inputs.h"
-#include "weighted_pipeline.h"
+#include "chain/chain_inputs.h"
+#include "chain/tests/weighted_pipeline.h"
 
 /*
  * The texture changes of Field 1 (Nocturne No. 1 in E-flat major, in 12/8), against tests/fixtures/annotations/field1_texture.txt: a DRAFT

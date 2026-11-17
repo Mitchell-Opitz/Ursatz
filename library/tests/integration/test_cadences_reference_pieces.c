@@ -16,8 +16,8 @@
 #include "model/time/time_signature.h"
 #include "io/midi_importer.h"
 #include "analysis/notes/analysis_key.h"
-#include "ursatz_chain/analysis_chain.h"
-#include "weighted_pipeline.h"
+#include "chain/analysis_chain.h"
+#include "chain/tests/weighted_pipeline.h"
 #include "../key_index_test_util.h"
 
 /*

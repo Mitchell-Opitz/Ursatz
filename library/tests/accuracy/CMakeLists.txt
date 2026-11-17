@@ -1,4 +1,4 @@
-ursatz_test_library(accuracy_support SOURCES romantext.c score_layout.c alignment.c LIBS ursatz
+ursatz_test_library(accuracy_support SOURCES romantext.c score_layout.c alignment.c LIBS ursatz_io
     INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
 
 ursatz_test(accuracy_romantext SOURCES test_romantext.c LIBS accuracy_support LABELS accuracy)

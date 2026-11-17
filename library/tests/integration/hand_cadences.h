@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include "analysis/harmony/analysis_cadence.h"
-#include "ursatz_chain/chain_inputs.h"
+#include "chain/chain_inputs.h"
 
 /*
  * Cadences given by an annotation (a type and the measure they arrive in) as the HarmonyCadences the chain's input builders take. A hand

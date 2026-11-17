@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "io/midi_importer.h"
-#include "tests/io/midi_import_split.h"
+#include "io/tests/io/midi_import_split.h"
 #include "theory/tests/meter/meter_test_util.h"
 #include "theory/meter/metric_position_rules.h"
 #include "model/time/meter_map.h"

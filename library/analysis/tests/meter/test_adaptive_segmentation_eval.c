@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "io/midi_importer.h"
-#include "tests/io/midi_import_split.h"
+#include "io/tests/io/midi_import_split.h"
 #include "theory/tests/meter/meter_test_util.h"
 #include "theory/meter/segmentation_beat_grid.h"
 #include "analysis/notes/sonority_segmentation.h"

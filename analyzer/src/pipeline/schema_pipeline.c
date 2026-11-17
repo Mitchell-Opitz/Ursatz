@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_chain/analysis_chain.h>
-#include <ursatz_chain/chain_inputs.h>
+#include <chain/analysis_chain.h>
+#include <chain/chain_inputs.h>
 
 #include "model/core/rational.h"
 #include "analysis/galant/galant_analysis_input.h"

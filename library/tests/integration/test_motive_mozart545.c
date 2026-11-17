@@ -1,9 +1,9 @@
 #include "analysis/form/analysis_motive.h"
 #include "theory/harmony/harmony_cadence_rules.h"
-#include "ursatz_chain/form_bridge.h"
-#include "ursatz_chain/kernel_owners.h"
+#include "chain/form_bridge.h"
+#include "chain/kernel_owners.h"
 #include "hand_cadences.h"
-#include "weighted_pipeline.h"
+#include "chain/tests/weighted_pipeline.h"
 
 /*
  * The motive families of Mozart 545, the exposition (measures 1-28), against tests/fixtures/annotations/mozart545_motives.txt: a DRAFT hand

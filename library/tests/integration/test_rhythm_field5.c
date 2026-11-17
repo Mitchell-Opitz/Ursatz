@@ -9,7 +9,7 @@
 #include "analysis/meter/meter_analysis_hypermeter.h"
 #include "analysis/meter/meter_analysis_syncopation.h"
 #include "analysis/meter/meter_analysis_input.h"
-#include "ursatz_chain/chain_inputs.h"
+#include "chain/chain_inputs.h"
 
 /*
  * The rhythm and meter analysis of Field 5 (Nocturne No. 5 in B-flat major, in 12/8), the measures of tests/fixtures/annotations/field5_rhythm.txt:

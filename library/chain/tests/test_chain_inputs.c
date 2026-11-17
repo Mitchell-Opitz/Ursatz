@@ -1,4 +1,4 @@
-#include "ursatz_chain/chain_inputs.h"
+#include "chain/chain_inputs.h"
 
 #include "chain_test_piece.h"
 #include "model/pitch/pitch_numeric_value.h"
@@ -6,7 +6,7 @@
 #include "theory/harmony/harmony_cadence_rules.h"
 #include "analysis/harmony/outer_scale_degrees.h"
 #include "theory/meter/segmentation_beat_grid.h"
-#include "ursatz_chain/analysis_chain.h"
+#include "chain/analysis_chain.h"
 
 /*
  * The chain's input builders, each on a small constructed piece (chain_test_piece.h): the results, the error paths (a NULL argument, an
