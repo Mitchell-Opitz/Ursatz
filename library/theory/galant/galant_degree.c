@@ -18,7 +18,7 @@ bool galant_degree_of(const PitchSpelling *pitch, const PitchSpelling *tonic, Ga
     int steps = modulo(pitch_spelling_step_number(pitch) - pitch_spelling_step_number(tonic), 7);
     int semitones = modulo(pitch_spelling_midi(pitch) - pitch_spelling_midi(tonic),
                            12);
-    int alteration = semitones - standard_tonality_degree_semitone(STANDARD_TONALITY_MODE_MAJOR, steps + 1);
+    int alteration = semitones - standard_tonality_natural_degree_semitone(steps + 1);
     if (alteration > 6) {
         alteration -= 12;
     } else if (alteration < -6) {
@@ -31,8 +31,7 @@ bool galant_degree_of(const PitchSpelling *pitch, const PitchSpelling *tonic, Ga
 
 GalantPitchDegree galant_degree_of_semitones(int semitones) {
     GalantPitchDegree reading = {1, 0};
-    standard_tonality_degree_of_semitone(pitch_class_of_midi(semitones), STANDARD_TONALITY_MODE_MAJOR, &reading.degree,
-                                         &reading.alteration);
+    standard_tonality_natural_degree_of_semitone(pitch_class_of_midi(semitones), &reading.degree, &reading.alteration);
     return reading;
 }
 

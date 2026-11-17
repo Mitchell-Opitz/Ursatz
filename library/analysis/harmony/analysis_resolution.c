@@ -45,7 +45,7 @@ static int steps_of(long delta) {
     long magnitude = delta < 0 ? -delta : delta;
     int degree = 1;
     int alteration = 0;
-    standard_tonality_degree_of_semitone((int)(magnitude % 12), STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration);
+    standard_tonality_natural_degree_of_semitone((int)(magnitude % 12), &degree, &alteration);
     int steps = (int)(magnitude / 12) * 7 + degree - 1;
     return delta < 0 ? -steps : steps;
 }

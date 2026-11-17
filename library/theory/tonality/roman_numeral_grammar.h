@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "theory/tonality/roman_numeral_rules.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/tonal_key.h"
 
 /*
@@ -97,6 +98,14 @@ bool standard_tonality_numeral_format_styled(const StandardTonalityNumeralText *
  */
 bool standard_tonality_numeral_root_semitone(const StandardTonalityNumeralText *numeral, StandardTonalityMode mode,
                                              int *semitones);
+
+/*
+ * The same from the key's material: its steps give the target and the plain numeral, and `materials` give the target's own scale
+ * (the major, or the harmonic minor for a lowercase target). False (output untouched) for an invalid value, a NULL argument, or a
+ * material without the degree. standard_tonality_numeral_root_semitone calls it with the builtin materials until P58 B13.
+ */
+bool standard_tonality_numeral_root_semitone_of(const StandardTonalityNumeralText *numeral, const PitchMaterial *key_material,
+                                                const CommonPracticeMaterials *materials, int *semitones);
 
 /*
  * The text of a plain numeral: root position, no alteration, no target. The major-major and major-minor sevenths

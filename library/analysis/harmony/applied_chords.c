@@ -7,15 +7,17 @@
 #include "theory/tonality/triad_in_key_rules.h"
 #include "model/pitch/midi_pitch.h"
 #include "theory/tonality/tonal_key.h"
+#include "theory/tonality/common_practice_materials.h"
 
-static StandardTonalityMode key_mode(const StandardTonalityChordInput *input) {
-    return input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? STANDARD_TONALITY_MODE_MAJOR
-                                                            : STANDARD_TONALITY_MODE_NATURAL_MINOR;
+/* The material of the input's key: the major, or the natural minor. TRANSITIONAL until the stage holds the snapshot's materials (P58 B10). */
+static const PitchMaterial *key_material(const StandardTonalityChordInput *input) {
+    const CommonPracticeMaterials *materials = common_practice_materials_builtin();
+    return input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? materials->major : materials->natural_minor;
 }
 
 /* The semitones above the tonic of a scale degree of the key (natural minor in minor). */
 static int scale_semitone(const StandardTonalityChordInput *input, int degree) {
-    return standard_tonality_degree_semitone(key_mode(input), degree);
+    return standard_tonality_material_degree_semitone(key_material(input), degree);
 }
 
 /* The targets: scale degree 1..7 of the key. */
@@ -87,7 +89,7 @@ static double score_chord(const double weights[12], double total, int root, cons
 static bool in_key(const StandardTonalityChordInput *input, int pitch_class) {
     int offset = pitch_class_of_midi(pitch_class - input->tonic_pitch_class);
     /* The scale and, in minor, the raised leading tone. */
-    return (standard_tonality_mode_pitch_classes_with_leading_tone(0, key_mode(input)) & (1u << offset)) != 0;
+    return (standard_tonality_material_pitch_classes_with_leading_tone(0, key_material(input)) & (1u << offset)) != 0;
 }
 
 static int member_in_bass(int bass_pitch_class, int root, const int *intervals, size_t count) {

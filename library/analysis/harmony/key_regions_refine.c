@@ -3,14 +3,15 @@
 #include <stdlib.h>
 
 #include "theory/tonality/tonal_key.h"
+#include "theory/tonality/common_practice_materials.h"
 
 /* The pitch classes of a key's natural collection as a 12-bit mask: the major scale, or the relative major's
    for a minor key. */
 static unsigned natural_collection(int key_index) {
-    StandardTonalityMode mode = common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR
-                                    ? STANDARD_TONALITY_MODE_NATURAL_MINOR
-                                    : STANDARD_TONALITY_MODE_MAJOR;
-    return standard_tonality_mode_pitch_classes(common_practice_key_index_tonic(key_index), mode);
+    /* TRANSITIONAL until the stage's config carries the snapshot's materials (P58 B10). */
+    const PitchMaterial *material =
+        common_practice_material(common_practice_materials_builtin(), common_practice_key_index_mode(key_index));
+    return standard_tonality_material_pitch_classes(common_practice_key_index_tonic(key_index), material);
 }
 
 /* True when the key `to` is closely related to `from`: the dominant or subdominant in the same mode, or the
@@ -29,10 +30,9 @@ static bool closely_related(int from, int to) {
 
 /* The tones a key's diatonic chords are made of: its natural collection, plus the raised seventh in minor. */
 static unsigned held_collection(int key_index) {
-    StandardTonalityMode mode = common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR
-                                    ? STANDARD_TONALITY_MODE_NATURAL_MINOR
-                                    : STANDARD_TONALITY_MODE_MAJOR;
-    return standard_tonality_mode_pitch_classes_with_leading_tone(common_practice_key_index_tonic(key_index), mode);
+    const PitchMaterial *material =
+        common_practice_material(common_practice_materials_builtin(), common_practice_key_index_mode(key_index));
+    return standard_tonality_material_pitch_classes_with_leading_tone(common_practice_key_index_tonic(key_index), material);
 }
 
 /* Folds a region back into the key before it when it is a passage of IV, V and ii of that key (see key_regions.h,

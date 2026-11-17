@@ -9,7 +9,7 @@
 /* Semitones of the perfect (steps 0, 3, 4, 7) or major (steps 1, 2, 5, 6) interval at a simple step count 0 to 7: the major
    scale's degree steps + 1, and the octave (steps 7) is twelve. */
 static int scale_semitones(int steps) {
-    return steps == 7 ? PITCH_SEMITONES_PER_OCTAVE : standard_tonality_degree_semitone(STANDARD_TONALITY_MODE_MAJOR, steps + 1);
+    return steps == 7 ? PITCH_SEMITONES_PER_OCTAVE : standard_tonality_natural_degree_semitone(steps + 1);
 }
 
 static bool is_perfect_kind(int steps) {

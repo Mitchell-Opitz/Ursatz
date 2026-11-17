@@ -5,6 +5,7 @@
 #include "model/core/rational.h"
 #include "model/pitch/midi_pitch.h"
 #include "theory/tonality/tonal_key.h"
+#include "theory/tonality/common_practice_materials.h"
 
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     CommonPracticeWeightedConfig config;
@@ -265,12 +266,12 @@ static bool entry_holds(const VocabularyEntry *entry, int root, int pitch_class)
 
 /* The pitch classes above the tonic that belong to the key (applied chords need a tone outside them): the major scale;
    in minor the natural minor scale and its raised sixth and seventh. */
-static unsigned key_scale_mask(CommonPracticeKeyMode mode) {
+static unsigned key_scale_mask(const CommonPracticeMaterials *materials, CommonPracticeKeyMode mode) {
     if (mode == COMMON_PRACTICE_KEY_MAJOR) {
-        return standard_tonality_mode_pitch_classes(0, STANDARD_TONALITY_MODE_MAJOR);
+        return standard_tonality_material_pitch_classes(0, materials->major);
     }
-    return standard_tonality_mode_pitch_classes(0, STANDARD_TONALITY_MODE_NATURAL_MINOR) |
-           standard_tonality_mode_pitch_classes(0, STANDARD_TONALITY_MODE_MELODIC_MINOR);
+    return standard_tonality_material_pitch_classes(0, materials->natural_minor) |
+           standard_tonality_material_pitch_classes(0, materials->melodic_minor);
 }
 
 /* True when the entry, rooted at pitch class `root`, may be ranked on its own merits (the bass aside): its root sounds
@@ -289,7 +290,8 @@ static bool entry_eligible(const VocabularyEntry *entry, int root, int tonic_pit
     chord.seventh = entry->seventh;
     int intervals[4];
     size_t count = common_practice_ranked_chord_intervals(&chord, intervals);
-    unsigned scale = key_scale_mask(mode);
+    /* TRANSITIONAL until the stage's config carries the snapshot's materials (P58 B10). */
+    unsigned scale = key_scale_mask(common_practice_materials_builtin(), mode);
     for (size_t i = 0; i < count; i++) {
         int pitch_class = (root + intervals[i]) % 12;
         if ((scale & (1u << ((pitch_class - tonic_pitch_class + 12) % 12))) == 0 && weights->pitch_class[pitch_class] > 0.0) {

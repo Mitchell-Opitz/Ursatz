@@ -12,12 +12,12 @@ static int mod_int(int value, int modulus) {
 }
 
 static int semitones_of(GalantPitchDegree degree) {
-    return standard_tonality_degree_semitone(STANDARD_TONALITY_MODE_MAJOR, degree.degree) + degree.alteration;
+    return standard_tonality_natural_degree_semitone(degree.degree) + degree.alteration;
 }
 
 /* The degree on letter distance `letter` (0 to 6) at `semitones` above the tonic (octaves dropped). */
 static GalantPitchDegree make_degree(int letter, int semitones) {
-    int alteration = mod_int(semitones - standard_tonality_degree_semitone(STANDARD_TONALITY_MODE_MAJOR, letter + 1), 12);
+    int alteration = mod_int(semitones - standard_tonality_natural_degree_semitone(letter + 1), 12);
     if (alteration >= 6) {
         alteration -= 12;
     }

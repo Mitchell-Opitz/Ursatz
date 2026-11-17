@@ -16,6 +16,7 @@
 #include "theory/tonality/roman_numeral_grammar.h"
 #include "theory/tonality/seventh_rules.h"
 #include "theory/tonality/tonal_key.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/framework/framework.h"
 #include "theory/tonality/triad_rules.h"
 #include "model/pitch/midi_pitch.h"
@@ -51,11 +52,11 @@ static int degree_of_offset(StandardTonalityRomanKeyMode mode, int offset, bool 
     *raised_sixth = false;
     int degree = 0;
     int alteration = 0;
-    if (!standard_tonality_degree_of_semitone(offset,
-                                              mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR
-                                                  ? STANDARD_TONALITY_MODE_MAJOR
-                                                  : STANDARD_TONALITY_MODE_NATURAL_MINOR,
-                                              &degree, &alteration)) {
+    /* TRANSITIONAL until the adapter's config carries the snapshot's materials (P58 B10). */
+    const CommonPracticeMaterials *materials = common_practice_materials_builtin();
+    if (!standard_tonality_material_degree_of_semitone(
+            offset, mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? materials->major : materials->natural_minor, &degree,
+            &alteration)) {
         return 0;
     }
     if (alteration == 0) {
