@@ -12,23 +12,23 @@ static MeterMap *make_map(unsigned top, int bottom_exponent, bool pickup) {
     TimeSignature *signature = NULL;
     assert(time_signature_create(top, unit, &signature) == TIME_SIGNATURE_OK);
     note_value_destroy(unit);
-    MusicalTime *zero = NULL;
-    MusicalTime *later = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    assert(musical_time_create(1, 4, &later) == MUSICAL_TIME_OK);
-    MeterMapChangePoint points[2] = {{signature, *zero}, {signature, *later}};
+    MusicalTime zero;
+    MusicalTime later;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
+    assert(musical_time_make(1, 4, &later) == MUSICAL_TIME_OK);
+    MeterMapChangePoint points[2] = {{signature, zero}, {signature, later}};
     EntityID *id = NULL;
     assert(entity_id_create("romantext-test-meter", &id) == ENTITY_ID_OK);
     MeterMap *map = NULL;
     assert(meter_map_create(id, points, pickup ? 2 : 1, &map) == METER_MAP_OK);
     time_signature_destroy(signature);
-    musical_time_destroy(zero);
-    musical_time_destroy(later);
     return map;
 }
 
-static bool time_is(const MusicalTime *t, long n, unsigned long d) {
-    return musical_time_numerator(t) * (long)d == n * (long)musical_time_denominator(t);
+static bool time_is(MusicalTime t, long n, unsigned long d) {
+    MusicalTime expected;
+    assert(musical_time_make(n, (long long)d, &expected) == MUSICAL_TIME_OK);
+    return musical_time_same(t, expected);
 }
 
 static void test_metadata(void) {

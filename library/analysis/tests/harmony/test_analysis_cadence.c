@@ -40,8 +40,8 @@ static void test_authentic_v_to_i_on_a_strong_enough_beat(void) {
     assert(interpretation_framework_reference(c->interpretation) != NULL);
 
     /* The TimeSpan runs from the dominant's start (1/4) to the arrival's end (3/4). */
-    assert(musical_time_numerator(&c->span.start) == 1 && musical_time_denominator(&c->span.start) == 4);
-    assert(musical_time_numerator(&c->span.end) == 3 && musical_time_denominator(&c->span.end) == 4);
+    assert(c->span.start.value.num == 1 && c->span.start.value.den == 4);
+    assert(c->span.end.value.num == 3 && c->span.end.value.den == 4);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);

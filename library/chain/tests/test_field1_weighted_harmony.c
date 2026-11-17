@@ -107,15 +107,14 @@ static Rational rational_of(double whole_notes) {
 }
 
 static void print_where(const MeterMap *map, Rational t) {
-    MusicalTime *time = musical_time_from_rational_or_null(t);
+    MusicalTime time = musical_time_of(t);
     int measure = 0;
-    assert(meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK);
+    assert(meter_map_measure_index_at(map, &time, &measure) == METER_MAP_OK);
     TimeSpan span;
     assert(meter_map_measure_span(map, measure, &span) == METER_MAP_OK);
     Rational into = {0, 1};
     assert(rational_sub(t, test_rational_of_time(&span.start), &into) == 0);
     printf("measure %d, %.3f of a whole note in", measure, rational_to_double(into));
-    musical_time_destroy(time);
 }
 
 static void test_field_1_follows_i_v_i_and_resolves_the_annotated_harmony(void) {

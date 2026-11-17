@@ -309,7 +309,7 @@ static void test_bad_calls(void) {
     bad.release_tolerance_denominator = 16; /* wider than half a grid step */
     assert(!standard_texture_config_valid(&bad));
     /* a note the analysis cannot read is refused when the windows are measured */
-    TimeSpan readable = *piece_span(&piece, 0, 1, 1, 4);
+    TimeSpan readable = whole_span(0, 1, 1, 4);
     AnalysisNote bad_id = {"", NULL, readable, 60, NULL, NULL, 0, 0, 1.0};
     AnalysisNote no_span = {"x", NULL, (TimeSpan){0}, 60, NULL, NULL, 0, 0, 1.0};
     AnalysisNote bad_confidence = {"x", NULL, readable, 60, NULL, NULL, 0, 0, 1.5};

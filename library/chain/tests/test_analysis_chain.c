@@ -109,14 +109,14 @@ static void digest_string(Digest *d, const char *text) {
     digest_int(d, text != NULL);
 }
 
-static void digest_time(Digest *d, const MusicalTime *time) {
-    digest_int(d, (long long)musical_time_numerator(time));
-    digest_int(d, (long long)musical_time_denominator(time));
+static void digest_time(Digest *d, MusicalTime time) {
+    digest_int(d, time.value.num);
+    digest_int(d, time.value.den);
 }
 
 static void digest_span(Digest *d, const TimeSpan *span) {
-    digest_time(d, time_span_start(span));
-    digest_time(d, time_span_end(span));
+    digest_time(d, span->start);
+    digest_time(d, span->end);
 }
 
 /* --- the chain's input: a file's notes and key signature events --- */

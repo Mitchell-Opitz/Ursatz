@@ -69,7 +69,7 @@ static PlantedList load_planted(void) {
 }
 
 static double beats_of(const MusicalTime *time) {
-    return 4.0 * (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+    return 4.0 * (double)time->value.num / (double)time->value.den;
 }
 
 static void describe(const MeterMap *map, const GalantSegmentList *list, int first, int last, char *out, size_t size) {
@@ -278,12 +278,12 @@ static void run_fixture_alone(const PlantedList *planted) {
     printf("The galant fixture, %zu segments, 24 measures (hand-written):\n", build.list.count);
     TimeSignature *signature = NULL;
     NoteValue *quarter = NULL;
-    MusicalTime *zero = NULL;
+    MusicalTime zero;
     EntityID *id = NULL;
     MeterMap *map = NULL;
     assert(note_value_create(2, &quarter) == NOTE_VALUE_OK && time_signature_create(4, quarter, &signature) == TIME_SIGNATURE_OK);
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK && entity_id_create("galant-fixture-meter", &id) == ENTITY_ID_OK);
-    MeterMapChangePoint point = {signature, *zero};
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK && entity_id_create("galant-fixture-meter", &id) == ENTITY_ID_OK);
+    MeterMapChangePoint point = {signature, zero};
     assert(meter_map_create(id, &point, 1, &map) == METER_MAP_OK);
     Outcome outcome = score("the adapters alone", map, &build.list, &schemas, &sequences, planted, true);
     assert(outcome.found == planted->count);
@@ -291,7 +291,6 @@ static void run_fixture_alone(const PlantedList *planted) {
     galant_schema_matches_destroy(&schemas);
     scale_sequence_matches_destroy(&sequences);
     meter_map_destroy(map);
-    musical_time_destroy(zero);
     time_signature_destroy(signature);
     note_value_destroy(quarter);
     schema_build_destroy(&build);

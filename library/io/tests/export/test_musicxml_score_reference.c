@@ -45,8 +45,8 @@ static int colour_staves(NoteEvent *const *events, size_t count, int *staff) {
         const char *key = voice != NULL ? entity_id_value(voice_reference_target_id(voice)) : NULL;
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
         const Duration *duration = note_event_duration(events[i]);
-        MusicalTime *end = NULL;
-        assert(musical_time_add(position, duration, &end) == MUSICAL_TIME_OK);
+        MusicalTime end;
+        assert(musical_time_plus(*position, *duration, &end) == MUSICAL_TIME_OK);
         int chosen = 0;
         for (int s = 1; chosen == 0; s++) {
             Lane *lane = NULL;
@@ -58,20 +58,18 @@ static int colour_staves(NoteEvent *const *events, size_t count, int *staff) {
                     break;
                 }
             }
-            bool free_lane = lane == NULL || (long long)lane->end_n * (long long)musical_time_denominator(position) <=
-                                                 (long long)musical_time_numerator(position) * (long long)lane->end_d;
+            bool free_lane = lane == NULL || (long long)lane->end_n * position->value.den <= position->value.num * (long long)lane->end_d;
             if (free_lane) {
                 if (lane == NULL) {
                     lane = &lanes[lane_count++];
                     lane->voice = key;
                     lane->staff = s;
                 }
-                lane->end_n = musical_time_numerator(end);
-                lane->end_d = musical_time_denominator(end);
+                lane->end_n = (long)end.value.num;
+                lane->end_d = (unsigned long)end.value.den;
                 chosen = s;
             }
         }
-        musical_time_destroy(end);
         staff[i] = chosen;
         if (chosen > staves) {
             staves = chosen;

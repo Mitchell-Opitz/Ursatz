@@ -79,13 +79,12 @@ static MeterMap *four_four(void) {
     TimeSignature *signature = NULL;
     assert(time_signature_create(4, quarter, &signature) == TIME_SIGNATURE_OK);
     note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {signature, *zero};
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
+    MeterMapChangePoint point = {signature, zero};
     MeterMap *map = NULL;
     assert(meter_map_create(make_id("map"), &point, 1, &map) == METER_MAP_OK);
     time_signature_destroy(signature);
-    musical_time_destroy(zero);
     return map;
 }
 
@@ -140,14 +139,12 @@ static void assert_entry(const OuterVoiceEntry *entry, const char *id, long pitc
 }
 
 static void assert_span(const OuterVoiceEntry *entry, long sn, unsigned long sd, long en, unsigned long ed) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    assert(musical_time_create(sn, sd, &start) == MUSICAL_TIME_OK);
-    assert(musical_time_create(en, ed, &end) == MUSICAL_TIME_OK);
-    assert(musical_time_equals(&entry->span.start, start));
-    assert(musical_time_equals(&entry->span.end, end));
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+    MusicalTime start;
+    MusicalTime end;
+    assert(musical_time_make(sn, (long long)sd, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make(en, (long long)ed, &end) == MUSICAL_TIME_OK);
+    assert(musical_time_same(entry->span.start, start));
+    assert(musical_time_same(entry->span.end, end));
 }
 
 static void test_a_single_voice_is_both_outer_lines(void) {

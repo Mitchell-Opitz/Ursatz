@@ -218,7 +218,7 @@ static const HandChord *chord_at(const Annotation *a, double t) {
 typedef struct {
     HarmonySegmentInput *inputs;
     MetricalPosition **positions;
-    Duration *beat_length;
+    Duration beat_length;
     size_t count;
 } Inputs;
 
@@ -228,19 +228,19 @@ static Inputs make_inputs(const WeightedPipeline *p, const MeterMap *map, const 
     in.inputs = (HarmonySegmentInput *)calloc(count, sizeof(HarmonySegmentInput));
     in.positions = (MetricalPosition **)calloc(count, sizeof(MetricalPosition *));
     assert(in.inputs != NULL && in.positions != NULL);
-    assert(duration_create(a->beat_num, (unsigned long)a->beat_den, &in.beat_length) == DURATION_OK);
+    assert(duration_make(a->beat_num, (long long)a->beat_den, &in.beat_length) == DURATION_OK);
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(p->sonorities.items[s].sonority);
-        assert(metrical_position_from_time(map, time_span_start(window), &in.positions[s]) == METRICAL_POSITION_OK);
+        assert(metrical_position_from_time(map, &window->start, &in.positions[s]) == METRICAL_POSITION_OK);
         HarmonySegmentInput *input = &in.inputs[s];
         input->segment.id = p->segment_ids[s];
         input->segment.span = *window;
         input->segment.position = in.positions[s];
-        input->segment.strength = chain_attack_strength(map, time_span_start(window));
+        input->segment.strength = chain_attack_strength(map, &window->start);
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
         input->has_beat_length = true;
-        input->beat_length = *in.beat_length;
+        input->beat_length = in.beat_length;
     }
     return in;
 }
@@ -249,7 +249,6 @@ static void destroy_inputs(Inputs *in) {
     for (size_t s = 0; s < in->count; s++) {
         metrical_position_destroy(in->positions[s]);
     }
-    duration_destroy(in->beat_length);
     free(in->positions);
     free(in->inputs);
 }

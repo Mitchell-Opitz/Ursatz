@@ -299,8 +299,7 @@ static void report_piece(const char *label, const char *file, const char *annota
         while (s < count) {
             size_t region = 0;
             for (size_t i = 0; i < first.region_count; i++) {
-                if (musical_time_numerator(&first.regions[i].span.start) * (long)musical_time_denominator(&segments[s].start) <=
-                    musical_time_numerator(&segments[s].start) * (long)musical_time_denominator(&first.regions[i].span.start)) {
+                if (musical_time_cmp(first.regions[i].span.start, segments[s].start) <= 0) {
                     region = i;
                 }
             }
@@ -308,8 +307,7 @@ static void report_piece(const char *label, const char *file, const char *annota
             while (end < count) {
                 size_t other = 0;
                 for (size_t i = 0; i < first.region_count; i++) {
-                    if (musical_time_numerator(&first.regions[i].span.start) * (long)musical_time_denominator(&segments[end].start) <=
-                        musical_time_numerator(&segments[end].start) * (long)musical_time_denominator(&first.regions[i].span.start)) {
+                    if (musical_time_cmp(first.regions[i].span.start, segments[end].start) <= 0) {
                         other = i;
                     }
                 }

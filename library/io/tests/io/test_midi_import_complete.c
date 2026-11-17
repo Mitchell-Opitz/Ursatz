@@ -214,10 +214,9 @@ static File fixture_type1(void) {
 }
 
 static void assert_time(const MusicalTime *time, long numerator, unsigned long denominator) {
-    MusicalTime *expected = NULL;
-    assert(musical_time_create(numerator, denominator, &expected) == MUSICAL_TIME_OK);
-    assert(musical_time_equals(time, expected));
-    musical_time_destroy(expected);
+    MusicalTime expected;
+    assert(musical_time_make(numerator, (long long)denominator, &expected) == MUSICAL_TIME_OK);
+    assert(musical_time_same(*time, expected));
 }
 
 static void assert_program(const MidiProgramChange *change, uint64_t tick, unsigned char channel,

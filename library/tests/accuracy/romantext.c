@@ -189,7 +189,7 @@ typedef struct {
     size_t chord_capacity;
 } Builder;
 
-static bool push_key(Builder *b, MusicalTime *time, int measure, int tonic, bool minor) {
+static bool push_key(Builder *b, MusicalTime time, int measure, int tonic, bool minor) {
     RomanTextAnalysis *out = b->out;
     if (out->key_count == b->key_capacity) {
         size_t capacity = b->key_capacity == 0 ? 8 : b->key_capacity * 2;
@@ -263,20 +263,14 @@ bool romantext_beat_offset(unsigned top, unsigned bottom, long beat_thousandths,
 /* The time at `offset` (whole notes) into `measure` of the map: the measure's start plus the offset. A pickup (measure
    0 of a map with one) counts its offset from where a full measure would have started. False when the measure or the
    offset is not in the map. */
-static bool position_time(const MeterMap *map, int measure, const Duration *offset_duration, MusicalTime **out) {
+static bool position_time(const MeterMap *map, int measure, Duration offset_duration, MusicalTime *out) {
     TimeSpan span;
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    Rational start = {0, 1};
-    Rational end = {0, 1};
-    Rational offset = {0, 1};
-    bool read = rational_of_musical_time(&span.start, &start) == RATIONAL_OK &&
-                rational_of_musical_time(&span.end, &end) == RATIONAL_OK &&
-                rational_of_duration(offset_duration, &offset) == RATIONAL_OK;
-    if (!read) {
-        return false;
-    }
+    Rational start = span.start.value;
+    Rational end = span.end.value;
+    Rational offset = offset_duration.value;
 
     Rational length = {0, 1};
     Rational into_span = offset;
@@ -302,11 +296,15 @@ static bool position_time(const MeterMap *map, int measure, const Duration *offs
     }
 
     Rational time = {0, 1};
-    return rational_add(start, into_span, &time) == 0 && musical_time_from_rational(time, out) == TIME_RATIONAL_OK;
+    if (rational_add(start, into_span, &time) != 0) {
+        return false;
+    }
+    *out = musical_time_of(time);
+    return true;
 }
 
 /* The time of (measure, beat in thousandths) on a MeterMap. */
-static bool meter_map_time_at(const void *context, int measure, long thousandths, MusicalTime **time) {
+static bool meter_map_time_at(const void *context, int measure, long thousandths, MusicalTime *time) {
     const MeterMap *map = (const MeterMap *)context;
     const TimeSignature *signature = NULL;
     if (metrical_position_reading_signature(map, measure, &signature) != METRICAL_POSITION_OK) {
@@ -318,13 +316,11 @@ static bool meter_map_time_at(const void *context, int measure, long thousandths
                                thousandths, &numerator, &denominator)) {
         return false;
     }
-    Duration *offset = NULL;
-    if (duration_create(numerator, denominator, &offset) != DURATION_OK) {
+    Duration offset;
+    if (duration_make(numerator, (long long)denominator, &offset) != DURATION_OK) {
         return false;
     }
-    bool converted = position_time(map, measure, offset, time);
-    duration_destroy(offset);
-    return converted;
+    return position_time(map, measure, offset, time);
 }
 
 RomanTextGrid romantext_meter_map_grid(const MeterMap *map) {
@@ -332,9 +328,8 @@ RomanTextGrid romantext_meter_map_grid(const MeterMap *map) {
     return grid;
 }
 
-static bool before(const MusicalTime *a, const MusicalTime *b) {
-    return musical_time_numerator(a) * (long)musical_time_denominator(b) <
-           musical_time_numerator(b) * (long)musical_time_denominator(a);
+static bool before(MusicalTime a, MusicalTime b) {
+    return musical_time_cmp(a, b) < 0;
 }
 
 static bool starts_with(const char *line, const char *prefix) {
@@ -451,7 +446,7 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
             if (is_ignored_token(token)) {
                 continue;
             }
-            MusicalTime *time = NULL;
+            MusicalTime time = musical_time_of(rational_ratio(0, 1));
             if (parse_key_token(token, &tonic, &minor)) {
                 if (!grid->time_at(grid->context, measure, beat, &time)) {
                     set_error(out, "line %d: position of \"%s\" is outside the score's measures", line_number, token);
@@ -459,7 +454,6 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
                     break;
                 }
                 if (!push_key(&builder, time, measure, tonic, minor)) {
-                    musical_time_destroy(time);
                     status = ROMANTEXT_ERR_ALLOC;
                 }
                 continue;
@@ -471,13 +465,11 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
             }
             if (out->chord_count > 0 && before(time, out->chords[out->chord_count - 1].time)) {
                 set_error(out, "line %d: \"%s\" is before the chord that precedes it", line_number, token);
-                musical_time_destroy(time);
                 status = ROMANTEXT_ERR_BAD_POSITION;
                 break;
             }
             RomanTextChord *chord = push_chord(&builder);
             if (chord == NULL) {
-                musical_time_destroy(time);
                 status = ROMANTEXT_ERR_ALLOC;
                 break;
             }
@@ -536,12 +528,6 @@ RomanTextStatus romantext_load(const char *path, const RomanTextGrid *grid, Roma
 void romantext_destroy(RomanTextAnalysis *analysis) {
     if (analysis == NULL) {
         return;
-    }
-    for (size_t i = 0; i < analysis->key_count; i++) {
-        musical_time_destroy(analysis->keys[i].time);
-    }
-    for (size_t i = 0; i < analysis->chord_count; i++) {
-        musical_time_destroy(analysis->chords[i].time);
     }
     free(analysis->keys);
     free(analysis->chords);

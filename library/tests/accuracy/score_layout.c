@@ -245,7 +245,7 @@ void score_layout_destroy(ScoreLayout *layout) {
     layout->measure_count = 0;
 }
 
-static bool layout_time_at(const void *context, int measure, long thousandths, MusicalTime **out_time) {
+static bool layout_time_at(const void *context, int measure, long thousandths, MusicalTime *out_time) {
     const ScoreLayout *layout = (const ScoreLayout *)context;
     const ScoreMeasure *found = NULL;
     for (size_t i = 0; i < layout->measure_count; i++) {
@@ -280,7 +280,8 @@ static bool layout_time_at(const void *context, int measure, long thousandths, M
     if (rational_add(found->start, offset, &at) != RATIONAL_OK) {
         return false;
     }
-    return musical_time_create((long)at.num, (unsigned long)at.den, out_time) == MUSICAL_TIME_OK;
+    *out_time = musical_time_of(at);
+    return true;
 }
 
 RomanTextGrid score_layout_grid(const ScoreLayout *layout) {
@@ -306,24 +307,20 @@ MeterMap *score_layout_meter_map(const ScoreLayout *layout, const char *id_text)
         return NULL;
     }
     note_value_destroy(unit);
-    MusicalTime *zero = NULL;
-    MusicalTime *later = NULL;
+    MusicalTime zero;
     MeterMap *map = NULL;
     EntityID *id = NULL;
-    if (musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK) {
+    if (musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK) {
         bool pickup = layout->has_pickup;
-        if (!pickup || musical_time_create((long)layout->measures[0].length.num, (unsigned long)layout->measures[0].length.den, &later) == MUSICAL_TIME_OK) {
-            MeterMapChangePoint points[2] = {{signature, *zero}, {signature, later ? *later : *zero}};
-            if (entity_id_create(id_text, &id) == ENTITY_ID_OK) {
-                if (meter_map_create(id, points, pickup ? 2 : 1, &map) != METER_MAP_OK) {
-                    entity_id_destroy(id);
-                    map = NULL;
-                }
+        MusicalTime later = pickup ? musical_time_of(layout->measures[0].length) : zero;
+        MeterMapChangePoint points[2] = {{signature, zero}, {signature, later}};
+        if (entity_id_create(id_text, &id) == ENTITY_ID_OK) {
+            if (meter_map_create(id, points, pickup ? 2 : 1, &map) != METER_MAP_OK) {
+                entity_id_destroy(id);
+                map = NULL;
             }
         }
     }
-    musical_time_destroy(later);
-    musical_time_destroy(zero);
     time_signature_destroy(signature);
     return map;
 }

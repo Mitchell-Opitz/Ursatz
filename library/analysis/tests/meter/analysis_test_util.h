@@ -21,31 +21,21 @@ typedef struct {
     AnalysisNote *notes;
     char **ids;
     size_t note_capacity;
-    TimeSpan **spans;
-    size_t span_count;
-    MusicalTime **times;
-    size_t time_count;
     int next_id;
 } Piece;
 
-static inline MusicalTime *piece_time(Piece *piece, long n, unsigned long d) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(n, d, &time) == MUSICAL_TIME_OK);
-    piece->times = (MusicalTime **)realloc(piece->times, (piece->time_count + 1) * sizeof(MusicalTime *));
-    piece->times[piece->time_count++] = time;
+static inline MusicalTime whole_time(long n, unsigned long d) {
+    MusicalTime time;
+    assert(musical_time_make(n, (long long)d, &time) == MUSICAL_TIME_OK);
     return time;
 }
 
-static inline const TimeSpan *piece_span(Piece *piece, long sn, unsigned long sd, long en, unsigned long ed) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    TimeSpan *span = NULL;
-    assert(musical_time_create(sn, sd, &start) == MUSICAL_TIME_OK && musical_time_create(en, ed, &end) == MUSICAL_TIME_OK);
-    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
-    piece->spans = (TimeSpan **)realloc(piece->spans, (piece->span_count + 1) * sizeof(TimeSpan *));
-    piece->spans[piece->span_count++] = span;
+static inline TimeSpan whole_span(long sn, unsigned long sd, long en, unsigned long ed) {
+    MusicalTime start;
+    MusicalTime end;
+    TimeSpan span;
+    assert(musical_time_make(sn, (long long)sd, &start) == MUSICAL_TIME_OK && musical_time_make(en, (long long)ed, &end) == MUSICAL_TIME_OK);
+    assert(time_span_make(start, end, &span) == TIME_SPAN_OK);
     return span;
 }
 
@@ -53,13 +43,12 @@ static inline const TimeSpan *piece_span(Piece *piece, long sn, unsigned long sd
 static inline void piece_init(Piece *piece, unsigned top, int unit_exponent) {
     *piece = (Piece){0};
     TimeSignature *signature = make_signature(top, unit_exponent);
-    MusicalTime *zero = NULL;
+    MusicalTime zero;
     EntityID *id = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
     assert(entity_id_create("test-meter-map", &id) == ENTITY_ID_OK);
-    MeterMapChangePoint point = {signature, *zero};
+    MeterMapChangePoint point = {signature, zero};
     assert(meter_map_create(id, &point, 1, &piece->map) == METER_MAP_OK);
-    musical_time_destroy(zero);
     time_signature_destroy(signature);
     assert(standard_meter_input_init(&piece->input, piece->map, NULL, 0) == STANDARD_METER_ANALYSIS_OK);
 }
@@ -78,7 +67,7 @@ static inline void piece_note(Piece *piece, int line, long sn, unsigned long sd,
     piece->ids[at] = (char *)malloc(strlen(id) + 1);
     assert(piece->ids[at] != NULL);
     strcpy(piece->ids[at], id);
-    AnalysisNote note = {piece->ids[at], NULL, *piece_span(piece, sn, sd, en, ed), 60, NULL, NULL, ANALYSIS_INDEX_NONE,
+    AnalysisNote note = {piece->ids[at], NULL, whole_span(sn, sd, en, ed), 60, NULL, NULL, ANALYSIS_INDEX_NONE,
                          (size_t)line, 1.0};
     piece->notes[at] = note;
     piece->input.notes = piece->notes;
@@ -88,7 +77,7 @@ static inline void piece_note(Piece *piece, int line, long sn, unsigned long sd,
 static inline void piece_chord_change(Piece *piece, long n, unsigned long d) {
     char id[32];
     snprintf(id, sizeof(id), "c%d", piece->next_id++);
-    assert(standard_meter_input_add_chord_change(&piece->input, id, *piece_time(piece, n, d)) == STANDARD_METER_ANALYSIS_OK);
+    assert(standard_meter_input_add_chord_change(&piece->input, id, whole_time(n, d)) == STANDARD_METER_ANALYSIS_OK);
 }
 
 static inline void piece_phrase(Piece *piece, long sn, unsigned long sd, long en, unsigned long ed, bool cadence,
@@ -96,9 +85,9 @@ static inline void piece_phrase(Piece *piece, long sn, unsigned long sd, long en
                                 int expansion_measures, bool elided) {
     char id[32];
     snprintf(id, sizeof(id), "p%d", piece->next_id++);
-    const TimeSpan *span = piece_span(piece, sn, sd, en, ed);
-    const TimeSpan *arrival = cadence ? piece_span(piece, cn, cd, cen, ced) : NULL;
-    assert(standard_meter_input_add_phrase(&piece->input, id, *span, arrival, expansion, expansion_measures, elided) ==
+    const TimeSpan span = whole_span(sn, sd, en, ed);
+    const TimeSpan arrival = cadence ? whole_span(cn, cd, cen, ced) : span;
+    assert(standard_meter_input_add_phrase(&piece->input, id, span, cadence ? &arrival : NULL, expansion, expansion_measures, elided) ==
            STANDARD_METER_ANALYSIS_OK);
 }
 
@@ -109,14 +98,6 @@ static inline void piece_destroy(Piece *piece) {
     free(piece->ids);
     free(piece->notes);
     standard_meter_input_destroy(&piece->input);
-    for (size_t i = 0; i < piece->span_count; i++) {
-        time_span_destroy(piece->spans[i]);
-    }
-    for (size_t i = 0; i < piece->time_count; i++) {
-        musical_time_destroy(piece->times[i]);
-    }
-    free(piece->spans);
-    free(piece->times);
     meter_map_destroy(piece->map);
 }
 

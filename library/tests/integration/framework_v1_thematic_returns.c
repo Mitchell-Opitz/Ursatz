@@ -315,7 +315,7 @@ static void fv1_bach_minimum_window(const Chain *c) {
                 same = contour_direction_at(contours[i], k) == contour_direction_at(contours[j], k);
             }
             for (size_t k = 0; k < 3 && same; k++) {
-                same = duration_equals(rhythmic_pattern_duration_at(rhythms[i], k), rhythmic_pattern_duration_at(rhythms[j], k));
+                same = duration_same(*rhythmic_pattern_duration_at(rhythms[i], k), *rhythmic_pattern_duration_at(rhythms[j], k));
             }
             same_shape += same ? 1 : 0;
         }

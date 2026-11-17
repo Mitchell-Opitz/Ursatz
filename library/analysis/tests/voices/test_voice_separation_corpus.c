@@ -133,12 +133,11 @@ static void test_chorale(void) {
     TimeSignature *signature = NULL;
     assert(time_signature_create(4, quarter, &signature) == TIME_SIGNATURE_OK);
     note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {signature, *zero};
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
+    MeterMapChangePoint point = {signature, zero};
     assert(meter_map_create(make_id("chorale-meter"), &point, 1, &map) == METER_MAP_OK);
     time_signature_destroy(signature);
-    musical_time_destroy(zero);
 
     VoiceAssignment a = {0};
     assert(voice_separate(set.notes, set.values, set.count, NULL, map, standard_meter_segmentation_beat_grid, NULL,
@@ -210,7 +209,7 @@ static void destroy_imported(Imported *imported) {
 
 static long onset_ticks(const Imported *imported, size_t i) {
     const MusicalTime *at = temporal_anchor_position(note_event_temporal_anchor(imported->events[i]));
-    return musical_time_numerator(at) * 4 * imported->ticks_per_quarter / (long)musical_time_denominator(at);
+    return (long)at->value.num * 4 * imported->ticks_per_quarter / (long)at->value.den;
 }
 
 typedef struct {

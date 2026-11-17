@@ -31,9 +31,9 @@ static const AnalysisVoiceCell *grid_cell(const AnalysisVoiceGrid *grid, size_t 
     return &grid->cells[segment * grid->voice_count + voice];
 }
 
-static MusicalTime *time_at(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+static MusicalTime time_at(long numerator, unsigned long denominator) {
+    MusicalTime time;
+    assert(musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK);
     return time;
 }
 
@@ -108,19 +108,15 @@ static void test_segments_and_members(TestPiece *piece) {
 
 static void test_attack_strength(TestPiece *piece) {
     const MeterMap *map = piece->import.meter_map;
-    MusicalTime *beat_one = time_at(0, 1);
-    MusicalTime *beat_two = time_at(1, 4);
-    MusicalTime *beat_three = time_at(1, 2);
-    MusicalTime *offbeat = time_at(1, 8);
-    assert(chain_attack_strength(map, beat_one) == BEAT_STRENGTH_STRONG);
-    assert(chain_attack_strength(map, beat_two) == BEAT_STRENGTH_WEAK);
-    assert(chain_attack_strength(map, beat_three) == BEAT_STRENGTH_MEDIUM);
-    assert(chain_attack_strength(map, offbeat) == BEAT_STRENGTH_WEAK);
-    assert(chain_attack_strength(NULL, beat_one) == BEAT_STRENGTH_WEAK && chain_attack_strength(map, NULL) == BEAT_STRENGTH_WEAK);
-    musical_time_destroy(beat_one);
-    musical_time_destroy(beat_two);
-    musical_time_destroy(beat_three);
-    musical_time_destroy(offbeat);
+    MusicalTime beat_one = time_at(0, 1);
+    MusicalTime beat_two = time_at(1, 4);
+    MusicalTime beat_three = time_at(1, 2);
+    MusicalTime offbeat = time_at(1, 8);
+    assert(chain_attack_strength(map, &beat_one) == BEAT_STRENGTH_STRONG);
+    assert(chain_attack_strength(map, &beat_two) == BEAT_STRENGTH_WEAK);
+    assert(chain_attack_strength(map, &beat_three) == BEAT_STRENGTH_MEDIUM);
+    assert(chain_attack_strength(map, &offbeat) == BEAT_STRENGTH_WEAK);
+    assert(chain_attack_strength(NULL, &beat_one) == BEAT_STRENGTH_WEAK && chain_attack_strength(map, NULL) == BEAT_STRENGTH_WEAK);
 }
 
 static void test_keys(TestPiece *piece) {

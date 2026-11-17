@@ -306,7 +306,7 @@ typedef struct {
 } Chain;
 
 static double fv1_time_double(const MusicalTime *t) {
-    return (double)musical_time_numerator(t) / (double)musical_time_denominator(t);
+    return (double)t->value.num / (double)t->value.den;
 }
 
 static void fv1_chain_run(Chain *c, const FormPiece *fp) {
@@ -368,10 +368,10 @@ static void fv1_chain_destroy(Chain *c) {
 static void fv1_where(const Chain *c, size_t segment, int *measure, double *beat) {
     const TimeSpan *window = sonority_time_window(analysis_chain_segments(c->chain)->sonorities.items[segment].sonority);
     MetricalPosition *position = NULL;
-    assert(metrical_position_from_time(c->map, time_span_start(window), &position) == METRICAL_POSITION_OK);
+    assert(metrical_position_from_time(c->map, &window->start, &position) == METRICAL_POSITION_OK);
     *measure = metrical_position_measure(position);
     const Duration *offset = metrical_position_offset(position);
-    *beat = 1.0 + ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / c->beat_length;
+    *beat = 1.0 + ((double)offset->value.num / (double)offset->value.den) / c->beat_length;
     metrical_position_destroy(position);
 }
 

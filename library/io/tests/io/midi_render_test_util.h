@@ -122,12 +122,6 @@ static inline EntityID *test_id(const char *value) {
     return id;
 }
 
-static inline MusicalTime *test_time(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
-    return time;
-}
-
 static inline MusicalTime test_time_value(long long numerator, long long denominator) {
     MusicalTime time;
     assert(musical_time_make(numerator, denominator, &time) == MUSICAL_TIME_OK);
@@ -144,20 +138,17 @@ typedef struct {
 
 static inline MeterMap *test_meter_map(const TestMeterChange *changes, size_t count) {
     TimeSignature *signatures[16];
-    MusicalTime *starts[16];
     MeterMapChangePoint points[16];
     assert(count <= 16);
     for (size_t i = 0; i < count; i++) {
         signatures[i] = test_time_signature(changes[i].top, changes[i].bottom);
-        starts[i] = test_time(changes[i].start_numerator, changes[i].start_denominator);
         points[i].time_signature = signatures[i];
-        points[i].start = *starts[i];
+        points[i].start = test_time_value(changes[i].start_numerator, (long long)changes[i].start_denominator);
     }
     MeterMap *map = NULL;
     assert(meter_map_create(test_id("test-meter-map"), points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
@@ -169,19 +160,14 @@ typedef struct {
 } TestTempoChange;
 
 static inline TempoMap *test_tempo_map(const TestTempoChange *changes, size_t count) {
-    MusicalTime *starts[16];
     TempoMapChangePoint points[16];
     assert(count <= 16);
     for (size_t i = 0; i < count; i++) {
-        starts[i] = test_time(changes[i].start_numerator, changes[i].start_denominator);
-        points[i].start = *starts[i];
+        points[i].start = test_time_value(changes[i].start_numerator, (long long)changes[i].start_denominator);
         points[i].microseconds_per_quarter = changes[i].microseconds_per_quarter;
     }
     TempoMap *map = NULL;
     assert(tempo_map_create(test_id("test-tempo-map"), points, count, &map) == TEMPO_MAP_OK);
-    for (size_t i = 0; i < count; i++) {
-        musical_time_destroy(starts[i]);
-    }
     return map;
 }
 
@@ -272,10 +258,10 @@ static inline TestNoteFact *test_facts_of(NoteEvent *const *events, PitchNumeric
     for (size_t i = 0; i < count; i++) {
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
         const Duration *duration = note_event_duration(events[i]);
-        facts[i].position_numerator = musical_time_numerator(position);
-        facts[i].position_denominator = musical_time_denominator(position);
-        facts[i].duration_numerator = duration_numerator(duration);
-        facts[i].duration_denominator = duration_denominator(duration);
+        facts[i].position_numerator = (long)position->value.num;
+        facts[i].position_denominator = (unsigned long)position->value.den;
+        facts[i].duration_numerator = (long)duration->value.num;
+        facts[i].duration_denominator = (unsigned long)duration->value.den;
         facts[i].pitch = pitch_numeric_value_position_numerator(pitches[i]);
     }
     qsort(facts, count, sizeof(TestNoteFact), test_compare_facts);

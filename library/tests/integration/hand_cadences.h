@@ -19,12 +19,6 @@ typedef struct {
     CadenceType type;
 } HandCadence;
 
-static inline int hand_time_compare(const MusicalTime *a, const MusicalTime *b) {
-    long long left = (long long)musical_time_numerator(a) * (long long)musical_time_denominator(b);
-    long long right = (long long)musical_time_numerator(b) * (long long)musical_time_denominator(a);
-    return left < right ? -1 : (left > right ? 1 : 0);
-}
-
 static inline HarmonyCadences hand_cadences_make(const ChainSegments *segments, const MeterMap *map, const HandCadence *hand, size_t count) {
     HarmonyCadences cadences = {NULL, count};
     cadences.items = (HarmonyCadenceResult *)calloc(count > 0 ? count : 1, sizeof(HarmonyCadenceResult));
@@ -35,8 +29,7 @@ static inline HarmonyCadences hand_cadences_make(const ChainSegments *segments, 
         bool found = false;
         for (size_t s = 0; s < segments->count; s++) {
             const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
-            if (hand_time_compare(time_span_start(window), &measure.start) < 0 ||
-                hand_time_compare(time_span_end(window), &measure.end) > 0) {
+            if (musical_time_cmp(window->start, measure.start) < 0 || musical_time_cmp(window->end, measure.end) > 0) {
                 continue;
             }
             if (!found) {

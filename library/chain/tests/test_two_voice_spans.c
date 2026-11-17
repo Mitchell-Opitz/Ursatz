@@ -65,10 +65,8 @@ static int measure_of(const MeterMap *map, double at) {
         if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
             break;
         }
-        const MusicalTime *start = &span.start;
-        const MusicalTime *end = &span.end;
-        double from = (double)musical_time_numerator(start) / (double)musical_time_denominator(start);
-        double to = (double)musical_time_numerator(end) / (double)musical_time_denominator(end);
+        double from = (double)span.start.value.num / (double)span.start.value.den;
+        double to = (double)span.end.value.num / (double)span.end.value.den;
         if (from - 1e-9 <= at && at < to - 1e-9) {
             return measure;
         }

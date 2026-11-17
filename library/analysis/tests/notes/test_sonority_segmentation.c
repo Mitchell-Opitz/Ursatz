@@ -77,22 +77,19 @@ typedef struct {
 
 static MeterMap *build_map(const Change *changes, size_t count) {
     TimeSignature *signatures[4];
-    MusicalTime *starts[4];
     MeterMapChangePoint points[4];
     for (size_t i = 0; i < count; i++) {
         NoteValue *unit = NULL;
         assert(note_value_create(changes[i].bottom_exponent, &unit) == NOTE_VALUE_OK);
         assert(time_signature_create(changes[i].top, unit, &signatures[i]) == TIME_SIGNATURE_OK);
         note_value_destroy(unit);
-        assert(musical_time_create(changes[i].start_n, changes[i].start_d, &starts[i]) == MUSICAL_TIME_OK);
         points[i].time_signature = signatures[i];
-        points[i].start = *starts[i];
+        assert(musical_time_make(changes[i].start_n, (long long)changes[i].start_d, &points[i].start) == MUSICAL_TIME_OK);
     }
     MeterMap *map = NULL;
     assert(meter_map_create(make_id("map"), points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
@@ -142,16 +139,14 @@ static MeterMap *four_four(void) {
 }
 
 static void assert_window(const AdaptiveSonority *s, long sn, unsigned long sd, long en, unsigned long ed) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    assert(musical_time_create(sn, sd, &start) == MUSICAL_TIME_OK);
-    assert(musical_time_create(en, ed, &end) == MUSICAL_TIME_OK);
+    MusicalTime start;
+    MusicalTime end;
+    assert(musical_time_make(sn, (long long)sd, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make(en, (long long)ed, &end) == MUSICAL_TIME_OK);
     const TimeSpan *window = sonority_time_window(s->sonority);
-    assert(musical_time_equals(time_span_start(window), start));
-    assert(musical_time_equals(time_span_end(window), end));
-    assert(time_span_boundary(window) == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+    assert(musical_time_same(window->start, start));
+    assert(musical_time_same(window->end, end));
+    assert(window->boundary == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
 }
 
 static void assert_member(const AdaptiveSonority *s, size_t index, const char *id, bool held) {

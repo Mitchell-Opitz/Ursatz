@@ -86,18 +86,16 @@ static PitchIdentity *make_expected_pitch(uint8_t midi_note) {
 static void assert_position(const NoteEvent *note, long numerator, unsigned long denominator) {
     const TemporalAnchor *anchor = note_event_temporal_anchor(note);
     const MusicalTime *position = temporal_anchor_position(anchor);
-    MusicalTime *expected = NULL;
-    musical_time_create(numerator, denominator, &expected);
-    assert(musical_time_equals(position, expected));
-    musical_time_destroy(expected);
+    MusicalTime expected;
+    assert(musical_time_make(numerator, (long long)denominator, &expected) == MUSICAL_TIME_OK);
+    assert(musical_time_same(*position, expected));
 }
 
 static void assert_duration(const NoteEvent *note, long numerator, unsigned long denominator) {
     const Duration *duration = note_event_duration(note);
-    Duration *expected = NULL;
-    duration_create(numerator, denominator, &expected);
-    assert(duration_equals(duration, expected));
-    duration_destroy(expected);
+    Duration expected;
+    assert(duration_make(numerator, (long long)denominator, &expected) == DURATION_OK);
+    assert(duration_same(*duration, expected));
 }
 
 static void assert_pitch(const NoteEvent *note, uint8_t midi_note) {

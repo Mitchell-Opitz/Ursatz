@@ -91,7 +91,7 @@ static size_t index_of(const Piece *p, int measure, int beat) {
     for (size_t i = 0; i < p->count; i++) {
         const Duration *offset = metrical_position_offset(p->inputs[i].segment.position);
         if (metrical_position_measure(p->inputs[i].segment.position) == measure &&
-            duration_numerator(offset) * 4 == (long)(beat - 1) * duration_denominator(offset)) {
+            offset->value.num * 4 == (long long)(beat - 1) * offset->value.den) {
             return i;
         }
     }

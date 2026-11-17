@@ -42,8 +42,8 @@ static void assert_note(const MusicXmlImport *import, size_t i, long onset_n, un
                         unsigned long length_d, long midi) {
     const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(import->events[i]));
     const Duration *length = note_event_duration(import->events[i]);
-    assert(equals(musical_time_numerator(onset), musical_time_denominator(onset), onset_n, onset_d));
-    assert(equals(duration_numerator(length), duration_denominator(length), length_n, length_d));
+    assert(equals((long)onset->value.num, (unsigned long)onset->value.den, onset_n, onset_d));
+    assert(equals((long)length->value.num, (unsigned long)length->value.den, length_n, length_d));
     assert(pitch_numeric_value_position_numerator(import->pitch_values[i]) == midi);
     assert(pitch_numeric_value_position_denominator(import->pitch_values[i]) == 1);
 }
@@ -258,24 +258,23 @@ static void test_a_backup_before_the_measure_is_stopped(void) {
 /* --- measures, time signatures and key signatures --- */
 
 static void assert_time(const MusicalTime *time, long numerator, unsigned long denominator) {
-    assert(equals(musical_time_numerator(time), musical_time_denominator(time), numerator, denominator));
+    assert(equals((long)time->value.num, (unsigned long)time->value.den, numerator, denominator));
 }
 
 static void assert_time_value(MusicalTime time, long numerator, unsigned long denominator) {
     assert_time(&time, numerator, denominator);
 }
 
-static MusicalTime *at(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+static MusicalTime at(long numerator, unsigned long denominator) {
+    MusicalTime time;
+    assert(musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK);
     return time;
 }
 
 static int measure_at(const MeterMap *map, long numerator, unsigned long denominator) {
-    MusicalTime *time = at(numerator, denominator);
+    MusicalTime time = at(numerator, denominator);
     int measure = -99;
-    assert(meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK);
-    musical_time_destroy(time);
+    assert(meter_map_measure_index_at(map, &time, &measure) == METER_MAP_OK);
     return measure;
 }
 
@@ -556,8 +555,8 @@ static void test_dynamics(void) {
         assert(strcmp(dynamics_marking(import.dynamics[i]), NAMES[i]) == 0);
         assert(dynamics_target_kind(import.dynamics[i]) == DYNAMICS_TARGET_TIME_SPAN);
         const TimeSpan *span = dynamics_target_time_span(import.dynamics[i]);
-        assert_time(time_span_start(span), FROM_N[i], FROM_D[i]);
-        assert_time(time_span_end(span), TO_N[i], TO_D[i]);
+        assert_time(&span->start, FROM_N[i], FROM_D[i]);
+        assert_time(&span->end, TO_N[i], TO_D[i]);
         assert(import.dynamics_part[i] == PART[i] && import.dynamics_staff[i] == STAFF[i]);
     }
     musicxml_import_destroy(&import);

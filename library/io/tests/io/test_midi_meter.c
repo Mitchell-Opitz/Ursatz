@@ -123,14 +123,12 @@ static void assert_measure_span(const Imported *imported, int index, long sn, un
                                 unsigned long ed) {
     TimeSpan span;
     assert(meter_map_measure_span(imported->meter.meter_map, index, &span) == METER_MAP_OK);
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    musical_time_create(sn, sd, &start);
-    musical_time_create(en, ed, &end);
-    assert(musical_time_equals(&span.start, start));
-    assert(musical_time_equals(&span.end, end));
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+    MusicalTime start;
+    MusicalTime end;
+    assert(musical_time_make(sn, (long long)sd, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make(en, (long long)ed, &end) == MUSICAL_TIME_OK);
+    assert(musical_time_same(span.start, start));
+    assert(musical_time_same(span.end, end));
 }
 
 static size_t measure_count_of(const Imported *imported) {

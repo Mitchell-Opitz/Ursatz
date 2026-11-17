@@ -44,7 +44,7 @@ static const Piece CLEMENTI = {"Clementi 36", "Clementi 36.mid"};
 static const Piece MOZART = {"Mozart 545", "Mozart 545.mid"};
 
 static double to_double(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+    return (double)time->value.num / (double)time->value.den;
 }
 
 /* The measure a time in whole notes lies in, and whether it is the measure's first beat. */

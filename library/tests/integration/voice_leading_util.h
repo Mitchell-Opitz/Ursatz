@@ -186,13 +186,12 @@ static inline void vl_separated(const VlPiece *piece, VlAssignment *a) {
     TimeSignature *signature = NULL;
     assert(time_signature_create(4, quarter, &signature) == TIME_SIGNATURE_OK);
     note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {signature, *zero};
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
+    MeterMapChangePoint point = {signature, zero};
     MeterMap *map = NULL;
     assert(meter_map_create(vl_id("vl-meter"), &point, 1, &map) == METER_MAP_OK);
     time_signature_destroy(signature);
-    musical_time_destroy(zero);
 
     VoiceAssignment assignment = {0};
     assert(voice_separate(events, values, piece->note_count, NULL, map, standard_meter_segmentation_beat_grid, NULL, NULL,
@@ -227,7 +226,7 @@ typedef struct {
     HarmonyVoiceGrid harmony_grid;
 
     HarmonySegmentInput inputs[VL_MAX_SEGMENTS];
-    TimeSpan *spans[VL_MAX_SEGMENTS];
+    TimeSpan spans[VL_MAX_SEGMENTS];
     MetricalPosition *positions[VL_MAX_SEGMENTS];
 
     PitchNumericValue *values[VL_MAX_NOTES];
@@ -336,13 +335,11 @@ static inline void vl_build(const VlPiece *piece, const VlAssignment *assignment
 
     /* the neutral inputs of standard-harmony: the quarter's hand-labelled chord */
     for (size_t s = 0; s < seg->segment_count; s++) {
-        MusicalTime *from = NULL;
-        MusicalTime *to = NULL;
-        assert(musical_time_create(seg->start[s], 8, &from) == MUSICAL_TIME_OK);
-        assert(musical_time_create(seg->end[s], 8, &to) == MUSICAL_TIME_OK);
-        assert(time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &seg->spans[s]) == TIME_SPAN_OK);
-        musical_time_destroy(from);
-        musical_time_destroy(to);
+        MusicalTime from;
+        MusicalTime to;
+        assert(musical_time_make(seg->start[s], 8, &from) == MUSICAL_TIME_OK);
+        assert(musical_time_make(seg->end[s], 8, &to) == MUSICAL_TIME_OK);
+        assert(time_span_make(from, to, &seg->spans[s]) == TIME_SPAN_OK);
         Duration offset;
         assert(duration_make(seg->start[s] % 8, 8, &offset) == DURATION_OK);
         assert(metrical_position_create((int)(seg->start[s] / 8) + 1, offset, &seg->positions[s]) ==
@@ -350,7 +347,7 @@ static inline void vl_build(const VlPiece *piece, const VlAssignment *assignment
 
         HarmonySegmentInput *input = &seg->inputs[s];
         input->segment.id = seg->segment_ids[s];
-        input->segment.span = *seg->spans[s];
+        input->segment.span = seg->spans[s];
         input->segment.position = seg->positions[s];
         input->segment.strength = seg->start[s] % 8 == 0 ? BEAT_STRENGTH_STRONG
                                : seg->start[s] % 4 == 0 ? BEAT_STRENGTH_MEDIUM
@@ -370,7 +367,6 @@ static inline void vl_build(const VlPiece *piece, const VlAssignment *assignment
 
 static inline void vl_destroy(VlSegments *seg, size_t note_count) {
     for (size_t s = 0; s < seg->segment_count; s++) {
-        time_span_destroy(seg->spans[s]);
         metrical_position_destroy(seg->positions[s]);
     }
     for (size_t i = 0; i < note_count; i++) {

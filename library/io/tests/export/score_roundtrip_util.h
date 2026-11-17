@@ -14,8 +14,7 @@ static inline bool rt_metronome_equal(const MetronomeMarking *a, const Metronome
 }
 
 static inline bool rt_span_equal(const TimeSpan *a, const TimeSpan *b) {
-    return time_span_boundary(a) == time_span_boundary(b) && musical_time_equals(time_span_start(a), time_span_start(b)) &&
-           musical_time_equals(time_span_end(a), time_span_end(b));
+    return a->boundary == b->boundary && musical_time_same(a->start, b->start) && musical_time_same(a->end, b->end);
 }
 
 /*
@@ -129,10 +128,10 @@ static inline RtNote *rt_notes(const MusicXmlImport *import) {
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(import->events[i]));
         const Duration *duration = note_event_duration(import->events[i]);
         const PitchSpelling *spelling = note_event_optional_pitch_spelling(import->events[i]);
-        notes[i].pos_n = musical_time_numerator(position);
-        notes[i].pos_d = musical_time_denominator(position);
-        notes[i].dur_n = duration_numerator(duration);
-        notes[i].dur_d = duration_denominator(duration);
+        notes[i].pos_n = (long)position->value.num;
+        notes[i].pos_d = (unsigned long)position->value.den;
+        notes[i].dur_n = (long)duration->value.num;
+        notes[i].dur_d = (unsigned long)duration->value.den;
         notes[i].part = import->part_index[i];
         notes[i].staff = import->staff[i];
         notes[i].midi = pitch_numeric_value_position_numerator(import->pitch_values[i]);
@@ -146,23 +145,17 @@ static inline RtNote *rt_notes(const MusicXmlImport *import) {
 
 /* The number of measures the MeterMap lays under the notes' last end, and the last end it used. */
 static inline size_t rt_measure_count(const MusicXmlImport *import) {
-    MusicalTime *last = tu_time(0, 1);
+    MusicalTime last = tu_time_value(0, 1);
     for (size_t i = 0; i < import->count; i++) {
-        MusicalTime *end = NULL;
-        assert(musical_time_add(temporal_anchor_position(note_event_temporal_anchor(import->events[i])),
-                                note_event_duration(import->events[i]), &end) == MUSICAL_TIME_OK);
-        long long a = (long long)musical_time_numerator(end) * (long long)musical_time_denominator(last);
-        long long b = (long long)musical_time_numerator(last) * (long long)musical_time_denominator(end);
-        if (a > b) {
-            musical_time_destroy(last);
+        MusicalTime end;
+        assert(musical_time_plus(*temporal_anchor_position(note_event_temporal_anchor(import->events[i])),
+                                 *note_event_duration(import->events[i]), &end) == MUSICAL_TIME_OK);
+        if (musical_time_cmp(end, last) > 0) {
             last = end;
-        } else {
-            musical_time_destroy(end);
         }
     }
     size_t count = 0;
-    assert(meter_map_measure_count(import->meter_map, last, &count) == METER_MAP_OK);
-    musical_time_destroy(last);
+    assert(meter_map_measure_count(import->meter_map, &last, &count) == METER_MAP_OK);
     return count;
 }
 
@@ -222,8 +215,8 @@ static inline void rt_assert_same(const MusicXmlImport *a, const MusicXmlImport 
     for (size_t i = 0; i < a->tempo_marking_count; i++) {
         const TempoMarking *x = a->tempo_markings[i];
         const TempoMarking *y = b->tempo_markings[i];
-        assert(musical_time_equals(temporal_anchor_position(tempo_marking_temporal_anchor(x)),
-                                   temporal_anchor_position(tempo_marking_temporal_anchor(y))));
+        assert(musical_time_same(*temporal_anchor_position(tempo_marking_temporal_anchor(x)),
+                                 *temporal_anchor_position(tempo_marking_temporal_anchor(y))));
         assert(tempo_marking_has_text(x) == tempo_marking_has_text(y));
         if (tempo_marking_has_text(x)) {
             assert(strcmp(tempo_marking_text(x), tempo_marking_text(y)) == 0);

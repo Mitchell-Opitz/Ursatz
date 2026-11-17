@@ -52,12 +52,6 @@ static inline MusicalTime tu_time_value(long long numerator, long long denominat
     return time;
 }
 
-static inline MusicalTime *tu_time(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
-    return time;
-}
-
 /* A note at position / duration (whole-note fractions), spelled letter + accidental + octave, in a voice (NULL: none). */
 static inline NoteEvent *tu_note(const char *id, long pos_n, unsigned long pos_d, long dur_n, unsigned long dur_d,
                                  PitchLetter letter, int accidental, int octave, const char *voice) {
@@ -132,15 +126,13 @@ static inline MeterMap *tu_meter_map(const TuMeter *changes, size_t count) {
         assert(note_value_create(exponent, &unit) == NOTE_VALUE_OK);
         assert(time_signature_create(changes[i].top, unit, &signatures[i]) == TIME_SIGNATURE_OK);
         note_value_destroy(unit);
-        starts[i] = tu_time(changes[i].start_n, changes[i].start_d);
         points[i].time_signature = signatures[i];
-        points[i].start = *starts[i];
+        points[i].start = tu_time_value(changes[i].start_n, (long long)changes[i].start_d);
     }
     MeterMap *map = NULL;
     assert(meter_map_create(tu_id("tu-meter-map"), points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
@@ -152,19 +144,14 @@ typedef struct {
 } TuTempo;
 
 static inline TempoMap *tu_tempo_map(const TuTempo *changes, size_t count) {
-    MusicalTime *starts[8];
     TempoMapChangePoint points[8];
     assert(count <= 8);
     for (size_t i = 0; i < count; i++) {
-        starts[i] = tu_time(changes[i].start_n, changes[i].start_d);
-        points[i].start = *starts[i];
+        points[i].start = tu_time_value(changes[i].start_n, (long long)changes[i].start_d);
         points[i].microseconds_per_quarter = changes[i].microseconds;
     }
     TempoMap *map = NULL;
     assert(tempo_map_create(tu_id("tu-tempo-map"), points, count, &map) == TEMPO_MAP_OK);
-    for (size_t i = 0; i < count; i++) {
-        musical_time_destroy(starts[i]);
-    }
     return map;
 }
 
@@ -175,10 +162,9 @@ static inline TempoMarking *tu_tempo_marking(long pos_n, unsigned long pos_d, co
     assert(temporal_anchor_create(tu_time_value(pos_n, (long long)pos_d), &anchor) == TEMPORAL_ANCHOR_OK);
     MetronomeMarking *metronome = NULL;
     if (beat_n != 0) {
-        Duration *beat = NULL;
-        assert(duration_create((long)beat_n, beat_d, &beat) == DURATION_OK);
-        assert(metronome_marking_create(beat, bpm_n, bpm_d, &metronome) == METRONOME_MARKING_OK);
-        duration_destroy(beat);
+        Duration beat;
+        assert(duration_make((long long)beat_n, (long long)beat_d, &beat) == DURATION_OK);
+        assert(metronome_marking_create(&beat, bpm_n, bpm_d, &metronome) == METRONOME_MARKING_OK);
     }
     TempoMarking *marking = NULL;
     assert(tempo_marking_create(anchor, text, metronome, &marking) == TEMPO_MARKING_OK);

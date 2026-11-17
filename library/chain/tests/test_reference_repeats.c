@@ -33,7 +33,7 @@ static const Piece CLEMENTI = {"Clementi 36", "Clementi 36.mid"};
 static const Piece MOZART = {"Mozart 545", "Mozart 545.mid"};
 
 static double to_double(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+    return (double)time->value.num / (double)time->value.den;
 }
 
 static int measure_of(const MeterMap *map, double at) {
