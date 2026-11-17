@@ -40,6 +40,10 @@ Options (both ON by default):
 - `URSATZ_TESTS`: build and register the tests of every part.
 - `URSATZ_GUI`: build the GUI and its HTTP server.
 
+## Knowledge
+
+`knowledge/` holds the music-theory knowledge as data: entries of pitch material, chord types and relations, each with its citations, in JSON checked against the schemas in `knowledge/schema/` ([README](knowledge/README.md)). `tools/ci/check-knowledge.py` validates every entry; two tests run it (`knowledge_validate` on the real entries, `knowledge_validate_fixtures` on good and bad sets under `tests/fixtures/knowledge/`), both labelled `schema`.
+
 ## Test fixtures
 
 `tests/fixtures/` holds the reference pieces and annotations every part's tests read, once ([README](tests/fixtures/README.md)). Tests find it through `URSATZ_FIXTURES_DIR`.
