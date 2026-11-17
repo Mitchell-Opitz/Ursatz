@@ -88,8 +88,8 @@ static bool copy_markings(const MusicXmlImport *import, ImportedSource *source) 
         const TempoMarking *marking = import->tempo_markings[i];
         ImportedTempoMarking *copy = &source->tempo_markings[i];
         const MusicalTime *position = temporal_anchor_position(tempo_marking_temporal_anchor(marking));
-        copy->position_numerator = musical_time_numerator(position);
-        copy->position_denominator = musical_time_denominator(position);
+        copy->position_numerator = (long)position->value.num;
+        copy->position_denominator = (unsigned long)position->value.den;
         copy->part = import->tempo_marking_part[i];
         const MetronomeMarking *metronome = tempo_marking_metronome_marking(marking);
         if (metronome) {
@@ -118,10 +118,10 @@ static bool copy_markings(const MusicXmlImport *import, ImportedSource *source) 
         if (!span) {
             continue; /* the importer gives every dynamic a span; an entry without a marking is skipped later */
         }
-        copy->start_numerator = musical_time_numerator(time_span_start(span));
-        copy->start_denominator = musical_time_denominator(time_span_start(span));
-        copy->end_numerator = musical_time_numerator(time_span_end(span));
-        copy->end_denominator = musical_time_denominator(time_span_end(span));
+        copy->start_numerator = (long)span->start.value.num;
+        copy->start_denominator = (unsigned long)span->start.value.den;
+        copy->end_numerator = (long)span->end.value.num;
+        copy->end_denominator = (unsigned long)span->end.value.den;
         copy->part = import->dynamics_part[i];
         copy->staff = import->dynamics_staff[i];
         if (!(copy->marking = strdup(dynamics_marking(dynamics)))) {

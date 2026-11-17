@@ -143,9 +143,12 @@ static AnalyzerStatus build_notes(const ImportedNotes *imported, AnalyzerPlaybac
         const PitchNumericValue *value = imported->pitch_values[i];
         AnalyzerPlaybackNote *note = &out->notes[i];
         Rational note_end;
-        if (!position || !duration || !value || rational_of_musical_time(position, &note->onset) != RATIONAL_OK ||
-            rational_of_duration(duration, &note->length) != RATIONAL_OK ||
-            rational_add(note->onset, note->length, &note_end) != RATIONAL_OK) {
+        if (!position || !duration || !value) {
+            return ANALYZER_ERR_LIBRARY;
+        }
+        note->onset = position->value;
+        note->length = duration->value;
+        if (rational_add(note->onset, note->length, &note_end) != RATIONAL_OK) {
             return ANALYZER_ERR_LIBRARY;
         }
         if (rational_cmp(note_end, out->end) > 0) {

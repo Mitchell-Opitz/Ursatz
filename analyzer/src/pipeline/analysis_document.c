@@ -81,7 +81,7 @@ static Rational doc_sub(DocBuild *build, Rational a, Rational b) {
 /* length measured in beats of the given duration. */
 static Rational doc_in_beats(DocBuild *build, Rational length, const Duration *beat) {
     Rational beats = {0, 1};
-    if (rational_div(length, doc_rational(build, duration_numerator(beat), duration_denominator(beat)), &beats) !=
+    if (rational_div(length, doc_rational(build, beat->value.num, (unsigned long long)beat->value.den), &beats) !=
         RATIONAL_OK) {
         build->overflowed = true;
     }
@@ -178,13 +178,9 @@ static cJSON *uncertainty_json(AnalysisConfidence confidence) {
    past its start, as a rational (0/1 on the beat). Null when the
    position cannot be read, e.g. a signature with no beat grid. */
 static cJSON *position_json(DocBuild *build, const MeterMap *map, Rational time) {
-    MusicalTime *musical_time = NULL;
-    if (musical_time_create((long)time.num, (unsigned long)time.den, &musical_time) != MUSICAL_TIME_OK) {
-        return cJSON_CreateNull();
-    }
+    MusicalTime musical_time = musical_time_of(time);
     MetricalPosition *position = NULL;
-    MetricalPositionResult result = metrical_position_from_time(map, musical_time, &position);
-    musical_time_destroy(musical_time);
+    MetricalPositionResult result = metrical_position_from_time(map, &musical_time, &position);
     if (result != METRICAL_POSITION_OK) {
         return cJSON_CreateNull();
     }
@@ -921,13 +917,9 @@ static cJSON *notes_json(DocBuild *build, const ImportedNotes *notes, const Anal
    position cannot be read or the signature has no beat grid. Segments do not cross a barline, so one
    signature covers the whole span. */
 static cJSON *span_beats_json(DocBuild *build, const MeterMap *map, Rational start, Rational end) {
-    MusicalTime *musical_time = NULL;
-    if (musical_time_create((long)start.num, (unsigned long)start.den, &musical_time) != MUSICAL_TIME_OK) {
-        return cJSON_CreateNull();
-    }
+    MusicalTime musical_time = musical_time_of(start);
     MetricalPosition *position = NULL;
-    MetricalPositionResult result = metrical_position_from_time(map, musical_time, &position);
-    musical_time_destroy(musical_time);
+    MetricalPositionResult result = metrical_position_from_time(map, &musical_time, &position);
     if (result != METRICAL_POSITION_OK) {
         return cJSON_CreateNull();
     }
@@ -3665,17 +3657,13 @@ static cJSON *voice_leading_json(DocBuild *build, const ImportedNotes *notes, co
 
 /* The measure a time lies in, as the library numbers them (a pickup is 0); 0 when the position cannot be read. */
 static int measure_of_time(const MeterMap *map, Rational time) {
-    MusicalTime *musical_time = NULL;
+    MusicalTime musical_time = musical_time_of(time);
     MetricalPosition *position = NULL;
     int measure = 0;
-    if (musical_time_create((long)time.num, (unsigned long)time.den, &musical_time) != MUSICAL_TIME_OK) {
-        return 0;
-    }
-    if (metrical_position_from_time(map, musical_time, &position) == METRICAL_POSITION_OK) {
+    if (metrical_position_from_time(map, &musical_time, &position) == METRICAL_POSITION_OK) {
         measure = metrical_position_measure(position);
         metrical_position_destroy(position);
     }
-    musical_time_destroy(musical_time);
     return measure;
 }
 

@@ -44,8 +44,8 @@ typedef struct {
 /* The tick of a note's onset: the position in whole notes times four quarters times the file's division. */
 static long long onset_tick(const NoteEvent *event, unsigned division) {
     const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(event));
-    long long numerator = (long long)musical_time_numerator(onset) * 4 * (long long)division;
-    long long denominator = (long long)musical_time_denominator(onset);
+    long long numerator = onset->value.num * 4 * (long long)division;
+    long long denominator = onset->value.den;
     return denominator > 0 ? numerator / denominator : 0;
 }
 

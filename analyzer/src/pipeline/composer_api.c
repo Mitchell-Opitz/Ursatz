@@ -231,24 +231,23 @@ void analyzer_violations_free(AnalyzerViolation *violations, size_t count) {
 static void place(const MeterMap *map, long numerator, unsigned long denominator, int *measure, double *beat) {
     *measure = 0;
     *beat = 0.0;
-    MusicalTime *time = NULL;
+    MusicalTime time;
     MetricalPosition *position = NULL;
     const TimeSignature *signature = NULL;
     Duration unit;
-    if (musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK) {
-        if (metrical_position_from_time(map, time, &position) == METRICAL_POSITION_OK) {
+    if (musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK) {
+        if (metrical_position_from_time(map, &time, &position) == METRICAL_POSITION_OK) {
             int m = metrical_position_measure(position);
             const Duration *offset = metrical_position_offset(position);
             if (metrical_position_reading_signature(map, m, &signature) == METRICAL_POSITION_OK &&
                 time_signature_unit_duration(signature, &unit) == DURATION_OK && unit.value.num > 0) {
                 *measure = m;
-                *beat = 1.0 + ((double)duration_numerator(offset) / (double)duration_denominator(offset)) /
+                *beat = 1.0 + ((double)offset->value.num / (double)offset->value.den) /
                                   ((double)unit.value.num / (double)unit.value.den);
             }
         }
     }
     metrical_position_destroy(position);
-    musical_time_destroy(time);
 }
 
 /* Appends one violation; the rule and the note ids are copied. false on allocation failure. */

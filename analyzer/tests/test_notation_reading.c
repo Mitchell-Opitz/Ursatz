@@ -54,9 +54,9 @@ static bool same_pitch_value(const PitchNumericValue *a, const PitchNumericValue
 
 /* Same start, duration, pitch, spelling, voice target and provenance, whatever the ids. */
 static bool same_note_by_value(const NoteEvent *a, const NoteEvent *b) {
-    if (!musical_time_equals(temporal_anchor_position(note_event_temporal_anchor(a)),
-                             temporal_anchor_position(note_event_temporal_anchor(b))) ||
-        !duration_equals(note_event_duration(a), note_event_duration(b)) ||
+    if (!musical_time_same(*temporal_anchor_position(note_event_temporal_anchor(a)),
+                           *temporal_anchor_position(note_event_temporal_anchor(b))) ||
+        !duration_same(*note_event_duration(a), *note_event_duration(b)) ||
         !same_pitch_identity(note_event_pitch(a), note_event_pitch(b))) {
         return false;
     }
@@ -83,7 +83,7 @@ static bool same_note_by_value(const NoteEvent *a, const NoteEvent *b) {
 }
 
 static bool time_is(const MusicalTime *time, long numerator, unsigned long denominator) {
-    return musical_time_numerator(time) == numerator && musical_time_denominator(time) == denominator;
+    return time->value.num == numerator && time->value.den == denominator;
 }
 
 static NotationReading reading_of(const char *meter, const char *scale, const char *pickup) {
@@ -153,13 +153,13 @@ static void test_scale_keeps_identity(void) {
         assert(strcmp(entity_id_value(note_event_id(old)), entity_id_value(note_event_id(now))) == 0);
         const MusicalTime *old_start = temporal_anchor_position(note_event_temporal_anchor(old));
         const MusicalTime *now_start = temporal_anchor_position(note_event_temporal_anchor(now));
-        assert(time_is(now_start, 2 * musical_time_numerator(old_start), musical_time_denominator(old_start)) ||
-               (musical_time_denominator(old_start) % 2 == 0 &&
-                time_is(now_start, musical_time_numerator(old_start), musical_time_denominator(old_start) / 2)));
+        assert(time_is(now_start, 2 * old_start->value.num, old_start->value.den) ||
+               (old_start->value.den % 2 == 0 &&
+                time_is(now_start, old_start->value.num, old_start->value.den / 2)));
         const Duration *old_length = note_event_duration(old);
         const Duration *now_length = note_event_duration(now);
-        assert(duration_numerator(now_length) * (long)duration_denominator(old_length) ==
-               2 * duration_numerator(old_length) * (long)duration_denominator(now_length));
+        assert(now_length->value.num * (long)old_length->value.den ==
+               2 * old_length->value.num * (long)now_length->value.den);
         assert(same_pitch_identity(note_event_pitch(old), note_event_pitch(now)));
         assert(pitch_spelling_equals(note_event_optional_pitch_spelling(old), note_event_optional_pitch_spelling(now)));
         assert((note_event_optional_voice(old) == NULL) == (note_event_optional_voice(now) == NULL));
@@ -221,8 +221,8 @@ static void test_scales_markings(void) {
     for (size_t i = 0; i < notes.key_signature_events.count; i++) {
         const MusicalTime *old = &before.key_signature_events.events[i].position;
         const MusicalTime *now = &notes.key_signature_events.events[i].position;
-        assert(musical_time_numerator(now) * (long)musical_time_denominator(old) * 2 ==
-               musical_time_numerator(old) * (long)musical_time_denominator(now));
+        assert(now->value.num * (long)old->value.den * 2 ==
+               old->value.num * (long)now->value.den);
     }
 
     imported_notes_destroy(&notes);
@@ -287,10 +287,10 @@ static Snapshot snapshot(const ImportedNotes *notes) {
     Snapshot snapshot;
     memset(&snapshot, 0, sizeof snapshot); /* so the padding compares equal */
     snapshot.count = notes->count;
-    snapshot.first_start_numerator = musical_time_numerator(start);
-    snapshot.first_start_denominator = musical_time_denominator(start);
-    snapshot.end_numerator = musical_time_numerator(&notes->meter.end_time);
-    snapshot.end_denominator = musical_time_denominator(&notes->meter.end_time);
+    snapshot.first_start_numerator = start->value.num;
+    snapshot.first_start_denominator = start->value.den;
+    snapshot.end_numerator = notes->meter.end_time.value.num;
+    snapshot.end_denominator = notes->meter.end_time.value.den;
     snapshot.regions = meter_map_region_count(notes->meter.meter_map);
     snapshot.pickup = meter_map_has_pickup(notes->meter.meter_map);
     snapshot.applied = notes->source.reading_applied;
@@ -382,7 +382,7 @@ static void test_bach_114_three_four(void) {
         assert(measure == expected_measure[k]);
         TimeSpan span;
         assert(meter_map_measure_span(notes.meter.meter_map, measure, &span) == METER_MAP_OK);
-        assert(musical_time_equals(&span.start, start)); /* beat 1 of the measure */
+        assert(musical_time_same(span.start, *start)); /* beat 1 of the measure */
     }
 
     imported_notes_destroy(&notes);

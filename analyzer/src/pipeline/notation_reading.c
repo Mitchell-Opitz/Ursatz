@@ -130,9 +130,8 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
     unsigned long start_den;
     long length_num;
     unsigned long length_den;
-    if (!scale_fraction(musical_time_numerator(start), musical_time_denominator(start), reading, &start_num,
-                        &start_den) ||
-        !scale_fraction(duration_numerator(duration), duration_denominator(duration), reading, &length_num,
+    if (!scale_fraction((long)start->value.num, (unsigned long)start->value.den, reading, &start_num, &start_den) ||
+        !scale_fraction((long)duration->value.num, (unsigned long)duration->value.den, reading, &length_num,
                         &length_den)) {
         *overflow = true;
         return NULL;
@@ -194,20 +193,11 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
 static bool scaled_value(MusicalTime time, const NotationReading *reading, bool *overflow, MusicalTime *out) {
     long num;
     unsigned long den;
-    if (!scale_fraction(musical_time_numerator(&time), musical_time_denominator(&time), reading, &num, &den)) {
+    if (!scale_fraction((long)time.value.num, (unsigned long)time.value.den, reading, &num, &den)) {
         *overflow = true;
         return false;
     }
     return musical_time_make(num, (long long)den, out) == MUSICAL_TIME_OK;
-}
-
-static MusicalTime *scaled_time(const MusicalTime *time, const NotationReading *reading, bool *overflow) {
-    MusicalTime scaled;
-    MusicalTime *out = NULL;
-    if (!scaled_value(*time, reading, overflow, &scaled)) {
-        return NULL;
-    }
-    return musical_time_create(scaled.value.num, (unsigned long)scaled.value.den, &out) == MUSICAL_TIME_OK ? out : NULL;
 }
 
 static int exponent_of(int power_of_two) {
@@ -264,11 +254,6 @@ static void prepared_destroy(Prepared *prepared, const ImportedNotes *notes) {
     free(prepared->denominators);
 }
 
-/* The value of a heap time, zero for a time that failed to build (the caller has already failed). */
-static MusicalTime time_value_or_zero(const MusicalTime *time) {
-    return time ? *time : musical_time_of(rational_ratio(0, 1));
-}
-
 /* The meter map the reading asks for; NULL on failure (overflow set when a time did not fit). */
 static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationReading *reading, bool *invalid,
                                     bool *overflow) {
@@ -285,9 +270,9 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
     }
 
     MeterMap *map = NULL;
-    MusicalTime *times[3] = {NULL, NULL, NULL};
+    MusicalTime zero = musical_time_of(rational_ratio(0, 1));
+    MusicalTime pickup = zero;
     MeterMapChangePoint points[8];
-    MusicalTime **scaled = NULL;
     size_t count = 0;
     bool ok = true;
 
@@ -296,16 +281,15 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
             *invalid = true;
             ok = false;
         } else {
-            ok = musical_time_create(0, 1, &times[0]) == MUSICAL_TIME_OK &&
-                 musical_time_create(reading->pickup_numerator, reading->pickup_denominator, &times[1]) ==
-                     MUSICAL_TIME_OK;
-            points[0] = (MeterMapChangePoint){chosen, time_value_or_zero(times[0])};
-            points[1] = (MeterMapChangePoint){chosen, time_value_or_zero(times[1])};
+            ok = musical_time_make(reading->pickup_numerator, (long long)reading->pickup_denominator, &pickup) ==
+                 MUSICAL_TIME_OK;
+            points[0] = (MeterMapChangePoint){chosen, zero};
+            points[1] = (MeterMapChangePoint){chosen, pickup};
             count = 2;
         }
     } else if (reading->has_meter) {
-        ok = own && musical_time_create(0, 1, &times[0]) == MUSICAL_TIME_OK;
-        points[0] = (MeterMapChangePoint){chosen, time_value_or_zero(times[0])};
+        ok = own != NULL;
+        points[0] = (MeterMapChangePoint){chosen, zero};
         count = 1;
     }
 
@@ -319,14 +303,13 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
             from = 1; /* a defaulted lead-in is restored by the map itself */
         }
         MeterMapChangePoint *list = malloc((region_count + 1) * sizeof *list);
-        scaled = calloc(region_count + 1, sizeof *scaled);
-        ok = list && scaled;
+        ok = list != NULL;
         for (size_t i = from; ok && i < region_count; i++) {
             const MeterMapRegion *region = meter_map_region(old, i);
             MusicalTime region_start = meter_map_region_start(region);
-            scaled[count] = scaled_time(&region_start, reading, overflow);
-            ok = scaled[count] != NULL;
-            list[count] = (MeterMapChangePoint){meter_map_region_time_signature(region), time_value_or_zero(scaled[count])};
+            MusicalTime start = zero;
+            ok = scaled_value(region_start, reading, overflow, &start);
+            list[count] = (MeterMapChangePoint){meter_map_region_time_signature(region), start};
             count++;
         }
         EntityID *id = ok ? entity_id_copy(meter_map_id(old)) : NULL;
@@ -338,12 +321,7 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
         if (!map) {
             entity_id_destroy(id);
         }
-        for (size_t i = 0; scaled && i < region_count + 1; i++) {
-            musical_time_destroy(scaled[i]);
-        }
-        free(scaled);
         free(list);
-        musical_time_destroy(times[0]);
         return ok ? map : NULL;
     }
 
@@ -353,9 +331,6 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
         if (!map) {
             entity_id_destroy(id);
         }
-    }
-    for (int i = 0; i < 3; i++) {
-        musical_time_destroy(times[i]);
     }
     time_signature_destroy(own);
     return ok ? map : NULL;

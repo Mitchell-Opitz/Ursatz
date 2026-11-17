@@ -50,8 +50,8 @@ static double as_double(long numerator, unsigned long denominator) {
 static double sounding_inside(const NoteEvent *note, double start, double end) {
     const MusicalTime *onset_time = temporal_anchor_position(note_event_temporal_anchor(note));
     const Duration *length = note_event_duration(note);
-    double onset = as_double(musical_time_numerator(onset_time), musical_time_denominator(onset_time));
-    double release = onset + as_double((long)duration_numerator(length), duration_denominator(length));
+    double onset = as_double(onset_time->value.num, onset_time->value.den);
+    double release = onset + as_double((long)length->value.num, length->value.den);
     double from = onset > start ? onset : start;
     double to = release < end ? release : end;
     return to > from ? to - from : 0.0;

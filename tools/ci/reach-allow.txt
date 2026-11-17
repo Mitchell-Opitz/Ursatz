@@ -38,3 +38,6 @@ library/model/time/duration.c duration_destroy  # until P58 B4: the heap API has
 library/model/time/musical_time.c musical_time_add  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
 library/model/time/musical_time.c musical_time_equals  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
 library/model/time/time_rational.c musical_time_from_rational_or_null  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
+library/model/time/time_span.c boundary_is_valid  # until P58 B4: only time_span_create calls it, and no application calls that now; B4 deletes both
+library/model/time/time_span.c time_span_create  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
+library/model/time/time_span.c time_span_destroy  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it

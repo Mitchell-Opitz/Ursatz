@@ -43,9 +43,9 @@ static char *fingerprint(const NoteEvent *const *events, size_t count) {
         size_t token_size = 0;
         const unsigned char *token = pitch_identity_token(note_event_pitch(events[i]), &token_size);
         char line[160];
-        int written = snprintf(line, sizeof line, "%s@%ld/%lu+%ld/%lu:", entity_id_value(note_event_id(events[i])),
-                               musical_time_numerator(onset), musical_time_denominator(onset),
-                               duration_numerator(length), duration_denominator(length));
+        int written = snprintf(line, sizeof line, "%s@%lld/%lld+%lld/%lld:", entity_id_value(note_event_id(events[i])),
+                               onset->value.num, onset->value.den,
+                               length->value.num, length->value.den);
         for (size_t k = 0; k < token_size && written > 0 && (size_t)written + 3 < sizeof line; k++) {
             written += snprintf(line + written, sizeof line - (size_t)written, "%02x", token[k]);
         }

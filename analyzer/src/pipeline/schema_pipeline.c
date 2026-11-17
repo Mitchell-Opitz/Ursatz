@@ -56,12 +56,11 @@ static bool entry_ranges(const AnalysisReport *report, SchemaBuild *build) {
     }
     size_t next = 0;
     for (size_t s = 0; s < list->count; s++) {
-        const MusicalTime *start = &list->items[s].segment.span.start;
-        const MusicalTime *end = &list->items[s].segment.span.end;
-        long start_n = musical_time_numerator(start);
-        unsigned long start_d = musical_time_denominator(start);
-        long end_n = musical_time_numerator(end);
-        unsigned long end_d = musical_time_denominator(end);
+        const TimeSpan *span = &list->items[s].segment.span;
+        long start_n = (long)span->start.value.num;
+        unsigned long start_d = (unsigned long)span->start.value.den;
+        long end_n = (long)span->end.value.num;
+        unsigned long end_d = (unsigned long)span->end.value.den;
         while (next < report->entry_count &&
                rational_less(report->entries[next].time_numerator, report->entries[next].time_denominator, start_n,
                              start_d)) {

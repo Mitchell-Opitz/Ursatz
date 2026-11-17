@@ -49,7 +49,7 @@
 /* A note's onset in whole notes and its pitch as a MIDI note number. */
 static double onset_of(const ImportedNotes *notes, size_t index) {
     const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(notes->events[index]));
-    return (double)musical_time_numerator(start) / (double)musical_time_denominator(start);
+    return (double)start->value.num / (double)start->value.den;
 }
 
 static long pitch_of(const ImportedNotes *notes, size_t index) {

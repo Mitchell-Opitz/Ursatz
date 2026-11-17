@@ -94,10 +94,10 @@ static bool measures_span(const MeterMap *map, int first, int last, long *start_
     bool ok = meter_map_measure_span(map, first, &from) == METER_MAP_OK &&
               meter_map_measure_span(map, last, &to) == METER_MAP_OK;
     if (ok) {
-        *start_numerator = musical_time_numerator(&from.start);
-        *start_denominator = musical_time_denominator(&from.start);
-        *end_numerator = musical_time_numerator(&to.end);
-        *end_denominator = musical_time_denominator(&to.end);
+        *start_numerator = (long)from.start.value.num;
+        *start_denominator = (unsigned long)from.start.value.den;
+        *end_numerator = (long)to.end.value.num;
+        *end_denominator = (unsigned long)to.end.value.den;
     }
     return ok;
 }
@@ -228,9 +228,9 @@ static size_t *note_ids_between(const FormStage *stage, long start_numerator, un
         return NULL;
     }
     for (size_t n = 0; n < stage->note_index_count && n < stage->built.input.note_count; n++) {
-        const MusicalTime *start = &stage->built.input.notes[n].span.start;
-        long numerator = musical_time_numerator(start);
-        unsigned long denominator = musical_time_denominator(start);
+        const MusicalTime start = stage->built.input.notes[n].span.start;
+        long numerator = (long)start.value.num;
+        unsigned long denominator = (unsigned long)start.value.den;
         if (!rational_less(numerator, denominator, start_numerator, start_denominator) &&
             rational_less(numerator, denominator, end_numerator, end_denominator)) {
             ids[(*count)++] = stage->note_indices[n];
@@ -422,12 +422,10 @@ bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
         const StandardFormPhrase *found = &stage->phrases.items[i];
         const StandardFormPhraseClaim *claim = &found->claim;
         AnalysisPhrase *phrase = &report->phrases[i];
-        const MusicalTime *start = &found->span.start;
-        const MusicalTime *end = &found->span.end;
-        phrase->start_numerator = musical_time_numerator(start);
-        phrase->start_denominator = musical_time_denominator(start);
-        phrase->end_numerator = musical_time_numerator(end);
-        phrase->end_denominator = musical_time_denominator(end);
+        phrase->start_numerator = (long)found->span.start.value.num;
+        phrase->start_denominator = (unsigned long)found->span.start.value.den;
+        phrase->end_numerator = (long)found->span.end.value.num;
+        phrase->end_denominator = (unsigned long)found->span.end.value.den;
         /* The chords starting inside the span: the entries are in time order and the phrases tile. */
         while (next_entry < report->entry_count &&
                rational_less(report->entries[next_entry].time_numerator, report->entries[next_entry].time_denominator,

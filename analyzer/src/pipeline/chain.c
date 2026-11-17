@@ -43,10 +43,10 @@ static bool segmentation_view(const AnalyzerPass *pass, const ChainSegments *sou
         const AdaptiveSonority *item = &source->sonorities.items[s];
         const TimeSpan *window = sonority_time_window(item->sonority);
         Segment *segment = &out->segments[s];
-        segment->start_numerator = musical_time_numerator(time_span_start(window));
-        segment->start_denominator = musical_time_denominator(time_span_start(window));
-        segment->end_numerator = musical_time_numerator(time_span_end(window));
-        segment->end_denominator = musical_time_denominator(time_span_end(window));
+        segment->start_numerator = (long)window->start.value.num;
+        segment->start_denominator = (unsigned long)window->start.value.den;
+        segment->end_numerator = (long)window->end.value.num;
+        segment->end_denominator = (unsigned long)window->end.value.den;
         size_t count = sonority_event_id_count(item->sonority);
         segment->member_count = count;
         segment->note_indices = malloc(sizeof(size_t) * (count > 0 ? count : 1));
