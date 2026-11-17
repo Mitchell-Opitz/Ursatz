@@ -13,7 +13,7 @@
  * The most common error is between the alto and tenor.
  *
  * "Higher" is strict, by sounding pitch (the semitone number in
- * voicing_pitch.h): two adjacent voices on the same pitch are not a
+ * pitch_spelling_midi): two adjacent voices on the same pitch are not a
  * correctly ordered pair.
  */
 

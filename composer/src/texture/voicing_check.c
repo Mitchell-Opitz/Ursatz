@@ -7,7 +7,7 @@
 #include <theory/counterpoint/harmonic_rules.h>
 #include <theory/harmony/harmony_resolution_rules.h>
 #include <theory/voicing/range_rules.h>
-#include <theory/voicing/voicing_pitch.h>
+#include <model/pitch/pitch_arithmetic.h>
 #include <theory/voicing/voicing_rules.h>
 
 #include "texture/voicing_internal.h"
@@ -86,7 +86,7 @@ static bool pair_holds(const VoicingContext *context, size_t chord, const int fr
 
 /* The step of a spelling from the tonic, in the letters of the scale: do is 0, re 1, an octave 7. */
 static int step_from(const PitchSpelling *tonic, const PitchSpelling *note) {
-    return standard_voicing_step_number(note) - standard_voicing_step_number(tonic);
+    return pitch_spelling_step_number(note) - pitch_spelling_step_number(tonic);
 }
 
 /*

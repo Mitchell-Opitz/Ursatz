@@ -2,7 +2,8 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_spelling.h"
 #include "theory/counterpoint/rule_table.h"
 
 bool standard_counterpoint_classify_motion(const PitchSpelling *lower_from, const PitchSpelling *lower_to,
@@ -11,19 +12,19 @@ bool standard_counterpoint_classify_motion(const PitchSpelling *lower_from, cons
     if (lower_from == NULL || lower_to == NULL || upper_from == NULL || upper_to == NULL || out == NULL) {
         return false;
     }
-    bool lower_moves = !standard_counterpoint_same_pitch(lower_from, lower_to);
-    bool upper_moves = !standard_counterpoint_same_pitch(upper_from, upper_to);
+    bool lower_moves = !pitch_spelling_equals(lower_from, lower_to);
+    bool upper_moves = !pitch_spelling_equals(upper_from, upper_to);
 
     if (!lower_moves && !upper_moves) {
         *out = MOTION_TYPE_STATIC;
     } else if (lower_moves != upper_moves) {
         *out = MOTION_TYPE_OBLIQUE;
-    } else if (standard_counterpoint_direction(lower_from, lower_to) !=
-               standard_counterpoint_direction(upper_from, upper_to)) {
+    } else if (pitch_spelling_direction(lower_from, lower_to) !=
+               pitch_spelling_direction(upper_from, upper_to)) {
         *out = MOTION_TYPE_CONTRARY;
     } else {
-        int lower_steps = standard_counterpoint_step_number(lower_to) - standard_counterpoint_step_number(lower_from);
-        int upper_steps = standard_counterpoint_step_number(upper_to) - standard_counterpoint_step_number(upper_from);
+        int lower_steps = pitch_spelling_step_number(lower_to) - pitch_spelling_step_number(lower_from);
+        int upper_steps = pitch_spelling_step_number(upper_to) - pitch_spelling_step_number(upper_from);
         *out = lower_steps == upper_steps ? MOTION_TYPE_PARALLEL : MOTION_TYPE_SIMILAR;
     }
     return true;

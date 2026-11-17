@@ -1,6 +1,6 @@
 #include "theory/counterpoint/species_helpers.h"
 
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/midi_pitch.h"
 
 bool standard_counterpoint_species_is_tonic(const PitchSpelling *note, const PitchSpelling *tonic) {
@@ -9,9 +9,9 @@ bool standard_counterpoint_species_is_tonic(const PitchSpelling *note, const Pit
 }
 
 bool standard_counterpoint_species_is_sol(const PitchSpelling *note, const PitchSpelling *tonic) {
-    int letters = (((standard_counterpoint_step_number(note) - standard_counterpoint_step_number(tonic)) % 7) + 7) % 7;
+    int letters = (((pitch_spelling_step_number(note) - pitch_spelling_step_number(tonic)) % 7) + 7) % 7;
     int semitones =
-        pitch_class_of_midi(standard_counterpoint_semitone_number(note) - standard_counterpoint_semitone_number(tonic));
+        pitch_class_of_midi(pitch_spelling_midi(note) - pitch_spelling_midi(tonic));
     return letters == 4 && semitones == 7;
 }
 
@@ -37,7 +37,7 @@ bool standard_counterpoint_species_check_leaps(const PitchSpelling *const *notes
         }
         if (interval.simple_size == 6) {
             bool ascending_minor = interval.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR &&
-                                   standard_counterpoint_direction(notes[j - 1], notes[j]) > 0;
+                                   pitch_spelling_direction(notes[j - 1], notes[j]) > 0;
             if (!ascending_minor && (exception == NULL || !exception(context, j))) {
                 return false;
             }

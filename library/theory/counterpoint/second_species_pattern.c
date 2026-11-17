@@ -3,7 +3,8 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_spelling.h"
 
 bool standard_counterpoint_weak_beat_pattern_is_dissonant(StandardCounterpointWeakBeatPattern pattern) {
     return pattern == STANDARD_COUNTERPOINT_WEAK_BEAT_DISSONANT_PASSING_TONE;
@@ -46,8 +47,8 @@ bool standard_counterpoint_second_species_weak_beat_pattern(const StandardCounte
 
     bool ends_consonant = consonant(&vertical_d1) && consonant(&vertical_d2);
     bool weak_consonant = consonant(&vertical_w);
-    int out_direction = standard_counterpoint_direction(d1, w);
-    int back_direction = standard_counterpoint_direction(w, d2);
+    int out_direction = pitch_spelling_direction(d1, w);
+    int back_direction = pitch_spelling_direction(w, d2);
     bool same_direction = out_direction != 0 && out_direction == back_direction;
     bool opposite_direction = out_direction != 0 && back_direction != 0 && out_direction != back_direction;
 
@@ -74,7 +75,7 @@ bool standard_counterpoint_second_species_weak_beat_pattern(const StandardCounte
         found = STANDARD_COUNTERPOINT_WEAK_BEAT_CHANGE_OF_REGISTER;
     } else if (first.size == 3 && second.size == 2 && opposite_direction && whole.size == 2) {
         found = STANDARD_COUNTERPOINT_WEAK_BEAT_DELAY_OF_MELODIC_PROGRESSION;
-    } else if (first.size == 2 && second.size == 2 && opposite_direction && standard_counterpoint_same_pitch(d1, d2)) {
+    } else if (first.size == 2 && second.size == 2 && opposite_direction && pitch_spelling_equals(d1, d2)) {
         found = STANDARD_COUNTERPOINT_WEAK_BEAT_CONSONANT_NEIGHBOR_TONE;
     } else {
         return false;

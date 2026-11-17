@@ -8,7 +8,7 @@ separate from `theory/style/`, the same shape as
 `theory/counterpoint/`.
 
 The dependency on `standard-counterpoint` is one way: this module reads its
-pitch arithmetic (`standard-counterpoint/counterpoint_pitch.h`), and that
+intervals and its notes' spelling numbers (`pitch_spelling_midi`, `pitch_spelling_step_number` of the model pitch owner), and that
 framework knows nothing of this one. File names carry a `galant_` prefix so
 they never collide with the `standard-counterpoint` headers on the include
 path.

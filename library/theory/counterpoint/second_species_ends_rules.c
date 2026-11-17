@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
@@ -67,8 +67,8 @@ static bool check_clausula_vera(const Exercise *exercise) {
         !standard_counterpoint_interval_between(cantus_before, before, &vertical)) {
         return false;
     }
-    int cantus_direction = standard_counterpoint_direction(cantus_before, cantus_final);
-    int counterpoint_direction = standard_counterpoint_direction(before, final);
+    int cantus_direction = pitch_spelling_direction(cantus_before, cantus_final);
+    int counterpoint_direction = pitch_spelling_direction(before, final);
     bool major_or_minor = vertical.quality == STANDARD_COUNTERPOINT_QUALITY_MAJOR ||
                           vertical.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR;
     return standard_counterpoint_interval_is_step(&cantus_move) &&

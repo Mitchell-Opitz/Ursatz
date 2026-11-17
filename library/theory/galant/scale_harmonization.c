@@ -1,7 +1,7 @@
 #include "theory/galant/scale_harmonization.h"
 
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 bool scale_harmonization_valid(const ScaleHarmonization *harmonization) {
     if (harmonization == NULL || harmonization->stages == NULL || harmonization->tonic == NULL ||
@@ -27,7 +27,7 @@ bool scale_interval_above_bass(const ScaleHarmonization *harmonization, size_t s
     }
     const PitchSpelling *bass = harmonization->stages[stage].pitches[0];
     const PitchSpelling *upper = harmonization->stages[stage].pitches[voice];
-    if (standard_counterpoint_semitone_number(upper) < standard_counterpoint_semitone_number(bass)) {
+    if (pitch_spelling_midi(upper) < pitch_spelling_midi(bass)) {
         return false;
     }
     StandardCounterpointInterval interval;

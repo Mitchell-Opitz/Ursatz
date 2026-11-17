@@ -2,13 +2,13 @@
 
 #include <stddef.h>
 
-#include "theory/voicing/voicing_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 bool standard_voicing_pair_ordered(const PitchSpelling *upper, const PitchSpelling *lower) {
     if (upper == NULL || lower == NULL) {
         return false;
     }
-    return standard_voicing_semitone_number(upper) > standard_voicing_semitone_number(lower);
+    return pitch_spelling_midi(upper) > pitch_spelling_midi(lower);
 }
 
 VoicePart standard_voicing_first_crossing(const StandardVoicingChord *chord) {

@@ -14,13 +14,13 @@
  *   soprano  C4 to G5      alto  G3 to D5
  *   tenor    C3 to G4      bass  F2 to D4
  *
- * A pitch is measured by its semitone number (voicing_pitch.h), so an
+ * A pitch is measured by its MIDI number (pitch_spelling_midi), so an
  * enharmonic spelling sounding inside the range is in range (B-sharp 3 is
  * C4); the written letter and octave of a pitch are not what is
  * compared. The rules take the sounding pitch.
  */
 
-/* The lowest and highest semitone numbers of the part's range. False
+/* The lowest and highest MIDI numbers of the part's range (C4 is 60). False
    (outputs untouched) for an invalid part or a NULL output. */
 bool standard_voicing_range_semitones(VoicePart part, int *lowest, int *highest);
 

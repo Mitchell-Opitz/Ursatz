@@ -175,5 +175,5 @@ which part is the cantus firmus, and the tonic.
 
 The tonic of the cantus firmus, which part is the cantus firmus, and the
 limits for the soft melodic rules are the caller's input. Notes are read as
-sounding pitch in 12-tone equal temperament, this module's own copy in
-`counterpoint_pitch.h`.
+sounding pitch in 12-tone equal temperament, `pitch_spelling_midi` of
+the model pitch owner.

@@ -3,7 +3,8 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/midi_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_TENDENCY_COUNT] = {
@@ -83,14 +84,14 @@ static bool check_step_inertia(const StandardCounterpointLine *line) {
 }
 
 static bool check_melodic_regression(const StandardCounterpointLine *line) {
-    int low = standard_counterpoint_semitone_number(line->notes[standard_counterpoint_line_lowest_index(line)]);
-    int high = standard_counterpoint_semitone_number(line->notes[standard_counterpoint_line_highest_index(line)]);
+    int low = pitch_spelling_midi(line->notes[standard_counterpoint_line_lowest_index(line)]);
+    int high = pitch_spelling_midi(line->notes[standard_counterpoint_line_highest_index(line)]);
     int range = high - low;
     if (range == 0) {
         return true;
     }
     for (size_t i = 0; i + 1 < line->count; i++) {
-        int above_low = standard_counterpoint_semitone_number(line->notes[i]) - low;
+        int above_low = pitch_spelling_midi(line->notes[i]) - low;
         int direction = standard_counterpoint_line_direction_at(line, i);
         if (4 * above_low >= 3 * range && direction > 0) {
             return false;
@@ -112,7 +113,7 @@ static bool check_melodic_arch(const StandardCounterpointLine *line) {
         return false;
     }
     const PitchSpelling *top = line->notes[climax];
-    return standard_counterpoint_direction(line->notes[count - 1], top) != 0;
+    return pitch_spelling_direction(line->notes[count - 1], top) != 0;
 }
 
 bool standard_counterpoint_tendency_holds(StandardCounterpointTendency which,

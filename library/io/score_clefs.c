@@ -12,6 +12,7 @@
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_rational.h"
 #include "model/time/time_span.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 /* The price of a change of clef, in ledger line quarter notes: a change is worth it when the other clef saves more
    than this many ledger line quarter notes before the clef changes again. */
@@ -42,10 +43,9 @@ static ScoreClef clef_of_index(int index) {
 
 /* --- ledger lines --- */
 
-/* The diatonic position of a written pitch: C4 is 28, D4 29, ... PitchLetter counts from A. */
+/* The diatonic position of a written pitch: C4 is 28, D4 29, ... */
 static long staff_position(const PitchSpelling *spelling) {
-    long step = ((long)pitch_spelling_letter(spelling) + 5) % 7;
-    return (long)pitch_spelling_octave(spelling) * 7 + step;
+    return pitch_spelling_step_number(spelling);
 }
 
 /* The ledger lines a note at position needs in the staff whose lines run from bottom to top: one per ledger line it

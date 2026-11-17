@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_spelling.h"
 
 #define SLOTS STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR
 
@@ -27,7 +27,7 @@ static bool bar_valid(const StandardCounterpointSlot *bar, bool first_bar) {
             return false;
         }
         if (whole) {
-            if (bar[i].kind != STANDARD_COUNTERPOINT_SLOT_TIE || !standard_counterpoint_same_pitch(bar[i].pitch, bar[0].pitch)) {
+            if (bar[i].kind != STANDARD_COUNTERPOINT_SLOT_TIE || !pitch_spelling_equals(bar[i].pitch, bar[0].pitch)) {
                 return false;
             }
         } else if (bar[i].kind != STANDARD_COUNTERPOINT_SLOT_ATTACK) {

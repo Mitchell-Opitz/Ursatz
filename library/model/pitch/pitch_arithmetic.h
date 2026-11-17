@@ -40,6 +40,14 @@ int pitch_spelling_step_number(const PitchSpelling *spelling);
  * Direction and accidentals are ignored. 1 when either spelling is NULL. */
 int pitch_spelling_generic_size(const PitchSpelling *a, const PitchSpelling *b);
 
+/* The direction of motion from `from` to `to`: 1 up, -1 down, 0 for the same sounding pitch. Compares the MIDI numbers
+ * first; spellings that sound alike are told apart by step number (B-sharp 3 to C4 is up). Neither may be NULL. */
+int pitch_spelling_direction(const PitchSpelling *from, const PitchSpelling *to);
+
+/* True when both have the same letter and accidental, whatever the octave. Enharmonic spellings are not the same
+ * (C-sharp, D-flat). False for NULL. */
+bool pitch_spelling_same_name(const PitchSpelling *a, const PitchSpelling *b);
+
 /* 0 to 11 for a letter and accidental, whatever the octave. */
 int pitch_class_of_letter(PitchLetter letter, int accidental);
 

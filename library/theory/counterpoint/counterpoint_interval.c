@@ -2,7 +2,8 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/midi_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 /* Semitones of the perfect (index 0, 3, 4, 7) and major (index 1, 2, 5, 6)
    interval at each simple step count 0 to 7. */
@@ -20,13 +21,13 @@ bool standard_counterpoint_interval_between(const PitchSpelling *a, const PitchS
     }
     const PitchSpelling *low = a;
     const PitchSpelling *high = b;
-    if (standard_counterpoint_direction(a, b) < 0) {
+    if (pitch_spelling_direction(a, b) < 0) {
         low = b;
         high = a;
     }
 
-    int steps = standard_counterpoint_step_number(high) - standard_counterpoint_step_number(low);
-    int semitones = standard_counterpoint_semitone_number(high) - standard_counterpoint_semitone_number(low);
+    int steps = pitch_spelling_step_number(high) - pitch_spelling_step_number(low);
+    int semitones = pitch_spelling_midi(high) - pitch_spelling_midi(low);
     if (steps < 0) {
         return false;
     }
@@ -41,7 +42,7 @@ bool standard_counterpoint_interval_between(const PitchSpelling *a, const PitchS
             octaves -= 1;
         }
     }
-    int simple_semitones = semitones - STANDARD_COUNTERPOINT_SEMITONES_PER_OCTAVE * octaves;
+    int simple_semitones = semitones - PITCH_SEMITONES_PER_OCTAVE * octaves;
 
     StandardCounterpointQuality quality;
     if (is_perfect_kind(simple_steps)) {

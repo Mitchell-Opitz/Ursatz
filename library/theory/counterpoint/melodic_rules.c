@@ -2,7 +2,8 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_spelling.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
 
@@ -56,7 +57,7 @@ static bool check_clausula_vera(const StandardCounterpointLine *line) {
 static bool check_repeated_notes(const StandardCounterpointLine *line, const StandardCounterpointLimits *limits) {
     size_t run = 1;
     for (size_t i = 1; i < line->count; i++) {
-        run = standard_counterpoint_same_pitch(line->notes[i - 1], line->notes[i]) ? run + 1 : 1;
+        run = pitch_spelling_equals(line->notes[i - 1], line->notes[i]) ? run + 1 : 1;
         if (run > limits->max_consecutive_repeats) {
             return false;
         }
@@ -68,7 +69,7 @@ static bool check_pitch_occurrences(const StandardCounterpointLine *line, const 
     for (size_t i = 0; i < line->count; i++) {
         size_t occurrences = 0;
         for (size_t j = 0; j < line->count; j++) {
-            if (standard_counterpoint_same_pitch(line->notes[i], line->notes[j])) {
+            if (pitch_spelling_equals(line->notes[i], line->notes[j])) {
                 occurrences++;
             }
         }
@@ -134,7 +135,7 @@ static bool check_unique_climax(const StandardCounterpointLine *line) {
     const PitchSpelling *top = line->notes[standard_counterpoint_line_highest_index(line)];
     size_t occurrences = 0;
     for (size_t i = 0; i < line->count; i++) {
-        if (standard_counterpoint_direction(line->notes[i], top) == 0) {
+        if (pitch_spelling_direction(line->notes[i], top) == 0) {
             occurrences++;
         }
     }
@@ -143,7 +144,7 @@ static bool check_unique_climax(const StandardCounterpointLine *line) {
 
 static bool check_climax_not_final(const StandardCounterpointLine *line) {
     const PitchSpelling *top = line->notes[standard_counterpoint_line_highest_index(line)];
-    return standard_counterpoint_direction(line->notes[line->count - 1], top) != 0;
+    return pitch_spelling_direction(line->notes[line->count - 1], top) != 0;
 }
 
 static bool check_climax_by_leap(const StandardCounterpointLine *line) {

@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/fourth_species_suspension.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
@@ -30,17 +30,17 @@ typedef StandardCounterpointFourthSpeciesExercise Exercise;
 
 /* The leading tone: the letter below the tonic's, a half step below it. */
 static bool is_leading_tone(const PitchSpelling *note, const PitchSpelling *tonic) {
-    int letters = (((standard_counterpoint_step_number(note) - standard_counterpoint_step_number(tonic)) % 7) + 7) % 7;
+    int letters = (((pitch_spelling_step_number(note) - pitch_spelling_step_number(tonic)) % 7) + 7) % 7;
     int semitones =
-        pitch_class_of_midi(standard_counterpoint_semitone_number(tonic) - standard_counterpoint_semitone_number(note));
+        pitch_class_of_midi(pitch_spelling_midi(tonic) - pitch_spelling_midi(note));
     return letters == 6 && semitones == 1;
 }
 
 /* The supertonic: the letter above the tonic's, a whole or half step above it. */
 static bool is_supertonic(const PitchSpelling *note, const PitchSpelling *tonic) {
-    int letters = (((standard_counterpoint_step_number(note) - standard_counterpoint_step_number(tonic)) % 7) + 7) % 7;
+    int letters = (((pitch_spelling_step_number(note) - pitch_spelling_step_number(tonic)) % 7) + 7) % 7;
     int semitones =
-        pitch_class_of_midi(standard_counterpoint_semitone_number(note) - standard_counterpoint_semitone_number(tonic));
+        pitch_class_of_midi(pitch_spelling_midi(note) - pitch_spelling_midi(tonic));
     return letters == 1 && (semitones == 1 || semitones == 2);
 }
 

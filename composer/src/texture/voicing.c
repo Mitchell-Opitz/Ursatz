@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <theory/voicing/range_rules.h>
-#include <theory/voicing/voicing_pitch.h>
 #include <theory/vocabulary/voice_part.h>
 
 #include <ursatz_composer/plan_state.h>
@@ -334,9 +333,6 @@ bool voicing_options(const VoicingContext *context, size_t chord, VoicingOption 
         if (!standard_voicing_range_semitones(parts[part], &range[part][0], &range[part][1])) {
             return false;
         }
-        /* standard-voicing counts semitones from C0 (C4 is 48), MIDI from C-1 (C4 is 60). */
-        range[part][0] += STANDARD_VOICING_SEMITONES_PER_OCTAVE;
-        range[part][1] += STANDARD_VOICING_SEMITONES_PER_OCTAVE;
     }
     if (!context->write_soprano) {
         range[VOICING_SOPRANO][0] = range[VOICING_SOPRANO][1] = context->soprano[chord];

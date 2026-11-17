@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "theory/voicing/spacing_rules.h"
-#include "theory/voicing/voicing_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/tests/voicing/voicing_test_util.h"
 
 static void test_limits(void) {
@@ -14,13 +14,13 @@ static void test_limits(void) {
 }
 
 static void test_generic_size(void) {
-    assert(standard_voicing_generic_size(P(C, 0, 4), P(C, 0, 4)) == 1);
-    assert(standard_voicing_generic_size(P(C, 0, 5), P(C, 0, 4)) == 8);
-    assert(standard_voicing_generic_size(P(C, 0, 4), P(C, 0, 5)) == 8);
-    assert(standard_voicing_generic_size(P(G, 0, 4), P(C, 0, 3)) == 12);
+    assert(pitch_spelling_generic_size(P(C, 0, 4), P(C, 0, 4)) == 1);
+    assert(pitch_spelling_generic_size(P(C, 0, 5), P(C, 0, 4)) == 8);
+    assert(pitch_spelling_generic_size(P(C, 0, 4), P(C, 0, 5)) == 8);
+    assert(pitch_spelling_generic_size(P(G, 0, 4), P(C, 0, 3)) == 12);
     /* Accidentals do not change a generic size. */
-    assert(standard_voicing_generic_size(P(C, 1, 5), P(C, 0, 4)) == 8);
-    assert(standard_voicing_generic_size(P(D, -1, 5), P(C, 0, 4)) == 9);
+    assert(pitch_spelling_generic_size(P(C, 1, 5), P(C, 0, 4)) == 8);
+    assert(pitch_spelling_generic_size(P(D, -1, 5), P(C, 0, 4)) == 9);
 }
 
 static void test_upper_voices_octave(void) {

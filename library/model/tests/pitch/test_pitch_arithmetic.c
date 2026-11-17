@@ -200,6 +200,38 @@ static void test_step_number_and_generic_size(void) {
     pitch_spelling_destroy(b3_flat);
 }
 
+static void test_direction_and_same_name(void) {
+    PitchSpelling *c4 = NULL;
+    PitchSpelling *d4 = NULL;
+    PitchSpelling *b3_sharp = NULL;
+    PitchSpelling *c5 = NULL;
+    PitchSpelling *c_sharp4 = NULL;
+    PitchSpelling *d_flat4 = NULL;
+    assert(pitch_spelling_create(PITCH_LETTER_C, 0, 4, &c4) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_create(PITCH_LETTER_D, 0, 4, &d4) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_create(PITCH_LETTER_B, 1, 3, &b3_sharp) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_create(PITCH_LETTER_C, 0, 5, &c5) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_create(PITCH_LETTER_C, 1, 4, &c_sharp4) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_create(PITCH_LETTER_D, -1, 4, &d_flat4) == PITCH_SPELLING_OK);
+    assert(pitch_spelling_direction(c4, d4) == 1);
+    assert(pitch_spelling_direction(d4, c4) == -1);
+    assert(pitch_spelling_direction(c4, c4) == 0);
+    assert(pitch_spelling_direction(b3_sharp, c4) == 1); /* sounds alike: the step number decides */
+    assert(pitch_spelling_direction(c4, b3_sharp) == -1);
+    assert(pitch_spelling_same_name(c4, c5));
+    assert(!pitch_spelling_same_name(c4, d4));
+    assert(!pitch_spelling_same_name(c_sharp4, d_flat4)); /* enharmonic spellings differ */
+    assert(!pitch_spelling_same_name(c4, c_sharp4));
+    assert(!pitch_spelling_same_name(NULL, c4));
+    assert(!pitch_spelling_same_name(c4, NULL));
+    pitch_spelling_destroy(c4);
+    pitch_spelling_destroy(d4);
+    pitch_spelling_destroy(b3_sharp);
+    pitch_spelling_destroy(c5);
+    pitch_spelling_destroy(c_sharp4);
+    pitch_spelling_destroy(d_flat4);
+}
+
 int main(void) {
     test_letter_semitone_and_index();
     test_letter_offset_wraps_both_ways();
@@ -213,6 +245,7 @@ int main(void) {
     test_pitch_class_names();
     test_letter_from_char();
     test_step_number_and_generic_size();
+    test_direction_and_same_name();
     printf("test_pitch_arithmetic: ok\n");
     return 0;
 }

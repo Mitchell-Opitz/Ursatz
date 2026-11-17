@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_SECOND_SPECIES_STRONG_COUNT] = {
@@ -119,8 +119,8 @@ static bool octave_leap_then_step_back(const Exercise *exercise, size_t bar) {
         !standard_counterpoint_interval_between(weak, next, &step)) {
         return false;
     }
-    int out = standard_counterpoint_direction(downbeat, weak);
-    int back = standard_counterpoint_direction(weak, next);
+    int out = pitch_spelling_direction(downbeat, weak);
+    int back = pitch_spelling_direction(weak, next);
     return leap.size == 8 && leap.quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT &&
            standard_counterpoint_interval_is_step(&step) && out != 0 && back != 0 && out != back;
 }

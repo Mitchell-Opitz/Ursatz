@@ -25,7 +25,7 @@ rule builds a `Rule` or `Constraint`.
   found is reported. The upper voices may be arranged in any order.
 - **Range** (`range_rules.h`): soprano C4-G5, alto G3-D5, tenor C3-G4,
   bass F2-D4, both ends included. Pitches are compared by sounding
-  semitone number (12-TET, this module's own copy in `voicing_pitch.h`),
+  MIDI number (12-TET, `pitch_spelling_midi` of the model pitch owner),
   so B-sharp 3 is in the soprano range as C4.
 - **Spacing** (`spacing_rules.h`): no more than an octave (generic size 8)
   between soprano and alto or alto and tenor, no more than a twelfth

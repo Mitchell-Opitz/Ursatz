@@ -4,10 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <theory/counterpoint/counterpoint_pitch.h>
 #include <theory/counterpoint/consonance_rules.h>
 #include <theory/voicing/range_rules.h>
-#include <theory/voicing/voicing_pitch.h>
 #include <theory/vocabulary/voice_part.h>
 
 #include <ursatz_composer/plan_state.h>
@@ -200,9 +198,8 @@ static bool read_target(const PiecePlan *plan, LaneSpanId target, CounterpointCo
         counterpoint_context_free(out);
         return false;
     }
-    /* standard-voicing counts semitones from C0 (C4 is 48), MIDI from C-1 (C4 is 60). */
-    out->low = low + STANDARD_VOICING_SEMITONES_PER_OCTAVE;
-    out->high = high + STANDARD_VOICING_SEMITONES_PER_OCTAVE;
+    out->low = low;
+    out->high = high;
     for (size_t i = 0; i < out->count; i++) {
         if (out->line[i] < 0 || out->line[i] > 127 || !out->spell[out->line[i]]) {
             *why = "a note of the given line is not in the key's scale";

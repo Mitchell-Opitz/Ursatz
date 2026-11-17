@@ -2,16 +2,15 @@
 #include <stdio.h>
 
 #include "theory/voicing/range_rules.h"
-#include "theory/voicing/voicing_pitch.h"
 #include "theory/tests/voicing/voicing_test_util.h"
 
 static void test_range_semitones(void) {
     int low;
     int high;
-    assert(standard_voicing_range_semitones(VOICE_PART_SOPRANO, &low, &high) && low == 48 && high == 67);
-    assert(standard_voicing_range_semitones(VOICE_PART_ALTO, &low, &high) && low == 43 && high == 62);
-    assert(standard_voicing_range_semitones(VOICE_PART_TENOR, &low, &high) && low == 36 && high == 55);
-    assert(standard_voicing_range_semitones(VOICE_PART_BASS, &low, &high) && low == 29 && high == 50);
+    assert(standard_voicing_range_semitones(VOICE_PART_SOPRANO, &low, &high) && low == 60 && high == 79);
+    assert(standard_voicing_range_semitones(VOICE_PART_ALTO, &low, &high) && low == 55 && high == 74);
+    assert(standard_voicing_range_semitones(VOICE_PART_TENOR, &low, &high) && low == 48 && high == 67);
+    assert(standard_voicing_range_semitones(VOICE_PART_BASS, &low, &high) && low == 41 && high == 62);
 
     low = -1;
     assert(!standard_voicing_range_semitones(VOICE_PART_COUNT, &low, &high));

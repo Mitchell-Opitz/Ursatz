@@ -4,7 +4,7 @@
 
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_SPECIES_BREAK_COUNT] = {"downbeat-consonant", "weak-passing",
@@ -79,8 +79,8 @@ static bool check_weak_passing(const Exercise *exercise) {
             !step_between(from, through) || !step_between(through, to)) {
             return false;
         }
-        int out = standard_counterpoint_direction(from, through);
-        int back = standard_counterpoint_direction(through, to);
+        int out = pitch_spelling_direction(from, through);
+        int back = pitch_spelling_direction(through, to);
         if (out == 0 || out != back) {
             return false;
         }

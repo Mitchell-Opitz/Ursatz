@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/voicing/voicing_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 int standard_voicing_spacing_limit(VoicePart upper) {
     switch (upper) {
@@ -22,7 +22,7 @@ bool standard_voicing_spacing_valid(VoicePart upper, const PitchSpelling *upper_
     if (limit == 0 || upper_pitch == NULL || lower_pitch == NULL) {
         return false;
     }
-    return standard_voicing_generic_size(upper_pitch, lower_pitch) <= limit;
+    return pitch_spelling_generic_size(upper_pitch, lower_pitch) <= limit;
 }
 
 VoicePart standard_voicing_first_wide_spacing(const StandardVoicingChord *chord) {

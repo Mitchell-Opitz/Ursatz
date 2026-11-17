@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "model/pitch/midi_pitch.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 /* The semitones above the tonic of degrees 1 to 7 of the major scale. */
 static const int MAJOR_SEMITONES[7] = {0, 2, 4, 5, 7, 9, 11};
@@ -17,8 +17,8 @@ bool galant_degree_of(const PitchSpelling *pitch, const PitchSpelling *tonic, Ga
     if (pitch == NULL || tonic == NULL || out == NULL) {
         return false;
     }
-    int steps = modulo(standard_counterpoint_step_number(pitch) - standard_counterpoint_step_number(tonic), 7);
-    int semitones = modulo(standard_counterpoint_semitone_number(pitch) - standard_counterpoint_semitone_number(tonic),
+    int steps = modulo(pitch_spelling_step_number(pitch) - pitch_spelling_step_number(tonic), 7);
+    int semitones = modulo(pitch_spelling_midi(pitch) - pitch_spelling_midi(tonic),
                            12);
     int alteration = semitones - MAJOR_SEMITONES[steps];
     if (alteration > 6) {

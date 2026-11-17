@@ -3,7 +3,6 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"

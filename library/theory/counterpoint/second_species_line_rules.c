@@ -5,7 +5,7 @@
 #include "theory/counterpoint/cantus_firmus_rules.h"
 #include "theory/counterpoint/counterpoint_interval.h"
 #include "theory/counterpoint/counterpoint_line.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
@@ -135,9 +135,9 @@ static bool check_secondary_climaxes(const Attacks *attacks) {
     const PitchSpelling *top = attacks->notes[standard_counterpoint_line_highest_index(&attacks->line)];
     size_t peaks = 0;
     for (size_t i = 1; i + 1 < count; i++) {
-        if (standard_counterpoint_direction(attacks->notes[i - 1], attacks->notes[i]) > 0 &&
-            standard_counterpoint_direction(attacks->notes[i], attacks->notes[i + 1]) < 0 &&
-            standard_counterpoint_direction(attacks->notes[i], top) != 0) {
+        if (pitch_spelling_direction(attacks->notes[i - 1], attacks->notes[i]) > 0 &&
+            pitch_spelling_direction(attacks->notes[i], attacks->notes[i + 1]) < 0 &&
+            pitch_spelling_direction(attacks->notes[i], top) != 0) {
             peaks++;
         }
     }

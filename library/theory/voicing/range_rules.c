@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/voicing/voicing_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 typedef struct {
     PitchLetter low_letter;
@@ -23,7 +23,7 @@ static int natural_semitones(PitchLetter letter, int octave) {
     if (pitch_spelling_create(letter, 0, octave, &spelling) != PITCH_SPELLING_OK) {
         return 0;
     }
-    int number = standard_voicing_semitone_number(spelling);
+    int number = pitch_spelling_midi(spelling);
     pitch_spelling_destroy(spelling);
     return number;
 }
@@ -43,7 +43,7 @@ bool standard_voicing_in_range(VoicePart part, const PitchSpelling *pitch) {
     if (pitch == NULL || !standard_voicing_range_semitones(part, &lowest, &highest)) {
         return false;
     }
-    int number = standard_voicing_semitone_number(pitch);
+    int number = pitch_spelling_midi(pitch);
     return number >= lowest && number <= highest;
 }
 

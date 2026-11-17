@@ -3,7 +3,6 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/rule_table.h"
 

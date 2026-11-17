@@ -4,7 +4,7 @@
 
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 bool standard_counterpoint_suspension_is_dissonant(StandardCounterpointSuspensionType type) {
     return type >= 0 && type < STANDARD_COUNTERPOINT_SUSPENSION_CONSONANT_TIE;
@@ -35,7 +35,7 @@ bool standard_counterpoint_fourth_species_suspension(const StandardCounterpointF
     }
     bool steps_down = standard_counterpoint_interval_is_step(&step) &&
                       standard_counterpoint_interval_melodic_consonant(&step) &&
-                      standard_counterpoint_direction(held, resolution) < 0;
+                      pitch_spelling_direction(held, resolution) < 0;
     if (!consonant(&preparation) || !consonant(&resolved) || !steps_down) {
         return false;
     }
@@ -45,7 +45,7 @@ bool standard_counterpoint_fourth_species_suspension(const StandardCounterpointF
         return true;
     }
 
-    bool above = standard_counterpoint_direction(cantus, held) > 0;
+    bool above = pitch_spelling_direction(cantus, held) > 0;
     int from = suspension.simple_size;
     int to = resolved.simple_size;
     if (above) {

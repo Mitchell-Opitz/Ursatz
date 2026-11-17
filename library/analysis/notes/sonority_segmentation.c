@@ -31,14 +31,6 @@ void segment_list_destroy(SegmentList *list) {
     list->count = 0;
 }
 
-/* The semitone of each letter above C, indexed by PitchLetter (A B C D E F G). */
-static const int LETTER_SEMITONE[7] = {9, 11, 0, 2, 4, 5, 7};
-
-static int semitone_of(const PitchSpelling *spelling) {
-    return 12 * (pitch_spelling_octave(spelling) + 1) + LETTER_SEMITONE[pitch_spelling_letter(spelling)] +
-           pitch_spelling_accidental(spelling);
-}
-
 AdaptiveSegmentationResult segmentation_prepare_notes(NoteEvent *const *notes, size_t note_count, NoteSpan **out) {
     NoteSpan *spans = (NoteSpan *)calloc(note_count, sizeof(NoteSpan));
     if (spans == NULL) {
@@ -67,7 +59,7 @@ AdaptiveSegmentationResult segmentation_prepare_notes(NoteEvent *const *notes, s
             free(spans);
             return AD_SEGMENTATION_ERR_OVERFLOW;
         }
-        spans[i].pitch = semitone_of(spelling);
+        spans[i].pitch = pitch_spelling_midi(spelling);
         spans[i].pitch_class = pitch_class_of_midi(spans[i].pitch);
     }
     *out = spans;

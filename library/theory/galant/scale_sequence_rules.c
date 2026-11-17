@@ -3,7 +3,9 @@
 #include <stdlib.h>
 
 #include "theory/galant/scale_rule_table.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/midi_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_spelling.h"
 
 static bool table_is_hard(int which) {
     return which <= SCALE_SEQUENCE_SUSPENDED;
@@ -34,13 +36,13 @@ static bool check_bass_by_step(const ScaleSequence *s) {
         const PitchSpelling *previous = bass_at(s, i - 1);
         const PitchSpelling *current = bass_at(s, i);
         if (pattern_stage(s, i)->bass_moves) {
-            int steps = standard_counterpoint_step_number(current) - standard_counterpoint_step_number(previous);
-            int semitones = abs(standard_counterpoint_semitone_number(current) -
-                                standard_counterpoint_semitone_number(previous));
+            int steps = pitch_spelling_step_number(current) - pitch_spelling_step_number(previous);
+            int semitones = abs(pitch_spelling_midi(current) -
+                                pitch_spelling_midi(previous));
             if (steps != direction || (semitones != 1 && semitones != 2)) {
                 return false;
             }
-        } else if (!standard_counterpoint_same_pitch(previous, current)) {
+        } else if (!pitch_spelling_equals(previous, current)) {
             return false;
         }
     }
@@ -72,7 +74,7 @@ static bool check_repeats(const ScaleSequence *s) {
 
 static bool check_suspended(const ScaleSequence *s) {
     for (size_t i = 1; i < s->harmonization->stage_count; i++) {
-        if (pattern_stage(s, i)->suspended && !standard_counterpoint_same_pitch(upper_at(s, i - 1), upper_at(s, i))) {
+        if (pattern_stage(s, i)->suspended && !pitch_spelling_equals(upper_at(s, i - 1), upper_at(s, i))) {
             return false;
         }
     }

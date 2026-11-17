@@ -1,7 +1,7 @@
 #include "theory/voicing/doubling_rules.h"
 
 #include "theory/voicing/construction_rules.h"
-#include "theory/voicing/voicing_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 static bool chord_complete(const StandardVoicingChord *chord) {
     if (chord == NULL) {
@@ -34,7 +34,7 @@ int standard_voicing_pitch_class_count(const StandardVoicingChord *chord, const 
     }
     int count = 0;
     for (int i = 0; i < VOICE_PART_COUNT; i++) {
-        if (standard_voicing_same_pitch_class(chord->voice[i], note)) {
+        if (pitch_spelling_same_name(chord->voice[i], note)) {
             count++;
         }
     }

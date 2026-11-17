@@ -4,7 +4,8 @@
 
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_spelling.h"
 
 #define SLOTS STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR
 
@@ -59,7 +60,7 @@ static bool melodic_size_is(const PitchSpelling *a, const PitchSpelling *b, int 
 static int direction_between(const Exercise *exercise, size_t from, size_t to) {
     const PitchSpelling *a = pitch_at(exercise, from);
     const PitchSpelling *b = pitch_at(exercise, to);
-    return a == NULL || b == NULL ? 0 : standard_counterpoint_direction(a, b);
+    return a == NULL || b == NULL ? 0 : pitch_spelling_direction(a, b);
 }
 
 static bool step_between(const Exercise *exercise, size_t from, size_t to) {
@@ -71,7 +72,7 @@ static bool third_between(const Exercise *exercise, size_t from, size_t to) {
 }
 
 static bool same_pitch_at(const Exercise *exercise, size_t a, size_t b) {
-    return standard_counterpoint_same_pitch(pitch_at(exercise, a), pitch_at(exercise, b));
+    return pitch_spelling_equals(pitch_at(exercise, a), pitch_at(exercise, b));
 }
 
 static bool passing_tone(const Exercise *exercise, size_t slot) {

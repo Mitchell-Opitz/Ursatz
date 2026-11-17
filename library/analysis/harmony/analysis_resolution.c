@@ -18,7 +18,6 @@ HarmonyResolutionConfig harmony_resolution_config_default(void) {
 }
 
 bool harmony_voice_cell_semitone(const HarmonyVoiceCell *cell, long *out) {
-    static const int LETTER_BASE[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
     if (cell == NULL || out == NULL) {
         return false;
     }
@@ -30,8 +29,7 @@ bool harmony_voice_cell_semitone(const HarmonyVoiceCell *cell, long *out) {
         return true;
     }
     if (cell->spelling != NULL) {
-        *out = 12L * (pitch_spelling_octave(cell->spelling) + 1) + LETTER_BASE[pitch_spelling_letter(cell->spelling)] +
-               pitch_spelling_accidental(cell->spelling);
+        *out = pitch_spelling_midi(cell->spelling);
         return true;
     }
     return false;

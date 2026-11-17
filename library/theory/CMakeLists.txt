@@ -63,13 +63,11 @@ add_library(ursatz_theory
     voicing/range_rules.c
     voicing/spacing_rules.c
     voicing/stem_rules.c
-    voicing/voicing_pitch.c
     voicing/voicing_rules.c
     counterpoint/cantus_firmus_rules.c
     counterpoint/consonance_rules.c
     counterpoint/counterpoint_interval.c
     counterpoint/counterpoint_line.c
-    counterpoint/counterpoint_pitch.c
     counterpoint/counterpoint_rules.c
     counterpoint/first_species_ends_rules.c
     counterpoint/first_species_harmony_rules.c
@@ -217,14 +215,12 @@ ursatz_public_headers(ursatz_theory
         theory/voicing/spacing_rules.h
         theory/voicing/stem_rules.h
         theory/voicing/voicing_chord.h
-        theory/voicing/voicing_pitch.h
         theory/voicing/voicing_rules.h
         theory/counterpoint/cantus_firmus_rules.h
         theory/counterpoint/consonance_rules.h
         theory/counterpoint/counterpoint_interval.h
         theory/counterpoint/counterpoint_limits.h
         theory/counterpoint/counterpoint_line.h
-        theory/counterpoint/counterpoint_pitch.h
         theory/counterpoint/counterpoint_rules.h
         theory/counterpoint/counterpoint_slots.h
         theory/counterpoint/first_species_ends_rules.h

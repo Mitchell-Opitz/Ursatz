@@ -3,7 +3,8 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_spelling.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
 
@@ -34,7 +35,7 @@ static bool valid_rule(StandardCounterpointFirstSpeciesIndependenceRule which) {
 static size_t repeated_notes(const StandardCounterpointLine *line) {
     size_t repeats = 0;
     for (size_t i = 0; i + 1 < line->count; i++) {
-        if (standard_counterpoint_same_pitch(line->notes[i], line->notes[i + 1])) {
+        if (pitch_spelling_equals(line->notes[i], line->notes[i + 1])) {
             repeats++;
         }
     }
@@ -43,10 +44,10 @@ static size_t repeated_notes(const StandardCounterpointLine *line) {
 
 static bool check_no_overlap(const StandardCounterpointPair *pair) {
     for (size_t i = 0; i + 1 < pair->lower->count; i++) {
-        if (standard_counterpoint_direction(pair->lower->notes[i], pair->upper->notes[i + 1]) < 0) {
+        if (pitch_spelling_direction(pair->lower->notes[i], pair->upper->notes[i + 1]) < 0) {
             return false;
         }
-        if (standard_counterpoint_direction(pair->upper->notes[i], pair->lower->notes[i + 1]) > 0) {
+        if (pitch_spelling_direction(pair->upper->notes[i], pair->lower->notes[i + 1]) > 0) {
             return false;
         }
     }

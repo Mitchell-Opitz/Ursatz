@@ -5,7 +5,7 @@
 #include "theory/counterpoint/cantus_firmus_rules.h"
 #include "theory/counterpoint/counterpoint_interval.h"
 #include "theory/counterpoint/counterpoint_line.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
@@ -65,7 +65,7 @@ static bool check_downward_steps(const Attacks *attacks) {
             return false;
         }
         if (standard_counterpoint_interval_is_step(&interval) &&
-            standard_counterpoint_direction(attacks->notes[j - 1], attacks->notes[j]) < 0) {
+            pitch_spelling_direction(attacks->notes[j - 1], attacks->notes[j]) < 0) {
             down++;
         }
     }
@@ -79,7 +79,7 @@ static bool check_upward_leap(const Attacks *attacks) {
             return false;
         }
         if (standard_counterpoint_interval_is_leap(&interval) &&
-            standard_counterpoint_direction(attacks->notes[j - 1], attacks->notes[j]) > 0) {
+            pitch_spelling_direction(attacks->notes[j - 1], attacks->notes[j]) > 0) {
             return true;
         }
     }

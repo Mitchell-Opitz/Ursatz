@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "model/pitch/midi_pitch.h"
+
 #define PITCH_LETTER_COUNT 7
 #define PITCH_NAME_MAX_OCTAVE_DIGITS 9
 
@@ -84,6 +86,22 @@ int pitch_spelling_generic_size(const PitchSpelling *a, const PitchSpelling *b) 
     }
     int difference = pitch_spelling_step_number(a) - pitch_spelling_step_number(b);
     return (difference < 0 ? -difference : difference) + 1;
+}
+
+int pitch_spelling_direction(const PitchSpelling *from, const PitchSpelling *to) {
+    int distance = pitch_spelling_midi(to) - pitch_spelling_midi(from);
+    if (distance == 0) {
+        distance = pitch_spelling_step_number(to) - pitch_spelling_step_number(from);
+    }
+    return (distance > 0) - (distance < 0);
+}
+
+bool pitch_spelling_same_name(const PitchSpelling *a, const PitchSpelling *b) {
+    if (a == NULL || b == NULL) {
+        return false;
+    }
+    return pitch_spelling_letter(a) == pitch_spelling_letter(b) &&
+           pitch_spelling_accidental(a) == pitch_spelling_accidental(b);
 }
 
 PitchLetter pitch_letter_offset(PitchLetter letter, int steps) {

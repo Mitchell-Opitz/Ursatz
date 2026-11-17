@@ -4,7 +4,7 @@
 
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/rule_table.h"
 
@@ -93,7 +93,7 @@ static bool check_mostly_within_octave(const StandardCounterpointPair *pair) {
 
 static bool check_no_crossing(const StandardCounterpointPair *pair) {
     for (size_t i = 0; i < pair->lower->count; i++) {
-        if (standard_counterpoint_direction(pair->lower->notes[i], pair->upper->notes[i]) < 0) {
+        if (pitch_spelling_direction(pair->lower->notes[i], pair->upper->notes[i]) < 0) {
             return false;
         }
     }
@@ -163,8 +163,8 @@ static bool check_climax_coordination(const StandardCounterpointPair *pair) {
     const PitchSpelling *upper_top = pair->upper->notes[standard_counterpoint_line_highest_index(pair->upper)];
     const PitchSpelling *lower_top = pair->lower->notes[standard_counterpoint_line_highest_index(pair->lower)];
     for (size_t i = 0; i < pair->lower->count; i++) {
-        if (standard_counterpoint_direction(pair->upper->notes[i], upper_top) == 0 &&
-            standard_counterpoint_direction(pair->lower->notes[i], lower_top) == 0) {
+        if (pitch_spelling_direction(pair->upper->notes[i], upper_top) == 0 &&
+            pitch_spelling_direction(pair->lower->notes[i], lower_top) == 0) {
             return false;
         }
     }

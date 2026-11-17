@@ -14,7 +14,7 @@
  * most common error is between the alto and tenor, which are written in
  * different clefs.
  *
- * Distances are generic sizes (voicing_pitch.h): C4 to C5 is an octave,
+ * Distances are generic sizes (pitch_spelling_generic_size): C4 to C5 is an octave,
  * C4 to C-sharp 5 is also a (generic) octave. The limits are 8 and 12.
  *
  * Spacing measures the distance only. A voice that has crossed below its

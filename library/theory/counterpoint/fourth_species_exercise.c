@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_spelling.h"
 
 #define SLOTS STANDARD_COUNTERPOINT_FOURTH_SPECIES_SLOTS_PER_BAR
 
@@ -35,7 +35,7 @@ bool standard_counterpoint_fourth_species_exercise_valid(const StandardCounterpo
         bool last = bar + 1 == bars;
         if (last) {
             if (strong->kind != STANDARD_COUNTERPOINT_SLOT_ATTACK || weak->kind != STANDARD_COUNTERPOINT_SLOT_TIE ||
-                !standard_counterpoint_same_pitch(weak->pitch, strong->pitch)) {
+                !pitch_spelling_equals(weak->pitch, strong->pitch)) {
                 return false;
             }
             continue;
@@ -44,7 +44,7 @@ bool standard_counterpoint_fourth_species_exercise_valid(const StandardCounterpo
             return false;
         }
         if (strong->kind == STANDARD_COUNTERPOINT_SLOT_TIE) {
-            if (!standard_counterpoint_same_pitch(strong->pitch, before->pitch)) {
+            if (!pitch_spelling_equals(strong->pitch, before->pitch)) {
                 return false;
             }
         } else if (strong->kind != STANDARD_COUNTERPOINT_SLOT_ATTACK) {

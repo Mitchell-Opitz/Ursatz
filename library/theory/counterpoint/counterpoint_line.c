@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 bool standard_counterpoint_line_valid(const StandardCounterpointLine *line) {
     if (line == NULL || line->notes == NULL || line->count == 0) {
@@ -33,7 +33,7 @@ int standard_counterpoint_line_direction_at(const StandardCounterpointLine *line
     if (!standard_counterpoint_line_valid(line) || index + 1 >= line->count) {
         return 0;
     }
-    return standard_counterpoint_direction(line->notes[index], line->notes[index + 1]);
+    return pitch_spelling_direction(line->notes[index], line->notes[index + 1]);
 }
 
 size_t standard_counterpoint_line_highest_index(const StandardCounterpointLine *line) {
@@ -42,7 +42,7 @@ size_t standard_counterpoint_line_highest_index(const StandardCounterpointLine *
     }
     size_t best = 0;
     for (size_t i = 1; i < line->count; i++) {
-        if (standard_counterpoint_direction(line->notes[best], line->notes[i]) > 0) {
+        if (pitch_spelling_direction(line->notes[best], line->notes[i]) > 0) {
             best = i;
         }
     }
@@ -55,7 +55,7 @@ size_t standard_counterpoint_line_lowest_index(const StandardCounterpointLine *l
     }
     size_t best = 0;
     for (size_t i = 1; i < line->count; i++) {
-        if (standard_counterpoint_direction(line->notes[best], line->notes[i]) < 0) {
+        if (pitch_spelling_direction(line->notes[best], line->notes[i]) < 0) {
             best = i;
         }
     }

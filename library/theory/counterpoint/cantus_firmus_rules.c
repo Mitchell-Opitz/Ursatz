@@ -4,7 +4,7 @@
 
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/counterpoint/counterpoint_interval.h"
-#include "theory/counterpoint/counterpoint_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
 #include "model/pitch/midi_pitch.h"
@@ -52,7 +52,7 @@ static bool interval_at(const StandardCounterpointLine *line, size_t i, Standard
 }
 
 static int direction_at(const StandardCounterpointLine *line, size_t i) {
-    return standard_counterpoint_direction(line->notes[i], line->notes[i + 1]);
+    return pitch_spelling_direction(line->notes[i], line->notes[i + 1]);
 }
 
 static bool is_leap_at(const StandardCounterpointLine *line, size_t i) {
@@ -68,7 +68,7 @@ static bool is_step_at(const StandardCounterpointLine *line, size_t i) {
 static const PitchSpelling *highest_note(const StandardCounterpointLine *line) {
     const PitchSpelling *best = line->notes[0];
     for (size_t i = 1; i < line->count; i++) {
-        if (standard_counterpoint_direction(best, line->notes[i]) > 0) {
+        if (pitch_spelling_direction(best, line->notes[i]) > 0) {
             best = line->notes[i];
         }
     }
@@ -78,7 +78,7 @@ static const PitchSpelling *highest_note(const StandardCounterpointLine *line) {
 static const PitchSpelling *lowest_note(const StandardCounterpointLine *line) {
     const PitchSpelling *best = line->notes[0];
     for (size_t i = 1; i < line->count; i++) {
-        if (standard_counterpoint_direction(best, line->notes[i]) < 0) {
+        if (pitch_spelling_direction(best, line->notes[i]) < 0) {
             best = line->notes[i];
         }
     }
@@ -133,7 +133,7 @@ static bool check_single_climax(const StandardCounterpointLine *line) {
     const PitchSpelling *top = highest_note(line);
     size_t occurrences = 0;
     for (size_t i = 0; i < line->count; i++) {
-        if (standard_counterpoint_direction(line->notes[i], top) == 0) {
+        if (pitch_spelling_direction(line->notes[i], top) == 0) {
             occurrences++;
         }
     }
@@ -186,15 +186,15 @@ static bool check_consecutive_leaps(const StandardCounterpointLine *line) {
    is a leading tone when a half step below the tonic, and unraised when a
    whole step below. */
 static bool check_leading_tone(const StandardCounterpointLine *line, const PitchSpelling *tonic) {
-    int tonic_step = standard_counterpoint_step_number(tonic);
-    int tonic_semitone = standard_counterpoint_semitone_number(tonic);
+    int tonic_step = pitch_spelling_step_number(tonic);
+    int tonic_semitone = pitch_spelling_midi(tonic);
     for (size_t i = 0; i < line->count; i++) {
         const PitchSpelling *note = line->notes[i];
-        int letters_above = (((standard_counterpoint_step_number(note) - tonic_step) % 7) + 7) % 7;
+        int letters_above = (((pitch_spelling_step_number(note) - tonic_step) % 7) + 7) % 7;
         if (letters_above != 6) {
             continue;
         }
-        int below = pitch_class_of_midi(tonic_semitone - standard_counterpoint_semitone_number(note));
+        int below = pitch_class_of_midi(tonic_semitone - pitch_spelling_midi(note));
         bool leading = below == 1;
         bool unraised = below == 2;
         if (i + 1 >= line->count) {
@@ -227,7 +227,7 @@ static bool check_mostly_stepwise(const StandardCounterpointLine *line) {
 
 static bool motive_equal(const StandardCounterpointLine *line, size_t i, size_t j) {
     for (size_t k = 0; k < MOTIVE_LENGTH; k++) {
-        if (!standard_counterpoint_same_pitch(line->notes[i + k], line->notes[j + k])) {
+        if (!pitch_spelling_equals(line->notes[i + k], line->notes[j + k])) {
             return false;
         }
     }

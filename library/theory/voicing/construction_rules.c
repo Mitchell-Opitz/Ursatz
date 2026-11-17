@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "theory/voicing/voicing_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 static bool valid_input(const StandardVoicingChord *chord, const PitchSpelling *const *tones, size_t tone_count,
                         int inversion) {
@@ -35,14 +35,14 @@ StandardVoicingConstruction standard_voicing_check_construction(const StandardVo
         return STANDARD_VOICING_CONSTRUCTION_INVALID_INPUT;
     }
 
-    if (!standard_voicing_same_pitch_class(chord->voice[VOICE_PART_BASS], tones[inversion])) {
+    if (!pitch_spelling_same_name(chord->voice[VOICE_PART_BASS], tones[inversion])) {
         return STANDARD_VOICING_CONSTRUCTION_BASS_MISMATCH;
     }
 
     for (int v = 0; v < VOICE_PART_COUNT; v++) {
         bool is_tone = false;
         for (size_t t = 0; t < tone_count; t++) {
-            if (standard_voicing_same_pitch_class(chord->voice[v], tones[t])) {
+            if (pitch_spelling_same_name(chord->voice[v], tones[t])) {
                 is_tone = true;
                 break;
             }
@@ -55,7 +55,7 @@ StandardVoicingConstruction standard_voicing_check_construction(const StandardVo
     for (size_t t = 0; t < tone_count; t++) {
         bool sounds = false;
         for (int v = 0; v < VOICE_PART_COUNT; v++) {
-            if (standard_voicing_same_pitch_class(chord->voice[v], tones[t])) {
+            if (pitch_spelling_same_name(chord->voice[v], tones[t])) {
                 sounds = true;
                 break;
             }
