@@ -32,6 +32,10 @@ add_library(ursatz_analysis
     harmony/harmonic_spans.c
     harmony/key_identification.c
     harmony/key_regions.c
+    harmony/key_regions_windows.c
+    harmony/key_regions_path.c
+    harmony/key_regions_refine.c
+    harmony/key_regions_phrases.c
     harmony/non_chord_tones.c
     harmony/outer_scale_degrees.c
     harmony/progression_patterns.c
