@@ -20,6 +20,7 @@ static Motive make_motive(const char *text, int beats, int unit) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = beats;
     options.meter.beat_unit = unit;
@@ -27,7 +28,7 @@ static Motive make_motive(const char *text, int beats, int unit) {
     return motive;
 }
 
-static GrowRequest make_request(const Motive *motive, int tonic, KeyStructureMode mode, int beats, int unit, size_t bars) {
+static GrowRequest make_request(const Motive *motive, int tonic, HarmonyMode mode, int beats, int unit, size_t bars) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
@@ -99,7 +100,7 @@ static const char *first_chord(const PiecePlan *plan, const char *idea) {
 
 static void test_three_kinds(void) {
     Motive motive = make_motive("E4:q G4:e F4:e D4:q C4:q", 4, 4);
-    GrowRequest request = make_request(&motive, 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, 8);
+    GrowRequest request = make_request(&motive, 0, HARMONY_MODE_MAJOR, 4, 4, 8);
     size_t seen[3] = {0, 0, 0};
     for (unsigned long seed = 1; seed <= 30; seed++) {
         PiecePlan *plan = NULL;
@@ -147,7 +148,7 @@ static void test_three_kinds(void) {
 /* A 4-bar theme in 2/4 has a basic idea of one cell: the repetition can only be exact. */
 static void test_one_cell(void) {
     Motive motive = make_motive("A4:q C5:e Bb4:e", 2, 4);
-    GrowRequest request = make_request(&motive, 5, KEY_STRUCTURE_MODE_MAJOR, 2, 4, 4);
+    GrowRequest request = make_request(&motive, 5, HARMONY_MODE_MAJOR, 2, 4, 4);
     for (unsigned long seed = 1; seed <= 10; seed++) {
         PiecePlan *plan = NULL;
         GrowOutcome outcome;

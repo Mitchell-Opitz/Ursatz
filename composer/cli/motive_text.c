@@ -44,9 +44,9 @@ static Rational rational(const cJSON *object, const char *name) {
 static void key_text(long tonic, const char *mode, char *out, size_t size) {
     static const char *const MAJOR[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
     static const char *const MINOR[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"};
-    bool minor = strcmp(mode, "minor") == 0;
+    bool is_minor = strcmp(mode, "minor") == 0;
     long pc = ((tonic % 12) + 12) % 12;
-    snprintf(out, size, "%s %s", minor ? MINOR[pc] : MAJOR[pc], minor ? "minor" : "major");
+    snprintf(out, size, "%s %s", is_minor ? MINOR[pc] : MAJOR[pc], is_minor ? "minor" : "major");
 }
 
 /* A position in beats, counting from 1: "1", "2+1/2". */

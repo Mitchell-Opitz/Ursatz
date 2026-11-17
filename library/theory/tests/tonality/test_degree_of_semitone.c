@@ -3,8 +3,29 @@
 
 #include "theory/tonality/tonal_key.h"
 
+#include "test_knowledge.h"
+
+/* The four tonal materials by index: major, natural minor, harmonic minor, melodic minor; NULL for another index. */
+enum { TEST_MODE_MAJOR, TEST_MODE_NATURAL_MINOR, TEST_MODE_HARMONIC_MINOR, TEST_MODE_MELODIC_MINOR };
+
+static const PitchMaterial *material_of(int mode) {
+    const CommonPracticeMaterials *m = test_materials();
+    switch (mode) {
+        case TEST_MODE_MAJOR:
+            return m->major;
+        case TEST_MODE_NATURAL_MINOR:
+            return m->natural_minor;
+        case TEST_MODE_HARMONIC_MINOR:
+            return m->harmonic_minor;
+        case TEST_MODE_MELODIC_MINOR:
+            return m->melodic_minor;
+        default:
+            return NULL;
+    }
+}
+
 /*
- * standard_tonality_degree_of_semitone for the four modes, and the comparison with the Composer's
+ * standard_tonality_material_degree_of_semitone for the four tonal materials, and the comparison with the Composer's
  * tables (melody_check.c pitch_degree, counterpoint_write.c scale_degree). Where they differ the
  * difference is written here as the record P25 declares.
  */
@@ -14,17 +35,17 @@ static int floor_mod12(int value) {
 }
 
 static void test_scale_notes(void) {
-    for (int mode = 0; mode <= STANDARD_TONALITY_MODE_MELODIC_MINOR; mode++) {
+    for (int mode = 0; mode <= TEST_MODE_MELODIC_MINOR; mode++) {
         for (int degree = 1; degree <= 7; degree++) {
-            int semitone = standard_tonality_degree_semitone((StandardTonalityMode)mode, degree);
+            int semitone = standard_tonality_material_degree_semitone(material_of(mode), degree);
             int got = 0;
             int alteration = 9;
-            assert(standard_tonality_degree_of_semitone(semitone, (StandardTonalityMode)mode, &got, &alteration));
+            assert(standard_tonality_material_degree_of_semitone(semitone, material_of(mode), &got, &alteration));
             assert(got == degree && alteration == 0);
             /* Octaves above and below read the same. */
-            assert(standard_tonality_degree_of_semitone(semitone + 24, (StandardTonalityMode)mode, &got, &alteration));
+            assert(standard_tonality_material_degree_of_semitone(semitone + 24, material_of(mode), &got, &alteration));
             assert(got == degree && alteration == 0);
-            assert(standard_tonality_degree_of_semitone(semitone - 12, (StandardTonalityMode)mode, &got, &alteration));
+            assert(standard_tonality_material_degree_of_semitone(semitone - 12, material_of(mode), &got, &alteration));
             assert(got == degree && alteration == 0);
         }
     }
@@ -34,41 +55,41 @@ static void test_chromatic_notes(void) {
     int degree;
     int alteration;
     /* Major: semitones 1, 3, 8, 10 are the next degree lowered; 6 is the fourth raised. */
-    assert(standard_tonality_degree_of_semitone(1, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(1, material_of(TEST_MODE_MAJOR), &degree, &alteration));
     assert(degree == 2 && alteration == -1);
-    assert(standard_tonality_degree_of_semitone(3, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(3, material_of(TEST_MODE_MAJOR), &degree, &alteration));
     assert(degree == 3 && alteration == -1);
-    assert(standard_tonality_degree_of_semitone(6, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(6, material_of(TEST_MODE_MAJOR), &degree, &alteration));
     assert(degree == 4 && alteration == 1);
-    assert(standard_tonality_degree_of_semitone(8, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(8, material_of(TEST_MODE_MAJOR), &degree, &alteration));
     assert(degree == 6 && alteration == -1);
-    assert(standard_tonality_degree_of_semitone(10, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(10, material_of(TEST_MODE_MAJOR), &degree, &alteration));
     assert(degree == 7 && alteration == -1);
     /* Natural minor: the leading tone is the seventh raised. */
-    assert(standard_tonality_degree_of_semitone(1, STANDARD_TONALITY_MODE_NATURAL_MINOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(1, material_of(TEST_MODE_NATURAL_MINOR), &degree, &alteration));
     assert(degree == 2 && alteration == -1);
-    assert(standard_tonality_degree_of_semitone(11, STANDARD_TONALITY_MODE_NATURAL_MINOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(11, material_of(TEST_MODE_NATURAL_MINOR), &degree, &alteration));
     assert(degree == 7 && alteration == 1);
-    assert(standard_tonality_degree_of_semitone(4, STANDARD_TONALITY_MODE_NATURAL_MINOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(4, material_of(TEST_MODE_NATURAL_MINOR), &degree, &alteration));
     assert(degree == 3 && alteration == 1);
     /* Harmonic minor: the minor third between its sixth and seventh. */
-    assert(standard_tonality_degree_of_semitone(9, STANDARD_TONALITY_MODE_HARMONIC_MINOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(9, material_of(TEST_MODE_HARMONIC_MINOR), &degree, &alteration));
     assert(degree == 6 && alteration == 1);
-    assert(standard_tonality_degree_of_semitone(10, STANDARD_TONALITY_MODE_HARMONIC_MINOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(10, material_of(TEST_MODE_HARMONIC_MINOR), &degree, &alteration));
     assert(degree == 6 && alteration == 2);
     /* Melodic minor: its tenth semitone is the sixth raised. */
-    assert(standard_tonality_degree_of_semitone(10, STANDARD_TONALITY_MODE_MELODIC_MINOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_of_semitone(10, material_of(TEST_MODE_MELODIC_MINOR), &degree, &alteration));
     assert(degree == 6 && alteration == 1);
 }
 
 static void test_every_semitone_resolves(void) {
-    for (int mode = 0; mode <= STANDARD_TONALITY_MODE_MELODIC_MINOR; mode++) {
+    for (int mode = 0; mode <= TEST_MODE_MELODIC_MINOR; mode++) {
         for (int s = -24; s <= 24; s++) {
             int degree = 0;
             int alteration = -1;
-            assert(standard_tonality_degree_of_semitone(s, (StandardTonalityMode)mode, &degree, &alteration));
+            assert(standard_tonality_material_degree_of_semitone(s, material_of(mode), &degree, &alteration));
             assert(degree >= 1 && degree <= 7 && alteration >= -1 && alteration <= 2);
-            assert(standard_tonality_degree_semitone((StandardTonalityMode)mode, degree) + alteration ==
+            assert(standard_tonality_material_degree_semitone(material_of(mode), degree) + alteration ==
                    floor_mod12(s));
         }
     }
@@ -89,14 +110,14 @@ static void test_composer_tables(void) {
            the same degree with no alteration. The minor table is natural with the raised sixth and
            seventh, so it is read in the melodic mode for the raised notes and the natural for the rest. */
         if (COMPOSER_WRITE_MAJOR[s] != 0) {
-            assert(standard_tonality_degree_of_semitone(s, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+            assert(standard_tonality_material_degree_of_semitone(s, material_of(TEST_MODE_MAJOR), &degree, &alteration));
             assert(degree == COMPOSER_WRITE_MAJOR[s] && alteration == 0);
         }
         if (COMPOSER_WRITE_MINOR[s] != 0) {
             int natural_degree, natural_alteration, melodic_degree, melodic_alteration;
-            assert(standard_tonality_degree_of_semitone(s, STANDARD_TONALITY_MODE_NATURAL_MINOR, &natural_degree,
+            assert(standard_tonality_material_degree_of_semitone(s, material_of(TEST_MODE_NATURAL_MINOR), &natural_degree,
                                                         &natural_alteration));
-            assert(standard_tonality_degree_of_semitone(s, STANDARD_TONALITY_MODE_MELODIC_MINOR, &melodic_degree,
+            assert(standard_tonality_material_degree_of_semitone(s, material_of(TEST_MODE_MELODIC_MINOR), &melodic_degree,
                                                         &melodic_alteration));
             assert((natural_alteration == 0 && natural_degree == COMPOSER_WRITE_MINOR[s]) ||
                    (melodic_alteration == 0 && melodic_degree == COMPOSER_WRITE_MINOR[s]));
@@ -109,12 +130,12 @@ static void test_composer_tables(void) {
     unsigned major_differs = 0;
     unsigned minor_differs = 0;
     for (int s = 0; s < 12; s++) {
-        assert(standard_tonality_degree_of_semitone(s, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+        assert(standard_tonality_material_degree_of_semitone(s, material_of(TEST_MODE_MAJOR), &degree, &alteration));
         if (degree != COMPOSER_MAJOR[s]) {
             major_differs |= 1u << s;
             assert(alteration == 1 && COMPOSER_MAJOR[s] == degree + 1);
         }
-        assert(standard_tonality_degree_of_semitone(s, STANDARD_TONALITY_MODE_NATURAL_MINOR, &degree, &alteration));
+        assert(standard_tonality_material_degree_of_semitone(s, material_of(TEST_MODE_NATURAL_MINOR), &degree, &alteration));
         if (degree != COMPOSER_MINOR[s]) {
             minor_differs |= 1u << s;
             assert(alteration == 1 && COMPOSER_MINOR[s] == degree + 1);
@@ -134,16 +155,16 @@ static void test_every_offset_in_major_and_minor(void) {
     for (int s = 0; s < 12; s++) {
         int degree = 0;
         int alteration = 9;
-        assert(standard_tonality_degree_of_semitone(s, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+        assert(standard_tonality_material_degree_of_semitone(s, material_of(TEST_MODE_MAJOR), &degree, &alteration));
         assert(degree == EXPECTED_MAJOR[s][0] && alteration == EXPECTED_MAJOR[s][1]);
-        assert(standard_tonality_degree_of_semitone(s, STANDARD_TONALITY_MODE_NATURAL_MINOR, &degree, &alteration));
+        assert(standard_tonality_material_degree_of_semitone(s, material_of(TEST_MODE_NATURAL_MINOR), &degree, &alteration));
         assert(degree == EXPECTED_MINOR[s][0] && alteration == EXPECTED_MINOR[s][1]);
     }
     /* Semitone one is b2 in every mode. */
-    for (int mode = 0; mode <= STANDARD_TONALITY_MODE_MELODIC_MINOR; mode++) {
+    for (int mode = 0; mode <= TEST_MODE_MELODIC_MINOR; mode++) {
         int degree = 0;
         int alteration = 0;
-        assert(standard_tonality_degree_of_semitone(1, (StandardTonalityMode)mode, &degree, &alteration));
+        assert(standard_tonality_material_degree_of_semitone(1, material_of(mode), &degree, &alteration));
         assert(degree == 2 && alteration == -1);
     }
 }
@@ -151,42 +172,42 @@ static void test_every_offset_in_major_and_minor(void) {
 static void test_invalid(void) {
     int degree = 99;
     int alteration = 99;
-    assert(!standard_tonality_degree_of_semitone(0, STANDARD_TONALITY_MODE_MAJOR, NULL, &alteration));
-    assert(!standard_tonality_degree_of_semitone(0, STANDARD_TONALITY_MODE_MAJOR, &degree, NULL));
-    assert(!standard_tonality_degree_of_semitone(0, (StandardTonalityMode)99, &degree, &alteration));
+    assert(!standard_tonality_material_degree_of_semitone(0, material_of(TEST_MODE_MAJOR), NULL, &alteration));
+    assert(!standard_tonality_material_degree_of_semitone(0, material_of(TEST_MODE_MAJOR), &degree, NULL));
+    assert(!standard_tonality_material_degree_of_semitone(0, material_of(99), &degree, &alteration));
     assert(degree == 99 && alteration == 99);
 }
 
 static void test_at_or_below(void) {
-    for (int mode = STANDARD_TONALITY_MODE_MAJOR; mode <= STANDARD_TONALITY_MODE_MELODIC_MINOR; mode++) {
+    for (int mode = TEST_MODE_MAJOR; mode <= TEST_MODE_MELODIC_MINOR; mode++) {
         for (int semitones = -24; semitones < 36; semitones++) {
             int below_degree = 0;
             int below_alteration = 0;
             int degree = 0;
             int alteration = 0;
-            assert(standard_tonality_degree_at_or_below_semitone(semitones, (StandardTonalityMode)mode, &below_degree,
+            assert(standard_tonality_material_degree_at_or_below_semitone(semitones, material_of(mode), &below_degree,
                                                                  &below_alteration));
-            assert(standard_tonality_degree_of_semitone(semitones, (StandardTonalityMode)mode, &degree, &alteration));
+            assert(standard_tonality_material_degree_of_semitone(semitones, material_of(mode), &degree, &alteration));
             /* the reading with the lowered override is this one, or the next degree up lowered */
             assert((degree == below_degree && alteration == below_alteration) ||
                    (degree == below_degree + 1 && alteration == -1));
             assert(below_degree >= 1 && below_degree <= 7 && below_alteration >= 0 && below_alteration <= 2);
-            int base = standard_tonality_degree_semitone((StandardTonalityMode)mode, below_degree);
+            int base = standard_tonality_material_degree_semitone(material_of(mode), below_degree);
             assert(((semitones % 12) + 12) % 12 == base + below_alteration);
         }
     }
     /* no lowered override: semitone 1 is the tonic raised in every mode, 3 in major the second raised */
     int degree = 0;
     int alteration = 0;
-    assert(standard_tonality_degree_at_or_below_semitone(1, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_at_or_below_semitone(1, material_of(TEST_MODE_MAJOR), &degree, &alteration));
     assert(degree == 1 && alteration == 1);
-    assert(standard_tonality_degree_at_or_below_semitone(3, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_at_or_below_semitone(3, material_of(TEST_MODE_MAJOR), &degree, &alteration));
     assert(degree == 2 && alteration == 1);
-    assert(standard_tonality_degree_at_or_below_semitone(10, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(standard_tonality_material_degree_at_or_below_semitone(10, material_of(TEST_MODE_MAJOR), &degree, &alteration));
     assert(degree == 6 && alteration == 1);
-    assert(!standard_tonality_degree_at_or_below_semitone(0, STANDARD_TONALITY_MODE_MAJOR, NULL, &alteration));
-    assert(!standard_tonality_degree_at_or_below_semitone(0, STANDARD_TONALITY_MODE_MAJOR, &degree, NULL));
-    assert(!standard_tonality_degree_at_or_below_semitone(0, (StandardTonalityMode)99, &degree, &alteration));
+    assert(!standard_tonality_material_degree_at_or_below_semitone(0, material_of(TEST_MODE_MAJOR), NULL, &alteration));
+    assert(!standard_tonality_material_degree_at_or_below_semitone(0, material_of(TEST_MODE_MAJOR), &degree, NULL));
+    assert(!standard_tonality_material_degree_at_or_below_semitone(0, material_of(99), &degree, &alteration));
 }
 
 int main(void) {

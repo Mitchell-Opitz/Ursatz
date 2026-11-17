@@ -42,7 +42,7 @@ typedef struct {
     MusicalTime time;       /* where the key holds from */
     int measure;
     int tonic_pitch_class;  /* 0..11 */
-    bool minor;
+    bool is_minor;
 } RomanTextKey;
 
 typedef struct {
@@ -61,7 +61,7 @@ typedef struct {
     int target_alteration;
     bool target_upper;      /* the target is written in capitals (a major key) */
     int tonic_pitch_class;  /* the key in force at the chord */
-    bool minor;
+    bool is_minor;
     size_t key_index;       /* an index into keys, or SIZE_MAX when no key was given before the chord */
 } RomanTextChord;
 

@@ -386,7 +386,7 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
         snprintf(what, sizeof(what), "motive '%s'", theme->slot_motive_id[s]);
         motive_path(path, sizeof path, theme->slot_motive_index[s]);
         Motive *target = s == GROW_SLOT_BASIC ? &material->basic : &material->slot_motives[s];
-        status = api_read_degrees_motive(what, path, theme->slot_motive[s], NULL, &setup->meter, &setup->key, target, error);
+        status = api_read_degrees_motive(setup->knowledge, what, path, theme->slot_motive[s], NULL, &setup->meter, &setup->key, target, error);
         if (status != COMPOSER_OK) {
             return status;
         }
@@ -406,7 +406,7 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
                             grow_idea_name((GrowIdea)idea), grow_idea_name((GrowIdea)idea));
         }
         snprintf(what, sizeof(what), "motive '%s'", theme->idea_motive_id[idea]);
-        status = api_read_degrees_motive(what, path, theme->idea_motive[idea], NULL, &setup->meter, &setup->key,
+        status = api_read_degrees_motive(setup->knowledge, what, path, theme->idea_motive[idea], NULL, &setup->meter, &setup->key,
                                          &material->idea_motives[idea], error);
         if (status != COMPOSER_OK) {
             return status;
@@ -418,7 +418,7 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
         material->has_idea[idea] = true;
     }
     if (theme->accompaniment_motive) {
-        status = api_read_degrees_motive("the accompaniment motive", "/accompaniment/motive", theme->accompaniment_motive,
+        status = api_read_degrees_motive(setup->knowledge, "the accompaniment motive", "/accompaniment/motive", theme->accompaniment_motive,
                                          "accompaniment", &setup->meter, &setup->key, &material->accompaniment_motive, error);
         if (status != COMPOSER_OK) {
             return status;

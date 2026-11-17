@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "model/pitch/midi_pitch.h"
-#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/roman_numeral_grammar.h"
 #include "theory/tonality/tonal_key.h"
 #include "theory/tonality/triad_in_key_rules.h"
@@ -20,12 +19,6 @@ static const struct {
     {7, STANDARD_TONALITY_NUMERAL_FULLY_DIMINISHED_SEVENTH},
     {7, STANDARD_TONALITY_NUMERAL_HALF_DIMINISHED_SEVENTH},
 };
-
-/* The material of a key mode, from the built-in materials: a remaining site until P58 B13 (the Composer's labels have no config to carry the snapshot's). */
-static const PitchMaterial *tonality_material(HarmonyMode mode) {
-    const CommonPracticeMaterials *materials = common_practice_materials_builtin();
-    return mode == HARMONY_MODE_MAJOR ? materials->major : materials->natural_minor;
-}
 
 bool harmony_applied_quality_valid(HarmonyAppliedQuality quality) {
     return quality >= 0 && quality < HARMONY_APPLIED_QUALITY_COUNT;
@@ -106,7 +99,9 @@ int harmony_applied_scale_semitone(HarmonyMode mode, int degree) {
     if (!harmony_mode_valid(mode) || degree < 1 || degree > 7) {
         return -1;
     }
-    return standard_tonality_material_degree_semitone(tonality_material(mode), degree);
+    /* The major scale is the natural notes C D E F G A B; the minor key is its natural minor, the third, sixth and seventh a semitone down. */
+    int lowered = mode == HARMONY_MODE_MINOR && (degree == 3 || degree == 6 || degree == 7) ? 1 : 0;
+    return standard_tonality_natural_degree_semitone(degree) - lowered;
 }
 
 int harmony_applied_root_degree(HarmonyMode mode, const HarmonyAppliedChord *chord) {

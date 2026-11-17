@@ -3,8 +3,8 @@
 /* The adapter input builder: kernel Chord and Key structure in, a plain record per segment out. */
 
 static void test_reads_chord_and_local_key(void) {
-    Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
-    Key *g_major = adapter_test_key("G major", 7, KEY_STRUCTURE_MODE_MAJOR);
+    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
+    Key *g_major = adapter_test_key("G major", 7, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     MusicalTime two = adapter_test_time(2, 1);
     MusicalTime one = adapter_test_time(1, 1);
@@ -43,7 +43,7 @@ static void test_reads_chord_and_local_key(void) {
 }
 
 static void test_segment_without_match_or_key_passes_through(void) {
-    Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
+    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime four = adapter_test_time(4, 1);
     MusicalTime five = adapter_test_time(5, 1);
     MusicalTime one = adapter_test_time(1, 1);
@@ -73,7 +73,7 @@ static void test_segment_without_match_or_key_passes_through(void) {
 }
 
 static void test_bass_is_the_lowest_chord_tone(void) {
-    Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
+    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     MusicalTime one = adapter_test_time(1, 1);
     MusicalTime two = adapter_test_time(2, 1);
@@ -129,7 +129,7 @@ static void test_rejects_bad_input(void) {
     StandardTonalitySegmentInput no_start[1] = {{NULL, start, NULL, NULL}};
     assert(standard_tonality_build_chord_inputs(no_start, 1, NULL, 0, &inputs, &count) ==
            STANDARD_TONALITY_CHORD_INPUT_ERR_BAD_SEGMENT);
-    Key *key = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
+    Key *key = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     StandardTonalityKeyRegionInput twice[2] = {{key, zero, 0.0}, {key, zero, 0.0}};
     assert(standard_tonality_build_chord_inputs(NULL, 0, twice, 2, &inputs, &count) ==
@@ -138,7 +138,7 @@ static void test_rejects_bad_input(void) {
 }
 
 static void test_a_given_bass_gives_root_position_over_a_lower_note(void) {
-    Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
+    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     MusicalTime one = adapter_test_time(1, 1);
     MusicalTime two = adapter_test_time(2, 1);

@@ -59,7 +59,7 @@ PieceResult compose_candidates(const PiecePlan *plan, const ComposeConfig *confi
         ComposeConfig run = *config;
         run.seed = config->seed + i;
         candidate->seed = run.seed;
-        if (plan_from_json(text, &candidate->plan, NULL) != PLAN_OK) {
+        if (plan_from_json(config->knowledge, text, &candidate->plan, NULL) != PLAN_OK) {
             status = PIECE_ERR_ALLOC;
             break;
         }

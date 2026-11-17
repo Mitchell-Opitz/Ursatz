@@ -312,6 +312,9 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     if (!config_valid(config)) {
         return COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG;
     }
+    if (config->applied_chords && config->materials == NULL) {
+        return COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG; /* the applied chords read the scale of the key's materials */
+    }
     if (mode != COMMON_PRACTICE_KEY_MAJOR && mode != COMMON_PRACTICE_KEY_MINOR) {
         return COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE;
     }
@@ -327,7 +330,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
                           : mode == COMMON_PRACTICE_KEY_MAJOR ? COMMON_PRACTICE_MAJOR_APPLIED_COUNT
                                                               : COMMON_PRACTICE_MINOR_APPLIED_COUNT;
     size_t entry_count = vocabulary_size + applied_size;
-    const CommonPracticeMaterials *materials = config->materials != NULL ? config->materials : common_practice_materials_builtin();
+    const CommonPracticeMaterials *materials = config->materials;
 
     /* Holding the bass is required only when some candidate the call ranks can: otherwise every candidate stays eligible. */
     bool bass_required = false;

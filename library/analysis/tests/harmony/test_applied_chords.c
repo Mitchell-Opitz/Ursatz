@@ -4,6 +4,7 @@
 #include "analysis/harmony/applied_chords.h"
 #include "analysis/harmony/roman_numeral_adapter.h"
 #include "relationship_test_access.h"
+#include "test_knowledge.h"
 
 /* Applied chords: the diatonic reading is re-checked against V/x, V7/x, vii-diminished/x and the fully
    diminished seventh, and relabelled only when the chromatic evidence and the resolution are there. */
@@ -15,6 +16,7 @@ static StandardTonalityChordInput make_input(const char *id, int root, int bass,
                                              int tonic, StandardTonalityRomanKeyMode mode) {
     StandardTonalityChordInput input;
     memset(&input, 0, sizeof(input));
+    input.materials = test_materials();
     input.segment_id = id;
     input.has_numeral = true;
     input.root_pitch_class = root;

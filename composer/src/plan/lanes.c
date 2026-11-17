@@ -11,8 +11,7 @@
 #include "util/util.h"
 
 AnalysisKey plan_key_of_pitch_class(int pitch_class, const PitchMaterial *material) {
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, material};
-    key.mode = composer_key_mode(&key);
+    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, material};
     PitchLetter letter;
     int accidental;
     if (standard_tonality_key_tonic_of_pitch_class_material(util_pitch_class(pitch_class), material, &letter, &accidental)) {

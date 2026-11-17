@@ -91,18 +91,10 @@ bool standard_tonality_numeral_format_styled(const StandardTonalityNumeralText *
                                              StandardTonalityNumeralStyle style, char *buffer, size_t size);
 
 /*
- * The root's semitones above the tonic (0..11) in the mode. An applied numeral is resolved through its target:
- * the target's root in the mode, then the numeral's degree in the target's own scale (major for an uppercase
- * target, harmonic minor for a lowercase one). The alteration is added last. False (output untouched) for an
- * invalid value, an invalid mode, or NULL arguments.
- */
-bool standard_tonality_numeral_root_semitone(const StandardTonalityNumeralText *numeral, StandardTonalityMode mode,
-                                             int *semitones);
-
-/*
- * The same from the key's material: its steps give the target and the plain numeral, and `materials` give the target's own scale
- * (the major, or the harmonic minor for a lowercase target). False (output untouched) for an invalid value, a NULL argument, or a
- * material without the degree. standard_tonality_numeral_root_semitone calls it with the builtin materials until P58 B13.
+ * The root's semitones above the tonic (0..11) in the key's material. An applied numeral is resolved through its target: the target's
+ * root in the key's material, then the numeral's degree in the target's own scale (`materials`' major for an uppercase target, its
+ * harmonic minor for a lowercase one). The alteration is added last. False (output untouched) for an invalid value, a NULL argument,
+ * or a material without the degree.
  */
 bool standard_tonality_numeral_root_semitone_of(const StandardTonalityNumeralText *numeral, const PitchMaterial *key_material,
                                                 const CommonPracticeMaterials *materials, int *semitones);

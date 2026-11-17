@@ -150,6 +150,7 @@ static Fixture build(const Scenario *scenario, bool with_development) {
     assert(plan_add_node(fixture.plan, section, PLAN_NODE_PHRASE, extra, NULL, &phrase) == PLAN_OK);
     assert(plan_add_node(fixture.plan, phrase, PLAN_NODE_IDEA, extra, NULL, &idea) == PLAN_OK);
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = scenario->beats_per_bar;
     options.meter.beat_unit = scenario->beat_unit;
@@ -667,6 +668,7 @@ static IdeaFixture build_ideas(int beats, int unit, HarmonyMode mode, int tonic)
     assert(plan_add_node(fixture.plan, material, PLAN_NODE_PHRASE, extra, NULL, &material_idea) == PLAN_OK);
     assert(plan_add_node(fixture.plan, material_idea, PLAN_NODE_IDEA, extra, NULL, &material_idea) == PLAN_OK);
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = beats;
     options.meter.beat_unit = unit;
@@ -864,6 +866,7 @@ static ToneScene build_tone_scene(bool keyed) {
     assert(plan_add_node(scene.plan, material, PLAN_NODE_PHRASE, extra, NULL, &material_idea) == PLAN_OK);
     assert(plan_add_node(scene.plan, material_idea, PLAN_NODE_IDEA, extra, NULL, &material_idea) == PLAN_OK);
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;

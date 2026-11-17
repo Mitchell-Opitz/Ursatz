@@ -516,6 +516,7 @@ static void function_structure(Fixture *fixture, FunctionRow *row) {
     size_t bar = (size_t)row->beats;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter = fixture->request.meter;
     options.has_key = true;

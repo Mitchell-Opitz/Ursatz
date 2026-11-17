@@ -33,23 +33,23 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     bool given;
 } Scenario;
 
 static const Scenario SCENARIOS_ANY[] = {
-    {"C major 4/4, invented", 0, KEY_STRUCTURE_MODE_MAJOR, 4, false},
-    {"A minor 3/4, invented", 9, KEY_STRUCTURE_MODE_MINOR, 3, false},
-    {"C major 4/4, given", 0, KEY_STRUCTURE_MODE_MAJOR, 4, true},
-    {"A minor 3/4, given", 9, KEY_STRUCTURE_MODE_MINOR, 3, true},
+    {"C major 4/4, invented", 0, HARMONY_MODE_MAJOR, 4, false},
+    {"A minor 3/4, invented", 9, HARMONY_MODE_MINOR, 3, false},
+    {"C major 4/4, given", 0, HARMONY_MODE_MAJOR, 4, true},
+    {"A minor 3/4, given", 9, HARMONY_MODE_MINOR, 3, true},
 };
 /* The forms that list 3/4 as their only meter. */
 static const Scenario SCENARIOS_THREE_FOUR[] = {
-    {"C major 3/4, invented", 0, KEY_STRUCTURE_MODE_MAJOR, 3, false},
-    {"A minor 3/4, invented", 9, KEY_STRUCTURE_MODE_MINOR, 3, false},
-    {"C major 3/4, given", 0, KEY_STRUCTURE_MODE_MAJOR, 3, true},
-    {"A minor 3/4, given", 9, KEY_STRUCTURE_MODE_MINOR, 3, true},
+    {"C major 3/4, invented", 0, HARMONY_MODE_MAJOR, 3, false},
+    {"A minor 3/4, invented", 9, HARMONY_MODE_MINOR, 3, false},
+    {"C major 3/4, given", 0, HARMONY_MODE_MAJOR, 3, true},
+    {"A minor 3/4, given", 9, HARMONY_MODE_MINOR, 3, true},
 };
 /* The scenarios of the template being run (set in main). */
 static const Scenario *SCENARIOS = SCENARIOS_ANY;
@@ -539,7 +539,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         }
         /* B1 is not closed: in a major piece the tonic major is the home key, and a closing form plans a PAC there that is not
            closed as a half cadence; in a minor piece it is the parallel major and keeps its PAC (R-517, piece_cadences.c). */
-        const CadenceType want = expected[i].tonic_major && scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? CADENCE_TYPE_HALF
+        const CadenceType want = expected[i].tonic_major && scenario->mode == HARMONY_MODE_MAJOR ? CADENCE_TYPE_HALF
                                                                                                        : expected[i].cadence;
         assert(cadence && cadence->params.cadence == want);
         /* An antecedent's weak cadence comes second. */
@@ -548,32 +548,32 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         assert(!weak || weak->params.cadence == CADENCE_TYPE_HALF);
         /* A section in the parallel mode is on the home tonic in the other mode. */
         /* The region of the main and subordinate themes is V in major and III in minor, which is a major key. */
-        const KeyStructureMode mode = expected[i].parallel || (expected[i].region && scenario->mode == KEY_STRUCTURE_MODE_MINOR) ? (scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? KEY_STRUCTURE_MODE_MINOR
-                                                                                                          : KEY_STRUCTURE_MODE_MAJOR)
+        const HarmonyMode mode = expected[i].parallel || (expected[i].region && scenario->mode == HARMONY_MODE_MINOR) ? (scenario->mode == HARMONY_MODE_MAJOR ? HARMONY_MODE_MINOR
+                                                                                                          : HARMONY_MODE_MAJOR)
                                                            : scenario->mode;
-        const int region_offset = scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? 7 : 3; /* V in major, III in minor */
+        const int region_offset = scenario->mode == HARMONY_MODE_MAJOR ? 7 : 3; /* V in major, III in minor */
         const int offset = expected[i].region ? region_offset : expected[i].key_offset;
         if (expected[i].tonic_major) {
             /* The home tonic's major key: the home key in a major piece, the parallel major in a minor one (R-517). */
             assert(key && analysis_key_tonic_pitch_class(&key->params.key) == scenario->tonic &&
-                   key->params.key.mode == KEY_STRUCTURE_MODE_MAJOR);
+                   harmony_key_mode(&key->params.key) == HARMONY_MODE_MAJOR);
         } else if (expected[i].second) {
             /* One of the second region's keys: vi or IV in major, VI or iv in minor (R-520). */
             const int pc = analysis_key_tonic_pitch_class(&key->params.key);
-            const bool major = scenario->mode == KEY_STRUCTURE_MODE_MAJOR;
-            assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && key->params.key.mode == (major ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR)) ||
-                           (pc == (scenario->tonic + 5) % 12 && key->params.key.mode == scenario->mode)));
+            const bool major = scenario->mode == HARMONY_MODE_MAJOR;
+            assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && harmony_key_mode(&key->params.key) == (major ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR)) ||
+                           (pc == (scenario->tonic + 5) % 12 && harmony_key_mode(&key->params.key) == scenario->mode)));
         } else if (expected[i].region_key >= 0) {
             /* The development is vi in major and iv in minor; the sequence is ii in major and v in minor; all minor keys (R-520). The
                elaboration is IV in major and VI in minor, both major keys (R-523). */
-            const bool major = scenario->mode == KEY_STRUCTURE_MODE_MAJOR;
+            const bool major = scenario->mode == HARMONY_MODE_MAJOR;
             const bool elaboration = expected[i].region_key == ELABORATION;
             const int up = elaboration ? (major ? 5 : 8) : expected[i].region_key == DEVELOPMENT ? (major ? 9 : 5) : (major ? 2 : 7);
             assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + up) % 12 &&
-                   key->params.key.mode == (elaboration ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR));
+                   harmony_key_mode(&key->params.key) == (elaboration ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR));
         } else {
             assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
-                   key->params.key.mode == mode);
+                   harmony_key_mode(&key->params.key) == mode);
         }
         /* A figure rides on a figurate return and only there (R-497). */
         const PlanConstraint *figure = find(plan, section, PLAN_CONSTRAINT_FIGURE, 0);

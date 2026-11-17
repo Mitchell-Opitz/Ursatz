@@ -118,7 +118,7 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    key.key = test_key_mode(0, HARMONY_MODE_MAJOR);
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 }
@@ -532,6 +532,7 @@ static unsigned long long fnv(const char *text) {
 static PiecePlan *sentence_plan(Motive *motive) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -539,7 +540,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
@@ -704,6 +705,7 @@ static int test_motive_labels(void) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -834,7 +836,7 @@ static int test_plan_without(void) {
     char *json = plan_json_with(2);
     assert(strstr(json, "\"without\": [") && strstr(json, "motive-rhythm"));
     PiecePlan *again = NULL;
-    assert(plan_from_json(json, &again, NULL) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
     const PlanStyle *read = style_of(again);
     assert(read && read->without_count == 2 && strcmp(read->without[0], "motive-degrees") == 0 &&
            strcmp(read->without[1], "motive-rhythm") == 0);
@@ -843,7 +845,7 @@ static int test_plan_without(void) {
     /* a style constraint with no list: no member is written and it reads back with none */
     json = plan_json_with(0);
     assert(!strstr(json, "without"));
-    assert(plan_from_json(json, &again, NULL) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
     read = style_of(again);
     assert(read && read->without_count == 0);
     plan_destroy(again);
@@ -1142,6 +1144,7 @@ static int test_brief(void) {
     /* The limit halves a connection that is remote, between 1/2 and 3/4, only at 1/2. */
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = request_parse_meter("4/4", &options.meter);
     options.has_key = request_parse_key("C major", test_knowledge(), &options.key);
     Motive basic;

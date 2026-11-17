@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "theory/tonality/tonal_key.h"
+#include "test_knowledge.h"
 
 /*
  * Key tonic spelling: all 24 keys, the tonic with the fewer accidentals in its signature, sharps on a tie
@@ -12,6 +13,11 @@ typedef struct {
     PitchLetter letter;
     int accidental;
 } Tonic;
+
+/* The key of a major or a natural minor material, as `minor` says. */
+static const PitchMaterial *key_material(int minor) {
+    return minor ? test_materials()->natural_minor : test_materials()->major;
+}
 
 #define T(l, a) {PITCH_LETTER_##l, (a)}
 
@@ -25,11 +31,11 @@ static void test_all_keys(void) {
             const Tonic *expected = minor ? &MINOR[pc] : &MAJOR[pc];
             PitchLetter letter = PITCH_LETTER_A;
             int accidental = 9;
-            assert(standard_tonality_key_tonic_of_pitch_class(pc, minor != 0, &letter, &accidental));
+            assert(standard_tonality_key_tonic_of_pitch_class_material(pc, key_material(minor), &letter, &accidental));
             assert(letter == expected->letter && accidental == expected->accidental);
             /* The chosen spelling is a real key with a signature of at most 7 accidentals, and the shortest. */
             int fifths = 0;
-            assert(standard_tonality_key_fifths(letter, accidental, minor != 0, &fifths));
+            assert(standard_tonality_key_fifths_of(letter, accidental, key_material(minor), &fifths));
             assert(fifths >= -7 && fifths <= 7);
         }
     }
@@ -38,19 +44,19 @@ static void test_all_keys(void) {
 static void test_ties_take_sharps(void) {
     PitchLetter letter;
     int accidental;
-    assert(standard_tonality_key_tonic_of_pitch_class(6, false, &letter, &accidental));
+    assert(standard_tonality_key_tonic_of_pitch_class_material(6, key_material(0), &letter, &accidental));
     assert(letter == PITCH_LETTER_F && accidental == 1);
-    assert(standard_tonality_key_tonic_of_pitch_class(3, true, &letter, &accidental));
+    assert(standard_tonality_key_tonic_of_pitch_class_material(3, key_material(1), &letter, &accidental));
     assert(letter == PITCH_LETTER_D && accidental == 1);
 }
 
 static void test_invalid_arguments(void) {
     PitchLetter letter = PITCH_LETTER_G;
     int accidental = 5;
-    assert(!standard_tonality_key_tonic_of_pitch_class(-1, false, &letter, &accidental));
-    assert(!standard_tonality_key_tonic_of_pitch_class(12, true, &letter, &accidental));
-    assert(!standard_tonality_key_tonic_of_pitch_class(0, false, NULL, &accidental));
-    assert(!standard_tonality_key_tonic_of_pitch_class(0, false, &letter, NULL));
+    assert(!standard_tonality_key_tonic_of_pitch_class_material(-1, key_material(0), &letter, &accidental));
+    assert(!standard_tonality_key_tonic_of_pitch_class_material(12, key_material(1), &letter, &accidental));
+    assert(!standard_tonality_key_tonic_of_pitch_class_material(0, key_material(0), NULL, &accidental));
+    assert(!standard_tonality_key_tonic_of_pitch_class_material(0, key_material(0), &letter, NULL));
     assert(letter == PITCH_LETTER_G && accidental == 5);
 }
 

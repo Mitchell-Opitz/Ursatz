@@ -32,7 +32,7 @@
 
 typedef struct {
     const char *name;
-    AnalysisKey key;
+    TestKeySpec key;
     size_t bars;
     int above[MAX_BARS]; /* the cantus as a bass */
     int below[MAX_BARS]; /* the cantus as a melody */
@@ -40,12 +40,12 @@ typedef struct {
 
 static const Cantus CANTI[] = {
     {"Fux, D Dorian",
-     {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR, NULL},
+     {PITCH_LETTER_D, 0, HARMONY_MODE_MINOR},
      11,
      {62, 65, 64, 62, 67, 65, 69, 67, 65, 64, 62},
      {62, 65, 64, 62, 67, 65, 69, 67, 65, 64, 62}},
     {"C major",
-     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL},
+     {PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR},
      11,
      {60, 64, 62, 65, 64, 67, 69, 67, 64, 62, 60},
      {60, 64, 62, 65, 64, 67, 69, 67, 64, 62, 60}},
@@ -82,7 +82,7 @@ static Piece build(const Cantus *cantus, int species, bool above) {
     assert(plan_add_lane_span(piece.plan, owner, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_with_material(cantus->key);
+    payload.key = test_key_of(cantus->key);
     assert(plan_add_lane_span(piece.plan, owner, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     for (size_t b = 0; b < cantus->bars; b++) {
@@ -172,7 +172,7 @@ static void check_result(const Piece *piece, const Cantus *cantus, int species, 
     PitchSpelling *cantus_spelled[MAX_BARS];
     PitchSpelling *owned[MAX_BARS * 4] = {NULL};
     StandardCounterpointSlot slots[MAX_BARS * 4];
-    PitchSpelling *tonic = spell(analysis_key_tonic_pitch_class(&cantus->key) + 60);
+    PitchSpelling *tonic = spell(analysis_key_tonic_pitch_class(&(AnalysisKey){NULL, cantus->key.tonic_letter, cantus->key.tonic_accidental, NULL}) + 60);
     StandardCounterpointLine line = {(const PitchSpelling *const *)cantus_spelled, cantus->bars};
     StandardCounterpointCantusPart part = above ? STANDARD_COUNTERPOINT_CANTUS_IN_LOWER : STANDARD_COUNTERPOINT_CANTUS_IN_UPPER;
     StandardCounterpointResult result;

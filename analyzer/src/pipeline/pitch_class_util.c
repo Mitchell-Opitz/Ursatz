@@ -39,9 +39,10 @@ char *key_label_create(int tonic_pitch_class, const PitchMaterial *material) {
 int key_signature_major_tonic(int sharps_flats) {
     PitchLetter letter;
     int accidental;
-    if (sharps_flats < -7 || sharps_flats > 7 ||
-        !standard_tonality_key_of_fifths(sharps_flats, false, &letter, &accidental)) {
+    if (sharps_flats < -7 || sharps_flats > 7) {
         return -1;
     }
+    /* The major tonic of a signature: `sharps_flats` steps along the line of fifths from C. */
+    pitch_spelling_from_fifths(sharps_flats, &letter, &accidental);
     return pitch_class_of_letter(letter, accidental);
 }

@@ -119,10 +119,10 @@ static bool ids_are_stable(const PiecePlan *plan) {
     return true;
 }
 
-static PiecePlan *copy_plan(const char *text) {
+static PiecePlan *copy_plan(const KnowledgeSnapshot *knowledge, const char *text) {
     PiecePlan *copy = NULL;
     PlanJsonError error;
-    return plan_from_json(text, &copy, &error) == PLAN_OK ? copy : NULL;
+    return plan_from_json(knowledge, text, &copy, &error) == PLAN_OK ? copy : NULL;
 }
 
 void plan_variations_destroy(PlanVariations *variations) {
@@ -171,7 +171,7 @@ static RegenerateResult vary(const PiecePlan *plan, const FillTarget *targets, s
     size_t seeds = 4 * count;
     for (size_t k = 0; k < seeds && out->count < count && result == REGENERATE_OK; k++) {
         out->seeds_tried = k + 1;
-        PiecePlan *copy = copy_plan(text);
+        PiecePlan *copy = copy_plan(config->knowledge, text);
         if (!copy) {
             result = REGENERATE_ERR_ALLOC;
             break;

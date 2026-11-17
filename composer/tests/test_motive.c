@@ -31,6 +31,7 @@ static AnalysisKey G_MAJOR;
 static MotiveOptions options_with(const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     if (meter) {
         options.has_meter = true;
         options.meter = *meter;
@@ -189,17 +190,17 @@ static void test_options(void) {
     /* A note list has no meter of its own. */
     MotiveOptions none = options_with(NULL, NULL);
     assert(motive_from_notes_text("D4:q", &none, &motive, &error) == MOTIVE_ERR_METER);
-    assert(motive_from_notes_text("D4:q", NULL, &motive, &error) == MOTIVE_ERR_METER);
+    assert(motive_from_notes_text("D4:q", test_motive_options(), &motive, &error) == MOTIVE_ERR_METER);
     assert(strcmp(error.location, "meter") == 0);
 
     AnalysisKey key;
-    assert(request_parse_key("Bb minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
-    assert(request_parse_key("F# major", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
+    assert(request_parse_key("Bb minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 10 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    assert(request_parse_key("F# major", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 6 && harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
     assert(!request_parse_key("H major", test_knowledge(), &key));
     assert(!request_parse_key("D dorian", test_knowledge(), &key));
     assert(!request_parse_key("C harmonic minor", test_knowledge(), &key) && !request_parse_key("D", test_knowledge(), &key));
-    assert(request_parse_key("c MINOR", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 0 && key.mode == KEY_STRUCTURE_MODE_MINOR);
-    assert(request_parse_key("G natural minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 7 && key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(request_parse_key("c MINOR", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 0 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    assert(request_parse_key("G natural minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 7 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
     char refusal[160];
     assert(request_key_refusal("C dorian", test_knowledge(), refusal, sizeof refusal) &&
            strcmp(refusal, "the Composer writes major and minor keys; 'dorian' is not one of them") == 0);
@@ -451,7 +452,7 @@ static void test_json_round_trip(void) {
         assert(json);
         Motive back;
         MotiveError error;
-        assert(motive_from_json(json, NULL, &back, &error) == MOTIVE_OK);
+        assert(motive_from_json(json, test_motive_options(), &back, &error) == MOTIVE_OK);
         assert(motive_equal(&motives[i], &back));
         free(json);
     }
@@ -572,7 +573,7 @@ static void test_file_errors(void) {
     for (size_t i = 0; i < sizeof(GARBAGE) / sizeof(GARBAGE[0]); i++) {
         size_t size = i == 3 ? 26 : strlen(GARBAGE[i]);
         for (int format = MOTIVE_FORMAT_AUTO; format <= MOTIVE_FORMAT_JSON; format++) {
-            MotiveResult result = motive_load(GARBAGE[i], size, (MotiveFormat)format, NULL, &motive, &error);
+            MotiveResult result = motive_load(GARBAGE[i], size, (MotiveFormat)format, test_motive_options(), &motive, &error);
             assert(result != MOTIVE_OK);
             assert(error.message[0] != '\0');
         }
@@ -659,7 +660,7 @@ static void test_attach_as_given(void) {
     char *json = plan_to_json(plan, &json_error);
     assert(json);
     PiecePlan *copy = NULL;
-    assert(plan_from_json(json, &copy, &json_error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, &copy, &json_error) == PLAN_OK);
     assert(plan_node_kind(copy, node) == PLAN_NODE_MOTIVE && plan_node_state(copy, node) == PLAN_STATE_GIVEN);
     assert(plan_lane_span_state(copy, span) == PLAN_STATE_GIVEN && plan_lane_span_lane(copy, span) == PLAN_LANE_MELODY);
     const PlanLanePayload *read = plan_lane_span_payload(copy, span);
@@ -969,7 +970,7 @@ static void test_pickup_and_form_in_json(void) {
     assert(!motive_equal(&plain, &shifted));
 
     const char *bad = "{\"meter\": {\"beats_per_bar\": 4, \"beat_unit\": 4}, \"form\": \"chord\", \"notes\": []}";
-    assert(motive_from_json(bad, NULL, &again, &error) == MOTIVE_ERR_VALUE);
+    assert(motive_from_json(bad, test_motive_options(), &again, &error) == MOTIVE_ERR_VALUE);
     assert(strcmp(error.location, "form") == 0);
     MotiveSketchForm form;
     assert(motive_form_parse("contour", &form) && form == MOTIVE_SKETCH_FORM_CONTOUR && !motive_form_parse("chord", &form));
@@ -1012,7 +1013,7 @@ static void test_analysis_by_form(void) {
 static void test_render_in_another_key(void) {
     /* D minor 1 b3 5 1' (D4 F4 A4 D5) in G minor: the same degrees, a fourth up. */
     Motive source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
-    const AnalysisKey G_MINOR = test_key_mode(7, KEY_STRUCTURE_MODE_MINOR);
+    const AnalysisKey G_MINOR = test_key_mode(7, HARMONY_MODE_MINOR);
     Motive moved;
     assert(motive_in_key(&source, &G_MINOR, &moved));
     assert(moved.key_source == MOTIVE_SKETCH_KEY_GIVEN && moved.tonic_pc == 7 && motive_sketch_minor(&moved));
@@ -1158,7 +1159,7 @@ static const char *const EXTRAS_JSON =
 static void test_extras_in_json(void) {
     Motive motive;
     MotiveError error;
-    assert(motive_from_json(EXTRAS_JSON, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive_from_json(EXTRAS_JSON, test_motive_options(), &motive, &error) == MOTIVE_OK);
     assert(motive.chord_count == 3 && motive.feature_count == 2 && motive.accompaniment);
     assert(motive.chords[1].degree == 5 && motive.chords[1].inversion == 1 && time_is(motive.chords[1].onset, 1, 2));
     assert(strcmp(motive.features[1].label, "b") == 0 && motive.features[1].first == 2 && motive.features[1].last == 3);
@@ -1167,7 +1168,7 @@ static void test_extras_in_json(void) {
     char *written = test_motive_json(&motive);
     assert(written && strstr(written, "\"harmony\": \"I V6@2 I@3\"") && strstr(written, "\"role\": \"accompaniment\""));
     Motive again;
-    assert(motive_from_json(written, NULL, &again, &error) == MOTIVE_OK);
+    assert(motive_from_json(written, test_motive_options(), &again, &error) == MOTIVE_OK);
     assert(motive_equal(&motive, &again));
     free(written);
     Motive plain = load_notes("C4:q E4:q G4:q C5:q", &FOUR_FOUR, &C_MAJOR);
@@ -1247,10 +1248,10 @@ static void test_extras_errors(void) {
     assert(at);
     snprintf(text, strlen(EXTRAS_JSON) + 64, "%.*s%s%s", (int)(at - EXTRAS_JSON), EXTRAS_JSON, bad_harmony,
              at + strlen("\"harmony\": \"I V6@2 I@3\""));
-    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_ERR_SYNTAX);
+    assert(motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_ERR_SYNTAX);
     assert(strcmp(error.location, "harmony") == 0 && strstr(error.message, "token 2"));
     free(text);
-    assert(motive_from_json("{\"role\": \"bass\", \"notes\": []}", NULL, &motive, &error) == MOTIVE_ERR_VALUE);
+    assert(motive_from_json("{\"role\": \"bass\", \"notes\": []}", test_motive_options(), &motive, &error) == MOTIVE_ERR_VALUE);
     assert(strcmp(error.location, "role") == 0);
 }
 
@@ -1258,7 +1259,7 @@ static void test_equal_compares_extras(void) {
     Motive a;
     Motive b;
     MotiveError error;
-    assert(motive_from_json(EXTRAS_JSON, NULL, &a, &error) == MOTIVE_OK);
+    assert(motive_from_json(EXTRAS_JSON, test_motive_options(), &a, &error) == MOTIVE_OK);
     b = a;
     assert(motive_equal(&a, &b));
     b.chords[1].degree = 4;
@@ -1365,9 +1366,9 @@ static void test_features_follow_the_notes(void) {
 }
 
 int main(void) {
-    D_MINOR = test_key_mode(2, KEY_STRUCTURE_MODE_MINOR);
-    C_MAJOR = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
-    G_MAJOR = test_key_mode(7, KEY_STRUCTURE_MODE_MAJOR);
+    D_MINOR = test_key_mode(2, HARMONY_MODE_MINOR);
+    C_MAJOR = test_key_mode(0, HARMONY_MODE_MAJOR);
+    G_MAJOR = test_key_mode(7, HARMONY_MODE_MAJOR);
     test_same_motive_from_each_format();
     test_musicxml_keeps_spelling();
     test_options();

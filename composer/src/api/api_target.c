@@ -209,10 +209,10 @@ ComposerStatus composer_api_lock(const ComposerContext *context, const char *req
         status = api_read_target(root, &target, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_read_plan_text(root, "plan", &text, &out->error);
+        status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_plan_from_text(text, "plan", &plan, &out->error);
+        status = api_plan_from_text(context->knowledge, text, "plan", &plan, &out->error);
     }
     if (status == COMPOSER_OK) {
         status = api_target_list(plan, &target, &targets, &target_count, &out->error);

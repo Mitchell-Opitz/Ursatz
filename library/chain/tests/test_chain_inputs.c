@@ -9,6 +9,13 @@
 #include "chain/analysis_chain.h"
 #include "test_knowledge.h"
 
+/* The default config with the snapshot's materials: the key regions estimate has none of its own. */
+static const CommonPracticeKeyRegionsConfig *default_config(void) {
+    static CommonPracticeKeyRegionsConfig config;
+    config = common_practice_key_regions_config_default(test_materials());
+    return &config;
+}
+
 /*
  * The chain's input builders, each on a small constructed piece (chain_test_piece.h): the results, the error paths (a NULL argument, an
  * invalid or incomplete note set, a count out of range; the output is left untouched), and destroying after a partial failure. The stage
@@ -144,21 +151,21 @@ static void test_keys(TestPiece *piece) {
     CommonPracticeKeyRegions regions;
     memset(&regions, 0, sizeof(regions));
     const MeterMap *map = piece->import.meter_map;
-    assert(chain_estimate_key_regions(NULL, segments.count, map, NULL, 0, NULL, &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 1, NULL, &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_estimate_key_regions(NULL, segments.count, map, NULL, 0, default_config(), &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 1, default_config(), &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
     MusicalTime before;
     assert(musical_time_make(-1, 1, &before) == MUSICAL_TIME_OK);
-    AnalysisKeyEvent no_time = {before, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL}}; /* before the piece starts */
-    assert(chain_estimate_key_regions(key_segments, segments.count, map, &no_time, 1, NULL, &regions) == CHAIN_INPUT_ERR_KEYS);
+    AnalysisKeyEvent no_time = {before, {NULL, PITCH_LETTER_C, 0, test_materials()->major}}; /* before the piece starts */
+    assert(chain_estimate_key_regions(key_segments, segments.count, map, &no_time, 1, default_config(), &regions) == CHAIN_INPUT_ERR_KEYS);
     assert(regions.regions == NULL);
 
     MusicalTime zero;
     assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
-    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL}};
-    assert(chain_estimate_key_regions(key_segments, segments.count, map, &signature, 1, NULL, &regions) == CHAIN_INPUT_OK);
+    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, test_materials()->major}};
+    assert(chain_estimate_key_regions(key_segments, segments.count, map, &signature, 1, default_config(), &regions) == CHAIN_INPUT_OK);
     assert(regions.region_count >= 1 && regions.regions[0].key_index == 0); /* C major */
     common_practice_key_regions_destroy(&regions);
-    assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 0, NULL, &regions) == CHAIN_INPUT_OK);
+    assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 0, default_config(), &regions) == CHAIN_INPUT_OK);
     assert(regions.region_count >= 1 && regions.regions[0].key_index == 0);
     common_practice_key_regions_destroy(&regions);
     chain_key_segments_destroy(key_segments);
@@ -201,7 +208,7 @@ static void test_stage_inputs(TestPiece *piece) {
     config.refine_keys = false;
     MusicalTime zero;
     assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
-    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL}};
+    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, test_materials()->major}};
     AnalysisChain *chain = NULL;
     AnalysisChainStatus status = analysis_chain_run(&piece->set, &signature, 1, &config, &chain);
     assert(status == ANALYSIS_CHAIN_OK);

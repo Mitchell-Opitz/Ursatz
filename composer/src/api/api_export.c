@@ -118,7 +118,7 @@ ComposerStatus composer_api_export(const ComposerContext *context, const char *r
     }
     PiecePlan *plan = NULL;
     PlanJsonError load_error;
-    PlanResult loaded = plan_from_json(plan_text, &plan, &load_error);
+    PlanResult loaded = plan_from_json(context->knowledge, plan_text, &plan, &load_error);
     free(plan_text);
     if (loaded != PLAN_OK) {
         if (loaded == PLAN_ERR_ALLOC) {

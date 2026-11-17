@@ -45,7 +45,7 @@
 typedef struct {
     const char *name;
     int pitch_class;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     unsigned beats;
     unsigned unit;
 } Row;
@@ -162,7 +162,7 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
     /* The plan round-trips through plan JSON. */
     char *json = plan_to_json(plan, NULL);
     PiecePlan *again = NULL;
-    assert(json && plan_from_json(json, &again, NULL) == PLAN_OK);
+    assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
     char *second = plan_to_json(again, NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);
@@ -188,7 +188,7 @@ static bool melody_in_scale(const PiecePlan *plan, NodeId section, AnalysisKey k
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[s])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
             int degree = ((notes->notes[n].midi - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
-            if (!(key.mode == KEY_STRUCTURE_MODE_MAJOR ? MAJOR[degree] : MINOR[degree])) {
+            if (!(harmony_key_mode(&key) == HARMONY_MODE_MAJOR ? MAJOR[degree] : MINOR[degree])) {
                 return false;
             }
         }
@@ -210,7 +210,7 @@ static void check_parallel_plan(PiecePlan *plan) {
     assert(count == 3);
     AnalysisKey home = key_of(plan, sections[0]);
     AnalysisKey other = key_of(plan, sections[1]);
-    assert(analysis_key_tonic_pitch_class(&other) == analysis_key_tonic_pitch_class(&home) && other.mode != home.mode);
+    assert(analysis_key_tonic_pitch_class(&other) == analysis_key_tonic_pitch_class(&home) && harmony_key_mode(&other) != harmony_key_mode(&home));
     AnalysisKey last = key_of(plan, sections[2]);
     assert(analysis_key_equals(&last, &home));
     char reason[256] = "";
@@ -227,7 +227,7 @@ static void check_parallel_plan(PiecePlan *plan) {
     assert(test_piece_check_keys(plan, &keys) && keys.ok && keys.changes == 0);
     char *json = plan_to_json(plan, NULL);
     PiecePlan *again = NULL;
-    assert(json && plan_from_json(json, &again, NULL) == PLAN_OK);
+    assert(json && plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
     char *second = plan_to_json(again, NULL);
     assert(second && strcmp(json, second) == 0);
     free(json);
@@ -284,9 +284,9 @@ static int run_row(const FormSpec *form, const Row *row, unsigned long seeds, bo
 
 int main(int argc, char **argv) {
     static const Row ROWS[] = {
-        {"C major 2/4", 0, KEY_STRUCTURE_MODE_MAJOR, 2, 4}, {"A minor 2/4", 9, KEY_STRUCTURE_MODE_MINOR, 2, 4},
-        {"C major 3/4", 0, KEY_STRUCTURE_MODE_MAJOR, 3, 4}, {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4},
-        {"C major 6/8", 0, KEY_STRUCTURE_MODE_MAJOR, 6, 8},
+        {"C major 2/4", 0, HARMONY_MODE_MAJOR, 2, 4}, {"A minor 2/4", 9, HARMONY_MODE_MINOR, 2, 4},
+        {"C major 3/4", 0, HARMONY_MODE_MAJOR, 3, 4}, {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4},
+        {"C major 6/8", 0, HARMONY_MODE_MAJOR, 6, 8},
     };
     const char *mode = argc > 1 ? argv[1] : "smoke";
     FormSpec *form = load_form();
@@ -299,8 +299,8 @@ int main(int argc, char **argv) {
         }
     } else if (strcmp(mode, "parallel") == 0) {
         static const Row PARALLEL[] = {
-            {"C major 2/4", 0, KEY_STRUCTURE_MODE_MAJOR, 2, 4}, {"A minor 2/4", 9, KEY_STRUCTURE_MODE_MINOR, 2, 4},
-            {"C major 6/8", 0, KEY_STRUCTURE_MODE_MAJOR, 6, 8}, {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, 4},
+            {"C major 2/4", 0, HARMONY_MODE_MAJOR, 2, 4}, {"A minor 2/4", 9, HARMONY_MODE_MINOR, 2, 4},
+            {"C major 6/8", 0, HARMONY_MODE_MAJOR, 6, 8}, {"A minor 3/4", 9, HARMONY_MODE_MINOR, 3, 4},
         };
         FormSpec *parallel = load_form_named("parallel-form.json");
         for (size_t r = 0; r < sizeof(PARALLEL) / sizeof(PARALLEL[0]); r++) {

@@ -89,7 +89,7 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
         seed = seeded ? seed : api_default_seed();
     }
     if (status == COMPOSER_OK) {
-        status = api_read_plan_text(root, "plan", &text, &out->error);
+        status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
 
     /* What will be reopened, read from the plan as it is now. */
@@ -100,7 +100,7 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
     FillTarget *targets = NULL;
     size_t target_count = 0;
     if (status == COMPOSER_OK) {
-        status = api_plan_from_text(text, "plan", &before, &out->error);
+        status = api_plan_from_text(context->knowledge, text, "plan", &before, &out->error);
     }
     if (status == COMPOSER_OK) {
         status = api_target_list(before, &target, &targets, &target_count, &out->error);
@@ -133,7 +133,7 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
             break;
         }
         PiecePlan *fresh = NULL;
-        status = api_plan_from_text(text, "plan", &fresh, &out->error);
+        status = api_plan_from_text(context->knowledge, text, "plan", &fresh, &out->error);
         if (status != COMPOSER_OK) {
             break;
         }

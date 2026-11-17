@@ -42,13 +42,13 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C-major", 0, KEY_STRUCTURE_MODE_MAJOR, 4},
-    {"A-minor", 9, KEY_STRUCTURE_MODE_MINOR, 3},
+    {"C-major", 0, HARMONY_MODE_MAJOR, 4},
+    {"A-minor", 9, HARMONY_MODE_MINOR, 3},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 

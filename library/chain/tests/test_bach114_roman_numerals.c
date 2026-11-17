@@ -13,6 +13,14 @@
 #include "model/time/time_signature.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "interpretation_test_access.h"
+#include "test_knowledge.h"
+
+/* The default config with the snapshot's materials: the key regions estimate has none of its own. */
+static const CommonPracticeKeyRegionsConfig *default_config(void) {
+    static CommonPracticeKeyRegionsConfig config;
+    config = common_practice_key_regions_config_default(test_materials());
+    return &config;
+}
 
 /*
  * Roman numerals for Bach, Minuet in G (BWV Anh. 114), against tests/fixtures/annotations/
@@ -244,6 +252,7 @@ static void test_adapter_alone_matches_the_hand_analysis(void) {
     MeterMap *score_meter = three_four_map();
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, "Bach 114.mid", score_meter);
     CommonPracticeWeightedConfig weighting = common_practice_weighted_config_default();
+    weighting.materials = test_materials();
 
     StandardTonalityChordInput *inputs =
         (StandardTonalityChordInput *)calloc(p.segment_count, sizeof(StandardTonalityChordInput));
@@ -255,6 +264,7 @@ static void test_adapter_alone_matches_the_hand_analysis(void) {
         if (segment_marks[s] != NULL) {
             input_from_mark(segment_marks[s], &inputs[s]);
             inputs[s].segment_id = p.segment_ids[s];
+            inputs[s].materials = test_materials();
             CommonPracticeWeights weights;
             assert(common_practice_weight_segment(p.segments[s].members, p.segments[s].member_count, &weighting,
                                                   &weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
@@ -337,7 +347,7 @@ static void test_whole_chain_against_the_hand_analysis(void) {
                                               &key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     }
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(key_segments, p.segment_count, score_meter, NULL, 0, NULL, &regions) ==
+    assert(key_regions_estimate(key_segments, p.segment_count, score_meter, NULL, 0, default_config(), &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_OK);
 
     printf("Bach 114, the whole chain: Roman numerals in the local key (draft hand marks, G major):\n");
@@ -368,6 +378,9 @@ static void test_whole_chain_against_the_hand_analysis(void) {
     assert(standard_tonality_build_chord_inputs(segment_inputs, p.segment_count, region_inputs,
                                                 regions.region_count, &inputs, &input_count) ==
            STANDARD_TONALITY_CHORD_INPUT_OK);
+    for (size_t mi = 0; mi < input_count; mi++) {
+        inputs[mi].materials = test_materials();
+    }
     StandardTonalityRomanResult *results = NULL;
     assert(standard_tonality_build_roman_numerals_with_config(inputs, input_count, NULL, &results) == STANDARD_TONALITY_ROMAN_OK);
 

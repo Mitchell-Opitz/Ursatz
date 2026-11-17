@@ -684,8 +684,8 @@ static ComposerStatus list_names(const CommonPracticeMaterials *materials, Compo
     bool ok = sequences != NULL;
     for (int id = 0; ok && id < GALANT_SCHEMA_COUNT; id++) {
         bool major = harmony_schema_available((GalantSchemaId)id, materials->major);
-        bool minor = harmony_schema_available((GalantSchemaId)id, materials->natural_minor);
-        if (!major && !minor) {
+        bool is_minor = harmony_schema_available((GalantSchemaId)id, materials->natural_minor);
+        if (!major && !is_minor) {
             continue;
         }
         cJSON *entry = cJSON_CreateObject();
@@ -693,7 +693,7 @@ static ComposerStatus list_names(const CommonPracticeMaterials *materials, Compo
         ok = entry && modes && cJSON_AddStringToObject(entry, "name", galant_schema_name((GalantSchemaId)id)) &&
              cJSON_AddStringToObject(entry, "function", schema_function_name(galant_prototype((GalantSchemaId)id)->function)) &&
              (!major || cJSON_AddItemToArray(modes, cJSON_CreateString("major"))) &&
-             (!minor || cJSON_AddItemToArray(modes, cJSON_CreateString("minor"))) && cJSON_AddItemToObject(entry, "modes", modes) &&
+             (!is_minor || cJSON_AddItemToArray(modes, cJSON_CreateString("minor"))) && cJSON_AddItemToObject(entry, "modes", modes) &&
              cJSON_AddItemToArray(schemas, entry);
         if (!ok) {
             cJSON_Delete(modes);

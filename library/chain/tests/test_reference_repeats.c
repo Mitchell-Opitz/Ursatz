@@ -60,7 +60,7 @@ static AnalysisChain *run_chain(const Piece *piece, WeightedPipeline *p, Analysi
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p->import.key_signatures.events[i];
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
+        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
     }
     AnalysisChainConfig config = analysis_chain_config_default();
     config.knowledge = test_knowledge();

@@ -83,22 +83,22 @@ static Run run_fixture(const char *file, bool spans) {
     assert(key_events != NULL);
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p.import.key_signatures.events[i];
-        KeyStructureMode mode = event->mode_byte == 1 ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+        const PitchMaterial *material = event->mode_byte == 1 ? test_materials()->natural_minor : test_materials()->major;
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, mode, &key_events[i].key));
+        assert(analysis_key_from_fifths(event->sharps_flats, material, &key_events[i].key));
     }
     /* the home key: the first key signature's tonic and mode */
     const MidiKeySignatureEvent *first = &p.import.key_signatures.events[0];
-    bool minor = first->mode_byte == 1;
+    bool first_is_minor = first->mode_byte == 1;
     int major_tonic = ((first->sharps_flats * 7) % 12 + 12) % 12;
-    int tonic = minor ? (major_tonic + 9) % 12 : major_tonic;
+    int tonic = first_is_minor ? (major_tonic + 9) % 12 : major_tonic;
 
     AnalysisChainConfig config = analysis_chain_config_default();
 
     config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
-    config.home_key_index = test_key_index_of(tonic, minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
+    config.home_key_index = test_key_index_of(tonic, first_is_minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
     config.harmonic_spans = spans;
     AnalysisChain *chain = NULL;
     assert(analysis_chain_run(&p.set, key_events, key_event_count, &config, &chain) == ANALYSIS_CHAIN_OK);

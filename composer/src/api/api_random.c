@@ -35,6 +35,7 @@ static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot
                                    bool *accompaniment, bool *has_role, const char **drawn_mode, const char **drawn_meter,
                                    ComposerPreferences *preferences, bool *has_preferences, ComposerError *error) {
     memset(out, 0, sizeof *out);
+    out->knowledge = knowledge;
     *drawn_mode = NULL;
     *drawn_meter = NULL;
     unsigned long count = RANDOM_MOTIVE_COUNT_DEFAULT;

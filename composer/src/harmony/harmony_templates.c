@@ -222,9 +222,9 @@ void harmony_options_predominant(const PhraseContext *phrase, FillRng *rng, Opti
         (chord->chord.degree != 4 && chord->chord.degree != 2) || t + 1 == phrase->count) {
         return;
     }
-    bool minor = mode == HARMONY_MODE_MINOR;
-    const Form *forms = minor ? MINOR_FORMS : MAJOR_FORMS;
-    size_t form_count = minor ? sizeof(MINOR_FORMS) / sizeof(MINOR_FORMS[0]) : sizeof(MAJOR_FORMS) / sizeof(MAJOR_FORMS[0]);
+    bool is_minor = mode == HARMONY_MODE_MINOR;
+    const Form *forms = is_minor ? MINOR_FORMS : MAJOR_FORMS;
+    size_t form_count = is_minor ? sizeof(MINOR_FORMS) / sizeof(MINOR_FORMS[0]) : sizeof(MAJOR_FORMS) / sizeof(MAJOR_FORMS[0]);
     const PhraseChord *before = t > 0 ? &phrase->chords[t - 1] : NULL;
     const PhraseChord *after = &phrase->chords[t + 1];
 
@@ -243,8 +243,8 @@ void harmony_options_predominant(const PhraseContext *phrase, FillRng *rng, Opti
     if (n < 2) {
         return;
     }
-    const Form *seconds = minor ? MINOR_AFTER_IV : MAJOR_AFTER_IV;
-    size_t second_count = minor ? sizeof(MINOR_AFTER_IV) / sizeof(MINOR_AFTER_IV[0])
+    const Form *seconds = is_minor ? MINOR_AFTER_IV : MAJOR_AFTER_IV;
+    size_t second_count = is_minor ? sizeof(MINOR_AFTER_IV) / sizeof(MINOR_AFTER_IV[0])
                                 : sizeof(MAJOR_AFTER_IV) / sizeof(MAJOR_AFTER_IV[0]);
     for (size_t f = 0; f < second_count; f++) {
         size_t firsts[2];

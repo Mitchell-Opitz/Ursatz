@@ -30,15 +30,15 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
     const char *motive;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"D minor 3/4", 2, KEY_STRUCTURE_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
+    {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"D minor 3/4", 2, HARMONY_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -52,6 +52,7 @@ static Motive make_motive(const Scenario *scenario) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
@@ -184,7 +185,7 @@ static void test_bad_requests(void) {
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && !plan);
 
     /* Alberti is not written in 6/8. */
-    Scenario compound = {"G major 6/8", 7, KEY_STRUCTURE_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"};
+    Scenario compound = {"G major 6/8", 7, HARMONY_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"};
     Motive compound_motive = make_motive(&compound);
     accompaniment.texture = -1;
     accompaniment.pattern = PLAN_ACCOMPANIMENT_ALBERTI;
@@ -215,6 +216,7 @@ static Motive make_accompaniment_motive(const Scenario *scenario, const char *no
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;

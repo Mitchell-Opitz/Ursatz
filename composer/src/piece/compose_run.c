@@ -602,6 +602,7 @@ typedef struct {
     size_t attempt; /* the attempt at the returns, which moves the seeds of the stages they run */
     bool seam;      /* the stages are the seam's: their records are kept under the seam stage */
     MotiveDevelopContext motives;
+    CommonPracticeMaterials materials; /* the snapshot's, which motives.materials points to */
     AccompanimentParams accompaniment;
     VoicingParams voicing;
     ComposeOutcome *outcome;
@@ -829,7 +830,7 @@ static PieceResult run_returns(Run *run) {
     for (size_t attempt = 0; result == PIECE_OK && attempt < attempts; attempt++) {
         if (attempt > 0) {
             PiecePlan *fresh = NULL;
-            if (plan_from_json(snapshot, &fresh, NULL) != PLAN_OK) {
+            if (plan_from_json(run->config->knowledge, snapshot, &fresh, NULL) != PLAN_OK) {
                 result = PIECE_ERR_ALLOC;
                 break;
             }
@@ -1017,6 +1018,9 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     }
     /* Fragments of one note are allowed: grow-theme shortens a fragment to fit its idea. */
     motive_develop_context_default(&run.motives);
+    if (common_practice_materials_resolve(config->knowledge, &run.materials, NULL, 0)) {
+        run.motives.materials = &run.materials;
+    }
     run.motives.min_length = 1;
     run.motives.basic = config->basic;
     run.motives.pool = config->pool;
@@ -1247,7 +1251,7 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
     for (size_t round = 0; snapshot && round < COMPOSE_RUN_ROUNDS; round++) {
         if (round > 0) {
             PiecePlan *fresh = NULL;
-            if (plan_from_json(snapshot, &fresh, NULL) != PLAN_OK) {
+            if (plan_from_json(config->knowledge, snapshot, &fresh, NULL) != PLAN_OK) {
                 result = PIECE_ERR_ALLOC;
                 break;
             }

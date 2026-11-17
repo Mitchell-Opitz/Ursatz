@@ -73,7 +73,7 @@ static bool parse_number(const char *text, long minimum, long maximum, long *out
 }
 
 /* A pitch as a note list writes it ("D4", "Bb3") or a MIDI note number. */
-static bool parse_pitch(const char *text, int *out) {
+static bool parse_pitch(const KnowledgeSnapshot *knowledge, const char *text, int *out) {
     long number;
     if (parse_number(text, 0, 127, &number)) {
         *out = (int)number;
@@ -86,6 +86,7 @@ static bool parse_pitch(const char *text, int *out) {
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
+    options.knowledge = knowledge;
     Motive motive;
     if (motive_from_notes_text(note, &options, &motive, NULL) != MOTIVE_OK || motive.note_count != 1) {
         return false;
@@ -277,7 +278,7 @@ typedef struct {
 } Flags;
 
 /* The motive_ref constraint the operation and its members describe, or a message in *problem. */
-static bool build_ref(const Flags *flags, Op op, const Motive *source, size_t *min_length, PlanMotiveRef *ref,
+static bool build_ref(const KnowledgeSnapshot *knowledge, const Flags *flags, Op op, const Motive *source, size_t *min_length, PlanMotiveRef *ref,
                       const char **problem, char *buffer, size_t size) {
     static const MotiveRelationKind KINDS[] = {MOTIVE_RELATION_EXACT,   MOTIVE_RELATION_INVERT,   MOTIVE_RELATION_RETROGRADE,
                                                MOTIVE_RELATION_INTERVAL_CHANGE, MOTIVE_RELATION_FRAGMENT,
@@ -339,7 +340,7 @@ static bool build_ref(const Flags *flags, Op op, const Motive *source, size_t *m
     }
     if (flags->axis) {
         int pitch;
-        if (!parse_pitch(flags->axis, &pitch)) {
+        if (!parse_pitch(knowledge, flags->axis, &pitch)) {
             snprintf(buffer, size, "axis must be a pitch such as D4 or a MIDI number, not '%s'", flags->axis);
             return false;
         }
@@ -478,11 +479,11 @@ static ComposerStatus read_flags(const cJSON *request, Flags *flags, char (*buff
 }
 
 /* The notes written on the target once suggestion index is applied to a copy of the plan. */
-static bool suggestion_motive(const Scene *scene, const FillSuggestions *suggestions, size_t index, const Motive *source,
+static bool suggestion_motive(const KnowledgeSnapshot *knowledge, const Scene *scene, const FillSuggestions *suggestions, size_t index, const Motive *source,
                               Motive *out) {
     char *json = plan_to_json(scene->plan, NULL);
     PiecePlan *copy = NULL;
-    bool ok = json && plan_from_json(json, &copy, NULL) == PLAN_OK && fill_apply_suggestion(copy, suggestions, index) == FILL_OK;
+    bool ok = json && plan_from_json(knowledge, json, &copy, NULL) == PLAN_OK && fill_apply_suggestion(copy, suggestions, index) == FILL_OK;
     LaneSpanId ids[4];
     if (ok && plan_node_lane_spans(copy, scene->target, ids, 4) == 1) {
         const PlanLanePayload *payload = plan_lane_span_payload(copy, ids[0]);
@@ -580,8 +581,9 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
         develop_context.meter = motive_meter(&source);
         develop_context.has_key = source.key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED;
         develop_context.key = motive_key(&source);
+        develop_context.materials = &materials;
         develop_context.candidates = (size_t)suggest * 3 > 12 ? (size_t)suggest * 3 : 12;
-        if (!build_ref(&flags, op, &source, &develop_context.min_length, &ref, &problem, problem_text, sizeof(problem_text))) {
+        if (!build_ref(context->knowledge, &flags, op, &source, &develop_context.min_length, &ref, &problem, problem_text, sizeof(problem_text))) {
             status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "%s", problem);
         }
     }
@@ -632,7 +634,7 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
             for (size_t i = 0; status == COMPOSER_OK && i < count; i++) {
                 const Candidate *candidate = candidate_set_candidate_at(set, i);
                 Motive development;
-                if (!suggestion_motive(&scene, suggestions, i, &source, &development)) {
+                if (!suggestion_motive(context->knowledge, &scene, suggestions, i, &source, &development)) {
                     status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot read candidate %zu", i + 1);
                     break;
                 }

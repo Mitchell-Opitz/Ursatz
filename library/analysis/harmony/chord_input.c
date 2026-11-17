@@ -1,7 +1,9 @@
 #include "analysis/harmony/chord_input.h"
 
 #include <stdlib.h>
+
 #include "model/pitch/midi_pitch.h"
+#include "theory/tonality/common_practice_materials.h"
 
 /* The region containing `start`: the last region that starts at or before it. -1 if none. */
 static long region_at(const StandardTonalityKeyRegionInput *regions, size_t region_count, MusicalTime start) {
@@ -96,8 +98,9 @@ static void read_structures(StandardTonalityChordInput *input, const Chord *chor
         input->intervals[i] = chord_structure_value.root_relative_intervals[i];
     }
     input->tonic_pitch_class = key_structure_value.tonic_pitch_class;
-    input->mode = key_structure_value.mode == KEY_STRUCTURE_MODE_MINOR ? STANDARD_TONALITY_ROMAN_KEY_MINOR
-                                                                       : STANDARD_TONALITY_ROMAN_KEY_MAJOR;
+    CommonPracticeKeyMode key_mode = COMMON_PRACTICE_KEY_MAJOR;
+    common_practice_key_mode_of(key_structure_value.material, &key_mode);
+    input->mode = key_mode == COMMON_PRACTICE_KEY_MINOR ? STANDARD_TONALITY_ROMAN_KEY_MINOR : STANDARD_TONALITY_ROMAN_KEY_MAJOR;
     input->chord_uncertainty = chord_uncertainty_of(chord);
 }
 

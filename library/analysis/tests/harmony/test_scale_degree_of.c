@@ -54,8 +54,7 @@ static void test_known_degrees(void) {
 /* common_practice_scale_degree_of is the standard-tonality owner (R-285): the two agree on every offset, both modes. */
 static void test_agrees_with_the_degree_owner(void) {
     for (int mode = COMMON_PRACTICE_KEY_MAJOR; mode <= COMMON_PRACTICE_KEY_MINOR; mode++) {
-        StandardTonalityMode owner_mode =
-            mode == COMMON_PRACTICE_KEY_MAJOR ? STANDARD_TONALITY_MODE_MAJOR : STANDARD_TONALITY_MODE_NATURAL_MINOR;
+        const PitchMaterial *owner_material = common_practice_material(test_materials(), (CommonPracticeKeyMode)mode);
         for (int tonic = 0; tonic < 12; tonic++) {
             for (int pc = 0; pc < 12; pc++) {
                 int degree = 0;
@@ -63,7 +62,7 @@ static void test_agrees_with_the_degree_owner(void) {
                 int owner_degree = 0;
                 int owner_alteration = 0;
                 assert(common_practice_scale_degree_of(pc, tonic, (CommonPracticeKeyMode)mode, test_materials(), &degree, &alteration));
-                assert(standard_tonality_degree_of_semitone(pc - tonic, owner_mode, &owner_degree, &owner_alteration));
+                assert(standard_tonality_material_degree_of_semitone(pc - tonic, owner_material, &owner_degree, &owner_alteration));
                 assert(degree == owner_degree && alteration == owner_alteration);
             }
         }

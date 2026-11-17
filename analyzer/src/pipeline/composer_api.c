@@ -86,7 +86,7 @@ static bool add_key_signature(ImportedNotes *notes, int tonic, const PitchMateri
         return false;
     }
     CommonPracticeKeyMode mode;
-    bool minor = common_practice_key_mode_of(material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
+    bool is_minor = common_practice_key_mode_of(material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
     MidiKeySignatureEvent *event = calloc(1, sizeof *event);
     if (!event) {
         return false;
@@ -96,14 +96,14 @@ static bool add_key_signature(ImportedNotes *notes, int tonic, const PitchMateri
         return false;
     }
     event->position = musical_time_of(rational_ratio(0, 1));
-    event->mode_hint = minor ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
+    event->mode_hint = is_minor ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     event->tick = 0;
     event->track_index = 0;
     event->sharps_flats = (int8_t)fifths;
-    event->mode_byte = minor ? 1 : 0;
+    event->mode_byte = is_minor ? 1 : 0;
     notes->key_signature_events.events = event;
     notes->key_signature_events.count = 1;
-    notes->key_signature = (MidiKeySignature){true, (int8_t)fifths, minor};
+    notes->key_signature = (MidiKeySignature){true, (int8_t)fifths, is_minor};
     return true;
 }
 

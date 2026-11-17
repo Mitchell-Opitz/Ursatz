@@ -63,22 +63,12 @@ bool composer_key_valid(const AnalysisKey *key) {
     return key && (key->material == NULL || composer_material_valid(key->material));
 }
 
-KeyStructureMode composer_key_mode(const AnalysisKey *key) {
-    return composer_key_is_minor(key) ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
-}
-
-const PitchMaterial *composer_builtin_material(bool minor) {
-    return common_practice_material(common_practice_materials_builtin(),
-                                    minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
-}
-
 void composer_key_set_material(AnalysisKey *key, const PitchMaterial *material) {
     key->material = material;
-    key->mode = composer_key_mode(key);
 }
 
-void composer_key_set_minor(AnalysisKey *key, const CommonPracticeMaterials *materials, bool minor) {
-    composer_key_set_material(key, common_practice_material(materials, minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR));
+void composer_key_set_mode(AnalysisKey *key, const CommonPracticeMaterials *materials, CommonPracticeKeyMode mode) {
+    composer_key_set_material(key, common_practice_material(materials, mode));
 }
 
 unsigned util_scale_mask(int tonic_pitch_class, const PitchMaterial *material) {

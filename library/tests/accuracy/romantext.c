@@ -45,7 +45,7 @@ static int roman_degree(const char *letters, size_t length) {
 }
 
 /* "G:", "a:", "Bb:", "f#:", "B-:" -> true with the tonic and mode. */
-static bool parse_key_token(const char *token, int *tonic, bool *minor) {
+static bool parse_key_token(const char *token, int *tonic, bool *is_minor) {
     static const int LETTER_PC[7] = {9, 11, 0, 2, 4, 5, 7}; /* a b c d e f g */
     char letter = token[0];
     if (!isalpha((unsigned char)letter) || tolower((unsigned char)letter) < 'a' || tolower((unsigned char)letter) > 'g') {
@@ -61,7 +61,7 @@ static bool parse_key_token(const char *token, int *tonic, bool *minor) {
         return false;
     }
     *tonic = ((pc % 12) + 12) % 12;
-    *minor = islower((unsigned char)letter) != 0;
+    *is_minor = islower((unsigned char)letter) != 0;
     return true;
 }
 
@@ -188,7 +188,7 @@ typedef struct {
     size_t chord_capacity;
 } Builder;
 
-static bool push_key(Builder *b, MusicalTime time, int measure, int tonic, bool minor) {
+static bool push_key(Builder *b, MusicalTime time, int measure, int tonic, bool is_minor) {
     RomanTextAnalysis *out = b->out;
     if (out->key_count == b->key_capacity) {
         size_t capacity = b->key_capacity == 0 ? 8 : b->key_capacity * 2;
@@ -203,7 +203,7 @@ static bool push_key(Builder *b, MusicalTime time, int measure, int tonic, bool 
     key->time = time;
     key->measure = measure;
     key->tonic_pitch_class = tonic;
-    key->minor = minor;
+    key->is_minor = is_minor;
     return true;
 }
 
@@ -437,7 +437,7 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
             const char *token = tokens[i];
             long beat_value = 0;
             int tonic = 0;
-            bool minor = false;
+            bool is_minor = false;
             if (parse_beat_token(token, &beat_value)) {
                 beat = beat_value;
                 continue;
@@ -446,13 +446,13 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
                 continue;
             }
             MusicalTime time = musical_time_of(rational_ratio(0, 1));
-            if (parse_key_token(token, &tonic, &minor)) {
+            if (parse_key_token(token, &tonic, &is_minor)) {
                 if (!grid->time_at(grid->context, measure, beat, &time)) {
                     set_error(out, "line %d: position of \"%s\" is outside the score's measures", line_number, token);
                     status = ROMANTEXT_ERR_BAD_POSITION;
                     break;
                 }
-                if (!push_key(&builder, time, measure, tonic, minor)) {
+                if (!push_key(&builder, time, measure, tonic, is_minor)) {
                     status = ROMANTEXT_ERR_ALLOC;
                 }
                 continue;
@@ -480,7 +480,7 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
                 const RomanTextKey *key = &out->keys[out->key_count - 1];
                 chord->key_index = out->key_count - 1;
                 chord->tonic_pitch_class = key->tonic_pitch_class;
-                chord->minor = key->minor;
+                chord->is_minor = key->is_minor;
             }
             if (!chord->supported) {
                 out->unsupported_count++;
@@ -544,19 +544,19 @@ static int wrap12(int v) {
     return ((v % 12) + 12) % 12;
 }
 
-static int scale_step(int tonic, bool minor, int degree, int alteration) {
-    const int *scale = minor ? MINOR_SCALE : MAJOR_SCALE;
+static int scale_step(int tonic, bool is_minor, int degree, int alteration) {
+    const int *scale = is_minor ? MINOR_SCALE : MAJOR_SCALE;
     return wrap12(tonic + scale[degree - 1] + alteration);
 }
 
 size_t romantext_expected_chord(const RomanTextChord *c, int *root, int intervals[4]) {
     int tonic = c->tonic_pitch_class;
-    bool minor = c->minor;
+    bool is_minor = c->is_minor;
     int local_tonic = tonic;
-    bool local_minor = minor;
+    bool local_minor = is_minor;
     bool dominant_like = false;
     if (c->applied) {
-        local_tonic = scale_step(tonic, minor, c->target_degree, c->target_alteration);
+        local_tonic = scale_step(tonic, is_minor, c->target_degree, c->target_alteration);
         local_minor = !c->target_upper;
     }
     if (c->applied && (c->degree == 5 || c->degree == 7)) {
@@ -606,5 +606,5 @@ size_t romantext_expected_chord(const RomanTextChord *c, int *root, int interval
 
 
 bool romantext_is_raised_sixth_diminished(const RomanTextChord *chord) {
-    return chord->minor && !chord->applied && chord->degree == 6 && chord->alteration == 1 && chord->marker == 'o';
+    return chord->is_minor && !chord->applied && chord->degree == 6 && chord->alteration == 1 && chord->marker == 'o';
 }

@@ -18,6 +18,7 @@ static AnalysisKey C_MAJOR; /* made in main: a key carries the material of the k
 static MotiveAnalysis analyze(const char *text, const PlanMeter *meter, const MotiveOptions *extra) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     if (extra) {
         options = *extra;
     }
@@ -68,6 +69,7 @@ static void test_long_note_splits(void) {
 static void test_pickup_joins_first(void) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_pickup = true;
     options.pickup.num = 1;
     options.pickup.den = 4;
@@ -102,6 +104,7 @@ static void test_cap(void) {
 static void test_given_segments_kept(void) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_features = true;
     options.feature_count = 2;
     snprintf(options.features[0].label, sizeof(options.features[0].label), "x");
@@ -130,7 +133,7 @@ static void test_deterministic(void) {
 }
 
 int main(void) {
-    C_MAJOR = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    C_MAJOR = test_key_mode(0, HARMONY_MODE_MAJOR);
     test_repeated_rhythm();
     test_rest_splits();
     test_long_note_splits();

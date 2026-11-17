@@ -53,7 +53,7 @@ static Motive load_motive(const char *path) {
     MotiveError error;
     memset(&error, 0, sizeof(error));
     assert(text);
-    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_OK);
     free(text);
     return motive;
 }

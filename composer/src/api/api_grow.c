@@ -311,9 +311,9 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
                         text->key);
     }
     if (text->mode && request_equals_ignore_case(text->mode, "major")) {
-        composer_key_set_minor(&out->key, out->materials, false);
+        composer_key_set_mode(&out->key, out->materials, COMMON_PRACTICE_KEY_MAJOR);
     } else if (text->mode && request_equals_ignore_case(text->mode, "minor")) {
-        composer_key_set_minor(&out->key, out->materials, true);
+        composer_key_set_mode(&out->key, out->materials, COMMON_PRACTICE_KEY_MINOR);
     }
     if (!request_parse_meter(text->meter, &out->meter) || !harmony_meter_supported(&out->meter)) {
         return api_fail_meter(error, "/meter", text->meter);

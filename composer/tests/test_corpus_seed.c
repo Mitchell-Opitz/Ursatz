@@ -57,6 +57,7 @@ static AnalysisKey key_of(int tonic, HarmonyMode mode) {
 static Motive bar_in(const PlanMeter *meter, const AnalysisKey *key, const char *notes) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter = *meter;
     options.has_key = true;

@@ -54,7 +54,7 @@ static const Case CASES[] = {
 static Motive load_motive(const char *path) {
     char *text = test_must_read_file(path, NULL);
     Motive motive;
-    assert(motive_from_json(text, NULL, &motive, NULL) == MOTIVE_OK);
+    assert(motive_from_json(text, test_motive_options(), &motive, NULL) == MOTIVE_OK);
     free(text);
     return motive;
 }
@@ -83,7 +83,7 @@ static size_t melody_of(const PiecePlan *plan, NodeId node, const PlanNote **not
 }
 
 /* The scale position of a pitch: octave * 7 + degree, a chromatic pitch on the degree below (the raised 7th of minor on 7). */
-static long scale_position(int pitch, int tonic, bool minor) {
+static long scale_position(int pitch, int tonic, bool is_minor) {
     static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
     static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 10};
     int from = pitch - tonic;
@@ -91,7 +91,7 @@ static long scale_position(int pitch, int tonic, bool minor) {
     int pc = from - (int)octave * 12;
     int degree = 0;
     for (int d = 0; d < 7; d++) {
-        degree = (minor ? MINOR : MAJOR)[d] <= pc ? d : degree;
+        degree = (is_minor ? MINOR : MAJOR)[d] <= pc ? d : degree;
     }
     return octave * 7 + degree;
 }
@@ -120,7 +120,7 @@ static bool same_durations(const PlanNote *notes, const Motive *motive, size_t f
 
 /* Checks one cadential idea of a composed theme; the motive node is m<slot>. */
 static void check_idea(const PiecePlan *plan, const Motive *motive, const MotiveAnalysis *analysis, const char *idea,
-                       const char *motive_name, int tonic, bool minor, Rational shortest) {
+                       const char *motive_name, int tonic, bool is_minor, Rational shortest) {
     NodeId node = test_find_node(plan, motive_name);
     NodeId idea_node = test_find_node(plan, idea);
     assert(node != PLAN_NODE_NONE && idea_node != PLAN_NODE_NONE);
@@ -132,9 +132,9 @@ static void check_idea(const PiecePlan *plan, const Motive *motive, const Motive
     size_t count = melody_of(plan, idea_node, &notes);
     assert(count >= 2);
     assert(same_durations(notes, motive, segment->first, false) || same_durations(notes, motive, segment->first, true));
-    long head = scale_position(motive->notes[segment->first + 1].pitch, tonic, minor) -
-                scale_position(motive->notes[segment->first].pitch, tonic, minor);
-    assert(scale_position(notes[1].midi, tonic, minor) - scale_position(notes[0].midi, tonic, minor) == head);
+    long head = scale_position(motive->notes[segment->first + 1].pitch, tonic, is_minor) -
+                scale_position(motive->notes[segment->first].pitch, tonic, is_minor);
+    assert(scale_position(notes[1].midi, tonic, is_minor) - scale_position(notes[0].midi, tonic, is_minor) == head);
     for (size_t i = 0; i < count; i++) {
         Rational doubled = notes[i].duration;
         doubled.num *= 2;
@@ -190,14 +190,14 @@ static void test_cadential_ideas(void) {
             }
             AnalysisKey key = motive_key(&motive);
             int tonic = analysis_key_tonic_pitch_class(&key);
-            bool minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
+            bool is_minor = harmony_key_mode(&key) == HARMONY_MODE_MINOR;
             const PiecePlan *plan = run.themes[0].plan;
             if (test->ending == PLAN_THEME_ENDING_CONTINUATION) {
-                check_idea(plan, &motive, &analysis, "cadential", "m4", tonic, minor, shortest);
+                check_idea(plan, &motive, &analysis, "cadential", "m4", tonic, is_minor, shortest);
                 ideas++;
             } else if (test->ending == PLAN_THEME_ENDING_CADENTIAL) {
-                check_idea(plan, &motive, &analysis, "cadential 1", "m2", tonic, minor, shortest);
-                check_idea(plan, &motive, &analysis, "cadential 2", "m3", tonic, minor, shortest);
+                check_idea(plan, &motive, &analysis, "cadential 1", "m2", tonic, is_minor, shortest);
+                check_idea(plan, &motive, &analysis, "cadential 2", "m3", tonic, is_minor, shortest);
                 ideas += 2;
             } else {
                 /* A period has no cadential idea: nothing is liquidated. */
@@ -231,6 +231,7 @@ static void test_no_residue(void) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -243,7 +244,7 @@ static void test_no_residue(void) {
     options.features[1].first = 1;
     options.features[1].last = 1;
     assert(motive_from_notes_text("C5:h G4:h", &options, &motive, NULL) == MOTIVE_OK);
-    AnalysisKey key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey key = test_key_mode(0, HARMONY_MODE_MAJOR);
     motive_set_key(&motive, &key, MOTIVE_SKETCH_KEY_GIVEN);
     memset(&text, 0, sizeof(text));
     text.cadence = "PAC";

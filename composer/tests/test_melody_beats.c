@@ -58,7 +58,7 @@ static Rational beats(long count) {
 }
 
 static AnalysisKey c_major(void) {
-    AnalysisKey key = test_key_with_material((AnalysisKey){NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL});
+    AnalysisKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     return key;
 }
 
@@ -128,6 +128,7 @@ static NodeId add_melody_motive(Piece *piece) {
     NodeId source;
     PlanSpan material = {beats(40), beats(4)};
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -447,7 +448,7 @@ static void test_pickup_json(void) {
     char *text = plan_to_json(piece.plan, &error);
     assert(text && strstr(text, "\"kind\": \"pickup\"") && strstr(text, "\"length\": \"1/4\""));
     PiecePlan *parsed = NULL;
-    assert(plan_from_json(text, &parsed, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, &parsed, &error) == PLAN_OK);
     char *again = plan_to_json(parsed, &error);
     assert(again && strcmp(text, again) == 0);
     LaneSpanId melody;
@@ -467,7 +468,7 @@ static void test_pickup_json(void) {
     assert(at);
     at[12] = 'x';
     PiecePlan *rejected = NULL;
-    assert(plan_from_json(broken, &rejected, &error) != PLAN_OK && rejected == NULL);
+    assert(plan_from_json(test_knowledge(), broken, &rejected, &error) != PLAN_OK && rejected == NULL);
     free(broken);
     free(again);
     free(text);

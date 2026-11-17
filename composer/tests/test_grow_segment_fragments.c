@@ -27,6 +27,7 @@ static Motive make_motive(bool with_features) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -48,7 +49,7 @@ static GrowRequest make_request(const Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -187,7 +188,7 @@ static void test_plan_round_trip(void) {
     char *text = plan_to_json(plan, &error);
     assert(text && strstr(text, "\"segment\"") && strstr(text, "\"steps\""));
     PiecePlan *again = NULL;
-    assert(plan_from_json(text, &again, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
     for (int k = 2; k <= 4; k++) {
         char name[4];
         snprintf(name, sizeof(name), "m%d", k);

@@ -11,6 +11,7 @@
 
 #include "model/identity/entity_id.h"
 #include "model/interpretation/key.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/key_vocabulary.h"
 
 /*
@@ -39,6 +40,7 @@
  */
 
 /*
+ * `materials` are the snapshot's four common-practice materials: the major and natural minor collections are theirs.
  * Returns true and sets *out to the matching mode when
  * tonic_relative_pitch_classes (each 0-11, duplicates ignored, order
  * irrelevant) contains all 7 pitch classes of the major or natural-minor
@@ -46,9 +48,9 @@
  * those 7 do not prevent a match. Returns false (out untouched) when no
  * match exists -- e.g. fewer than 7 of the required pitch classes
  * present, a value outside 0-11, or a collection this framework does
- * not define as major or natural minor.
+ * not define as major or natural minor, or a NULL `materials`.
  */
-bool common_practice_identify_key_mode(const int *tonic_relative_pitch_classes, size_t pitch_class_count,
-                                        CommonPracticeKeyMode *out);
+bool common_practice_identify_key_mode(const CommonPracticeMaterials *materials, const int *tonic_relative_pitch_classes,
+                                        size_t pitch_class_count, CommonPracticeKeyMode *out);
 
 #endif

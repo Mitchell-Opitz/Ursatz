@@ -9,6 +9,7 @@
 #include "member_test_util.h"
 #include "analysis/harmony/weighted_chord_identification.h"
 #include "interpretation_test_access.h"
+#include "test_knowledge.h"
 
 /*
  * Weighted chord identification result tests: the best and runner-up chord, both scores, the uncertainty
@@ -405,6 +406,7 @@ static void test_a_segment_without_a_bass_override_reads_as_before(void) {
 static CommonPracticeWeightedConfig applied_config(void) {
     CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
     config.applied_chords = true;
+    config.materials = test_materials();
     return config;
 }
 

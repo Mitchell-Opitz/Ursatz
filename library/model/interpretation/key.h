@@ -45,21 +45,13 @@ typedef struct Key Key;
  * KeyStructure (optional): the tonic and material a Key's producer knew, in numbers, so a consumer in another
  * framework can read them without parsing the label. tonic_pitch_class is 0 = C ... 11 = B. The material is the pitch
  * material of the key (a pointer into the knowledge snapshot the key was made from; the snapshot outlives every key made from
- * it). `mode` is the Key's quality as the producer's vocabulary has it: major, or minor (the natural-minor key; the raised sixth
- * and seventh of minor are a Roman numeral convention, not a different key). It is set from the material by every maker
- * (key_structure_mode_of) and goes with the mode-based code until P58 B13. A Key built without a structure reports none.
+ * it). A consumer that needs the key's quality reads it from the material (pitch_material_third). A Key built without a structure
+ * reports none.
  */
-typedef enum { KEY_STRUCTURE_MODE_MAJOR = 0, KEY_STRUCTURE_MODE_MINOR } KeyStructureMode;
-
 typedef struct {
     int tonic_pitch_class;
-    KeyStructureMode mode;
     const PitchMaterial *material;
 } KeyStructure;
-
-/* The mode a material is read as, by its third: major for a major third (4 semitones), minor for a minor third (3). False (*out
-   untouched) for a NULL material, one with no third, or a third of another size. */
-bool key_structure_mode_of(const PitchMaterial *material, KeyStructureMode *out);
 
 typedef enum {
     KEY_OK = 0,
@@ -80,7 +72,7 @@ typedef enum {
 KeyResult key_create(Interpretation *interpretation, const char *label, Key **out);
 
 /* As key_create, and the Key also carries *structure (copied). KEY_ERR_BAD_STRUCTURE for a tonic outside
-   0..11, a NULL material, or a mode that is not the material's (key_structure_mode_of). */
+   0..11 or a NULL material. */
 KeyResult key_create_with_structure(Interpretation *interpretation, const char *label, const KeyStructure *structure,
                                      Key **out);
 void key_destroy(Key *key);

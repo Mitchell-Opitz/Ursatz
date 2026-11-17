@@ -302,8 +302,7 @@ ursatz_public_headers(ursatz_theory
 )
 target_link_libraries(ursatz_theory PUBLIC ursatz_model PRIVATE cjson)
 
-# The knowledge files are embedded in the library (target architecture 5): no binary reads knowledge/ at run time. The four tonality
-# modes' steps come out of their entries in the same step (StandardTonalityMode order).
+# The knowledge files are embedded in the library (target architecture 5): no binary reads knowledge/ at run time.
 # The paths come from this folder, not the top project: an application that adds the library as a subproject has its own root.
 if(NOT Python3_EXECUTABLE)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -314,7 +313,6 @@ add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c
     COMMAND ${Python3_EXECUTABLE} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_knowledge.py ${URSATZ_REPOSITORY_ROOT}/knowledge
         ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c
-        --modes omt.material.major,omt.material.natural-minor,omt.material.harmonic-minor,omt.material.melodic-minor
     DEPENDS ${URSATZ_KNOWLEDGE_FILES} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_knowledge.py
     COMMENT "Embedding the knowledge files"
     VERBATIM)

@@ -147,7 +147,7 @@ static void chain_input_init(ChainInput *in, const Reference *ref) {
     for (size_t i = 0; i < in->event_count; i++) {
         const MidiKeySignatureEvent *event = &in->import.key_signatures.events[i];
         in->events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &in->events[i].key));
+        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &in->events[i].key));
     }
     in->own = ref->three_four ? three_four_map() : NULL;
     in->set.notes = in->notes;

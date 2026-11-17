@@ -34,13 +34,13 @@ int main(void) {
     MotiveError error;
     memset(&error, 0, sizeof(error));
     assert(text);
-    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_OK);
     free(text);
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         GrowRequest request;
         memset(&request, 0, sizeof(request));
         request.motive = &motive;
-        request.key = test_key_mode(2, KEY_STRUCTURE_MODE_MINOR);
+        request.key = test_key_mode(2, HARMONY_MODE_MINOR);
         request.meter.beats_per_bar = 4;
         request.meter.beat_unit = 4;
         request.bars = 8;

@@ -5,6 +5,7 @@
 
 #include "member_test_util.h"
 #include "analysis/harmony/weighted_identification.h"
+#include "test_knowledge.h"
 
 /*
  * Weighted chord identification tests. Step 1, the weights: duration sounding in the segment times the
@@ -567,6 +568,7 @@ static size_t rank_applied(const CommonPracticeWeights *weights, int tonic, Comm
                            bool require_bass, CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT]) {
     CommonPracticeWeightedConfig config = bass_heavy();
     config.applied_chords = applied;
+    config.materials = test_materials();
     config.require_bass_chord_tone = require_bass;
     size_t count = 0;
     assert(common_practice_rank_candidates(weights, tonic, mode, &config, out, &count) == COMMON_PRACTICE_WEIGHTED_OK);

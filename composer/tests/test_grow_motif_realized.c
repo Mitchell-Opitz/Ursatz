@@ -36,7 +36,7 @@ static Motive load_motive(void) {
     MotiveError error;
     memset(&error, 0, sizeof(error));
     assert(text);
-    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_OK);
     free(text);
     return motive;
 }
@@ -91,7 +91,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, GivenChord *
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
     request.meter.beats_per_bar = 6;
     request.meter.beat_unit = 8;
     request.bars = 8;

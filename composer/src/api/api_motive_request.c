@@ -187,6 +187,7 @@ static ComposerStatus read_motive(const cJSON *request, const char *base, const 
                                   ComposerError *error) {
     MotiveOptions options;
     memset(&options, 0, sizeof options);
+    options.knowledge = knowledge;
     const char *meter_text = NULL;
     const char *key_text = NULL;
     bool present = false;
@@ -389,7 +390,7 @@ static ComposerStatus read_tone_overrides(const char *what, const char *base, co
     return COMPOSER_OK;
 }
 
-ComposerStatus api_read_degrees_motive(const char *what, const char *base, const cJSON *object, const char *role,
+ComposerStatus api_read_degrees_motive(const KnowledgeSnapshot *knowledge, const char *what, const char *base, const cJSON *object, const char *role,
                                        const PlanMeter *meter, const AnalysisKey *key, Motive *out, ComposerError *error) {
     const char *degrees;
     const char *harmony;
@@ -413,6 +414,7 @@ ComposerStatus api_read_degrees_motive(const char *what, const char *base, const
     options.meter = *meter;
     options.has_key = true;
     options.key = *key;
+    options.knowledge = knowledge;
     if (pickup) {
         if (!request_parse_pickup(pickup, meter->beat_unit, &options.pickup)) {
             return fail_at(error, COMPOSER_ERR_REQUEST, base, "/pickup", "%s: pickup '%s' is not a number of beats; write 0, 1 or 1/2",

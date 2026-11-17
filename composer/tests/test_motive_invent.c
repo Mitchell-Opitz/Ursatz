@@ -23,13 +23,13 @@ typedef struct {
     int beats;
     int unit;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 4, 4, 0, KEY_STRUCTURE_MODE_MAJOR},
-    {"A minor 3/4", 3, 4, 9, KEY_STRUCTURE_MODE_MINOR},
-    {"D major 6/8", 6, 8, 2, KEY_STRUCTURE_MODE_MAJOR},
+    {"C major 4/4", 4, 4, 0, HARMONY_MODE_MAJOR},
+    {"A minor 3/4", 3, 4, 9, HARMONY_MODE_MINOR},
+    {"D major 6/8", 6, 8, 2, HARMONY_MODE_MAJOR},
 };
 
 #define SEEDS 20
@@ -104,7 +104,7 @@ static PiecePlan *invent(const Scenario *scenario, unsigned long seed, LaneSpanI
 static int degree_of(const Scenario *scenario, int pitch) {
     static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
     static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 10};
-    const int *scale = scenario->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR;
+    const int *scale = scenario->mode == HARMONY_MODE_MINOR ? MINOR : MAJOR;
     int offset = ((pitch - scenario->tonic) % 12 + 12) % 12;
     for (int degree = 0; degree < 7; degree++) {
         if (scale[degree] == offset) {

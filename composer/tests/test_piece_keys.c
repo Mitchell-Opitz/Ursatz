@@ -614,7 +614,7 @@ static int test_tonic_major(bool smoke) {
     }
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         const AnalysisKey home = test_key_mode(SCENARIOS[s].tonic, SCENARIOS[s].mode);
-        const bool minor = SCENARIOS[s].mode == HARMONY_MODE_MINOR;
+        const bool is_minor = SCENARIOS[s].mode == HARMONY_MODE_MINOR;
         const AnalysisKey major = test_key_mode(SCENARIOS[s].tonic, HARMONY_MODE_MAJOR);
         size_t composed = 0;
         for (unsigned long seed = 1; seed <= (smoke ? 1 : MAJOR_SEEDS); seed++) {
@@ -636,7 +636,7 @@ static int test_tonic_major(bool smoke) {
             check_lane_tiles(plan, &lane);
             const AnalysisKey at_b = key_at(&lane, plan_node_span(plan, sections[2]).start);
             const AnalysisKey at_b1 = key_at(&lane, plan_node_span(plan, sections[6]).start);
-            assert(same_key(at_b1, minor ? major : home));
+            assert(same_key(at_b1, is_minor ? major : home));
             assert(same_key(key_at(&lane, plan_node_span(plan, sections[7]).start), home));
             assert(same_key(key_at(&lane, plan_node_span(plan, sections[4]).start), home));
             assert(!same_key(at_b, home));
@@ -666,7 +666,7 @@ static int test_tonic_major(bool smoke) {
             plan_destroy(plan);
         }
         printf("%s 4/4: %zu of %d seeds compose, B1 in %s\n", SCENARIOS[s].name, composed, smoke ? 1 : MAJOR_SEEDS,
-               minor ? "the tonic major" : "the home key");
+               is_minor ? "the tonic major" : "the home key");
         if (smoke) {
             /* Seed 1 alone has no rate to hold, but it must compose, so that the checks of a composed piece ran. */
             if (composed < 1) {

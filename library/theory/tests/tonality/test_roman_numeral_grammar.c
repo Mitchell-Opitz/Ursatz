@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "theory/tonality/roman_numeral_grammar.h"
+#include "test_knowledge.h"
 
 typedef StandardTonalityNumeralText Text;
 #define Q(name) STANDARD_TONALITY_NUMERAL_##name
@@ -274,18 +275,18 @@ static void test_styles(void) {
     }
 }
 
-static int root(const char *label, StandardTonalityMode mode) {
+static int root(const char *label, const PitchMaterial *material) {
     Text text = parsed(label);
     int semitones = -1;
-    assert(standard_tonality_numeral_root_semitone(&text, mode, &semitones));
+    assert(standard_tonality_numeral_root_semitone_of(&text, material, test_materials(), &semitones));
     return semitones;
 }
 
 static void test_root_semitones(void) {
-    const StandardTonalityMode major = STANDARD_TONALITY_MODE_MAJOR;
-    const StandardTonalityMode natural = STANDARD_TONALITY_MODE_NATURAL_MINOR;
-    const StandardTonalityMode harmonic = STANDARD_TONALITY_MODE_HARMONIC_MINOR;
-    const StandardTonalityMode melodic = STANDARD_TONALITY_MODE_MELODIC_MINOR;
+    const PitchMaterial *major = test_materials()->major;
+    const PitchMaterial *natural = test_materials()->natural_minor;
+    const PitchMaterial *harmonic = test_materials()->harmonic_minor;
+    const PitchMaterial *melodic = test_materials()->melodic_minor;
     assert(root("I", major) == 0 && root("ii", major) == 2 && root("iii", major) == 4 && root("IV", major) == 5);
     assert(root("V7", major) == 7 && root("vi", major) == 9 && root("viio", major) == 11);
     assert(root("bVI", major) == 8 && root("bVII", major) == 10 && root("#iv", major) == 6 && root("bII6", major) == 1);
@@ -305,11 +306,12 @@ static void test_root_semitones(void) {
 
     Text text = parsed("V");
     int semitones = 99;
-    assert(!standard_tonality_numeral_root_semitone(&text, (StandardTonalityMode)9, &semitones) && semitones == 99);
-    assert(!standard_tonality_numeral_root_semitone(&text, major, NULL));
-    assert(!standard_tonality_numeral_root_semitone(NULL, major, &semitones));
+    assert(!standard_tonality_numeral_root_semitone_of(&text, NULL, test_materials(), &semitones) && semitones == 99);
+    assert(!standard_tonality_numeral_root_semitone_of(&text, major, test_materials(), NULL));
+    assert(!standard_tonality_numeral_root_semitone_of(NULL, major, test_materials(), &semitones));
+    assert(!standard_tonality_numeral_root_semitone_of(&text, major, NULL, &semitones));
     Text bad = plain(0, Q(MAJOR), 0);
-    assert(!standard_tonality_numeral_root_semitone(&bad, major, &semitones) && semitones == 99);
+    assert(!standard_tonality_numeral_root_semitone_of(&bad, major, test_materials(), &semitones) && semitones == 99);
 }
 
 static void test_base_and_from_base(void) {

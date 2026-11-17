@@ -4,15 +4,10 @@
 
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/midi_pitch.h"
-#include "theory/tonality/common_practice_materials.h"
 
 #define KEY_MAX_ACCIDENTALS 7
 #define KEY_DEGREE_COUNT 7
 #define KEY_MAX_ACCIDENTAL_OFFSET 2
-
-static bool mode_valid(StandardTonalityMode mode) {
-    return mode >= STANDARD_TONALITY_MODE_MAJOR && mode <= STANDARD_TONALITY_MODE_MELODIC_MINOR;
-}
 
 static bool letter_valid(PitchLetter letter) {
     return letter >= PITCH_LETTER_A && letter <= PITCH_LETTER_G;
@@ -21,28 +16,6 @@ static bool letter_valid(PitchLetter letter) {
 static int floor_mod(int value, int modulus) {
     int result = value % modulus;
     return result < 0 ? result + modulus : result;
-}
-
-/* The material of a mode (the generated rows, until P58 B13), or NULL for an invalid mode. */
-static const PitchMaterial *mode_material(StandardTonalityMode mode) {
-    const CommonPracticeMaterials *materials = common_practice_materials_builtin();
-    switch (mode) {
-        case STANDARD_TONALITY_MODE_MAJOR:
-            return materials->major;
-        case STANDARD_TONALITY_MODE_NATURAL_MINOR:
-            return materials->natural_minor;
-        case STANDARD_TONALITY_MODE_HARMONIC_MINOR:
-            return materials->harmonic_minor;
-        case STANDARD_TONALITY_MODE_MELODIC_MINOR:
-            return materials->melodic_minor;
-        default:
-            return NULL;
-    }
-}
-
-static const PitchMaterial *key_material(bool minor) {
-    const CommonPracticeMaterials *materials = common_practice_materials_builtin();
-    return minor ? materials->natural_minor : materials->major;
 }
 
 /* The letters in the order of the major scale from C, and their natural semitones. */
@@ -60,10 +33,6 @@ int standard_tonality_material_degree_semitone(const PitchMaterial *material, in
     return pitch_material_step(material, degree);
 }
 
-int standard_tonality_degree_semitone(StandardTonalityMode mode, int degree) {
-    return standard_tonality_material_degree_semitone(mode_material(mode), degree);
-}
-
 unsigned standard_tonality_material_pitch_classes(int center, const PitchMaterial *material) {
     return pitch_material_mask(material, center);
 }
@@ -74,20 +43,6 @@ unsigned standard_tonality_material_pitch_classes_with_leading_tone(int center, 
         return 0;
     }
     return mask | (1u << ((floor_mod(center, PITCH_SEMITONES_PER_OCTAVE) + 11) % PITCH_SEMITONES_PER_OCTAVE));
-}
-
-unsigned standard_tonality_mode_pitch_classes(int tonic_pitch_class, StandardTonalityMode mode) {
-    if (!mode_valid(mode) || tonic_pitch_class < 0 || tonic_pitch_class >= PITCH_SEMITONES_PER_OCTAVE) {
-        return 0;
-    }
-    return standard_tonality_material_pitch_classes(tonic_pitch_class, mode_material(mode));
-}
-
-unsigned standard_tonality_mode_pitch_classes_with_leading_tone(int tonic_pitch_class, StandardTonalityMode mode) {
-    if (!mode_valid(mode) || tonic_pitch_class < 0 || tonic_pitch_class >= PITCH_SEMITONES_PER_OCTAVE) {
-        return 0;
-    }
-    return standard_tonality_material_pitch_classes_with_leading_tone(tonic_pitch_class, mode_material(mode));
 }
 
 /* The degree of `steps` at or below `inside` (0 to 11) and the semitones above it. */
@@ -133,16 +88,6 @@ bool standard_tonality_material_degree_of_semitone(int semitones_above_center, c
         *alteration = -1;
     }
     return true;
-}
-
-bool standard_tonality_degree_at_or_below_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
-                                                   int *alteration) {
-    return standard_tonality_material_degree_at_or_below_semitone(semitones_above_tonic, mode_material(mode), degree, alteration);
-}
-
-bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
-                                          int *alteration) {
-    return standard_tonality_material_degree_of_semitone(semitones_above_tonic, mode_material(mode), degree, alteration);
 }
 
 bool standard_tonality_natural_degree_of_semitone(int semitones_above_tonic, int *degree, int *alteration) {
@@ -205,11 +150,6 @@ bool standard_tonality_key_fifths_of(PitchLetter tonic_letter, int tonic_acciden
     return true;
 }
 
-bool standard_tonality_key_fifths(PitchLetter tonic_letter, int tonic_accidental, bool minor,
-                                  int *fifths) {
-    return standard_tonality_key_fifths_of(tonic_letter, tonic_accidental, key_material(minor), fifths);
-}
-
 bool standard_tonality_key_signature_of_material(PitchLetter tonic_letter, int tonic_accidental, const PitchMaterial *material,
                                                  KeySignature **out) {
     int fifths;
@@ -221,11 +161,6 @@ bool standard_tonality_key_signature_of_material(PitchLetter tonic_letter, int t
     return key_signature_from_fifths(fifths, out);
 }
 
-bool standard_tonality_key_signature_of(PitchLetter tonic_letter, int tonic_accidental, bool minor,
-                                        KeySignature **out) {
-    return standard_tonality_key_signature_of_material(tonic_letter, tonic_accidental, key_material(minor), out);
-}
-
 bool standard_tonality_key_of_fifths_material(int fifths, const PitchMaterial *material, PitchLetter *letter, int *accidental) {
     const PitchMaterial *diatonic = signature_material(material);
     if (letter == NULL || accidental == NULL || diatonic == NULL) {
@@ -234,10 +169,6 @@ bool standard_tonality_key_of_fifths_material(int fifths, const PitchMaterial *m
     /* The signature of the material on C is its offset from the tonic's place on the line of fifths. */
     pitch_spelling_from_fifths(fifths - signature_sum(PITCH_LETTER_C, 0, diatonic), letter, accidental);
     return true;
-}
-
-bool standard_tonality_key_of_fifths(int fifths, bool minor, PitchLetter *letter, int *accidental) {
-    return standard_tonality_key_of_fifths_material(fifths, key_material(minor), letter, accidental);
 }
 
 const char *standard_tonality_chromatic_degree_label(int semitones_above_tonic) {
@@ -258,11 +189,23 @@ static int signature_size(const int tonics[8], int pitch_class) {
     return 99;
 }
 
+/* The major scale on C as a mask: the natural notes of the letters, C D E F G A B. */
+static unsigned c_major_mask(void) {
+    unsigned mask = 0;
+    for (int d = 0; d < KEY_DEGREE_COUNT; d++) {
+        mask |= 1u << pitch_letter_semitone(LETTERS_FROM_C[d]);
+    }
+    return mask;
+}
+
 /* The semitones to add to a tonic of the material to reach the tonic of the major scale with the same notes, or -1 for none. */
-static int relative_major_offset(const PitchMaterial *diatonic, const PitchMaterial *major, int tonic) {
+static int relative_major_offset(const PitchMaterial *diatonic, int tonic) {
     unsigned notes = pitch_material_mask(diatonic, tonic);
+    unsigned c_major = c_major_mask();
     for (int offset = 0; offset < PITCH_SEMITONES_PER_OCTAVE; offset++) {
-        if (pitch_material_mask(major, tonic + offset) == notes) {
+        unsigned rotated = ((c_major << ((tonic + offset) % PITCH_SEMITONES_PER_OCTAVE)) |
+                            (c_major >> (PITCH_SEMITONES_PER_OCTAVE - (tonic + offset) % PITCH_SEMITONES_PER_OCTAVE))) & 0xFFFu;
+        if (rotated == notes) {
             return offset;
         }
     }
@@ -275,7 +218,7 @@ bool standard_tonality_key_tonic_of_pitch_class_material(int pitch_class, const 
     if (pitch_class < 0 || pitch_class > 11 || letter == NULL || accidental == NULL || diatonic == NULL) {
         return false;
     }
-    int offset = relative_major_offset(diatonic, common_practice_materials_builtin()->major, pitch_class);
+    int offset = relative_major_offset(diatonic, pitch_class);
     if (offset < 0) {
         return false;
     }
@@ -283,9 +226,4 @@ bool standard_tonality_key_tonic_of_pitch_class_material(int pitch_class, const 
     int sharps = signature_size(SHARP_MAJOR_TONICS, major_pitch_class);
     int flats = signature_size(FLAT_MAJOR_TONICS, major_pitch_class);
     return standard_tonality_key_of_fifths_material(flats < sharps ? -flats : sharps, material, letter, accidental);
-}
-
-bool standard_tonality_key_tonic_of_pitch_class(int pitch_class, bool minor, PitchLetter *letter,
-                                                int *accidental) {
-    return standard_tonality_key_tonic_of_pitch_class_material(pitch_class, key_material(minor), letter, accidental);
 }

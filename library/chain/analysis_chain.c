@@ -23,7 +23,7 @@ AnalysisChainConfig analysis_chain_config_default(void) {
     config.stages = ANALYSIS_CHAIN_STAGE_ALL;
     config.segmentation = adaptive_segmentation_config_default();
     config.weighting = common_practice_weighted_config_default();
-    config.key_regions = common_practice_key_regions_config_default();
+    config.key_regions = common_practice_key_regions_config_default(NULL); /* the chain sets the snapshot's materials */
     config.outer_voices = outer_voice_config_default();
     config.cadences = harmony_cadence_config_default();
     config.form = standard_form_config_default();

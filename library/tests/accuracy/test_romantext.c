@@ -51,8 +51,8 @@ static void test_chords_keys_and_beats(void) {
     RomanTextAnalysis a;
     assert(romantext_parse(text, &grid, &a) == ROMANTEXT_OK);
     assert(a.key_count == 2 && a.chord_count == 10 && a.unsupported_count == 0);
-    assert(a.keys[0].tonic_pitch_class == 7 && !a.keys[0].minor);
-    assert(a.keys[1].tonic_pitch_class == 9 && a.keys[1].minor);
+    assert(a.keys[0].tonic_pitch_class == 7 && !a.keys[0].is_minor);
+    assert(a.keys[1].tonic_pitch_class == 9 && a.keys[1].is_minor);
     assert(time_is(a.keys[1].time, 2, 1)); /* measure 3 starts at 2 whole notes */
 
     const RomanTextChord *c = a.chords;
@@ -63,10 +63,10 @@ static void test_chords_keys_and_beats(void) {
     assert(c[4].degree == 5 && c[4].seventh && c[4].inversion == 0 && time_is(c[4].time, 1, 1));
     assert(c[5].seventh && c[5].inversion == 1);
     assert(c[6].degree == 1 && c[6].inversion == 2 && !c[6].seventh);
-    assert(c[7].degree == 1 && !c[7].upper && c[7].tonic_pitch_class == 9 && c[7].minor);
+    assert(c[7].degree == 1 && !c[7].upper && c[7].tonic_pitch_class == 9 && c[7].is_minor);
     assert(c[8].degree == 2 && c[8].marker == '%' && c[8].seventh && !c[8].upper);
     assert(c[9].degree == 5 && c[9].seventh && c[9].inversion == 2);
-    assert(c[0].tonic_pitch_class == 7 && !c[0].minor);
+    assert(c[0].tonic_pitch_class == 7 && !c[0].is_minor);
     romantext_destroy(&a);
     meter_map_destroy(map);
 }
@@ -97,7 +97,7 @@ static void test_slashed_figures_and_keys(void) {
     const char *text = "m1 Bb: I b2 vi6/5 b3 V4/3\nm2 f#: i6/4 b2 V4/2 b3 V7/IV\n";
     RomanTextAnalysis a;
     assert(romantext_parse(text, &grid, &a) == ROMANTEXT_OK);
-    assert(a.key_count == 2 && a.keys[0].tonic_pitch_class == 10 && a.keys[1].tonic_pitch_class == 6 && a.keys[1].minor);
+    assert(a.key_count == 2 && a.keys[0].tonic_pitch_class == 10 && a.keys[1].tonic_pitch_class == 6 && a.keys[1].is_minor);
     assert(a.chords[1].degree == 6 && a.chords[1].seventh && a.chords[1].inversion == 1 && !a.chords[1].applied);
     assert(a.chords[2].seventh && a.chords[2].inversion == 2);
     assert(a.chords[3].degree == 1 && !a.chords[3].seventh && a.chords[3].inversion == 2);

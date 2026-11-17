@@ -202,7 +202,7 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
         char *text = cJSON_PrintUnformatted(plan);
         PlanJsonError detail;
         memset(&detail, 0, sizeof detail);
-        PlanResult read = text ? plan_from_json(text, &request->theme_plan[index], &detail) : PLAN_ERR_ALLOC;
+        PlanResult read = text ? plan_from_json(request->knowledge, text, &request->theme_plan[index], &detail) : PLAN_ERR_ALLOC;
         cJSON_free(text);
         if (read == PLAN_ERR_ALLOC) {
             return api_fail_alloc(error);
@@ -354,9 +354,9 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\"", request->key_text);
     }
     if (request_equals_ignore_case(mode, "major")) {
-        composer_key_set_minor(&piece->key, request->materials, false);
+        composer_key_set_mode(&piece->key, request->materials, COMMON_PRACTICE_KEY_MAJOR);
     } else if (request_equals_ignore_case(mode, "minor")) {
-        composer_key_set_minor(&piece->key, request->materials, true);
+        composer_key_set_mode(&piece->key, request->materials, COMMON_PRACTICE_KEY_MINOR);
     }
     if (!request_parse_meter(request->meter_text, &piece->meter) || !harmony_meter_supported(&piece->meter)) {
         snprintf(path, sizeof path, "%s/meter", base);
@@ -507,13 +507,13 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
 }
 
 /* A melodic motive of the request. */
-static ComposerStatus read_melodic(const char *what, const char *path, const cJSON *json, const PlanMeter *meter,
+static ComposerStatus read_melodic(const KnowledgeSnapshot *knowledge, const char *what, const char *path, const cJSON *json, const PlanMeter *meter,
                                    const AnalysisKey *key, Motive **out, ComposerError *error) {
     *out = calloc(1, sizeof(Motive));
     if (!*out) {
         return api_fail_alloc(error);
     }
-    ComposerStatus status = api_read_degrees_motive(what, path, json, NULL, meter, key, *out, error);
+    ComposerStatus status = api_read_degrees_motive(knowledge, what, path, json, NULL, meter, key, *out, error);
     if (status == COMPOSER_OK && (*out)->accompaniment) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s is of the accompaniment role; a piece takes a melodic motive", what);
     }
@@ -528,7 +528,7 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
     ComposerStatus status = COMPOSER_OK;
     if (request->piece_motive_json) {
         snprintf(path, sizeof path, "%s/motive", base);
-        status = read_melodic("the motive of the piece", path, request->piece_motive_json, &piece->meter, &piece->key,
+        status = read_melodic(request->knowledge, "the motive of the piece", path, request->piece_motive_json, &piece->meter, &piece->key,
                               &request->piece_motive, error);
         piece->motive = request->piece_motive;
     }
@@ -537,7 +537,7 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
         if (request->motive_json[i]) {
             snprintf(what, sizeof(what), "the motive of section '%s'", request->sections[i].id);
             snprintf(path, sizeof path, "%s/sections/%zu/fill/motive", base, i);
-            status = read_melodic(what, path, request->motive_json[i], &piece->meter, &piece->key,
+            status = read_melodic(request->knowledge, what, path, request->motive_json[i], &piece->meter, &piece->key,
                                   &request->section_motive[i], error);
             request->sections[i].motive = request->section_motive[i];
         }
@@ -580,7 +580,7 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
                                 item_id, flag);
             }
             snprintf(what, sizeof(what), "form '%s'", item_id);
-            status = api_read_degrees_motive(what, path, form, NULL, &piece->meter, &piece->key,
+            status = api_read_degrees_motive(request->knowledge, what, path, form, NULL, &piece->meter, &piece->key,
                                              &request->pool_motives[request->pool_count], error);
             if (status != COMPOSER_OK) {
                 return status;

@@ -96,19 +96,20 @@ static void test_region_key(void) {
         AnalysisKey key;
         assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
         assert(analysis_key_tonic_pitch_class(&key) == common_practice_key_index_tonic(index));
-        assert((key.mode == KEY_STRUCTURE_MODE_MINOR) == (common_practice_key_index_mode(index) == COMMON_PRACTICE_KEY_MINOR));
         assert(key.id == NULL);
         assert(key.material == common_practice_material(test_materials(), common_practice_key_index_mode(index)));
     }
     CommonPracticeKeyRegion region;
     memset(&region, 0, sizeof(region));
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, test_materials()->major};
     region.key_index = test_key_index_of(3, COMMON_PRACTICE_KEY_MINOR);
     assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
-    assert(key.tonic_letter == PITCH_LETTER_E && key.tonic_accidental == -1 && key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(key.tonic_letter == PITCH_LETTER_E && key.tonic_accidental == -1 &&
+           key.material == test_materials()->natural_minor);
     region.key_index = test_key_index_of(6, COMMON_PRACTICE_KEY_MAJOR);
     assert(common_practice_key_region_analysis_key(&region, test_materials(), &key));
-    assert(key.tonic_letter == PITCH_LETTER_F && key.tonic_accidental == 1 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
+    assert(key.tonic_letter == PITCH_LETTER_F && key.tonic_accidental == 1 &&
+           key.material == test_materials()->major);
 
     region.key_index = 24;
     assert(!common_practice_key_region_analysis_key(&region, test_materials(), &key));
@@ -123,11 +124,11 @@ static void test_signature_event(void) {
     assert(musical_time_make(2, 1, &time) == MUSICAL_TIME_OK);
     CommonPracticeKeySignatureEvent out = {.sharps_flats = 99};
 
-    for (int mode = KEY_STRUCTURE_MODE_MAJOR; mode <= KEY_STRUCTURE_MODE_MINOR; mode++) {
+    for (int mode = COMMON_PRACTICE_KEY_MAJOR; mode <= COMMON_PRACTICE_KEY_MINOR; mode++) {
         for (int fifths = -7; fifths <= 7; fifths++) {
             AnalysisKeyEvent event;
             event.time = time;
-            assert(analysis_key_from_fifths(fifths, (KeyStructureMode)mode, &event.key));
+            assert(analysis_key_from_fifths(fifths, common_practice_material(test_materials(), (CommonPracticeKeyMode)mode), &event.key));
             assert(common_practice_key_signature_event_from_analysis(&event, &out));
             assert(musical_time_same(out.position, time));
             assert(out.sharps_flats == fifths);
@@ -135,7 +136,7 @@ static void test_signature_event(void) {
     }
 
     out.sharps_flats = 99;
-    AnalysisKeyEvent too_sharp = {time, {NULL, PITCH_LETTER_G, 1, KEY_STRUCTURE_MODE_MAJOR, NULL}}; /* G sharp major: 8 sharps */
+    AnalysisKeyEvent too_sharp = {time, {NULL, PITCH_LETTER_G, 1, test_materials()->major}}; /* G sharp major: 8 sharps */
     assert(!common_practice_key_signature_event_from_analysis(&too_sharp, &out));
     assert(!common_practice_key_signature_event_from_analysis(NULL, &out));
     assert(!common_practice_key_signature_event_from_analysis(&too_sharp, NULL));

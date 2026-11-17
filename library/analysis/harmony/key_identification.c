@@ -42,17 +42,15 @@ static bool matches_collection(const int *distinct, size_t distinct_count, const
     return true;
 }
 
-bool common_practice_identify_key_mode(const int *tonic_relative_pitch_classes, size_t pitch_class_count,
-                                        CommonPracticeKeyMode *out) {
-    if (tonic_relative_pitch_classes == NULL || out == NULL) {
+bool common_practice_identify_key_mode(const CommonPracticeMaterials *materials, const int *tonic_relative_pitch_classes,
+                                        size_t pitch_class_count, CommonPracticeKeyMode *out) {
+    if (materials == NULL || tonic_relative_pitch_classes == NULL || out == NULL) {
         return false;
     }
 
     int distinct[12];
     size_t distinct_count = count_distinct(tonic_relative_pitch_classes, pitch_class_count, distinct, 12);
 
-    /* The built-in materials: a remaining site until P58 B13 (the Composer's motive import is the one caller and holds no snapshot). */
-    const CommonPracticeMaterials *materials = common_practice_materials_builtin();
     if (matches_collection(distinct, distinct_count, materials->major)) {
         *out = COMMON_PRACTICE_KEY_MAJOR;
         return true;

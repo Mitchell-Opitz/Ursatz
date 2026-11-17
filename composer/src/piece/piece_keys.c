@@ -61,17 +61,17 @@ static bool resolve_degree(const KnowledgeSnapshot *knowledge, AnalysisKey home,
  * degrees the forms list. False when the relation refuses the degree.
  */
 bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
-    bool minor = composer_key_is_minor(&home);
-    const int *degrees = minor ? region->minor : region->major;
-    size_t count = minor ? region->minor_count : region->major_count;
+    bool is_minor = composer_key_is_minor(&home);
+    const int *degrees = is_minor ? region->minor : region->major;
+    size_t count = is_minor ? region->minor_count : region->major_count;
     int degree = degrees[fill_rng_below(rng, count)];
     return resolve_degree(knowledge, home, degree, out);
 }
 
 /* A region a section's keys name has no degree 1: the parallel key is for the parts of a compound form. */
-static bool region_has_degree_one(const FormRegion *region, bool minor) {
-    const int *degrees = minor ? region->minor : region->major;
-    size_t count = minor ? region->minor_count : region->major_count;
+static bool region_has_degree_one(const FormRegion *region, bool is_minor) {
+    const int *degrees = is_minor ? region->minor : region->major;
+    size_t count = is_minor ? region->minor_count : region->major_count;
     for (size_t i = 0; i < count; i++) {
         if (degrees[i] == 1) {
             return true;

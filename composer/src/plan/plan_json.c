@@ -106,7 +106,7 @@ static bool key_members_json(cJSON *object, const AnalysisKey *key) {
     char tonic[8];
     return pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic)) &&
            plan_json_add(object, "tonic", cJSON_CreateString(tonic)) &&
-           plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[composer_key_mode(key)]));
+           plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[composer_key_is_minor(key) ? 1 : 0]));
 }
 
 static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *constraint) {
@@ -424,7 +424,7 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
 static void plan_key_label(const AnalysisKey *key, char *out, size_t size) {
     char tonic[8] = "?";
     pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic));
-    snprintf(out, size, "%s %s", tonic, MODE_NAMES[composer_key_mode(key)]);
+    snprintf(out, size, "%s %s", tonic, MODE_NAMES[composer_key_is_minor(key) ? 1 : 0]);
 }
 
 static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *out, size_t size) {
@@ -1263,10 +1263,10 @@ static bool read_motive_tones(JsonReader *reader, const cJSON *item, const char 
 
 /*
  * Version 1 files (R-260): a key is "tonic_pitch_class" and "mode", with no spelling. The tonic is spelled as the library
- * spells the key on that pitch class (standard_tonality_key_tonic_of_pitch_class: the fewest accidentals in its
+ * spells the key on that pitch class (standard_tonality_key_tonic_of_pitch_class_material: the fewest accidentals in its
  * signature, sharps on a tie), which is how every plan of version 1 was written.
  */
-static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, KeyStructureMode mode,
+static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, const PitchMaterial *material,
                         AnalysisKey *out) {
     long pitch_class;
     PitchLetter letter;
@@ -1274,14 +1274,12 @@ static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *pat
     if (!json_read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &pitch_class)) {
         return false;
     }
-    if (!standard_tonality_key_tonic_of_pitch_class((int)pitch_class, mode == KEY_STRUCTURE_MODE_MINOR, &letter,
-                                                    &accidental)) {
+    if (!standard_tonality_key_tonic_of_pitch_class_material((int)pitch_class, material, &letter, &accidental)) {
         char at[PLAN_JSON_PATH_MAX];
         json_child_path(at, path, "tonic_pitch_class");
         return json_bad_format(reader, at, "no key on this pitch class");
     }
-    /* TRANSITIONAL (P58 B13): a plan file names a mode, not a material; the builtin one stands in until the formats carry ids. */
-    AnalysisKey key = {NULL, letter, accidental, mode, composer_builtin_material(mode == KEY_STRUCTURE_MODE_MINOR)};
+    AnalysisKey key = {NULL, letter, accidental, material};
     *out = key;
     return true;
 }
@@ -1292,8 +1290,10 @@ static bool read_key_members(JsonReader *reader, const cJSON *object, const char
     if (!read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &mode)) {
         return false;
     }
+    /* A plan file names a mode, not a material: major or minor are the snapshot's major and natural minor (until the formats carry ids). */
+    const PitchMaterial *material = common_practice_material(reader->materials, mode == 1 ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
     if (reader->version == 1) {
-        return read_key_v1(reader, object, path, (KeyStructureMode)mode, out);
+        return read_key_v1(reader, object, path, material, out);
     }
     const cJSON *tonic = plan_json_member(reader, object, path, "tonic", true);
     if (!tonic) {
@@ -1306,8 +1306,7 @@ static bool read_key_members(JsonReader *reader, const cJSON *object, const char
     if (!cJSON_IsString(tonic) || !pitch_spelling_parse_name(tonic->valuestring, &letter, &accidental, NULL)) {
         return json_bad_format(reader, at, "expected a tonic like \"C\", \"F#\" or \"Bb\"");
     }
-    AnalysisKey key = {NULL, letter, accidental, (KeyStructureMode)mode,
-                       composer_builtin_material((KeyStructureMode)mode == KEY_STRUCTURE_MODE_MINOR)};
+    AnalysisKey key = {NULL, letter, accidental, material};
     *out = key;
     return true;
 }
@@ -2316,8 +2315,9 @@ static bool read_metadata(JsonReader *reader, const cJSON *document, PiecePlan *
     return true;
 }
 
-static PlanResult read_document(const cJSON *document, PiecePlan *plan, PlanJsonError *error) {
-    JsonReader reader = {error, PLAN_OK, 0};
+static PlanResult read_document(const cJSON *document, PiecePlan *plan, const CommonPracticeMaterials *materials,
+                                PlanJsonError *error) {
+    JsonReader reader = {error, PLAN_OK, 0, materials};
     if (!cJSON_IsObject(document)) {
         json_bad_format(&reader, "", "expected a JSON object");
         return reader.result;
@@ -2356,12 +2356,17 @@ static PlanResult read_document(const cJSON *document, PiecePlan *plan, PlanJson
     return PLAN_OK;
 }
 
-PlanResult plan_from_json(const char *text, PiecePlan **out, PlanJsonError *error) {
+PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error) {
     if (!text || !out) {
         json_set_error(error, -1, "", "text or out is NULL");
         return PLAN_ERR_NULL;
     }
     *out = NULL;
+    CommonPracticeMaterials materials;
+    if (!common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
+        json_set_error(error, -1, "", "a knowledge snapshot is required");
+        return PLAN_ERR_NULL;
+    }
     const char *end = NULL;
     cJSON *document = cJSON_ParseWithLengthOpts(text, strlen(text) + 1, &end, true);
     if (!document) {
@@ -2374,7 +2379,7 @@ PlanResult plan_from_json(const char *text, PiecePlan **out, PlanJsonError *erro
         json_set_error(error, -1, "", "out of memory");
         return PLAN_ERR_ALLOC;
     }
-    PlanResult result = read_document(document, plan, error);
+    PlanResult result = read_document(document, plan, &materials, error);
     cJSON_Delete(document);
     if (result != PLAN_OK) {
         plan_destroy(plan);

@@ -89,7 +89,6 @@ uses analysis-similarity   model analysis-notes
 allow library/model/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
 only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
-only library/theory/knowledge/knowledge_modes.h library/theory/knowledge library/theory/tonality/tonal_key.c library/theory/tests/knowledge -- the generated mode rows, until P58 (R-579)
 
 
 

@@ -18,7 +18,7 @@
 
 typedef struct {
     const char *name;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
     bool has_key;
@@ -26,11 +26,11 @@ typedef struct {
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", KEY_STRUCTURE_MODE_MAJOR, 4, 4, false, 0},
-    {"D minor 4/4", KEY_STRUCTURE_MODE_MINOR, 4, 4, true, 2},
-    {"A minor 3/4", KEY_STRUCTURE_MODE_MINOR, 3, 4, false, 0},
-    {"D major 6/8", KEY_STRUCTURE_MODE_MAJOR, 6, 8, true, 2},
-    {"G major 2/4", KEY_STRUCTURE_MODE_MAJOR, 2, 4, true, 7},
+    {"C major 4/4", HARMONY_MODE_MAJOR, 4, 4, false, 0},
+    {"D minor 4/4", HARMONY_MODE_MINOR, 4, 4, true, 2},
+    {"A minor 3/4", HARMONY_MODE_MINOR, 3, 4, false, 0},
+    {"D major 6/8", HARMONY_MODE_MAJOR, 6, 8, true, 2},
+    {"G major 2/4", HARMONY_MODE_MAJOR, 2, 4, true, 7},
 };
 
 #define SEEDS 20
@@ -40,6 +40,7 @@ static MotiveRandomOptions options_of(const Scenario *scenario, unsigned long se
     MotiveRandomOptions options;
     memset(&options, 0, sizeof(options));
     options.material = test_material_mode(scenario->mode);
+    options.knowledge = test_knowledge();
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
     options.has_key = scenario->has_key;
@@ -61,8 +62,8 @@ static Rational time_of(long num, unsigned long den) {
 static void check_motive(const Scenario *scenario, const Motive *motive) {
     assert(motive_meter(motive).beats_per_bar == scenario->beats && motive_meter(motive).beat_unit == scenario->unit);
     assert(motive->key_source == MOTIVE_SKETCH_KEY_GIVEN);
-    assert(motive_sketch_minor(motive) == (scenario->mode == KEY_STRUCTURE_MODE_MINOR));
-    int tonic = scenario->has_key ? scenario->tonic : (scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? 0 : 9);
+    assert(motive_sketch_minor(motive) == (scenario->mode == HARMONY_MODE_MINOR));
+    int tonic = scenario->has_key ? scenario->tonic : (scenario->mode == HARMONY_MODE_MAJOR ? 0 : 9);
     assert(motive->tonic_pc == tonic);
     assert(motive->form == MOTIVE_SKETCH_FORM_FULL);
     assert(motive->note_count >= 2 && motive->note_count <= 12);
@@ -272,7 +273,7 @@ static void test_refusals(void) {
     Motive motives[COUNT];
     size_t made = 99;
     MotiveRandomOptions options = options_of(&SCENARIOS[0], 1);
-    options.key = test_key_mode(analysis_key_tonic_pitch_class(&options.key), KEY_STRUCTURE_MODE_MINOR);
+    options.key = test_key_mode(analysis_key_tonic_pitch_class(&options.key), HARMONY_MODE_MINOR);
     options.has_key = true;
     assert(motive_random(&options, motives, &made) == MOTIVE_RANDOM_ERR_KEY && made == 0);
     options = options_of(&SCENARIOS[0], 1);

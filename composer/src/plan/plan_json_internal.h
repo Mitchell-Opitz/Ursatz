@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include <cJSON.h>
+#include <theory/tonality/common_practice_materials.h>
 #include <ursatz_composer/plan_json.h>
 
 /* Writing helpers shared by plan_json.c and fill_record.c. */
@@ -23,6 +24,7 @@ typedef struct {
     PlanJsonError *error;
     PlanResult result;
     int version; /* the plan file's format version being read: 1 or 2; 0 where no plan file is read */
+    const CommonPracticeMaterials *materials; /* the materials a plan's keys are made of; NULL where no plan file is read */
 } JsonReader;
 
 void json_set_error(PlanJsonError *error, long offset, const char *path, const char *format, ...);

@@ -19,15 +19,15 @@
 #define SEEDS 200
 
 typedef struct {
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {KEY_STRUCTURE_MODE_MAJOR, 2, 4}, {KEY_STRUCTURE_MODE_MINOR, 2, 4}, {KEY_STRUCTURE_MODE_MAJOR, 3, 4},
-    {KEY_STRUCTURE_MODE_MINOR, 3, 4}, {KEY_STRUCTURE_MODE_MAJOR, 4, 4}, {KEY_STRUCTURE_MODE_MINOR, 4, 4},
-    {KEY_STRUCTURE_MODE_MAJOR, 6, 8}, {KEY_STRUCTURE_MODE_MINOR, 6, 8},
+    {HARMONY_MODE_MAJOR, 2, 4}, {HARMONY_MODE_MINOR, 2, 4}, {HARMONY_MODE_MAJOR, 3, 4},
+    {HARMONY_MODE_MINOR, 3, 4}, {HARMONY_MODE_MAJOR, 4, 4}, {HARMONY_MODE_MINOR, 4, 4},
+    {HARMONY_MODE_MAJOR, 6, 8}, {HARMONY_MODE_MINOR, 6, 8},
 };
 
 /* The harmony plans the strategy draws from, one degree per segment. */
@@ -37,6 +37,7 @@ static MotiveRandomOptions options_of(const Scenario *scenario, unsigned long se
     MotiveRandomOptions options;
     memset(&options, 0, sizeof(options));
     options.material = test_material_mode(scenario->mode);
+    options.knowledge = test_knowledge();
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
     options.form = MOTIVE_SKETCH_FORM_FULL;

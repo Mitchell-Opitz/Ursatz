@@ -1,6 +1,7 @@
 #ifndef URSATZ_COMPOSER_PLAN_JSON_H
 #define URSATZ_COMPOSER_PLAN_JSON_H
 
+#include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/piece_plan.h>
 
 /*
@@ -33,10 +34,11 @@ typedef struct {
 char *plan_to_json(const PiecePlan *plan, PlanJsonError *error);
 
 /*
- * Parses a plan. On PLAN_OK, *out is a plan the caller destroys. On failure *out
- * is NULL and the result is PLAN_ERR_PARSE (not JSON), PLAN_ERR_FORMAT (JSON
+ * Parses a plan. The keys of the plan are made of the snapshot's common-practice materials (a file names a major or a minor key).
+ * On PLAN_OK, *out is a plan the caller destroys; the snapshot must outlive it. On failure *out is NULL and the result is
+ * PLAN_ERR_NULL (no text, no out, or no snapshot with the four materials), PLAN_ERR_PARSE (not JSON), PLAN_ERR_FORMAT (JSON
  * that is not a valid plan) or PLAN_ERR_ALLOC.
  */
-PlanResult plan_from_json(const char *text, PiecePlan **out, PlanJsonError *error);
+PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error);
 
 #endif

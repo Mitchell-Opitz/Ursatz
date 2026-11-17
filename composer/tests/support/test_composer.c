@@ -12,7 +12,7 @@
 
 PlanResult test_read_plan_file(const char *path, PiecePlan **out, PlanJsonError *error) {
     char *text = test_must_read_file(path, NULL);
-    PlanResult result = plan_from_json(text, out, error);
+    PlanResult result = plan_from_json(test_knowledge(), text, out, error);
     free(text);
     return result;
 }
@@ -21,7 +21,15 @@ MotiveResult test_load_motive_file(const char *path, MotiveFormat format, const 
                                    MotiveError *error) {
     size_t size = 0;
     char *data = test_must_read_file(path, &size);
-    MotiveResult result = motive_load(data, size, format, options, out, error);
+    MotiveOptions with;
+    memset(&with, 0, sizeof(with));
+    if (options) {
+        with = *options;
+    }
+    if (!with.knowledge) {
+        with.knowledge = test_knowledge();
+    }
+    MotiveResult result = motive_load(data, size, format, &with, out, error);
     free(data);
     return result;
 }

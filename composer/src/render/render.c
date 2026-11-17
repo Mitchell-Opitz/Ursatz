@@ -190,7 +190,7 @@ static int key_sharps_flats(const AnalysisKey *key) {
     int accidental;
     int fifths = 0;
     if (!key_tonic(key, &letter, &accidental) ||
-        !standard_tonality_key_fifths(letter, accidental, composer_key_is_minor(key), &fifths)) {
+        !standard_tonality_key_fifths_of(letter, accidental, key->material, &fifths)) {
         return 0;
     }
     return fifths;
@@ -239,7 +239,7 @@ static Spelling spell(int midi, const AnalysisKey *key) {
     int tonic_accidental = 0;
     KeySignature *signature = NULL;
     if (key && key_tonic(key, &tonic_letter, &tonic_accidental) &&
-        standard_tonality_key_signature_of(tonic_letter, tonic_accidental, composer_key_is_minor(key), &signature)) {
+        standard_tonality_key_signature_of_material(tonic_letter, tonic_accidental, key->material, &signature)) {
         for (int step = 0; step < 7; step++) {
             PitchLetter letter = pitch_letter_offset(PITCH_LETTER_C, step);
             int accidental = 0;

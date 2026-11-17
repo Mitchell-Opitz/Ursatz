@@ -18,7 +18,7 @@
  *   - the segment's kernel Chord Interpretation (interpretation/chord.h) and its ChordStructure: the root
  *     pitch class, the quality as a root-relative interval set, and the bass pitch class;
  *   - the kernel Key Interpretation of each key region (interpretation/key.h) and its KeyStructure: the
- *     tonic pitch class and the mode;
+ *     tonic pitch class and the pitch material of the key;
  *   - the segment's 12 pitch-class weights, as a plain array (index 0 = C ... 11 = B).
  *
  * BASS. When the segment passes its sounding pitches, bass_pitch_class is the pitch class of the lowest
@@ -84,7 +84,7 @@ typedef struct {
     bool has_weights;
     double weights[12];
     /* The common-practice materials the numeral reading takes the key's scale from (borrowed). The chain sets its own after building
-       the inputs; NULL (the built inputs' default) reads the built-in ones, a remaining site until P58 B13. */
+       the inputs; NULL (the built inputs' default) reads no scale, so no degree is found. */
     const CommonPracticeMaterials *materials;
 } StandardTonalityChordInput;
 

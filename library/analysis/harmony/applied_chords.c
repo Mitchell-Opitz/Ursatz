@@ -9,10 +9,12 @@
 #include "theory/tonality/tonal_key.h"
 #include "theory/tonality/common_practice_materials.h"
 
-/* The material of the input's key: the major, or the natural minor, of the input's materials (the built-in ones when it has none). */
+/* The material of the input's key: the major, or the natural minor, of the input's materials; NULL when it has none. */
 static const PitchMaterial *key_material(const StandardTonalityChordInput *input) {
-    const CommonPracticeMaterials *materials =
-        input->materials != NULL ? input->materials : common_practice_materials_builtin();
+    const CommonPracticeMaterials *materials = input->materials;
+    if (materials == NULL) {
+        return NULL;
+    }
     return input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? materials->major : materials->natural_minor;
 }
 

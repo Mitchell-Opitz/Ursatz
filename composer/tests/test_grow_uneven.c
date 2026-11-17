@@ -25,7 +25,7 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
     const char *motive;       /* one bar */
@@ -33,9 +33,9 @@ typedef struct {
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q",
+    {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q",
      "E4:q G4:e F4:e D4:q C4:q E4:q G4:q A4:q G4:q F4:q D4:q E4:h"},
-    {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, 4, "C5:q E5:e D5:e B4:q",
+    {"A minor 3/4", 9, HARMONY_MODE_MINOR, 3, 4, "C5:q E5:e D5:e B4:q",
      "C5:q E5:e D5:e B4:q A4:q C5:q B4:q G#4:q A4:h"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
@@ -70,6 +70,7 @@ static Motive make_motive(const Scenario *scenario, const char *text) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
@@ -300,7 +301,7 @@ static void test_round_trip(void) {
         char *text = plan_to_json(plan, &error);
         assert(text && strstr(text, "\"construction\""));
         PiecePlan *again = NULL;
-        assert(plan_from_json(text, &again, &error) == PLAN_OK);
+        assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
         char *text_again = plan_to_json(again, &error);
         assert(text_again && strcmp(text, text_again) == 0);
         const PlanConstraint *read = plan_node_find_constraint(again, test_find_node(again, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
@@ -334,7 +335,7 @@ static void test_round_trip(void) {
     char *text = plan_to_json(scratch, &error);
     assert(text && strstr(text, "\"stretch\"") && strstr(text, "\"cadential\""));
     PiecePlan *again = NULL;
-    assert(plan_from_json(text, &again, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
     char *text_again = plan_to_json(again, &error);
     assert(text_again && strcmp(text, text_again) == 0);
     free(text);
@@ -377,7 +378,7 @@ static void test_round_trip(void) {
     char *name = strstr(at, marker);
     memcpy(name + 1, "basic idxa", 10);
     PiecePlan *broken = NULL;
-    assert(plan_from_json(good_text, &broken, &error) == PLAN_ERR_FORMAT && broken == NULL);
+    assert(plan_from_json(test_knowledge(), good_text, &broken, &error) == PLAN_ERR_FORMAT && broken == NULL);
     assert(strstr(error.path, "ideas") != NULL);
     free(good_text);
     plan_destroy(good);

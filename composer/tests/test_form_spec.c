@@ -2437,12 +2437,12 @@ static size_t melody_notes(const PiecePlan *plan, Rational from, Rational to, He
     return count;
 }
 
-static bool pitch_in_scale(int tonic, bool minor, int pitch) {
+static bool pitch_in_scale(int tonic, bool is_minor, int pitch) {
     static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
     static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 11};
     int pitch_class = ((pitch - tonic) % 12 + 12) % 12;
     for (int i = 0; i < 7; i++) {
-        if ((minor ? MINOR : MAJOR)[i] == pitch_class) {
+        if ((is_minor ? MINOR : MAJOR)[i] == pitch_class) {
             return true;
         }
     }
@@ -2486,7 +2486,7 @@ static void lead_sweep(const char *text, int pitch_class, HarmonyMode mode, int 
     free(without);
     *composed = 0;
     *written = 0;
-    bool minor = mode == HARMONY_MODE_MINOR;
+    bool is_minor = mode == HARMONY_MODE_MINOR;
     for (unsigned long seed = 1; seed <= LEAD_SEEDS; seed++) {
         ComposeOutcome outcome;
         ComposeOutcome plain_outcome;
@@ -2531,7 +2531,7 @@ static void lead_sweep(const char *text, int pitch_class, HarmonyMode mode, int 
                 for (size_t i = 1; i < count; i++) {
                     Rational offset = add_time(bar_start, add_time(beat, (Rational){(long long)(i - 1), 8}));
                     assert(rational_cmp(bar_notes[i].onset, offset) == 0 && rational_cmp(bar_notes[i].duration, eighth) == 0);
-                    assert(pitch_in_scale(pitch_class, minor, bar_notes[i].midi));
+                    assert(pitch_in_scale(pitch_class, is_minor, bar_notes[i].midi));
                 }
                 /* The last note is a step from A return's first note. */
                 HeardNote next[4];

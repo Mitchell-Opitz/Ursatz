@@ -4,6 +4,7 @@
 #include "analysis/harmony/applied_chords.h"
 #include "analysis/harmony/roman_numeral_adapter.h"
 #include "interpretation_test_access.h"
+#include "test_knowledge.h"
 
 /* Roman numeral Interpretations per chord segment, in the segment's local key. */
 
@@ -11,6 +12,7 @@ static StandardTonalityChordInput chord_in(int root, int bass, const int *interv
                                            StandardTonalityRomanKeyMode mode) {
     StandardTonalityChordInput input;
     memset(&input, 0, sizeof(input));
+    input.materials = test_materials();
     input.segment_id = "segment";
     input.has_numeral = true;
     input.root_pitch_class = root;
@@ -146,8 +148,8 @@ static void test_key_boundary_switches_the_numeral_key(void) {
     expect_label(chord_in(7, 7, ADAPTER_MAJOR_TRIAD, 3, 7, C_MAJOR), "I");
 
     /* Through the builder: two segments, a region boundary between them. */
-    Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
-    Key *g_major = adapter_test_key("G major", 7, KEY_STRUCTURE_MODE_MAJOR);
+    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
+    Key *g_major = adapter_test_key("G major", 7, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     MusicalTime two = adapter_test_time(2, 1);
     MusicalTime one = adapter_test_time(1, 1);
@@ -160,6 +162,9 @@ static void test_key_boundary_switches_the_numeral_key(void) {
     size_t count = 0;
     assert(standard_tonality_build_chord_inputs(segments, 2, regions, 2, &inputs, &count) ==
            STANDARD_TONALITY_CHORD_INPUT_OK);
+    for (size_t mi = 0; mi < count; mi++) {
+        inputs[mi].materials = test_materials();
+    }
     StandardTonalityRomanResult *results = NULL;
     assert(standard_tonality_build_roman_numerals_with_config(inputs, count, NULL, &results) == STANDARD_TONALITY_ROMAN_OK);
     assert(results[0].has_numeral && strcmp(results[0].claim.label, "V") == 0);
@@ -172,7 +177,7 @@ static void test_key_boundary_switches_the_numeral_key(void) {
 }
 
 static void test_no_match_segment_gives_no_numeral(void) {
-    Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
+    Key *c_major = adapter_test_key("C major", 0, COMMON_PRACTICE_KEY_MAJOR);
     MusicalTime zero = adapter_test_time(0, 1);
     StandardTonalityKeyRegionInput regions[1] = {{c_major, zero, 0.0}};
     StandardTonalitySegmentInput segments[1] = {{"unmatched", zero, NULL, NULL}};
@@ -180,6 +185,9 @@ static void test_no_match_segment_gives_no_numeral(void) {
     size_t count = 0;
     assert(standard_tonality_build_chord_inputs(segments, 1, regions, 1, &inputs, &count) ==
            STANDARD_TONALITY_CHORD_INPUT_OK);
+    for (size_t mi = 0; mi < count; mi++) {
+        inputs[mi].materials = test_materials();
+    }
     StandardTonalityRomanResult *results = NULL;
     assert(standard_tonality_build_roman_numerals_with_config(inputs, count, NULL, &results) == STANDARD_TONALITY_ROMAN_OK);
     assert(count == 1 && !results[0].has_numeral && results[0].interpretation == NULL);

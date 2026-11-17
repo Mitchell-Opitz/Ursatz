@@ -64,13 +64,13 @@ ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size
     for (size_t s = 0; s < count && status == CHAIN_INPUT_OK; s++) {
         const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
         int tonic_pc = chords[s].tonic_pitch_class;
-        bool minor = chords[s].mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
+        bool is_minor = chords[s].mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
         GalantSegment segment;
         memset(&segment, 0, sizeof(segment));
         AnalysisSegment analysis = {segments->ids[s], *window, NULL, chain_attack_strength(map, &window->start)};
         segment.segment = analysis;
         beat_length_at(map, &window->start, &segment.beat_numerator, &segment.beat_denominator);
-        snprintf(segment.key_id, sizeof(segment.key_id), "key-%d%s", tonic_pc, minor ? "m" : "");
+        snprintf(segment.key_id, sizeof(segment.key_id), "key-%d%s", tonic_pc, is_minor ? "m" : "");
         segment.key = galant_degree_of_semitones(tonic_pc - home_pc);
         if (lines->bass[s].present) {
             segment.has_bass = true;
@@ -83,14 +83,14 @@ ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size
         segment.uncertainty = 0.5;
         if (romans[s].has_numeral) {
             const StandardTonalityRomanClaim *claim = &romans[s].claim;
-            int lowered = minor && (claim->degree == 3 || claim->degree == 6 || claim->degree == 7) &&
+            int lowered = is_minor && (claim->degree == 3 || claim->degree == 6 || claim->degree == 7) &&
                                   !romans[s].reading.raised_leading_tone
                               ? -1
                               : 0;
             segment.has_numeral = true;
             segment.root = (GalantPitchDegree){claim->degree, lowered};
             if (claim->applied) {
-                int target_lowered = minor && (claim->applied_target_degree == 3 || claim->applied_target_degree == 6 ||
+                int target_lowered = is_minor && (claim->applied_target_degree == 3 || claim->applied_target_degree == 6 ||
                                                claim->applied_target_degree == 7)
                                          ? -1
                                          : 0;

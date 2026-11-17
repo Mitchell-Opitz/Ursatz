@@ -318,29 +318,6 @@ bool standard_tonality_numeral_root_semitone_of(const StandardTonalityNumeralTex
     return true;
 }
 
-bool standard_tonality_numeral_root_semitone(const StandardTonalityNumeralText *numeral, StandardTonalityMode mode,
-                                             int *semitones) {
-    const CommonPracticeMaterials *materials = common_practice_materials_builtin();
-    const PitchMaterial *key_material = NULL;
-    switch (mode) {
-        case STANDARD_TONALITY_MODE_MAJOR:
-            key_material = materials->major;
-            break;
-        case STANDARD_TONALITY_MODE_NATURAL_MINOR:
-            key_material = materials->natural_minor;
-            break;
-        case STANDARD_TONALITY_MODE_HARMONIC_MINOR:
-            key_material = materials->harmonic_minor;
-            break;
-        case STANDARD_TONALITY_MODE_MELODIC_MINOR:
-            key_material = materials->melodic_minor;
-            break;
-        default:
-            return false;
-    }
-    return standard_tonality_numeral_root_semitone_of(numeral, key_material, materials, semitones);
-}
-
 bool standard_tonality_numeral_from_base(const StandardTonalityRomanNumeral *numeral,
                                          StandardTonalityNumeralText *out) {
     if (numeral == NULL || out == NULL || numeral->degree < 1 || numeral->degree > 7) {

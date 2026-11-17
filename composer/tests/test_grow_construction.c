@@ -101,6 +101,7 @@ static Motive make_motive(const Scenario *scenario, const char *text) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
@@ -205,7 +206,7 @@ static GrowRequest request_of(const Scenario *scenario, const Motive *motive, si
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
     request.meter = meter_of(scenario);
     request.bars = bars;
     request.pairing.beginning = beginning;

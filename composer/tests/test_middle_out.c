@@ -90,6 +90,7 @@ static Line notes_of(const char *text) {
     Motive motive;
     MotiveError error;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -119,7 +120,7 @@ static PieceRequest request_of(const char *form, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form;
-    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -370,7 +371,7 @@ static bool cadence_as_planned(const PiecePlan *plan, const ComposeHeard *heard)
 /* The melody's notes that start a bar are tones of the chord there; the chords at the bass notes stand on them. */
 static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
     PlanLaneKind lane = kind == SCENARIO_MELODY ? PLAN_LANE_MELODY : PLAN_LANE_BASS;
-    AnalysisKey key = test_key_with_material((AnalysisKey){NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL});
+    AnalysisKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     Rational half = {1, 2}; /* a harmony cell of 4/4 */
     if (kind == SCENARIO_PROGRESSION) {
         return;

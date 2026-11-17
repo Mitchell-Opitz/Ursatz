@@ -5,9 +5,9 @@ gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test h
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_reset  # test hook: test_analyzer_route resets the import counter
 gui/backend/src/service/piece_lock.c ursatz_gui_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
-library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P58 B13 (keys by text); its tests call it
-library/model/pitch/region.c region_equals  # no app compares regions until P58 B13; its tests call it
-library/model/pitch/region.c same_material  # helper of region_equals, which no app calls until P58 B13; its tests call it
+library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P60 (sections name regions); its tests call it
+library/model/pitch/region.c region_equals  # no app compares regions until P60 (sections name regions); its tests call it
+library/model/pitch/region.c same_material  # helper of region_equals, which no app calls until P60; its tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/model/time/meter_arithmetic.c meter_map_time_of  # the inverse of meter_map_position_of has no app caller until P59 reads the performer parts' local maps; its tests call it
 library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
@@ -22,14 +22,6 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # no app
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_at  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_count  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation_named  # no app resolves a relation until P58 B11 (region relations) and B13 (forms); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation_named  # no app resolves a relation by word until P60 (sections name relations); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 library/theory/tonality/region_relation.c region_resolve_named  # no app resolves a relation by word until P60 (per-section regions in requests); its tests call it
-library/theory/tonality/roman_numeral_grammar.c standard_tonality_numeral_root_semitone  # no app calls the mode form until P58 B13 deletes it; its tests call it
-library/theory/tonality/tonal_key.c mode_material  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
-library/theory/tonality/tonal_key.c mode_valid  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
-library/theory/tonality/tonal_key.c standard_tonality_degree_at_or_below_semitone  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
-library/theory/tonality/tonal_key.c standard_tonality_degree_of_semitone  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
-library/theory/tonality/tonal_key.c standard_tonality_degree_semitone  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
-library/theory/tonality/tonal_key.c standard_tonality_mode_pitch_classes  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
-library/theory/tonality/tonal_key.c standard_tonality_mode_pitch_classes_with_leading_tone  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms

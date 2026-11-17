@@ -138,13 +138,13 @@ typedef struct {
     size_t phrase_count;                       /* default 0 */
     const CommonPracticeKeyRepeat *repeats;    /* optional: written-out repeats whose measures share keys; borrowed */
     size_t repeat_count;                       /* default 0 */
-    const CommonPracticeMaterials *materials;  /* the chain sets the snapshot's; NULL (the default) reads common_practice_materials_builtin(), a remaining site until P58 B13; borrowed */
+    const CommonPracticeMaterials *materials;  /* the snapshot's four materials, required by key_regions_estimate (BAD_CONFIG without); the window scores read none; borrowed */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
    "key-region", pivot_search_measures 2, evidence_weight 0.8, no phrase boundaries, snap_reach_measures 1, hold_tolerance 0.05,
-   no phrases and no repeats, the builtin common-practice materials. */
-CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
+   no phrases and no repeats, and `materials` (the snapshot's; may be NULL for a caller that only scores windows). */
+CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(const CommonPracticeMaterials *materials);
 
 typedef enum {
     COMMON_PRACTICE_CADENCE_AUTHENTIC = 0,

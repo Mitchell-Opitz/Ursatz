@@ -46,8 +46,8 @@ static const Reading WITHOUT_SPANS[] = {{155, 0}, {606, 8}, {205, 8}, {268, 8}, 
 static const Reading WITH_SPANS[] = {{54, 0}, {210, 16}, {46, 4}, {107, 9}, {82, 0}};
 
 /* The material of a key the test hears: NULL without a key. */
-static const PitchMaterial *key_material_of(bool has_key, bool minor) {
-    return has_key ? knowledge_snapshot_material(test_knowledge(), minor ? "omt.material.natural-minor" : "omt.material.major")
+static const PitchMaterial *key_material_of(bool has_key, bool is_minor) {
+    return has_key ? knowledge_snapshot_material(test_knowledge(), is_minor ? "omt.material.natural-minor" : "omt.material.major")
                    : NULL;
 }
 

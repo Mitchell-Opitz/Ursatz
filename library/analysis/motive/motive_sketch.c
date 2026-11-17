@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "model/pitch/pitch_arithmetic.h"
-#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/tonal_key.h"
 
 static long floor_div(long a, long b) {
@@ -299,6 +298,17 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
 
 /* --- contour ----------------------------------------------------------------- */
 
+/* The semitones of contour rank `step` over C 60: the sketch's own scale when it has one, else the steps of the C major scale (the
+   letters C D E F G A B), the contour's convention for a sketch with no scale. */
+static int contour_pitch_at_step(const MotiveSketch *sketch, long step) {
+    if (sketch->has_scale) {
+        return motive_sketch_pitch_at_step(sketch, step, 0);
+    }
+    long octave = floor_div(step, 7);
+    int degree = (int)(step - octave * 7);
+    return (int)(octave * 12 + standard_tonality_natural_degree_semitone(degree + 1));
+}
+
 bool motive_sketch_contour_normalize(const MotiveSketch *in, MotiveSketch *out) {
     if (in->note_count == 0 || in->note_count > MOTIVE_SKETCH_MAX_NOTES) {
         return false;
@@ -321,17 +331,11 @@ bool motive_sketch_contour_normalize(const MotiveSketch *in, MotiveSketch *out) 
         ranks[i] = below;
     }
     MotiveSketch result = *in;
-    MotiveSketch scale = *in;
-    if (!scale.has_scale) {
-        scale.has_scale = true;
-        scale.tonic_pc = 0;
-        scale.material = common_practice_materials_builtin()->major; /* a remaining site until P58 B13: a sketch with no scale has no material to read */
-    }
     for (size_t i = 0; i < in->note_count; i++) {
         if (ranks[i] >= 64) {
             return false;
         }
-        int pitch = 60 + motive_sketch_pitch_at_step(&scale, ranks[i], 0);
+        int pitch = 60 + contour_pitch_at_step(in, ranks[i]);
         if (pitch > 127) {
             return false;
         }

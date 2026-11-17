@@ -141,10 +141,7 @@ KeyResult common_practice_build_key(const PitchMaterial *material, const char *t
     int tonic_pitch_class = tonic_pitch_class_of(tonic_name);
     KeyResult key_result;
     if (tonic_pitch_class >= 0) {
-        KeyStructure structure = {tonic_pitch_class,
-                                  mode == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR
-                                                                    : KEY_STRUCTURE_MODE_MAJOR,
-                                  material};
+        KeyStructure structure = {tonic_pitch_class, material};
         key_result = key_create_with_structure(interpretation, label, &structure, out);
     } else {
         key_result = key_create(interpretation, label, out);

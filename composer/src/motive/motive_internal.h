@@ -7,6 +7,7 @@
 #include <cJSON.h>
 #include <analysis/motive/motive_relation.h>
 #include <analysis/motive/motive_sketch.h>
+#include <theory/tonality/common_practice_materials.h>
 #include <model/core/rational.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
@@ -33,6 +34,8 @@ typedef struct {
     size_t feature_count;
     bool has_role;
     bool accompaniment;
+    /* The options' snapshot's materials: the default C major of a degree list, the keys of a JSON document and of a file's signature. */
+    CommonPracticeMaterials materials;
 } MotiveDocument;
 
 /*
@@ -131,8 +134,8 @@ cJSON *motive_json_object(const Motive *motive);
 /* Prints document as the project's JSON text and deletes it. NULL on failure; caller frees the text. */
 char *motive_json_text(cJSON *document);
 
-/* The key of a MIDI key signature count of sharps (negative for flats) and mode. */
-AnalysisKey motive_key_from_signature(int sharps_flats, KeyStructureMode mode);
+/* The key of a key signature count of sharps (negative for flats) and mode, in the materials' major or natural minor. */
+AnalysisKey motive_key_from_signature(const CommonPracticeMaterials *materials, int sharps_flats, CommonPracticeKeyMode mode);
 
 /*
  * The step of the key's scale a MIDI pitch is on (7 to an octave, 0 the tonic's pitch class), and whether it is a

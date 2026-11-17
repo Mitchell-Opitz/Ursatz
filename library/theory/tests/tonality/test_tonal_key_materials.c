@@ -4,18 +4,17 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "model/pitch/pitch_arithmetic.h"
 #include "test_knowledge.h"
 
 /*
- * The material-based tonal functions (tonal_key.h) against the mode-based ones: on the four tonal materials every degree, semitone,
- * tonic and key agrees; the signatures of the seven diatonic modes on every tonic; the imaginary keys beyond seven accidentals; and
- * the natural degrees that need no key.
+ * The material-based tonal functions (tonal_key.h) on the four tonal materials (what the retired mode rows and the test of the
+ * generated mode rows checked): the steps of each snapshot entry give the degrees, the pitch classes and the readings of a
+ * semitone; the signatures of the seven diatonic modes on every tonic; the imaginary keys beyond seven accidentals; and the natural
+ * degrees that need no key.
  */
 
 #define TONAL_COUNT 4
-
-static const StandardTonalityMode MODES[TONAL_COUNT] = {STANDARD_TONALITY_MODE_MAJOR, STANDARD_TONALITY_MODE_NATURAL_MINOR,
-                                                        STANDARD_TONALITY_MODE_HARMONIC_MINOR, STANDARD_TONALITY_MODE_MELODIC_MINOR};
 
 static const PitchMaterial *tonal_material(int index) {
     const CommonPracticeMaterials *m = test_materials();
@@ -30,16 +29,20 @@ static bool minor_of(int index) {
 static void test_degrees_and_masks(void) {
     for (int index = 0; index < TONAL_COUNT; index++) {
         const PitchMaterial *material = tonal_material(index);
+        assert(material->step_count == 7);
         for (int degree = -1; degree <= 9; degree++) {
-            assert(standard_tonality_material_degree_semitone(material, degree) ==
-                   standard_tonality_degree_semitone(MODES[index], degree));
+            int expected = degree >= 1 && degree <= 7 ? material->steps[degree - 1] : -1;
+            assert(standard_tonality_material_degree_semitone(material, degree) == expected);
         }
         for (int tonic = -13; tonic <= 25; tonic++) {
             int pitch_class = ((tonic % 12) + 12) % 12;
-            assert(standard_tonality_material_pitch_classes(tonic, material) ==
-                   standard_tonality_mode_pitch_classes(pitch_class, MODES[index]));
+            unsigned mask = 0;
+            for (int degree = 1; degree <= 7; degree++) {
+                mask |= 1u << ((pitch_class + material->steps[degree - 1]) % 12);
+            }
+            assert(standard_tonality_material_pitch_classes(tonic, material) == mask);
             assert(standard_tonality_material_pitch_classes_with_leading_tone(tonic, material) ==
-                   standard_tonality_mode_pitch_classes_with_leading_tone(pitch_class, MODES[index]));
+                   (mask | (1u << ((pitch_class + 11) % 12))));
             assert(standard_tonality_material_pitch_classes(tonic, material) == pitch_material_mask(material, tonic));
         }
     }
@@ -48,21 +51,21 @@ static void test_degrees_and_masks(void) {
     assert(standard_tonality_material_pitch_classes_with_leading_tone(0, NULL) == 0);
 }
 
+/* Every semitone reads as a degree of the material and an alteration from it; the lowered reading is the next degree down. */
 static void test_semitone_readings(void) {
     for (int index = 0; index < TONAL_COUNT; index++) {
         const PitchMaterial *material = tonal_material(index);
         for (int semitone = -30; semitone <= 40; semitone++) {
-            int mode_degree = 0;
-            int mode_alteration = 0;
+            int below_degree = 0;
+            int below_alteration = 0;
             int degree = 0;
             int alteration = 0;
-            bool by_mode = standard_tonality_degree_at_or_below_semitone(semitone, MODES[index], &mode_degree, &mode_alteration);
-            bool by_material = standard_tonality_material_degree_at_or_below_semitone(semitone, material, &degree, &alteration);
-            assert(by_mode == by_material && degree == mode_degree && alteration == mode_alteration);
-
-            by_mode = standard_tonality_degree_of_semitone(semitone, MODES[index], &mode_degree, &mode_alteration);
-            by_material = standard_tonality_material_degree_of_semitone(semitone, material, &degree, &alteration);
-            assert(by_mode == by_material && degree == mode_degree && alteration == mode_alteration);
+            int inside = ((semitone % 12) + 12) % 12;
+            assert(standard_tonality_material_degree_at_or_below_semitone(semitone, material, &below_degree, &below_alteration));
+            assert(below_degree >= 1 && below_degree <= 7 && material->steps[below_degree - 1] + below_alteration == inside);
+            assert(standard_tonality_material_degree_of_semitone(semitone, material, &degree, &alteration));
+            assert((degree == below_degree && alteration == below_alteration) || (degree == below_degree + 1 && alteration == -1));
+            assert(degree >= 1 && degree <= 7 && material->steps[degree - 1] + alteration == inside);
         }
         int degree = 7;
         int alteration = 7;
@@ -90,48 +93,46 @@ static void test_natural_degrees(void) {
     assert(!standard_tonality_natural_degree_of_semitone(0, NULL, NULL));
 }
 
+/* The signature of a tonal material is the major key's of the tonic, less three places on the line of fifths for the minor forms (all
+   three use the natural minor's). */
 static void test_key_signatures_agree(void) {
+    const PitchMaterial *major = tonal_material(0);
     for (int index = 0; index < TONAL_COUNT; index++) {
         const PitchMaterial *material = tonal_material(index);
+        int shift = minor_of(index) ? 3 : 0;
         for (int letter = PITCH_LETTER_A; letter <= PITCH_LETTER_G; letter++) {
             for (int accidental = -2; accidental <= 2; accidental++) {
-                int by_mode = 99;
+                int by_major = 99;
                 int by_material = -99;
-                assert(standard_tonality_key_fifths((PitchLetter)letter, accidental, minor_of(index), &by_mode));
+                assert(standard_tonality_key_fifths_of((PitchLetter)letter, accidental, major, &by_major));
                 assert(standard_tonality_key_fifths_of((PitchLetter)letter, accidental, material, &by_material));
-                assert(by_mode == by_material);
+                assert(by_major - shift == by_material);
 
-                KeySignature *mode_signature = NULL;
-                KeySignature *material_signature = NULL;
-                bool mode_ok = standard_tonality_key_signature_of((PitchLetter)letter, accidental, minor_of(index), &mode_signature);
-                bool material_ok =
-                    standard_tonality_key_signature_of_material((PitchLetter)letter, accidental, material, &material_signature);
-                assert(mode_ok == material_ok);
-                if (mode_ok) {
-                    assert(key_signature_entry_count(mode_signature) == key_signature_entry_count(material_signature));
-                    key_signature_destroy(mode_signature);
-                    key_signature_destroy(material_signature);
+                KeySignature *signature = NULL;
+                bool ok = standard_tonality_key_signature_of_material((PitchLetter)letter, accidental, material, &signature);
+                assert(ok == (by_material >= -7 && by_material <= 7));
+                if (ok) {
+                    assert(key_signature_entry_count(signature) == (size_t)(by_material < 0 ? -by_material : by_material));
+                    key_signature_destroy(signature);
                 }
             }
         }
         for (int fifths = -12; fifths <= 12; fifths++) {
-            PitchLetter mode_letter = PITCH_LETTER_A;
-            PitchLetter material_letter = PITCH_LETTER_B;
-            int mode_accidental = 0;
-            int material_accidental = 9;
-            assert(standard_tonality_key_of_fifths(fifths, minor_of(index), &mode_letter, &mode_accidental));
-            assert(standard_tonality_key_of_fifths_material(fifths, material, &material_letter, &material_accidental));
-            assert(mode_letter == material_letter && mode_accidental == material_accidental);
+            PitchLetter letter = PITCH_LETTER_A;
+            PitchLetter expected_letter = PITCH_LETTER_B;
+            int accidental = 0;
+            int expected_accidental = 9;
+            assert(standard_tonality_key_of_fifths_material(fifths, material, &letter, &accidental));
+            pitch_spelling_from_fifths(fifths + shift, &expected_letter, &expected_accidental);
+            assert(letter == expected_letter && accidental == expected_accidental);
         }
         for (int pitch_class = 0; pitch_class < 12; pitch_class++) {
-            PitchLetter mode_letter = PITCH_LETTER_A;
-            PitchLetter material_letter = PITCH_LETTER_B;
-            int mode_accidental = 0;
-            int material_accidental = 9;
-            assert(standard_tonality_key_tonic_of_pitch_class(pitch_class, minor_of(index), &mode_letter, &mode_accidental));
-            assert(standard_tonality_key_tonic_of_pitch_class_material(pitch_class, material, &material_letter,
-                                                                       &material_accidental));
-            assert(mode_letter == material_letter && mode_accidental == material_accidental);
+            PitchLetter letter = PITCH_LETTER_A;
+            int accidental = 0;
+            int fifths = 99;
+            assert(standard_tonality_key_tonic_of_pitch_class_material(pitch_class, material, &letter, &accidental));
+            assert(pitch_class_of_letter(letter, accidental) == pitch_class);
+            assert(standard_tonality_key_fifths_of(letter, accidental, material, &fifths) && fifths >= -7 && fifths <= 7);
         }
     }
 }
@@ -166,7 +167,7 @@ static void test_seven_modes_on_every_tonic(void) {
             for (int accidental = -2; accidental <= 2; accidental++) {
                 int major = 0;
                 int fifths = 0;
-                assert(standard_tonality_key_fifths((PitchLetter)letter, accidental, false, &major));
+                assert(standard_tonality_key_fifths_of((PitchLetter)letter, accidental, tonal_material(0), &major));
                 assert(standard_tonality_key_fifths_of((PitchLetter)letter, accidental, material, &fifths));
                 assert(fifths == major + DIATONIC[mode].offset);
             }

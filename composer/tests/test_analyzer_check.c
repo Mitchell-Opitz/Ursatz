@@ -41,14 +41,14 @@ typedef enum { SENTENCE, PERIOD, ROUNDED_BINARY } Shape;
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     const char *motive; /* grown shapes only */
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, "C5:q E5:e D5:e B4:q"},
+    {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"A minor 3/4", 9, HARMONY_MODE_MINOR, 3, "C5:q E5:e D5:e B4:q"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -78,6 +78,7 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
     }
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter = meter;
     assert(motive_from_notes_text(scenario->motive, &options, motive_out, NULL) == MOTIVE_OK);
@@ -348,7 +349,7 @@ static void piece_section(PieceFixture *fixture, const char *id, PiecePart part,
 /* The intro 2 bars, a sentence of 8 bars, a free phrase of 4 and a turnaround of 2, D minor 4/4, and the ending a run adds. */
 static void piece_fixture(PieceFixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->request.key = test_key_mode(2, KEY_STRUCTURE_MODE_MINOR);
+    fixture->request.key = test_key_mode(2, HARMONY_MODE_MINOR);
     fixture->request.knowledge = test_knowledge();
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;

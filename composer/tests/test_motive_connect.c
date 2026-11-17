@@ -18,6 +18,7 @@
 static Motive load(const char *notes, const char *harmony) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = request_parse_meter("4/4", &options.meter);
     options.has_key = request_parse_key("C major", test_knowledge(), &options.key);
     if (harmony) {
@@ -111,6 +112,7 @@ static void test_harmony_progression(void) {
 static void test_no_chord_no_harmony(void) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = request_parse_meter("4/4", &options.meter);
     Motive rhythm;
     assert(motive_from_rhythm_text("x:q x:q x:q x:q", &options, &rhythm, NULL) == MOTIVE_OK);

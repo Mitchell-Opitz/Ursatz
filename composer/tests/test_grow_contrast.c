@@ -51,7 +51,7 @@ static Motive load_motive(const char *path) {
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
-    MotiveResult result = motive_from_json(text, NULL, &motive, &error);
+    MotiveResult result = motive_from_json(text, test_motive_options(), &motive, &error);
     if (result != MOTIVE_OK) {
         fprintf(stderr, "%s: cannot read the motif at %s: %s\n", path, error.location, error.message);
     }

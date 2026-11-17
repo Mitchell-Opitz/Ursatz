@@ -114,10 +114,10 @@ static ComposerStatus run_variations(const ComposerContext *context, const char 
         seed = seeded ? seed : api_default_seed();
     }
     if (status == COMPOSER_OK) {
-        status = api_read_plan_text(root, "plan", &text, &out->error);
+        status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_plan_from_text(text, "plan", &plan, &out->error);
+        status = api_plan_from_text(context->knowledge, text, "plan", &plan, &out->error);
     }
     char what[96] = "";
     if (status == COMPOSER_OK) {

@@ -54,9 +54,9 @@ const char *api_key_name(const AnalysisKey *key, char *out, size_t size);
  * it with free. Messages: "cannot read plan: <why>[ at <where>]" at /<name>, or "the input is an Ursatz-Analyzer analysis
  * document, not a plan; ..." for a document of the Analyzer.
  */
-ComposerStatus api_read_plan_text(const cJSON *request, const char *name, char **text, ComposerError *error);
+ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSON *request, const char *name, char **text, ComposerError *error);
 /* The plan of the text above. */
-ComposerStatus api_plan_from_text(const char *text, const char *name, PiecePlan **out, ComposerError *error);
+ComposerStatus api_plan_from_text(const KnowledgeSnapshot *knowledge, const char *text, const char *name, PiecePlan **out, ComposerError *error);
 
 /* --- what a request asks to have made -------------------------------------------------------------- */
 

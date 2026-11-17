@@ -68,7 +68,7 @@ static bool build_key_events(const ImportedNotes *notes, const CommonPracticeMat
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
         out->key_events[i].time = event->position;
         /* The file's mode hint never reached the chain: every key is the major one. */
-        if (!analysis_key_from_fifths_material(event->sharps_flats, materials->major,
+        if (!analysis_key_from_fifths(event->sharps_flats, materials->major,
                                                &out->key_events[i].key)) {
             return false;
         }

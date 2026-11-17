@@ -53,9 +53,8 @@ static int degree_of_offset(const StandardTonalityChordInput *input, int offset,
     *raised_sixth = false;
     int degree = 0;
     int alteration = 0;
-    const CommonPracticeMaterials *materials =
-        input->materials != NULL ? input->materials : common_practice_materials_builtin();
-    if (!standard_tonality_material_degree_of_semitone(
+    const CommonPracticeMaterials *materials = input->materials;
+    if (materials == NULL || !standard_tonality_material_degree_of_semitone(
             offset, mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? materials->major : materials->natural_minor, &degree,
             &alteration)) {
         return 0;
@@ -147,23 +146,23 @@ static bool read_diatonic(const StandardTonalityChordInput *input, StandardTonal
     if (!numeral_from_intervals(input->intervals, input->interval_count, degree, &numeral)) {
         return false;
     }
-    bool minor = input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
+    bool is_minor = input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
     /* "IV7" is a major seventh in a major key; in minor no natural or harmonic IV is major, so IV7 is melodic
        minor's dominant seventh on the 4th, the one uppercase seventh off the dominant that is not ambiguous. */
-    bool melodic_dominant_seventh = minor && degree == 4 && numeral.seventh &&
+    bool melodic_dominant_seventh = is_minor && degree == 4 && numeral.seventh &&
                                     numeral.seventh_quality == STANDARD_TONALITY_SEVENTH_MAJOR_MINOR;
     if (!standard_tonality_roman_numeral_is_unambiguous(&numeral) && !melodic_dominant_seventh) {
         return false;
     }
     bool fits = !raised_sixth && standard_tonality_roman_numeral_fits_key(input->mode, degree, raised, &numeral);
-    if (!fits && !(minor && melodic_minor_fits(degree, raised, raised_sixth, &numeral))) {
+    if (!fits && !(is_minor && melodic_minor_fits(degree, raised, raised_sixth, &numeral))) {
         return false;
     }
     memset(out, 0, sizeof(*out));
     out->numeral = numeral;
     out->raised_leading_tone = raised;
     out->raised_sixth = raised_sixth;
-    out->romantext_spelling = minor;
+    out->romantext_spelling = is_minor;
     out->inversion = inversion_of(input);
     return true;
 }

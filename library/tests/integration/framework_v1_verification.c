@@ -3,6 +3,7 @@
 #include "framework_v1_chain.h"
 #include "framework_v1_deviations.h"
 #include "interpretation_test_access.h"
+#include "test_knowledge.h"
 
 /*
  * Framework v1 verification: the full chain over the five reference pieces (Bach BWV Anh. 114, Clementi Op. 36 No. 1, Field Nocturne No. 1,
@@ -78,7 +79,7 @@ static void fv1_check_keys(const Chain *c, Fv1Verifier *v) {
     char name2[24];
 
     /* the home key: the key the chain's own estimator gives the whole scope taken as one window (key_window_scores, the library's profiles) */
-    CommonPracticeKeyRegionsConfig whole = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig whole = common_practice_key_regions_config_default(test_materials());
     whole.window_measures = (size_t)(x->keys_last - x->keys_first + 1);
     CommonPracticeKeyWindows windows = {0};
     assert(key_window_scores(c->key_segments, c->count, c->map, &whole, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK && windows.count >= 1);

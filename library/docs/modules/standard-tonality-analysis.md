@@ -9,7 +9,7 @@
 standard-tonality includes no other framework, so the adapter reads only kernel-level data (`chord_input.h`):
 
 - the segment's kernel `Chord` and its `ChordStructure` (`interpretation/chord.h`): root pitch class, quality as a root-relative interval set, bass pitch class;
-- the kernel `Key` of each key region and its `KeyStructure` (`interpretation/key.h`): tonic pitch class and mode;
+- the kernel `Key` of each key region and its `KeyStructure` (`interpretation/key.h`): tonic pitch class and pitch material;
 - the segment's 12 pitch-class weights, as a plain `double[12]` (index 0 = C).
 
 `ChordStructure` and `KeyStructure` are additive: a Chord or Key built with `chord_create` / `key_create` reports none. common-practice-minimal fills them when it builds a chord (`weighted_chord_identification`) or a key (`common_practice_build_key`). The layer table covers `analysis/` as well as the module's top directory.

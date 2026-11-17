@@ -7,6 +7,14 @@
 #include "schema_util.h"
 #include "chain/chain_inputs.h"
 #include "../key_index_test_util.h"
+#include "test_knowledge.h"
+
+/* The default config with the snapshot's materials: the key regions estimate has none of its own. */
+static const CommonPracticeKeyRegionsConfig *default_config(void) {
+    static CommonPracticeKeyRegionsConfig config;
+    config = common_practice_key_regions_config_default(test_materials());
+    return &config;
+}
 
 /*
  * Schema and sequence detection (L3.10) on a hand-written galant fixture, tests/fixtures/galant/galant_fixture.txt: 24 measures in C major planted with a
@@ -190,7 +198,7 @@ static void chain_run(Chain *chain, const WeightedPipeline *p, const MeterMap *m
         assert(common_practice_weight_segment(p->segments[s].members, p->segments[s].member_count, &weighting,
                                               &chain->key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     }
-    assert(key_regions_estimate(chain->key_segments, count, map, NULL, 0, NULL, &chain->regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(chain->key_segments, count, map, NULL, 0, default_config(), &chain->regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     chain->region_inputs = (StandardTonalityKeyRegionInput *)calloc(chain->regions.region_count, sizeof(StandardTonalityKeyRegionInput));
     chain->segment_inputs = (StandardTonalitySegmentInput *)calloc(count, sizeof(StandardTonalitySegmentInput));
     assert(chain->region_inputs != NULL && chain->segment_inputs != NULL);
@@ -207,6 +215,9 @@ static void chain_run(Chain *chain, const WeightedPipeline *p, const MeterMap *m
     }
     assert(standard_tonality_build_chord_inputs(chain->segment_inputs, count, chain->region_inputs, chain->regions.region_count,
                                                 &chain->tonal_inputs, &chain->tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK);
+    for (size_t mi = 0; mi < chain->tonal_count; mi++) {
+        chain->tonal_inputs[mi].materials = test_materials();
+    }
     assert(standard_tonality_build_roman_numerals_with_config(chain->tonal_inputs, chain->tonal_count, NULL, &chain->romans) == STANDARD_TONALITY_ROMAN_OK);
     assert(chain->tonal_count == count);
     chain->tonic_pc = (int *)calloc(count, sizeof(int));

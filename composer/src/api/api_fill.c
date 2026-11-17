@@ -187,7 +187,7 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
         status = read_style_members(root, &style_options, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_read_plan_text(root, "plan", &text, &out->error);
+        status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
 
     /* The seeds are tried one after another, each from a new copy of the plan; only a stuck run can be mended by the next. */
@@ -208,7 +208,7 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
             break;
         }
         PiecePlan *fresh = NULL;
-        status = api_plan_from_text(text, "plan", &fresh, &out->error);
+        status = api_plan_from_text(context->knowledge, text, "plan", &fresh, &out->error);
         if (status != COMPOSER_OK) {
             break;
         }

@@ -39,7 +39,7 @@ static void check_piece(const char *name) {
     assert(key_events != NULL);
     for (size_t i = 0; i < key_count; i++) {
         key_events[i].time = imported.key_signatures[i].position;
-        assert(analysis_key_from_fifths(imported.key_signatures[i].sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
+        assert(analysis_key_from_fifths(imported.key_signatures[i].sharps_flats, test_materials()->major, &key_events[i].key));
     }
 
     AnalysisNoteSet set = {notes, note_count, map};

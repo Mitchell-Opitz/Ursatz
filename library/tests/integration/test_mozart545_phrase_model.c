@@ -13,6 +13,14 @@
 #include "analysis/harmony/roman_numeral_adapter.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "analysis/voices/outer_voice.h"
+#include "test_knowledge.h"
+
+/* The default config with the snapshot's materials: the key regions estimate has none of its own. */
+static const CommonPracticeKeyRegionsConfig *default_config(void) {
+    static CommonPracticeKeyRegionsConfig config;
+    config = common_practice_key_regions_config_default(test_materials());
+    return &config;
+}
 
 /*
  * Phrase model labels for Mozart, Piano Sonata K. 545, first movement, exposition, against
@@ -412,7 +420,7 @@ static void test_whole_chain(void) {
                                               &key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     }
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(key_segments, count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(key_segments, count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
 
     StandardTonalityKeyRegionInput *region_inputs =
         (StandardTonalityKeyRegionInput *)calloc(regions.region_count, sizeof(StandardTonalityKeyRegionInput));
@@ -434,6 +442,9 @@ static void test_whole_chain(void) {
     size_t tonal_count = 0;
     assert(standard_tonality_build_chord_inputs(segment_inputs, count, region_inputs, regions.region_count,
                                                 &tonal_inputs, &tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK);
+    for (size_t mi = 0; mi < tonal_count; mi++) {
+        tonal_inputs[mi].materials = test_materials();
+    }
     StandardTonalityRomanResult *romans = NULL;
     assert(standard_tonality_build_roman_numerals_with_config(tonal_inputs, tonal_count, NULL, &romans) == STANDARD_TONALITY_ROMAN_OK);
 

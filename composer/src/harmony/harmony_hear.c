@@ -28,13 +28,13 @@
  * diminished seventh on the leading tone).
  */
 bool harmony_diatonic_intervals(HarmonyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
-    bool minor = mode == HARMONY_MODE_MINOR;
+    bool is_minor = mode == HARMONY_MODE_MINOR;
     /* A minor key's chords are the natural scale's, but the dominant is major and the leading-tone chord diminished. */
-    bool raised = minor && (chord->degree == 5 || (chord->degree == 7 && chord->leading_tone));
+    bool raised = is_minor && (chord->degree == 5 || (chord->degree == 7 && chord->leading_tone));
     memset(intervals, 0, 4 * sizeof(int));
     if (!chord->seventh) {
         StandardTonalityTriadQuality triad;
-        StandardTonalityTriadKey key = !minor ? STANDARD_TONALITY_TRIAD_KEY_MAJOR
+        StandardTonalityTriadKey key = !is_minor ? STANDARD_TONALITY_TRIAD_KEY_MAJOR
                                        : raised ? STANDARD_TONALITY_TRIAD_KEY_MINOR_HARMONIC
                                                 : STANDARD_TONALITY_TRIAD_KEY_MINOR_NATURAL;
         if (!standard_tonality_triad_quality_in_key(key, chord->degree, &triad) ||
@@ -45,10 +45,10 @@ bool harmony_diatonic_intervals(HarmonyMode mode, const HarmonyChord *chord, int
         return true;
     }
     StandardTonalitySeventhQuality seventh;
-    StandardTonalitySeventhKey key = !minor ? STANDARD_TONALITY_SEVENTH_KEY_MAJOR
+    StandardTonalitySeventhKey key = !is_minor ? STANDARD_TONALITY_SEVENTH_KEY_MAJOR
                                      : raised ? STANDARD_TONALITY_SEVENTH_KEY_MINOR_RAISED_LEADING_TONE
                                               : STANDARD_TONALITY_SEVENTH_KEY_MINOR_NATURAL;
-    if (!minor && chord->degree == 7) {
+    if (!is_minor && chord->degree == 7) {
         /* Kept on purpose (R-582): the library owner reads the seventh on the leading tone of a major key as half
            diminished, the Composer has always played it fully diminished, and changing it changes what is played. */
         seventh = STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED;

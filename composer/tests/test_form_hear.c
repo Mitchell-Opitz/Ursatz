@@ -146,11 +146,11 @@ static void test_constrained_melody(void) {
     plan_destroy(plan);
 }
 
-static void expect_key(const FormHeardKey *key, long numerator, long denominator, int tonic, KeyStructureMode mode) {
+static void expect_key(const FormHeardKey *key, long numerator, long denominator, int tonic, HarmonyMode mode) {
     Rational start;
     assert(rational_make(numerator, denominator, &start) == RATIONAL_OK);
     assert(rational_cmp(key->start, start) == 0);
-    assert(analysis_key_tonic_pitch_class(&key->key) == tonic && key->key.mode == mode);
+    assert(analysis_key_tonic_pitch_class(&key->key) == tonic && harmony_key_mode(&key->key) == mode);
 }
 
 /* The key regions heard: the C major sentence is one region from 0, the one that modulates ends in a G major region. */
@@ -160,7 +160,7 @@ static void test_keys(void) {
     size_t count = 0;
     assert(form_hear_keys(plan, test_knowledge(), bars(0, 8), &keys, &count) == FORM_HEAR_OK);
     assert(count == 1);
-    expect_key(&keys[0], 0, 1, 0, KEY_STRUCTURE_MODE_MAJOR);
+    expect_key(&keys[0], 0, 1, 0, HARMONY_MODE_MAJOR);
     free(keys);
     plan_destroy(plan);
 
@@ -168,8 +168,8 @@ static void test_keys(void) {
     assert(form_hear_keys(plan, test_knowledge(), bars(0, 8), &keys, &count) == FORM_HEAR_OK);
     /* Recorded: C major from 0, G major from bar 4 (the continuation). */
     assert(count == 2);
-    expect_key(&keys[0], 0, 1, 0, KEY_STRUCTURE_MODE_MAJOR);
-    expect_key(&keys[1], 4, 1, 7, KEY_STRUCTURE_MODE_MAJOR);
+    expect_key(&keys[0], 0, 1, 0, HARMONY_MODE_MAJOR);
+    expect_key(&keys[1], 4, 1, 7, HARMONY_MODE_MAJOR);
     free(keys);
     plan_destroy(plan);
 }

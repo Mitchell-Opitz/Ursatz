@@ -72,23 +72,17 @@ bool composer_material_supported(const CommonPracticeMaterials *materials, const
 /*
  * Whether the key reads as a minor key: its material has a minor third (common_practice_key_mode_of). False for a key with no
  * material (the zero key reads as major, as a request left at its defaults holds) or a material that is neither major nor
- * minor; the Composer writes keys that have one (P58 B13). Every read of a key's mode goes through this.
+ * minor; the Composer writes keys that have one. Every read of a key's mode goes through this.
  */
 bool composer_key_is_minor(const AnalysisKey *key);
 
 /*
- * The builtin major (or natural minor) material, common_practice_materials_builtin's, for code that holds a mode and no materials.
- * TRANSITIONAL: goes with the mode types and the builtin materials (P58 B13).
- */
-const PitchMaterial *composer_builtin_material(bool minor);
-
-/*
  * Makes the key a major or a minor key, keeping its tonic spelling: its material becomes the major or the natural minor of
- * materials and its mode follows. The one way the Composer writes a mode (P58 B13).
+ * materials (`mode` is the key's mode). The one way the Composer writes a mode.
  */
-void composer_key_set_minor(AnalysisKey *key, const CommonPracticeMaterials *materials, bool minor);
+void composer_key_set_mode(AnalysisKey *key, const CommonPracticeMaterials *materials, CommonPracticeKeyMode mode);
 
-/* Makes the key of the material (the tonic spelling stays); its mode follows. The material is the major or the natural minor of the call's materials. */
+/* Makes the key of the material (the tonic spelling stays). The material is the major or the natural minor of the call's materials. */
 void composer_key_set_material(AnalysisKey *key, const PitchMaterial *material);
 
 /*
@@ -96,12 +90,6 @@ void composer_key_set_material(AnalysisKey *key, const PitchMaterial *material);
  * (C, no material) is valid and reads as C major, which a request left at its defaults holds.
  */
 bool composer_key_valid(const AnalysisKey *key);
-
-/*
- * The key's mode as the code still written on KeyStructureMode reads it: KEY_STRUCTURE_MODE_MINOR when composer_key_is_minor,
- * else KEY_STRUCTURE_MODE_MAJOR. TRANSITIONAL: goes with the mode types (P58 B13).
- */
-KeyStructureMode composer_key_mode(const AnalysisKey *key);
 
 /* The name of a chord's harmonic function, "unknown" for a chord with none. */
 const char *util_function_name(bool has_function, HarmonicFunction function);

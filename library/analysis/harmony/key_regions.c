@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "model/pitch/pitch_arithmetic.h"
+#include "theory/tonality/common_practice_materials.h"
 
 CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void) {
     CommonPracticeKeyProfiles profiles = {
@@ -12,7 +13,7 @@ CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void) {
     return profiles;
 }
 
-CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) {
+CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(const CommonPracticeMaterials *materials) {
     CommonPracticeKeyRegionsConfig config;
     config.window_measures = 4;
     config.profiles = common_practice_krumhansl_kessler_profiles();
@@ -29,7 +30,7 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) 
     config.phrase_count = 0;
     config.repeats = NULL;
     config.repeat_count = 0;
-    config.materials = common_practice_materials_builtin();
+    config.materials = materials;
     return config;
 }
 
@@ -109,9 +110,9 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
     }
     CommonPracticeKeyRegionsConfig effective =
-        config != NULL ? *config : common_practice_key_regions_config_default();
+        config != NULL ? *config : common_practice_key_regions_config_default(NULL);
     if (effective.materials == NULL) {
-        effective.materials = common_practice_materials_builtin(); /* a remaining site until P58 B13: a caller without the snapshot's */
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG; /* the keys are made of the materials: a config carries them */
     }
     CommonPracticeKeyRegionsStatus status = key_regions_validate_inputs(segments, segment_count, map, &effective);
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
@@ -329,9 +330,7 @@ bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *regi
     out->id = NULL;
     out->tonic_letter = letter;
     out->tonic_accidental = name[1] == '#' ? 1 : (name[1] == 'b' ? -1 : 0);
-    CommonPracticeKeyMode mode = common_practice_key_index_mode(region->key_index);
-    out->mode = mode == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
-    out->material = common_practice_material(materials, mode);
+    out->material = common_practice_material(materials, common_practice_key_index_mode(region->key_index));
     return out->material != NULL;
 }
 
@@ -340,8 +339,9 @@ bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *e
         return false;
     }
     int fifths = pitch_spelling_fifths(event->key.tonic_letter, event->key.tonic_accidental);
-    if (event->key.mode == KEY_STRUCTURE_MODE_MINOR) {
-        fifths -= 3;
+    CommonPracticeKeyMode mode;
+    if (common_practice_key_mode_of(event->key.material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR) {
+        fifths -= 3; /* the minor tonic is three places down the line of fifths from its relative major */
     }
     if (fifths < -7 || fifths > 7) {
         return false;

@@ -54,10 +54,8 @@ static Chord *adapter_test_chord(const char *segment, int root, int bass, const 
     return chord;
 }
 
-static Key *adapter_test_key(const char *name, int tonic, KeyStructureMode mode) {
-    KeyStructure structure = {tonic, mode,
-                              common_practice_material(test_materials(), mode == KEY_STRUCTURE_MODE_MINOR ? COMMON_PRACTICE_KEY_MINOR
-                                                                                                  : COMMON_PRACTICE_KEY_MAJOR)};
+static Key *adapter_test_key(const char *name, int tonic, CommonPracticeKeyMode mode) {
+    KeyStructure structure = {tonic, common_practice_material(test_materials(), mode)};
     Key *key = NULL;
     assert(key_create_with_structure(adapter_test_interpretation(name, name, 1000000UL), name, &structure, &key) ==
            KEY_OK);

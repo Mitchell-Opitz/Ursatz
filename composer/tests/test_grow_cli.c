@@ -439,11 +439,12 @@ static Motive notes_motive(const char *text) {
     MotiveOptions options;
     Motive motive;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
     options.has_key = true;
-    options.key = test_key_mode(2, KEY_STRUCTURE_MODE_MINOR);
+    options.key = test_key_mode(2, HARMONY_MODE_MINOR);
     assert(motive_from_notes_text(text, &options, &motive, NULL) == MOTIVE_OK);
     return motive;
 }
@@ -452,7 +453,7 @@ static GrowRequest library_request(const Motive *basic, PlanThemeBeginning begin
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = basic;
-    request.key = test_key_mode(2, KEY_STRUCTURE_MODE_MINOR);
+    request.key = test_key_mode(2, HARMONY_MODE_MINOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -599,7 +600,7 @@ static void test_library_bad_slots(void) {
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     other = fits;
-    AnalysisKey other_key = test_key_mode(7, motive_sketch_minor(&other) ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey other_key = test_key_mode(7, motive_sketch_minor(&other) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR);
     motive_set_key(&other, &other_key, other.key_source);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);

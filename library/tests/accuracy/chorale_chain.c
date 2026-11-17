@@ -169,7 +169,7 @@ static bool read_numerals(Run *r) {
             continue;
         }
         const RomanTextKey *k = &r->annotation.keys[i];
-        CommonPracticeKeyMode mode = k->minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR;
+        CommonPracticeKeyMode mode = k->is_minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR;
         int index = test_key_index_of(k->tonic_pitch_class, mode);
         char id[48];
         snprintf(id, sizeof(id), "annotation-key-%zu", region_total);
@@ -186,12 +186,14 @@ static bool read_numerals(Run *r) {
         region_total++;
     }
     if (standard_tonality_build_chord_inputs(r->segment_inputs, n, r->annotation_region_inputs, region_total,
-                                             &r->annotation_inputs, &count) != STANDARD_TONALITY_CHORD_INPUT_OK ||
-        standard_tonality_build_roman_numerals_with_config(r->annotation_inputs, count, NULL, &r->annotation_romans) !=
-            STANDARD_TONALITY_ROMAN_OK) {
+                                             &r->annotation_inputs, &count) != STANDARD_TONALITY_CHORD_INPUT_OK) {
         return false;
     }
-    return true;
+    for (size_t mi = 0; mi < count; mi++) {
+        r->annotation_inputs[mi].materials = test_materials();
+    }
+    return standard_tonality_build_roman_numerals_with_config(r->annotation_inputs, count, NULL, &r->annotation_romans) ==
+           STANDARD_TONALITY_ROMAN_OK;
 }
 
 static bool same_set(const int *a, size_t an, const int *b, size_t bn) {
@@ -418,8 +420,8 @@ static void compare(const Run *r, ChoraleScore *out) {
         if (key != NULL && s >= 0) {
             const CommonPracticeKeyRegion *region = &r->regions->regions[region_at(r->regions, rational_to_double(r->starts[s]))];
             int tonic = common_practice_key_index_tonic(region->key_index);
-            bool minor = common_practice_key_index_mode(region->key_index) == COMMON_PRACTICE_KEY_MINOR;
-            if (tonic == key->tonic_pitch_class && minor == key->minor) {
+            bool is_minor = common_practice_key_index_mode(region->key_index) == COMMON_PRACTICE_KEY_MINOR;
+            if (tonic == key->tonic_pitch_class && is_minor == key->is_minor) {
                 out->key_right += w;
             }
         }
@@ -506,7 +508,7 @@ ChoraleChainStatus chorale_chain_run(const char *piece_dir, ChoraleScore *out, c
     }
     for (size_t i = 0; i < r.key_event_count; i++) {
         r.key_events[i].time = r.imported.key_signatures[i].position;
-        if (!analysis_key_from_fifths(r.imported.key_signatures[i].sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &r.key_events[i].key)) {
+        if (!analysis_key_from_fifths(r.imported.key_signatures[i].sharps_flats, test_materials()->major, &r.key_events[i].key)) {
             goto done;
         }
     }

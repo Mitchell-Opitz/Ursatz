@@ -28,15 +28,15 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
     const char *motive; /* one bar */
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, 4, "C5:q E5:e D5:e B4:q"},
+    {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"A minor 3/4", 9, HARMONY_MODE_MINOR, 3, 4, "C5:q E5:e D5:e B4:q"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -95,6 +95,7 @@ static Motive make_motive(const Scenario *scenario) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
@@ -272,7 +273,7 @@ static void check_evaded(const PiecePlan *plan, const Scenario *scenario) {
     assert(count >= 2 && is_tonic(chords[count - 1]->roman_numeral) && is_dominant(chords[count - 2]->roman_numeral));
     /* The melody of the evaded idea ends on the tonic; that of the idea before it on a tone of vi (the tonic or the third). */
     assert(last_pitch_class(plan, after) == scenario->tonic);
-    int third = (scenario->tonic + (scenario->mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12;
+    int third = (scenario->tonic + (scenario->mode == HARMONY_MODE_MINOR ? 3 : 4)) % 12;
     int before = last_pitch_class(plan, idea);
     assert(before == scenario->tonic || before == third);
 }

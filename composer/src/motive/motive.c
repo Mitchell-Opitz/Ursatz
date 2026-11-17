@@ -128,16 +128,14 @@ static bool meter_valid(const PlanMeter *meter) {
            (unit == 1 || unit == 2 || unit == 4 || unit == 8 || unit == 16);
 }
 
-AnalysisKey motive_key_from_signature(int sharps_flats, KeyStructureMode mode) {
+AnalysisKey motive_key_from_signature(const CommonPracticeMaterials *materials, int sharps_flats, CommonPracticeKeyMode mode) {
+    const PitchMaterial *material = common_practice_material(materials, mode);
     AnalysisKey key;
-    if (analysis_key_from_fifths(sharps_flats, mode, &key)) {
-        /* The mode-based maker leaves the material NULL: the builtin one stands in (TRANSITIONAL, P58 B13). */
-        key.material = composer_builtin_material(mode == KEY_STRUCTURE_MODE_MINOR);
+    if (analysis_key_from_fifths(sharps_flats, material, &key)) {
         return key;
     }
     int major_tonic = util_pitch_class(sharps_flats * 7);
-    return plan_key_of_pitch_class(mode == KEY_STRUCTURE_MODE_MINOR ? (major_tonic + 9) % 12 : major_tonic,
-                                   composer_builtin_material(mode == KEY_STRUCTURE_MODE_MINOR));
+    return plan_key_of_pitch_class(mode == COMMON_PRACTICE_KEY_MINOR ? (major_tonic + 9) % 12 : major_tonic, material);
 }
 
 /* ------------------------------------------------------------------- time */
@@ -214,10 +212,7 @@ void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKe
     }
     sketch->has_scale = true;
     sketch->tonic_pc = analysis_key_tonic_pitch_class(key);
-    /* The key's own material; a key written by the mode-based code has none yet, and takes the builtin one (until P58 B13). */
-    const CommonPracticeMaterials *builtin = common_practice_materials_builtin();
-    sketch->material = key->material != NULL ? key->material
-                                             : (composer_key_is_minor(key) ? builtin->natural_minor : builtin->major);
+    sketch->material = key->material;
     sketch->key_source = source;
     sketch->has_tonic_spelling = true;
     sketch->tonic_letter = (int)key->tonic_letter;
@@ -264,7 +259,7 @@ int motive_pitch(const Motive *motive, size_t index) {
 AnalysisKey motive_key(const Motive *motive) {
     AnalysisKey key;
     if (!motive_key_of(motive, &key)) {
-        key = plan_key_of_pitch_class(0, composer_builtin_material(false));
+        key = plan_key_of_pitch_class(0, NULL); /* the zero key: C, no material (it reads as C major) */
     }
     return key;
 }
@@ -336,7 +331,7 @@ MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveEr
  * unspecified; no key is guessed from fewer pitches. A scale and its relative share their seven pitch classes, so
  * two answers are settled by the last note and, failing that, left open.
  */
-static bool infer_key(const Motive *motive, AnalysisKey *out) {
+static bool infer_key(const Motive *motive, const CommonPracticeMaterials *materials, AnalysisKey *out) {
     bool present[12] = {false};
     for (size_t i = 0; i < motive->note_count; i++) {
         if (motive->notes[i].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN) {
@@ -354,8 +349,8 @@ static bool infer_key(const Motive *motive, AnalysisKey *out) {
             }
         }
         CommonPracticeKeyMode mode;
-        if (common_practice_identify_key_mode(relative, count, &mode)) {
-            found[found_count] = plan_key_of_pitch_class(tonic, composer_builtin_material(mode == COMMON_PRACTICE_KEY_MINOR));
+        if (common_practice_identify_key_mode(materials, relative, count, &mode)) {
+            found[found_count] = plan_key_of_pitch_class(tonic, common_practice_material(materials, mode));
             found_count++;
         }
     }
@@ -452,10 +447,10 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     } else if (document->has_key) {
         key = document->key;
         source = MOTIVE_SKETCH_KEY_GIVEN;
-    } else if (infer_key(motive, &key)) {
+    } else if (infer_key(motive, &document->materials, &key)) {
         source = MOTIVE_SKETCH_KEY_INFERRED;
     } else {
-        key = plan_key_of_pitch_class(0, composer_builtin_material(false));
+        key = plan_key_of_pitch_class(0, document->materials.major);
         source = MOTIVE_SKETCH_KEY_UNSPECIFIED;
     }
     if (analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
@@ -569,16 +564,21 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
 
 /* --------------------------------------------------------------- loading */
 
-static void begin(Motive *motive, MotiveDocument *document, MotiveError *error) {
+static bool begin(Motive *motive, MotiveDocument *document, const MotiveOptions *options, MotiveError *error) {
     memset(motive, 0, sizeof(*motive));
     memset(document, 0, sizeof(*document));
-    document->key = plan_key_of_pitch_class(0, composer_builtin_material(false));
-    motive_set_meter(motive, (PlanMeter){4, 4, 0});
-    motive->length = motive_time(0, 1);
-    motive->pickup = motive_time(0, 1);
     if (error) {
         memset(error, 0, sizeof(*error));
     }
+    if (!options || !common_practice_materials_resolve(options->knowledge, &document->materials, NULL, 0)) {
+        motive_set_error(error, "", "the options carry no knowledge snapshot with the common-practice materials");
+        return false;
+    }
+    document->key = plan_key_of_pitch_class(0, document->materials.major);
+    motive_set_meter(motive, (PlanMeter){4, 4, 0});
+    motive->length = motive_time(0, 1);
+    motive->pickup = motive_time(0, 1);
+    return true;
 }
 
 typedef MotiveResult (*TextParser)(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error);
@@ -591,7 +591,9 @@ static MotiveResult load_text(const char *text, TextParser parse, const MotiveOp
     }
     Motive motive;
     MotiveDocument document;
-    begin(&motive, &document, error);
+    if (!begin(&motive, &document, options, error)) {
+        return MOTIVE_ERR_NULL;
+    }
     if (options && options->has_key) {
         /* A key the caller gives is the key a degree list is read in; for the other inputs it changes nothing. */
         document.has_key = true;
@@ -635,7 +637,9 @@ MotiveResult motive_from_midi(const unsigned char *data, size_t size, const Moti
     }
     Motive motive;
     MotiveDocument document;
-    begin(&motive, &document, error);
+    if (!begin(&motive, &document, options, error)) {
+        return MOTIVE_ERR_NULL;
+    }
     MotiveResult result = motive_read_midi(data, size, &motive, &document, error);
     if (result == MOTIVE_OK) {
         result = motive_complete(&motive, &document, options, error);
@@ -654,7 +658,9 @@ MotiveResult motive_from_musicxml(const char *data, size_t size, const MotiveOpt
     }
     Motive motive;
     MotiveDocument document;
-    begin(&motive, &document, error);
+    if (!begin(&motive, &document, options, error)) {
+        return MOTIVE_ERR_NULL;
+    }
     MotiveResult result = motive_read_musicxml(data, size, &motive, &document, error);
     if (result == MOTIVE_OK) {
         result = motive_complete(&motive, &document, options, error);
@@ -923,7 +929,9 @@ static bool read_key(JsonReader *reader, const cJSON *item, MotiveDocument *docu
         return json_bad_format(reader, "key.mode", "expected \"major\" or \"minor\"");
     }
     document->has_key = true;
-    document->key = plan_key_of_pitch_class((int)tonic, composer_builtin_material(strcmp(mode->valuestring, "minor") == 0));
+    document->key = plan_key_of_pitch_class(
+        (int)tonic, common_practice_material(&document->materials, strcmp(mode->valuestring, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
+                                                                                                         : COMMON_PRACTICE_KEY_MAJOR));
     return true;
 }
 
@@ -1018,7 +1026,7 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
     }
     PlanJsonError detail;
     memset(&detail, 0, sizeof(detail));
-    JsonReader reader = {&detail, PLAN_OK, 0};
+    JsonReader reader = {&detail, PLAN_OK, 0, NULL};
     bool ok = cJSON_IsObject(root) || json_bad_format(&reader, "", "expected an object");
     const cJSON *meter = ok ? cJSON_GetObjectItemCaseSensitive(root, "meter") : NULL;
     const cJSON *key = ok ? cJSON_GetObjectItemCaseSensitive(root, "key") : NULL;
