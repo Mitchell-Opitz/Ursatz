@@ -1,0 +1,33 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.relation.both",
+      "kind": "relation",
+      "subtype": "tonal",
+      "name": "both",
+      "content": {
+        "degree": 5,
+        "root_semitones": 7,
+        "material": "same"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "C major",
+          "target": "G major"
+        }
+      ]
+    }
+  ]
+}

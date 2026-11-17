@@ -1,0 +1,1 @@
+'degree' is a required property

@@ -34,6 +34,43 @@
       ]
     },
     {
+      "id": "omt.relation.submediant",
+      "kind": "relation",
+      "subtype": "tonal",
+      "name": "submediant",
+      "aliases": [
+        "relative minor"
+      ],
+      "content": {
+        "degree": 6,
+        "material": "diatonic",
+        "anchor_default": "home",
+        "reached_by": [
+          "pivot",
+          "direct"
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "C major",
+          "target": "A minor"
+        },
+        {
+          "anchor": "C minor",
+          "target": "Ab major"
+        }
+      ]
+    },
+    {
       "id": "omt.relation.two-steps-brighter",
       "kind": "relation",
       "subtype": "modal",
@@ -53,8 +90,8 @@
       "version": 1,
       "examples": [
         {
-          "anchor": "C major",
-          "target": "G major"
+          "anchor": "C aeolian",
+          "target": "C mixolydian"
         }
       ]
     },
@@ -80,7 +117,7 @@
       "examples": [
         {
           "anchor": "C major",
-          "target": "G major"
+          "target": "C minor"
         }
       ]
     },
@@ -105,7 +142,7 @@
       "examples": [
         {
           "anchor": "C major",
-          "target": "G major"
+          "target": "F major"
         }
       ]
     },

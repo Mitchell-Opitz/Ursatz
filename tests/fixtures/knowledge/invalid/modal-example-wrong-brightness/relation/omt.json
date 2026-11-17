@@ -1,0 +1,32 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.relation.one-step-darker",
+      "kind": "relation",
+      "subtype": "modal",
+      "name": "one step darker",
+      "content": {
+        "center": "same",
+        "brightness_steps": -1
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "C major",
+          "target": "C minor"
+        }
+      ]
+    }
+  ]
+}
