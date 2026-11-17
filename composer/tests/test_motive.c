@@ -1013,7 +1013,7 @@ static void test_analysis_by_form(void) {
 static void test_render_in_another_key(void) {
     /* D minor 1 b3 5 1' (D4 F4 A4 D5) in G minor: the same degrees, a fourth up. */
     Motive source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
-    const AnalysisKey G_MINOR = test_key_mode(7, HARMONY_MODE_MINOR);
+    const AnalysisKey G_MINOR = test_key(7, "minor");
     Motive moved;
     assert(motive_in_key(&source, &G_MINOR, &moved));
     assert(moved.key_source == MOTIVE_SKETCH_KEY_GIVEN && moved.tonic_pc == 7 && motive_sketch_minor(&moved));
@@ -1366,9 +1366,9 @@ static void test_features_follow_the_notes(void) {
 }
 
 int main(void) {
-    D_MINOR = test_key_mode(2, HARMONY_MODE_MINOR);
-    C_MAJOR = test_key_mode(0, HARMONY_MODE_MAJOR);
-    G_MAJOR = test_key_mode(7, HARMONY_MODE_MAJOR);
+    D_MINOR = test_key(2, "minor");
+    C_MAJOR = test_key(0, "major");
+    G_MAJOR = test_key(7, "major");
     test_same_motive_from_each_format();
     test_musicxml_keeps_spelling();
     test_options();

@@ -42,7 +42,7 @@ static void run(const Scenario *scenario, unsigned long seed) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = test_key_mode(scenario->tonic, HARMONY_MODE_MINOR);
+    request.key = test_key(scenario->tonic, "minor");
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;

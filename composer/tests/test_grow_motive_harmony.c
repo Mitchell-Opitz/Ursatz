@@ -98,13 +98,13 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, bool sentenc
     request.bars = 8;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     if (sentence) {
-        request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+        request.key = test_key(0, "major");
         request.meter.beats_per_bar = 6;
         request.meter.beat_unit = 8;
         request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
         request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     } else {
-        request.key = test_key_mode(9, HARMONY_MODE_MINOR);
+        request.key = test_key(9, "minor");
         request.meter.beats_per_bar = 3;
         request.meter.beat_unit = 4;
         request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
@@ -256,7 +256,7 @@ int main(void) {
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
     options.has_key = true;
-    options.key = test_key_mode(2, HARMONY_MODE_MINOR);
+    options.key = test_key(2, "minor");
     assert(motive_from_degrees_text("1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e", &options, &chordless, NULL) == MOTIVE_OK);
     assert(chordless.chord_count == 0);
     size_t chordless_runs = 0;

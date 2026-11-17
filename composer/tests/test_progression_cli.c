@@ -446,7 +446,7 @@ static void test_sequences(void) {
                 assert(harmony_hear_cadence(plan, phrase, HARMONY_MODE_MINOR, CADENCE_TYPE_PERFECT_AUTHENTIC, &heard, &at_end));
                 assert(at_end && heard == CADENCE_TYPE_PERFECT_AUTHENTIC);
                 assert(harmony_check_lane_without_cadence(plan, phrase, HARMONY_MODE_MINOR, &violation) && violation == NULL);
-                AnalysisKey key = test_key_mode(2, HARMONY_MODE_MINOR);
+                AnalysisKey key = test_key(2, "minor");
                 violation = "unread";
                 assert(harmony_check_bass(plan, phrase, key, NULL, &violation) && violation == NULL);
                 plan_destroy(plan);

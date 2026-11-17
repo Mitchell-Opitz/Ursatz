@@ -444,7 +444,7 @@ static Motive notes_motive(const char *text) {
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
     options.has_key = true;
-    options.key = test_key_mode(2, HARMONY_MODE_MINOR);
+    options.key = test_key(2, "minor");
     assert(motive_from_notes_text(text, &options, &motive, NULL) == MOTIVE_OK);
     return motive;
 }
@@ -453,7 +453,7 @@ static GrowRequest library_request(const Motive *basic, PlanThemeBeginning begin
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = basic;
-    request.key = test_key_mode(2, HARMONY_MODE_MINOR);
+    request.key = test_key(2, "minor");
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;

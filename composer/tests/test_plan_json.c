@@ -75,7 +75,7 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = test_key_mode(3, HARMONY_MODE_MINOR);
+    key.key = test_key(3, "minor");
     add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
 
     PlanLanePayload tonic = harmony("i", HARMONIC_FUNCTION_TONIC);
@@ -115,7 +115,7 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     motive_ref.params.motive.has_step = true;
     motive_ref.params.motive.step = (MotiveRelationStep){.kind = MOTIVE_RELATION_TRANSPOSE, .value = {0, -2}};
     PlanConstraint key_constraint = {PLAN_CONSTRAINT_KEY, {0}};
-    key_constraint.params.key = test_key_mode(7, HARMONY_MODE_MAJOR);
+    key_constraint.params.key = test_key(7, "major");
     assert(plan_node_add_constraint(plan, phrase, &length) == PLAN_OK);
     assert(plan_node_add_constraint(plan, phrase, &cadence) == PLAN_OK);
     assert(plan_node_add_constraint(plan, phrase, &archetype) == PLAN_OK);
@@ -649,7 +649,7 @@ static void test_figure(void) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 2;
     request.meter.beat_unit = 4;
@@ -752,7 +752,7 @@ static void test_section_function(void) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;

@@ -91,7 +91,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, GivenChord *
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.meter.beats_per_bar = 6;
     request.meter.beat_unit = 8;
     request.bars = 8;

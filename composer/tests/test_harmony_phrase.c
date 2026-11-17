@@ -510,7 +510,7 @@ static void test_pivot_into_the_dominant(void) {
         assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
         for (int k = 0; k < 2; k++) {
             memset(&payload, 0, sizeof(payload));
-            payload.key = test_key_mode(k == 0 ? 0 : 7, HARMONY_MODE_MAJOR);
+            payload.key = test_key(k == 0 ? 0 : 7, "major");
             assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, k == 0 ? first : second, &payload, &id) == PLAN_OK);
             assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
         }

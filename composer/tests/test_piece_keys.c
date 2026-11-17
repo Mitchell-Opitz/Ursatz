@@ -615,7 +615,7 @@ static int test_tonic_major(bool smoke) {
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         const AnalysisKey home = test_key_mode(SCENARIOS[s].tonic, SCENARIOS[s].mode);
         const bool is_minor = SCENARIOS[s].mode == HARMONY_MODE_MINOR;
-        const AnalysisKey major = test_key_mode(SCENARIOS[s].tonic, HARMONY_MODE_MAJOR);
+        const AnalysisKey major = test_key(SCENARIOS[s].tonic, "major");
         size_t composed = 0;
         for (unsigned long seed = 1; seed <= (smoke ? 1 : MAJOR_SEEDS); seed++) {
             PieceRequest request;

@@ -349,7 +349,7 @@ static void piece_section(PieceFixture *fixture, const char *id, PiecePart part,
 /* The intro 2 bars, a sentence of 8 bars, a free phrase of 4 and a turnaround of 2, D minor 4/4, and the ending a run adds. */
 static void piece_fixture(PieceFixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->request.key = test_key_mode(2, HARMONY_MODE_MINOR);
+    fixture->request.key = test_key(2, "minor");
     fixture->request.knowledge = test_knowledge();
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;

@@ -621,7 +621,7 @@ static void test_for_plan(void) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
         request.form = FORMS[f].name;
-        request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+        request.key = test_key(0, "major");
         request.knowledge = test_knowledge();
         request.meter.beats_per_bar = FORMS[f].meters > 0 ? 3 : 4;
         request.meter.beat_unit = 4;
@@ -886,7 +886,7 @@ static int test_meters(void) {
     PiecePlan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -1108,7 +1108,7 @@ static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, Compo
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -2068,7 +2068,7 @@ static void test_parts_reader(void) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -2573,7 +2573,7 @@ static void lead_sometimes(const char *text) {
             PieceRequest request;
             memset(&request, 0, sizeof(request));
             request.form = form->name;
-            request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+            request.key = test_key(0, "major");
             request.knowledge = test_knowledge();
             request.meter.beats_per_bar = 3;
             request.meter.beat_unit = 4;

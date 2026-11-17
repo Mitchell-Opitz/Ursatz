@@ -95,7 +95,7 @@ static void test_compose(void) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = test_key_mode(9, HARMONY_MODE_MINOR);
+    request.key = test_key(9, "minor");
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -159,7 +159,7 @@ static void test_cadence_note(void) {
         memset(&request, 0, sizeof(request));
         request.motive = &basic;
         request.idea_motives[GROW_IDEA_CADENTIAL] = &cadential;
-        request.key = test_key_mode(9, HARMONY_MODE_MINOR);
+        request.key = test_key(9, "minor");
         request.meter.beats_per_bar = 3;
         request.meter.beat_unit = 4;
         request.bars = 8;
@@ -248,7 +248,7 @@ static void test_four_bar_refused(void) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = test_key_mode(9, HARMONY_MODE_MINOR);
+    request.key = test_key(9, "minor");
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 4;
@@ -274,7 +274,7 @@ static void test_period_slot(void) {
     memset(&request, 0, sizeof(request));
     request.motive = &basic;
     request.slot_motives[GROW_SLOT_CONTRASTING] = &contrasting;
-    request.key = test_key_mode(9, HARMONY_MODE_MINOR);
+    request.key = test_key(9, "minor");
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -330,7 +330,7 @@ static GrowRequest part_request(const Motive *motive, PlanThemeBeginning beginni
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;

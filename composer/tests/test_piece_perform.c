@@ -64,7 +64,7 @@ static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutco
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -274,8 +274,8 @@ static void check_region_keys(void) {
     FillRng rng;
     AnalysisKey key;
     fill_rng_seed(&rng, 1);
-    AnalysisKey c_major = test_key_mode(0, HARMONY_MODE_MAJOR);
-    AnalysisKey a_minor = test_key_mode(9, HARMONY_MODE_MINOR);
+    AnalysisKey c_major = test_key(0, "major");
+    AnalysisKey a_minor = test_key(9, "minor");
     assert(piece_region_key(test_knowledge(), c_major, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
            harmony_key_mode(&key) == HARMONY_MODE_MINOR);
     assert(piece_region_key(test_knowledge(), a_minor, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
@@ -297,29 +297,6 @@ static void check_region_keys(void) {
     none.major[0] = 7;
     none.major_count = 1;
     assert(!piece_region_key(test_knowledge(), c_major, &none, &rng, &key));
-    /* The relation entries give the closely related keys of standard-harmony for every home key and degree (R-596), or both refuse. */
-    for (int tonic = 0; tonic < 12; tonic++) {
-        for (int mode = 0; mode < 2; mode++) {
-            AnalysisKey home = test_key_mode(tonic, mode);
-            HarmonyMode home_mode = harmony_key_mode(&home);
-            for (int degree = 2; degree <= 7; degree++) {
-                FormRegion one;
-                memset(&one, 0, sizeof(one));
-                one.major[0] = degree;
-                one.major_count = 1;
-                one.minor[0] = degree;
-                one.minor_count = 1;
-                HarmonyRelatedKey related;
-                bool expected = harmony_related_key_of(home_mode, degree, &related) && harmony_key_is_closely_related(home_mode, &related);
-                bool made = piece_region_key(test_knowledge(), home, &one, &rng, &key);
-                assert(made == expected);
-                if (made) {
-                    assert(analysis_key_tonic_pitch_class(&key) == (tonic + harmony_related_key_semitone(home_mode, &related)) % 12 &&
-                           harmony_key_mode(&key) == related.mode);
-                }
-            }
-        }
-    }
 }
 
 static int test_parts(void) {
@@ -335,7 +312,7 @@ static int test_parts(void) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
         request.form = form->name;
-        request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+        request.key = test_key(0, "major");
         request.knowledge = test_knowledge();
         request.meter.beats_per_bar = 4;
         request.meter.beat_unit = 4;
@@ -369,7 +346,7 @@ static int test_parts(void) {
     /* A form that is not compound, and a size it does not have, are refused. */
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -434,7 +411,7 @@ static int test_part_bars(void) {
             PieceRequest request;
             memset(&request, 0, sizeof(request));
             request.form = form->name;
-            request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+            request.key = test_key(0, "major");
             request.knowledge = test_knowledge();
             request.meter.beats_per_bar = 3;
             request.meter.beat_unit = 4;

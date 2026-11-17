@@ -118,7 +118,7 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    key.key = test_key(0, "major");
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 }
@@ -540,7 +540,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;

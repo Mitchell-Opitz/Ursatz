@@ -872,7 +872,7 @@ static ToneScene build_tone_scene(bool keyed) {
     options.meter.beat_unit = 4;
     if (keyed) {
         options.has_key = true;
-        options.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+        options.key = test_key(0, "major");
     }
     assert(motive_from_notes_text(MOTIVE, &options, &motive, NULL) == MOTIVE_OK);
     assert(motive_attach(scene.plan, material_idea, extra.start, &motive, "m0", &scene.source, NULL) == PLAN_OK);
@@ -888,7 +888,7 @@ static ToneScene build_tone_scene(bool keyed) {
     assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_METER, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    payload.key = test_key(0, "major");
     assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     static const char *const CHORDS[2] = {"I", "IV"};

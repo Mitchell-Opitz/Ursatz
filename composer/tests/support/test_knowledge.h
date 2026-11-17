@@ -59,17 +59,34 @@ static inline const CommonPracticeMaterials *test_materials(void) {
     return &test_knowledge_materials_value;
 }
 
-/* The major (HARMONY_MODE_MAJOR) or the natural minor (HARMONY_MODE_MINOR) of test_knowledge(). */
+/* The material of test_knowledge() a word names (its key word, name, id or alias: "major", "minor", "dorian"); the test stops for a word it does not know. */
+static inline const PitchMaterial *test_material(const char *word) {
+    const PitchMaterial *material = knowledge_snapshot_material_named(test_knowledge(), word);
+    assert(material != NULL);
+    return material;
+}
+
+/* The word of a mode's key: "major" or "minor". */
+static inline const char *test_mode_word(HarmonyMode mode) {
+    return mode == HARMONY_MODE_MINOR ? "minor" : "major";
+}
+
+/* The major (HARMONY_MODE_MAJOR) or the natural minor (HARMONY_MODE_MINOR) of test_knowledge(), found by its word. */
 static inline const PitchMaterial *test_material_mode(HarmonyMode mode) {
-    return mode == HARMONY_MODE_MINOR ? test_materials()->natural_minor : test_materials()->major;
+    return test_material(test_mode_word(mode));
 }
 
 /*
- * The key on a pitch class (0 to 11) in the major or the natural minor of test_knowledge(), spelled as plan_key_of_pitch_class
- * spells it. The mode argument goes when test keys are built from material words (test_key).
+ * The key on a pitch class (0 to 11) in the material the word names ("major", "minor", ...), spelled as plan_key_of_pitch_class
+ * spells it: a test builds its keys from materials as a request does, by the word.
  */
+static inline AnalysisKey test_key(int pitch_class, const char *word) {
+    return plan_key_of_pitch_class(pitch_class, test_material(word));
+}
+
+/* test_key for a mode held in a variable. */
 static inline AnalysisKey test_key_mode(int pitch_class, HarmonyMode mode) {
-    return plan_key_of_pitch_class(pitch_class, test_material_mode(mode));
+    return test_key(pitch_class, test_mode_word(mode));
 }
 
 /* The motive options a read with nothing else to say takes: no meter, no key, the snapshot of test_knowledge(). */

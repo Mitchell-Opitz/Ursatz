@@ -53,7 +53,7 @@ static PiecePlan *rounded_binary(void) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
@@ -75,7 +75,7 @@ static PiecePlan *period_a_minor(Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key_mode(9, HARMONY_MODE_MINOR);
+    request.key = test_key(9, "minor");
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;

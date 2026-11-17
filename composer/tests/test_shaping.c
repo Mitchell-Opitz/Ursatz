@@ -29,7 +29,7 @@ static MelodyCandidate *candidate(long length) {
     assert(rational_make(1, 1, &whole) == RATIONAL_OK && rational_make(1, 4, &quarter) == RATIONAL_OK);
     MelodyContext *context = &melody->context;
     melody_context_zero(context);
-    context->key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    context->key = test_key(0, "major");
     context->metre.bar_length = whole;
     context->metre.cell_length = quarter;
     context->metre.cells_per_bar = 4;

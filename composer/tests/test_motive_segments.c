@@ -133,7 +133,7 @@ static void test_deterministic(void) {
 }
 
 int main(void) {
-    C_MAJOR = test_key_mode(0, HARMONY_MODE_MAJOR);
+    C_MAJOR = test_key(0, "major");
     test_repeated_rhythm();
     test_rest_splits();
     test_long_note_splits();

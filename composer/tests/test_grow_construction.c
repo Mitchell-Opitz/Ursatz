@@ -206,7 +206,7 @@ static GrowRequest request_of(const Scenario *scenario, const Motive *motive, si
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.meter = meter_of(scenario);
     request.bars = bars;
     request.pairing.beginning = beginning;

@@ -273,7 +273,7 @@ static void test_refusals(void) {
     Motive motives[COUNT];
     size_t made = 99;
     MotiveRandomOptions options = options_of(&SCENARIOS[0], 1);
-    options.key = test_key_mode(analysis_key_tonic_pitch_class(&options.key), HARMONY_MODE_MINOR);
+    options.key = test_key(analysis_key_tonic_pitch_class(&options.key), "minor");
     options.has_key = true;
     assert(motive_random(&options, motives, &made) == MOTIVE_RANDOM_ERR_KEY && made == 0);
     options = options_of(&SCENARIOS[0], 1);
