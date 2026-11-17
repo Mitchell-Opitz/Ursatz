@@ -20,7 +20,7 @@ documents). Code that needs the whole stack lives in the analysis chain (`chain/
 | `voicing/` | Range, spacing and voicing rules | standard-voicing |
 | `counterpoint/` | Species rules | standard-counterpoint |
 | `form/` | Phrase, period, sentence, hybrid and expansion rules | standard-form |
-| `meter/` | Meter, beat grid, syncopation, hemiola, hypermeter rules | standard-meter |
+| `meter/` | Meter classification (simple, compound, duple, triple, quadruple) read from the signature's beat groups, which own the beat (`time_signature_beat_length`), beat grid, syncopation, hemiola, hypermeter rules | standard-meter |
 | `galant/` | Schema prototypes, rule of the octave, sequences | galant-schemas, scale-harmonization |
 | `markings/` | Dynamics and tempo rules | standard-markings |
 
