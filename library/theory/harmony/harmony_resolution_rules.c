@@ -1,6 +1,7 @@
 #include "theory/harmony/harmony_resolution_rules.h"
 
-#include "theory/harmony/harmony_rule_table.h"
+#include "theory/harmony/harmony_framework.h"
+#include "theory/rules/rule_table.h"
 #include "theory/harmony/harmony_steps.h"
 
 static const char *const NAMES[HARMONY_RESOLUTION_RULE_COUNT] = {"seventh-resolves-down",
@@ -10,11 +11,12 @@ static RulePair g_pairs[HARMONY_RESOLUTION_RULE_COUNT];
 static UrsatzOnce g_built[HARMONY_RESOLUTION_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
-static const HarmonyRuleTable TABLE = {"resolution", NAMES,   HARMONY_RESOLUTION_RULE_COUNT,
-                                       NULL,         g_pairs, g_built, evaluate_candidate};
+static const RuleTable TABLE = {
+    "standard-harmony", standard_harmony_framework, "standard-harmony",
+    "resolution", NAMES, HARMONY_RESOLUTION_RULE_COUNT, NULL, g_pairs, g_built, evaluate_candidate};
 
 const char *harmony_resolution_rule_name(HarmonyResolutionRule which) {
-    return harmony_rule_table_name(&TABLE, (int)which);
+    return rule_table_name(&TABLE, (int)which);
 }
 
 bool harmony_resolution_valid(const HarmonyVoiceResolution *resolution) {
@@ -44,7 +46,7 @@ static bool is_leading_tone_voice(const HarmonyVoiceResolution *r) {
 
 bool harmony_resolution_rule_applies(HarmonyResolutionRule which,
                                      const HarmonyVoiceResolution *resolution) {
-    if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_resolution_valid(resolution)) {
+    if (!rule_table_valid(&TABLE, (int)which) || !harmony_resolution_valid(resolution)) {
         return false;
     }
     return which == HARMONY_RESOLUTION_SEVENTH_RESOLVES_DOWN ? is_seventh_voice(resolution)
@@ -53,7 +55,7 @@ bool harmony_resolution_rule_applies(HarmonyResolutionRule which,
 
 bool harmony_resolution_rule_holds(HarmonyResolutionRule which,
                                    const HarmonyVoiceResolution *resolution) {
-    if (!harmony_rule_table_valid(&TABLE, (int)which) || !harmony_resolution_valid(resolution)) {
+    if (!rule_table_valid(&TABLE, (int)which) || !harmony_resolution_valid(resolution)) {
         return false;
     }
     if (!harmony_resolution_rule_applies(which, resolution)) {
@@ -85,6 +87,6 @@ static bool applies_adapter(int which, const void *subject) {
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context) {
     (void)context;
-    return harmony_rule_table_evaluate(&TABLE, holds_adapter, applies_adapter, sizeof(HarmonyVoiceResolution),
+    return rule_table_evaluate(&TABLE, holds_adapter, applies_adapter, sizeof(HarmonyVoiceResolution),
                                        constraint, candidate);
 }

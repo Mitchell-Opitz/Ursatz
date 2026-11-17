@@ -4,7 +4,8 @@
 
 #include "theory/tonality/interval.h"
 #include "theory/counterpoint/motion_rules.h"
-#include "theory/counterpoint/rule_table.h"
+#include "theory/counterpoint/framework.h"
+#include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT] = {
     "motion-variety", "contrary-preferred", "similar-with-leap", "similar-with-large-leap"};
@@ -14,12 +15,13 @@ static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
-static const StandardCounterpointRuleTable TABLE = {
-    "first-species-motion", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT, standard_counterpoint_rule_table_never_hard,
+static const RuleTable TABLE = {
+    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
+    "first-species-motion", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_MOTION_COUNT, rule_table_never_hard,
     g_pairs, g_built, evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesMotionRule which) {
-    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
+    return rule_table_valid(&TABLE, (int)which);
 }
 
 /* How many motions of each MotionType the texture has. */
@@ -100,14 +102,14 @@ static bool holds_adapter(int which, const void *subject) {
                                                                  subject);
 }
 
-STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointPair)
-STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointPair)
+RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointPair)
+RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointPair)
 
 bool standard_counterpoint_first_species_motion_check(const StandardCounterpointPair *pair, unsigned *violations) {
     if (!standard_counterpoint_pair_valid(pair) || violations == NULL) {
         return false;
     }
     unsigned unused_hard;
-    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, pair, &unused_hard, violations);
+    rule_table_check(&TABLE, holds_adapter, pair, &unused_hard, violations);
     return true;
 }

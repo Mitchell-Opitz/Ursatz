@@ -1,6 +1,6 @@
 #include "theory/galant/galant_matching_rules.h"
 
-#include "theory/galant/galant_rule_table.h"
+#include "theory/rules/rule_table.h"
 #include "theory/tonality/interval.h"
 #include "model/pitch/midi_pitch.h"
 
@@ -8,7 +8,7 @@ static bool table_is_hard(int which) {
     return which <= GALANT_MATCH_BASS_DEFINING;
 }
 
-static const GalantRuleTable TABLE = {GALANT_MATCH_RULE_COUNT, table_is_hard};
+static const RuleTable TABLE = {.count = GALANT_MATCH_RULE_COUNT, .is_hard = table_is_hard};
 
 bool galant_match_valid(const GalantMatch *match) {
     return match != NULL && match->prototype != NULL && galant_exemplar_valid(match->exemplar) &&
@@ -85,7 +85,7 @@ static bool check_tenths(const GalantMatch *match) {
 }
 
 bool galant_matching_rule_holds(GalantMatchRule which, const GalantMatch *match) {
-    if (!galant_rule_table_valid(&TABLE, (int)which) || !galant_match_valid(match)) {
+    if (!rule_table_valid(&TABLE, (int)which) || !galant_match_valid(match)) {
         return false;
     }
     switch (which) {
@@ -114,6 +114,6 @@ bool galant_matching_check(const GalantMatch *match, unsigned *hard_violations, 
     if (hard_violations == NULL || soft_violations == NULL || !galant_match_valid(match)) {
         return false;
     }
-    galant_rule_table_check(&TABLE, holds_adapter, match, hard_violations, soft_violations);
+    rule_table_check(&TABLE, holds_adapter, match, hard_violations, soft_violations);
     return true;
 }

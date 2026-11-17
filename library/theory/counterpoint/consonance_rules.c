@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/rule_table.h"
+#include "theory/rules/rule_table.h"
 
 bool standard_counterpoint_classify_interval(const StandardTonalityInterval *interval,
                                              StandardTonalityIntervalCategory *out) {

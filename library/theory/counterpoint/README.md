@@ -69,7 +69,7 @@ The first four species are documented in [standard-counterpoint-species.md](../.
 Every group of rules (a species' strong beats, its line rules, the common
 melodic rules) follows one pattern, built on two shared helpers.
 
-- **`rule_table.h`**: a table for one group. The module defines its rule
+- **`theory/rules/rule_table.h`**: the one table for a group, shared with every other area. The module defines its rule
   names, a function that says which rules are hard, and static storage for the
   cached pairs, then points the table at them. The table reports a group's
   failures as hard and soft bit masks. The module writes only how one rule is evaluated and a small adapter

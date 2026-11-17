@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include "theory/galant/scale_rule_table.h"
+#include "theory/rules/rule_table.h"
 #include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
@@ -11,7 +11,7 @@ static bool table_is_hard(int which) {
     return which <= SCALE_SEQUENCE_SUSPENDED;
 }
 
-static const ScaleRuleTable TABLE = {SCALE_SEQUENCE_RULE_COUNT, table_is_hard};
+static const RuleTable TABLE = {.count = SCALE_SEQUENCE_RULE_COUNT, .is_hard = table_is_hard};
 
 bool scale_sequence_valid(const ScaleSequence *sequence) {
     return sequence != NULL && sequence->pattern != NULL && sequence->pattern->unit_length > 0 &&
@@ -82,7 +82,7 @@ static bool check_suspended(const ScaleSequence *s) {
 }
 
 bool scale_sequence_rule_holds(ScaleSequenceRule which, const ScaleSequence *sequence) {
-    if (!scale_rule_table_valid(&TABLE, (int)which) || !scale_sequence_valid(sequence)) {
+    if (!rule_table_valid(&TABLE, (int)which) || !scale_sequence_valid(sequence)) {
         return false;
     }
     switch (which) {
@@ -111,6 +111,6 @@ bool scale_sequence_check(const ScaleSequence *sequence, unsigned *hard_violatio
     if (hard_violations == NULL || soft_violations == NULL || !scale_sequence_valid(sequence)) {
         return false;
     }
-    scale_rule_table_check(&TABLE, holds_adapter, sequence, hard_violations, soft_violations);
+    rule_table_check(&TABLE, holds_adapter, sequence, hard_violations, soft_violations);
     return true;
 }

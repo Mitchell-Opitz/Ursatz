@@ -5,7 +5,8 @@
 #include "theory/tonality/interval.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/rule_table.h"
+#include "theory/counterpoint/framework.h"
+#include "theory/rules/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
 #include "model/pitch/midi_pitch.h"
 
@@ -17,12 +18,13 @@ static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
-static const StandardCounterpointRuleTable TABLE = {
+static const RuleTable TABLE = {
+    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
     "first-species-ends", NAMES, STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT, NULL, g_pairs, g_built,
     evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointFirstSpeciesEndsRule which) {
-    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
+    return rule_table_valid(&TABLE, (int)which);
 }
 
 static const StandardCounterpointLine *counterpoint_line(const StandardCounterpointPair *pair,
@@ -104,8 +106,8 @@ static bool holds_adapter(int which, const void *subject) {
                                                                s->pair, s->cantus_part, s->tonic);
 }
 
-STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
-STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
+RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
+RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_first_species_ends_check(const StandardCounterpointPair *pair,
                                                     StandardCounterpointCantusPart cantus_part,
@@ -117,6 +119,6 @@ bool standard_counterpoint_first_species_ends_check(const StandardCounterpointPa
     }
     Subject subject = {pair, cantus_part, tonic};
     unsigned unused_soft;
-    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, &subject, violations, &unused_soft);
+    rule_table_check(&TABLE, holds_adapter, &subject, violations, &unused_soft);
     return true;
 }

@@ -4,7 +4,8 @@
 
 #include "model/core/value.h"
 #include "preference_test_access.h"
-#include "theory/harmony/harmony_rule_table.h"
+#include "theory/harmony/harmony_framework.h"
+#include "theory/rules/rule_table.h"
 
 /* A table of three rules: "alpha" and "gamma" are hard, "beta" is soft. */
 enum { ALPHA = 0, BETA, GAMMA, COUNT };
@@ -22,30 +23,36 @@ static bool holds(int which, const void *subject) {
 
 static RulePair g_pairs[COUNT];
 static UrsatzOnce g_built[COUNT];
-static const HarmonyRuleTable PLAIN = {"test-plain", NAMES, COUNT, is_hard, g_pairs, g_built, NULL};
+static const RuleTable PLAIN = {
+    "standard-harmony", standard_harmony_framework, "standard-harmony",
+    "test-plain", NAMES, COUNT, is_hard, g_pairs, g_built, NULL};
 
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static RulePair g_eval_pairs[COUNT];
 static UrsatzOnce g_eval_built[COUNT];
-static const HarmonyRuleTable EVAL = {"test-eval", NAMES, COUNT, is_hard, g_eval_pairs, g_eval_built,
+static const RuleTable EVAL = {
+    "standard-harmony", standard_harmony_framework, "standard-harmony",
+    "test-eval", NAMES, COUNT, is_hard, g_eval_pairs, g_eval_built,
                                       evaluate_candidate, score_candidate};
-HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, EVAL, holds, unsigned)
-HARMONY_RULE_TABLE_SCORER(score_candidate, EVAL, holds, unsigned)
+RULE_TABLE_EVALUATOR(evaluate_candidate, EVAL, holds, unsigned)
+RULE_TABLE_SCORER(score_candidate, EVAL, holds, unsigned)
 
 static RulePair g_bare_pairs[COUNT];
 static UrsatzOnce g_bare_built[COUNT];
-static const HarmonyRuleTable BARE = {NULL, NAMES, COUNT, NULL, g_bare_pairs, g_bare_built, NULL};
+static const RuleTable BARE = {
+    "standard-harmony", standard_harmony_framework, "standard-harmony",
+    NULL, NAMES, COUNT, NULL, g_bare_pairs, g_bare_built, NULL};
 
 static void test_candidate_type(void) {
     char written[64];
-    assert(harmony_rule_table_candidate_type(&EVAL, written, sizeof(written)));
+    assert(rule_table_candidate_type(&EVAL, written, sizeof(written)));
     assert(strcmp(written, "standard-harmony/test-eval") == 0);
-    assert(!harmony_rule_table_candidate_type(&EVAL, written, 8));
-    assert(!harmony_rule_table_candidate_type(&BARE, written, sizeof(written)));
-    assert(!harmony_rule_table_candidate_type(NULL, written, sizeof(written)));
-    assert(!harmony_rule_table_candidate_type(&EVAL, NULL, sizeof(written)));
+    assert(!rule_table_candidate_type(&EVAL, written, 8));
+    assert(!rule_table_candidate_type(&BARE, written, sizeof(written)));
+    assert(!rule_table_candidate_type(NULL, written, sizeof(written)));
+    assert(!rule_table_candidate_type(&EVAL, NULL, sizeof(written)));
 }
 
 static PreferenceRankResult rank_mask(const Preference *preference, const char *tag, unsigned mask,
@@ -62,22 +69,22 @@ static void test_preferences(void) {
 
     /* A soft rule gets a Preference with the table's callback; a hard rule, and a table with no callback, get none. */
     for (int i = 0; i < COUNT; i++) {
-        const Preference *preference = harmony_rule_table_preference(&EVAL, i);
+        const Preference *preference = rule_table_preference(&EVAL, i);
         assert((preference != NULL) == !is_hard(i));
-        assert(harmony_rule_table_preference(&PLAIN, i) == NULL);
-        assert(harmony_rule_table_preference(&BARE, i) == NULL);
+        assert(rule_table_preference(&PLAIN, i) == NULL);
+        assert(rule_table_preference(&BARE, i) == NULL);
         if (preference != NULL) {
             assert(preference_score_fn(preference) == score_candidate);
-            assert(preference_framework(preference) == preference_framework(harmony_rule_table_preference(&EVAL, BETA)));
+            assert(preference_framework(preference) == preference_framework(rule_table_preference(&EVAL, BETA)));
         }
     }
-    assert(harmony_rule_table_preference(&EVAL, COUNT) == NULL);
-    assert(harmony_rule_table_preference(&EVAL, -1) == NULL);
-    assert(harmony_rule_table_preference(NULL, 0) == NULL);
-    assert(harmony_rule_table_preference(&EVAL, BETA) == harmony_rule_table_preference(&EVAL, BETA));
+    assert(rule_table_preference(&EVAL, COUNT) == NULL);
+    assert(rule_table_preference(&EVAL, -1) == NULL);
+    assert(rule_table_preference(NULL, 0) == NULL);
+    assert(rule_table_preference(&EVAL, BETA) == rule_table_preference(&EVAL, BETA));
 
     /* The soft rule scores 1/1 when it holds and 0/1 when it does not, and never rejects: no other result exists. */
-    const Preference *beta = harmony_rule_table_preference(&EVAL, BETA);
+    const Preference *beta = rule_table_preference(&EVAL, BETA);
     unsigned long numerator = 99, denominator = 99;
     assert(rank_mask(beta, tag, 1u << BETA, &numerator, &denominator) == PREFERENCE_RANK_COMPUTED);
     assert(numerator == 1 && denominator == 1);
@@ -99,17 +106,17 @@ static void test_preferences(void) {
     unsigned mask = 1u << BETA;
     Value *candidate;
     assert(value_create(tag, &mask, sizeof(mask), &candidate) == VALUE_OK);
-    PreferenceScore score = harmony_rule_table_score(&EVAL, holds, sizeof(mask), beta, candidate);
+    PreferenceScore score = rule_table_score(&EVAL, holds, sizeof(mask), beta, candidate);
     assert(score.numerator == 1 && score.denominator == 1);
-    score = harmony_rule_table_score(NULL, holds, sizeof(mask), beta, candidate);
+    score = rule_table_score(NULL, holds, sizeof(mask), beta, candidate);
     assert(score.denominator == 0);
-    score = harmony_rule_table_score(&EVAL, NULL, sizeof(mask), beta, candidate);
+    score = rule_table_score(&EVAL, NULL, sizeof(mask), beta, candidate);
     assert(score.denominator == 0);
-    score = harmony_rule_table_score(&EVAL, holds, sizeof(mask), NULL, candidate);
+    score = rule_table_score(&EVAL, holds, sizeof(mask), NULL, candidate);
     assert(score.denominator == 0);
-    score = harmony_rule_table_score(&EVAL, holds, sizeof(mask), beta, NULL);
+    score = rule_table_score(&EVAL, holds, sizeof(mask), beta, NULL);
     assert(score.denominator == 0);
-    score = harmony_rule_table_score(&BARE, holds, sizeof(mask), beta, candidate);
+    score = rule_table_score(&BARE, holds, sizeof(mask), beta, candidate);
     assert(score.denominator == 0);
     value_destroy(candidate);
 }

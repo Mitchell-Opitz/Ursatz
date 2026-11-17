@@ -7,7 +7,8 @@
 #include "theory/counterpoint/counterpoint_line.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
-#include "theory/counterpoint/rule_table.h"
+#include "theory/counterpoint/framework.h"
+#include "theory/rules/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
 
 #define BUFFER_SIZE (STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR * STANDARD_COUNTERPOINT_THIRD_SPECIES_MAX_BARS)
@@ -32,12 +33,13 @@ static UrsatzOnce g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
-static const StandardCounterpointRuleTable TABLE = {
+static const RuleTable TABLE = {
+    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
     "third-species-line", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT, table_is_hard, g_pairs, g_built,
     evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointThirdSpeciesLineRule which) {
-    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
+    return rule_table_valid(&TABLE, (int)which);
 }
 
 typedef StandardCounterpointThirdSpeciesExercise Exercise;
@@ -180,8 +182,8 @@ static bool holds_adapter(int which, const void *subject) {
                                                                s->exercise, s->tonic);
 }
 
-STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
-STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
+RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, Subject)
+RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, Subject)
 
 bool standard_counterpoint_third_species_line_check(const StandardCounterpointThirdSpeciesExercise *exercise,
                                                      const PitchSpelling *tonic, unsigned *hard_violations,
@@ -191,7 +193,7 @@ bool standard_counterpoint_third_species_line_check(const StandardCounterpointTh
         return false;
     }
     Subject subject = {exercise, tonic};
-    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, &subject, hard_violations,
+    rule_table_check(&TABLE, holds_adapter, &subject, hard_violations,
                                            soft_violations);
     return true;
 }

@@ -4,7 +4,8 @@
 
 #include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
-#include "theory/counterpoint/rule_table.h"
+#include "theory/counterpoint/framework.h"
+#include "theory/rules/rule_table.h"
 #include "theory/counterpoint/third_species_figure.h"
 
 #define BUFFER_SIZE (STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR * STANDARD_COUNTERPOINT_THIRD_SPECIES_MAX_BARS)
@@ -25,12 +26,13 @@ static UrsatzOnce g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
-static const StandardCounterpointRuleTable TABLE = {
+static const RuleTable TABLE = {
+    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
     "third-species-beat", NAMES, STANDARD_COUNTERPOINT_THIRD_SPECIES_BEAT_COUNT, table_is_hard, g_pairs, g_built,
     evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointThirdSpeciesBeatRule which) {
-    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
+    return rule_table_valid(&TABLE, (int)which);
 }
 
 typedef StandardCounterpointThirdSpeciesExercise Exercise;
@@ -118,8 +120,8 @@ static bool holds_adapter(int which, const void *subject) {
                                                                subject);
 }
 
-STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointThirdSpeciesExercise)
-STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointThirdSpeciesExercise)
+RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointThirdSpeciesExercise)
+RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointThirdSpeciesExercise)
 
 bool standard_counterpoint_third_species_beat_check(const StandardCounterpointThirdSpeciesExercise *exercise,
                                                     unsigned *hard_violations, unsigned *soft_violations) {
@@ -127,7 +129,7 @@ bool standard_counterpoint_third_species_beat_check(const StandardCounterpointTh
         !standard_counterpoint_third_species_exercise_valid(exercise)) {
         return false;
     }
-    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, exercise, hard_violations,
+    rule_table_check(&TABLE, holds_adapter, exercise, hard_violations,
                                            soft_violations);
     return true;
 }

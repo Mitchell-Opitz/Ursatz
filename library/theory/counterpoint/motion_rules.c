@@ -4,7 +4,7 @@
 
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
-#include "theory/counterpoint/rule_table.h"
+#include "theory/rules/rule_table.h"
 
 bool standard_counterpoint_classify_motion(const PitchSpelling *lower_from, const PitchSpelling *lower_to,
                                            const PitchSpelling *upper_from, const PitchSpelling *upper_to,

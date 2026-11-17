@@ -80,7 +80,7 @@ Framework adapters accept the neutral types in `analysis/notes/` (`AnalysisNote`
 
 ## Claims and rule tables
 
-A framework builds its durable claims through the kernel helpers in `interpretation/claim_interpretation.h`. Each `analysis/*claim.c` keeps its public names and is a one-line call with the framework's id and short name: `claim_interpretation_create` for the Interpretation, `claim_interpretation_note_group` for the note shell, `claim_interpretation_relationship` for the Relationship. standard-harmony and standard-counterpoint keep their own rule tables (`harmony_rule_table.h`, `rule_table.h`) and pair builders, used only for the Preferences of their soft rules; scale-harmonization and galant-schemas keep a rule table of counts and hardness only. A framework needs no claim code of its own.
+A framework builds its durable claims through the kernel helpers in `interpretation/claim_interpretation.h`. Each `analysis/*claim.c` keeps its public names and is a one-line call with the framework's id and short name: `claim_interpretation_create` for the Interpretation, `claim_interpretation_note_group` for the note shell, `claim_interpretation_relationship` for the Relationship. standard-harmony and standard-counterpoint use the one rule table and pair builder (`theory/rules/rule_table.h`, `rule_pair.h`), the pairs used only for the Preferences of their soft rules; scale-harmonization and galant-schemas set only the count and the hardness of it. A framework needs no claim code of its own.
 
 ## Singleton and rule table
 

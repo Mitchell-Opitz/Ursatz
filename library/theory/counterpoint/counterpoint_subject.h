@@ -16,7 +16,7 @@
  * else, and one of the structs below for a rule that also needs the tonic, the
  * cantus part or the limits. The Value's type tag is
  * "standard-counterpoint/<table prefix>" (see
- * standard_counterpoint_rule_table_candidate_type). The struct is copied into
+ * rule_table_candidate_type). The struct is copied into
  * the Value, but the pointers in it stay borrowed: whatever they point at must
  * outlive the evaluate call.
  */

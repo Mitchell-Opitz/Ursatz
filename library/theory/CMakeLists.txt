@@ -12,6 +12,7 @@ add_library(ursatz_theory
     rules/preference.c
     rules/rule.c
     rules/rule_pair.c
+    rules/rule_table.c
     vocabulary/applied_chord_kind.c
     vocabulary/beat_strength.c
     vocabulary/cadence_type.c
@@ -50,7 +51,6 @@ add_library(ursatz_theory
     harmony/harmony_prolongation.c
     harmony/harmony_related_key.c
     harmony/harmony_resolution_rules.c
-    harmony/harmony_rule_table.c
     harmony/harmony_six_four.c
     harmony/harmony_steps.c
     harmony/harmony_strong_predominants.c
@@ -87,7 +87,6 @@ add_library(ursatz_theory
     counterpoint/melodic_rules.c
     counterpoint/motion_rules.c
     counterpoint/motion_type.c
-    counterpoint/rule_table.c
     counterpoint/second_species_ends_rules.c
     counterpoint/second_species_exercise.c
     counterpoint/second_species_line_rules.c
@@ -141,12 +140,10 @@ add_library(ursatz_theory
     galant/galant_framework.c
     galant/galant_matching_rules.c
     galant/galant_prototypes.c
-    galant/galant_rule_table.c
     galant/scale_direction.c
     galant/scale_framework.c
     galant/scale_harmonization.c
     galant/scale_patterns.c
-    galant/scale_rule_table.c
     galant/scale_sequence_rules.c
     galant/schema_function.c
     galant/sequence_kind.c

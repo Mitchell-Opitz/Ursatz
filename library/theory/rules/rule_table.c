@@ -1,54 +1,61 @@
-#include "theory/harmony/harmony_rule_table.h"
+#include "theory/rules/rule_table.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#include "theory/harmony/harmony_framework.h"
-
-bool harmony_rule_table_valid(const HarmonyRuleTable *table, int which) {
+bool rule_table_valid(const RuleTable *table, int which) {
     return table != NULL && which >= 0 && which < table->count;
 }
 
-bool harmony_rule_table_is_hard(const HarmonyRuleTable *table, int which) {
-    if (!harmony_rule_table_valid(table, which)) {
+bool rule_table_is_hard(const RuleTable *table, int which) {
+    if (!rule_table_valid(table, which)) {
         return false;
     }
     return table->is_hard == NULL || table->is_hard(which);
 }
 
+bool rule_table_never_hard(int which) {
+    (void)which;
+    return false;
+}
+
 typedef struct {
-    const HarmonyRuleTable *table;
+    const RuleTable *table;
     int which;
 } BuildPairArg;
 
 static void build_pair(void *arg) {
-    const HarmonyRuleTable *table = ((const BuildPairArg *)arg)->table;
+    const RuleTable *table = ((const BuildPairArg *)arg)->table;
     int which = ((const BuildPairArg *)arg)->which;
     char name[96];
-    snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
+    if (table->prefix != NULL) {
+        snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
+    } else {
+        snprintf(name, sizeof(name), "%s", table->names[which]);
+    }
     rule_pair_build(
-        standard_harmony_framework(), "standard-harmony", name, harmony_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
-        table->evaluate, table->score, &table->pairs[which]);
+        table->framework != NULL ? table->framework() : NULL, table->id_prefix, name,
+        rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT, table->evaluate, table->score, &table->pairs[which]);
 }
 
-static void ensure_built(const HarmonyRuleTable *table, int which) {
-    if (!harmony_rule_table_valid(table, which)) {
+static void ensure_built(const RuleTable *table, int which) {
+    if (!rule_table_valid(table, which)) {
         return;
     }
     BuildPairArg arg = {table, which};
     ursatz_once(&table->built[which], build_pair, &arg);
 }
 
-const Preference *harmony_rule_table_preference(const HarmonyRuleTable *table, int which) {
+const Preference *rule_table_preference(const RuleTable *table, int which) {
     ensure_built(table, which);
-    return harmony_rule_table_valid(table, which) ? table->pairs[which].preference : NULL;
+    return rule_table_valid(table, which) ? table->pairs[which].preference : NULL;
 }
 
-const char *harmony_rule_table_name(const HarmonyRuleTable *table, int which) {
-    return harmony_rule_table_valid(table, which) ? table->names[which] : NULL;
+const char *rule_table_name(const RuleTable *table, int which) {
+    return rule_table_valid(table, which) ? table->names[which] : NULL;
 }
 
-void harmony_rule_table_check(const HarmonyRuleTable *table, HarmonyRuleHolds holds,
+void rule_table_check(const RuleTable *table, RuleHolds holds,
                                         const void *subject, unsigned *hard_violations,
                                         unsigned *soft_violations) {
     unsigned hard = 0;
@@ -57,7 +64,7 @@ void harmony_rule_table_check(const HarmonyRuleTable *table, HarmonyRuleHolds ho
         if (holds(i, subject)) {
             continue;
         }
-        if (harmony_rule_table_is_hard(table, i)) {
+        if (rule_table_is_hard(table, i)) {
             hard |= 1u << i;
         } else {
             soft |= 1u << i;
@@ -67,16 +74,16 @@ void harmony_rule_table_check(const HarmonyRuleTable *table, HarmonyRuleHolds ho
     *soft_violations = soft;
 }
 
-bool harmony_rule_table_candidate_type(const HarmonyRuleTable *table, char *out, size_t capacity) {
-    if (table == NULL || table->prefix == NULL || out == NULL) {
+bool rule_table_candidate_type(const RuleTable *table, char *out, size_t capacity) {
+    if (table == NULL || table->framework_name == NULL || table->prefix == NULL || out == NULL) {
         return false;
     }
-    int written = snprintf(out, capacity, "standard-harmony/%s", table->prefix);
+    int written = snprintf(out, capacity, "%s/%s", table->framework_name, table->prefix);
     return written > 0 && (size_t)written < capacity;
 }
 
-ConstraintEvalResult harmony_rule_table_evaluate(const HarmonyRuleTable *table, HarmonyRuleHolds holds,
-                                                 HarmonyRuleApplies applies, size_t subject_size,
+ConstraintEvalResult rule_table_evaluate(const RuleTable *table, RuleHolds holds,
+                                                 RuleApplies applies, size_t subject_size,
                                                  const Constraint *constraint, const Value *candidate) {
     if (table == NULL || holds == NULL || constraint == NULL || candidate == NULL) {
         return CONSTRAINT_EVAL_ERR_NULL_CANDIDATE;
@@ -93,7 +100,7 @@ ConstraintEvalResult harmony_rule_table_evaluate(const HarmonyRuleTable *table, 
     }
 
     char tag[96];
-    if (!harmony_rule_table_candidate_type(table, tag, sizeof(tag))) {
+    if (!rule_table_candidate_type(table, tag, sizeof(tag))) {
         return CONSTRAINT_EVAL_NOT_IMPLEMENTED;
     }
     if (strcmp(value_type(candidate), tag) != 0) {
@@ -110,7 +117,7 @@ ConstraintEvalResult harmony_rule_table_evaluate(const HarmonyRuleTable *table, 
     return holds(which, subject) ? CONSTRAINT_EVAL_PASS : CONSTRAINT_EVAL_FAIL;
 }
 
-PreferenceScore harmony_rule_table_score(const HarmonyRuleTable *table, HarmonyRuleHolds holds, size_t subject_size,
+PreferenceScore rule_table_score(const RuleTable *table, RuleHolds holds, size_t subject_size,
                                          const Preference *preference, const Value *candidate) {
     PreferenceScore unscorable = {0, 0};
     if (table == NULL || holds == NULL || preference == NULL || candidate == NULL) {
@@ -124,7 +131,7 @@ PreferenceScore harmony_rule_table_score(const HarmonyRuleTable *table, HarmonyR
         }
     }
     char tag[96];
-    if (which < 0 || !harmony_rule_table_candidate_type(table, tag, sizeof(tag)) ||
+    if (which < 0 || !rule_table_candidate_type(table, tag, sizeof(tag)) ||
         strcmp(value_type(candidate), tag) != 0) {
         return unscorable;
     }

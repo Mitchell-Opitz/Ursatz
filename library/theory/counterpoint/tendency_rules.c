@@ -5,7 +5,8 @@
 #include "theory/tonality/interval.h"
 #include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_arithmetic.h"
-#include "theory/counterpoint/rule_table.h"
+#include "theory/counterpoint/framework.h"
+#include "theory/rules/rule_table.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_TENDENCY_COUNT] = {
     "pitch-proximity", "step-declination", "step-inertia", "melodic-regression", "melodic-arch"};
@@ -15,16 +16,17 @@ static UrsatzOnce g_built[STANDARD_COUNTERPOINT_TENDENCY_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
-static const StandardCounterpointRuleTable TABLE = {
-    "tendency", NAMES, STANDARD_COUNTERPOINT_TENDENCY_COUNT, standard_counterpoint_rule_table_never_hard,
+static const RuleTable TABLE = {
+    "standard-counterpoint", standard_counterpoint_framework, "standard-counterpoint",
+    "tendency", NAMES, STANDARD_COUNTERPOINT_TENDENCY_COUNT, rule_table_never_hard,
     g_pairs, g_built, evaluate_candidate, score_candidate};
 
 static bool valid_rule(StandardCounterpointTendency which) {
-    return standard_counterpoint_rule_table_valid(&TABLE, (int)which);
+    return rule_table_valid(&TABLE, (int)which);
 }
 
 const char *standard_counterpoint_tendency_name(StandardCounterpointTendency which) {
-    return standard_counterpoint_rule_table_name(&TABLE, (int)which);
+    return rule_table_name(&TABLE, (int)which);
 }
 
 static bool check_pitch_proximity(const StandardCounterpointLine *line) {
@@ -141,14 +143,14 @@ static bool holds_adapter(int which, const void *subject) {
     return standard_counterpoint_tendency_holds((StandardCounterpointTendency)which, subject);
 }
 
-STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointLine)
-STANDARD_COUNTERPOINT_RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointLine)
+RULE_TABLE_EVALUATOR(evaluate_candidate, TABLE, holds_adapter, StandardCounterpointLine)
+RULE_TABLE_SCORER(score_candidate, TABLE, holds_adapter, StandardCounterpointLine)
 
 bool standard_counterpoint_tendency_check(const StandardCounterpointLine *line, unsigned *violations) {
     if (!standard_counterpoint_line_valid(line) || violations == NULL) {
         return false;
     }
     unsigned unused_hard;
-    standard_counterpoint_rule_table_check(&TABLE, holds_adapter, line, &unused_hard, violations);
+    rule_table_check(&TABLE, holds_adapter, line, &unused_hard, violations);
     return true;
 }
