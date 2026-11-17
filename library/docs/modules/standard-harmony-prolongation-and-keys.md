@@ -1,8 +1,8 @@
 # standard-harmony prolongation and keys
 
-The rule groups of `frameworks/standard-harmony/` for tonic prolongation, plagal motion, phrase model labeling, tonicization, and modulation and closely related keys. [Docs index](../README.md)
+The rule groups of `theory/harmony/` for tonic prolongation, plagal motion, phrase model labeling, tonicization, and modulation and closely related keys. [Docs index](../README.md)
 
-Framework overview: [frameworks/standard-harmony/README.md](../../frameworks/standard-harmony/README.md).
+Framework overview: [theory/harmony/README.md](../../theory/harmony/README.md).
 
 - **Tonic prolongation** (`harmony_prolongation.h`), the way phrase beginnings extend the tonic's
   influence by alternating tonic with V6 or an inverted V7: three chords, I, then V6

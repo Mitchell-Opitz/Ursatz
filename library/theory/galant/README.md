@@ -3,10 +3,9 @@
 Theory Framework instance `galant-schemas-v1`: the schemas of the Galant style,
 the stock musical phrases that composers and improvisers of the 18th century
 learned as the melodic, harmonic, and metric skeletons for new music
-(Gjerdingen 2007). Path `frameworks/galant-schemas/`, tests in
-`frameworks/galant-schemas/tests/`. A Framework extension module physically
-separate from `src/theory/`, the same shape as
-`frameworks/standard-counterpoint/`.
+(Gjerdingen 2007). Where it lives: the rules are in `library/theory/galant/` (tests `library/theory/tests/galant/`) and the analysis adapter is in `library/analysis/galant/` (tests `library/analysis/tests/galant/`). A Framework extension module physically
+separate from `theory/style/`, the same shape as
+`theory/counterpoint/`.
 
 The dependency on `standard-counterpoint` is one way: this module reads its
 pitch arithmetic (`standard-counterpoint/counterpoint_pitch.h`), and that
@@ -96,9 +95,9 @@ a `Rule` or `Constraint`.
 
 ## Vocabulary enums
 
-Owned here (moved from `src/semantics/`; type names and values unchanged):
+Owned here (moved from `theory/vocabulary/`; type names and values unchanged):
 
-- `SchemaFunction` is a plain enum value naming where a Galant schema typically appears in a piece, in the order they occur: opening gambit (to start a piece), continuation (after an opening, as a response to it or to carry the music on: the answer, process, and transition schemas), pre-cadential (just before the cadence, to lead into it), cadence (to conclude), or post-cadential (after the cadence). It carries no `EntityID`, pitches, or framework claim. Which schemas have which function is a convention of a framework (`frameworks/galant-schemas`).
+- `SchemaFunction` is a plain enum value naming where a Galant schema typically appears in a piece, in the order they occur: opening gambit (to start a piece), continuation (after an opening, as a response to it or to carry the music on: the answer, process, and transition schemas), pre-cadential (just before the cadence, to lead into it), cadence (to conclude), or post-cadential (after the cadence). It carries no `EntityID`, pitches, or framework claim. Which schemas have which function is a convention of a framework (`theory/galant`).
 
 ## Neutral analysis input
 

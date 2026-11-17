@@ -2,9 +2,8 @@
 
 Theory Framework instance `standard-harmony-v1`: the basics of harmony in
 common-practice Western music (Open Music Theory, Introduction to Harmony,
-Cadences, and Phrase Endings). Path `frameworks/standard-harmony/`, tests in
-`frameworks/standard-harmony/tests/`. A Framework extension module physically
-separate from `src/theory/`, the same shape as `frameworks/standard-tonality/`.
+Cadences, and Phrase Endings). Where it lives: the rules are in `library/theory/harmony/` (tests `library/theory/tests/harmony/`) and the analysis adapter is in `library/analysis/harmony/` (tests `library/analysis/tests/harmony/`). A Framework extension module physically
+separate from `theory/style/`, the same shape as `theory/tonality/`.
 
 It depends on no other framework. Chords are plain data (`HarmonyChord`,
 `harmony_chord.h`: the scale degree of the root, 1 to 7, the inversion, and
@@ -13,18 +12,18 @@ Roman numerals (`standard-tonality`) and not pitches. Voicing the inner voices i
 `standard-voicing`'s. File names carry a `harmony_` prefix so they never collide
 with the other frameworks' headers on the include path.
 
-The entities these rules use live in `src/semantics/`: `CadenceType` (perfect authentic, imperfect
+The entities these rules use live in `theory/vocabulary/`: `CadenceType` (perfect authentic, imperfect
 authentic, half, subverted), `NonChordTone` (the embellishing tones), with
 `BeatStrength` for the beat. They name things and carry no rule; which chords have
 which function, and which progressions make which cadence, is this framework's.
 
 The cadence vocabulary (`harmony_cadence_kinds.h`, R-415) gives each cadence kind a name, a label, an abbreviation, a core `CadenceType`, a strength and whether it is conclusive. It holds the seven core types and three kinds the core has no value for: evaded (a subverted cadence), abandoned (no cadence, so core unknown and never ranked) and medial caesura (a half cadence that ends a transition). `harmony_cadence_strength` reads its strength from the table, which is the one owner of cadence strength. New kinds are entries here, never new `CadenceType` values.
 
-`SixFourType` (six_four_type.h, cadential, passing, neighbor, arpeggiating) is single-framework, so it lives in this module, not in `src/semantics/`.
+`SixFourType` (six_four_type.h, cadential, passing, neighbor, arpeggiating) is single-framework, so it lives in this module, not in `theory/vocabulary/`.
 
-`PhraseModelLabel` (phrase_model_label.h, Tb, PD, D, Te) is single-framework, so it lives in this module, not in `src/semantics/`.
+`PhraseModelLabel` (phrase_model_label.h, Tb, PD, D, Te) is single-framework, so it lives in this module, not in `theory/vocabulary/`.
 
-`HarmonicFunction` (harmonic_function.h, tonic, predominant, dominant) is single-framework, so it lives in this module, not in `src/semantics/`.
+`HarmonicFunction` (harmonic_function.h, tonic, predominant, dominant) is single-framework, so it lives in this module, not in `theory/vocabulary/`.
 
 The **analysis adapter** (`analysis/`) turns chord segments into this framework's inputs and returns function,
 phrase model, six-four, prolongation and cadence Interpretations (PAC and IAC told apart by the soprano). See `docs/modules/standard-harmony-analysis.md`.
@@ -66,7 +65,7 @@ Every rule group has pure check functions; the phrase model and cadence groups a
   Predominant sevenths in minor have altered notes (ii7 is half diminished), which are not
   modeled.
   Hyperbeats are not modeled, only the beat strength of each chord.
-- **The analysis procedure.** Guessing the harmony from the bass line is the analyst's. `frameworks/standard-harmony/analysis/` finds cadences, phrases, functions, six-fours and prolongations from the chord segments it is given (`docs/modules/standard-harmony-analysis.md`). The bass line hints (sol
+- **The analysis procedure.** Guessing the harmony from the bass line is the analyst's. `analysis/harmony/` finds cadences, phrases, functions, six-fours and prolongations from the chord segments it is given (`docs/modules/standard-harmony-analysis.md`). The bass line hints (sol
   at the cadence, fa or re under a strong predominant) are the cadence and strong
   predominant rules'.
 - **Other cadences.** Plagal and deceptive endings are not cadences in this

@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Layer L5 (`music-structure`). Path `src/structure/`, tests `tests/structure/`. Depends on `identity`, `core`, `time`, `pitch`, `events`, and `containers` only. Must not depend on anything L6+.
+Layer L5 (`music-structure`). Path `model/structure/`, tests `tests/structure/`. Depends on `identity`, `core`, `time`, `pitch`, `events`, and `containers` only. Must not depend on anything L6+.
 
 ## Provides
 

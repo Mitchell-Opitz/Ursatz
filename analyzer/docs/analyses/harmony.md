@@ -70,8 +70,8 @@ make a chord read as root position.
 ## Outer voices
 
 The analyzer adds no music theory of its own here: it renders what Ursatz's outer-voice extraction
-(`outer_voice_extract`, `src/analysis/outer_voice.h`) and scale-degree labelling
-(`common_practice_scale_degree_label`, `frameworks/common-practice-minimal/outer_scale_degrees.h`)
+(`outer_voice_extract`, `analysis/voices/outer_voice.h`) and scale-degree labelling
+(`common_practice_scale_degree_label`, `analysis/harmony/outer_scale_degrees.h`)
 establish, in `src/pipeline/outer_voice_pipeline.c`.
 
 - **Soprano and bass.** The lines are extracted over the voice segments (one per melody note). Each chord's
@@ -99,7 +99,7 @@ establish, in `src/pipeline/outer_voice_pipeline.c`.
 ## Key regions, tonicizations and modulations
 
 The analyzer adds no music theory of its own here: it renders what Ursatz's key-region detection
-(`key_regions_estimate`, `frameworks/common-practice-minimal/key_regions.h`) establishes, in
+(`key_regions_estimate`, `analysis/harmony/key_regions.h`) establishes, in
 `src/pipeline/key_region_pipeline.c`.
 
 - **Key regions.** The piece is cut into windows of four measures, each scored against the 24 major and

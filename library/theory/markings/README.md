@@ -1,16 +1,14 @@
 # standard-markings
 
 Theory Framework instance `standard-markings-v1`: the conventional
-markings of Western staff notation other than pitch placement. Path
-`frameworks/standard-markings/`, tests in
-`frameworks/standard-markings/tests/`. A Framework extension module
-physically separate from `src/theory/`, same shape as
-`frameworks/common-practice-minimal/`.
+markings of Western staff notation other than pitch placement. Where it lives: the rules are in `library/theory/markings/` (tests `library/theory/tests/markings/`). A Framework extension module
+physically separate from `theory/style/`, same shape as
+`theory/tonality/`.
 
 ## Scope
 
 Meaning for the Italian vocabulary carried by the opaque marking types
-in `src/events/` (`Dynamics`, `TempoMarking`):
+in `model/events/` (`Dynamics`, `TempoMarking`):
 
 - **Dynamics**: loudness order from ppp to fff with unlimited -issimo
   stacking, mezzo as "moderately", crescendo/decrescendo/diminuendo as

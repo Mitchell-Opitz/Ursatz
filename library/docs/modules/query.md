@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Path `src/query/`, tests `tests/query/`. Depends on `identity`, `core` (for `ProvenanceReference`) and `semantics` (for `ContourDirection`) only. Must not depend on `time`, `pitch`, `events`, `containers`, `structure`, `context`, `interpretation`, `relationship`, `theory`, `rules`, `transform`, `analysis`, `generation`, `io` or `frameworks/`. Enforced by the layer table.
+Path `analysis/similarity/`, tests `tests/query/`. Depends on `identity`, `core` (for `ProvenanceReference`) and `semantics` (for `ContourDirection`) only. Must not depend on `time`, `pitch`, `events`, `containers`, `structure`, `context`, `interpretation`, `relationship`, `theory`, `rules`, `transform`, `analysis`, `generation`, `io` or `theory/`. Enforced by the layer table.
 
 ## Provides
 

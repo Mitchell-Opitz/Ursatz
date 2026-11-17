@@ -2,14 +2,13 @@
 
 The first populated Theory Framework instance in Ursatz: `common-practice-minimal-v1`.
 
-Path `frameworks/common-practice-minimal/`, tests
-`frameworks/common-practice-minimal/tests/`. Built as a Framework
-extension module physically separate from `src/theory/`, per
+Where it lives: the rules are in `library/theory/tonality/` (tests `library/theory/tests/tonality/`) and the analysis adapter is in `library/analysis/harmony/` (tests `library/analysis/tests/harmony/`). Built as a Framework
+extension module physically separate from `theory/style/`, per
 `docs/modules/theory.md`'s documented boundary ("built as extensions on
 top of Framework/Rule/Constraint after this module, never as changes to
 the L7 kernel itself"). This is the first module in that pattern;
 future extensions (jazz harmony, species counterpoint, etc.) are
-expected to follow the same `frameworks/<name>/` shape.
+expected to follow the same shape: rules in `theory/<area>/`, adapter in `analysis/<area>/`.
 
 This framework compiles no kernel source.
 
@@ -70,7 +69,7 @@ covers exactly:
 
 All of the above are planned for later passes, either within this
 Framework's own versioning (`common-practice-minimal-v2`+) or as
-separate `frameworks/<name>/` extensions.
+separate framework identities (`theory/<area>/` and `analysis/<area>/`).
 
 Weighted identification and chords in context are documented in [common-practice-minimal-weighted.md](../../docs/modules/common-practice-minimal-weighted.md).
 

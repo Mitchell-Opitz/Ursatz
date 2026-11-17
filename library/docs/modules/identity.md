@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Layer L0. Path `src/identity/`, tests `tests/identity/`. No dependencies on any other module.
+Layer L0. Path `model/identity/`, tests `tests/identity/`. No dependencies on any other module.
 
 ## Provides
 

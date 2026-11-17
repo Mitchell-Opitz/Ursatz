@@ -80,7 +80,7 @@ The Ursatz headers the Analyzer includes, checked by the layer table, which allo
 
 | Entry used | From which repo | For what |
 | --- | --- | --- |
-| `ursatz_chain/analysis_chain.h`, `ursatz_chain/chain_inputs.h` (`analysis_chain_run` and the `analysis_chain_*` accessors) | Ursatz | The one analysis run and its results; the public headers reach them only through `result_chain.h` |
+| `chain/analysis_chain.h`, `chain/chain_inputs.h` (`analysis_chain_run` and the `analysis_chain_*` accessors) | Ursatz | The one analysis run and its results; the public headers reach them only through `result_chain.h` |
 | `io/midi_importer.h`, `io/midi_key_signature.h`, `io/musicxml_importer.h` | Ursatz | Reading MIDI and MusicXML files |
 | `core/`, `time/`, `pitch/`, `events/`, `identity/` | Ursatz | Rationals, meters, tempo maps, pitches, notes, ids |
 | `interpretation/`, `semantics/`, `structure/`, `containers/`, `relationship/` | Ursatz | The chain's `Interpretation`s and the kernel vocabulary |

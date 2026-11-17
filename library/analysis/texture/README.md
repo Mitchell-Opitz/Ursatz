@@ -1,18 +1,16 @@
 # standard-texture
 
 Theory Framework instance `standard-texture-v1`: musical texture, the
-density of and interaction between a work's voices. Path
-`frameworks/standard-texture/`, tests in
-`frameworks/standard-texture/tests/`. A Framework extension module
-physically separate from `src/theory/`, same shape as
-`frameworks/standard-tonality/` and `frameworks/standard-meter/`. It does
+density of and interaction between a work's voices. Where it lives: the analysis adapter is in `library/analysis/texture/` (tests `library/analysis/tests/texture/`). A Framework extension module
+physically separate from `theory/style/`, same shape as
+`theory/tonality/` and `theory/meter/`. It does
 not depend on any other framework module.
 
 ## Scope
 
 Rules about musical texture, the density of and interaction between a
 work's voices. The vocabulary names `Texture`
-(`src/interpretation/texture.h`), the framework-relative interpretation
+(`model/interpretation/texture.h`), the framework-relative interpretation
 of a passage; its target is the passage's `EntityID`.
 
 - **Textures** (`texture_rules.h`): four main categories and six names.

@@ -1,8 +1,8 @@
 # standard-harmony rules
 
-The rule groups of `frameworks/standard-harmony/` for harmonic function, the phrase model rules, cadences, strong predominants, six-four chords, deceptive motion and predominant sevenths. [Docs index](../README.md)
+The rule groups of `theory/harmony/` for harmonic function, the phrase model rules, cadences, strong predominants, six-four chords, deceptive motion and predominant sevenths. [Docs index](../README.md)
 
-Framework overview: [frameworks/standard-harmony/README.md](../../frameworks/standard-harmony/README.md).
+Framework overview: [theory/harmony/README.md](../../theory/harmony/README.md).
 
 
 The phrase model and cadence rule groups have pure check functions. A rule that states what

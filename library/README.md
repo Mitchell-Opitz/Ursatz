@@ -6,11 +6,14 @@ strictly separates events, structures, relationships, interpretations, contexts,
 and provenance. Interpretations (chord, key, cadence, form) are only ever produced under an
 explicit, named Theory Framework.
 
-- `src/`: the kernel, layers L0 through L9. L0 to L8 are implemented. L9 is partial: MIDI
-  import, MusicXML export and similarity scoring.
-- `frameworks/`: 11 Theory Framework extension modules (tonality, harmony, counterpoint,
-  form, meter, texture, and more). See [frameworks/README.md](frameworks/README.md).
-- `chain/`: the analysis chain `ursatz_chain`. See [chain/README.md](chain/README.md).
+- `model/`: the value types (identity, core, time, pitch, events, containers, structure, relationship,
+  interpretation), target `ursatz_model`.
+- `theory/`: the rule libraries, vocabularies and style models of the 11 Theory Frameworks (tonality, harmony,
+  counterpoint, form, meter, and more), target `ursatz_theory`. See [theory/README.md](theory/README.md).
+- `analysis/`: the analyses and the frameworks' adapters, target `ursatz_analysis`. See
+  [analysis/README.md](analysis/README.md).
+- `chain/`: the analysis chain, target `ursatz_chain`. See [chain/README.md](chain/README.md).
+- `io/`: MIDI and MusicXML import and export, target `ursatz_io`.
 
 ## Build and test
 
@@ -28,7 +31,7 @@ bash tools/ci/check-docs.sh library
 - Full run, both sets: `ctest --test-dir build/library -j$(nproc) --output-on-failure`
 - The 10 s rule: a fast-set test that takes over 10 s is sped up or labeled `slow`. CI prints the ten slowest tests and
   warns about each fast-set test over 10 s.
-- A library test is registered with `ursatz_test(<name> LIBS ursatz ...)` (`cmake/UrsatzTest.cmake` at the repository root): it builds `test_<name>` from `test_<name>.c`, compiles it with `-UNDEBUG`, and sets the timeout (120 s, 1800 s for `slow`). `VALGRIND` adds `<name>_valgrind`.
+- A library test is registered with `ursatz_test(<name> LIBS ursatz_theory ...)` (`cmake/UrsatzTest.cmake` at the repository root): it builds `test_<name>` from `test_<name>.c`, compiles it with `-UNDEBUG`, and sets the timeout (120 s, 1800 s for `slow`). `VALGRIND` adds `<name>_valgrind`.
 - Fixtures are in the root `tests/fixtures/` (`URSATZ_FIXTURES_DIR`).
 - Labels: `slow` (nightly only), `valgrind` (every memcheck test, always with `slow`), `accuracy` (the accuracy harness, gate and corpus tests).
 - The slow set, with every memcheck test, runs nightly in CI (`.github/workflows/nightly.yml`).
@@ -37,9 +40,9 @@ Requirements, the full test run and CI are in [docs/BUILDING.md](docs/BUILDING.m
 
 ## Using the library
 
-Link `ursatz` (and the frameworks and `ursatz_chain` you need) from the repository's build. A consumer sees only the
-public headers: kernel headers by their module path (`time/meter_map.h`), framework headers by their folder
-name (`standard-form/analysis/analysis_phrase.h`), the chain as `ursatz_chain/analysis_chain.h`. Details in
+Link the groups you need (`ursatz_model`, `ursatz_theory`, `ursatz_analysis`, `ursatz_chain`, `ursatz_io`) from the
+repository's build. A consumer sees only the staged public headers, by their path from `library/`
+(`model/time/meter_map.h`, `analysis/form/analysis_phrase.h`, `chain/analysis_chain.h`). Details in
 [docs/public-surface.md](docs/public-surface.md).
 
 ## Docs

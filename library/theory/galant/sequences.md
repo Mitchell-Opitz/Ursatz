@@ -2,10 +2,8 @@
 
 Theory Framework instance `scale-harmonization-v1`: harmonizing a bass scale in
 the schema and partimento tradition (Open Music Theory, Galant schemas: the
-Rule of the Octave and Harmonizing the Scale with Sequences). Path
-`frameworks/scale-harmonization/`, tests in
-`frameworks/scale-harmonization/tests/`. A Framework extension module physically
-separate from `src/theory/`, the same shape as `frameworks/standard-counterpoint/`.
+Rule of the Octave and Harmonizing the Scale with Sequences). Where it lives: the rules are in `library/theory/galant/` (tests `library/theory/tests/galant/`) and the analysis adapter is in `library/analysis/galant/` (tests `library/analysis/tests/galant/`). A Framework extension module physically
+separate from `theory/style/`, the same shape as `theory/counterpoint/`.
 
 The dependencies on other frameworks are one way: this module reads the pitch
 arithmetic and intervals of `standard-counterpoint` and the scale degrees of
@@ -72,7 +70,7 @@ is hard; "avoid" and "usually" features are soft. No rule builds a `Rule` or
 
 ## Vocabulary enums
 
-Owned here (moved from `src/semantics/`; type names and values unchanged):
+Owned here (moved from `theory/vocabulary/`; type names and values unchanged):
 
 - `ScaleDirection` is a plain enum value naming the direction a scale or a bass line runs: ascending or descending. It carries no `EntityID`, pitches, or framework claim, and is not `ContourDirection` (`semantics/contour.h`), which also has a "same" direction and describes the change between two pitches of a `Contour`.
-- `SequenceKind` is a plain enum value naming a kind of sequential harmonization of a bass scale, a pattern of one or more harmonies that repeats in the direction of the scale: parallel chords, 5-6, 7-6 (a chain of suspensions), cycle of fifths, or 2-3 (the inversion of the 7-6, also a chain of suspensions). It carries no `EntityID`, pitches, or framework claim. Which patterns a framework encodes, and their intervals above the bass, are its own convention (`frameworks/scale-harmonization`).
+- `SequenceKind` is a plain enum value naming a kind of sequential harmonization of a bass scale, a pattern of one or more harmonies that repeats in the direction of the scale: parallel chords, 5-6, 7-6 (a chain of suspensions), cycle of fifths, or 2-3 (the inversion of the 7-6, also a chain of suspensions). It carries no `EntityID`, pitches, or framework claim. Which patterns a framework encodes, and their intervals above the bass, are its own convention (`theory/galant`).

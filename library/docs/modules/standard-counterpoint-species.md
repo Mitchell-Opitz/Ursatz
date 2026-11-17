@@ -1,8 +1,8 @@
 # standard-counterpoint species
 
-The First to Fourth species rule groups of `frameworks/standard-counterpoint/`. [Docs index](../README.md)
+The First to Fourth species rule groups of `theory/counterpoint/`. [Docs index](../README.md)
 
-Framework overview: [frameworks/standard-counterpoint/README.md](../../frameworks/standard-counterpoint/README.md).
+Framework overview: [theory/counterpoint/README.md](../../theory/counterpoint/README.md).
 
 ## First species
 
@@ -46,7 +46,7 @@ advice, first species can make it hard.
 Two notes against one. There is no rhythm model, so the
 counterpoint is a list of slots, two per bar (`second_species_exercise.h`):
 the first slot is the strong beat (`BeatStrength`,
-`src/semantics/beat_strength.h`), the second the weak beat. A slot is an
+`theory/vocabulary/beat_strength.h`), the second the weak beat. A slot is an
 attack, a tie to the slot before it (a whole note is an attack tied through the
 weak beat), or a rest (a half rest on the first beat only). The cantus firmus
 is the same as in first species. The caller supplies the exercise, which says
@@ -90,7 +90,7 @@ which part is the cantus firmus, and the tonic.
 
 Four notes against one. The counterpoint is a list of slots
 (`counterpoint_slots.h`), four per bar, with the strengths strong, weak, medium,
-weak (`BeatStrength`, `src/semantics/beat_strength.h`). A bar is four quarter
+weak (`BeatStrength`, `theory/vocabulary/beat_strength.h`). A bar is four quarter
 notes (the first may be a quarter rest and three notes) or a whole note (an
 attack and three ties); `third_species_exercise.h`. The caller supplies the
 exercise, which says which part is the cantus firmus, and the tonic.
@@ -100,7 +100,7 @@ exercise, which says which part is the cantus firmus, and the tonic.
   dissonant passing tones in a row, a dissonant neighbor tone, a double
   neighbor, or a nota cambiata (the form that fills in a step down and the form
   that fills in a step up). Each maps to a `NonChordTone`
-  (`src/semantics/non_chord_tone.h`).
+  (`theory/vocabulary/non_chord_tone.h`).
 - **Strong beats** (`third_species_strong_rules.h`): downbeats consonant, no
   three bars in a row beginning with the same perfect interval, at most three
   with the same imperfect consonance, no dissonant outline between downbeats,
@@ -145,7 +145,7 @@ which part is the cantus firmus, and the tonic.
   resolution one step down. Above the cantus firmus the dissonant types are
   7-6, 4-3, and 9-8, below it 2-3; a consonant tie that resolves down by step
   is a consonant suspension. The dissonant types map to
-  `NON_CHORD_TONE_SUSPENSION` (`src/semantics/non_chord_tone.h`).
+  `NON_CHORD_TONE_SUSPENSION` (`theory/vocabulary/non_chord_tone.h`).
 - **Suspension rules** (`fourth_species_suspension_rules.h`): every dissonant
   tied downbeat is a proper suspension (hard). Soft: at least half of the tied
   bars hold a dissonant suspension, and no more than half of them are 9-8.

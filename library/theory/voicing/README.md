@@ -1,16 +1,15 @@
 # standard-voicing
 
 Theory Framework instance `standard-voicing-v1`: writing a chord in strict
-SATB style. Path `frameworks/standard-voicing/`, tests in
-`frameworks/standard-voicing/tests/`. A Framework extension module
-physically separate from `src/theory/`, same shape as
-`frameworks/standard-tonality/` and `frameworks/standard-texture/`. It does
+SATB style. Where it lives: the rules are in `library/theory/voicing/` (tests `library/theory/tests/voicing/`). A Framework extension module
+physically separate from `theory/style/`, same shape as
+`theory/tonality/` and `analysis/texture/`. It does
 not depend on any other framework module.
 
 ## Scope
 
 Rules for a chord written in four parts: soprano, alto, tenor, bass
-(`VoicePart`, `src/semantics/voice_part.h`). A voiced chord is
+(`VoicePart`, `theory/vocabulary/voice_part.h`). A voiced chord is
 `StandardVoicingChord` (`voicing_chord.h`): one sounding `PitchSpelling`
 per part. Six rules (`voicing_rules.h`), each a pure check function; no
 rule builds a `Rule` or `Constraint`.

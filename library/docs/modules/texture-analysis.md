@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Adapter in `frameworks/standard-texture/analysis/` (`texture_analysis_*.c`). It measures texture features per measure from separated voices, classifies each measure with `standard-texture`'s rules, and merges the measures into passages with change points. The adapter includes no other framework and no kernel analysis; the layer table covers `analysis/` as well as the framework.
+Adapter in `analysis/texture/` (`texture_analysis_*.c`). It measures texture features per measure from separated voices, classifies each measure with `standard-texture`'s rules, and merges the measures into passages with change points. The adapter includes no other framework and no kernel analysis; the layer table covers `analysis/` as well as the framework.
 
 ## Input
 
@@ -16,7 +16,7 @@ Adapter in `frameworks/standard-texture/analysis/` (`texture_analysis_*.c`). It 
 | voice | the voice index the separation gave it inside the track (0 the top); a voice is the pair (track, voice) |
 | voice_confidence | the separation's confidence, 0 to 1 |
 
-`chain_build_texture_input` (`ursatz_chain/chain_inputs.h`) builds it from the rule-based voice separation (L2.7), run per importer track, and the import.
+`chain_build_texture_input` (`chain/chain_inputs.h`) builds it from the rule-based voice separation (L2.7), run per importer track, and the import.
 
 ### Config and snap
 

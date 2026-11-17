@@ -1,10 +1,9 @@
 # standard-tonality
 
 Theory Framework instance `standard-tonality-v1`: the tonal conventions
-of Western music. Path `frameworks/standard-tonality/`, tests in
-`frameworks/standard-tonality/tests/`. A Framework extension module
-physically separate from `src/theory/`, same shape as
-`frameworks/common-practice-minimal/`. It does not depend on any other
+of Western music. Where it lives: the rules are in `library/theory/tonality/` (tests `library/theory/tests/tonality/`) and the analysis adapter is in `library/analysis/harmony/` (tests `library/analysis/tests/harmony/`). A Framework extension module
+physically separate from `theory/style/`, same shape as
+`theory/tonality/`. It does not depend on any other
 framework module: pitch arithmetic it needs is its own.
 
 ## Scope
@@ -39,4 +38,4 @@ unified).
 ## 12-TET assumption
 
 `tonal_key.h` and `roman_numeral_analysis_rules.h` assume twelve-tone equal
-temperament. They call `src/pitch/pitch_arithmetic.h`, which holds the one letter table.
+temperament. They call `model/pitch/pitch_arithmetic.h`, which holds the one letter table.

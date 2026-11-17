@@ -1,8 +1,8 @@
 # common-practice-minimal weighted identification
 
-Weighted chord identification and non-chord tones of `frameworks/common-practice-minimal/`, including chords in context. [Docs index](../README.md)
+Weighted chord identification and non-chord tones of `theory/tonality/`, including chords in context. [Docs index](../README.md)
 
-Framework overview: [frameworks/common-practice-minimal/README.md](../../frameworks/common-practice-minimal/README.md).
+Framework overview: [theory/tonality/README.md](../../analysis/harmony/README.md).
 
 ## Weighted identification and non-chord tones
 

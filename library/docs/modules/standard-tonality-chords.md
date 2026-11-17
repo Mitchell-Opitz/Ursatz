@@ -1,8 +1,8 @@
 # standard-tonality triads and sevenths
 
-The triad and seventh chord quality rule groups of `frameworks/standard-tonality/`. [Docs index](../README.md)
+The triad and seventh chord quality rule groups of `theory/tonality/`. [Docs index](../README.md)
 
-Framework overview: [frameworks/standard-tonality/README.md](../../frameworks/standard-tonality/README.md).
+Framework overview: [theory/tonality/README.md](../../theory/tonality/README.md).
 
 - **Triad structure** (`triad_rules.h`): three notes stacked in thirds, all
   on lines or all on spaces; root, third, fifth; four qualities set by

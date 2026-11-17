@@ -19,7 +19,7 @@ The implementation status and doc of each kernel module. [Docs index](README.md)
 | rules | L7 | Implemented (partial, see doc) | [rules](modules/rules.md) |
 | analysis | L8 | Implemented | [analysis](modules/analysis.md), [motive-relations](modules/motive-relations.md), [motive-variant-recognition](modules/motive-variant-recognition.md), [motive-tone-roles](modules/motive-tone-roles.md) |
 | io | L9 | Implemented (partial, see doc) | [io](modules/io.md) |
-| export | L9 | Implemented (MusicXML from a MeterMap: parts, staves, key, tempo, dynamics; no MXL, repeats or articulations) | `src/export/musicxml_export.h` |
+| export | L9 | Implemented (MusicXML from a MeterMap: parts, staves, key, tempo, dynamics; no MXL, repeats or articulations) | `io/musicxml_export.h` |
 | query | L9 | Implemented (partial, see doc) | [query](modules/query.md) |
 
 "Partial" means some types from the module's Registry row are implemented and some are explicitly deferred; the module's own doc lists which.

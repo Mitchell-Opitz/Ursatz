@@ -1,16 +1,15 @@
 # standard-meter
 
 Theory Framework instance `standard-meter-v1`: how Western staff
-notation organizes rhythm into meter. Path `frameworks/standard-meter/`,
-tests in `frameworks/standard-meter/tests/`. A Framework extension module
-physically separate from `src/theory/`, same shape as
-`frameworks/common-practice-minimal/`. It
+notation organizes rhythm into meter. Where it lives: the rules are in `library/theory/meter/` (tests `library/theory/tests/meter/`) and the analysis adapter is in `library/analysis/meter/` (tests `library/analysis/tests/meter/`). A Framework extension module
+physically separate from `theory/style/`, same shape as
+`theory/tonality/`. It
 depends on `time/` types (`NoteValue`, `Duration`, `TimeSignature`).
 
 ## Scope
 
 Simple and compound meter, built on `TimeSignature`
-(`src/time/time_signature.h`: a top number and an undotted bottom unit --
+(`model/time/time_signature.h`: a top number and an undotted bottom unit --
 the two numbers and nothing more; this framework reads them):
 
 - **Meter class** (`meter_class_rules.h`): top 2, 3, 4 is simple and 6, 9,

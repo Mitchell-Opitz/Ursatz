@@ -1,9 +1,8 @@
 # standard-form
 
 Theory Framework instance `standard-form-v1`: how Western tonal music is
-organized into phrase-level form. Path `frameworks/standard-form/`, tests
-in `frameworks/standard-form/tests/`. The plain value types it
-uses stay in `src/semantics/` (`CadenceType`, `SubphraseRole`); this
+organized into phrase-level form. Where it lives: the rules are in `library/theory/form/` (tests `library/theory/tests/form/`) and the analysis adapter is in `library/analysis/form/` (tests `library/analysis/tests/form/`). The plain value types it
+uses stay in `theory/vocabulary/` (`CadenceType`, `SubphraseRole`); this
 framework gives them their conventions.
 
 ## Scope
@@ -90,7 +89,7 @@ arrives with the form adapter (L3.6).
 
 ## Vocabulary enums
 
-Owned here (moved from `src/semantics/`; type names and values unchanged), each in its own header: `PhraseRole`, `PhraseBeginning`, `PhraseEnding`, `IdeaLabel`, `ContinuationTrait`, `PhraseLevelForm`, `PhraseLengthChange`, `ExpansionPlacement`, `InternalExpansionTechnique`, `ExternalExpansionKind`. `SubphraseRole` stays in `src/semantics/` because the Composer's grow check uses it; `CadenceType` stays because it is shared. `FormLevel` was deleted (P55): nothing read it.
+Owned here (moved from `theory/vocabulary/`; type names and values unchanged), each in its own header: `PhraseRole`, `PhraseBeginning`, `PhraseEnding`, `IdeaLabel`, `ContinuationTrait`, `PhraseLevelForm`, `PhraseLengthChange`, `ExpansionPlacement`, `InternalExpansionTechnique`, `ExternalExpansionKind`. `SubphraseRole` stays in `theory/vocabulary/` because the Composer's grow check uses it; `CadenceType` stays because it is shared. `FormLevel` was deleted (P55): nothing read it.
 
 Two of them look a value up by name, false with the output untouched for an unknown name or NULL: `phrase_beginning_from_name` and `phrase_ending_from_name`.
 

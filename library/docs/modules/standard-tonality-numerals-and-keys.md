@@ -1,8 +1,8 @@
 # standard-tonality numerals and keys
 
-The Roman numeral, analysis adapter and key function rule groups of `frameworks/standard-tonality/`. [Docs index](../README.md)
+The Roman numeral, analysis adapter and key function rule groups of `theory/tonality/`. [Docs index](../README.md)
 
-Framework overview: [frameworks/standard-tonality/README.md](../../frameworks/standard-tonality/README.md).
+Framework overview: [theory/tonality/README.md](../../theory/tonality/README.md).
 
 - **Roman numerals** (`roman_numeral_rules.h`): the numeral is the scale
   degree of the root (I to VII); uppercase for a major third above the
@@ -84,7 +84,7 @@ Framework overview: [frameworks/standard-tonality/README.md](../../frameworks/st
   as a count of sharps or flats or as a `KeySignature`, and the key of a
   signature count. Modes are major and the three minor forms
   (`STANDARD_TONALITY_MODE_*`; melodic is the ascending form; a bare
-  "minor" is never implied). Spelling arithmetic comes from `src/pitch/pitch_arithmetic.h`.
+  "minor" is never implied). Spelling arithmetic comes from `model/pitch/pitch_arithmetic.h`.
   `standard_tonality_key_tonic_of_pitch_class` spells the tonic of a key from its
   pitch class with the fewer accidentals in its signature (sharps on a tie; a
   minor key by its relative major), and `standard_tonality_chromatic_degree_label`

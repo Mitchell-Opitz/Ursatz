@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Two adapters over one input. Schema matching is in `frameworks/galant-schemas/analysis/` (`galant_analysis_*.c`) and may include only `standard-counterpoint`. Sequence detection is in `frameworks/scale-harmonization/analysis/` (`scale_analysis_*.c`) and may include only `galant-schemas` and `standard-counterpoint`. The layer table covers `analysis/` for both. No prototype, kind or rule is added: the adapters use the 26 prototypes of `galant_prototypes.h`, the patterns of `scale_patterns.h` and their rules.
+Two adapters over one input. Schema matching is in `analysis/galant/` (`galant_analysis_*.c`) and may include only `standard-counterpoint`. Sequence detection is in `analysis/galant/` (`scale_analysis_*.c`) and may include only `galant-schemas` and `standard-counterpoint`. The layer table covers `analysis/` for both. No prototype, kind or rule is added: the adapters use the 26 prototypes of `galant_prototypes.h`, the patterns of `scale_patterns.h` and their rules.
 
 Every result is a Relationship over its segments with an Interpretation (FrameworkReference of the framework, scalar confidence = 1 − uncertainty, author `<framework>-v1`) targeting the Relationship's id.
 

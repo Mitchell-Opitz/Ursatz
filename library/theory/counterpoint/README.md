@@ -1,16 +1,14 @@
 # standard-counterpoint
 
 Theory Framework instance `standard-counterpoint-v1`: strict two-part
-counterpoint in the species tradition (Fux, Gradus ad Parnassum). Path
-`frameworks/standard-counterpoint/`, tests in
-`frameworks/standard-counterpoint/tests/`. A Framework extension module
-physically separate from `src/theory/`, same shape as
-`frameworks/standard-voicing/` and `frameworks/standard-texture/`. It does not
+counterpoint in the species tradition (Fux, Gradus ad Parnassum). Where it lives: the rules are in `library/theory/counterpoint/` (tests `library/theory/tests/counterpoint/`) and the analysis adapter is in `library/analysis/counterpoint/` (tests `library/analysis/tests/counterpoint/`). A Framework extension module
+physically separate from `theory/style/`, same shape as
+`theory/voicing/` and `analysis/texture/`. It does not
 depend on any other framework module.
 
 The rules are style-independent training rules for writing lines and
 combining them, not a claim about one repertoire. They use the
-`MotionType` value type (`motion_type.h`, in this module: only standard-counterpoint uses it, so it moved here from `src/semantics/`).
+`MotionType` value type (`motion_type.h`, in this module: only standard-counterpoint uses it, so it moved here from `theory/vocabulary/`).
 
 ## Scope
 

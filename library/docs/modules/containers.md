@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Layer L4 (`music-containers`). Path `src/containers/`, tests `tests/containers/`. Depends on `identity`, `core`, `time`, `pitch`, and `events` only. Must not depend on anything L5+.
+Layer L4 (`music-containers`). Path `model/containers/`, tests `tests/containers/`. Depends on `identity`, `core`, `time`, `pitch`, and `events` only. Must not depend on anything L5+.
 
 ## Provides
 

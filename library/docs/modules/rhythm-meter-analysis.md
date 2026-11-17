@@ -2,7 +2,7 @@
 
 [Docs index](../README.md): the Ursatz docs by topic.
 
-Adapter in `frameworks/standard-meter/analysis/` (`meter_analysis_*.c`). It reads syncopation, hemiola, hypermeter and per-phrase rhythmic density from real music against the rules of `standard-meter`. The adapter includes no other framework and no kernel analysis; the layer table covers `analysis/` as well as the framework.
+Adapter in `analysis/meter/` (`meter_analysis_*.c`). It reads syncopation, hemiola, hypermeter and per-phrase rhythmic density from real music against the rules of `standard-meter`. The adapter includes no other framework and no kernel analysis; the layer table covers `analysis/` as well as the framework.
 
 Time is `Rational` and `score_time_*` (`time/score_time.h`). `meter_analysis_position.c` holds the pickup-aware beat grid, `standard_meter_level_at` and `standard_meter_beat_of` (a `double` beat), since they read the framework's own beat grid rather than the signature's unit.
 
@@ -18,7 +18,7 @@ Every result follows the durable claim pattern: an Interpretation with Framework
 | phrase | id, `TimeSpan`, cadence-arrival `TimeSpan` or none, expansion kind (none, internal, external, contraction) and measures, elided-with-next flag |
 | chord change | id, `MusicalTime`; optional |
 
-`chain_build_meter_input` (`ursatz_chain/chain_inputs.h`) builds it from the import, the L2 outer-voice lines (soprano 0, bass 1, other 2), the harmonic segments and the standard-form phrases.
+`chain_build_meter_input` (`chain/chain_inputs.h`) builds it from the import, the L2 outer-voice lines (soprano 0, bass 1, other 2), the harmonic segments and the standard-form phrases.
 
 `StandardMeterConfig`:
 
