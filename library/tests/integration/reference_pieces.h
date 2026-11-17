@@ -29,7 +29,7 @@ static inline MeterMap *three_four_map(void) {
     note_value_destroy(quarter);
     MusicalTime *zero = NULL;
     assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {three_four, zero};
+    MeterMapChangePoint point = {three_four, *zero};
     EntityID *id = NULL;
     assert(entity_id_create("bach-114-score-meter", &id) == ENTITY_ID_OK);
     MeterMap *map = NULL;

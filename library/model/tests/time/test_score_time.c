@@ -33,7 +33,7 @@ static MusicalTime *at(long n, unsigned long d) {
 static MeterMap *single(unsigned top, int bottom_exponent) {
     TimeSignature *ts = sig(top, bottom_exponent);
     MusicalTime *start = at(0, 1);
-    MeterMapChangePoint point = {ts, start};
+    MeterMapChangePoint point = {ts, *start};
     EntityID *id = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK);
     MeterMap *map = NULL;

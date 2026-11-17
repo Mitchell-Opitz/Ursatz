@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 struct TemporalAnchor {
-    MusicalTime *position;
+    MusicalTime position;
 };
 
 TemporalAnchorResult temporal_anchor_create(MusicalTime *position, TemporalAnchor **out) {
@@ -16,7 +16,8 @@ TemporalAnchorResult temporal_anchor_create(MusicalTime *position, TemporalAncho
         return TEMPORAL_ANCHOR_ERR_ALLOC;
     }
 
-    anchor->position = position;
+    anchor->position = *position;
+    musical_time_destroy(position);
 
     *out = anchor;
     return TEMPORAL_ANCHOR_OK;
@@ -26,10 +27,9 @@ void temporal_anchor_destroy(TemporalAnchor *anchor) {
     if (anchor == NULL) {
         return;
     }
-    musical_time_destroy(anchor->position);
     free(anchor);
 }
 
 const MusicalTime *temporal_anchor_position(const TemporalAnchor *anchor) {
-    return anchor->position;
+    return &anchor->position;
 }

@@ -269,6 +269,11 @@ static void prepared_destroy(Prepared *prepared, const ImportedNotes *notes) {
     free(prepared->denominators);
 }
 
+/* The value of a heap time, zero for a time that failed to build (the caller has already failed). */
+static MusicalTime time_value_or_zero(const MusicalTime *time) {
+    return time ? *time : musical_time_of(rational_ratio(0, 1));
+}
+
 /* The meter map the reading asks for; NULL on failure (overflow set when a time did not fit). */
 static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationReading *reading, bool *invalid,
                                     bool *overflow) {
@@ -299,13 +304,13 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
             ok = musical_time_create(0, 1, &times[0]) == MUSICAL_TIME_OK &&
                  musical_time_create(reading->pickup_numerator, reading->pickup_denominator, &times[1]) ==
                      MUSICAL_TIME_OK;
-            points[0] = (MeterMapChangePoint){chosen, times[0]};
-            points[1] = (MeterMapChangePoint){chosen, times[1]};
+            points[0] = (MeterMapChangePoint){chosen, time_value_or_zero(times[0])};
+            points[1] = (MeterMapChangePoint){chosen, time_value_or_zero(times[1])};
             count = 2;
         }
     } else if (reading->has_meter) {
         ok = own && musical_time_create(0, 1, &times[0]) == MUSICAL_TIME_OK;
-        points[0] = (MeterMapChangePoint){chosen, times[0]};
+        points[0] = (MeterMapChangePoint){chosen, time_value_or_zero(times[0])};
         count = 1;
     }
 
@@ -325,7 +330,7 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
             const MeterMapRegion *region = meter_map_region(old, i);
             scaled[count] = scaled_time(meter_map_region_start(region), reading, overflow);
             ok = scaled[count] != NULL;
-            list[count] = (MeterMapChangePoint){meter_map_region_time_signature(region), scaled[count]};
+            list[count] = (MeterMapChangePoint){meter_map_region_time_signature(region), time_value_or_zero(scaled[count])};
             count++;
         }
         EntityID *id = ok ? entity_id_copy(meter_map_id(old)) : NULL;

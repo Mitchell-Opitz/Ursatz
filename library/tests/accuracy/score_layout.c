@@ -313,7 +313,7 @@ MeterMap *score_layout_meter_map(const ScoreLayout *layout, const char *id_text)
     if (musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK) {
         bool pickup = layout->has_pickup;
         if (!pickup || musical_time_create((long)layout->measures[0].length.num, (unsigned long)layout->measures[0].length.den, &later) == MUSICAL_TIME_OK) {
-            MeterMapChangePoint points[2] = {{signature, zero}, {signature, later}};
+            MeterMapChangePoint points[2] = {{signature, *zero}, {signature, later ? *later : *zero}};
             if (entity_id_create(id_text, &id) == ENTITY_ID_OK) {
                 if (meter_map_create(id, points, pickup ? 2 : 1, &map) != METER_MAP_OK) {
                     entity_id_destroy(id);

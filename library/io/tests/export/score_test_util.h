@@ -130,7 +130,7 @@ static inline MeterMap *tu_meter_map(const TuMeter *changes, size_t count) {
         note_value_destroy(unit);
         starts[i] = tu_time(changes[i].start_n, changes[i].start_d);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
     }
     MeterMap *map = NULL;
     assert(meter_map_create(tu_id("tu-meter-map"), points, count, &map) == METER_MAP_OK);
@@ -153,7 +153,7 @@ static inline TempoMap *tu_tempo_map(const TuTempo *changes, size_t count) {
     assert(count <= 8);
     for (size_t i = 0; i < count; i++) {
         starts[i] = tu_time(changes[i].start_n, changes[i].start_d);
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
         points[i].microseconds_per_quarter = changes[i].microseconds;
     }
     TempoMap *map = NULL;

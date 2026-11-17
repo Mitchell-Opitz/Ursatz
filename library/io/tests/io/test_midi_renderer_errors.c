@@ -156,7 +156,7 @@ static void test_map_and_key_limits(void) {
     TempoMap *tempo_map = NULL;
     {
         MusicalTime *start = test_time(0, 1);
-        TempoMapChangePoint point = {start, 0x1000000UL};
+        TempoMapChangePoint point = {*start, 0x1000000UL};
         TempoMapResult created = tempo_map_create(test_id("test-tempo-map"), &point, 1, &tempo_map);
         musical_time_destroy(start);
         if (created == TEMPO_MAP_OK) {

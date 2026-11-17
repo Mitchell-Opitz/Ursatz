@@ -62,7 +62,7 @@ static MeterMap *copy_meter_map(const MeterMap *map) {
         ok = ok && time_signature_create(time_signature_top_number(source), unit, &signatures[i]) == TIME_SIGNATURE_OK;
         note_value_destroy(unit);
         points[i].time_signature = signatures[i];
-        points[i].start = meter_map_region_start(region);
+        points[i].start = *meter_map_region_start(region);
     }
     ok = ok && entity_id_create("fragment-meter", &id) == ENTITY_ID_OK;
     if (ok && meter_map_create(id, points, count, &copy) != METER_MAP_OK) {

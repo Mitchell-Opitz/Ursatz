@@ -16,7 +16,7 @@ static MeterMap *make_map(unsigned top, int bottom_exponent, bool pickup) {
     MusicalTime *later = NULL;
     assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
     assert(musical_time_create(1, 4, &later) == MUSICAL_TIME_OK);
-    MeterMapChangePoint points[2] = {{signature, zero}, {signature, later}};
+    MeterMapChangePoint points[2] = {{signature, *zero}, {signature, *later}};
     EntityID *id = NULL;
     assert(entity_id_create("romantext-test-meter", &id) == ENTITY_ID_OK);
     MeterMap *map = NULL;

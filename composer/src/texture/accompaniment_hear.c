@@ -44,7 +44,7 @@ static bool meter_map_of(const PlanMeter *meter, MeterMap **out) {
     if (note_value_create(exponent, &unit) == NOTE_VALUE_OK &&
         time_signature_create((unsigned)meter->beats_per_bar, unit, &signature) == TIME_SIGNATURE_OK &&
         musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK && entity_id_create("composer-accompaniment-meter", &id) == ENTITY_ID_OK) {
-        MeterMapChangePoint point = {signature, zero};
+        MeterMapChangePoint point = {signature, *zero};
         ok = meter_map_create(id, &point, 1, out) == METER_MAP_OK;
         if (!ok) {
             entity_id_destroy(id);

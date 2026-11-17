@@ -69,7 +69,7 @@ static MeterMap *build(const Change *changes, size_t count) {
         signatures[i] = make_signature(changes[i].top, changes[i].bottom_exponent);
         assert(musical_time_create(changes[i].start_n, changes[i].start_d, &starts[i]) == MUSICAL_TIME_OK);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
     }
     EntityID *id = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK);

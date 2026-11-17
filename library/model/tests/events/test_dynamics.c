@@ -46,7 +46,10 @@ static void test_create_for_time_span_accepts_valid(void) {
     assert(strcmp(dynamics_marking(dynamics), "cresc.") == 0);
     assert(dynamics_target_kind(dynamics) == DYNAMICS_TARGET_TIME_SPAN);
     assert(dynamics_target_event_id(dynamics) == NULL);
-    assert(dynamics_target_time_span(dynamics) == span);
+    const TimeSpan *held = dynamics_target_time_span(dynamics);
+    assert(musical_time_numerator(time_span_start(held)) == 0);
+    assert(musical_time_numerator(time_span_end(held)) == 1 && musical_time_denominator(time_span_end(held)) == 1);
+    assert(time_span_boundary(held) == TIME_SPAN_BOUNDARY_CLOSED);
 
     dynamics_destroy(dynamics);
 }

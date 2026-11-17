@@ -33,7 +33,7 @@ static TempoMap *build(const Change *changes, size_t count) {
     TempoMapChangePoint points[8];
     for (size_t i = 0; i < count; i++) {
         starts[i] = at(changes[i].start_n, changes[i].start_d);
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
         points[i].microseconds_per_quarter = changes[i].tempo;
     }
     TempoMap *map = NULL;
@@ -145,13 +145,13 @@ static void test_rejects_bad_input(void) {
     MusicalTime *one = at(1, 1);
     MusicalTime *negative = at(-1, 4);
 
-    TempoMapChangePoint zero_tempo = {zero, 0};
+    TempoMapChangePoint zero_tempo = {*zero, 0};
     assert(tempo_map_create(id("tempo"), &zero_tempo, 1, &map) == TEMPO_MAP_ERR_ZERO_TEMPO);
-    TempoMapChangePoint below = {negative, 500000};
+    TempoMapChangePoint below = {*negative, 500000};
     assert(tempo_map_create(id("tempo"), &below, 1, &map) == TEMPO_MAP_ERR_NEGATIVE_START);
-    TempoMapChangePoint descending[2] = {{one, 500000}, {zero, 500000}};
+    TempoMapChangePoint descending[2] = {{*one, 500000}, {*zero, 500000}};
     assert(tempo_map_create(id("tempo"), descending, 2, &map) == TEMPO_MAP_ERR_NOT_ASCENDING);
-    TempoMapChangePoint same[2] = {{one, 500000}, {one, 600000}};
+    TempoMapChangePoint same[2] = {{*one, 500000}, {*one, 600000}};
     assert(tempo_map_create(id("tempo"), same, 2, &map) == TEMPO_MAP_ERR_NOT_ASCENDING);
     assert(map == NULL);
 
@@ -164,7 +164,7 @@ static void test_overflow_is_an_error_not_a_wrap(void) {
     /* Construction refuses a map whose seconds at a change point do not fit, and keeps the id. */
     MusicalTime *zero = at(0, 1);
     MusicalTime *huge = at(LONG_MAX, 1);
-    TempoMapChangePoint points[2] = {{zero, 16777215}, {huge, 1}};
+    TempoMapChangePoint points[2] = {{*zero, 16777215}, {*huge, 1}};
     EntityID *kept = id("tempo");
     TempoMap *map = NULL;
     assert(tempo_map_create(kept, points, 2, &map) == TEMPO_MAP_ERR_OVERFLOW);

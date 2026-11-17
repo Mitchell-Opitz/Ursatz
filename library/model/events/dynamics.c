@@ -7,7 +7,7 @@ struct Dynamics {
     char *marking;
     DynamicsTargetKind target_kind;
     EntityID *target_event_id;
-    TimeSpan *target_time_span;
+    TimeSpan target_time_span;
 };
 
 static char *copy_marking(const char *marking) {
@@ -41,7 +41,8 @@ DynamicsResult dynamics_create_for_time_span(const char *marking, TimeSpan *time
     dynamics->marking = marking_copy;
     dynamics->target_kind = DYNAMICS_TARGET_TIME_SPAN;
     dynamics->target_event_id = NULL;
-    dynamics->target_time_span = time_span;
+    dynamics->target_time_span = *time_span;
+    time_span_destroy(time_span);
 
     *out = dynamics;
     return DYNAMICS_OK;
@@ -53,7 +54,6 @@ void dynamics_destroy(Dynamics *dynamics) {
     }
     free(dynamics->marking);
     entity_id_destroy(dynamics->target_event_id);
-    time_span_destroy(dynamics->target_time_span);
     free(dynamics);
 }
 
@@ -70,5 +70,5 @@ const EntityID *dynamics_target_event_id(const Dynamics *dynamics) {
 }
 
 const TimeSpan *dynamics_target_time_span(const Dynamics *dynamics) {
-    return dynamics->target_time_span;
+    return &dynamics->target_time_span;
 }

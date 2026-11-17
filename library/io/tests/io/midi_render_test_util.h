@@ -147,7 +147,7 @@ static inline MeterMap *test_meter_map(const TestMeterChange *changes, size_t co
         signatures[i] = test_time_signature(changes[i].top, changes[i].bottom);
         starts[i] = test_time(changes[i].start_numerator, changes[i].start_denominator);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
     }
     MeterMap *map = NULL;
     assert(meter_map_create(test_id("test-meter-map"), points, count, &map) == METER_MAP_OK);
@@ -170,7 +170,7 @@ static inline TempoMap *test_tempo_map(const TestTempoChange *changes, size_t co
     assert(count <= 16);
     for (size_t i = 0; i < count; i++) {
         starts[i] = test_time(changes[i].start_numerator, changes[i].start_denominator);
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
         points[i].microseconds_per_quarter = changes[i].microseconds_per_quarter;
     }
     TempoMap *map = NULL;

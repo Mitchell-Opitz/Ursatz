@@ -47,7 +47,7 @@ static MeterMap *build(const Change *changes, size_t count) {
         signatures[i] = sig(changes[i].top, changes[i].bottom_exponent);
         starts[i] = at(changes[i].start_n, changes[i].start_d);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
     }
     MeterMap *map = NULL;
     assert(meter_map_create(id("map"), points, count, &map) == METER_MAP_OK);
@@ -295,14 +295,14 @@ static void test_rejects_bad_input(void) {
 
     TimeSignature *ts = sig(4, 2);
     MusicalTime *negative = at(-1, 4);
-    MeterMapChangePoint below = {ts, negative};
+    MeterMapChangePoint below = {ts, *negative};
     assert(meter_map_create(id("map"), &below, 1, &map) == METER_MAP_ERR_NEGATIVE_START);
 
     MusicalTime *one = at(1, 1);
     MusicalTime *zero = at(0, 1);
-    MeterMapChangePoint descending[2] = {{ts, one}, {ts, zero}};
+    MeterMapChangePoint descending[2] = {{ts, *one}, {ts, *zero}};
     assert(meter_map_create(id("map"), descending, 2, &map) == METER_MAP_ERR_NOT_ASCENDING);
-    MeterMapChangePoint same[2] = {{ts, one}, {ts, one}};
+    MeterMapChangePoint same[2] = {{ts, *one}, {ts, *one}};
     assert(meter_map_create(id("map"), same, 2, &map) == METER_MAP_ERR_NOT_ASCENDING);
 
     assert(map == NULL);
@@ -329,7 +329,7 @@ static void test_grid_overflow_is_refused(void) {
     TimeSignature *second = sig(4, 2);
     MusicalTime *a = at(1, 4000000000000000001UL);
     MusicalTime *b = at(1, 4000000000000000000UL);
-    MeterMapChangePoint points[2] = {{first, a}, {second, b}};
+    MeterMapChangePoint points[2] = {{first, *a}, {second, *b}};
     MeterMap *map = NULL;
     assert(meter_map_create(id("map"), points, 2, &map) == METER_MAP_ERR_OVERFLOW);
     assert(map == NULL);

@@ -563,7 +563,7 @@ static MidiImportResult build_meter_from(unsigned long denominator, uint32_t end
                     break;
                 }
                 points[i].time_signature = signatures->events[i].time_signature;
-                points[i].start = starts[i];
+                points[i].start = *starts[i];
             }
             if (failure == MIDI_IMPORT_OK &&
                 meter_map_create(map_id, points, signatures->count, &result.meter_map) != METER_MAP_OK) {
@@ -656,7 +656,7 @@ static MidiImportResult build_tempo_from(unsigned long denominator, const MidiTe
                     failure = MIDI_IMPORT_ERR_ALLOC;
                     break;
                 }
-                points[i].start = starts[i];
+                points[i].start = *starts[i];
                 points[i].microseconds_per_quarter = tempos->events[i].microseconds_per_quarter;
             }
             if (failure == MIDI_IMPORT_OK &&

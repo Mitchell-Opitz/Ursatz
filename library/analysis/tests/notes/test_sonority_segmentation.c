@@ -88,7 +88,7 @@ static MeterMap *build_map(const Change *changes, size_t count) {
         note_value_destroy(unit);
         assert(musical_time_create(changes[i].start_n, changes[i].start_d, &starts[i]) == MUSICAL_TIME_OK);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
     }
     MeterMap *map = NULL;
     assert(meter_map_create(make_id("map"), points, count, &map) == METER_MAP_OK);

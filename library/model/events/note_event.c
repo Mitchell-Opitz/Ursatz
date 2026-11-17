@@ -5,7 +5,7 @@
 struct NoteEvent {
     EntityID *id;
     TemporalAnchor *temporal_anchor;
-    Duration *duration;
+    Duration duration;
     PitchIdentity *pitch;
     PitchSpelling *optional_pitch_spelling;
     VoiceReference *optional_voice;
@@ -39,7 +39,8 @@ NoteEventResult note_event_create(EntityID *id, TemporalAnchor *temporal_anchor,
 
     note_event->id = id;
     note_event->temporal_anchor = temporal_anchor;
-    note_event->duration = duration;
+    note_event->duration = *duration;
+    duration_destroy(duration);
     note_event->pitch = pitch;
     note_event->optional_pitch_spelling = optional_pitch_spelling;
     note_event->optional_voice = optional_voice;
@@ -55,7 +56,6 @@ void note_event_destroy(NoteEvent *note_event) {
     }
     entity_id_destroy(note_event->id);
     temporal_anchor_destroy(note_event->temporal_anchor);
-    duration_destroy(note_event->duration);
     pitch_identity_destroy(note_event->pitch);
     pitch_spelling_destroy(note_event->optional_pitch_spelling);
     voice_reference_destroy(note_event->optional_voice);
@@ -72,7 +72,7 @@ const TemporalAnchor *note_event_temporal_anchor(const NoteEvent *note_event) {
 }
 
 const Duration *note_event_duration(const NoteEvent *note_event) {
-    return note_event->duration;
+    return &note_event->duration;
 }
 
 const PitchIdentity *note_event_pitch(const NoteEvent *note_event) {

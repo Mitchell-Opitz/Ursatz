@@ -137,7 +137,7 @@ static void test_chorale(void) {
     note_value_destroy(quarter);
     MusicalTime *zero = NULL;
     assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {signature, zero};
+    MeterMapChangePoint point = {signature, *zero};
     assert(meter_map_create(make_id("chorale-meter"), &point, 1, &map) == METER_MAP_OK);
     time_signature_destroy(signature);
     musical_time_destroy(zero);

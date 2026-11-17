@@ -1112,7 +1112,7 @@ static bool build_meter_map(Ctx *ctx) {
              time_signature_create(kept[i].beats, unit, &signatures[i]) == TIME_SIGNATURE_OK;
         note_value_destroy(unit);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
     }
     ok = ok && meter_map_create(map_id, points, kept_count, &out->meter_map) == METER_MAP_OK;
     for (size_t i = 0; starts != NULL && signatures != NULL && i < kept_count; i++) {
@@ -1235,7 +1235,7 @@ static bool build_tempo_map(Ctx *ctx) {
     for (size_t i = 0; i < kept_count && ok; i++) {
         starts[i] = musical_time_from_rational_or_null(kept[i].position);
         ok = starts[i] != NULL;
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
         points[i].microseconds_per_quarter = kept[i].microseconds_per_quarter;
     }
     TempoMapResult made = ok ? tempo_map_create(map_id, points, kept_count, &out->tempo_map) : TEMPO_MAP_ERR_ALLOC;

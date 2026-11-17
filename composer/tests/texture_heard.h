@@ -80,7 +80,7 @@ static inline TextureHeard texture_heard(const PiecePlan *plan, PlanSpan span, P
     assert(note_value_create(exponent, &unit) == NOTE_VALUE_OK);
     assert(time_signature_create((unsigned)meter.beats_per_bar, unit, &signature) == TIME_SIGNATURE_OK);
     assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK && entity_id_create("test-texture-meter", &id) == ENTITY_ID_OK);
-    MeterMapChangePoint point = {signature, zero};
+    MeterMapChangePoint point = {signature, *zero};
     assert(meter_map_create(id, &point, 1, &map) == METER_MAP_OK);
     for (int part = 0; part < 5; part++) {
         PlanLaneKind lane = part == 0 ? PLAN_LANE_MELODY : (part == 1 ? PLAN_LANE_BASS : PLAN_LANE_INNER_VOICE);

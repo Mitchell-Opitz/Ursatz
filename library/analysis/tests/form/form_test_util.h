@@ -74,7 +74,7 @@ static inline void form_init(FormFixture *f, int top, int pickup_quarters) {
     MusicalTime *after_pickup = NULL;
     assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
     assert(musical_time_create(pickup_quarters, 4, &after_pickup) == MUSICAL_TIME_OK);
-    MeterMapChangePoint points[2] = {{signature, zero}, {signature, after_pickup}};
+    MeterMapChangePoint points[2] = {{signature, *zero}, {signature, *after_pickup}};
     assert(meter_map_create(form_id("form-test-meter"), points, pickup_quarters > 0 ? 2 : 1, &f->map) == METER_MAP_OK);
     time_signature_destroy(signature);
     musical_time_destroy(zero);

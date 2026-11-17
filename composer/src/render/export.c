@@ -56,16 +56,13 @@ static PlanExportResult build_tempo_map(const PlanExportOptions *options, TempoM
         return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
     }
     EntityID *id = NULL;
-    MusicalTime *start = NULL;
     TempoMapChangePoint point;
     TempoMapResult made = TEMPO_MAP_ERR_ALLOC;
-    if (entity_id_create("composer-tempo-map", &id) == ENTITY_ID_OK &&
-        musical_time_create(0, 1, &start) == MUSICAL_TIME_OK) {
-        point.start = start;
+    if (entity_id_create("composer-tempo-map", &id) == ENTITY_ID_OK) {
+        point.start = musical_time_of(rational_ratio(0, 1));
         point.microseconds_per_quarter = (unsigned long)micros;
         made = tempo_map_create(id, &point, 1, out);
     }
-    musical_time_destroy(start);
     if (made != TEMPO_MAP_OK) {
         entity_id_destroy(id);
         set_message(error, "out of memory");

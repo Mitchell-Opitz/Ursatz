@@ -59,7 +59,7 @@ typedef struct MeterMapRegion MeterMapRegion;
 
 typedef struct {
     const TimeSignature *time_signature; /* read, not owned */
-    const MusicalTime *start;            /* read, not owned */
+    MusicalTime start;
 } MeterMapChangePoint;
 
 typedef enum {

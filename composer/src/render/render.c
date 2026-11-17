@@ -397,10 +397,9 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
         return PLAN_RENDER_OK;
     }
     TimeSignature **signatures = calloc(count, sizeof(TimeSignature *));
-    MusicalTime **starts = calloc(count, sizeof(MusicalTime *));
     MeterMapChangePoint *points = calloc(count, sizeof(MeterMapChangePoint));
     PlanRenderResult result = PLAN_RENDER_OK;
-    if (!signatures || !starts || !points) {
+    if (!signatures || !points) {
         result = PLAN_RENDER_ERR_ALLOC;
     }
     for (size_t i = 0; result == PLAN_RENDER_OK && i < count; i++) {
@@ -424,12 +423,10 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
             note_value_destroy(unit);
             if (made != TIME_SIGNATURE_OK) {
                 result = PLAN_RENDER_ERR_NOT_REPRESENTABLE;
-            } else if (musical_time_from_rational(start, &starts[i]) != TIME_RATIONAL_OK) {
-                result = PLAN_RENDER_ERR_ALLOC;
             }
         }
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = musical_time_of(start);
     }
     if (result == PLAN_RENDER_OK) {
         EntityID *id = NULL;
@@ -440,12 +437,10 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
             result = PLAN_RENDER_ERR_NOT_REPRESENTABLE;
         }
     }
-    for (size_t i = 0; signatures && starts && i < count; i++) {
+    for (size_t i = 0; signatures && i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     free(signatures);
-    free(starts);
     free(points);
     return result;
 }

@@ -53,7 +53,7 @@ static inline void piece_init(Piece *piece, unsigned top, int unit_exponent) {
     assert(time_signature_create(top, unit, &signature) == TIME_SIGNATURE_OK);
     assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
     assert(entity_id_create("test-meter-map", &id) == ENTITY_ID_OK);
-    MeterMapChangePoint point = {signature, zero};
+    MeterMapChangePoint point = {signature, *zero};
     assert(meter_map_create(id, &point, 1, &piece->map) == METER_MAP_OK);
     note_value_destroy(unit);
     musical_time_destroy(zero);

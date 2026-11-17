@@ -47,7 +47,7 @@ typedef struct TempoMap TempoMap;
 typedef struct TempoMapRegion TempoMapRegion;
 
 typedef struct {
-    const MusicalTime *start;           /* read, not owned */
+    MusicalTime start;
     unsigned long microseconds_per_quarter; /* 1 or more */
 } TempoMapChangePoint;
 

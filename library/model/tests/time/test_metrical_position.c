@@ -86,7 +86,7 @@ static MeterMap *build(const Change *changes, size_t count) {
         signatures[i] = sig(changes[i].top, changes[i].bottom_exponent);
         starts[i] = at(changes[i].start_n, changes[i].start_d);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = *starts[i];
     }
     EntityID *id = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK);

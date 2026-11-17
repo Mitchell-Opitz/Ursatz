@@ -8,19 +8,11 @@
 #include "model/core/rational.h"
 #include "model/time/time_rational.h"
 
-/* Exact arithmetic is core/rational.h; every operation is checked and reports overflow. */
-static int rat_of_time(const MusicalTime *time, Rational *out) {
-    return rational_of_musical_time(time, out) == RATIONAL_OK ? 0 : -1;
-}
-
-static int fits_time(Rational r) {
-    return r.num >= 0 && r.num <= (long long)LONG_MAX && (unsigned long long)r.den <= ULONG_MAX;
-}
-
 struct TempoMapRegion {
     EntityID *id;
-    MusicalTime *start;
-    MusicalTime *end; /* NULL while open */
+    /* tempo_map_region_start still returns a pointer; this holds the value it points at until
+       the accessor is changed to give a value. */
+    MusicalTime start_time;
     Rational start_r;
     Rational end_r; /* meaningful only when !open */
     bool open;
@@ -36,18 +28,8 @@ struct TempoMap {
     size_t count;
 };
 
-static MusicalTime *time_of_rat(Rational r) {
-    MusicalTime *t = NULL;
-    if (!fits_time(r) || musical_time_create((long)r.num, (unsigned long)r.den, &t) != MUSICAL_TIME_OK) {
-        return NULL;
-    }
-    return t;
-}
-
 static void region_release(TempoMapRegion *region) {
     entity_id_destroy(region->id);
-    musical_time_destroy(region->start);
-    musical_time_destroy(region->end);
 }
 
 static void map_release(TempoMap *map, size_t filled) {
@@ -65,12 +47,8 @@ static TempoMapResult region_fill(TempoMapRegion *region, Rational start, unsign
         rational_make(4LL * (long long)microseconds_per_quarter, 1000000LL, &seconds_per_whole_note) != RATIONAL_OK) {
         return TEMPO_MAP_ERR_OVERFLOW;
     }
-    MusicalTime *start_time = time_of_rat(start);
-    if (start_time == NULL) {
-        return TEMPO_MAP_ERR_ALLOC;
-    }
     memset(region, 0, sizeof(*region));
-    region->start = start_time;
+    region->start_time = musical_time_of(start);
     region->start_r = start;
     region->open = true;
     region->microseconds_per_quarter = microseconds_per_quarter;
@@ -90,10 +68,6 @@ static TempoMapResult finalize(TempoMap *map) {
         if (i + 1 < map->count) {
             region->end_r = map->regions[i + 1].start_r;
             region->open = false;
-            region->end = time_of_rat(region->end_r);
-            if (region->end == NULL) {
-                return TEMPO_MAP_ERR_ALLOC;
-            }
             Rational length = {0, 1};
             Rational seconds = {0, 1};
             if (rational_sub(region->end_r, region->start_r, &length) != 0 ||
@@ -121,22 +95,15 @@ TempoMapResult tempo_map_create(EntityID *id, const TempoMapChangePoint *change_
     }
 
     for (size_t i = 0; i < count; i++) {
-        if (change_points[i].start == NULL) {
-            return TEMPO_MAP_ERR_NULL_ARGUMENT;
-        }
         if (change_points[i].microseconds_per_quarter == 0) {
             return TEMPO_MAP_ERR_ZERO_TEMPO;
         }
-        if (musical_time_numerator(change_points[i].start) < 0) {
+        if (change_points[i].start.value.num < 0) {
             return TEMPO_MAP_ERR_NEGATIVE_START;
         }
         if (i > 0) {
-            Rational previous;
-            Rational current;
-            if (rat_of_time(change_points[i - 1].start, &previous) != 0 ||
-                rat_of_time(change_points[i].start, &current) != 0) {
-                return TEMPO_MAP_ERR_OVERFLOW;
-            }
+            Rational previous = change_points[i - 1].start.value;
+            Rational current = change_points[i].start.value;
             if (rational_cmp(previous, current) >= 0) {
                 return TEMPO_MAP_ERR_NOT_ASCENDING;
             }
@@ -154,11 +121,7 @@ TempoMapResult tempo_map_create(EntityID *id, const TempoMapChangePoint *change_
     }
 
     Rational zero = {0, 1};
-    Rational first;
-    if (rat_of_time(change_points[0].start, &first) != 0) {
-        map_release(map, 0);
-        return TEMPO_MAP_ERR_OVERFLOW;
-    }
+    Rational first = change_points[0].start.value;
     if (rational_cmp(first, zero) != 0) {
         TempoMapResult filled = region_fill(&map->regions[0], zero, TEMPO_MAP_DEFAULT_MICROSECONDS_PER_QUARTER, true);
         if (filled != TEMPO_MAP_OK) {
@@ -169,11 +132,7 @@ TempoMapResult tempo_map_create(EntityID *id, const TempoMapChangePoint *change_
     }
 
     for (size_t i = 0; i < count; i++) {
-        Rational start;
-        if (rat_of_time(change_points[i].start, &start) != 0) {
-            map_release(map, map->count);
-            return TEMPO_MAP_ERR_OVERFLOW;
-        }
+        Rational start = change_points[i].start.value;
         TempoMapResult filled = region_fill(&map->regions[map->count], start,
                                             change_points[i].microseconds_per_quarter, false);
         if (filled != TEMPO_MAP_OK) {
@@ -252,7 +211,7 @@ const TempoMapRegion *tempo_map_region(const TempoMap *map, size_t index) {
 }
 
 const MusicalTime *tempo_map_region_start(const TempoMapRegion *region) {
-    return region->start;
+    return &region->start_time;
 }
 
 unsigned long tempo_map_region_microseconds_per_quarter(const TempoMapRegion *region) {

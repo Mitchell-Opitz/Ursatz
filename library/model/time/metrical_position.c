@@ -7,7 +7,7 @@
 
 struct MetricalPosition {
     int measure;
-    Duration *offset;
+    Duration offset;
 };
 
 MetricalPositionResult metrical_position_create(int measure, const Duration *offset, MetricalPosition **out) {
@@ -19,10 +19,7 @@ MetricalPositionResult metrical_position_create(int measure, const Duration *off
     if (position == NULL) {
         return METRICAL_POSITION_ERR_ALLOC;
     }
-    if (duration_create(duration_numerator(offset), duration_denominator(offset), &position->offset) != DURATION_OK) {
-        free(position);
-        return METRICAL_POSITION_ERR_ALLOC;
-    }
+    position->offset = *offset;
     position->measure = measure;
 
     *out = position;
@@ -33,7 +30,6 @@ void metrical_position_destroy(MetricalPosition *position) {
     if (position == NULL) {
         return;
     }
-    duration_destroy(position->offset);
     free(position);
 }
 
@@ -42,7 +38,7 @@ int metrical_position_measure(const MetricalPosition *position) {
 }
 
 const Duration *metrical_position_offset(const MetricalPosition *position) {
-    return position->offset;
+    return &position->offset;
 }
 
 /* Exact arithmetic is core/rational.h; every operation is checked and reports overflow. */
