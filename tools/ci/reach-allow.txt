@@ -31,3 +31,7 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation  # no 
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation_named  # no app resolves a relation until P58 B11 (region relations) and B13 (forms); its tests call it
 library/theory/knowledge/knowledge_snapshot.c nocase_equal  # helper of the by-word material lookup, which no app calls until P58 B13; its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
+library/theory/tonality/brightness.c brightness_rank_of  # no app asks a mode's brightness until P58 B13 (forms resolve through relations); its tests call it
+library/theory/tonality/brightness.c brightness_shift  # no app shifts a mode's brightness until P58 B13 (forms resolve through relations); its tests call it
+library/theory/tonality/brightness.c name_of  # helper of the brightness functions, which no app calls until P58 B13; its tests call it
+library/theory/tonality/brightness.c say  # helper of the brightness functions, which no app calls until P58 B13; its tests call it

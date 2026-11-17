@@ -21,6 +21,7 @@ add_library(ursatz_theory
     vocabulary/motive_occurrence_kind.c
     vocabulary/non_chord_tone.c
     vocabulary/voice_part.c
+    tonality/brightness.c
     tonality/chord_vocabulary.c
     tonality/chord_vocabulary_seventh.c
     tonality/common_practice_framework.c
