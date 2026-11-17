@@ -352,10 +352,10 @@ static inline void vl_build(const VlPiece *piece, const VlAssignment *assignment
         duration_destroy(offset);
 
         HarmonySegmentInput *input = &seg->inputs[s];
-        input->segment_id = seg->segment_ids[s];
-        input->span = seg->spans[s];
-        input->position = seg->positions[s];
-        input->beat_strength = seg->start[s] % 8 == 0 ? BEAT_STRENGTH_STRONG
+        input->segment.id = seg->segment_ids[s];
+        input->segment.span = seg->spans[s];
+        input->segment.position = seg->positions[s];
+        input->segment.strength = seg->start[s] % 8 == 0 ? BEAT_STRENGTH_STRONG
                                : seg->start[s] % 4 == 0 ? BEAT_STRENGTH_MEDIUM
                                                         : BEAT_STRENGTH_WEAK;
         input->key_ref = "key";

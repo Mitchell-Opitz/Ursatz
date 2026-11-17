@@ -82,4 +82,4 @@ Every rule group has pure check functions; the phrase model and cadence groups a
 
 ## Neutral analysis input
 
-`harmony_segment_input_set_segment` (`analysis/analysis_input.h`) reads an `AnalysisSegment` (`semantics/analysis_segment.h`). `HarmonyVoiceCell` and `HarmonyVoiceGrid` are the shared `AnalysisVoiceCell` and `AnalysisVoiceGrid` (`semantics/voice_grid.h`); `segment_ids` is not read here.
+`HarmonySegmentInput` (`analysis/harmony/analysis_input.h`) embeds an `AnalysisSegment` (`analysis/notes/analysis_segment.h`) as `segment`: its id, span, position and strength. `HarmonyVoiceCell` and `HarmonyVoiceGrid` are the shared `AnalysisVoiceCell` and `AnalysisVoiceGrid` (`semantics/voice_grid.h`); `segment_ids` is not read here.

@@ -179,9 +179,9 @@ static void test_a_weak_arrival_on_the_half_beat_after_a_weak_dominant(void) {
     metrical_position_destroy(f.positions[2]);
     assert(metrical_position_create(1, eighth, &f.positions[2]) == METRICAL_POSITION_OK);
     duration_destroy(eighth);
-    f.inputs[2].position = f.positions[2];
-    f.inputs[2].beat_strength = BEAT_STRENGTH_WEAK; /* off the beat: weak, like the beat before it */
-    f.inputs[1].beat_strength = BEAT_STRENGTH_WEAK;
+    f.inputs[2].segment.position = f.positions[2];
+    f.inputs[2].segment.strength = BEAT_STRENGTH_WEAK; /* off the beat: weak, like the beat before it */
+    f.inputs[1].segment.strength = BEAT_STRENGTH_WEAK;
     HarmonySegment *segments = NULL;
     HarmonyCadences found = find(&f, &segments, NULL);
     assert(found.count == 1 && found.items[0].arrival_first == 2 &&

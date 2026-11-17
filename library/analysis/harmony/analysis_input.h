@@ -22,10 +22,9 @@
  *
  * HarmonySegmentInput, one per chord segment, in time order:
  *
- *   segment_id       the segment's Sonority id (non-empty); the target of every Interpretation made for it
- *   span             the segment's TimeSpan
- *   position         the MetricalPosition of the segment's start
- *   beat_strength    the BeatStrength of that start
+ *   segment          the neutral AnalysisSegment (analysis/notes/analysis_segment.h): `id`, the segment's Sonority id
+ *                    (non-empty), the target of every Interpretation made for it; `span`, its TimeSpan; `position`, the
+ *                    MetricalPosition of its start (may be NULL); and `strength`, the BeatStrength of that start
  *   degree           the chord's root as a scale degree, 1..7, in the key the chord is read in. For an applied
  *                    chord (applied_to != 0) it is the degree in the TEMPORARY key: 5 for a V or V7 of the target,
  *                    7 for a vii-diminished of it (what standard-tonality reports)
@@ -58,10 +57,7 @@
 #define HARMONY_SEGMENT_MAX_INTERVALS 4
 
 typedef struct {
-    const char *segment_id;
-    const TimeSpan *span;
-    const MetricalPosition *position;
-    BeatStrength beat_strength;
+    AnalysisSegment segment;
     int degree;
     int intervals[HARMONY_SEGMENT_MAX_INTERVALS];
     size_t interval_count;
@@ -102,8 +98,6 @@ typedef enum {
     HARMONY_ANALYSIS_ERR_ALLOC
 } HarmonyAnalysisStatus;
 
-/* Sets the segment id, span, position and beat strength of `input` from an AnalysisSegment, and nothing else. False for a NULL argument. */
-bool harmony_segment_input_set_segment(HarmonySegmentInput *input, const AnalysisSegment *segment);
 
 HarmonyAnalysisStatus harmony_analysis_prepare(const HarmonySegmentInput *inputs, size_t count,
                                                HarmonySegment **out);

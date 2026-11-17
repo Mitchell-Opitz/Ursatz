@@ -68,10 +68,10 @@ static void put(Piece *p, int measure, int beat, int beats, Chord chord) {
     duration_destroy(offset);
 
     memset(in, 0, sizeof(*in));
-    in->segment_id = p->ids[n];
-    in->span = p->spans[n];
-    in->position = p->positions[n];
-    in->beat_strength = fixture_strength(beat);
+    in->segment.id = p->ids[n];
+    in->segment.span = p->spans[n];
+    in->segment.position = p->positions[n];
+    in->segment.strength = fixture_strength(beat);
     in->degree = chord.degree;
     for (size_t i = 0; i < chord.interval_count; i++) {
         in->intervals[i] = chord.intervals[i];
@@ -93,8 +93,8 @@ static void bar(Piece *p, int measure, Chord chord) {
 /* The index of the segment that starts on `beat` of `measure`. */
 static size_t index_of(const Piece *p, int measure, int beat) {
     for (size_t i = 0; i < p->count; i++) {
-        const Duration *offset = metrical_position_offset(p->inputs[i].position);
-        if (metrical_position_measure(p->inputs[i].position) == measure &&
+        const Duration *offset = metrical_position_offset(p->inputs[i].segment.position);
+        if (metrical_position_measure(p->inputs[i].segment.position) == measure &&
             duration_numerator(offset) * 4 == (long)(beat - 1) * duration_denominator(offset)) {
             return i;
         }

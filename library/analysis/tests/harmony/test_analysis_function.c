@@ -104,7 +104,7 @@ static void test_segments_that_are_not_chords_pass_through(void) {
     harmony_function_results_destroy(results, f.count);
     harmony_analysis_destroy(segments);
 
-    f.inputs[0].segment_id = "";
+    f.inputs[0].segment.id = "";
     assert(harmony_analysis_prepare(f.inputs, f.count, &segments) == HARMONY_ANALYSIS_ERR_BAD_INPUT);
     fixture_destroy(&f);
 }

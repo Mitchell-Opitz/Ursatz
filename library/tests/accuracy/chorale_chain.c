@@ -287,10 +287,10 @@ static bool find_phrase_ends(Run *r) {
             break;
         }
         HarmonySegmentInput *input = &inputs[i];
-        input->segment_id = segs->ids[i];
-        input->span = window;
-        input->position = positions[i];
-        input->beat_strength = chain_attack_strength(r->map, time_span_start(window));
+        input->segment.id = segs->ids[i];
+        input->segment.span = window;
+        input->segment.position = positions[i];
+        input->segment.strength = chain_attack_strength(r->map, time_span_start(window));
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
         input->beat_length = beat_length;

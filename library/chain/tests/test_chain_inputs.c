@@ -241,7 +241,7 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(harmony.count == count && harmony.beat_length != NULL);
     for (size_t s = 0; s < count; s++) {
         const HarmonySegmentInput *input = &harmony.inputs[s];
-        assert(strcmp(input->segment_id, segments->ids[s]) == 0 && input->position == harmony.positions[s]);
+        assert(strcmp(input->segment.id, segments->ids[s]) == 0 && input->segment.position == harmony.positions[s]);
         assert(input->beat_length == harmony.beat_length && strcmp(input->key_ref, "key") == 0);
         if (romans[s].has_numeral) {
             assert(input->degree == romans[s].claim.degree && input->inversion == romans[s].claim.inversion);
@@ -251,7 +251,7 @@ static void test_stage_inputs(TestPiece *piece) {
             assert(input->degree == 0 && input->interval_count == 3);
         }
     }
-    assert(harmony.inputs[0].beat_strength == BEAT_STRENGTH_STRONG);
+    assert(harmony.inputs[0].segment.strength == BEAT_STRENGTH_STRONG);
     HarmonySegment *prepared = NULL;
     HarmonyCadences cadences = {0};
     assert(harmony_analysis_prepare(harmony.inputs, count, &prepared) == HARMONY_ANALYSIS_OK);

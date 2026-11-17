@@ -99,8 +99,8 @@ static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t 
     if (start->beat_length != NULL) {
         beat = (double)duration_numerator(start->beat_length) / (double)duration_denominator(start->beat_length);
     }
-    double length = whole_notes(time_span_end(segments[last].input->span)) -
-                    whole_notes(time_span_start(segments[first].input->span));
+    double length = whole_notes(time_span_end(segments[last].input->segment.span)) -
+                    whole_notes(time_span_start(segments[first].input->segment.span));
     if (length + 1e-9 >= config->arrival_min_beats * beat) {
         return true;
     }
@@ -114,7 +114,7 @@ static bool starts_on_beat(const HarmonySegment *segment, const HarmonyCadenceCo
     if (input->beat_length != NULL) {
         beat = (double)duration_numerator(input->beat_length) / (double)duration_denominator(input->beat_length);
     }
-    const Duration *offset = metrical_position_offset(input->position);
+    const Duration *offset = metrical_position_offset(input->segment.position);
     double beats = ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / beat;
     return fabs(beats - floor(beats + 0.5)) < 1e-9;
 }
@@ -123,8 +123,8 @@ static bool starts_on_beat(const HarmonySegment *segment, const HarmonyCadenceCo
    the beat while the tonic starts off it (a weak beat against the weak half beat after it). */
 static bool dominant_on_stronger_beat(const HarmonySegment *dominant, const HarmonySegment *tonic,
                                       const HarmonyCadenceConfig *config) {
-    BeatStrength d = dominant->input->beat_strength;
-    BeatStrength t = tonic->input->beat_strength;
+    BeatStrength d = dominant->input->segment.strength;
+    BeatStrength t = tonic->input->segment.strength;
     return beat_strength_is_stronger(d, t) ||
            (d == t && starts_on_beat(dominant, config) && !starts_on_beat(tonic, config));
 }
@@ -135,7 +135,7 @@ static bool dominant_on_stronger_beat(const HarmonySegment *dominant, const Harm
 static bool arrival_ok(const HarmonySegment *segments, size_t count, size_t before_first, size_t first, size_t last,
                        const HarmonyCadenceConfig *config) {
     const HarmonySegmentInput *start = segments[first].input;
-    if (!beat_strength_is_stronger(config->min_arrival_strength, start->beat_strength)) {
+    if (!beat_strength_is_stronger(config->min_arrival_strength, start->segment.strength)) {
         return arrival_closes(segments, count, first, last, config);
     }
     return config->allow_weak_arrival && is_dominant_root(&segments[before_first]) &&
@@ -371,15 +371,15 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     result->arrival_last = point->arrival_last;
     result->soprano_degree = c->soprano_degree;
     result->post_cadential = c->post_cadential;
-    result->arrival_beat_strength = arrival->beat_strength;
+    result->arrival_beat_strength = arrival->segment.strength;
     result->key_ref = arrival->key_ref;
 
     double u = max_uncertainty(segments, c->dominant_first, c->dominant_last, 0.0);
     u = max_uncertainty(segments, point->arrival_first, point->arrival_last, u);
     result->uncertainty = 1.0 - (1.0 - u) * (1.0 - c->penalty);
 
-    if (time_span_create(time_span_start(segments[c->dominant_first].input->span),
-                         time_span_end(segments[point->arrival_last].input->span), TIME_SPAN_BOUNDARY_LEFT_CLOSED,
+    if (time_span_create(time_span_start(segments[c->dominant_first].input->segment.span),
+                         time_span_end(segments[point->arrival_last].input->segment.span), TIME_SPAN_BOUNDARY_LEFT_CLOSED,
                          &result->span) != TIME_SPAN_OK) {
         return false;
     }
@@ -388,11 +388,11 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     size_t event_count = point->arrival_last - c->dominant_first + 1;
     EntityID **event_ids = (EntityID **)calloc(event_count, sizeof(EntityID *));
     char cadence_id_value[256];
-    snprintf(cadence_id_value, sizeof(cadence_id_value), "standard-harmony-cadence-%s", arrival->segment_id);
+    snprintf(cadence_id_value, sizeof(cadence_id_value), "standard-harmony-cadence-%s", arrival->segment.id);
     EntityID *cadence_id = NULL;
     bool ok = event_ids != NULL && entity_id_create(cadence_id_value, &cadence_id) == ENTITY_ID_OK;
     for (size_t i = 0; ok && i < event_count; i++) {
-        ok = entity_id_create(segments[c->dominant_first + i].input->segment_id, &event_ids[i]) == ENTITY_ID_OK;
+        ok = entity_id_create(segments[c->dominant_first + i].input->segment.id, &event_ids[i]) == ENTITY_ID_OK;
     }
     if (!ok || cadence_create(cadence_id, event_ids, event_count, NULL, &result->cadence) != CADENCE_OK) {
         for (size_t i = 0; event_ids != NULL && i < event_count; i++) {
@@ -413,18 +413,18 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     claim.soprano_degree = c->soprano_degree;
     claim.post_cadential = c->post_cadential;
     claim.has_six_four = c->has_six_four;
-    claim.arrival_beat_strength = (int)arrival->beat_strength;
+    claim.arrival_beat_strength = (int)arrival->segment.strength;
     claim.reading = (int)HARMONY_CADENCE_READING_CADENCE;
     claim.rank = 1;
     claim.share = c->share;
-    snprintf(claim.arrival_segment, sizeof(claim.arrival_segment), "%s", arrival->segment_id);
+    snprintf(claim.arrival_segment, sizeof(claim.arrival_segment), "%s", arrival->segment.id);
     snprintf(claim.dominant_segment, sizeof(claim.dominant_segment), "%s",
-             segments[c->dominant_first].input->segment_id);
+             segments[c->dominant_first].input->segment.id);
     snprintf(claim.key_ref, sizeof(claim.key_ref), "%s", arrival->key_ref);
     result->share = c->share;
     char interpretation_id[256];
     snprintf(interpretation_id, sizeof(interpretation_id), "standard-harmony-cadence-interpretation-%s",
-             arrival->segment_id);
+             arrival->segment.id);
     result->interpretation = harmony_analysis_make_interpretation(interpretation_id, cadence_id_value,
                                                                   HARMONY_CADENCE_CLAIM_TYPE, &claim, sizeof(claim),
                                                                   result->uncertainty, "cadence-adapter");
@@ -454,11 +454,11 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
         HarmonyCadenceClaim alt_claim = claim;
         alt_claim.type = (int)c->alt_type;
         alt_claim.soprano_degree = c->alt_soprano_degree;
-        alt_claim.arrival_beat_strength = (int)alt_arrival->beat_strength;
+        alt_claim.arrival_beat_strength = (int)alt_arrival->segment.strength;
         alt_claim.reading = (int)c->alt_reading;
         alt_claim.rank = 2;
         alt_claim.share = alt->share;
-        snprintf(alt_claim.arrival_segment, sizeof(alt_claim.arrival_segment), "%s", alt_arrival->segment_id);
+        snprintf(alt_claim.arrival_segment, sizeof(alt_claim.arrival_segment), "%s", alt_arrival->segment.id);
         char alt_id[300];
         snprintf(alt_id, sizeof(alt_id), "%s-alt", interpretation_id);
         alt->interpretation = harmony_analysis_make_interpretation(alt_id, cadence_id_value, HARMONY_CADENCE_CLAIM_TYPE,
@@ -681,7 +681,7 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
 /* The index of the segment that starts at `start` whole notes, from 1 on; false when none does. */
 static bool section_start_segment(const HarmonySegment *segments, size_t count, double start, size_t *out) {
     for (size_t i = 1; i < count; i++) {
-        if (fabs(whole_notes(time_span_start(segments[i].input->span)) - start) < 1e-9) {
+        if (fabs(whole_notes(time_span_start(segments[i].input->segment.span)) - start) < 1e-9) {
             *out = i;
             return true;
         }

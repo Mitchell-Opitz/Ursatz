@@ -27,8 +27,8 @@ static double beat_of(const HarmonySegment *segment, const HarmonyCadenceConfig 
 
 /* The length of the run [first, last] in beats. */
 static double run_beats(const HarmonySegment *segments, size_t first, size_t last, const HarmonyCadenceConfig *config) {
-    double length = whole_notes(time_span_end(segments[last].input->span)) -
-                    whole_notes(time_span_start(segments[first].input->span));
+    double length = whole_notes(time_span_end(segments[last].input->segment.span)) -
+                    whole_notes(time_span_start(segments[first].input->segment.span));
     return length / beat_of(&segments[first], config);
 }
 
@@ -47,10 +47,10 @@ static bool is_tonic_six(const HarmonySegment *segment) {
    run after a root-position V run that is a cadence point by the usual rule. */
 static bool authentic_follows(const HarmonySegment *segments, size_t count, const HarmonyRun *runs, size_t run_count,
                               size_t from_run, const HarmonyCadenceConfig *config) {
-    double start = whole_notes(time_span_start(segments[runs[from_run].first].input->span));
+    double start = whole_notes(time_span_start(segments[runs[from_run].first].input->segment.span));
     double window = config->reading_followup_beats * beat_of(&segments[runs[from_run].first], config);
     for (size_t r = from_run + 1; r < run_count; r++) {
-        double at = whole_notes(time_span_start(segments[runs[r].first].input->span));
+        double at = whole_notes(time_span_start(segments[runs[r].first].input->segment.span));
         if (at - start > window + 1e-9) {
             break;
         }
@@ -77,7 +77,7 @@ int harmony_cadence_evaded_share(const HarmonySegment *segments, size_t count, c
     size_t six = dominant_run + 1;
     int share = 500;
 
-    share += segments[runs[six].first].input->beat_strength == BEAT_STRENGTH_STRONG ? config->reading_strong_arrival
+    share += segments[runs[six].first].input->segment.strength == BEAT_STRENGTH_STRONG ? config->reading_strong_arrival
                                                                                    : -config->reading_strong_arrival;
 
     bool six_four = dominant_run >= 1 && harmony_cadence_is_cadential_six_four(&segments[runs[dominant_run - 1].first]);
@@ -118,7 +118,7 @@ int harmony_cadence_boundary_half_share(const HarmonySegment *segments, size_t c
     if (segments[runs[dominant_run].last].input->soprano_degree == 0 || tonic->input->soprano_degree == 0) {
         share += config->reading_break_after_dominant;
     }
-    if (tonic->input->beat_strength == BEAT_STRENGTH_STRONG && tonic->input->soprano_degree == 1) {
+    if (tonic->input->segment.strength == BEAT_STRENGTH_STRONG && tonic->input->soprano_degree == 1) {
         share -= config->reading_pac_shape;
     }
     if (beats + 1e-9 < 2.0) {

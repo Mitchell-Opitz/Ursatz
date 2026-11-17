@@ -38,7 +38,7 @@ HarmonyFunctionStatus harmony_analysis_assign_functions(const HarmonySegment *se
     for (size_t i = 0; i < count; i++) {
         HarmonyFunctionResult *result = &results[i];
         const HarmonySegmentInput *input = segments[i].input;
-        result->segment_id = input->segment_id;
+        result->segment_id = input->segment.id;
         result->uncertainty = input->uncertainty;
         if (!segments[i].valid || !function_of(&segments[i], result)) {
             continue;
@@ -51,8 +51,8 @@ HarmonyFunctionStatus harmony_analysis_assign_functions(const HarmonySegment *se
         claim.applied_kind = result->applied ? (int)segments[i].applied_chord.kind : 0;
 
         char id[256];
-        snprintf(id, sizeof(id), "standard-harmony-function-%s", input->segment_id);
-        result->interpretation = harmony_analysis_make_interpretation(id, input->segment_id,
+        snprintf(id, sizeof(id), "standard-harmony-function-%s", input->segment.id);
+        result->interpretation = harmony_analysis_make_interpretation(id, input->segment.id,
                                                                       HARMONY_FUNCTION_CLAIM_TYPE, &claim,
                                                                       sizeof(claim), input->uncertainty,
                                                                       "harmonic-function-adapter");

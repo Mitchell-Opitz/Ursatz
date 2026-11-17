@@ -617,7 +617,7 @@ ChainInputStatus chain_build_harmony_segments(const ChainSegments *segments, siz
         }
         HarmonySegmentInput *input = &built.inputs[s];
         AnalysisSegment segment = {segments->ids[s], window, built.positions[s], chain_attack_strength(map, time_span_start(window))};
-        harmony_segment_input_set_segment(input, &segment);
+        input->segment = segment;
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
         input->beat_length = built.beat_length;

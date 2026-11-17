@@ -89,8 +89,8 @@ HarmonyAnalysisStatus harmony_analysis_prepare(const HarmonySegmentInput *inputs
     }
     for (size_t i = 0; i < count; i++) {
         const HarmonySegmentInput *input = &inputs[i];
-        if (input->segment_id == NULL || input->segment_id[0] == '\0' || input->key_ref == NULL ||
-            input->key_ref[0] == '\0' || input->span == NULL || input->position == NULL ||
+        if (input->segment.id == NULL || input->segment.id[0] == '\0' || input->key_ref == NULL ||
+            input->key_ref[0] == '\0' || input->segment.span == NULL || input->segment.position == NULL ||
             !(input->uncertainty >= 0.0 && input->uncertainty <= 1.0)) {
             return HARMONY_ANALYSIS_ERR_BAD_INPUT;
         }
@@ -104,7 +104,7 @@ HarmonyAnalysisStatus harmony_analysis_prepare(const HarmonySegmentInput *inputs
         HarmonySegment *segment = &segments[i];
         segment->input = input;
         const Shape *shape = shape_of(input);
-        if (shape == NULL || !harmony_mode_valid(input->mode) || !beat_strength_valid(input->beat_strength) ||
+        if (shape == NULL || !harmony_mode_valid(input->mode) || !beat_strength_valid(input->segment.strength) ||
             input->degree < 1 || input->degree > 7 || input->inversion < 0 ||
             (size_t)input->inversion >= input->interval_count || input->applied_to < 0 || input->applied_to > 7) {
             continue;
@@ -122,15 +122,4 @@ HarmonyAnalysisStatus harmony_analysis_prepare(const HarmonySegmentInput *inputs
 
 void harmony_analysis_destroy(HarmonySegment *segments) {
     free(segments);
-}
-
-bool harmony_segment_input_set_segment(HarmonySegmentInput *input, const AnalysisSegment *segment) {
-    if (input == NULL || segment == NULL) {
-        return false;
-    }
-    input->segment_id = segment->id;
-    input->span = segment->span;
-    input->position = segment->position;
-    input->beat_strength = segment->strength;
-    return true;
 }

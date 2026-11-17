@@ -122,8 +122,8 @@ static bool emit(const ResolutionContext *ctx, HarmonyResolutionRule rule, size_
 
     const char *name = harmony_resolution_rule_name(rule);
     char key[256];
-    snprintf(key, sizeof(key), "%s-%s-%s-v%zu", name, ctx->segments[from].input->segment_id,
-             ctx->segments[to].input->segment_id, voice);
+    snprintf(key, sizeof(key), "%s-%s-%s-v%zu", name, ctx->segments[from].input->segment.id,
+             ctx->segments[to].input->segment.id, voice);
     char shell_id[300];
     snprintf(shell_id, sizeof(shell_id), "standard-harmony-resolution-notes-%s", key);
     const char *note_ids[2] = {a->note_id, b->note_id};

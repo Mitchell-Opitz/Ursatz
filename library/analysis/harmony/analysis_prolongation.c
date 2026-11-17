@@ -156,8 +156,8 @@ void harmony_prolongations_destroy(HarmonyProlongations *prolongations) {
 
 static bool make_pair(const HarmonySegment *segments, const Run *first_run, const HarmonyProlongationSpan *span,
                       size_t k, double uncertainty, Relationship **relationship, Interpretation **interpretation) {
-    const char *source = segments[span->first_segment].input->segment_id;
-    const char *target = segments[span->interior_segments[k]].input->segment_id;
+    const char *source = segments[span->first_segment].input->segment.id;
+    const char *target = segments[span->interior_segments[k]].input->segment.id;
     (void)first_run;
     char relationship_id_value[512];
     snprintf(relationship_id_value, sizeof(relationship_id_value), "standard-harmony-prolongs-%s-%s", source, target);
@@ -166,7 +166,7 @@ static bool make_pair(const HarmonySegment *segments, const Run *first_run, cons
     memset(&scope, 0, sizeof(scope));
     scope.function = (int)span->function;
     snprintf(scope.closing_segment, sizeof(scope.closing_segment), "%s",
-             segments[span->closing_segment].input->segment_id);
+             segments[span->closing_segment].input->segment.id);
     scope.interior_count = span->interior_count;
     HarmonyProlongationReasonValue reason_value;
     memset(&reason_value, 0, sizeof(reason_value));

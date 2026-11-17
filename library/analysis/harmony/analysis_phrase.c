@@ -71,8 +71,8 @@ static bool make_interpretation(const HarmonySegmentInput *input, PhraseModelLab
     claim.label = (int)label;
     claim.phrase_index = phrase_index;
     char id[256];
-    snprintf(id, sizeof(id), "standard-harmony-phrase-model-%s", input->segment_id);
-    *out = harmony_analysis_make_interpretation(id, input->segment_id, HARMONY_PHRASE_LABEL_CLAIM_TYPE, &claim,
+    snprintf(id, sizeof(id), "standard-harmony-phrase-model-%s", input->segment.id);
+    *out = harmony_analysis_make_interpretation(id, input->segment.id, HARMONY_PHRASE_LABEL_CLAIM_TYPE, &claim,
                                                 sizeof(claim), input->uncertainty, "phrase-model-adapter");
     return *out != NULL;
 }
@@ -129,7 +129,7 @@ HarmonyPhraseModelStatus harmony_analysis_phrase_model_label(const HarmonySegmen
         return HARMONY_PHRASE_MODEL_ERR_ALLOC;
     }
     for (size_t i = 0; i < count; i++) {
-        model.segments[i].segment_id = segments[i].input->segment_id;
+        model.segments[i].segment_id = segments[i].input->segment.id;
         model.segments[i].phrase_index = -1;
     }
     HarmonySixFourResult *six_fours = NULL;

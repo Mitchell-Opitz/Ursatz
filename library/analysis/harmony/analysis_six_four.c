@@ -50,7 +50,7 @@ void harmony_analysis_mark_cadential(HarmonySegment *segments, size_t count) {
         if (is_tonic_six_four(&segments[first].chord) && start->bass_degree == 5 && last + 1 < count &&
             diatonic(&segments[last + 1]) && segments[last + 1].chord.degree == 5 &&
             segments[last + 1].chord.inversion == 0 && segments[last + 1].input->bass_degree == 5 &&
-            !beat_strength_is_stronger(segments[last + 1].input->beat_strength, start->beat_strength)) {
+            !beat_strength_is_stronger(segments[last + 1].input->segment.strength, start->segment.strength)) {
             for (size_t s = first; s <= last; s++) {
                 segments[s].chord.cadential = true;
             }
@@ -106,7 +106,7 @@ static bool classify_run(const HarmonySegment *segments, size_t count, size_t fi
             return false;
         }
         subject.chords[j] = chain[j]->chord;
-        subject.beat[j] = chain[j]->input->beat_strength;
+        subject.beat[j] = chain[j]->input->segment.strength;
     }
     bool soprano_known = true;
     for (int j = 0; j < 3; j++) {
@@ -150,7 +150,7 @@ HarmonySixFourStatus harmony_analysis_classify_six_fours(const HarmonySegment *s
         return HARMONY_SIX_FOUR_ERR_ALLOC;
     }
     for (size_t i = 0; i < count; i++) {
-        results[i].segment_id = segments[i].input->segment_id;
+        results[i].segment_id = segments[i].input->segment.id;
     }
     size_t i = 0;
     while (i < count) {
@@ -173,9 +173,9 @@ HarmonySixFourStatus harmony_analysis_classify_six_fours(const HarmonySegment *s
                 memset(&claim, 0, sizeof(claim));
                 claim.type = (int)type;
                 char id[256];
-                snprintf(id, sizeof(id), "standard-harmony-six-four-%s", segments[s].input->segment_id);
+                snprintf(id, sizeof(id), "standard-harmony-six-four-%s", segments[s].input->segment.id);
                 results[s].interpretation = harmony_analysis_make_interpretation(
-                    id, segments[s].input->segment_id, HARMONY_SIX_FOUR_CLAIM_TYPE, &claim, sizeof(claim),
+                    id, segments[s].input->segment.id, HARMONY_SIX_FOUR_CLAIM_TYPE, &claim, sizeof(claim),
                     segments[s].input->uncertainty, "six-four-adapter");
                 if (results[s].interpretation == NULL) {
                     harmony_six_four_results_destroy(results, count);

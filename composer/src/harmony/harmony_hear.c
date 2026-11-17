@@ -213,10 +213,10 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
             harmony_segments_destroy(set);
             return NULL;
         }
-        input->segment_id = set->ids[i];
-        input->span = set->times[i].span;
-        input->position = set->times[i].position;
-        input->beat_strength = phrase->metre ? harmony_metre_cell_strength(phrase->metre, first_cell)
+        input->segment.id = set->ids[i];
+        input->segment.span = set->times[i].span;
+        input->segment.position = set->times[i].position;
+        input->segment.strength = phrase->metre ? harmony_metre_cell_strength(phrase->metre, first_cell)
                                              : harmony_rhythm_cell_strength(first_cell % phrase->cells_per_bar);
         if (chord->applied) {
             bool leading = chord->applied_chord.kind == APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE;

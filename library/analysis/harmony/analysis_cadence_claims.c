@@ -12,11 +12,11 @@
 /* --- segments in measures --- */
 
 static int measure_of(const HarmonySegment *segment) {
-    return metrical_position_measure(segment->input->position);
+    return metrical_position_measure(segment->input->segment.position);
 }
 
 static bool starts_measure(const HarmonySegment *segment) {
-    return duration_numerator(metrical_position_offset(segment->input->position)) == 0;
+    return duration_numerator(metrical_position_offset(segment->input->segment.position)) == 0;
 }
 
 /* The first segment that starts `measure` (offset 0), or count when none does. */
@@ -231,7 +231,7 @@ static bool point_of(const HarmonySegment *segments, size_t count, const Harmony
 }
 
 static double start_in_whole_notes(const HarmonySegment *segment) {
-    const MusicalTime *time = time_span_start(segment->input->span);
+    const MusicalTime *time = time_span_start(segment->input->segment.span);
     return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
 }
 

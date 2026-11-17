@@ -233,10 +233,10 @@ static Inputs make_inputs(const WeightedPipeline *p, const MeterMap *map, const 
         const TimeSpan *window = sonority_time_window(p->sonorities.items[s].sonority);
         assert(metrical_position_from_time(map, time_span_start(window), &in.positions[s]) == METRICAL_POSITION_OK);
         HarmonySegmentInput *input = &in.inputs[s];
-        input->segment_id = p->segment_ids[s];
-        input->span = window;
-        input->position = in.positions[s];
-        input->beat_strength = chain_attack_strength(map, time_span_start(window));
+        input->segment.id = p->segment_ids[s];
+        input->segment.span = window;
+        input->segment.position = in.positions[s];
+        input->segment.strength = chain_attack_strength(map, time_span_start(window));
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
         input->beat_length = in.beat_length;

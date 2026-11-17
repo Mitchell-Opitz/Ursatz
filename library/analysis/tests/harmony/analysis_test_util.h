@@ -62,10 +62,10 @@ static inline HarmonySegmentInput *fixture_add(Fixture *f, int degree, const int
     duration_destroy(offset);
 
     memset(in, 0, sizeof(*in));
-    in->segment_id = f->ids[n];
-    in->span = f->spans[n];
-    in->position = f->positions[n];
-    in->beat_strength = fixture_strength((int)(n % 4) + 1);
+    in->segment.id = f->ids[n];
+    in->segment.span = f->spans[n];
+    in->segment.position = f->positions[n];
+    in->segment.strength = fixture_strength((int)(n % 4) + 1);
     in->degree = degree;
     for (size_t i = 0; i < interval_count; i++) {
         in->intervals[i] = intervals[i];

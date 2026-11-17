@@ -124,7 +124,7 @@ ChainInputStatus chain_build_segment_lines(const ChainSegments *voice_segments, 
 
 /*
  * The inputs of standard-harmony's cadence adapter, one HarmonySegmentInput per segment, as the Roman numerals and the outer voices read them
- * (HarmonySegmentInput, analysis_input.h): the segment (through harmony_segment_input_set_segment), the numeral's degree, intervals,
+ * (HarmonySegmentInput, analysis_input.h): the segment (the AnalysisSegment it embeds), the numeral's degree, intervals,
  * inversion, applied target, mode and uncertainty, and the degrees of the outer lines' notes in the local key (0 for a chromatic or an
  * absent note). A segment with no numeral is passed as not a chord (degree 0). One beat length, the first beat of measure 1's, serves
  * every segment.
