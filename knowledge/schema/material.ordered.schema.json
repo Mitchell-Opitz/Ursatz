@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K1 pitch material, ordered: a twelve-tone row (schema only)",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "row"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "row": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 11
+          }
+        },
+        "forms": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "P",
+              "I",
+              "R",
+              "RI"
+            ]
+          }
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "pitches"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "pitches": {
+            "type": "array",
+            "minItems": 12,
+            "maxItems": 12,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-G][#b]?$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

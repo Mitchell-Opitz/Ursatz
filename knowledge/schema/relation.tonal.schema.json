@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K6 relation, tonal: the target center above the anchor's",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "root_semitones",
+        "material"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "root_semitones": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 11
+        },
+        "material": {
+          "anyOf": [
+            {
+              "enum": [
+                "same",
+                "other"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.[a-z]+(-[a-z]+)*\\.[a-z0-9]+(-[a-z0-9]+)*$"
+            }
+          ]
+        },
+        "anchor_default": {
+          "enum": [
+            "home",
+            "previous"
+          ]
+        },
+        "reached_by": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "pivot",
+              "direct",
+              "chromatic",
+              "common-tone",
+              "enharmonic"
+            ]
+          }
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "anchor",
+          "target"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "anchor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}
