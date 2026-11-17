@@ -37,4 +37,12 @@ const PitchMaterial *common_practice_material(const CommonPracticeMaterials *mat
  */
 bool common_practice_key_mode_of(const PitchMaterial *material, CommonPracticeKeyMode *out);
 
+/*
+ * TRANSITIONAL (until P58 B13): the four materials as the generated knowledge_tonality_mode_steps rows give them (steps, the ids,
+ * the key words, the family and the variant links; no color notes), as static data that no snapshot owns. Code that holds no
+ * snapshot yet (the Composer, the mode-based tonal functions, the stages not yet configured with the materials the chain resolves)
+ * reads them from here. Never NULL.
+ */
+const CommonPracticeMaterials *common_practice_materials_builtin(void);
+
 #endif

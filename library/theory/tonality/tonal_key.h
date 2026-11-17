@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "model/pitch/key_signature.h"
+#include "model/pitch/pitch_material.h"
 #include "model/pitch/pitch_spelling.h"
 #include "theory/tonality/roman_numeral_analysis_rules.h"
 
@@ -92,5 +93,60 @@ bool standard_tonality_degree_at_or_below_semitone(int semitones_above_tonic, St
  */
 bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
                                           int *alteration);
+
+/*
+ * The same readings from a pitch material (the steps of a knowledge entry) in place of a mode. A material has the steps it names
+ * (degrees 1 to step_count); a key of it is a tonic and the material. The mode-based functions above call these with the four
+ * tonality materials, as the generated rows give them, until P58 B13 removes the modes.
+ */
+
+/* Semitones above the center of `degree` of the material, or -1 for a NULL material or a degree it does not have. */
+int standard_tonality_material_degree_semitone(const PitchMaterial *material, int degree);
+
+/* The material on `center` (any integer, reduced to 0 to 11) as a 12-bit mask over pitch classes; 0 for NULL (pitch_material_mask). */
+unsigned standard_tonality_material_pitch_classes(int center, const PitchMaterial *material);
+
+/* The same mask plus the leading tone, pitch class center + 11. 0 for NULL. */
+unsigned standard_tonality_material_pitch_classes_with_leading_tone(int center, const PitchMaterial *material);
+
+/* standard_tonality_degree_at_or_below_semitone for a material; false (outputs untouched) for NULL arguments or a material with no steps. */
+bool standard_tonality_material_degree_at_or_below_semitone(int semitones_above_center, const PitchMaterial *material, int *degree,
+                                                            int *alteration);
+
+/*
+ * standard_tonality_degree_of_semitone for a material: the lowered readings are semitone 1 always, and semitones 3, 8 and 10 where
+ * the material's third is major and its sixth and seventh are 9 and 11 (the major scale's rule, R-285).
+ */
+bool standard_tonality_material_degree_of_semitone(int semitones_above_center, const PitchMaterial *material, int *degree,
+                                                   int *alteration);
+
+/*
+ * The signature of a key of the material on a tonic: the sum of the accidentals of its scale spelled up from the tonic's letter
+ * (the tonic's place on the line of fifths, less 3 for natural minor; D dorian 0, Bb mixolydian -3). A diatonic material (family
+ * "diatonic", 7 steps) has its own; any other uses the signature of its variant_of (harmonic and melodic minor: the natural
+ * minor's). False for a NULL output, an invalid letter, or a material that is neither diatonic nor a variant of a diatonic one.
+ */
+bool standard_tonality_key_fifths_of(PitchLetter tonic_letter, int tonic_accidental, const PitchMaterial *material, int *fifths);
+
+/* standard_tonality_key_signature_of for a material. */
+bool standard_tonality_key_signature_of_material(PitchLetter tonic_letter, int tonic_accidental, const PitchMaterial *material,
+                                                 KeySignature **out);
+
+/* standard_tonality_key_of_fifths for a material; false also for a material with no signature. */
+bool standard_tonality_key_of_fifths_material(int fifths, const PitchMaterial *material, PitchLetter *letter, int *accidental);
+
+/*
+ * standard_tonality_key_tonic_of_pitch_class for a material: the tonic spelled with the fewer accidentals in its signature, judged by
+ * the major scale of the same notes. False also for a material with no signature.
+ */
+bool standard_tonality_key_tonic_of_pitch_class_material(int pitch_class, const PitchMaterial *material, PitchLetter *letter,
+                                                         int *accidental);
+
+/* The semitones above the tonic of `degree` (1 to 7) of the major scale, spelled by letter (C D E F G A B): 0 2 4 5 7 9 11. -1 for
+ * another degree. For the sites that read a degree against the major scale with no key. */
+int standard_tonality_natural_degree_semitone(int degree);
+
+/* standard_tonality_degree_of_semitone against the major scale. False (outputs untouched) for NULL outputs. */
+bool standard_tonality_natural_degree_of_semitone(int semitones_above_tonic, int *degree, int *alteration);
 
 #endif
