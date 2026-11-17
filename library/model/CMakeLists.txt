@@ -62,6 +62,7 @@ ursatz_public_headers(ursatz_model
         model/core/once.h
         model/core/provenance_reference.h
         model/core/rational.h
+        model/core/string_copy.h
         model/core/value.h
         model/core/voice_reference.h
         model/events/dynamics.h

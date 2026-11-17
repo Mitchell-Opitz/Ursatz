@@ -152,7 +152,6 @@ ursatz_public_headers(ursatz_analysis
         analysis/meter/meter_analysis_hemiola.h
         analysis/meter/meter_analysis_hypermeter.h
         analysis/meter/meter_analysis_input.h
-        analysis/meter/meter_analysis_position.h
         analysis/meter/meter_analysis_syncopation.h
         analysis/meter/meter_analysis_tuplet.h
         analysis/texture/framework.h

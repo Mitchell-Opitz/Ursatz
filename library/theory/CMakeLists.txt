@@ -167,10 +167,8 @@ ursatz_public_headers(ursatz_theory
         theory/style/style_model.h
         theory/style/style_model_blend.h
         theory/style/style_model_build.h
-        theory/rules/constraint.h
         theory/rules/context.h
         theory/rules/preference.h
-        theory/rules/rule.h
         theory/vocabulary/applied_chord_kind.h
         theory/vocabulary/beat_strength.h
         theory/vocabulary/cadence_type.h
@@ -182,12 +180,14 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/chord_vocabulary.h
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_framework.h
+        theory/tonality/framework.h
         theory/tonality/key_vocabulary.h
         theory/tonality/roman_numeral_analysis_rules.h
         theory/tonality/roman_numeral_grammar.h
         theory/tonality/roman_numeral_rules.h
         theory/tonality/seventh_rules.h
         theory/tonality/tonal_key.h
+        theory/tonality/triad_in_key_rules.h
         theory/tonality/triad_rules.h
         theory/harmony/harmonic_function.h
         theory/harmony/harmony_applied.h
@@ -198,12 +198,16 @@ ursatz_public_headers(ursatz_theory
         theory/harmony/harmony_framework.h
         theory/harmony/harmony_functions.h
         theory/harmony/harmony_key_change.h
+        theory/harmony/harmony_phrase_labels.h
         theory/harmony/harmony_phrase_rules.h
         theory/harmony/harmony_pivot.h
         theory/harmony/harmony_plagal.h
         theory/harmony/harmony_predominant_seventh.h
+        theory/harmony/harmony_prolongation.h
         theory/harmony/harmony_related_key.h
         theory/harmony/harmony_resolution_rules.h
+        theory/harmony/harmony_six_four.h
+        theory/harmony/harmony_steps.h
         theory/harmony/harmony_strong_predominants.h
         theory/harmony/phrase_model_label.h
         theory/harmony/six_four_type.h
@@ -235,6 +239,7 @@ ursatz_public_headers(ursatz_theory
         theory/counterpoint/framework.h
         theory/counterpoint/harmonic_rules.h
         theory/counterpoint/melodic_rules.h
+        theory/counterpoint/motion_rules.h
         theory/counterpoint/motion_type.h
         theory/counterpoint/second_species_ends_rules.h
         theory/counterpoint/second_species_exercise.h
@@ -245,13 +250,19 @@ ursatz_public_headers(ursatz_theory
         theory/counterpoint/third_species_exercise.h
         theory/counterpoint/third_species_line_rules.h
         theory/counterpoint/third_species_rules.h
+        theory/form/beginning_rules.h
+        theory/form/combination_rules.h
         theory/form/continuation_trait.h
+        theory/form/ending_rules.h
         theory/form/expansion_placement.h
         theory/form/external_expansion_kind.h
+        theory/form/external_expansion_rules.h
         theory/form/framework.h
         theory/form/hybrid_rules.h
         theory/form/idea_label.h
+        theory/form/internal_expansion_rules.h
         theory/form/internal_expansion_technique.h
+        theory/form/length_rules.h
         theory/form/period_rules.h
         theory/form/phrase_beginning.h
         theory/form/phrase_ending.h
@@ -259,22 +270,29 @@ ursatz_public_headers(ursatz_theory
         theory/form/phrase_level_form.h
         theory/form/phrase_role.h
         theory/form/phrase_rules.h
+        theory/form/segmentation_rules.h
         theory/form/sentence_rules.h
         theory/meter/beat_grid.h
         theory/meter/borrowed_rules.h
         theory/meter/framework.h
         theory/meter/grouping_rules.h
+        theory/meter/hemiola_rules.h
+        theory/meter/hypermeter_rules.h
         theory/meter/meter_class_rules.h
         theory/meter/metric_position_rules.h
         theory/meter/segmentation_beat_grid.h
+        theory/meter/syncopation_rules.h
         theory/galant/galant_degree.h
         theory/galant/galant_exemplar.h
         theory/galant/galant_framework.h
+        theory/galant/galant_matching_rules.h
         theory/galant/galant_prototype.h
         theory/galant/galant_prototypes.h
         theory/galant/scale_direction.h
         theory/galant/scale_framework.h
+        theory/galant/scale_harmonization.h
         theory/galant/scale_patterns.h
+        theory/galant/scale_sequence_rules.h
         theory/galant/schema_function.h
         theory/galant/sequence_kind.h
         theory/markings/dynamics_rules.h
