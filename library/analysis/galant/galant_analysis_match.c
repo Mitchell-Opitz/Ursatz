@@ -289,7 +289,8 @@ static void extend(Search *search, Candidate *c, size_t stage, size_t from, unsi
             if (rational_is_negative(gap)) {
                 continue;
             }
-            if (rational_to_double(gap) / rational_to_double(previous_beat) > rational_to_double(search->config.max_gap_beats) + 1e-9) {
+            Rational reach;
+            if (rational_mul(search->config.max_gap_beats, previous_beat, &reach) != RATIONAL_OK || rational_cmp(gap, reach) > 0) {
                 break;
             }
         }
@@ -312,14 +313,17 @@ static size_t frames_for(const GalantSegmentList *s, size_t start, size_t stage_
                          GalantPitchDegree *frames) {
     size_t count = 0;
     frames[count++] = (GalantPitchDegree){1, 0};
-    double limit = (double)stage_count * (rational_to_double(config->max_gap_beats) + 4.0) * rational_to_double(seg_beat(s, start));
+    Rational limit;
+    Rational beats;
     Rational begin;
-    if (!seg_start(s, start, &begin)) {
+    if (rational_add(config->max_gap_beats, rational_ratio(4, 1), &beats) != RATIONAL_OK ||
+        rational_mul_int(beats, (long long)stage_count, &beats) != RATIONAL_OK ||
+        rational_mul(beats, seg_beat(s, start), &limit) != RATIONAL_OK || !seg_start(s, start, &begin)) {
         return count;
     }
     for (size_t j = start; j < s->count && count < MAX_FRAMES; j++) {
         Rational reach;
-        if (!gap_from(s, j, begin, &reach) || rational_to_double(reach) > limit) {
+        if (!gap_from(s, j, begin, &reach) || rational_cmp(reach, limit) > 0) {
             break;
         }
         bool seen = false;

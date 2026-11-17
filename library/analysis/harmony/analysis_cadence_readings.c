@@ -8,28 +8,29 @@
 #define SHARE_MIN 50
 #define SHARE_MAX 950
 
-static double whole_notes(const MusicalTime *time) {
-    return (double)time->value.num / (double)time->value.den;
-}
+/* A dominant shorter than this many beats is a short dominant. */
+#define SHORT_DOMINANT_BEATS rational_ratio(2, 1)
 
 static int clamp_share(int share) {
     return share < SHARE_MIN ? SHARE_MIN : (share > SHARE_MAX ? SHARE_MAX : share);
 }
 
 /* The length of a beat in whole notes at the segment: its own beat_length, or the config's. */
-static double beat_of(const HarmonySegment *segment, const HarmonyCadenceConfig *config) {
-    if (segment->input->has_beat_length) {
-        return (double)segment->input->beat_length.value.num /
-               (double)segment->input->beat_length.value.den;
-    }
-    return rational_to_double(config->beat_length);
+static Rational beat_of(const HarmonySegment *segment, const HarmonyCadenceConfig *config) {
+    return segment->input->has_beat_length ? segment->input->beat_length.value : config->beat_length;
 }
 
-/* The length of the run [first, last] in beats. */
-static double run_beats(const HarmonySegment *segments, size_t first, size_t last, const HarmonyCadenceConfig *config) {
-    double length = whole_notes(&segments[last].input->segment.span.end) -
-                    whole_notes(&segments[first].input->segment.span.start);
-    return length / beat_of(&segments[first], config);
+/* -1, 0 or 1: the length of the run [first, last] against `beats` of its first segment's beat. A length that does not fit a Rational
+   counts as shorter. */
+static int run_against_beats(const HarmonySegment *segments, size_t first, size_t last, Rational beats,
+                             const HarmonyCadenceConfig *config) {
+    Rational length;
+    Rational wanted;
+    if (rational_sub(segments[last].input->segment.span.end.value, segments[first].input->segment.span.start.value, &length) != RATIONAL_OK ||
+        rational_mul(beats, beat_of(&segments[first], config), &wanted) != RATIONAL_OK) {
+        return -1;
+    }
+    return rational_cmp(length, wanted);
 }
 
 static bool has_function(const HarmonySegment *segment, HarmonicFunction function) {
@@ -47,11 +48,15 @@ static bool is_tonic_six(const HarmonySegment *segment) {
    run after a root-position V run that is a cadence point by the usual rule. */
 static bool authentic_follows(const HarmonySegment *segments, size_t count, const HarmonyRun *runs, size_t run_count,
                               size_t from_run, const HarmonyCadenceConfig *config) {
-    double start = whole_notes(&segments[runs[from_run].first].input->segment.span.start);
-    double window = rational_to_double(config->reading_followup_beats) * beat_of(&segments[runs[from_run].first], config);
+    Rational start = segments[runs[from_run].first].input->segment.span.start.value;
+    Rational window;
+    if (rational_mul(config->reading_followup_beats, beat_of(&segments[runs[from_run].first], config), &window) != RATIONAL_OK) {
+        return false;
+    }
     for (size_t r = from_run + 1; r < run_count; r++) {
-        double at = whole_notes(&segments[runs[r].first].input->segment.span.start);
-        if (at - start > window + 1e-9) {
+        Rational after;
+        if (rational_sub(segments[runs[r].first].input->segment.span.start.value, start, &after) != RATIONAL_OK ||
+            rational_cmp(after, window) > 0) {
             break;
         }
         if (harmony_cadence_is_tonic_root(&segments[runs[r].first]) &&
@@ -109,10 +114,11 @@ int harmony_cadence_boundary_half_share(const HarmonySegment *segments, size_t c
         return 0;
     }
     const HarmonySegment *tonic = &segments[runs[dominant_run + 1].first];
-    double beats = run_beats(segments, runs[dominant_run].first, runs[dominant_run].last, config);
+    size_t dominant_first = runs[dominant_run].first;
+    size_t dominant_last = runs[dominant_run].last;
     int share = 500;
 
-    if (beats + 1e-9 >= rational_to_double(config->reading_long_dominant_beats)) {
+    if (run_against_beats(segments, dominant_first, dominant_last, config->reading_long_dominant_beats, config) >= 0) {
         share += config->reading_long_dominant;
     }
     if (segments[runs[dominant_run].last].input->soprano_degree == 0 || tonic->input->soprano_degree == 0) {
@@ -121,7 +127,7 @@ int harmony_cadence_boundary_half_share(const HarmonySegment *segments, size_t c
     if (tonic->input->segment.strength == BEAT_STRENGTH_STRONG && tonic->input->soprano_degree == 1) {
         share -= config->reading_pac_shape;
     }
-    if (beats + 1e-9 < 2.0) {
+    if (run_against_beats(segments, dominant_first, dominant_last, SHORT_DOMINANT_BEATS, config) < 0) {
         share -= config->reading_short_dominant;
     }
     return clamp_share(share);

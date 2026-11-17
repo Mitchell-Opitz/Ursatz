@@ -466,8 +466,20 @@ static bool same_text(const char *a, const char *b) {
     return a != NULL && b != NULL && strcmp(a, b) == 0;
 }
 
-static Rational grid_time(double whole_notes) {
-    return rational_ratio((long long)llround(whole_notes * 960.0), 960);
+/* The classifier reads times on the common-practice grid of 1/960 of a whole note (a multiple of the sixteenth, the triplet and the
+   quintuplet), as before time was exact: a time rounds to its nearest step before the classifier sees it. This stays a named step
+   and is not exact: Field 5 has 556 of its 2,166 note events off this grid, so exact times would change the rhythm fixture (R-586).
+   Halves round up. A time too large for the step stays as it is. */
+#define COMMON_PRACTICE_CLASSIFIER_GRID 960
+
+static Rational grid_time(Rational time) {
+    Rational steps;
+    long long nearest;
+    if (rational_mul_int(time, COMMON_PRACTICE_CLASSIFIER_GRID, &steps) != RATIONAL_OK ||
+        rational_add(steps, rational_ratio(1, 2), &steps) != RATIONAL_OK || rational_floor(steps, &nearest) != RATIONAL_OK) {
+        return time;
+    }
+    return rational_ratio(nearest, COMMON_PRACTICE_CLASSIFIER_GRID);
 }
 
 /* Replaces the framework label of every leftover member of one voice with the injected classifier's. Silent
@@ -510,8 +522,8 @@ static CommonPracticeWeightedStatus relabel_voice(const CommonPracticeSegment *s
     for (size_t k = 0; k < n; k++) {
         const CommonPracticeMember *member = &segments[refs[k].segment].members[refs[k].member];
         notes[k].midi = member->pitch;
-        notes[k].onset = grid_time(rational_to_double(member->onset));
-        notes[k].duration = grid_time(rational_to_double(member->duration));
+        notes[k].onset = grid_time(member->onset);
+        notes[k].duration = grid_time(member->duration);
         notes[k].chord_pitch_classes = masks[refs[k].segment];
     }
     if (config->classifier(notes, n, out, config->classifier_context)) {

@@ -233,6 +233,7 @@ static bool emit_run(StandardMeterTuplet **items, size_t *count, size_t *capacit
     item->attacks = run->attacks;
     item->meter = METER_TYPE_UNCLASSIFIED;
     item->beat = 1.0;
+    item->first = run->first;
     int measure = 0;
     double beat = 1.0;
     if (standard_meter_beat_of(notes->map, run->first, &measure, &beat)) {
@@ -324,7 +325,7 @@ static int compare_tuplets(const void *a, const void *b) {
     if (x->measure != y->measure) {
         return x->measure < y->measure ? -1 : 1;
     }
-    return x->beat < y->beat ? -1 : (x->beat > y->beat ? 1 : 0);
+    return rational_cmp(x->first, y->first);
 }
 
 static void free_items(StandardMeterTuplet *items, size_t count) {

@@ -19,7 +19,6 @@
 #define ELISION_COST 0.1
 #define MIN_RETURN_NOTES 6u
 #define RETURN_DISTANCE 5
-#define ONSET_TOLERANCE 1e-6
 #define STRICTLY_HIGHER 1e-9
 #define MAX_UNIT 16
 
@@ -108,8 +107,11 @@ static bool melody_returns(const Evidence *ev, int m) {
         Rational at_start = ev->measure_start[idx(ev, b)];
         bool same = true;
         for (size_t k = 0; same && k < total; k++) {
-            if (fabs((rational_to_double(ev->note_start[at + k]) - rational_to_double(at_start)) -
-                      (rational_to_double(ev->note_start[base + k]) - rational_to_double(base_start))) > ONSET_TOLERANCE) {
+            Rational from_at;
+            Rational from_base;
+            if (rational_sub(ev->note_start[at + k], at_start, &from_at) != RATIONAL_OK ||
+                rational_sub(ev->note_start[base + k], base_start, &from_base) != RATIONAL_OK ||
+                !rational_equals(from_at, from_base)) {
                 same = false;
             }
             if (same && k > 0 &&
@@ -128,10 +130,14 @@ static bool melody_returns(const Evidence *ev, int m) {
 /* No melody note sounds in the last half beat of measure m. */
 static bool melody_rests(const Evidence *ev, int m) {
     size_t i = idx(ev, m);
-    double window = rational_to_double(ev->measure_end[i]) - rational_to_double(ev->beat[i]) / 2.0;
+    Rational half_beat;
+    Rational window;
+    if (rational_div_int(ev->beat[i], 2, &half_beat) != RATIONAL_OK || rational_sub(ev->measure_end[i], half_beat, &window) != RATIONAL_OK) {
+        return false;
+    }
     size_t after = ev->note_first[i] + ev->note_count[i]; /* notes [0, after) start in or before m */
     for (size_t k = after; k > 0; k--) {
-        if (rational_to_double(ev->note_end[k - 1]) > window + STRICTLY_HIGHER) {
+        if (rational_cmp(ev->note_end[k - 1], window) > 0) {
             return false;
         }
     }
@@ -144,8 +150,12 @@ static bool last_note_long(const Evidence *ev, int m) {
         return false;
     }
     size_t k = ev->note_first[i] + ev->note_count[i] - 1;
-    double length = rational_to_double(ev->measure_end[i]) - rational_to_double(ev->measure_start[i]);
-    return (rational_to_double(ev->note_end[k]) - rational_to_double(ev->note_start[k])) * 2.0 >= length - STRICTLY_HIGHER;
+    Rational length;
+    Rational sounding;
+    Rational twice;
+    return rational_sub(ev->measure_end[i], ev->measure_start[i], &length) == RATIONAL_OK &&
+           rational_sub(ev->note_end[k], ev->note_start[k], &sounding) == RATIONAL_OK &&
+           rational_mul_int(sounding, 2, &twice) == RATIONAL_OK && rational_cmp(twice, length) >= 0;
 }
 
 static StandardFormAnalysisStatus evidence_build(const StandardFormInput *input, Evidence *ev) {

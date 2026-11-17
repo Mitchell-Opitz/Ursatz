@@ -210,15 +210,11 @@ void analysis_chain_destroy(AnalysisChain *chain) {
 
 /* --- the stages --- */
 
-static double time_double(MusicalTime time) {
-    return rational_to_double(time.value);
-}
-
 /* The region holding the segment that starts at `start` whole notes: the last whose start is not after it. */
 static size_t region_at(const CommonPracticeKeyRegions *regions, Rational start) {
     size_t found = 0;
     for (size_t i = 0; i < regions->region_count; i++) {
-        if (time_double(regions->regions[i].span.start) <= rational_to_double(start) + 1e-12) {
+        if (rational_cmp(regions->regions[i].span.start.value, start) <= 0) {
             found = i;
         }
     }
@@ -291,7 +287,7 @@ static bool read_numerals(AnalysisChain *chain) {
             continue;
         }
         MusicalTime after_pivot = chain->key_segments[change->pivot_segment + 1].start;
-        if (time_double(after_pivot) < time_double(p->region_inputs[change->to_region].start) - 1e-12) {
+        if (rational_cmp(after_pivot.value, p->region_inputs[change->to_region].start.value) < 0) {
             p->region_inputs[change->to_region].start = after_pivot;
         }
     }
@@ -703,9 +699,8 @@ static bool scope_count(AnalysisChain *chain) {
     if (meter_map_measure_span(chain->notes->map, chain->config.last_measure, &last) != METER_MAP_OK) {
         return false;
     }
-    double end = time_double(last.end);
     size_t count = 0;
-    while (count < chain->segs.count && rational_to_double(chain->segs.starts[count]) < end - 1e-12) {
+    while (count < chain->segs.count && rational_cmp(chain->segs.starts[count], last.end.value) < 0) {
         count++;
     }
     chain->count = count;
@@ -715,14 +710,14 @@ static bool scope_count(AnalysisChain *chain) {
 /* The repeats and returns of the notes in scope (R-400), found once: every pass's grid follows them. */
 static bool find_chain_repeats(AnalysisChain *chain) {
     const AnalysisNoteSet *set = chain->notes;
-    double end = 0;
+    Rational end = rational_ratio(0, 1);
     bool scoped = chain->config.last_measure > 0;
     if (scoped) {
         TimeSpan last;
         if (meter_map_measure_span(set->map, chain->config.last_measure, &last) != METER_MAP_OK) {
             return false;
         }
-        end = time_double(last.end);
+        end = last.end.value;
     }
     StandardFormRepeatNote *items = calloc(set->count > 0 ? set->count : 1, sizeof(StandardFormRepeatNote));
     if (items == NULL) {
@@ -731,7 +726,7 @@ static bool find_chain_repeats(AnalysisChain *chain) {
     size_t count = 0;
     for (size_t i = 0; i < set->count; i++) {
         const AnalysisNote *note = &set->notes[i];
-        if (note->midi == ANALYSIS_PITCH_UNKNOWN || (scoped && time_double(note->span.start) >= end - 1e-12)) {
+        if (note->midi == ANALYSIS_PITCH_UNKNOWN || (scoped && rational_cmp(note->span.start.value, end) >= 0)) {
             continue;
         }
         items[count].span = note->span;

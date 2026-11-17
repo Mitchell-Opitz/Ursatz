@@ -56,8 +56,9 @@ static bool config_valid(const HarmonyCadenceConfig *config) {
            count_valid(config->reading_long_dominant_beats);
 }
 
-static double whole_notes(const MusicalTime *time) {
-    return (double)time->value.num / (double)time->value.den;
+/* The length of a beat in whole notes at the segment: its own beat_length, or the config's. */
+static Rational beat_length_of(const HarmonySegmentInput *input, const HarmonyCadenceConfig *config) {
+    return input->has_beat_length ? input->beat_length.value : config->beat_length;
 }
 
 /* --- the chords the rules read --- */
@@ -98,14 +99,11 @@ bool harmony_cadence_is_cadential_six_four(const HarmonySegment *segment) {
 /* Whether the run [first, last] is long enough, or the soprano rests right after it, or it ends the piece. */
 static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t first, size_t last,
                            const HarmonyCadenceConfig *config) {
-    const HarmonySegmentInput *start = segments[first].input;
-    double beat = rational_to_double(config->beat_length);
-    if (start->has_beat_length) {
-        beat = (double)start->beat_length.value.num / (double)start->beat_length.value.den;
-    }
-    double length = whole_notes(&segments[last].input->segment.span.end) -
-                    whole_notes(&segments[first].input->segment.span.start);
-    if (length + 1e-9 >= rational_to_double(config->arrival_min_beats) * beat) {
+    Rational beat = beat_length_of(segments[first].input, config);
+    Rational length;
+    Rational needed;
+    if (rational_sub(segments[last].input->segment.span.end.value, segments[first].input->segment.span.start.value, &length) == RATIONAL_OK &&
+        rational_mul(config->arrival_min_beats, beat, &needed) == RATIONAL_OK && rational_cmp(length, needed) >= 0) {
         return true;
     }
     return config->soprano_rest_counts && last + 1 < count && segments[last + 1].input->soprano_degree == 0;
@@ -114,13 +112,9 @@ static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t 
 /* Whether the segment starts on the beat grid (its offset in the measure is a whole number of beats). */
 static bool starts_on_beat(const HarmonySegment *segment, const HarmonyCadenceConfig *config) {
     const HarmonySegmentInput *input = segment->input;
-    double beat = rational_to_double(config->beat_length);
-    if (input->has_beat_length) {
-        beat = (double)input->beat_length.value.num / (double)input->beat_length.value.den;
-    }
     const Duration *offset = metrical_position_offset(input->segment.position);
-    double beats = ((double)offset->value.num / (double)offset->value.den) / beat;
-    return fabs(beats - floor(beats + 0.5)) < 1e-9;
+    Rational beats;
+    return rational_div(offset->value, beat_length_of(input, config), &beats) == RATIONAL_OK && beats.den == 1;
 }
 
 /* Whether the dominant starts on a stronger beat than the tonic: a stronger BeatStrength, or, at equal strength, on
@@ -677,7 +671,7 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
 /* The index of the segment that starts at `start` whole notes, from 1 on; false when none does. */
 static bool section_start_segment(const HarmonySegment *segments, size_t count, Rational start, size_t *out) {
     for (size_t i = 1; i < count; i++) {
-        if (fabs(whole_notes(&segments[i].input->segment.span.start) - rational_to_double(start)) < 1e-9) {
+        if (rational_equals(segments[i].input->segment.span.start.value, start)) {
             *out = i;
             return true;
         }

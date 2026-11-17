@@ -28,8 +28,7 @@ bool harmony_key_change_confirm(KeyChangeExtent length_extent, Rational region_s
     }
     bool confirmed = false;
     for (size_t i = 0; i < cadence_count && !confirmed; i++) {
-        confirmed = rational_to_double(cadence_arrivals[i]) >= rational_to_double(region_start) - 1e-9 &&
-                    rational_to_double(cadence_arrivals[i]) < rational_to_double(region_end) - 1e-9;
+        confirmed = rational_cmp(cadence_arrivals[i], region_start) >= 0 && rational_cmp(cadence_arrivals[i], region_end) < 0;
     }
     if (confirmed) {
         *out = key_change_extent_is_modulation(length_extent) ? length_extent : KEY_CHANGE_EXTENT_WEAK_MODULATION;

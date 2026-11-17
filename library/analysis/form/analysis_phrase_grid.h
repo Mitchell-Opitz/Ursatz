@@ -34,7 +34,7 @@
  *   rest(m)     0.3 when no melody note sounds in the last half beat of m (the beat of the MeterMap at m)
  *   return(m)   0.3 when the melody notes starting in m + 1 and m + 2, at least 6 of them, repeat an earlier pair of measures:
  *               for some measure b from the first measure to m - 5, the notes starting in b and b + 1 are as many, their
- *               onsets (relative to the start of b, and of m + 1) are equal within 1e-6 whole notes, and so are the semitone
+ *               onsets (relative to the start of b, and of m + 1) are exactly equal, and so are the semitone
  *               steps between neighbouring notes
  *   evidence(m) the sum of the four
  *
