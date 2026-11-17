@@ -47,7 +47,7 @@ The themes (A, B, E's embellished B, the codettas) are composed and heard back a
 
 ## What was measured
 
-`tests/test_sonata_forms.c` (slow, one test per form) composes each form in eight rows of key and meter, seeds 1 to 10, each seed tried again from the next seeds, up to 16 times, as the piece entry does (`PIECE_SEED_TRIES`). Every row composes 10 of 10. Each composed run is checked: B, C1 and C2 in the subordinate key throughout; E in the elaboration key throughout, B's melody moved by the key difference at its onsets with notes added; P and S in the development and sequence keys, S's melody P's moved; R, A1, T1 and C4 at home; B1 and C3 with the onsets and durations of B and C1 and the pitches moved (and, in `sonatina` in a minor piece, mapped), in the home key or the tonic major; K ending on the tonic.
+`tests/test_form_families.c` (`test_sonata_forms_<form>`, slow, one test per form) composes each form in eight rows of key and meter, seeds 1 to 10, each seed tried again from the next seeds, up to 16 times, as the piece entry does (`PIECE_SEED_TRIES`). Every row composes 10 of 10. Each composed run is checked: B, C1 and C2 in the subordinate key throughout; E in the elaboration key throughout, B's melody moved by the key difference at its onsets with notes added; P and S in the development and sequence keys, S's melody P's moved; R, A1, T1 and C4 at home; B1 and C3 with the onsets and durations of B and C1 and the pitches moved (and, in `sonatina` in a minor piece, mapped), in the home key or the tonic major; K ending on the tonic.
 
 | Row | `sonatina`: first seed / tries / s a seed | `sonatina-tonic-major` |
 | --- | --- | --- |

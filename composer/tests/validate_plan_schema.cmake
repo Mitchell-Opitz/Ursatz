@@ -1,12 +1,7 @@
 # Validates the plan files against schema/plan.v2.schema.json: the CLI snapshots' plan files and every plan file the
 # plan JSON test wrote back from the fixtures and snapshots (plan_written_*). Run with cmake -P and -DPYTHON,
-# -DHAVE_JSONSCHEMA, -DVALIDATOR, -DSCHEMA, -DSNAPSHOT_DIR and -DWRITTEN_DIR. Prints a SKIPPED line (matched by the
-# test's SKIP_REGULAR_EXPRESSION) when python3 with jsonschema was not found at configure time.
-
-if(NOT HAVE_JSONSCHEMA)
-    message("SKIPPED: python3 with the jsonschema module was not found at configure time")
-    return()
-endif()
+# -DVALIDATOR, -DSCHEMA, -DSNAPSHOT_DIR and -DWRITTEN_DIR. The test is registered only when python3 with jsonschema was
+# found at configure time (-DPYTHON is that python3).
 
 file(GLOB snapshots "${SNAPSHOT_DIR}/*.plan.json")
 file(GLOB written "${WRITTEN_DIR}/plan_written_*")

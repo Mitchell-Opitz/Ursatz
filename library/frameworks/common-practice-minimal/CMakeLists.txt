@@ -31,4 +31,6 @@ ursatz_public_headers(common_practice_minimal
 )
 target_link_libraries(common_practice_minimal PUBLIC standard_tonality ursatz m)
 
-ursatz_add_tests()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+endif()

@@ -9,6 +9,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -58,7 +59,7 @@ static bool time_less(Time a, Time b) {
 
 /* The request: tests/fixtures/theme/one-motive.json in C major, with the meter, the motive and the seed given. */
 static char *request_of(const char *degrees, const char *meter, const char *into, unsigned seed) {
-    char *text = test_read_file(COMPOSER_FIXTURE_DIR "/theme/one-motive.json", NULL);
+    char *text = test_must_read_file(COMPOSER_FIXTURE_DIR "/theme/one-motive.json", NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
     assert(request);

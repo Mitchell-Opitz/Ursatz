@@ -8,6 +8,7 @@
 #include <ursatz_composer/theme_shape.h>
 
 #include "grow/grow_internal.h"
+#include "support/test_composer.h"
 
 /*
  * The four extensions of a theme (R-468, B3 of P47): internal repetition, a stretched cadence, an addition after the
@@ -126,16 +127,6 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     return request;
 }
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 /* The length of a span in bars of the scenario's meter; the span must be whole bars. */
 static size_t whole_bars(Rational time, const Scenario *scenario) {
     Rational bar;
@@ -147,11 +138,11 @@ static size_t whole_bars(Rational time, const Scenario *scenario) {
 
 /* The section is as long as all the bars and each node lies where the case puts it, in whole bars. */
 static void check_spans(const PiecePlan *plan, const Scenario *scenario, const Case *item) {
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
     assert(whole_bars(plan_node_span(plan, theme).length, scenario) == item->bars);
     for (const Span *want = item->spans; want->name; want++) {
-        NodeId node = find_node(plan, want->name);
+        NodeId node = test_find_node(plan, want->name);
         if (node == PLAN_NODE_NONE) {
             fprintf(stderr, "%s, %s: no node %s\n", scenario->name, item->name, want->name);
         }
@@ -208,9 +199,9 @@ static int last_pitch_class(const PiecePlan *plan, NodeId idea) {
 
 /* A repeat's motive against the one of the idea it repeats: a step lower, note for note (sequential), or another of the same contour. */
 static void check_repeat(const PiecePlan *plan, const char *idea_name, const char *repeat_name, bool varied) {
-    NodeId idea = find_node(plan, idea_name);
-    NodeId repeat = find_node(plan, repeat_name);
-    NodeId extension = find_node(plan, "extension 1");
+    NodeId idea = test_find_node(plan, idea_name);
+    NodeId repeat = test_find_node(plan, repeat_name);
+    NodeId extension = test_find_node(plan, "extension 1");
     assert(idea != PLAN_NODE_NONE && repeat != PLAN_NODE_NONE && extension != PLAN_NODE_NONE);
     /* The repeat asks for the extension's motive; the idea for the motive node of its own. */
     assert(asked_motive(plan, repeat) == extension);
@@ -269,8 +260,8 @@ static size_t chords_in(const PiecePlan *plan, PlanSpan span, const PlanHarmony 
 
 /* A V then a vi at the end of the idea before the evaded cadence, the theme's cadence at the end of the idea after it. */
 static void check_evaded(const PiecePlan *plan, const Scenario *scenario) {
-    NodeId idea = find_node(plan, "cadential");
-    NodeId after = find_node(plan, "cadential after the evaded cadence");
+    NodeId idea = test_find_node(plan, "cadential");
+    NodeId after = test_find_node(plan, "cadential after the evaded cadence");
     const PlanHarmony *chords[32];
     PlanSpan span = plan_node_span(plan, idea);
     size_t count = chords_in(plan, span, chords, 32);
@@ -287,12 +278,12 @@ static void check_evaded(const PiecePlan *plan, const Scenario *scenario) {
 
 /* The addition's chords go from a tonic to a tonic. */
 static void check_addition(const PiecePlan *plan, const Scenario *scenario) {
-    NodeId addition = find_node(plan, "addition");
+    NodeId addition = test_find_node(plan, "addition");
     const PlanHarmony *chords[32];
     size_t count = chords_in(plan, plan_node_span(plan, addition), chords, 32);
     assert(count >= 1 && is_tonic(chords[0]->roman_numeral) && is_tonic(chords[count - 1]->roman_numeral));
     /* Its melody ends on the cadence's tone, the tonic. */
-    assert(last_pitch_class(plan, find_node(plan, "addition idea")) == scenario->tonic);
+    assert(last_pitch_class(plan, test_find_node(plan, "addition idea")) == scenario->tonic);
 }
 
 static void check_extension(const PiecePlan *plan, const Scenario *scenario, const Case *item) {
@@ -305,7 +296,7 @@ static void check_extension(const PiecePlan *plan, const Scenario *scenario, con
         break;
     case CHECK_STRETCH:
         /* No idea of its own: the cadential idea is a bar longer (check_spans). */
-        assert(find_node(plan, "extension 1") == PLAN_NODE_NONE);
+        assert(test_find_node(plan, "extension 1") == PLAN_NODE_NONE);
         break;
     case CHECK_ADDITION:
         check_addition(plan, scenario);
@@ -318,7 +309,7 @@ static void check_extension(const PiecePlan *plan, const Scenario *scenario, con
 
 /* The plan carries the construction as given, extension included. */
 static void check_constraint(const PiecePlan *plan, const PlanConstruction *wanted) {
-    const PlanConstraint *constraint = plan_node_find_constraint(plan, find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
+    const PlanConstraint *constraint = plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
     assert(constraint);
     assert(memcmp(constraint->params.construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
     assert(constraint->params.construction.extension_count == wanted->extension_count);

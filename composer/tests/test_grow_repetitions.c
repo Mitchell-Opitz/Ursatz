@@ -4,6 +4,7 @@
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_composer.h"
 
 /*
  * The three repetitions of a presentation (B1 of P34): over seeds 1 to 30 of an 8-bar sentence in C major 4/4 with a 1-bar
@@ -13,16 +14,6 @@
  */
 
 typedef enum { EXACT, DOMINANT_FORM, SEQUENCE } Kind;
-
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
 
 static Motive make_motive(const char *text, int beats, int unit) {
     Motive motive;
@@ -51,7 +42,7 @@ static GrowRequest make_request(const Motive *motive, int tonic, KeyStructureMod
 
 /* How the plan has the repetition made from the basic idea: the relation its motive node asks for. */
 static Kind repetition_kind(const PiecePlan *plan) {
-    NodeId node = find_node(plan, "m1");
+    NodeId node = test_find_node(plan, "m1");
     assert(node != PLAN_NODE_NONE);
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
@@ -77,7 +68,7 @@ static Kind repetition_kind(const PiecePlan *plan) {
 /* The notes written on the motive node `name`: onsets, durations and pitches. */
 static size_t written_notes(const PiecePlan *plan, const char *name, const PlanNote **notes) {
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
-    assert(plan_node_lane_spans(plan, find_node(plan, name), &span, 1) == 1);
+    assert(plan_node_lane_spans(plan, test_find_node(plan, name), &span, 1) == 1);
     const PlanNotes *held = &plan_lane_span_payload(plan, span)->notes;
     *notes = held->notes;
     return held->note_count;
@@ -101,7 +92,7 @@ static int step_of(int midi) {
 /* The first chord of the idea. */
 static const char *first_chord(const PiecePlan *plan, const char *idea) {
     LaneSpanId chord = PLAN_LANE_SPAN_NONE;
-    assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, find_node(plan, idea)), &chord, 1) >= 1);
+    assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, test_find_node(plan, idea)), &chord, 1) >= 1);
     return plan_lane_span_payload(plan, chord)->harmony.roman_numeral;
 }
 

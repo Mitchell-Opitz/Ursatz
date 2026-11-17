@@ -1,378 +1,238 @@
-add_library(analyzer_test_support STATIC support/test_support.c)
-target_include_directories(analyzer_test_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
-target_link_libraries(analyzer_test_support PUBLIC ursatz_analyzer cjson)
+ursatz_test_library(analyzer_test_support SOURCES support/test_support.c LIBS ursatz_analyzer ursatz_test_support cjson
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/support)
 
-add_executable(test_analysis_pipeline test_analysis_pipeline.c)
-target_link_libraries(test_analysis_pipeline PRIVATE ursatz_analyzer analyzer_test_support)
-add_test(NAME test_analysis_pipeline COMMAND test_analysis_pipeline)
+ursatz_test(test_analysis_pipeline LIBS ursatz_analyzer analyzer_test_support)
 
-add_executable(test_corpus_key_estimation test_corpus_key_estimation.c)
-target_link_libraries(test_corpus_key_estimation PRIVATE ursatz_analyzer)
-target_compile_definitions(test_corpus_key_estimation PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_corpus_key_estimation COMMAND test_corpus_key_estimation)
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
-set_tests_properties(test_corpus_key_estimation PROPERTIES LABELS slow)
+ursatz_test(test_corpus_key_estimation LIBS ursatz_analyzer
+    LABELS slow)
 
-add_executable(test_long_labels test_long_labels.c)
-target_link_libraries(test_long_labels PRIVATE ursatz_analyzer)
-target_compile_definitions(test_long_labels PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_long_labels COMMAND test_long_labels)
 # Over 10 s in the fast set (about 37 s of CPU measured): runs nightly.
-set_tests_properties(test_long_labels PROPERTIES LABELS slow)
+ursatz_test(test_long_labels LIBS ursatz_analyzer
+    LABELS slow)
 
-add_executable(test_analysis_document test_analysis_document.c)
-target_link_libraries(test_analysis_document PRIVATE ursatz_analyzer analyzer_test_support cjson)
-add_test(NAME test_analysis_document COMMAND test_analysis_document)
+ursatz_test(test_analysis_document LIBS ursatz_analyzer analyzer_test_support cjson)
 
-add_test(NAME test_cli_output_flags
-         COMMAND ${CMAKE_COMMAND}
+ursatz_test(test_cli_output_flags COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 -DFIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_output_flags
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_output_flags.cmake)
 
-# Optional: schema validation needs python3 with the jsonschema module.
-find_package(Python3 COMPONENTS Interpreter QUIET)
-set(URSATZ_ANALYZER_HAVE_JSONSCHEMA FALSE)
-if(Python3_Interpreter_FOUND)
-    execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jsonschema"
-                    RESULT_VARIABLE jsonschema_result OUTPUT_QUIET ERROR_QUIET)
-    if(jsonschema_result EQUAL 0)
-        set(URSATZ_ANALYZER_HAVE_JSONSCHEMA TRUE)
-    endif()
-endif()
-if(NOT URSATZ_ANALYZER_HAVE_JSONSCHEMA)
-    message(STATUS "python3 with jsonschema not found: test_analysis_document_schema will be skipped")
+if(URSATZ_JSONSCHEMA_PYTHON)
+    # The smoke validates the Bach 114 document only.
+    ursatz_test(test_analysis_document_schema_smoke COMMAND ${CMAKE_COMMAND}
+                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
+                     -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/framework-v1-corpus
+                     "-DONLY=Bach 114.mid"
+                     -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema_smoke
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake
+        LABELS schema)
+    # Over 10 s in the fast set (about 49 s of CPU measured): runs nightly.
+    ursatz_test(test_analysis_document_schema COMMAND ${CMAKE_COMMAND}
+                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
+                     -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/framework-v1-corpus
+                     -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake
+        LABELS schema slow)
 endif()
 
-add_test(NAME test_analysis_document_schema
-         COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DPYTHON=${Python3_EXECUTABLE}
-                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
-                 -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/framework-v1-corpus
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake)
-# Over 10 s in the fast set (about 49 s of CPU measured): runs nightly.
-set_tests_properties(test_analysis_document_schema PROPERTIES LABELS slow)
-set_tests_properties(test_analysis_document_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
-
-add_executable(test_document_snapshots test_document_snapshots.c)
-target_link_libraries(test_document_snapshots PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_document_snapshots PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_document_snapshots COMMAND test_document_snapshots)
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
-set_tests_properties(test_document_snapshots PROPERTIES LABELS slow)
+ursatz_test(test_document_snapshots LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow)
 
-add_executable(test_analysis_result test_analysis_result.c)
-target_link_libraries(test_analysis_result PRIVATE ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
-target_compile_definitions(test_analysis_result PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_analysis_result_smoke COMMAND test_analysis_result smoke)
-add_test(NAME test_analysis_result COMMAND test_analysis_result)
+ursatz_test_executable(test_analysis_result LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain
+    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+ursatz_test(test_analysis_result_smoke TARGET test_analysis_result ARGS smoke)
 # Over 10 s in the fast set (about 43 s of CPU measured): runs nightly.
-set_tests_properties(test_analysis_result PROPERTIES LABELS slow)
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_analysis_result_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_analysis_result> smoke)
-    set_tests_properties(test_analysis_result_valgrind PROPERTIES LABELS slow)
+ursatz_test(test_analysis_result TARGET test_analysis_result LABELS slow)
+if(URSATZ_VALGRIND)
+    ursatz_test(test_analysis_result_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_analysis_result> smoke LABELS slow
+        valgrind)
 endif()
 
-add_executable(test_chord_sequence test_chord_sequence.c)
-target_link_libraries(test_chord_sequence PRIVATE ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
-target_compile_definitions(test_chord_sequence PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_chord_sequence_smoke COMMAND test_chord_sequence smoke)
-add_test(NAME test_chord_sequence COMMAND test_chord_sequence)
-set_tests_properties(test_chord_sequence PROPERTIES LABELS slow)
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_chord_sequence_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_chord_sequence> smoke)
-    set_tests_properties(test_chord_sequence_valgrind PROPERTIES LABELS slow)
+ursatz_test_executable(test_chord_sequence LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
+ursatz_test(test_chord_sequence_smoke TARGET test_chord_sequence ARGS smoke)
+ursatz_test(test_chord_sequence TARGET test_chord_sequence LABELS slow)
+if(URSATZ_VALGRIND)
+    ursatz_test(test_chord_sequence_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_chord_sequence> smoke LABELS slow
+        valgrind)
 endif()
 
-add_executable(test_playback test_playback.c)
-target_link_libraries(test_playback PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_playback PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
-    URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+ursatz_test_executable(test_playback LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_playback COMMAND test_playback)
-add_test(NAME test_playback_smoke COMMAND test_playback smoke)
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_playback_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_playback> smoke)
-    set_tests_properties(test_playback_valgrind PROPERTIES LABELS slow)
+ursatz_test(test_playback TARGET test_playback LABELS golden)
+ursatz_test(test_playback_smoke TARGET test_playback ARGS smoke LABELS golden)
+if(URSATZ_VALGRIND)
+    ursatz_test(test_playback_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_playback> smoke LABELS slow valgrind)
 endif()
 
-add_executable(test_score_export test_score_export.c)
-target_link_libraries(test_score_export PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_score_export PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
-    URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+ursatz_test_executable(test_score_export LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_score_export COMMAND test_score_export)
-add_test(NAME test_score_export_smoke COMMAND test_score_export smoke)
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_score_export_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_score_export> smoke)
-    set_tests_properties(test_score_export_valgrind PROPERTIES LABELS slow)
+ursatz_test(test_score_export TARGET test_score_export LABELS golden PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
+ursatz_test(test_score_export_smoke TARGET test_score_export ARGS smoke LABELS golden
+    PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
+if(URSATZ_VALGRIND)
+    ursatz_test(test_score_export_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_score_export> smoke LABELS slow
+        valgrind PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
 endif()
 
-add_executable(test_measure_locations test_measure_locations.c)
-target_link_libraries(test_measure_locations PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_measure_locations PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_measure_locations COMMAND test_measure_locations)
+ursatz_test_executable(test_measure_locations LIBS ursatz_analyzer analyzer_test_support cjson)
+ursatz_test(test_measure_locations_smoke TARGET test_measure_locations ARGS smoke)
 # Over 10 s in the fast set (about 40 s of CPU measured): runs nightly.
-set_tests_properties(test_measure_locations PROPERTIES LABELS slow)
+ursatz_test(test_measure_locations TARGET test_measure_locations LABELS slow)
 
-add_executable(test_chord_coverage test_chord_coverage.c)
-target_link_libraries(test_chord_coverage PRIVATE ursatz_analyzer)
-target_compile_definitions(test_chord_coverage PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_chord_coverage COMMAND test_chord_coverage)
+ursatz_test_executable(test_chord_coverage LIBS ursatz_analyzer)
+ursatz_test(test_chord_coverage_smoke TARGET test_chord_coverage ARGS smoke)
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
-set_tests_properties(test_chord_coverage PROPERTIES LABELS slow)
+ursatz_test(test_chord_coverage TARGET test_chord_coverage LABELS slow)
 
-add_executable(test_chord_details test_chord_details.c)
-target_link_libraries(test_chord_details PRIVATE ursatz_analyzer analyzer_test_support cjson)
-add_test(NAME test_chord_details COMMAND test_chord_details)
+ursatz_test(test_chord_details LIBS ursatz_analyzer analyzer_test_support cjson)
 
-add_executable(test_key_regions test_key_regions.c)
-target_link_libraries(test_key_regions PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_key_regions PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+ursatz_test_executable(test_key_regions LIBS ursatz_analyzer analyzer_test_support cjson)
 # Both pass since keys are placed on phrases (Ursatz P42, R-397): the regions follow the phrases that arrive in a
 # new key. Before P42 they failed (Clementi missed 1 core measure, Mozart 38 core measures and 5 modulations) and ran
 # under WILL_FAIL.
-add_test(NAME test_key_regions_clementi_36 COMMAND test_key_regions clementi)
-add_test(NAME test_key_regions_mozart_545 COMMAND test_key_regions mozart)
+ursatz_test(test_key_regions_clementi_36 TARGET test_key_regions ARGS clementi)
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
-set_tests_properties(test_key_regions_mozart_545 PROPERTIES LABELS slow)
-add_test(NAME test_key_regions_constructed COMMAND test_key_regions constructed)
+ursatz_test(test_key_regions_mozart_545 TARGET test_key_regions ARGS mozart LABELS slow)
+ursatz_test(test_key_regions_constructed TARGET test_key_regions ARGS constructed)
 
-add_executable(test_roman_numerals test_roman_numerals.c)
-target_link_libraries(test_roman_numerals PRIVATE ursatz_analyzer analyzer_test_support cjson m)
-target_compile_definitions(test_roman_numerals PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_roman_numerals COMMAND test_roman_numerals)
+ursatz_test_executable(test_roman_numerals LIBS ursatz_analyzer analyzer_test_support cjson m)
+ursatz_test(test_roman_numerals_smoke TARGET test_roman_numerals ARGS smoke)
 # Over 10 s in the fast set (about 42 s of CPU measured): runs nightly.
-set_tests_properties(test_roman_numerals PROPERTIES LABELS slow)
+ursatz_test(test_roman_numerals TARGET test_roman_numerals LABELS slow)
 
-add_executable(test_outer_voices test_outer_voices.c)
-target_link_libraries(test_outer_voices PRIVATE ursatz_analyzer analyzer_test_support cjson)
-add_test(NAME test_outer_voices COMMAND test_outer_voices)
+ursatz_test(test_outer_voices LIBS ursatz_analyzer analyzer_test_support cjson)
 
-add_executable(test_cadences test_cadences.c)
-target_link_libraries(test_cadences PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_cadences PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_cadences COMMAND test_cadences)
+ursatz_test_executable(test_cadences LIBS ursatz_analyzer analyzer_test_support cjson)
+ursatz_test(test_cadences_smoke TARGET test_cadences ARGS smoke)
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
-set_tests_properties(test_cadences PROPERTIES LABELS slow)
+ursatz_test(test_cadences TARGET test_cadences LABELS slow)
 
-add_executable(test_harmonic_function test_harmonic_function.c)
-target_link_libraries(test_harmonic_function PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_harmonic_function PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_harmonic_function COMMAND test_harmonic_function)
+ursatz_test_executable(test_harmonic_function LIBS ursatz_analyzer analyzer_test_support cjson)
+ursatz_test(test_harmonic_function_smoke TARGET test_harmonic_function ARGS smoke)
 # Over 10 s in the fast set (about 40 s of CPU measured): runs nightly.
-set_tests_properties(test_harmonic_function PROPERTIES LABELS slow)
+ursatz_test(test_harmonic_function TARGET test_harmonic_function LABELS slow)
 
-add_executable(test_progressions test_progressions.c)
-target_link_libraries(test_progressions PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_include_directories(test_progressions PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_progressions PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_progressions COMMAND test_progressions)
+ursatz_test_executable(test_progressions LIBS ursatz_analyzer analyzer_test_support cjson
+    INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test(test_progressions_smoke TARGET test_progressions ARGS smoke)
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
-set_tests_properties(test_progressions PROPERTIES LABELS slow)
+ursatz_test(test_progressions TARGET test_progressions LABELS slow)
 # Expected to fail: the library's Roman numerals give Bach 114 the most common progression I > IV7 (6 occurrences,
 # tied with ii > iii7), which ends on IV7, not I (see README, Known limits). The assertion stays as the target; remove
 # WILL_FAIL when the library meets it.
-add_test(NAME test_progressions_bach_114_top COMMAND test_progressions bach-top)
-set_tests_properties(test_progressions_bach_114_top PROPERTIES WILL_FAIL TRUE)
+ursatz_test(test_progressions_bach_114_top TARGET test_progressions ARGS bach-top PROPERTIES WILL_FAIL TRUE)
 
-add_executable(test_phrases test_phrases.c)
-target_link_libraries(test_phrases PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_phrases PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_phrases COMMAND test_phrases)
+ursatz_test_executable(test_phrases LIBS ursatz_analyzer analyzer_test_support cjson)
+ursatz_test(test_phrases_smoke TARGET test_phrases ARGS smoke)
 # Over 10 s in the fast set (about 42 s of CPU measured): runs nightly.
-set_tests_properties(test_phrases PROPERTIES LABELS slow)
+ursatz_test(test_phrases TARGET test_phrases LABELS slow)
 
-add_executable(test_themes test_themes.c)
-target_link_libraries(test_themes PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_themes PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_themes COMMAND test_themes)
+ursatz_test_executable(test_themes LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+ursatz_test(test_themes_smoke TARGET test_themes ARGS smoke)
 # Over 10 s in the fast set (about 44 s of CPU measured): runs nightly.
-set_tests_properties(test_themes PROPERTIES LABELS slow)
+ursatz_test(test_themes TARGET test_themes LABELS slow)
 
-add_executable(test_form_plan test_form_plan.c)
-target_link_libraries(test_form_plan PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_form_plan PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_form_plan COMMAND test_form_plan)
+ursatz_test_executable(test_form_plan LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+ursatz_test(test_form_plan_smoke TARGET test_form_plan ARGS smoke)
 # Over 10 s in the fast set (about 46 s of CPU measured): runs nightly.
-set_tests_properties(test_form_plan PROPERTIES LABELS slow)
+ursatz_test(test_form_plan TARGET test_form_plan LABELS slow)
 
-add_executable(test_motives test_motives.c)
-target_link_libraries(test_motives PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_motives PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_motives COMMAND test_motives)
 # Over 10 s in the fast set (about 80 s of CPU measured): runs nightly.
-set_tests_properties(test_motives PROPERTIES LABELS slow)
+ursatz_test(test_motives LIBS ursatz_analyzer analyzer_test_support cjson
+    LABELS slow)
 
-add_executable(test_motive_sketch_map test_motive_sketch_map.c)
-target_link_libraries(test_motive_sketch_map PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_include_directories(test_motive_sketch_map PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_motive_sketch_map PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_motive_sketch_map COMMAND test_motive_sketch_map)
 # Over 10 s in the fast set (about 37 s of CPU measured): runs nightly.
-set_tests_properties(test_motive_sketch_map PROPERTIES LABELS slow)
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_motive_sketch_map_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_motive_sketch_map>)
-    set_tests_properties(test_motive_sketch_map_valgrind PROPERTIES LABELS slow)
+ursatz_test(test_motive_sketch_map LIBS ursatz_analyzer analyzer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    LABELS slow)
+if(URSATZ_VALGRIND)
+    ursatz_test(test_motive_sketch_map_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_motive_sketch_map> LABELS slow
+        valgrind)
 endif()
 
-add_executable(test_melody test_melody.c)
-target_link_libraries(test_melody PRIVATE ursatz_analyzer analyzer_test_support cjson m)
-target_compile_definitions(test_melody PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_melody COMMAND test_melody)
+ursatz_test_executable(test_melody LIBS ursatz_analyzer analyzer_test_support cjson m)
+ursatz_test(test_melody TARGET test_melody)
 # Expected to fail: the extracted soprano of Bach 114 misses the annotated ranges (the extractor adopts a left-hand note
 # where the right hand rests, at the start of measure 4) and gets the right recovery status for 4 of the 11 annotated
 # leaps (36.4%, target 90%): it keeps one soprano note per segment, which drops the quick notes the other leaps arrive on.
 # Both climaxes are right. The assertions stay as the target; remove WILL_FAIL when the extraction meets it.
-add_test(NAME test_melody_bach_114_target COMMAND test_melody bach-114-target)
-set_tests_properties(test_melody_bach_114_target PROPERTIES WILL_FAIL TRUE)
+ursatz_test(test_melody_bach_114_target TARGET test_melody ARGS bach-114-target PROPERTIES WILL_FAIL TRUE)
 
-add_executable(test_rhythm test_rhythm.c)
-target_link_libraries(test_rhythm PRIVATE ursatz_analyzer analyzer_test_support cjson m)
-target_compile_definitions(test_rhythm PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_rhythm COMMAND test_rhythm)
-add_test(NAME test_rhythm_constructed COMMAND test_rhythm constructed)
+ursatz_test_executable(test_rhythm LIBS ursatz_analyzer analyzer_test_support cjson m)
+ursatz_test(test_rhythm TARGET test_rhythm)
+ursatz_test(test_rhythm_constructed TARGET test_rhythm ARGS constructed)
 # Expected to fail: the form adapter reports no elided cadence, so the hypermeter has no reinterpretation, and Field 5's
 # annotation has one (measure 9, where the phrase of measures 5 to 8 is elided with the next). The syncopation, the
 # hemiolas (none) and 7 of 8 hyperdownbeats (87.5%, target 80%; measure 18 is missed) meet the target. The assertions
 # stay as the target; remove WILL_FAIL when the form adapter reports elision.
-add_test(NAME test_rhythm_field5_target COMMAND test_rhythm field5-target)
-set_tests_properties(test_rhythm_field5_target PROPERTIES WILL_FAIL TRUE)
+ursatz_test(test_rhythm_field5_target TARGET test_rhythm ARGS field5-target PROPERTIES WILL_FAIL TRUE)
 
-add_executable(test_analyzer_texture test_texture.c)
-target_link_libraries(test_analyzer_texture PRIVATE ursatz_analyzer)
-target_compile_definitions(test_analyzer_texture PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_analyzer_texture COMMAND test_analyzer_texture)
+ursatz_test(test_analyzer_texture SOURCES test_texture.c LIBS ursatz_test_support ursatz_analyzer)
 
-add_executable(test_voice_leading test_voice_leading.c)
-target_link_libraries(test_voice_leading PRIVATE ursatz_analyzer)
-target_compile_definitions(test_voice_leading PRIVATE
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_voice_leading COMMAND test_voice_leading)
+ursatz_test(test_voice_leading LIBS ursatz_test_support ursatz_analyzer
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-add_executable(test_markings test_markings.c)
-target_link_libraries(test_markings PRIVATE ursatz_analyzer)
-target_compile_definitions(test_markings PRIVATE
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_markings COMMAND test_markings)
+ursatz_test(test_markings LIBS ursatz_test_support ursatz_analyzer
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-add_executable(test_schemas test_schemas.c)
-target_link_libraries(test_schemas PRIVATE ursatz_analyzer m)
-target_compile_definitions(test_schemas PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
-add_test(NAME test_schemas COMMAND test_schemas)
+ursatz_test_executable(test_schemas LIBS ursatz_test_support ursatz_analyzer m
+    DEFINITIONS URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
+ursatz_test(test_schemas_smoke TARGET test_schemas ARGS smoke)
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
-set_tests_properties(test_schemas PROPERTIES LABELS slow)
+ursatz_test(test_schemas TARGET test_schemas LABELS slow)
 
-add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
-target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_musicxml_midi_agreement PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_musicxml_midi_agreement COMMAND test_musicxml_midi_agreement)
+ursatz_test_executable(test_musicxml_midi_agreement LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+ursatz_test(test_musicxml_midi_agreement_smoke TARGET test_musicxml_midi_agreement ARGS smoke)
 # Over 10 s in the fast set (about 76 s of CPU measured): runs nightly.
-set_tests_properties(test_musicxml_midi_agreement PROPERTIES LABELS slow)
+ursatz_test(test_musicxml_midi_agreement TARGET test_musicxml_midi_agreement LABELS slow)
 
-add_executable(test_musicxml_input test_musicxml_input.c)
-target_link_libraries(test_musicxml_input PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_musicxml_input PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_musicxml_input COMMAND test_musicxml_input)
+ursatz_test(test_musicxml_input LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-add_executable(test_midi_parts test_midi_parts.c)
-target_link_libraries(test_midi_parts PRIVATE ursatz_analyzer)
-target_compile_definitions(test_midi_parts PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
-add_test(NAME test_midi_parts COMMAND test_midi_parts)
-find_program(VALGRIND_PROGRAM valgrind)
+ursatz_test(test_midi_parts LIBS ursatz_analyzer analyzer_test_support)
 
-add_executable(test_tempo_map_import test_tempo_map_import.c)
-target_link_libraries(test_tempo_map_import PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_include_directories(test_tempo_map_import PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(test_tempo_map_import PRIVATE URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_tempo_map_import COMMAND test_tempo_map_import)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_tempo_map_import_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_tempo_map_import>)
+ursatz_test(test_tempo_map_import LIBS ursatz_analyzer analyzer_test_support cjson
+    INCLUDES ${CMAKE_CURRENT_SOURCE_DIR} DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
+    PROPERTIES RESOURCE_LOCK analyzer_tempo_map_file)
+if(URSATZ_VALGRIND)
+    ursatz_test(test_tempo_map_import_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_tempo_map_import> LABELS slow valgrind
+        PROPERTIES RESOURCE_LOCK analyzer_tempo_map_file)
 endif()
 
-add_executable(test_notation_reading test_notation_reading.c)
-target_link_libraries(test_notation_reading PRIVATE ursatz_analyzer)
-target_compile_definitions(test_notation_reading PRIVATE URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_notation_reading COMMAND test_notation_reading)
+ursatz_test(test_notation_reading LIBS ursatz_analyzer
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-add_test(NAME test_cli_notation_reading
-         COMMAND ${CMAKE_COMMAND}
+ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
                  -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
-                 -DPYTHON=${Python3_EXECUTABLE}
-                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
+                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
                  -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_notation_reading
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_notation_reading.cmake)
 
-add_test(NAME test_cli_input_formats
-         COMMAND ${CMAKE_COMMAND}
+ursatz_test(test_cli_input_formats COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DMIDI_FIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 -DMIDI_FIXTURE=${URSATZ_FIXTURES_DIR}/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DMUSICXML_DIR=${CMAKE_CURRENT_SOURCE_DIR}/musicxml
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_input_formats
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_input_formats.cmake)
@@ -380,7 +240,7 @@ add_test(NAME test_cli_input_formats
 # Test corpora, built in the build tree at configure time (never committed twice). "reference" is the five framework-v1
 # pieces; "mixed" has one MIDI, one MusicXML in a subfolder, one .txt and one broken .mid.
 set(URSATZ_CORPORA_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpora)
-set(URSATZ_REFERENCE_FIXTURES ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/framework-v1-corpus)
+set(URSATZ_REFERENCE_FIXTURES ${URSATZ_FIXTURES_DIR}/framework-v1-corpus)
 file(REMOVE_RECURSE ${URSATZ_CORPORA_DIR})
 file(GLOB reference_pieces ${URSATZ_REFERENCE_FIXTURES}/*.mid)
 file(COPY ${reference_pieces} DESTINATION ${URSATZ_CORPORA_DIR}/reference)
@@ -389,208 +249,178 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/musicxml/field-1.musicxml DESTINATION ${UR
 file(WRITE ${URSATZ_CORPORA_DIR}/mixed/notes.txt "not a piece\n")
 file(WRITE ${URSATZ_CORPORA_DIR}/mixed/broken.mid "not a midi file\n")
 # "chorales" is the ten accuracy-corpus chorales (private use, R-016), one MusicXML file each;
-# "sonatinas" is the two sonatina movements.
-file(GLOB chorale_scores ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/chorales/*.musicxml)
-file(COPY ${chorale_scores} DESTINATION ${URSATZ_CORPORA_DIR}/chorales)
+# "sonatinas" is the two sonatina movements; "small" is Bach 114 and Clementi 36 (the smoke runs of the CLI tests).
+file(MAKE_DIRECTORY ${URSATZ_CORPORA_DIR}/chorales)
+file(GLOB chorale_folders LIST_DIRECTORIES true ${URSATZ_FIXTURES_DIR}/accuracy-corpus/chorale-*)
+foreach(chorale_folder IN LISTS chorale_folders)
+    get_filename_component(chorale ${chorale_folder} NAME)
+    file(COPY_FILE ${chorale_folder}/score.musicxml ${URSATZ_CORPORA_DIR}/chorales/${chorale}.musicxml)
+endforeach()
 file(COPY "${URSATZ_REFERENCE_FIXTURES}/Clementi 36.mid" "${URSATZ_REFERENCE_FIXTURES}/Mozart 545.mid"
      DESTINATION ${URSATZ_CORPORA_DIR}/sonatinas)
+file(COPY "${URSATZ_REFERENCE_FIXTURES}/Bach 114.mid" "${URSATZ_REFERENCE_FIXTURES}/Clementi 36.mid"
+     DESTINATION ${URSATZ_CORPORA_DIR}/small)
 
-add_executable(test_analyzer_corpus test_corpus.c)
-target_link_libraries(test_analyzer_corpus PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_analyzer_corpus PRIVATE
-    URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
-    URSATZ_CORPUS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_work"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_analyzer_corpus COMMAND test_analyzer_corpus)
 # Over 10 s in the fast set (about 122 s of CPU measured): runs nightly.
-set_tests_properties(test_analyzer_corpus PROPERTIES LABELS slow)
 # Tests sharing a work directory take a RESOURCE_LOCK named after it, so parallel runs do not collide.
-set_tests_properties(test_analyzer_corpus PROPERTIES RESOURCE_LOCK corpus_work)
+ursatz_test(test_analyzer_corpus SOURCES test_corpus.c LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
+    URSATZ_CORPUS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_work"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow PROPERTIES RESOURCE_LOCK corpus_work)
 
-add_test(NAME test_cli_corpus
-         COMMAND ${CMAKE_COMMAND}
+ursatz_test(test_cli_corpus COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DFIXTURE=${URSATZ_REFERENCE_FIXTURES}/Field\ 1.mid
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_corpus
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_corpus.cmake)
 
-add_test(NAME test_corpus_index_schema
-         COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DPYTHON=${Python3_EXECUTABLE}
-                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v2.schema.json
-                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/corpus_index_schema
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_corpus_index.cmake)
 # Over 10 s in the fast set (about 41 s of CPU measured): runs nightly.
-set_tests_properties(test_corpus_index_schema PROPERTIES LABELS slow)
-set_tests_properties(test_corpus_index_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
+if(URSATZ_JSONSCHEMA_PYTHON)
+    ursatz_test(test_corpus_index_schema COMMAND ${CMAKE_COMMAND}
+                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v2.schema.json
+                     -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
+                     -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/corpus_index_schema
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_corpus_index.cmake
+        LABELS schema slow)
+endif()
 
-add_executable(test_analyzer_style_labels test_style_labels.c)
-target_link_libraries(test_analyzer_style_labels PRIVATE ursatz_analyzer)
-target_include_directories(test_analyzer_style_labels PRIVATE ${PROJECT_SOURCE_DIR}/src)
-add_test(NAME test_analyzer_style_labels COMMAND test_analyzer_style_labels)
+ursatz_test(test_analyzer_style_labels SOURCES test_style_labels.c LIBS ursatz_test_support ursatz_analyzer
+    INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-add_executable(test_style_profile test_style_profile.c)
-target_link_libraries(test_style_profile PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_style_profile PRIVATE
-    URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
-    URSATZ_STYLE_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/style_work"
-    PROJECT_VERSION_FOR_TESTS="${PROJECT_VERSION}"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_style_profile COMMAND test_style_profile)
 # Over 10 s in the fast set (about 84 s of CPU measured): runs nightly.
-set_tests_properties(test_style_profile PROPERTIES LABELS slow)
-set_tests_properties(test_style_profile PROPERTIES RESOURCE_LOCK style_work)
+ursatz_test(test_style_profile LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
+    URSATZ_STYLE_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/style_work" PROJECT_VERSION_FOR_TESTS="${PROJECT_VERSION}"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow PROPERTIES RESOURCE_LOCK style_work)
 
-add_test(NAME test_cli_style_profile
-         COMMAND ${CMAKE_COMMAND}
+# The smoke profiles the corpus "small" (Bach 114 and Clementi 36).
+ursatz_test(test_cli_style_profile_smoke COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
+                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/style-model.v1.schema.json
+                 -DSMOKE=1
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_style_profile_smoke
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_style_profile.cmake)
+# Over 10 s in the fast set (about 85 s of CPU measured): runs nightly.
+ursatz_test(test_cli_style_profile COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_style_profile
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_style_profile.cmake)
-# Over 10 s in the fast set (about 85 s of CPU measured): runs nightly.
-set_tests_properties(test_cli_style_profile PROPERTIES LABELS slow)
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_style_profile.cmake
+    LABELS slow)
 
-add_test(NAME test_style_model_schema
-         COMMAND ${CMAKE_COMMAND}
-                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DPYTHON=${Python3_EXECUTABLE}
-                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/style-model.v1.schema.json
-                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
-                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/style_model_schema
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_style_model.cmake)
 # Over 10 s in the fast set (about 43 s of CPU measured): runs nightly.
-set_tests_properties(test_style_model_schema PROPERTIES LABELS slow)
-set_tests_properties(test_style_model_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
+if(URSATZ_JSONSCHEMA_PYTHON)
+    ursatz_test(test_style_model_schema COMMAND ${CMAKE_COMMAND}
+                     -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                     -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/style-model.v1.schema.json
+                     -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
+                     -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/style_model_schema
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_style_model.cmake
+        LABELS schema slow)
+endif()
 
-add_executable(test_similar_material test_similar_material.c)
-target_link_libraries(test_similar_material PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_compile_definitions(test_similar_material PRIVATE
-    URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
+ursatz_test_executable(test_similar_material LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_SIMILAR_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/similar_work"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_similar_material COMMAND test_similar_material)
+# The smoke searches Bach 114 alone.
+ursatz_test(test_similar_material_smoke TARGET test_similar_material ARGS smoke PROPERTIES RESOURCE_LOCK similar_work)
 # Over 10 s in the fast set (about 44 s of CPU measured): runs nightly.
-set_tests_properties(test_similar_material PROPERTIES LABELS slow)
-set_tests_properties(test_similar_material PROPERTIES RESOURCE_LOCK similar_work)
+ursatz_test(test_similar_material TARGET test_similar_material LABELS golden slow PROPERTIES RESOURCE_LOCK similar_work)
 
 # The --similar flag: the motive file comes from the test program, which writes it.
-add_test(NAME test_cli_similar_motive_file COMMAND test_similar_material --write-motive ${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid)
-set_tests_properties(test_cli_similar_motive_file PROPERTIES FIXTURES_SETUP similar_motive_file)
-add_test(NAME test_cli_similar
-         COMMAND ${CMAKE_COMMAND}
+ursatz_test(test_cli_similar_motive_file TARGET test_similar_material ARGS --write-motive
+    ${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid PROPERTIES FIXTURES_SETUP similar_motive_file)
+# The smoke searches the corpus "small" (Bach 114 and Clementi 36).
+ursatz_test(test_cli_similar_smoke COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DMOTIVE=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid
-                 -DPYTHON=${Python3_EXECUTABLE}
-                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
+                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/similar-material.v1.schema.json
+                 -DSMOKE=1
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_smoke
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake
+    PROPERTIES FIXTURES_REQUIRED similar_motive_file)
+# Over 10 s in the fast set (about 46 s of CPU measured): runs nightly.
+ursatz_test(test_cli_similar COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
+                 -DMOTIVE=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid
+                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
                  -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/similar-material.v1.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake)
-# Over 10 s in the fast set (about 46 s of CPU measured): runs nightly.
-set_tests_properties(test_cli_similar PROPERTIES LABELS slow)
-set_tests_properties(test_cli_similar PROPERTIES FIXTURES_REQUIRED similar_motive_file)
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake
+    LABELS slow
+    PROPERTIES FIXTURES_REQUIRED similar_motive_file)
 
-add_executable(test_composer_api test_composer_api.c)
-target_link_libraries(test_composer_api PRIVATE ursatz_analyzer cjson)
-target_compile_definitions(test_composer_api PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
+ursatz_test_executable(test_composer_api LIBS ursatz_test_support ursatz_analyzer cjson
+    DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_COMPOSER_API_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/composer_api_work")
-add_test(NAME test_composer_api_smoke COMMAND test_composer_api smoke)
-add_test(NAME test_composer_api COMMAND test_composer_api)
+ursatz_test(test_composer_api_smoke TARGET test_composer_api ARGS smoke PROPERTIES RESOURCE_LOCK composer_api_work)
 # Over 10 s in the fast set (about 130 s of CPU measured): runs nightly.
-set_tests_properties(test_composer_api PROPERTIES LABELS slow)
-set_tests_properties(test_composer_api_smoke test_composer_api PROPERTIES RESOURCE_LOCK composer_api_work)
-find_program(VALGRIND_PROGRAM valgrind)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_composer_api_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_composer_api> smoke)
-    set_tests_properties(test_composer_api_valgrind PROPERTIES LABELS slow)
-    set_tests_properties(test_composer_api_valgrind PROPERTIES RESOURCE_LOCK composer_api_work)
+ursatz_test(test_composer_api TARGET test_composer_api LABELS slow PROPERTIES RESOURCE_LOCK composer_api_work)
+if(URSATZ_VALGRIND)
+    ursatz_test(test_composer_api_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_composer_api> smoke LABELS slow
+        valgrind PROPERTIES RESOURCE_LOCK composer_api_work)
 endif()
 
-add_executable(test_hearing test_hearing.c)
-target_link_libraries(test_hearing PRIVATE ursatz_analyzer cjson ursatz_analyzer::chain)
-target_include_directories(test_hearing PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_hearing PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_HEARING_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/hearing_work")
+ursatz_test_executable(test_hearing LIBS ursatz_test_support ursatz_analyzer cjson ursatz_analyzer::chain
+    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS URSATZ_HEARING_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/hearing_work")
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/hearing_work)
-add_test(NAME test_hearing_smoke COMMAND test_hearing smoke)
-add_test(NAME test_hearing COMMAND test_hearing)
-set_tests_properties(test_hearing PROPERTIES LABELS slow)
-set_tests_properties(test_hearing_smoke test_hearing PROPERTIES RESOURCE_LOCK hearing_work)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_hearing_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_hearing> smoke)
-    set_tests_properties(test_hearing_valgrind PROPERTIES LABELS slow)
-    set_tests_properties(test_hearing_valgrind PROPERTIES RESOURCE_LOCK hearing_work)
+ursatz_test(test_hearing_smoke TARGET test_hearing ARGS smoke PROPERTIES RESOURCE_LOCK hearing_work)
+ursatz_test(test_hearing TARGET test_hearing LABELS slow PROPERTIES RESOURCE_LOCK hearing_work)
+if(URSATZ_VALGRIND)
+    ursatz_test(test_hearing_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_hearing> smoke LABELS slow valgrind
+        PROPERTIES RESOURCE_LOCK hearing_work)
 endif()
 
-add_executable(test_meter_check test_meter_check.c)
-target_link_libraries(test_meter_check PRIVATE ursatz_analyzer analyzer_test_support cjson m)
-target_compile_definitions(test_meter_check PRIVATE URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_meter_check COMMAND test_meter_check)
+ursatz_test_executable(test_meter_check LIBS ursatz_analyzer analyzer_test_support cjson m
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+ursatz_test(test_meter_check_smoke TARGET test_meter_check ARGS smoke)
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
-set_tests_properties(test_meter_check PROPERTIES LABELS slow)
+ursatz_test(test_meter_check TARGET test_meter_check LABELS slow)
 
-add_executable(test_motive_links test_motive_links.c)
-target_link_libraries(test_motive_links PRIVATE ursatz_analyzer analyzer_test_support cjson)
-target_include_directories(test_motive_links PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_compile_definitions(test_motive_links PRIVATE
-    URSATZ_LINKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/links"
-    URSATZ_LINKS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/motive_links_work")
-add_test(NAME test_motive_links COMMAND test_motive_links)
-set_tests_properties(test_motive_links PROPERTIES RESOURCE_LOCK motive_links_work)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_motive_links_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_motive_links>)
-    set_tests_properties(test_motive_links_valgrind PROPERTIES LABELS slow)
-    set_tests_properties(test_motive_links_valgrind PROPERTIES RESOURCE_LOCK motive_links_work)
+ursatz_test(test_motive_links LIBS ursatz_analyzer analyzer_test_support cjson INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS URSATZ_LINKS_DIR="${URSATZ_FIXTURES_DIR}/links"
+    URSATZ_LINKS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/motive_links_work" PROPERTIES RESOURCE_LOCK motive_links_work)
+if(URSATZ_VALGRIND)
+    ursatz_test(test_motive_links_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_motive_links> LABELS slow valgrind
+        PROPERTIES RESOURCE_LOCK motive_links_work)
 endif()
-add_test(NAME test_cli_link_motives
-         COMMAND ${CMAKE_COMMAND}
+ursatz_test(test_cli_link_motives COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/links
-                 -DPYTHON=${Python3_EXECUTABLE}
-                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
+                 -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/links
+                 -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
                  -DLINKS_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-links.v1.schema.json
                  -DCACHE_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-link-cache.v2.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_link_motives
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_link_motives.cmake)
 
-add_executable(test_staleness test_staleness.c)
-target_link_libraries(test_staleness PRIVATE ursatz_analyzer cjson)
-target_compile_definitions(test_staleness PRIVATE
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_staleness COMMAND test_staleness)
-if(VALGRIND_PROGRAM)
-    add_test(NAME test_staleness_valgrind
-             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
-                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
-                     $<TARGET_FILE:test_staleness>)
-    # Over 10 s in the fast set (about 84 s of CPU measured): runs nightly.
-    set_tests_properties(test_staleness_valgrind PROPERTIES LABELS slow)
+ursatz_test(test_staleness LIBS ursatz_test_support ursatz_analyzer cjson
+    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+if(URSATZ_VALGRIND)
+    ursatz_test(test_staleness_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
+        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_staleness> LABELS slow valgrind)
 endif()
+    # Over 10 s in the fast set (about 84 s of CPU measured): runs nightly.
 
-add_executable(test_analyzer_version test_version.c)
-target_link_libraries(test_analyzer_version PRIVATE ursatz_analyzer)
-add_test(NAME test_analyzer_version COMMAND test_analyzer_version)
+ursatz_test(test_analyzer_version SOURCES test_version.c LIBS ursatz_test_support ursatz_analyzer)
 
 # Consumer isolation (A20261104-31): a target linking only ursatz_analyzer cannot include a chain or framework header; one
 # linking ursatz_analyzer::chain reads the chain. The leak targets must fail to compile, so they are left out of the default
@@ -603,39 +433,21 @@ foreach(leak leak_framework leak_chain)
     add_library(analyzer_consumer_${leak} OBJECT EXCLUDE_FROM_ALL consumer/${leak}.c)
     target_link_libraries(analyzer_consumer_${leak} PRIVATE ursatz_analyzer)
 endforeach()
-add_test(NAME test_consumer_isolation
-         COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR}
+ursatz_test(test_consumer_isolation COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_isolation.cmake)
 
-add_executable(test_score_text_reader test_score_text_reader.c)
-target_link_libraries(test_score_text_reader PRIVATE ursatz_analyzer)
-target_include_directories(test_score_text_reader PRIVATE ${PROJECT_SOURCE_DIR}/src)
-add_test(NAME test_score_text_reader COMMAND test_score_text_reader)
+ursatz_test(test_score_text_reader LIBS ursatz_test_support ursatz_analyzer INCLUDES ${PROJECT_SOURCE_DIR}/src)
 
-add_executable(test_text_export test_text_export.c)
-target_link_libraries(test_text_export PRIVATE ursatz_analyzer)
-target_compile_definitions(test_text_export PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
-add_test(NAME test_text_export COMMAND test_text_export)
+ursatz_test(test_text_export LIBS ursatz_test_support ursatz_analyzer
+    DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 
-add_executable(test_text_export_snapshots test_text_export_snapshots.c)
-target_link_libraries(test_text_export_snapshots PRIVATE ursatz_analyzer analyzer_test_support)
-target_compile_definitions(test_text_export_snapshots PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_text_export_snapshots COMMAND test_text_export_snapshots)
+ursatz_test_executable(test_text_export_snapshots LIBS ursatz_analyzer analyzer_test_support
+    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+ursatz_test(test_text_export_snapshots_smoke TARGET test_text_export_snapshots ARGS smoke LABELS golden)
 # Over 10 s in the fast set (about 19 s of CPU measured): runs nightly.
-set_tests_properties(test_text_export_snapshots PROPERTIES LABELS slow)
+ursatz_test(test_text_export_snapshots TARGET test_text_export_snapshots LABELS golden slow)
 
-add_executable(test_material_export test_material_export.c)
-target_link_libraries(test_material_export PRIVATE ursatz_analyzer analyzer_test_support)
-target_compile_definitions(test_material_export PRIVATE
-    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+ursatz_test(test_material_export LIBS ursatz_analyzer analyzer_test_support
+    DEFINITIONS URSATZ_ANALYZER_EXPORT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/export"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-add_test(NAME test_material_export COMMAND test_material_export)
-
-# Default test timeouts by label (30 s, or 1800 s for tests labeled slow), so local runs match CI.
-include(${PROJECT_SOURCE_DIR}/cmake/TestTimeouts.cmake)
-ursatz_analyzer_apply_test_timeouts(${CMAKE_CURRENT_SOURCE_DIR})
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden)

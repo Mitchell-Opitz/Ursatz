@@ -27,4 +27,6 @@ ursatz_public_headers(galant_schemas
 )
 target_link_libraries(galant_schemas PUBLIC standard_counterpoint ursatz)
 
-ursatz_add_tests()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+endif()

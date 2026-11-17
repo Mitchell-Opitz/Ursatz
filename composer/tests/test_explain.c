@@ -14,6 +14,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/style.h>
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_CLI_PATH
 #error "COMPOSER_CLI_PATH is not defined"
@@ -376,7 +377,7 @@ static int test_cli(void) {
 
     /* A record without a style is what main wrote. */
     assert(run("fill explain_test_plan.json --seed 3 --record explain_test_record.json") == 0);
-    char *record = test_read_file("explain_test_record.json", NULL);
+    char *record = test_must_read_file("explain_test_record.json", NULL);
     assert(strstr(record, "\"style\"") == NULL);
     assert(fnv1a_record(record) == MAIN_RECORD_HASH);
     free(record);
@@ -384,13 +385,13 @@ static int test_cli(void) {
     /* --explain: JSON for a name ending in .json, text otherwise; neither changes the record. */
     assert(run("fill explain_test_plan.json --seed 3 --record explain_test_record2.json --explain explain_test.json") == 0);
     assert(run("fill explain_test_plan.json --seed 3 --explain explain_test.txt") == 0);
-    char *a = test_read_file("explain_test_record.json", NULL);
-    char *b = test_read_file("explain_test_record2.json", NULL);
+    char *a = test_must_read_file("explain_test_record.json", NULL);
+    char *b = test_must_read_file("explain_test_record2.json", NULL);
     assert(strcmp(a, b) == 0);
     free(a);
     free(b);
-    char *json = test_read_file("explain_test.json", NULL);
-    char *text = test_read_file("explain_test.txt", NULL);
+    char *json = test_must_read_file("explain_test.json", NULL);
+    char *text = test_must_read_file("explain_test.txt", NULL);
     assert(json[0] == '{' && strstr(json, "\"schema\": \"explanation\""));
     assert(strncmp(text, "section ", 8) == 0 && strstr(text, "chosen:") && strstr(text, "[harmony]"));
     assert(strstr(text, "analyzer check: not made"));
@@ -402,14 +403,14 @@ static int test_cli(void) {
              "fill explain_test_plan.json --seed 3 --check --style %s --record explain_test_record3.json --explain explain_test3.json",
              CHORALES);
     assert(run(arguments) == 0);
-    record = test_read_file("explain_test_record3.json", NULL);
+    record = test_must_read_file("explain_test_record3.json", NULL);
     assert(strstr(record, "\"style\": {"));
     free(record);
-    json = test_read_file("explain_test3.json", NULL);
+    json = test_must_read_file("explain_test3.json", NULL);
     assert(strstr(json, "\"style\": {") && strstr(json, "\"check\": {") && strstr(json, "\"heard\": \"perfect-authentic\""));
     free(json);
     assert(run("fill explain_test_plan.json --seed 3 --check --explain explain_test4.txt") == 0);
-    text = test_read_file("explain_test4.txt", NULL);
+    text = test_must_read_file("explain_test4.txt", NULL);
     assert(strstr(text, "planned agreed") && !strstr(text, "analyzer check: not made"));
     free(text);
 
@@ -419,7 +420,7 @@ static int test_cli(void) {
     fclose(motive);
     assert(run("grow explain_test_motive.txt --into period --key \"C major\" --meter 4/4 --seed 1 --check "
                "--explain explain_test_grow.json") == 0);
-    json = test_read_file("explain_test_grow.json", NULL);
+    json = test_must_read_file("explain_test_grow.json", NULL);
     assert(strstr(json, "\"schema\": \"explanation\"") && strstr(json, "\"stage\": \"harmony\"") &&
            strstr(json, "\"rejections\": ["));
     free(json);
@@ -428,7 +429,7 @@ static int test_cli(void) {
              "--explain explain_test_grow.txt",
              CHORALES);
     assert(run(arguments) == 0);
-    text = test_read_file("explain_test_grow.txt", NULL);
+    text = test_must_read_file("explain_test_grow.txt", NULL);
     assert(strncmp(text, "section theme", 13) == 0 && strstr(text, "(style "));
     free(text);
     printf("fill and grow --explain write the explanation\n");

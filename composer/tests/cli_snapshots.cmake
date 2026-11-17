@@ -1,10 +1,21 @@
 # Seeded CLI output compared with the committed snapshots in tests/snapshots (one file per output of a case).
 # Run with: cmake -DCOMPOSER=<ursatz-composer> -DWORK=<empty working directory> -DSNAPSHOTS=<tests/snapshots>
-#                 -DFIXTURES=<tests/fixtures> [-DUPDATE=1] -P cli_snapshots.cmake
+#                 -DFIXTURES=<tests/fixtures> -P cli_snapshots.cmake
 # The values of the analyzer_version, composer_version and ursatz_commit keys are removed and the working and fixture
 # directories are replaced by <WORK> and <FIXTURES> before comparing text; files ending .json are then compared as JSON
 # values (member order and whitespace do not matter), MIDI, MusicXML and other text byte for byte.
-# UPDATE=1 rewrites the snapshot files instead of comparing.
+# With URSATZ_UPDATE_GOLDENS=1 in the environment every case runs and the snapshot files are rewritten instead of
+# compared (the API tests read many of them: they are written by the CLI), and the script ends with a failure ("goldens
+# updated") so a run with the switch never passes. Comparing runs only COMPARED_CASES below, the CLI front end: the
+# cases no API test reads, and one case per command the API tests cover (the API tests compare the rest of each
+# command's output). The refusal cases (error-*) and version always run.
+
+set(UPDATE FALSE)
+if(NOT "$ENV{URSATZ_UPDATE_GOLDENS}" STREQUAL "" AND NOT "$ENV{URSATZ_UPDATE_GOLDENS}" STREQUAL "0")
+    set(UPDATE TRUE)
+endif()
+
+cmake_policy(SET CMP0057 NEW) # IN_LIST
 
 include("${CMAKE_CURRENT_LIST_DIR}/snapshot_json.cmake")
 
@@ -13,6 +24,13 @@ file(MAKE_DIRECTORY "${WORK}/normal")
 file(MAKE_DIRECTORY "${SNAPSHOTS}")
 
 set(failed "")
+
+# The cases a comparing run snapshots: not read by any API test (motive, random-motive-segments, theme-one-motive-check) and
+# one front-end case per command the API tests cover.
+set(COMPARED_CASES theme-one-motive piece-theme-fill plan-binary grow-sentence motive-notes variants-basic
+    counterpoint-species-1 progression motive random-motive-segments theme-one-motive-check)
+# Cases a comparing run only runs, without snapshots: a refusal case reads their plan (fill.plan.json).
+set(SETUP_CASES fill)
 
 # Runs the composer in WORK and requires exit status 0.
 function(composer)
@@ -43,7 +61,7 @@ function(snapshot name produced)
         return()
     endif()
     if(NOT EXISTS "${SNAPSHOTS}/${name}")
-        message(SEND_ERROR "missing snapshot ${name} (run with -DUPDATE=1 to create it)")
+        message(SEND_ERROR "missing snapshot ${name} (run with URSATZ_UPDATE_GOLDENS=1 to create it)")
         return()
     endif()
     if(name MATCHES "\\.json$")
@@ -64,6 +82,12 @@ endfunction()
 # Runs a case: the arguments, then the snapshots <case>.stdout.<ext> and one per file the command writes.
 function(run_case name stdout_ext)
     set(args ${ARGN})
+    if(NOT UPDATE AND NOT "${name}" IN_LIST COMPARED_CASES)
+        if("${name}" IN_LIST SETUP_CASES)
+            composer(${args})
+        endif()
+        return()
+    endif()
     composer(${args})
     file(RENAME "${WORK}/stdout.txt" "${WORK}/${name}.stdout.${stdout_ext}")
     snapshot("${name}.stdout.${stdout_ext}" "${name}.stdout.${stdout_ext}")
@@ -131,12 +155,14 @@ run_case(variations json variations fill.plan.json --section B --count 2 --seed 
          --musicxml)
 run_case(harmonize json harmonize fill-given.plan.json --section B --count 2 --seed 3 --out-dir harmonizations --format json
          --midi --musicxml)
-foreach(index 1 2)
-    foreach(ext json mid musicxml)
-        snapshot(variations.variation-${index}.${ext} variations/variation-${index}.${ext})
-        snapshot(harmonize.variation-${index}.${ext} harmonizations/variation-${index}.${ext})
+if(UPDATE)
+    foreach(index 1 2)
+        foreach(ext json mid musicxml)
+            snapshot(variations.variation-${index}.${ext} variations/variation-${index}.${ext})
+            snapshot(harmonize.variation-${index}.${ext} harmonizations/variation-${index}.${ext})
+        endforeach()
     endforeach()
-endforeach()
+endif()
 
 # --- grow ----------------------------------------------------------------------------
 
@@ -206,12 +232,14 @@ run_case(piece-regenerate-lane json piece --from "${WORK}/piece-theme-fill.plan.
 # Piece variations of the same section: the printed result, result.json and each variation's plan, MIDI and MusicXML.
 run_case(piece-variations json piece --from "${WORK}/piece-theme-fill.plan.json" --request "${WORK}/theme-fill.request.json"
          --variations a --lane harmony --count 2 --seed 2 --out-dir piece-variations --format json)
-snapshot(piece-variations.result.json piece-variations/result.json)
-foreach(index 1 2)
-    foreach(ext json mid musicxml)
-        snapshot(piece-variations.variation-${index}.${ext} piece-variations/variation-${index}.${ext})
+if(UPDATE)
+    snapshot(piece-variations.result.json piece-variations/result.json)
+    foreach(index 1 2)
+        foreach(ext json mid musicxml)
+            snapshot(piece-variations.variation-${index}.${ext} piece-variations/variation-${index}.${ext})
+        endforeach()
     endforeach()
-endforeach()
+endif()
 
 # --version: the version text is normalized to <VERSION> for this case only.
 composer(--version)
@@ -251,3 +279,7 @@ run_error_case(error-lock-section 2 lock fill.plan.json --section Q --out lock-r
 run_error_case(error-lock-open 2 lock plan-binary.plan.json --section A --out lock-refused.plan.json)
 
 file(REMOVE_RECURSE "${WORK}/normal")
+
+if(UPDATE)
+    message(FATAL_ERROR "test_cli_snapshots: goldens updated (URSATZ_UPDATE_GOLDENS)")
+endif()

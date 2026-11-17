@@ -1,7 +1,8 @@
 # Checks the --similar flag, its output and its exit codes, and validates the JSON output against the schema when
 # python3 with jsonschema was found at configure time. Run with cmake -P and -DCLI=<ursatz-analyzer>,
-# -DCORPORA_DIR=<test corpora>, -DMOTIVE=<a four-note MIDI motive>, -DPYTHON, -DHAVE_JSONSCHEMA, -DVALIDATOR, -DSCHEMA
-# and -DWORK_DIR=<scratch dir>.
+# -DCORPORA_DIR=<test corpora>, -DMOTIVE=<a four-note MIDI motive>, -DPYTHON (empty skips validation), -DVALIDATOR, -DSCHEMA
+# and -DWORK_DIR=<scratch dir>. With -DSMOKE=1 only the corpus "small" is analyzed and searched (a motive and a
+# progression), and only the exit codes, the files written and the schema are checked.
 
 foreach(var CLI CORPORA_DIR MOTIVE WORK_DIR SCHEMA)
     if(NOT DEFINED ${var})
@@ -24,6 +25,29 @@ function(expect_output label text)
         message(FATAL_ERROR "${label}: output lacks '${text}':\n${last_output}")
     endif()
 endfunction()
+
+if(SMOKE)
+    file(REMOVE_RECURSE "${WORK_DIR}")
+    set(SMALL "${WORK_DIR}/small")
+    check_case("corpus small" 0 --corpus "${CORPORA_DIR}/small" --out "${SMALL}")
+    check_case("--motive" 0 --similar "${SMALL}" --motive "${MOTIVE}" --format json)
+    file(WRITE "${WORK_DIR}/motive.json" "${last_output}")
+    check_case("--progression" 0 --similar "${SMALL}" --progression "I IV V I" --max 100 --format json)
+    file(WRITE "${WORK_DIR}/progression.json" "${last_output}")
+    foreach(name motive progression)
+        if(NOT EXISTS "${WORK_DIR}/${name}.json")
+            message(FATAL_ERROR "expected ${WORK_DIR}/${name}.json")
+        endif()
+        if(PYTHON)
+            execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" "${SCHEMA}" "${WORK_DIR}/${name}.json" RESULT_VARIABLE result)
+            if(NOT result EQUAL 0)
+                message(FATAL_ERROR "${name}.json does not match the schema")
+            endif()
+        endif()
+    endforeach()
+    file(REMOVE_RECURSE "${WORK_DIR}")
+    return()
+endif()
 
 file(REMOVE_RECURSE "${WORK_DIR}")
 set(REFERENCE "${WORK_DIR}/reference")
@@ -58,7 +82,7 @@ expect_output("no match" "^no match in 5 pieces\n")
 check_case("no match json" 0 --similar "${REFERENCE}" --progression "I IV V I" --min 1/1 --format json)
 file(WRITE "${WORK_DIR}/empty.json" "${last_output}")
 
-if(HAVE_JSONSCHEMA)
+if(PYTHON)
     foreach(name motive progression empty)
         execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" "${SCHEMA}" "${WORK_DIR}/${name}.json" RESULT_VARIABLE result)
         if(NOT result EQUAL 0)

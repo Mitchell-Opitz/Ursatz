@@ -8,6 +8,7 @@
 #include <ursatz_composer/composer_api.h>
 
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The forms entry (docs/api/vocabulary-and-validation.md, R-428): the seven built-in forms in registry order, the sizes and
@@ -18,7 +19,7 @@
 static cJSON *forms;
 
 static const cJSON *member(const cJSON *object, const char *name) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    const cJSON *item = test_json_member(object, name);
     assert(item);
     return item;
 }
@@ -581,7 +582,7 @@ int main(void) {
     ComposerResponse response;
     assert(composer_api_forms(&response) == COMPOSER_OK);
     assert(response.json);
-    test_write_file("api_forms_response_core.json", response.json);
+    test_write_text("api_forms_response_core.json", response.json);
     forms = cJSON_Parse(response.json);
     assert(forms);
     composer_response_destroy(&response);

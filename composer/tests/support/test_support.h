@@ -7,16 +7,10 @@
 #include <io/midi_importer.h>
 
 /*
- * Helpers the tests share. The whole file at `path` as a NUL-terminated string the caller frees; asserts when the file
- * cannot be read. When size is not NULL it receives the length without the terminator.
+ * Writes the text to a file at the path; aborts with the path when it cannot. The checked form of test_write_file (the
+ * shared support, ursatz_test.h), which reports a failure and leaves the test to check it.
  */
-char *test_read_file(const char *path, size_t *size);
-
-/* Whether a file exists at the path. */
-bool test_exists(const char *path);
-
-/* Writes the text to a new file at the path; asserts when it cannot. */
-void test_write_file(const char *path, const char *text);
+void test_write_text(const char *path, const char *text);
 
 /*
  * The notes of a MIDI file through Ursatz's complete import (midi_importer_import_complete): the NoteEvents and their

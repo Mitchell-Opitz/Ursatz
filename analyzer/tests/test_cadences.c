@@ -11,10 +11,11 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Cadences, boundary cadences and cadence-confirmed key changes on the five reference pieces (Ursatz's
- * framework-v1-corpus).
+ * framework-v1-corpus). With the argument "smoke" only Bach 114 runs (the fast set).
  *
  * Every cadence claim is checked for what the document promises: valid locations, note ids that exist, once each and
  * in order, an arrival and a dominant inside the claim's span, a type the library names, a key region that exists. The
@@ -45,16 +46,6 @@
  * Key changes: since P42 the chain places keys on phrases and confirms the changes with the cadences it claimed (R-397), so on
  * every piece a change is a modulation exactly where a claimed cadence arrives in the new region.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 typedef struct {
     const char *name;
@@ -253,12 +244,12 @@ static void check_counts(const Piece *piece, const cJSON *cadences) {
 
 static void run_piece(const Piece *piece) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, piece->file);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
     ImportedNotes notes;
     AnalysisReport report;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
-        failures++;
+        test_failure_count++;
         return;
     }
     char *json = test_render_document(path, &notes, &report);
@@ -286,14 +277,13 @@ static void run_piece(const Piece *piece) {
     imported_notes_destroy(&notes);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
         run_piece(&PIECES[i]);
     }
-    if (failures > 0) {
-        fprintf(stderr, "test_cadences: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_cadences: ok\n");
-    return 0;
+    return test_finish("test_cadences");
 }

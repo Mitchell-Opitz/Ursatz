@@ -10,16 +10,7 @@ function formatPieceLabel(id, filename) {
   return filename ? `${filename} (${id})` : id;
 }
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 check(
   formatPieceLabel("piece-1788837459-41", "sonata.mid") === "sonata.mid (piece-1788837459-41)",
@@ -34,4 +25,4 @@ check(
   "falls back to the bare id when the filename is missing",
 );
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

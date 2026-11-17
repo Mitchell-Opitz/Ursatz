@@ -1,6 +1,6 @@
-# Checks the --link-motives flag over a corpus run of the tests/links fixtures: text and JSON output, the cache, the
-# options and the exit codes. Run with cmake -P and -DCLI=<ursatz-analyzer>, -DFIXTURE_DIR=<tests/links>,
-# -DPYTHON, -DHAVE_JSONSCHEMA, -DVALIDATOR, -DLINKS_SCHEMA, -DCACHE_SCHEMA and -DWORK_DIR=<scratch dir>.
+# Checks the --link-motives flag over a corpus run of the tests/fixtures/links fixtures: text and JSON output, the cache, the
+# options and the exit codes. Run with cmake -P and -DCLI=<ursatz-analyzer>, -DFIXTURE_DIR=<tests/fixtures/links>,
+# -DPYTHON (empty skips validation), -DVALIDATOR, -DLINKS_SCHEMA, -DCACHE_SCHEMA and -DWORK_DIR=<scratch dir>.
 
 foreach(var CLI FIXTURE_DIR WORK_DIR)
     if(NOT DEFINED ${var})
@@ -33,7 +33,7 @@ endfunction()
 
 # Writes the CLI's JSON output to a file and validates it against a schema (skipped without jsonschema).
 function(validate label schema file)
-    if(HAVE_JSONSCHEMA)
+    if(PYTHON)
         execute_process(COMMAND "${PYTHON}" "${VALIDATOR}" "${schema}" "${file}" RESULT_VARIABLE result)
         if(NOT result EQUAL 0)
             message(FATAL_ERROR "${label}: ${file} does not match ${schema}")

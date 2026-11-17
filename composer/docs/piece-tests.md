@@ -63,3 +63,7 @@ Causes:
   whose inversion gets no structure, and some 4-bar minor themes.
 - Low shares come from what grow does not hear: 4-bar themes are never heard, and periods are never heard
   (see [grow.md](grow.md)).
+
+## Smoke runs
+
+A `smoke` run is the same program on one seed (and the first key and meter row), under 10 s, in the fast set: `test_grow_sentence_smoke`, `test_grow_accompaniment_smoke`, `test_counterpoint_species_3_smoke`, `test_piece_keys_tonic_major_smoke`, `test_form_parts_smoke`, `test_rondo_forms_<form>_smoke` (six forms) and `test_sonata_forms_<form>_smoke` (`sonatina` at seed 3, because seeds 1 and 2 do not compose in C major 4/4). A smoke skips only rate checks over a sweep. Nightly only: `test_api_rondo` and `test_api_sonata` (one fixed request each; the form family smokes and `test_api_forms` cover the path), `test_listen_cli_style_folder` (the Analyzer style path of `listen`; `test_listen_cli_smoke` covers the command), `consumer_build` and `consumer_rejects_internals` (a separate CMake project), the memcheck tests, and every slow test that already has a fast companion (the form template and piece key sweeps, the grow sweeps with `_fast` or `_smoke`, `test_grow_fidelity_sweep`).

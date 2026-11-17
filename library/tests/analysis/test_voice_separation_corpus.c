@@ -19,6 +19,7 @@
 #include "time/note_value.h"
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
+#include "ursatz_test.h"
 
 /*
  * Voice separation against ground truth. URSATZ_CORPUS_DIR and URSATZ_ANNOTATION_DIR are passed in by CMake.
@@ -76,23 +77,6 @@ static void add_note(Built *set, const TuningSystem *tuning, const char *id, lon
     set->count++;
 }
 
-static unsigned char *read_file(const char *path, size_t *out_size) {
-    FILE *file = fopen(path, "rb");
-    assert(file != NULL);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    assert(length > 0);
-    unsigned char *data = (unsigned char *)malloc((size_t)length + 1);
-    assert(data != NULL);
-    size_t read_count = fread(data, 1, (size_t)length, file);
-    fclose(file);
-    assert(read_count == (size_t)length);
-    data[length] = '\0';
-    *out_size = (size_t)length;
-    return data;
-}
-
 /* --- the chorale --- */
 
 typedef struct {
@@ -104,7 +88,7 @@ static void test_chorale(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/chorale_satb.txt", URSATZ_ANNOTATION_DIR);
     size_t size = 0;
-    unsigned char *text = read_file(path, &size);
+    unsigned char *text = (unsigned char *)test_must_read_file(path, &size);
 
     TuningSystem *tuning = NULL;
     assert(tuning_system_create(make_id("midi"), "MIDI note number", &tuning) == TUNING_SYSTEM_OK);
@@ -207,7 +191,7 @@ static Imported import_file(const char *file, long ticks_per_quarter) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, file);
     size_t size = 0;
-    unsigned char *data = read_file(path, &size);
+    unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
     Imported imported;
     memset(&imported, 0, sizeof(imported));
     assert(test_midi_import_parts(data, size, &imported.events, &imported.pitches, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
@@ -241,7 +225,7 @@ static size_t load_bach_truth(Written *out, size_t capacity) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/bach114_outer_voices.txt", URSATZ_ANNOTATION_DIR);
     size_t size = 0;
-    unsigned char *text = read_file(path, &size);
+    unsigned char *text = (unsigned char *)test_must_read_file(path, &size);
     size_t count = 0;
     for (char *line = strtok((char *)text, "\n"); line != NULL; line = strtok(NULL, "\n")) {
         if (line[0] == '#' || line[0] == '\0') {
@@ -424,7 +408,7 @@ static void report_file(const char *file, long ticks_per_quarter, bool has_track
         char path[1024];
         snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, file);
         size_t size = 0;
-        unsigned char *data = read_file(path, &size);
+        unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
         MidiOn *ons = (MidiOn *)calloc(imported.count + 16, sizeof(MidiOn));
         size_t on_count = read_note_ons(data, size, ons, imported.count + 16);
         free(data);

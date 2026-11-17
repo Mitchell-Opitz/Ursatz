@@ -9,7 +9,7 @@ functions: it reads its arguments into a request, calls the API and prints the r
 This page covers what every entry shares, and indexes every entry: the core, export, the motive entries, variants, recognize, random motives, themes, pieces, the
 plan workflow, the material commands (progression, counterpoint, develop, grow), the vocabularies and request validation.
 Each entry has its request and response in a file under `docs/api/` (see [Entries](#entries)), an example in
-[examples](api/examples.md), and its JSON Schemas under `schema/api/` (draft 2020-12). The CLI (`cli/`) includes no header but `composer_api.h` (`tools/ci/check-cli-api.sh`, run by CI).
+[examples](api/examples.md), and its JSON Schemas under `schema/api/` (draft 2020-12). The CLI (`cli/`) includes no header but `composer_api.h` (the layer table, `cmake/layer-table.txt`).
 
 A minimal client in C is in [Using the API from C](#using-the-api-from-c).
 
@@ -75,7 +75,7 @@ In the library, `FillConfig`, `ComposeConfig` and `GrowConfig` carry `const Comp
 The engine reports through the engine job hook in `src/util/job.h`: `job_step(job, stage, done, total)` calls `progress` and
 returns whether the job is cancelled, and `job_cancelled(job)` asks `cancelled` alone. `fill_loop.c`, `compose_run.c`,
 `grow_run.c` and the API files use these two and nothing else; `api/api_internal.h` is for `src/api/` only
-(`tools/ci/check-layers.sh` in CI).
+(the layer table in CI).
 
 ## Threading
 

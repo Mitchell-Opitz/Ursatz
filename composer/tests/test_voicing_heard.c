@@ -6,6 +6,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/voice_hear.h"
+#include "support/test_composer.h"
 
 /*
  * Themes grown in four parts, seeds 1 to 10, in C major 4/4, G major 3/4 and D minor 4/4. With the argument "chorale"
@@ -67,16 +68,6 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     return request;
 }
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 int main(int argc, char **argv) {
     bool write_soprano = argc > 1 && strcmp(argv[1], "chorale") == 0;
     size_t themes = 0;
@@ -108,7 +99,7 @@ int main(int argc, char **argv) {
                 incomplete++;
                 scenario_dirty++;
             } else {
-                PlanSpan span = plan_node_span(plan, find_node(plan, "theme"));
+                PlanSpan span = plan_node_span(plan, test_find_node(plan, "theme"));
                 VoiceHearResult hear = voice_hear(plan, span, &heard);
                 if (hear != VOICE_HEAR_OK) {
                     fprintf(stderr, "%s, seed %lu: not heard (%s)\n", SCENARIOS[s].name, seed, voice_hear_result_name(hear));

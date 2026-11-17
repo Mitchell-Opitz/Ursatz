@@ -1,2 +1,1 @@
-add_ursatz_test(section)
-add_ursatz_architecture_test(containers)
+ursatz_test(section LIBS ursatz)

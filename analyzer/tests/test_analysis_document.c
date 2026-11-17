@@ -11,6 +11,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Analysis document test: the test_analysis_pipeline fixture (C-E-G,
@@ -94,10 +95,8 @@ int main(void) {
     unsigned char buf[256];
     size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
-    char path[512];
-    test_temp_path(path, sizeof(path), "document_fixture.mid");
-    char expected_document_path[512];
-    test_temp_path(expected_document_path, sizeof(expected_document_path), "document_fixture.analysis.json");
+    char *path = test_temp_path("document_fixture.mid");
+    char *expected_document_path = test_temp_path("document_fixture.analysis.json");
     FILE *file = fopen(path, "wb");
     assert(file != NULL);
     assert(fwrite(buf, 1, size, file) == size);
@@ -381,6 +380,8 @@ int main(void) {
     analysis_report_destroy(&report);
     imported_notes_destroy(&notes);
     remove(path);
+    free(path);
+    free(expected_document_path);
 
     printf("test_analysis_document: ok\n");
     return 0;

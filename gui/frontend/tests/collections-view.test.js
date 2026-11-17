@@ -4,16 +4,7 @@
  * script: `node frontend/tests/collections-view.test.js`. */
 const M = require("../public/piece-metadata.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 const library = [
   { id: "p1", filename: "nocturne.mid", composer: "John Field", source: "", tags: ["whimsical"] },
@@ -51,4 +42,4 @@ check(
   "Save as collection combines the parts",
 );
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

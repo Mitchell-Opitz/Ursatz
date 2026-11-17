@@ -7,6 +7,7 @@
 #include "identity/entity_id.h"
 #include "theory/style_model_blend.h"
 #include "theory/style_model_build.h"
+#include "ursatz_test.h"
 
 /*
  * A StyleModel built from corpus statistics cannot become a Rule or a
@@ -25,20 +26,6 @@
  */
 
 #define THEORY_DIR "../../src/theory/"
-
-static char *read_file(const char *path) {
-    FILE *f = fopen(path, "r");
-    assert(f != NULL);
-    fseek(f, 0, SEEK_END);
-    long size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *text = (char *)malloc((size_t)size + 1);
-    assert(text != NULL);
-    assert(fread(text, 1, (size_t)size, f) == (size_t)size);
-    text[size] = '\0';
-    fclose(f);
-    return text;
-}
 
 /* Blanks out comments, in place, so only code is searched. */
 static void strip_comments(char *text) {
@@ -78,7 +65,7 @@ static int mentions(const char *text, const char *word) {
 static void assert_no_rules_vocabulary(const char *file) {
     char path[256];
     snprintf(path, sizeof(path), THEORY_DIR "%s", file);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     strip_comments(text);
     const char *forbidden[] = {"Rule", "Constraint", "rules/", "rule_", "constraint_"};
     for (size_t i = 0; i < sizeof(forbidden) / sizeof(forbidden[0]); i++) {

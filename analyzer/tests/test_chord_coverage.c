@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/midi_pipeline.h>
@@ -26,7 +27,7 @@
  * the union of its notes, and the segments that match no chord are fewer but longer: 84 of 90 spans, 87.6%, until P40
  * reads the chords of a span). The other
  * four reference pieces must still produce chords. The files are Ursatz's
- * framework-v1 corpus (URSATZ_ANALYZER_FIXTURE_DIR/framework-v1-corpus).
+ * framework-v1 corpus (URSATZ_FIXTURES_DIR/framework-v1-corpus). With the argument "smoke" only Bach 114 runs.
  */
 
 #define COVERAGE_TARGET 0.87
@@ -89,10 +90,14 @@ static double coverage(const ImportedNotes *notes, const AnalysisReport *report,
     return total > 0.0 ? covered / total : 0.0;
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
         char path[512];
-        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, PIECES[i].file);
+        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, PIECES[i].file);
 
         ImportedNotes notes;
         assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);

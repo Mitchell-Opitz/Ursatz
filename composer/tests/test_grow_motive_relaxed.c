@@ -9,6 +9,8 @@
 
 #include "support/test_support.h"
 #include "util/plan_util.h"
+#include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -23,20 +25,10 @@
 
 #define SEEDS 5
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 int main(void) {
     static const int ARPEGGIO[4] = {62, 65, 69, 74};
     static const int SHIFTS[] = {0, -12, 12, -24, 24};
-    char *text = test_read_file(COMPOSER_FIXTURE_DIR "/motifs/motive-d-minor-arpeggio.json", NULL);
+    char *text = test_must_read_file(COMPOSER_FIXTURE_DIR "/motifs/motive-d-minor-arpeggio.json", NULL);
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
@@ -68,7 +60,7 @@ int main(void) {
         assert(result == GROW_OK && !outcome.stuck);
         grow_outcome_destroy(&outcome);
         LaneSpanId span;
-        NodeId basic = find_node(plan, "basic idea");
+        NodeId basic = test_find_node(plan, "basic idea");
         assert(basic != PLAN_NODE_NONE && plan_melody_span_of(plan, basic, &span));
         const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
         assert(notes->note_count >= 4);

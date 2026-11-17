@@ -1,40 +1,17 @@
 ursatz_test_includes()
 
-add_executable(test_standard_texture_framework test_framework.c)
-target_link_libraries(test_standard_texture_framework PRIVATE standard_texture)
-add_test(NAME standard_texture_framework COMMAND test_standard_texture_framework)
+ursatz_test(standard_texture_framework SOURCES test_framework.c LIBS standard_texture)
 
-add_executable(test_architecture_standard_texture test_architecture_standard_texture.c)
-add_test(NAME architecture_standard_texture COMMAND test_architecture_standard_texture
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+ursatz_test(standard_texture_texture_rules SOURCES test_texture_rules.c LIBS standard_texture)
 
-add_executable(test_standard_texture_texture_rules test_texture_rules.c)
-target_link_libraries(test_standard_texture_texture_rules PRIVATE standard_texture)
-add_test(NAME standard_texture_texture_rules COMMAND test_standard_texture_texture_rules)
+ursatz_test(standard_texture_texture_classification_rules SOURCES test_texture_classification_rules.c
+    LIBS standard_texture)
 
-add_executable(test_standard_texture_texture_classification_rules test_texture_classification_rules.c)
-target_link_libraries(test_standard_texture_texture_classification_rules PRIVATE standard_texture)
-add_test(NAME standard_texture_texture_classification_rules COMMAND test_standard_texture_texture_classification_rules)
+ursatz_test(standard_texture_mixed_texture_rules SOURCES test_mixed_texture_rules.c LIBS standard_texture)
 
-add_executable(test_standard_texture_mixed_texture_rules test_mixed_texture_rules.c)
-target_link_libraries(test_standard_texture_mixed_texture_rules PRIVATE standard_texture)
-add_test(NAME standard_texture_mixed_texture_rules COMMAND test_standard_texture_mixed_texture_rules)
+ursatz_test(standard_texture_analysis_features SOURCES test_analysis_features.c LIBS standard_texture)
 
-add_executable(test_standard_texture_analysis_features test_analysis_features.c)
-target_link_libraries(test_standard_texture_analysis_features PRIVATE standard_texture)
-add_test(NAME standard_texture_analysis_features COMMAND test_standard_texture_analysis_features)
+ursatz_test(standard_texture_analysis_classify SOURCES test_analysis_classify.c LIBS standard_texture)
 
-add_executable(test_standard_texture_analysis_classify test_analysis_classify.c)
-target_link_libraries(test_standard_texture_analysis_classify PRIVATE standard_texture)
-add_test(NAME standard_texture_analysis_classify COMMAND test_standard_texture_analysis_classify)
+ursatz_test(standard_texture_analysis_note SOURCES test_texture_analysis_note.c LIBS standard_texture VALGRIND)
 
-add_executable(test_standard_texture_analysis_note test_texture_analysis_note.c)
-target_link_libraries(test_standard_texture_analysis_note PRIVATE standard_texture)
-add_test(NAME standard_texture_analysis_note COMMAND test_standard_texture_analysis_note)
-
-# Memcheck for the analysis note mapping test. Skips silently if valgrind isn't installed.
-find_program(URSATZ_TEXTURE_NOTE_VALGRIND valgrind)
-if(URSATZ_TEXTURE_NOTE_VALGRIND)
-  add_test(NAME standard_texture_analysis_note_valgrind
-           COMMAND ${URSATZ_TEXTURE_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_texture_analysis_note>)
-endif()

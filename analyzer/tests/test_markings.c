@@ -7,6 +7,8 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/musicxml_pipeline.h>
 
+#include "ursatz_test.h"
+
 /*
  * The tempo and dynamics markings of the report, on a constructed score (tests/musicxml/markings.musicxml, four
  * measures in 4/4): "Allegro" with quarter = 120 and p in measure 1, the text "cresc." in measure 2, f in measure 3,
@@ -14,16 +16,6 @@
  * comparison against the previous level marking, and that a file with no markings (the
  * two-part score) reports none.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* The marking starts at the beginning of the given measure of the 4/4 piece (measure 1 is time 0). */
 static bool starts_measure(long numerator, unsigned long denominator, int measure) {
@@ -35,7 +27,7 @@ static bool analyze(const char *dir, const char *name, ImportedNotes *notes, Ana
     snprintf(path, sizeof(path), "%s/%s", dir, name);
     if (musicxml_pipeline_import_file(path, notes) != MUSICXML_PIPELINE_OK || !run_analysis_pipeline(notes, report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
-        failures++;
+        test_failure_count++;
         return false;
     }
     return true;
@@ -100,10 +92,5 @@ static void check_no_markings(const char *dir) {
 int main(void) {
     check_markings(URSATZ_MUSICXML_DIR);
     check_no_markings(URSATZ_MUSICXML_DIR);
-    if (failures > 0) {
-        fprintf(stderr, "test_markings: %d check(s) failed\n", failures);
-        return 1;
-    }
-    printf("test_markings: ok\n");
-    return 0;
+    return test_finish("test_markings");
 }

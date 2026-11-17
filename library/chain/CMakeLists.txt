@@ -29,4 +29,6 @@ target_link_libraries(ursatz_chain PUBLIC
     scale_harmonization
 )
 
-ursatz_add_tests()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+endif()

@@ -13,12 +13,11 @@ option(URSATZ_GUI "Build the GUI and its HTTP server" ON)
 option(URSATZ_TESTS "Build and register the tests of every part" ON)
 
 # Each part reads its own switch; the root sets them all from the two options above.
-set(URSATZ_BUILD_TESTS ${URSATZ_TESTS})
-set(URSATZ_ANALYZER_BUILD_TESTS ${URSATZ_TESTS})
-set(URSATZ_COMPOSER_BUILD_TESTS ${URSATZ_TESTS})
 set(URSATZ_COMPOSER_BUILD_CLI ON)
 
 enable_testing()
+include(cmake/UrsatzTools.cmake)
+include(cmake/UrsatzTest.cmake)
 
 # Dependencies first; each later part reuses the targets the earlier ones define.
 add_subdirectory(third_party)
@@ -27,4 +26,12 @@ add_subdirectory(analyzer)
 add_subdirectory(composer)
 if(URSATZ_GUI)
     add_subdirectory(gui)
+endif()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+    # cmake --build build --target update-goldens: rewrites every golden (cmake/UpdateGoldens.cmake).
+    add_custom_target(update-goldens
+        COMMAND ${CMAKE_COMMAND} -DCTEST=${CMAKE_CTEST_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR}
+                -P ${CMAKE_SOURCE_DIR}/cmake/UpdateGoldens.cmake
+        USES_TERMINAL)
 endif()

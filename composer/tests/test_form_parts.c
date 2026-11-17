@@ -16,6 +16,8 @@
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
 #include "util/plan_util.h"
+#include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -46,6 +48,10 @@
  * function, has three phrases of 4, 2 and 2 bars, each ends on V or V7 in root position to a root-position tonic, the last
  * melody note is the tonic, and the plan round-trips through plan JSON. `grow_coda_applies` is true on K and false for a coda
  * of 4 bars, for a coda that follows another region (a start change) and for a source of 2 bars.
+ *
+ * With the argument `smoke` each case composes seed 1 in the first row (C major 4/4) alone, which must compose, and every
+ * check of a composed piece runs on it, with no rate over the seeds or rows; the checks of `grow_coda_applies` run as they do
+ * (B11 of P56 registers it as test_form_parts_smoke).
  */
 
 #define SEEDS 10
@@ -90,7 +96,7 @@ static const char *const TRANSITION =
 static char *fixture_without_coda(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     assert(text);
     static const char *const CODA = "\"role\": \"coda\", \"bars\": 8, \"cadence\": \"perfect-authentic\"";
     static const char *const CODETTA = "\"role\": \"codetta\", \"bars\": 8, \"beginning\": \"presentation\", "
@@ -173,21 +179,6 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
     return count;
 }
 
-/* The first node under `node` (any depth) with this name, or PLAN_NODE_NONE. */
-static NodeId find_named(const PiecePlan *plan, NodeId node, const char *name) {
-    for (size_t i = 0; i < plan_node_child_count(plan, node); i++) {
-        NodeId child = plan_node_child_at(plan, node, i);
-        if (strcmp(plan_node_name(plan, child), name) == 0) {
-            return child;
-        }
-        NodeId inner = find_named(plan, child, name);
-        if (inner != PLAN_NODE_NONE) {
-            return inner;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 /* The motive reference of the motive node an idea's melody span names (the idea's own made motive), or NULL. */
 static const PlanMotiveRef *idea_motive_ref(const PiecePlan *plan, NodeId idea) {
     LaneSpanId melody;
@@ -265,16 +256,16 @@ static void check_transition(const PiecePlan *plan, const Row *row, unsigned lon
     assert(strcmp(numeral, "V") == 0 || strcmp(numeral, "V7") == 0);
 
     /* The liquidation, read from the plan: fragment 2 is a liquidation by steps on a segment, the cadential idea at least as far. */
-    NodeId fragment_2 = find_named(plan, t, "fragment 2");
+    NodeId fragment_2 = test_find_named(plan, t, "fragment 2");
     const PlanMotiveRef *residue = idea_motive_ref(plan, fragment_2);
     if (!residue || residue->steps < 1 || residue->segment[0] == '\0' ||
-        idea_steps(plan, find_named(plan, t, "cadential")) < residue->steps) {
+        idea_steps(plan, test_find_named(plan, t, "cadential")) < residue->steps) {
         fprintf(stderr, "%s seed %lu: T's continuation is not liquidated\n", row->name, seed);
     }
     assert(residue && residue->steps >= 1 && residue->segment[0] != '\0');
-    assert(idea_steps(plan, find_named(plan, t, "cadential")) >= residue->steps);
+    assert(idea_steps(plan, test_find_named(plan, t, "cadential")) >= residue->steps);
     /* Only the transition liquidates: the codetta's continuation is the form's usual one. */
-    assert(idea_steps(plan, find_named(plan, sections[3], "fragment 2")) == 0);
+    assert(idea_steps(plan, test_find_named(plan, sections[3], "fragment 2")) == 0);
 }
 
 /* The pitches of an idea's melody span, in order; the count, 0 when the idea has none. */
@@ -293,7 +284,7 @@ static size_t idea_pitches(const PiecePlan *plan, NodeId idea, int *out, size_t 
 
 /* The motive node of the material with this name, or PLAN_NODE_NONE, and its invented notes (2 or more). */
 static bool invented_motive(const PiecePlan *plan, const char *name, NodeId *node) {
-    *node = find_named(plan, plan_root(plan), name);
+    *node = test_find_named(plan, plan_root(plan), name);
     LaneSpanId melody;
     return *node != PLAN_NODE_NONE && plan_node_kind(plan, *node) == PLAN_NODE_MOTIVE && plan_melody_span_of(plan, *node, &melody) &&
            plan_lane_span_payload(plan, melody)->notes.note_count >= 2;
@@ -332,8 +323,8 @@ static void check_independent(const PiecePlan *plan, const Row *row, unsigned lo
     /* T's basic idea is not A's. */
     int a[64];
     int t[64];
-    size_t a_count = idea_pitches(plan, find_named(plan, sections[0], "basic idea"), a, 64);
-    size_t t_count = idea_pitches(plan, find_named(plan, sections[1], "basic idea"), t, 64);
+    size_t a_count = idea_pitches(plan, test_find_named(plan, sections[0], "basic idea"), a, 64);
+    size_t t_count = idea_pitches(plan, test_find_named(plan, sections[1], "basic idea"), t, 64);
     bool same = a_count == t_count;
     for (size_t i = 0; same && i < a_count; i++) {
         same = a[i] == t[i];
@@ -427,7 +418,7 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
     int notes[64];
     size_t m0_count = node_pitches(plan, m0, notes, 64);
     int residue[64];
-    NodeId basic = find_named(plan, r, "basic idea");
+    NodeId basic = test_find_named(plan, r, "basic idea");
     size_t residue_count = node_pitches(plan, asked_motive(plan, basic), residue, 64);
     if (residue_count == 0 || residue_count >= m0_count) {
         fprintf(stderr, "%s seed %lu: R's basic idea asks for %zu notes, m0 has %zu\n", row->name, seed, residue_count, m0_count);
@@ -436,7 +427,7 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
 
     /* The cadential idea is the main theme head: the head motive it asks for is m0's first notes, and the melody keeps its
        intervals. */
-    NodeId cadential = find_named(plan, r, "cadential");
+    NodeId cadential = test_find_named(plan, r, "cadential");
     int head[64];
     size_t head_count = node_pitches(plan, asked_motive(plan, cadential), head, 64);
     int heard[64];
@@ -592,7 +583,7 @@ static const char *const THEME_AND_CODA =
 static void test_applies(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     assert(text);
     FormSpec *form = parse_form(text);
     free(text);
@@ -650,7 +641,7 @@ static void test_applies(void) {
 
     /* A source of 2 bars (3/4): the plan is built, the coda is not grown. */
     snprintf(path, sizeof(path), "%s/rates/two-bar-3-4.json", COMPOSER_FIXTURE_DIR);
-    char *motive_text = test_read_file(path, NULL);
+    char *motive_text = test_must_read_file(path, NULL);
     Motive motive;
     assert(motive_text && motive_from_json(motive_text, NULL, &motive, NULL) == MOTIVE_OK);
     free(motive_text);
@@ -670,11 +661,13 @@ static void test_applies(void) {
     form_spec_destroy(form);
 }
 
-static int run_rows(const char *label, const FormSpec *form, void (*check)(const PiecePlan *, const Row *, unsigned long)) {
+static int run_rows(const char *label, const FormSpec *form, void (*check)(const PiecePlan *, const Row *, unsigned long),
+                    bool smoke) {
     int status = 0;
-    for (size_t r = 0; r < ROW_COUNT; r++) {
+    const int seeds = smoke ? 1 : SEEDS;
+    for (size_t r = 0; r < (smoke ? 1 : ROW_COUNT); r++) {
         int composed = 0;
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)seeds; seed++) {
             ComposeOutcome outcome;
             PieceResult ran;
             PiecePlan *plan = compose(form, &ROWS[r], seed, &outcome, &ran);
@@ -687,8 +680,14 @@ static int run_rows(const char *label, const FormSpec *form, void (*check)(const
             compose_outcome_destroy(&outcome);
             plan_destroy(plan);
         }
-        printf("%s in %s: %d of %d seeds compose\n", label, ROWS[r].name, composed, SEEDS);
-        if (composed < COMPOSED_LEAST) {
+        printf("%s in %s: %d of %d seeds compose\n", label, ROWS[r].name, composed, seeds);
+        if (smoke) {
+            /* Seed 1 alone has no rate to hold, but it must compose, so that the checks of a composed piece ran. */
+            if (composed < 1) {
+                fprintf(stderr, "%s in %s: seed 1 should compose\n", label, ROWS[r].name);
+                status = 1;
+            }
+        } else if (composed < COMPOSED_LEAST) {
             fprintf(stderr, "%s in %s: %d composed, at least %d expected\n", label, ROWS[r].name, composed, COMPOSED_LEAST);
             status = 1;
         }
@@ -696,32 +695,37 @@ static int run_rows(const char *label, const FormSpec *form, void (*check)(const
     return status;
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    const bool smoke = argc == 2 && strcmp(argv[1], "smoke") == 0;
+    if (argc > 2 || (argc == 2 && !smoke)) {
+        fprintf(stderr, "usage: test_form_parts [smoke]\n");
+        return 2;
+    }
     FormSpec *form = load_form(TRANSITION);
-    int status = run_rows("transition", form, check_transition);
+    int status = run_rows("transition", form, check_transition, smoke);
     form_spec_destroy(form);
     form = load_form(INDEPENDENT);
-    status |= run_rows("independent", form, check_independent);
+    status |= run_rows("independent", form, check_independent, smoke);
     form_spec_destroy(form);
     char *fixture = fixture_without_coda();
     form = parse_form(fixture);
     free(fixture);
-    status |= run_rows("retransition", form, check_retransition);
+    status |= run_rows("retransition", form, check_retransition, smoke);
     form_spec_destroy(form);
     char *with_coda = NULL;
     {
         char path[1024];
         snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
-        with_coda = test_read_file(path, NULL);
+        with_coda = test_must_read_file(path, NULL);
         assert(with_coda);
     }
     form = parse_form(with_coda);
     free(with_coda);
-    status |= run_rows("coda", form, check_coda);
+    status |= run_rows("coda", form, check_coda, smoke);
     form_spec_destroy(form);
     test_applies();
     if (status == 0) {
-        printf("test_form_parts: ok\n");
+        printf(smoke ? "test_form_parts smoke: ok\n" : "test_form_parts: ok\n");
     }
     return status;
 }

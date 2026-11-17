@@ -5,18 +5,12 @@
 #include <ursatz_analyzer/style_labels.h>
 
 #include "style/style_profile_internal.h"
+#include "ursatz_test.h"
 
 /* The tempo and density bands and the motive label builders the Composer shares with the style profile. */
 
-static int failures = 0;
-
-#define CHECK_TEXT(actual, expected)                                                                                   \
-    do {                                                                                                               \
-        if (strcmp((actual), (expected)) != 0) {                                                                       \
-            fprintf(stderr, "FAIL line %d: got '%s', expected '%s'\n", __LINE__, (actual), (expected));               \
-            failures++;                                                                                                \
-        }                                                                                                              \
-    } while (0)
+#define CHECK_TEXT(actual, expected) \
+    CHECKF(strcmp((actual), (expected)) == 0, "got '%s', expected '%s'", (actual), (expected))
 
 static void check_tempo(double value, const char *expected) {
     char label[32];
@@ -32,8 +26,7 @@ static void check_density(double value, const char *expected) {
 
 static void check_owned(char *actual, const char *expected) {
     if (!actual) {
-        fprintf(stderr, "FAIL: NULL, expected '%s'\n", expected);
-        failures++;
+        CHECKF(false, "NULL, expected '%s'", expected);
         return;
     }
     CHECK_TEXT(actual, expected);
@@ -71,8 +64,7 @@ int main(void) {
     check_owned(style_label_join(parts, 3), "1 b6 5");
     check_owned(style_label_join(parts, 1), "1");
     if (style_label_join(parts, 0)) {
-        fprintf(stderr, "FAIL: join of nothing\n");
-        failures++;
+        CHECKF(false, "join of nothing");
     }
 
     const int steps[2] = {8, -1};
@@ -82,25 +74,19 @@ int main(void) {
     check_owned(style_label_motive_intervals(unison, 1), "0");
     check_owned(style_label_motive_intervals(leap, 1), "+15");
     if (style_label_motive_intervals(steps, 0)) {
-        fprintf(stderr, "FAIL: intervals of nothing\n");
-        failures++;
+        CHECKF(false, "intervals of nothing");
     }
 
     char figure[64];
     if (!style_label_nct_figure("1", "b6", "appoggiatura", "5", figure, sizeof figure)) {
-        fprintf(stderr, "FAIL: figure did not fit\n");
-        failures++;
+        CHECKF(false, "figure did not fit");
     }
     CHECK_TEXT(figure, "1 b6:appoggiatura 5");
     style_label_nct_figure(NULL, "b6", "appoggiatura", NULL, figure, sizeof figure);
     CHECK_TEXT(figure, "- b6:appoggiatura -");
     if (style_label_nct_figure("1", "b6", "appoggiatura", "5", figure, 8)) {
-        fprintf(stderr, "FAIL: a short buffer was accepted\n");
-        failures++;
+        CHECKF(false, "a short buffer was accepted");
     }
 
-    if (failures == 0) {
-        printf("test_style_labels: ok\n");
-    }
-    return failures == 0 ? 0 : 1;
+    return test_finish("test_style_labels");
 }

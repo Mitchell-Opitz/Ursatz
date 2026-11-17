@@ -2,16 +2,7 @@
  * Plain Node script: `node frontend/tests/piece-metadata.test.js`. */
 const M = require("../public/piece-metadata.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 check(same(M.parseTagInput(" Etude, nocturne ,ETUDE,,"), ["etude", "nocturne"]), "tags trimmed, lowercased, deduplicated, empties dropped");
 check(same(M.parseTagInput(""), []), "empty tag text gives no tags");
@@ -142,4 +133,4 @@ check(M.styleSourceText({ kind: "collection", collection_id: "gone" }, {}) === "
 check(M.styleSourceText({ kind: "brief", brief: { scopes: [], piece_ids: ["a"], style_ids: [] } }) === "Brief", "source text for a brief");
 check(M.styleSourceText({ kind: "pieces", piece_ids: ["a", "b"] }) === "Selected pieces (2)", "source text for ids");
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

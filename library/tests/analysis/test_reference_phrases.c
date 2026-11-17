@@ -9,6 +9,7 @@
 #include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"
 #include "../key_index_test_util.h"
+#include "ursatz_test.h"
 
 /*
  * The chain's phrases against Michelle's readings of the Clementi and Mozart reference pieces (R-393; the readings are
@@ -39,17 +40,6 @@ typedef struct {
 
 static const Piece CLEMENTI = {"Clementi 36", "Clementi 36.mid"};
 static const Piece MOZART = {"Mozart 545", "Mozart 545.mid"};
-
-static int failures = 0;
-
-#define CHECK(condition, ...)                \
-    do {                                     \
-        if (!(condition)) {                  \
-            printf("  FAIL " __VA_ARGS__);   \
-            printf("\n");                    \
-            failures++;                      \
-        }                                    \
-    } while (0)
 
 static double to_double(const MusicalTime *time) {
     return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
@@ -162,11 +152,11 @@ static void check_clementi(void) {
         }
     }
     printf("\n");
-    CHECK(count == 4, "Clementi: %zu cadences claimed, expected 4", count);
-    CHECK(has_claimed(claimed, count, 4, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 4 beat 1");
-    CHECK(has_claimed(claimed, count, 8, CADENCE_TYPE_IMPERFECT_AUTHENTIC), "Clementi: no imperfect authentic cadence at measure 8 beat 1");
-    CHECK(has_claimed(claimed, count, 23, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 23 beat 1");
-    CHECK(has_claimed(claimed, count, 27, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 27 beat 1");
+    CHECKF(count == 4, "Clementi: %zu cadences claimed, expected 4", count);
+    CHECKF(has_claimed(claimed, count, 4, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 4 beat 1");
+    CHECKF(has_claimed(claimed, count, 8, CADENCE_TYPE_IMPERFECT_AUTHENTIC), "Clementi: no imperfect authentic cadence at measure 8 beat 1");
+    CHECKF(has_claimed(claimed, count, 23, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 23 beat 1");
+    CHECKF(has_claimed(claimed, count, 27, CADENCE_TYPE_HALF), "Clementi: no half cadence at measure 27 beat 1");
     bool alternative = false;
     for (size_t i = 0; i < count; i++) {
         if (claimed[i].measure == 23 && claimed[i].alternative_measure == 24 && claimed[i].alternative_beat_one &&
@@ -174,7 +164,7 @@ static void check_clementi(void) {
             alternative = true;
         }
     }
-    CHECK(alternative, "Clementi: the half cadence at measure 23 has no perfect authentic alternative at measure 24 beat 1");
+    CHECKF(alternative, "Clementi: the half cadence at measure 23 has no perfect authentic alternative at measure 24 beat 1");
 
     const StandardFormThemes *themes = analysis_chain_themes(chain);
     bool period = false;
@@ -185,7 +175,7 @@ static void check_clementi(void) {
             period = true;
         }
     }
-    CHECK(period, "Clementi: no period of measures 1-8 with parts 1-4 and 5-8");
+    CHECKF(period, "Clementi: no period of measures 1-8 with parts 1-4 and 5-8");
 
     /* reported, not asserted (R-393) */
     printf("  reported: PAC m15 %s (m14 reads vii6 in C: the key, P42); PAC m31 %s (m30 beat 4's V is merged into the I6/4 span: chord "
@@ -228,17 +218,17 @@ static void check_mozart(void) {
         const StandardFormPhraseClaim *c = &phrases->items[i].claim;
         first = first || (c->first_measure == 1 && c->end_measure == 12 && c->cadence_type == CADENCE_TYPE_HALF);
         second = second || (c->first_measure == 13 && c->end_measure == 28 && c->cadence_type == CADENCE_TYPE_PERFECT_AUTHENTIC);
-        CHECK(!(c->first_measure <= 28 && c->length_measures == 1), "Mozart: a phrase of one measure at measure %d", c->first_measure);
+        CHECKF(!(c->first_measure <= 28 && c->length_measures == 1), "Mozart: a phrase of one measure at measure %d", c->first_measure);
     }
-    CHECK(first, "Mozart: no phrase of measures 1-12 ending on a half cadence");
-    CHECK(second, "Mozart: no phrase of measures 13-28 ending on a perfect authentic cadence");
-    CHECK(has_claimed(claimed, count, 12, CADENCE_TYPE_HALF), "Mozart: no half cadence at measure 12 beat 1");
-    CHECK(has_claimed(claimed, count, 28, CADENCE_TYPE_PERFECT_AUTHENTIC), "Mozart: no perfect authentic cadence at measure 28 beat 1");
+    CHECKF(first, "Mozart: no phrase of measures 1-12 ending on a half cadence");
+    CHECKF(second, "Mozart: no phrase of measures 13-28 ending on a perfect authentic cadence");
+    CHECKF(has_claimed(claimed, count, 12, CADENCE_TYPE_HALF), "Mozart: no half cadence at measure 12 beat 1");
+    CHECKF(has_claimed(claimed, count, 28, CADENCE_TYPE_PERFECT_AUTHENTIC), "Mozart: no perfect authentic cadence at measure 28 beat 1");
     size_t arriving = 0;
     for (size_t i = 0; i < count; i++) {
         arriving += claimed[i].measure >= 26 && claimed[i].measure <= 28 ? 1 : 0;
     }
-    CHECK(arriving == 1, "Mozart: %zu cadences arrive in measures 26 to 28, expected 1", arriving);
+    CHECKF(arriving == 1, "Mozart: %zu cadences arrive in measures 26 to 28, expected 1", arriving);
 
     analysis_chain_destroy(chain);
     free(key_events);
@@ -248,10 +238,5 @@ static void check_mozart(void) {
 int main(void) {
     check_clementi();
     check_mozart();
-    if (failures > 0) {
-        printf("test_reference_phrases: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_reference_phrases: ok\n");
-    return 0;
+    return test_finish("test_reference_phrases");
 }

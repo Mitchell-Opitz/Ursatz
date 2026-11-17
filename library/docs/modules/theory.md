@@ -16,7 +16,7 @@ Layer L7 (`music-theory`). Path `src/theory/`, tests `tests/theory/`. Sibling of
 
 ## Theory to Corpus open issue (Dependency Spec §7.2)
 
-The System Registry lists `StyleModel` as depending on `Corpus` (L9, `src/corpus/`). This module does not implement that dependency; the spec is explicit that no implementation may establish it until the resolution is recorded upstream. `StyleModel` accepts corpus-derived statistics only as an opaque, already-computed `Value` supplied by the caller. No file under `src/theory/` or `src/rules/` includes a corpus header. `tests/theory/test_architecture_theory.c` and `tests/rules/test_architecture_rules.c` enforce this by allowlisting only L0-L6 directories.
+The System Registry lists `StyleModel` as depending on `Corpus` (L9, `src/corpus/`). This module does not implement that dependency; the spec is explicit that no implementation may establish it until the resolution is recorded upstream. `StyleModel` accepts corpus-derived statistics only as an opaque, already-computed `Value` supplied by the caller. No file under `src/theory/` or `src/rules/` includes a corpus header. The layer table enforces this by allowing only L0-L6 directories.
 
 
 ## Frameworks

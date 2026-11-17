@@ -5,60 +5,24 @@
  * compare the Composer's answers with captures: a plan, a MIDI file and a MusicXML file are what they claim to be, and
  * a served playback is what the GUI's own playback service builds from the stored MIDI file.
  *
- * The including test defines check(cond, what) and exchange(method, url, body, &status) (the TCP client that answers
- * the body as JSON) as static functions; they are declared here and defined by the test. */
+ * check_playback_of takes the exchange of the including test (its port bound; the HTTP client that answers the body as
+ * JSON) as a function pointer; the checks are gui_check.h's, the files are read with the shared test support. */
 
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <cJSON.h>
 
+#include "gui_check.h"
 #include "service/playback_service.h"
 
-static void check(bool cond, const char *what);
-static cJSON *exchange(const char *method, const char *path, const char *body, int *status);
-
-/* The whole file, newly allocated and NUL terminated; its size goes to *size when that is not NULL. NULL when absent. */
-static char *version_check_read(const char *path, size_t *size) {
-  FILE *file = fopen(path, "rb");
-  if (!file) {
-    return NULL;
-  }
-  size_t capacity = 4096;
-  size_t length = 0;
-  char *buffer = malloc(capacity);
-  while (buffer) {
-    size_t n = fread(buffer + length, 1, capacity - length - 1, file);
-    length += n;
-    if (n == 0) {
-      break;
-    }
-    if (length + 1 >= capacity) {
-      char *grown = realloc(buffer, capacity * 2);
-      if (!grown) {
-        free(buffer);
-        buffer = NULL;
-        break;
-      }
-      buffer = grown;
-      capacity *= 2;
-    }
-  }
-  fclose(file);
-  if (buffer) {
-    buffer[length] = '\0';
-    if (size) {
-      *size = length;
-    }
-  }
-  return buffer;
-}
+/* An exchange with a JSON body: the answer's body parsed as JSON (the caller deletes it), its status in *status. */
+typedef cJSON *(*VersionCheckExchange)(const char *method, const char *path, const char *body, int *status);
 
 /* A Composer plan: JSON with "format": "ursatz-composer-plan". */
 static bool check_plan_file(const char *path) {
-  char *text = version_check_read(path, NULL);
+  char *text = test_read_file(path, NULL);
   cJSON *plan = text ? cJSON_Parse(text) : NULL;
   const cJSON *format = plan ? cJSON_GetObjectItemCaseSensitive(plan, "format") : NULL;
   bool ok = cJSON_IsString(format) && strcmp(format->valuestring, "ursatz-composer-plan") == 0;
@@ -70,7 +34,7 @@ static bool check_plan_file(const char *path) {
 /* A MIDI file: it starts with the header chunk. */
 static bool check_midi_file(const char *path) {
   size_t size = 0;
-  char *text = version_check_read(path, &size);
+  char *text = test_read_file(path, &size);
   bool ok = text && size > 14 && memcmp(text, "MThd", 4) == 0;
   free(text);
   return ok;
@@ -78,14 +42,14 @@ static bool check_midi_file(const char *path) {
 
 /* A MusicXML file: it holds a partwise score. */
 static bool check_musicxml_file(const char *path) {
-  char *text = version_check_read(path, NULL);
+  char *text = test_read_file(path, NULL);
   bool ok = text && strstr(text, "<score-partwise") != NULL;
   free(text);
   return ok;
 }
 
 /* The playback the route serves at url equals, as JSON values, the playback service's own for the stored MIDI file. */
-static void check_playback_of(const char *url, const char *midi_path, const char *what) {
+static void check_playback_of(VersionCheckExchange exchange, const char *url, const char *midi_path, const char *what) {
   int status = 0;
   char *json = NULL;
   cJSON *want = NULL;

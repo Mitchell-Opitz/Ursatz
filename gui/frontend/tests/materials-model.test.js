@@ -1,19 +1,11 @@
 /* Covers the pure materials helpers (public/materials-model.js): request
  * builders, new item bodies, the project filter, item and version rows.
- * Plain Node script: `node frontend/tests/materials-model.test.js`. */
-require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"));
+ * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
+const { generated } = require("./support/fixtures.js");
+require("../public/vocabulary.js").set(require(generated("vocabulary.json")));
 const M = require("../public/materials-model.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 const projects = [
   { id: "prj-a", name: "Sonata" },
@@ -494,6 +486,4 @@ check(same(M.buildMotifBody({ ...M.motifFormValues(overridden), toneOverrides: {
 check(!("tone_overrides" in M.buildMotifBody(M.motifFormValues({ motif: {} }), null).motif), "a body without overrides leaves the member out");
 check(M.motifBodyChanged({ ...M.motifFormValues(overridden), toneOverrides: {} }, overridden) && !M.motifBodyChanged(M.motifFormValues(overridden), overridden), "changing an override is a body change");
 
-if (failures > 0) {
-  process.exit(1);
-}
+finish();

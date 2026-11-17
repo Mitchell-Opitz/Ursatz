@@ -9,27 +9,20 @@
 #include <ursatz_analyzer/similar_material.h>
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The similar material search over the "reference" corpus CMake builds in the build tree (the five framework-v1
  * pieces). The opening four soprano notes of Mozart 545 are the motive: they must come back first, at m. 1 with
  * score 1, and again where the piece returns to them; the same motive a fourth higher must score the same. "I IV V I"
  * must find Bach 114's cadences. The motive and progression results are compared with
- * tests/snapshots/similar.reference.txt (with UPDATE_SNAPSHOTS=1 in the environment, the snapshot is rewritten
+ * tests/snapshots/similar.reference.txt (with URSATZ_UPDATE_GOLDENS=1 in the environment, the snapshot is rewritten
  * instead). Run with --write-motive <file> to write the four-note MIDI motive the CLI test searches for.
+ *
+ * With the argument "smoke" the corpus is Bach 114 alone (copied from the fixtures into a folder of its own); the
+ * motive is Bach 114's own opening, which must come back first at m. 1 with score 1, and the snapshot and the return of
+ * the motive in the piece are left to the full test.
  */
-
-static int failures = 0;
-
-#define CHECK(condition, ...)                                                                                          \
-    do {                                                                                                               \
-        if (!(condition)) {                                                                                            \
-            fprintf(stderr, "FAIL line %d: ", __LINE__);                                                               \
-            fprintf(stderr, __VA_ARGS__);                                                                              \
-            fprintf(stderr, "\n");                                                                                     \
-            failures++;                                                                                                \
-        }                                                                                                              \
-    } while (0)
 
 /* C5 E5 G5 B4, eighth notes at 480 ticks to the quarter: a MIDI file of one track. */
 static bool write_motive_midi(const char *path) {
@@ -56,6 +49,12 @@ static bool write_motive_midi(const char *path) {
 
 static char work_dir[1024];
 
+/* The corpus the queries run over: the five reference pieces, or in the smoke run Bach 114 alone. The motive is the
+   opening of motive_piece. */
+static bool smoke;
+static const char *motive_piece = "Mozart 545.mid";
+static size_t corpus_pieces = 5;
+
 /* One line per match: "<score> <piece> m.<start> b.<beat> - m.<end> b.<beat> <dimension> <score>..., numerals <n>". */
 static char *render(const SimilarResults *results) {
     size_t capacity = 512 + results->count * 512;
@@ -79,11 +78,11 @@ static char *render(const SimilarResults *results) {
     return text;
 }
 
-/* The first four soprano notes of the Mozart 545 document, as a motive moved up by transpose semitones. */
-static bool mozart_motive(SimilarQuery *query, int transpose) {
+/* The first four soprano notes of the motive piece's document, as a motive moved up by transpose semitones. */
+static bool opening_motive(SimilarQuery *query, int transpose) {
     char path[1100];
-    snprintf(path, sizeof path, "%s/Mozart 545.mid.analysis.json", work_dir);
-    char *json = test_read_file(path);
+    snprintf(path, sizeof path, "%s/%s.analysis.json", work_dir, motive_piece);
+    char *json = test_read_file(path, NULL);
     cJSON *document = json ? cJSON_Parse(json) : NULL;
     free(json);
     SimilarNote *notes = calloc(4, sizeof *notes);
@@ -114,56 +113,55 @@ static bool mozart_motive(SimilarQuery *query, int transpose) {
 static void check_snapshot(const char *text) {
     char snapshot_path[1100];
     snprintf(snapshot_path, sizeof snapshot_path, "%s/similar.reference.txt", URSATZ_SNAPSHOT_DIR);
-    const char *update = getenv("UPDATE_SNAPSHOTS");
-    if (update && strcmp(update, "1") == 0) {
-        CHECK(test_write_file(snapshot_path, text), "cannot write %s", snapshot_path);
+    if (test_update_goldens()) {
+        CHECKF(test_write_file(snapshot_path, text, strlen(text)), "cannot write %s", snapshot_path);
         return;
     }
-    char *expected = test_read_file(snapshot_path);
-    CHECK(expected && strcmp(expected, text) == 0, "results differ from %s", snapshot_path);
+    char *expected = test_read_file(snapshot_path, NULL);
+    CHECKF(expected && strcmp(expected, text) == 0, "results differ from %s", snapshot_path);
     free(expected);
 }
 
 static void test_motive(void) {
     SimilarQuery query;
-    CHECK(mozart_motive(&query, 0), "cannot read the Mozart 545 motive");
+    CHECKF(opening_motive(&query, 0), "cannot read the %s motive", motive_piece);
     SimilarResults results = {0};
     SimilarOptions options = similar_options_default();
-    CHECK(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_OK, "motive search failed");
-    CHECK(results.pieces_searched == 5, "searched %zu pieces", results.pieces_searched);
-    CHECK(results.count > 0 && results.count <= options.max_results, "%zu matches", results.count);
+    CHECKF(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_OK, "motive search failed");
+    CHECKF(results.pieces_searched == corpus_pieces, "searched %zu pieces", results.pieces_searched);
+    CHECKF(results.count > 0 && results.count <= options.max_results, "%zu matches", results.count);
     if (results.count > 0) {
         const SimilarMatch *first = &results.matches[0];
-        CHECK(strcmp(first->piece, "Mozart 545.mid") == 0 && first->start_measure == 1 && first->start_beat == 1.0,
-              "first match is %s m.%d b.%g", first->piece, first->start_measure, first->start_beat);
-        CHECK(first->score.similarity.numerator == first->score.similarity.denominator, "first score %lu/%lu",
-              first->score.similarity.numerator, first->score.similarity.denominator);
-        CHECK(first->note_count == 4 && first->notes[0].onset_numerator == 0 && first->notes[0].pitch == query.notes[0].pitch,
-              "first match notes");
-        bool returns = false;
+        CHECKF(strcmp(first->piece, motive_piece) == 0 && first->start_measure == 1 && first->start_beat == 1.0,
+               "first match is %s m.%d b.%g", first->piece, first->start_measure, first->start_beat);
+        CHECKF(first->score.similarity.numerator == first->score.similarity.denominator, "first score %lu/%lu",
+               first->score.similarity.numerator, first->score.similarity.denominator);
+        CHECKF(first->note_count == 4 && first->notes[0].onset_numerator == 0 && first->notes[0].pitch == query.notes[0].pitch,
+               "first match notes");
+        bool returns = smoke; /* Bach 114 does not return to its opening notes; the full test checks Mozart 545 */
         for (size_t i = 1; i < results.count; i++) {
             const SimilarMatch *m = &results.matches[i];
             returns = returns || (strcmp(m->piece, "Mozart 545.mid") == 0 && m->start_measure > 1 &&
                                   m->score.similarity.numerator == m->score.similarity.denominator);
         }
-        CHECK(returns, "no full-score return of the motive in Mozart 545");
+        CHECKF(returns, "no full-score return of the motive in Mozart 545");
         for (size_t i = 1; i < results.count; i++) {
             const SimilarMatch *a = &results.matches[i - 1], *b = &results.matches[i];
-            CHECK((unsigned __int128)a->score.similarity.numerator * b->score.similarity.denominator >=
-                      (unsigned __int128)b->score.similarity.numerator * a->score.similarity.denominator,
-                  "match %zu scores higher than the one before", i);
+            CHECKF((unsigned __int128)a->score.similarity.numerator * b->score.similarity.denominator >=
+                       (unsigned __int128)b->score.similarity.numerator * a->score.similarity.denominator,
+                   "match %zu scores higher than the one before", i);
         }
     }
     char *text = render(&results);
-    CHECK(text != NULL, "cannot render");
+    CHECKF(text != NULL, "cannot render");
 
     SimilarQuery higher;
     SimilarResults higher_results = {0};
-    CHECK(mozart_motive(&higher, 5), "cannot read the transposed motive");
-    CHECK(similar_material_find(work_dir, &higher, &options, &higher_results) == SIMILAR_OK, "transposed search failed");
+    CHECKF(opening_motive(&higher, 5), "cannot read the transposed motive");
+    CHECKF(similar_material_find(work_dir, &higher, &options, &higher_results) == SIMILAR_OK, "transposed search failed");
     char *higher_text = render(&higher_results);
-    CHECK(text && higher_text && strcmp(text, higher_text) == 0, "a motive moved up a fourth scores differently:\n%s\n%s",
-          text ? text : "", higher_text ? higher_text : "");
+    CHECKF(text && higher_text && strcmp(text, higher_text) == 0, "a motive moved up a fourth scores differently:\n%s\n%s",
+           text ? text : "", higher_text ? higher_text : "");
     free(higher_text);
     similar_results_destroy(&higher_results);
     similar_query_destroy(&higher);
@@ -172,23 +170,25 @@ static void test_motive(void) {
         char *progression_text = NULL;
         SimilarQuery progression;
         SimilarResults progression_results = {0};
-        CHECK(similar_query_from_numerals("I IV V I", &progression) == SIMILAR_OK, "cannot read the progression");
+        CHECKF(similar_query_from_numerals("I IV V I", &progression) == SIMILAR_OK, "cannot read the progression");
         SimilarOptions wide = similar_options_default();
         wide.max_results = 100; /* Bach 114's cadences score lower than the best ten */
-        CHECK(similar_material_find(work_dir, &progression, &wide, &progression_results) == SIMILAR_OK, "progression search failed");
+        CHECKF(similar_material_find(work_dir, &progression, &wide, &progression_results) == SIMILAR_OK, "progression search failed");
         progression_text = render(&progression_results);
         size_t total = strlen(text) + (progression_text ? strlen(progression_text) : 0) + 64;
         char *both = malloc(total);
-        CHECK(both && progression_text, "cannot render the progression");
+        CHECKF(both && progression_text, "cannot render the progression");
         if (both && progression_text) {
             snprintf(both, total, "motive: Mozart 545 opening\n%sprogression: I IV V I\n%s", text, progression_text);
-            check_snapshot(both);
+            if (!smoke) {
+                check_snapshot(both);
+            }
         }
         bool bach = false;
         for (size_t i = 0; i < progression_results.count; i++) {
             bach = bach || strcmp(progression_results.matches[i].piece, "Bach 114.mid") == 0;
         }
-        CHECK(bach, "no Bach 114 cadence among the matches of I IV V I");
+        CHECKF(bach, "no Bach 114 cadence among the matches of I IV V I");
         free(both);
         free(progression_text);
         similar_results_destroy(&progression_results);
@@ -201,55 +201,55 @@ static void test_motive(void) {
 
 static void test_queries(void) {
     SimilarQuery query;
-    CHECK(similar_query_from_numerals("ii-V6/5-I", &query) == SIMILAR_OK && query.numeral_count == 3 &&
-              strcmp(query.numerals[0], "ii") == 0 && strcmp(query.numerals[1], "V7") == 0 && strcmp(query.numerals[2], "I") == 0,
-          "numerals read wrongly");
+    CHECKF(similar_query_from_numerals("ii-V6/5-I", &query) == SIMILAR_OK && query.numeral_count == 3 &&
+               strcmp(query.numerals[0], "ii") == 0 && strcmp(query.numerals[1], "V7") == 0 && strcmp(query.numerals[2], "I") == 0,
+           "numerals read wrongly");
     similar_query_destroy(&query);
-    CHECK(similar_query_from_numerals("I  IV\tV7 I", &query) == SIMILAR_OK && query.numeral_count == 4, "spaces and tabs");
+    CHECKF(similar_query_from_numerals("I  IV\tV7 I", &query) == SIMILAR_OK && query.numeral_count == 4, "spaces and tabs");
     similar_query_destroy(&query);
-    CHECK(similar_query_from_numerals("I banana", &query) == SIMILAR_ERR_QUERY, "a word is not a numeral");
-    CHECK(similar_query_from_numerals("I", &query) == SIMILAR_ERR_QUERY, "one numeral is not a progression");
-    CHECK(similar_query_from_numerals("", &query) == SIMILAR_ERR_QUERY, "no numerals");
-    CHECK(similar_query_from_numerals(NULL, &query) == SIMILAR_ERR_ARGUMENT, "NULL text");
+    CHECKF(similar_query_from_numerals("I banana", &query) == SIMILAR_ERR_QUERY, "a word is not a numeral");
+    CHECKF(similar_query_from_numerals("I", &query) == SIMILAR_ERR_QUERY, "one numeral is not a progression");
+    CHECKF(similar_query_from_numerals("", &query) == SIMILAR_ERR_QUERY, "no numerals");
+    CHECKF(similar_query_from_numerals(NULL, &query) == SIMILAR_ERR_ARGUMENT, "NULL text");
 
     char path[1100];
     snprintf(path, sizeof path, "%s/motive.mid", work_dir);
-    CHECK(write_motive_midi(path), "cannot write %s", path);
-    CHECK(similar_query_from_file(path, &query) == SIMILAR_OK && query.kind == SIMILAR_QUERY_MOTIVE && query.note_count == 4,
-          "the motive file reads wrongly");
+    CHECKF(write_motive_midi(path), "cannot write %s", path);
+    CHECKF(similar_query_from_file(path, &query) == SIMILAR_OK && query.kind == SIMILAR_QUERY_MOTIVE && query.note_count == 4,
+           "the motive file reads wrongly");
     if (query.note_count == 4) {
-        CHECK(query.notes[0].pitch == 72 && query.notes[1].pitch == 76 && query.notes[2].pitch == 79 && query.notes[3].pitch == 71,
-              "motive pitches %d %d %d %d", query.notes[0].pitch, query.notes[1].pitch, query.notes[2].pitch, query.notes[3].pitch);
-        CHECK(query.notes[0].onset_numerator == 0 && query.notes[1].onset_numerator == 1 && query.notes[1].onset_denominator == 8,
-              "motive onsets");
+        CHECKF(query.notes[0].pitch == 72 && query.notes[1].pitch == 76 && query.notes[2].pitch == 79 && query.notes[3].pitch == 71,
+               "motive pitches %d %d %d %d", query.notes[0].pitch, query.notes[1].pitch, query.notes[2].pitch, query.notes[3].pitch);
+        CHECKF(query.notes[0].onset_numerator == 0 && query.notes[1].onset_numerator == 1 && query.notes[1].onset_denominator == 8,
+               "motive onsets");
     }
     similar_query_destroy(&query);
 
     SimilarQuery short_query = {SIMILAR_QUERY_MOTIVE, calloc(1, sizeof(SimilarNote)), 1, NULL, 0};
     short_query.notes[0] = (SimilarNote){60, 0, 1, 1, 4};
     SimilarResults results = {0};
-    CHECK(similar_material_find(work_dir, &short_query, NULL, &results) == SIMILAR_ERR_QUERY, "a one-note query is refused");
+    CHECKF(similar_material_find(work_dir, &short_query, NULL, &results) == SIMILAR_ERR_QUERY, "a one-note query is refused");
     similar_query_destroy(&short_query);
 
-    CHECK(similar_query_from_numerals("I V", &query) == SIMILAR_OK, "I V");
+    CHECKF(similar_query_from_numerals("I V", &query) == SIMILAR_OK, "I V");
     SimilarOptions options = similar_options_default();
-    CHECK(similar_material_find("/nonexistent/corpus", &query, &options, &results) == SIMILAR_ERR_IO, "a missing corpus");
+    CHECKF(similar_material_find("/nonexistent/corpus", &query, &options, &results) == SIMILAR_ERR_IO, "a missing corpus");
     options.max_results = 0;
-    CHECK(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_ERR_ARGUMENT, "no results asked for");
+    CHECKF(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_ERR_ARGUMENT, "no results asked for");
     options = similar_options_default();
     options.minimum_numerator = 3;
     options.minimum_denominator = 2;
-    CHECK(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_ERR_ARGUMENT, "a minimum above 1");
+    CHECKF(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_ERR_ARGUMENT, "a minimum above 1");
     options = similar_options_default();
     options.minimum_numerator = options.minimum_denominator = 1;
-    CHECK(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_OK, "minimum 1");
+    CHECKF(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_OK, "minimum 1");
     for (size_t i = 0; i < results.count; i++) {
-        CHECK(results.matches[i].score.similarity.numerator == results.matches[i].score.similarity.denominator, "minimum 1 kept %zu", i);
+        CHECKF(results.matches[i].score.similarity.numerator == results.matches[i].score.similarity.denominator, "minimum 1 kept %zu", i);
     }
     options.max_results = 2;
     options.minimum_numerator = 0;
     similar_results_destroy(&results);
-    CHECK(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_OK && results.count == 2, "max 2 gives %zu", results.count);
+    CHECKF(similar_material_find(work_dir, &query, &options, &results) == SIMILAR_OK && results.count == 2, "max 2 gives %zu", results.count);
     similar_results_destroy(&results);
     similar_query_destroy(&query);
 
@@ -257,10 +257,11 @@ static void test_queries(void) {
     snprintf(path, sizeof path, "%s/not-a-corpus", work_dir);
     mkdir(path, 0777);
     snprintf(path, sizeof path, "%s/not-a-corpus/corpus-index.json", work_dir);
-    CHECK(test_write_file(path, "{\"schema\": \"something-else\"}"), "cannot write the fake index");
-    CHECK(similar_query_from_numerals("I V", &query) == SIMILAR_OK, "I V again");
+    const char *fake_index = "{\"schema\": \"something-else\"}";
+    CHECKF(test_write_file(path, fake_index, strlen(fake_index)), "cannot write the fake index");
+    CHECKF(similar_query_from_numerals("I V", &query) == SIMILAR_OK, "I V again");
     snprintf(path, sizeof path, "%s/not-a-corpus", work_dir);
-    CHECK(similar_material_find(path, &query, NULL, &results) == SIMILAR_ERR_FORMAT, "a foreign index");
+    CHECKF(similar_material_find(path, &query, NULL, &results) == SIMILAR_ERR_FORMAT, "a foreign index");
     similar_query_destroy(&query);
 }
 
@@ -268,27 +269,50 @@ int main(int argc, char **argv) {
     if (argc == 3 && strcmp(argv[1], "--write-motive") == 0) {
         return write_motive_midi(argv[2]) ? 0 : 1;
     }
+    smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     snprintf(work_dir, sizeof work_dir, "%s", URSATZ_SIMILAR_WORK_DIR);
-    char command[1100];
+    char command[1400];
     snprintf(command, sizeof command, "rm -rf '%s'", work_dir);
     if (system(command) != 0) {
         fprintf(stderr, "cannot clear %s\n", work_dir);
     }
     mkdir(work_dir, 0777);
 
-    CorpusRunOptions run = {URSATZ_CORPORA_DIR "/reference", work_dir, false, NULL, NULL};
+    char corpus_dir[1200];
+    snprintf(corpus_dir, sizeof corpus_dir, "%s", URSATZ_CORPORA_DIR "/reference");
+    if (smoke) {
+        motive_piece = "Bach 114.mid";
+        corpus_pieces = 1;
+        snprintf(corpus_dir, sizeof corpus_dir, "%s_smoke_input", work_dir);
+        snprintf(command, sizeof command, "rm -rf '%s'", corpus_dir);
+        if (system(command) != 0) {
+            fprintf(stderr, "cannot clear %s\n", corpus_dir);
+        }
+        mkdir(corpus_dir, 0777);
+        char source[1100];
+        char copy[1500];
+        snprintf(source, sizeof source, "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, motive_piece);
+        snprintf(copy, sizeof copy, "%s/%s", corpus_dir, motive_piece);
+        size_t size = 0;
+        char *bytes = test_read_file(source, &size);
+        if (!bytes || !test_write_file(copy, bytes, size)) {
+            fprintf(stderr, "cannot copy %s\n", source);
+            return 1;
+        }
+        free(bytes);
+    }
+
+    CorpusRunOptions run = {corpus_dir, work_dir, false, NULL, NULL};
     CorpusRunSummary summary;
-    if (corpus_run(&run, &summary) != CORPUS_RUN_OK || summary.analyzed != 5) {
+    if (corpus_run(&run, &summary) != CORPUS_RUN_OK || summary.analyzed != corpus_pieces) {
         fprintf(stderr, "cannot analyze the reference corpus\n");
         return 1;
     }
     test_queries();
     test_motive();
 
-    if (failures) {
-        fprintf(stderr, "%d failure(s)\n", failures);
-        return 1;
+    if (!smoke && test_update_goldens()) {
+        return test_goldens_updated("test_similar_material");
     }
-    printf("test_similar_material: ok\n");
-    return 0;
+    return test_finish(smoke ? "test_similar_material smoke" : "test_similar_material");
 }

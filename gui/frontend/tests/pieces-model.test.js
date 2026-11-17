@@ -3,22 +3,14 @@
  * piece-summary.json is the output of `ursatz-composer piece --format json` for the request of the loop-and-ending
  * fixture (intro 2 bars, body of 8 and 4 bars from two motives, turnaround 2 bars, ending 2 bars), D minor at tempo
  * 170 from a style, seed 7 and --check.
- * Plain Node script: `node frontend/tests/pieces-model.test.js`. */
+ * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
 const fs = require("fs");
 const path = require("path");
-require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"), require("./fixtures/forms.json"));
+const { generated } = require("./support/fixtures.js");
+require("../public/vocabulary.js").set(require(generated("vocabulary.json")), require(generated("forms.json")));
 const P = require("../public/pieces-model.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 function section(id, part, letter, beats, fill, extra) {
   return { id, part, letter, beats, pickup: "0", cadence: null, fill: fill || { kind: "empty" }, ...extra };
@@ -207,7 +199,7 @@ check(
 const empty = P.resultView(null);
 check(empty.seed === null && empty.versions.length === 0 && empty.loop === "" && empty.files.length === 0, "no result gives no rows");
 
-/* forms (fixtures/forms.json is the route's answer) */
+/* forms (forms.json is generated from the Composer's forms route answer) */
 const roundedState = P.withForm(P.emptyState("pce-2"), "rounded-binary");
 roundedState.key = "A";
 roundedState.mode = "minor";
@@ -443,7 +435,7 @@ check(
 check(minuetRows.every((row) => row.function === ""), "a row without a function has none");
 
 /* The rondo labels (P52, R-521). */
-const rondoSections = require("./fixtures/forms.json").forms.find((form) => form.name === "small-rondo-ababa").sizes[0].sections;
+const rondoSections = require(generated("forms.json")).forms.find((form) => form.name === "small-rondo-ababa").sizes[0].sections;
 const rondoSection = (name) => rondoSections.find((section) => section.name === name);
 check(
   P.sectionReturnLabel(rondoSection("A1")) === "A (embellish)" &&
@@ -460,7 +452,7 @@ check(
     P.sectionKeysLabel(null) === "",
   "a section in the tonic major says so and any other shows its keys alone",
 );
-const mainSections = require("./fixtures/forms.json").forms.find((form) => form.name === "main-and-subordinate").sizes[0].sections;
+const mainSections = require(generated("forms.json")).forms.find((form) => form.name === "main-and-subordinate").sizes[0].sections;
 const mainReturn = mainSections.find((section) => section.returns);
 check(
   P.sectionReturnLabel(mainReturn) === `${mainReturn.returns} (${mainReturn.variation})` && P.sectionReturnLabel(mainReturn) === "A (exact)" && P.sectionKeysLabel(mainSections.find((section) => section.name === "T")) === "home to subordinate",
@@ -471,7 +463,7 @@ const rondoRows = P.resultView({ seed: 1, summary: rondoSummary }, { form: "smal
 check(rondoRows[8].letter === "A" && rondoRows[8].changes.includes("new setting"), "the second return of A in a small rondo says its new setting");
 
 /* The sonatina labels (P53, R-525). */
-const sonatinaForms = require("./fixtures/forms.json").forms;
+const sonatinaForms = require(generated("forms.json")).forms;
 const sonatinaSections = sonatinaForms.find((form) => form.name === "sonatina").sizes[0].sections;
 const sonatinaSection = (name) => sonatinaSections.find((section) => section.name === name);
 check(
@@ -493,7 +485,4 @@ check(
   "the home mode return of B in a sonatina says it was mapped into minor and the elaboration says no mode",
 );
 
-if (failures > 0) {
-  console.error(`${failures} failure(s)`);
-  process.exit(1);
-}
+finish();

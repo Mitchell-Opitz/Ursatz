@@ -9,6 +9,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -34,7 +35,7 @@ static bool quick;
 /* --- requests and responses ----------------------------------------------------------------------- */
 
 static cJSON *load_json(const char *path) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     cJSON *json = cJSON_Parse(text);
     assert(json);
     free(text);
@@ -50,7 +51,7 @@ static char *print(cJSON *request) {
 
 /* The text of a fixture, one line. */
 static char *line_of(const char *path) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     for (char *c = text; *c; c++) {
         if (*c == '\n') {
             *c = ' ';
@@ -72,9 +73,9 @@ static cJSON *motive_request(const char *fixture) {
 static void write_pair(const char *kind, const char *tag, const char *request, const ComposerResponse *response) {
     char path[160];
     snprintf(path, sizeof path, "api_%s_request_%s.json", kind, tag);
-    test_write_file(path, request);
+    test_write_text(path, request);
     snprintf(path, sizeof path, "api_%s_response_%s.json", kind, tag);
-    test_write_file(path, response->json);
+    test_write_text(path, response->json);
 }
 
 static ComposerStatus call(Entry entry, cJSON *request, const ComposerJob *job, ComposerResponse *response, char **printed) {
@@ -151,7 +152,7 @@ static void expect_plan(const char *plan_text, const char *snapshot) {
 
 static void expect_file(const unsigned char *data, size_t size, const char *snapshot) {
     size_t expected_size = 0;
-    char *expected = test_read_file(snapshot, &expected_size);
+    char *expected = test_must_read_file(snapshot, &expected_size);
     if (!data || size != expected_size || memcmp(data, expected, size) != 0) {
         fprintf(stderr, "a file differs from %s\n", snapshot);
     }

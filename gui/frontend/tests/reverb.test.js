@@ -5,16 +5,7 @@
 
 const Reverb = require("../public/reverb.js");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 /* A seeded random so the envelope check is repeatable. */
 function seeded(seed) {
@@ -58,7 +49,4 @@ for (const amount of [0, 20, 100]) {
 check(Reverb.reverbGains(100).dry > 0.5 && Reverb.reverbGains(100).dry < 1, "amount 100 keeps the dry signal audible");
 check(Reverb.reverbGains(-5).wet === 0 && Reverb.reverbGains(500).wet === Reverb.reverbGains(100).wet, "amounts outside 0 to 100 are clamped");
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
-}
+finish();

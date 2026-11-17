@@ -218,8 +218,8 @@ file and give it to `plan --given-melody`.
 `chorales-motives.style.json` is `chorales.style.json` plus invented statistics in the four motive categories; `test_style motives` checks that reading it keeps them and that reading it without them drops them. `step-up-motives.style.json` counts one `motive-degrees` label (`4 6 5 3 2`, the basic idea `E4:q G4:e F4:e D4:q C4:q` a step higher); `test_style prefer` grows a sentence at seed 2, where the repetition is offered a dominant form (`7 2 1 5 5`) and that transposition, and checks that the style moves the repetition to the transposition and `motive-degrees` read without it gives the dominant form back.
 
 `tests/fixtures/styles/chorales.style.json` (ten chorales) and `sonatinas.style.json` (Clementi 36, Mozart 545) were made by
-the Analyzer over its test corpora. From a folder holding `chorales/` (the ten `library/tests/accuracy/corpus/*/score.musicxml`,
-each renamed `<folder>.musicxml`) and `sonatinas/` (the two files in `library/tests/fixtures/framework-v1-corpus`):
+the Analyzer over its test corpora. From a folder holding `chorales/` (the ten `tests/fixtures/accuracy-corpus/*/score.musicxml`,
+each renamed `<folder>.musicxml`) and `sonatinas/` (the two files in `tests/fixtures/framework-v1-corpus`):
 
 ```sh
 for c in chorales sonatinas; do

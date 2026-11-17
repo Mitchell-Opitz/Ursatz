@@ -5,8 +5,8 @@ Build requirements, the test list and the checks CI runs beyond the configure, b
 
 Library headers are included only by their staged public paths (`time/meter_map.h`, `standard-harmony/analysis/analysis_cadence.h`,
 `common-practice-minimal/key_regions.h`), never by a framework's source directory. `URSATZ_LEGACY_INCLUDE_DIRS` is off
-(Ursatz's default), so the build sees only the staged public headers. `tools/ci/check-library-includes-analyzer.sh` checks this
-(see [Library include check](#library-include-check)). Tests read their input from `tests/fixtures/`, not from the library's own test folders (see `tests/fixtures/README.md`).
+(Ursatz's default), so the build sees only the staged public headers. the layer table checks this
+(see [Library include check](#library-include-check)). Tests read their input from `tests/fixtures/`, not from the library's own test folders (see [`tests/fixtures/README.md`](../../tests/fixtures/README.md)).
 
 The Analyzer holds no arithmetic of its own on times, pitches, key signatures or numerals. Exact times are `Rational`
 (`core/rational.h`, with the `time/time_rational.h` bridges); an overflow fails the stage that met it, and a document
@@ -19,6 +19,8 @@ phrase span and onset snap from `time/score_time.h` (`score_time_span`, `score_t
 check's own fraction stay until the library owns them.
 
 ## Tests
+
+Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): it compiles the test with `-UNDEBUG` and sets its timeout (120 s, 1800 s for `slow`). Labels: `slow` (nightly only), `valgrind` (memcheck runs, always with `slow`) and `schema`. The three schema tests (`test_analysis_document_schema`, `test_corpus_index_schema`, `test_style_model_schema`) are registered only when python3 with jsonschema is installed; `-DURSATZ_REQUIRE=jsonschema` makes the configure fail when it is not. The CLI tests that validate output on the side skip that step without it. Tests that write a fixed scratch file take a `RESOURCE_LOCK`, so they never run together. Smoke runs: `<name>_smoke` tests run the same program on Bach 114 alone (under 2 s each, in the fast set) for `test_measure_locations`, `test_chord_coverage`, `test_roman_numerals`, `test_cadences`, `test_harmonic_function`, `test_progressions`, `test_phrases`, `test_themes`, `test_form_plan`, `test_schemas`, `test_musicxml_midi_agreement`, `test_meter_check`, `test_text_export_snapshots` and `test_similar_material`; `test_analysis_document_schema_smoke` validates the Bach 114 document, and `test_cli_style_profile_smoke` and `test_cli_similar_smoke` run a two-piece corpus. Nightly only, because each needs a whole-corpus output and a smoke or CLI test covers the path: `test_motives` and `test_motive_sketch_map` (Mozart 545 only), `test_long_labels`, `test_corpus_key_estimation`, `test_analyzer_corpus`, `test_style_profile`, `test_corpus_index_schema` and `test_style_model_schema`. Test inputs come from the root `tests/fixtures/`; `URSATZ_FIXTURES_DIR` names it. Checks, file and JSON helpers come from the root `tests/support/ursatz_test.h`; `tests/support/` here keeps only what is Analyzer-specific.
 
 Tests:
 
@@ -50,8 +52,9 @@ Tests:
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_document_snapshots`: the analysis
   document (MIDI, without `analyzer_version`, `producer_key` and `input`) of the five reference pieces, byte for byte
-  against `tests/snapshots/<piece>.analysis.json`. Run a test with `UPDATE_SNAPSHOTS=1` (or
-  `URSATZ_UPDATE_SNAPSHOTS=1`) to rewrite its files; a claim that moves is recaptured in its own commit.
+  against `tests/snapshots/<piece>.analysis.json`. Rewrite its files with
+  `cmake --build build --target update-goldens` (every test labelled `golden`, see "Goldens" in the root `README.md`);
+  a claim that moves is recaptured in its own commit.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
   and beat of the chords covering chosen positions, for the five reference pieces and two
@@ -90,7 +93,7 @@ Tests:
   motive, the same motive moved up, `I IV V I`, the results against `tests/snapshots/similar.reference.txt`, and the
   refusals. `test_cli_similar` checks the flags, the output and the exit codes, and validates the JSON against the
   schema (see below).
-- `test_motive_links`: the library over the four pieces of `tests/links`: a link across keys that replays from one
+- `test_motive_links`: the library over the four pieces of `tests/fixtures/links`: a link across keys that replays from one
   prototype sketch to the other, a family in no link, the groups, the cache (a second run compares nothing, adding a piece
   compares only its pairs, another analyzer version or other options empty it) and the scope's refusals, also under
   valgrind. `test_cli_link_motives` checks the flags, the text and JSON output, the cache and the exit codes, and
@@ -105,10 +108,10 @@ Tests:
 
 ## Library include check
 
-`tools/ci/check-library-includes-analyzer.sh <build dir>` (relative to the repository root) runs after the build and fails when `src/` or `include/` includes an
+The layer table (`cmake/layer-table.txt`, test `layer_table`, run with the fast set) fails when `src/` or `include/` includes an
 Ursatz header that is not under a staged public root of the build, names a `*_internal.h` of Ursatz, when a CMake
 file reads `SOURCE_DIR` of an Ursatz target or a path under `library/tests`, or when a public header other than
-`result_chain.h` includes a chain or framework header. It prints each offending line. CI runs it after the build.
+`result_chain.h` includes a chain or framework header. It prints each offending line.
 `test_consumer_isolation` builds the targets of `tests/consumer`: one linking only `ursatz_analyzer` compiles every public
 header but `result_chain.h`, and cannot include a chain or framework header.
 

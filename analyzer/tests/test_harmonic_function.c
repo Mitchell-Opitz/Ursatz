@@ -10,6 +10,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Harmonic function, six-fours and prolongations on Bach 114 and Mozart 545 (Ursatz's framework-v1-corpus).
@@ -20,18 +21,9 @@
  * six-four has one of the library's types. Prolongations name an entry range that exists, in order, with a function
  * the library prolongs and the library's reasons. The first movement of Mozart 545 (measures 1 to 146) has 4 cadential
  * six-fours (m24, m52, m97, m142): the I6/4 before the V7 in the G and the C closing sections. Since keys are placed on
- * phrases (Ursatz P42) m22 to 24 are read in G, not A minor, and the six-four there is read.
+ * phrases (Ursatz P42) m22 to 24 are read in G, not A minor, and the six-four there is read. With the argument "smoke"
+ * only Bach 114 runs (the fast set).
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 typedef struct {
     const char *name;
@@ -132,12 +124,12 @@ static void check_prolongations(const cJSON *document, const AnalysisReport *rep
 
 static void run_piece(const Piece *piece) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, piece->file);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
     ImportedNotes notes;
     AnalysisReport report;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
-        failures++;
+        test_failure_count++;
         return;
     }
     char *json = test_render_document(path, &notes, &report);
@@ -158,14 +150,13 @@ static void run_piece(const Piece *piece) {
     imported_notes_destroy(&notes);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
         run_piece(&PIECES[i]);
     }
-    if (failures > 0) {
-        fprintf(stderr, "test_harmonic_function: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_harmonic_function: ok\n");
-    return 0;
+    return test_finish("test_harmonic_function");
 }

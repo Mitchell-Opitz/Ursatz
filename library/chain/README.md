@@ -4,7 +4,7 @@
 
 ## Layer
 
-An extension above the numbered stack. It may include kernel L0 to L8 and the framework headers listed in `chain/tests/test_architecture_chain.c`. It never includes L9 (`io`, `export`, `query`). `architecture_chain` enforces this. The notes it reads (`semantics/analysis_note.h`) are made from an import by the caller (the library's tests use `tests/import_notes_test_util.h`).
+An extension above the numbered stack. It may include kernel L0 to L8 and the framework headers listed in the `chain` row of `cmake/layer-table.txt`. It never includes L9 (`io`, `export`, `query`). The test `layer_table` enforces this. The notes it reads (`semantics/analysis_note.h`) are made from an import by the caller (the library's tests use `tests/import_notes_test_util.h`).
 
 ## Contents
 
@@ -81,3 +81,7 @@ The library's tests run analysis through the chain: `tests/analysis/weighted_pip
 ## Kernel owners (`ursatz_chain/kernel_owners.h`)
 
 The chain hands `chain_classify_tones` (`motive_tone_roles_line`) to the frameworks, which cannot call L8, as the `NonChordToneClassifier` of the weighted chord identifier and of the melody stage (`chain_relabel_melody_line`). `chain_match_motive_relation` (`motive_variant_recognize` at depth 1: exact, transpose, invert, retrograde, augment 2:1, diminish 1:2, and a leading or trailing fragment) is the `StandardFormRelationMatchFn` (`relation_match`) of the motive stage, which requires one. A classifier or matcher already set in `weighting` or `form` is kept.
+
+## Smoke run
+
+`analysis_chain_field1` runs `test_analysis_chain` on Field 1 alone (`URSATZ_CHAIN_PIECE=field1`, 0.3 s) in the fast set; `analysis_chain` (four reference pieces, about 22 s) stays `slow`.

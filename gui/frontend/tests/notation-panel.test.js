@@ -6,16 +6,7 @@
 
 const panel = require("../public/notation-panel.js");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 function reading(num, den, scale, pickup, score) {
   return {
@@ -78,7 +69,4 @@ check(
 check(JSON.stringify(panel.notationBody({ clear: true })) === '{"notation":null}', "clear body");
 check(JSON.stringify(panel.notationBody({ meter: "", value_scale: "", pickup: "" })) === '{"notation":null}', "empty fields clear");
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
-}
+finish();

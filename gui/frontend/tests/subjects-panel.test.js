@@ -3,16 +3,7 @@
  * Plain Node script: `node frontend/tests/subjects-panel.test.js`. */
 const S = require("../public/subjects-panel.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 const groups = [
   { kind: "character", subjects: [{ id: "sub-1", name: "Hero", item_count: 2, piece_count: 1, link_count: 3 }] },
@@ -80,6 +71,4 @@ check(pending.length === 1, "adding a subject leaves the list alone");
 check(S.withoutSubject(pending, "sub-1").length === 0 && S.withoutSubject(pending, "sub-9").length === 1, "a pending subject is removed by id");
 check(S.withSubject(undefined, { id: "sub-1", name: "Hero", kind: "character" }).length === 1 && S.withoutSubject(null, "sub-1").length === 0, "no list is an empty list");
 
-if (failures > 0) {
-  process.exit(1);
-}
+finish();

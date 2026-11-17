@@ -9,6 +9,8 @@
 #include <ursatz_analyzer/imported_notes.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
+#include "ursatz_test.h"
+
 /*
  * The schemas and sequences of the report, on the hand-written galant fixture of Ursatz's tests/integration/
  * test_schema_sequence.c (tests/fixtures/galant/galant_fixture.txt: 24 measures in C major planted with a Romanesca, a
@@ -27,21 +29,13 @@
  * On the reference pieces (the Mozart 545 and Clementi 36 of Ursatz's own test, printed there and not asserted) the
  * matches are pinned to what the library gives, with the structure checked. The library
  * finds no schema in the Bach 114, Clementi 36, Field 1 or Field 5 outer voices.
+ *
+ * With the argument "smoke" only the Bach 114 reference piece runs (the fast set).
  */
 
 /* 3 since Ursatz P42: keys placed on phrases give the galant fixture's romanesca at beats 52 to 56 another reading, so
    the chain finds 3 of the 9 planted items (Ursatz's own galant floor stays 4: its run stops before the form stage). */
 #define CHAIN_FLOOR_FOUND 3
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* --- the fixture --- */
 
@@ -243,7 +237,7 @@ static bool analyze(const char *path, Analysis *analysis) {
     if (midi_pipeline_import_file(path, &analysis->notes) != MIDI_PIPELINE_OK ||
         !run_analysis_pipeline(&analysis->notes, &analysis->report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
-        failures++;
+        test_failure_count++;
         return false;
     }
     return true;
@@ -365,7 +359,7 @@ static void check_fixture(const char *dir) {
     if (!fixture || !load_fixture(fixture_path, fixture) || !load_planted(annotation_path, &planted) ||
         !write_midi(fixture, midi_path)) {
         fprintf(stderr, "cannot build the galant fixture from %s\n", fixture_path);
-        failures++;
+        test_failure_count++;
         free(fixture);
         return;
     }
@@ -425,14 +419,20 @@ static void check_piece(const char *dir, const Pinned *pinned) {
     analysis_destroy(&analysis);
 }
 
-int main(void) {
-    check_fixture(URSATZ_ANALYZER_FIXTURE_DIR);
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    if (!smoke) {
+        check_fixture(URSATZ_FIXTURES_DIR);
+    }
     static const Pinned PIECES[] = {
         {"Bach 114.mid", 0, 2, 0, 2},   {"Clementi 36.mid", 0, 0, 0, 0}, {"Mozart 545.mid", 0, 8, 4, 4},
         {"Field 1.mid", 0, 0, 0, 0},    {"Field 5.mid", 0, 0, 0, 0},
     };
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
-        check_piece(URSATZ_ANALYZER_FIXTURE_DIR, &PIECES[i]);
+        if (smoke && strcmp(PIECES[i].file, "Bach 114.mid") != 0) {
+            continue;
+        }
+        check_piece(URSATZ_FIXTURES_DIR, &PIECES[i]);
     }
-    return failures == 0 ? 0 : 1;
+    return test_finish("test_schemas");
 }

@@ -1,7 +1,6 @@
 /* Material and subject routes end to end: projects, items, versions and uses
  * under /api/materials, with the status codes the routes promise (400, 404,
- * 409, 413). Uses a plain TCP socket for the HTTP requests, same as
- * test_styles_route.c. Runs in its own working directory (materials/ and
+ * 409, 413). Uses the shared HTTP client (tests/support/test_http.h). Runs in its own working directory (materials/ and
  * subjects/ are created there). */
 
 
@@ -14,136 +13,16 @@
 
 #ifdef _WIN32
 #include <direct.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-typedef SOCKET socket_t;
-#define CLOSESOCK closesocket
 #define MKDIR(path) _mkdir(path)
 #else
-#include <arpa/inet.h>
 #include <dirent.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
-typedef int socket_t;
-#define CLOSESOCK close
-#define INVALID_SOCKET (-1)
 #define MKDIR(path) mkdir(path, 0755)
 #endif
 
 #include <cJSON.h>
 
-
-static void sleep_ms(int ms) {
-#ifdef _WIN32
-  Sleep((DWORD)ms);
-#else
-  struct timespec ts = {0, (long)ms * 1000 * 1000};
-  nanosleep(&ts, NULL);
-#endif
-}
-
-static int failures = 0;
-
-static void check(bool cond, const char *what) {
-  if (!cond) {
-    fprintf(stderr, "FAIL: %s\n", what);
-    failures++;
-  } else {
-    printf("PASS: %s\n", what);
-  }
-}
-
-/* One HTTP exchange. extra_headers is zero or more complete "Name: value\r\n"
- * lines. Returns the whole response (status line, headers, body) as a newly
- * allocated string, or NULL when the connection failed. */
-static char *http_exchange(const char *method, const char *path, const char *extra_headers, const void *body,
-                           size_t body_len) {
-  socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock == INVALID_SOCKET) {
-    return NULL;
-  }
-
-  struct sockaddr_in addr;
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(18770);
-  inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
-
-  if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
-    CLOSESOCK(sock);
-    return NULL;
-  }
-
-  char header[1024];
-  int header_len = snprintf(header, sizeof(header),
-                            "%s %s HTTP/1.1\r\nHost: 127.0.0.1\r\n%sContent-Length: %zu\r\nConnection: close\r\n\r\n",
-                            method, path, extra_headers ? extra_headers : "", body_len);
-  send(sock, header, header_len, 0);
-  const char *cursor = body;
-  size_t remaining = body_len;
-  while (remaining > 0) {
-    int n = send(sock, cursor, remaining > 65536 ? 65536 : (int)remaining, 0);
-    if (n <= 0) {
-      break;
-    }
-    cursor += n;
-    remaining -= (size_t)n;
-  }
-
-  size_t capacity = 65536;
-  size_t total = 0;
-  char *response = malloc(capacity);
-  while (response) {
-    if (total + 1 >= capacity) {
-      capacity *= 2;
-      char *grown = realloc(response, capacity);
-      if (!grown) {
-        free(response);
-        response = NULL;
-        break;
-      }
-      response = grown;
-    }
-    int n = recv(sock, response + total, (int)(capacity - 1 - total), 0);
-    if (n <= 0) {
-      break;
-    }
-    total += (size_t)n;
-  }
-  CLOSESOCK(sock);
-  if (response) {
-    response[total] = '\0';
-  }
-  return response;
-}
-
-/* The part of a response after its headers. */
-static const char *response_body(const char *response) {
-  const char *split = response ? strstr(response, "\r\n\r\n") : NULL;
-  return split ? split + 4 : "";
-}
-
-static bool response_has_status(const char *response, int status) {
-  char needle[32];
-  snprintf(needle, sizeof(needle), "HTTP/1.1 %d", status);
-  return response && strncmp(response, needle, strlen(needle)) == 0;
-}
-
-/* An exchange with a JSON body; *status gets the HTTP status and the result is the parsed body (caller deletes). */
-static cJSON *json_exchange(const char *method, const char *path, const char *body, int *status) {
-  char *response = http_exchange(method, path, "Content-Type: application/json\r\n", body ? body : "",
-                                 body ? strlen(body) : 0);
-  *status = 0;
-  if (response && strncmp(response, "HTTP/1.1 ", 9) == 0) {
-    *status = atoi(response + 9);
-  }
-  cJSON *json = response ? cJSON_Parse(response_body(response)) : NULL;
-  free(response);
-  return json;
-}
 
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
@@ -161,7 +40,11 @@ static bool ok_true(const cJSON *json) {
 
 #include "routes/materials.h"
 #include "service/material_service.h"
+#include "gui_check.h"
 #include "server.h"
+#include "test_http.h"
+
+#define PORT "18770"
 #include "playback_check.h"
 #include "util/fs_util.h"
 
@@ -180,7 +63,7 @@ static char *create_item(const char *type, const char *name, const char *project
   int status = 0;
   snprintf(request, sizeof(request), "{\"type\":\"%s\",\"name\":\"%s\",\"project_id\":\"%s\",\"body\":%s}", type, name,
            project_id, body_text);
-  cJSON *answer = json_exchange("POST", "/api/materials/items", request, &status);
+  cJSON *answer = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
   char *id = status == 200 && item ? strdup(string_of(item, "id")) : NULL;
   cJSON_Delete(answer);
@@ -196,55 +79,55 @@ static void theme_using(const char *source, int version, char *out, size_t size)
 
 static void test_projects(void) {
   int status = 0;
-  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", "/api/materials/projects", NULL, &status);
   const cJSON *projects = cJSON_GetObjectItemCaseSensitive(answer, "projects");
   check(status == 200 && ok_true(answer) && cJSON_GetArraySize(projects) == 1, "a fresh store lists the General project");
   check(strcmp(string_of(cJSON_GetArrayItem(projects, 0), "name"), "General") == 0, "the first project is General");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/projects", "{\"name\":\"Sonata\",\"description\":\"first\"}", &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/projects", "{\"name\":\"Sonata\",\"description\":\"first\"}", &status);
   const cJSON *project = cJSON_GetObjectItemCaseSensitive(answer, "project");
   check(status == 200 && ok_true(answer) && strncmp(string_of(project, "id"), "prj-", 4) == 0, "a project is created");
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/projects/%s", string_of(project, "id"));
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/projects", "{\"description\":\"no name\"}", &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/projects", "{\"description\":\"no name\"}", &status);
   check(status == 400 && !ok_true(answer), "a project without a name is 400");
   cJSON_Delete(answer);
-  answer = json_exchange("POST", "/api/materials/projects", "[1]", &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/projects", "[1]", &status);
   check(status == 400, "a body that is not an object is 400");
   cJSON_Delete(answer);
 
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 200 && strcmp(string_of(cJSON_GetObjectItemCaseSensitive(answer, "project"), "name"), "Sonata") == 0,
         "a project is read by id");
   cJSON_Delete(answer);
-  answer = json_exchange("PATCH", path, "{\"name\":\"Sonatina\"}", &status);
+  answer = test_http_json(PORT, "PATCH", path, "{\"name\":\"Sonatina\"}", &status);
   check(status == 200 && strcmp(string_of(cJSON_GetObjectItemCaseSensitive(answer, "project"), "name"), "Sonatina") == 0,
         "a project is renamed");
   cJSON_Delete(answer);
-  answer = json_exchange("PATCH", path, "{}", &status);
+  answer = test_http_json(PORT, "PATCH", path, "{}", &status);
   check(status == 400, "a patch with nothing to change is 400");
   cJSON_Delete(answer);
-  answer = json_exchange("GET", "/api/materials/projects/prj-0000000000000000", NULL, &status);
+  answer = test_http_json(PORT, "GET", "/api/materials/projects/prj-0000000000000000", NULL, &status);
   check(status == 404, "an unknown project is 404");
   cJSON_Delete(answer);
-  answer = json_exchange("PUT", path, "{}", &status);
+  answer = test_http_json(PORT, "PUT", path, "{}", &status);
   check(status == 405, "an unsupported method is 405");
   cJSON_Delete(answer);
 
-  answer = json_exchange("DELETE", path, NULL, &status);
+  answer = test_http_json(PORT, "DELETE", path, NULL, &status);
   check(status == 200 && ok_true(answer), "an empty project is deleted");
   cJSON_Delete(answer);
-  answer = json_exchange("DELETE", path, NULL, &status);
+  answer = test_http_json(PORT, "DELETE", path, NULL, &status);
   check(status == 404, "deleting it again is 404");
   cJSON_Delete(answer);
 }
 
 static void test_items(void) {
   int status = 0;
-  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", "/api/materials/projects", NULL, &status);
   char project[64];
   snprintf(project, sizeof(project), "%s",
            string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
@@ -261,21 +144,21 @@ static void test_items(void) {
   char request[1024];
   snprintf(request, sizeof(request), "{\"type\":\"chord\",\"name\":\"x\",\"project_id\":\"%s\",\"body\":%s}", project,
            kMotifBody);
-  answer = json_exchange("POST", "/api/materials/items", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
   check(status == 400, "an unknown item type is 400");
   cJSON_Delete(answer);
   snprintf(request, sizeof(request), "{\"type\":\"motif\",\"name\":\"x\",\"project_id\":\"%s\",\"body\":{\"uses\":[]}}",
            project);
-  answer = json_exchange("POST", "/api/materials/items", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
   check(status == 400, "an invalid body is 400");
   cJSON_Delete(answer);
   snprintf(request, sizeof(request),
            "{\"type\":\"motif\",\"name\":\"x\",\"project_id\":\"prj-0000000000000000\",\"body\":%s}", kMotifBody);
-  answer = json_exchange("POST", "/api/materials/items", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
   check(status == 404, "an item in an unknown project is 404");
   cJSON_Delete(answer);
 
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 200 && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(answer, "body")) &&
             cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(answer, "uses_status")) &&
             cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(answer, "used_by")) &&
@@ -284,22 +167,22 @@ static void test_items(void) {
   check(number_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "current_version") == 1, "a new item is at version 1");
   cJSON_Delete(answer);
 
-  answer = json_exchange("PATCH", path, "{\"name\":\"Opening bars\"}", &status);
+  answer = test_http_json(PORT, "PATCH", path, "{\"name\":\"Opening bars\"}", &status);
   check(status == 200 && strcmp(string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "name"), "Opening bars") == 0,
         "an item is renamed");
   cJSON_Delete(answer);
-  answer = json_exchange("PATCH", path, "{\"project_id\":\"prj-0000000000000000\"}", &status);
+  answer = test_http_json(PORT, "PATCH", path, "{\"project_id\":\"prj-0000000000000000\"}", &status);
   check(status == 404, "moving an item to an unknown project is 404");
   cJSON_Delete(answer);
 
   char list_path[256];
   snprintf(list_path, sizeof(list_path), "/api/materials/items?project=%s&type=motif", project);
-  answer = json_exchange("GET", list_path, NULL, &status);
+  answer = test_http_json(PORT, "GET", list_path, NULL, &status);
   check(status == 200 && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(answer, "items")) == 1,
         "items are listed by project and type");
   cJSON_Delete(answer);
   snprintf(list_path, sizeof(list_path), "/api/materials/items?project=%s&type=theme", project);
-  answer = json_exchange("GET", list_path, NULL, &status);
+  answer = test_http_json(PORT, "GET", list_path, NULL, &status);
   check(status == 200 && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(answer, "items")) == 0,
         "the type filter narrows the list");
   cJSON_Delete(answer);
@@ -308,24 +191,24 @@ static void test_items(void) {
   char versions_path[320];
   snprintf(versions_path, sizeof(versions_path), "%s/versions", path);
   snprintf(request, sizeof(request), "{\"note\":\"longer\",\"body\":%s}", kMotifBody);
-  answer = json_exchange("POST", versions_path, request, &status);
+  answer = test_http_json(PORT, "POST", versions_path, request, &status);
   check(status == 200 && number_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "current_version") == 2,
         "a new version becomes current");
   cJSON_Delete(answer);
-  answer = json_exchange("POST", versions_path, "{\"body\":{\"uses\":[]}}", &status);
+  answer = test_http_json(PORT, "POST", versions_path, "{\"body\":{\"uses\":[]}}", &status);
   check(status == 400, "an invalid version body is 400");
   cJSON_Delete(answer);
   snprintf(request, sizeof(request), "%s/1", versions_path);
-  answer = json_exchange("GET", request, NULL, &status);
+  answer = test_http_json(PORT, "GET", request, NULL, &status);
   check(status == 200 && number_of(answer, "number") == 1 && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(answer, "body")),
         "version 1 is still readable");
   cJSON_Delete(answer);
   snprintf(request, sizeof(request), "%s/9", versions_path);
-  answer = json_exchange("GET", request, NULL, &status);
+  answer = test_http_json(PORT, "GET", request, NULL, &status);
   check(status == 404, "a version past the current one is 404");
   cJSON_Delete(answer);
   snprintf(request, sizeof(request), "%s/abc", versions_path);
-  answer = json_exchange("GET", request, NULL, &status);
+  answer = test_http_json(PORT, "GET", request, NULL, &status);
   check(status == 404, "a version that is not a number is 404");
   cJSON_Delete(answer);
 
@@ -335,7 +218,7 @@ static void test_items(void) {
   char *theme = create_item("theme", "Theme A", project, theme_body);
   check(theme != NULL, "a theme that uses the motif is created");
 
-  answer = json_exchange("DELETE", path, NULL, &status);
+  answer = test_http_json(PORT, "DELETE", path, NULL, &status);
   const cJSON *used_by = cJSON_GetObjectItemCaseSensitive(answer, "used_by");
   check(status == 409 && !ok_true(answer) && cJSON_GetArraySize(used_by) == 1 &&
             strcmp(string_of(cJSON_GetArrayItem(used_by, 0), "id"), theme ? theme : "") == 0,
@@ -344,10 +227,10 @@ static void test_items(void) {
 
   /* A third motif version makes the theme's use out of date. */
   snprintf(request, sizeof(request), "{\"note\":\"again\",\"body\":%s}", kMotifBody);
-  cJSON_Delete(json_exchange("POST", versions_path, request, &status));
+  cJSON_Delete(test_http_json(PORT, "POST", versions_path, request, &status));
   char theme_path[256];
   snprintf(theme_path, sizeof(theme_path), "/api/materials/items/%s", theme);
-  answer = json_exchange("GET", theme_path, NULL, &status);
+  answer = test_http_json(PORT, "GET", theme_path, NULL, &status);
   const cJSON *uses_status = cJSON_GetObjectItemCaseSensitive(answer, "uses_status");
   check(cJSON_GetArraySize(uses_status) == 1 &&
             cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(uses_status, 0), "updated")),
@@ -356,24 +239,24 @@ static void test_items(void) {
 
   char update_path[400];
   snprintf(update_path, sizeof(update_path), "%s/uses/%s/update", theme_path, motif);
-  answer = json_exchange("POST", update_path, NULL, &status);
+  answer = test_http_json(PORT, "POST", update_path, NULL, &status);
   check(status == 200 && number_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "current_version") == 2,
         "updating a use writes a new version of the theme");
   cJSON_Delete(answer);
   snprintf(update_path, sizeof(update_path), "%s/uses/mot-0000000000000000/update", theme_path);
-  answer = json_exchange("POST", update_path, NULL, &status);
+  answer = test_http_json(PORT, "POST", update_path, NULL, &status);
   check(status == 404, "updating a use that is not there is 404");
   cJSON_Delete(answer);
 
   char force_path[300];
   snprintf(force_path, sizeof(force_path), "%s?force=1", path);
-  answer = json_exchange("DELETE", force_path, NULL, &status);
+  answer = test_http_json(PORT, "DELETE", force_path, NULL, &status);
   check(status == 200 && ok_true(answer), "a forced delete removes a used item");
   cJSON_Delete(answer);
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 404, "the deleted item is 404");
   cJSON_Delete(answer);
-  answer = json_exchange("GET", theme_path, NULL, &status);
+  answer = test_http_json(PORT, "GET", theme_path, NULL, &status);
   check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(
                              cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "uses_status"), 0), "missing")),
         "the theme's use reports missing after the force delete");
@@ -382,7 +265,7 @@ static void test_items(void) {
   /* A project that still holds an item cannot be deleted. */
   char project_path[256];
   snprintf(project_path, sizeof(project_path), "/api/materials/projects/%s", project);
-  answer = json_exchange("DELETE", project_path, NULL, &status);
+  answer = test_http_json(PORT, "DELETE", project_path, NULL, &status);
   check(status == 409, "deleting a project that holds items is 409");
   cJSON_Delete(answer);
 
@@ -394,7 +277,7 @@ static void test_items(void) {
 static void test_motif_analysis(void) {
   int status = 0;
   char project[64] = "";
-  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", "/api/materials/projects", NULL, &status);
   snprintf(project, sizeof(project), "%s",
            string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
   cJSON_Delete(answer);
@@ -406,7 +289,7 @@ static void test_motif_analysis(void) {
   }
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s", motif);
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   const cJSON *body = cJSON_GetObjectItemCaseSensitive(answer, "body");
   const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "analysis");
   const cJSON *inner = cJSON_GetObjectItemCaseSensitive(analysis, "analysis");
@@ -420,7 +303,7 @@ static void test_motif_analysis(void) {
   snprintf(request, sizeof(request), "{\"note\":\"again\",\"body\":%s}", kMotifBody);
   char versions[300];
   snprintf(versions, sizeof(versions), "%s/versions", path);
-  answer = json_exchange("POST", versions, request, &status);
+  answer = test_http_json(PORT, "POST", versions, request, &status);
   check(status == 200 && ok_true(answer) && !cJSON_GetObjectItemCaseSensitive(answer, "analysis_error"),
         "a new motif version is saved with its analysis");
   cJSON_Delete(answer);
@@ -432,7 +315,7 @@ static void version_note(const char *item_id, int number, char *out, size_t out_
   char path[256];
   int status = 0;
   snprintf(path, sizeof(path), "/api/materials/items/%s", item_id);
-  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", path, NULL, &status);
   const cJSON *versions = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions");
   snprintf(out, out_size, "%s", string_of(cJSON_GetArrayItem(versions, number - 1), "note"));
   cJSON_Delete(answer);
@@ -441,7 +324,7 @@ static void version_note(const char *item_id, int number, char *out, size_t out_
 /* The id of the first project (the default one). */
 static void first_project(char *out, size_t out_size) {
   int status = 0;
-  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", "/api/materials/projects", NULL, &status);
   snprintf(out, out_size, "%s",
            string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
   cJSON_Delete(answer);
@@ -456,7 +339,7 @@ static cJSON *save_motif_form(const char *project, const char *form, const char 
            "\"form\":\"%s\",\"notes\":\"%s\",\"meter\":\"4/4\",\"key\":%s,\"pickup\":\"%s\",\"features\":[],"
            "\"analysis\":null,\"derived\":null}}}",
            project, form, notes, key_json, pickup);
-  return json_exchange("POST", "/api/materials/items", request, status);
+  return test_http_json(PORT, "POST", "/api/materials/items", request, status);
 }
 
 /* The saved motif object of an item answer, read back. */
@@ -464,7 +347,7 @@ static cJSON *read_motif(const cJSON *saved) {
   char path[256];
   int status = 0;
   snprintf(path, sizeof(path), "/api/materials/items/%s", string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id"));
-  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", path, NULL, &status);
   cJSON *motif = cJSON_DetachItemFromObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "body"), "motif");
   cJSON_Delete(answer);
   return motif;
@@ -478,7 +361,7 @@ static const cJSON *saved_motif(const char *item_id, int version) {
   char path[300];
   int status = 0;
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/%d", item_id, version);
-  held = json_exchange("GET", path, NULL, &status);
+  held = test_http_json(PORT, "GET", path, NULL, &status);
   return cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(held, "body"), "motif");
 }
 
@@ -486,7 +369,7 @@ static int saved_version_count(const char *item_id) {
   char path[300];
   int status = 0;
   snprintf(path, sizeof(path), "/api/materials/items/%s", item_id);
-  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", path, NULL, &status);
   int count = cJSON_GetArraySize(
       cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions"));
   cJSON_Delete(answer);
@@ -511,7 +394,7 @@ static void test_motif_analysis_error(void) {
 
   char path[300];
   snprintf(path, sizeof(path), "/api/materials/items/%s/reanalyze", item);
-  cJSON *answer = json_exchange("POST", path, "", &status);
+  cJSON *answer = test_http_json(PORT, "POST", path, "", &status);
   check(status == 200 && ok_true(answer), "re-analyze answers 200");
   cJSON_Delete(answer);
   check(saved_version_count(item) == 2, "re-analyze writes a new version");
@@ -520,7 +403,7 @@ static void test_motif_analysis_error(void) {
             cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(motif, "analysis_error")),
         "the new version is analyzed with no stored reason");
   snprintf(path, sizeof(path), "/api/materials/items/%s", item);
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   const cJSON *versions = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions");
   check(strcmp(string_of(cJSON_GetArrayItem(versions, 1), "note"), "Re-analyzed") == 0, "the new version's note is Re-analyzed");
   cJSON_Delete(answer);
@@ -537,7 +420,7 @@ static void test_motif_analysis_error(void) {
   cJSON_Delete(bad);
   int before = saved_version_count(item);
   snprintf(path, sizeof(path), "/api/materials/items/%s/reanalyze", item);
-  answer = json_exchange("POST", path, "", &status);
+  answer = test_http_json(PORT, "POST", path, "", &status);
   check(status == 400 && strstr(string_of(answer, "error"), "not a chord") != NULL, "a refused re-analyze is 400 with the message");
   check(strcmp(string_of(answer, "path"), "/harmony") == 0, "a refused re-analyze names the member at fault");
   cJSON_Delete(answer);
@@ -548,12 +431,12 @@ static void test_motif_analysis_error(void) {
   check(theme != NULL, "a theme is saved");
   if (theme) {
     snprintf(path, sizeof(path), "/api/materials/items/%s/reanalyze", theme);
-    answer = json_exchange("POST", path, "", &status);
+    answer = test_http_json(PORT, "POST", path, "", &status);
     check(status == 400 && strcmp(string_of(answer, "error"), "only motifs are analyzed") == 0, "re-analyze of a theme is 400");
     cJSON_Delete(answer);
   }
   snprintf(path, sizeof(path), "/api/materials/items/mot-0000000000000000/reanalyze");
-  answer = json_exchange("POST", path, "", &status);
+  answer = test_http_json(PORT, "POST", path, "", &status);
   check(status == 404, "re-analyze of an unknown item is 404");
   cJSON_Delete(answer);
   free(item);
@@ -622,9 +505,9 @@ static size_t midi_file(unsigned char *out, const unsigned char *events, size_t 
 static cJSON *import_exchange(const unsigned char *file, size_t file_size, const char *query, int *status) {
   char path[128];
   snprintf(path, sizeof(path), "/api/materials/motifs/import%s", query);
-  char *response = http_exchange("POST", path, "Content-Type: audio/midi\r\n", file, file_size);
+  char *response = test_http_exchange(PORT, "POST", path, "audio/midi", (const char *)file, file_size);
   *status = response && strncmp(response, "HTTP/1.1 ", 9) == 0 ? atoi(response + 9) : 0;
-  cJSON *json = response ? cJSON_Parse(response_body(response)) : NULL;
+  cJSON *json = response ? cJSON_Parse(test_http_body(response)) : NULL;
   free(response);
   return json;
 }
@@ -671,7 +554,7 @@ static void test_motif_import(void) {
   check(status == 400, "a bad meter is 400");
   cJSON_Delete(answer);
 
-  answer = json_exchange("GET", "/api/materials/motifs/import", NULL, &status);
+  answer = test_http_json(PORT, "GET", "/api/materials/motifs/import", NULL, &status);
   check(status == 405, "importing is POST only");
   cJSON_Delete(answer);
 }
@@ -695,7 +578,7 @@ static void test_motifs_in_c(void) {
   check(status == 200 && ok_true(saved), "a motif in C major is saved");
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions", string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id"));
-  cJSON *answer = json_exchange("POST", path,
+  cJSON *answer = test_http_json(PORT, "POST", path,
                                 "{\"note\":\"E minor\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"rhythm\",\"notes\":\"x:q x:q x:h\","
                                 "\"meter\":\"4/4\",\"key\":\"E minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,"
                                 "\"derived\":null}}}",
@@ -723,17 +606,17 @@ static void test_version_notes(void) {
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions", motif);
   char request[2048];
   snprintf(request, sizeof(request), "{\"body\":%s}", kMotifBody);
-  cJSON *answer = json_exchange("POST", path, request, &status);
+  cJSON *answer = test_http_json(PORT, "POST", path, request, &status);
   check(status == 400 && strcmp(string_of(answer, "error"), "give a version note") == 0, "a motif version without a note is 400");
   cJSON_Delete(answer);
   snprintf(request, sizeof(request), "{\"note\":\"   \",\"body\":%s}", kMotifBody);
-  answer = json_exchange("POST", path, request, &status);
+  answer = test_http_json(PORT, "POST", path, request, &status);
   check(status == 400 && strcmp(string_of(answer, "error"), "give a version note") == 0, "a blank note is 400");
   cJSON_Delete(answer);
   check(saved_version_count(motif) == 1, "no version was written without a note");
 
   snprintf(request, sizeof(request), "{\"note\":\"Shorter\",\"body\":%s}", kMotifBody);
-  answer = json_exchange("POST", path, request, &status);
+  answer = test_http_json(PORT, "POST", path, request, &status);
   check(status == 200 && ok_true(answer), "a motif version with a note is saved");
   cJSON_Delete(answer);
   version_note(motif, 2, note, sizeof(note));
@@ -742,7 +625,7 @@ static void test_version_notes(void) {
   /* A caller's own note on create is kept, and the other item types need no note. */
   snprintf(request, sizeof(request), "{\"type\":\"motif\",\"name\":\"Own\",\"project_id\":\"%s\",\"note\":\"From MIDI\",\"body\":%s}",
            project, kMotifBody);
-  answer = json_exchange("POST", "/api/materials/items", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
   const char *own = string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "id");
   version_note(own, 1, note, sizeof(note));
   check(status == 200 && strcmp(note, "From MIDI") == 0, "a note given on create is kept");
@@ -754,7 +637,7 @@ static void test_version_notes(void) {
 static void test_motif_refused(void) {
   int status = 0;
   char project[64] = "";
-  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", "/api/materials/projects", NULL, &status);
   snprintf(project, sizeof(project), "%s",
            string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
   cJSON_Delete(answer);
@@ -771,11 +654,11 @@ static void test_motif_refused(void) {
 
   char bad_notes[2048];
   snprintf(bad_notes, sizeof(bad_notes), "{\"note\":\"bad\",\"body\":%s}", kBadMotifBody);
-  answer = json_exchange("POST", versions, bad_notes, &status);
+  answer = test_http_json(PORT, "POST", versions, bad_notes, &status);
   check(status == 400 && !ok_true(answer) && strlen(string_of(answer, "error")) > 0, "a bad note list is 400 with the message");
   cJSON_Delete(answer);
 
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
   check(status == 200 && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(item, "versions")) == 1 &&
             number_of(item, "current_version") == 1,
@@ -785,7 +668,7 @@ static void test_motif_refused(void) {
   char request[2048];
   snprintf(request, sizeof(request), "{\"type\":\"motif\",\"name\":\"Bad\",\"project_id\":\"%s\",\"body\":%s}", project,
            kBadMotifBody);
-  answer = json_exchange("POST", "/api/materials/items", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
   check(status == 400, "a new motif with a bad note list is 400");
   cJSON_Delete(answer);
   free(motif);
@@ -810,7 +693,7 @@ static cJSON *render_exchange(const char *key, const char *render_key, const cha
            "{\"form\":\"full\",\"degrees\":\"1:q 3:e 5:e 1':h\",\"meter\":\"4/4\",\"key\":\"%s\",\"pickup\":\"%s\","
            "\"render_key\":\"%s\",\"role\":\"melodic\"}",
            key, pickup, render_key);
-  return json_exchange("POST", "/api/materials/render", request, status);
+  return test_http_json(PORT, "POST", "/api/materials/render", request, status);
 }
 
 /* A motif renders to MusicXML and playback data, in any key, from a request or from a stored version. */
@@ -851,26 +734,26 @@ static void test_motif_render(void) {
   const char *id = string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id");
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback", id);
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 200 && first_note(answer, &pitch, &on_num, &on_den) && pitch == 60,
         "a version sounds in its own key by default");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback?key=G%%20minor", id);
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 200 && first_note(answer, &pitch, &on_num, &on_den) && pitch == 67,
         "a version sounds in the chosen key");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score?key=G%%20minor", id);
-  char *response = http_exchange("GET", path, NULL, NULL, 0);
+  char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   check(response && strncmp(response, "HTTP/1.1 200", 12) == 0 && strstr(response, "<score-partwise") != NULL,
         "a version's score is MusicXML");
   free(response);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score?key=nope", id);
-  response = http_exchange("GET", path, NULL, NULL, 0);
+  response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   check(response && strncmp(response, "HTTP/1.1 400", 12) == 0, "a bad key on a version's score is 400");
   free(response);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/9/score", id);
-  response = http_exchange("GET", path, NULL, NULL, 0);
+  response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   check(response && strncmp(response, "HTTP/1.1 404", 12) == 0, "a missing version's score is 404");
   free(response);
   cJSON_Delete(saved);
@@ -890,7 +773,7 @@ static void test_served_playback(void) {
     char *request = ursatz_gui_read_file(fixture, NULL);
     snprintf(fixture, sizeof(fixture), URSATZ_GUI_TEST_PLAYBACK_FIXTURES "/motif-%s.playback.json", motifs[i]);
     cJSON *want = ursatz_gui_read_json_object(fixture);
-    cJSON *answer = request ? json_exchange("POST", "/api/materials/render", request, &status) : NULL;
+    cJSON *answer = request ? test_http_json(PORT, "POST", "/api/materials/render", request, &status) : NULL;
     snprintf(label, sizeof(label), "a %s motif render plays as it did before the Analyzer built it", motifs[i]);
     check(status == 200 && want && playback_matches_capture(cJSON_GetObjectItemCaseSensitive(answer, "playback"), want), label);
     cJSON_Delete(answer);
@@ -920,7 +803,7 @@ static void test_served_playback(void) {
   snprintf(render_dir, sizeof(render_dir), "materials/items/%s/v1/render", id);
 
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback", id);
-  cJSON *first = json_exchange("GET", path, NULL, &status);
+  cJSON *first = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 200 && ok_true(first) && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(first, "notes")) == 4,
         "a motif version's playback is built from its MIDI file");
   char file[300];
@@ -944,34 +827,34 @@ static void test_served_playback(void) {
   snprintf(file, sizeof(file), "%s/score.musicxml", render_dir);
   check(ursatz_gui_write_file_atomic(file, "<cached/>", 9), "the cached score is replaced");
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score", id);
-  char *response = http_exchange("GET", path, NULL, NULL, 0);
+  char *response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   check(response && strstr(response, "<cached/>") != NULL, "a version's score reads the cache for the same key and tempo");
   free(response);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback", id);
-  cJSON *second = json_exchange("GET", path, NULL, &status);
+  cJSON *second = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 200 && cJSON_Compare(first, second, 1), "a cached playback equals the first");
   cJSON_Delete(first);
   cJSON_Delete(second);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score?key=G%%20minor", id);
-  response = http_exchange("GET", path, NULL, NULL, 0);
+  response = test_http_exchange(PORT, "GET", path, NULL, NULL, 0);
   check(response && strstr(response, "<cached/>") == NULL && strstr(response, "<score-partwise") != NULL,
         "another key renders again");
   free(response);
 
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback?file=loop", id);
-  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 404, "a motif version has no loop file to play");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback?file=Not.a.name", id);
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 400, "a file outside the version name pattern is 400");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/9/playback?file=theme", id);
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 404, "a missing version's file playback is 404");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/variations/1/variation-1.mid/playback", id);
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 404, "a motif has no variations to play");
   cJSON_Delete(answer);
   cJSON_Delete(saved);
@@ -1002,7 +885,7 @@ static cJSON *finish_job(cJSON *accepted, int *status) {
   snprintf(path, sizeof(path), "/api/jobs/%s", id->valuestring);
   for (int i = 0; i < 6000; i++) {
     int poll = 0;
-    cJSON *answer = json_exchange("GET", path, NULL, &poll);
+    cJSON *answer = test_http_json(PORT, "GET", path, NULL, &poll);
     const cJSON *current = cJSON_GetObjectItemCaseSensitive(answer, "job");
     const cJSON *state = cJSON_GetObjectItemCaseSensitive(current, "state");
     if (cJSON_IsString(state) && strcmp(state->valuestring, "queued") != 0 && strcmp(state->valuestring, "running") != 0) {
@@ -1014,7 +897,7 @@ static cJSON *finish_job(cJSON *accepted, int *status) {
       return result;
     }
     cJSON_Delete(answer);
-    sleep_ms(50);
+    test_sleep_ms(50);
   }
   cJSON_Delete(accepted);
   *status = 0;
@@ -1024,13 +907,13 @@ static cJSON *finish_job(cJSON *accepted, int *status) {
 static cJSON *item_post(const char *id, const char *tail, const char *body, int *status) {
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s/%s", id, tail);
-  return finish_job(json_exchange("POST", path, body, status), status);
+  return finish_job(test_http_json(PORT, "POST", path, body, status), status);
 }
 
 static cJSON *item_get(const char *id, const char *tail, int *status) {
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s%s", id, tail);
-  return json_exchange("GET", path, NULL, status);
+  return test_http_json(PORT, "GET", path, NULL, status);
 }
 
 /* The degrees text of the i-th candidate of a variants answer. */
@@ -1051,7 +934,7 @@ static void test_harmony(void) {
                       "\"key\":\"C minor\",\"pickup\":\"0\",\"harmony\":%s,"
                       "\"features\":[{\"label\":\"a\",\"first\":0,\"last\":1}],\"analysis\":null,\"derived\":null}}}";
   snprintf(request, sizeof(request), shape, project, "\"I V@2\"");
-  cJSON *saved = json_exchange("POST", "/api/materials/items", request, &status);
+  cJSON *saved = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
   check(status == 200 && ok_true(saved), "a motif with its own harmony is saved");
   cJSON *motif = status == 200 ? read_motif(saved) : NULL;
   check(strcmp(string_of(motif, "harmony"), "I V@2") == 0, "the harmony is stored with the motif");
@@ -1063,11 +946,11 @@ static void test_harmony(void) {
   cJSON_Delete(saved);
 
   snprintf(request, sizeof(request), shape, project, "\"not a chord\"");
-  saved = json_exchange("POST", "/api/materials/items", request, &status);
+  saved = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
   check(status == 400, "harmony the Composer cannot read refuses the save");
   cJSON_Delete(saved);
   snprintf(request, sizeof(request), shape, project, "5");
-  saved = json_exchange("POST", "/api/materials/items", request, &status);
+  saved = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
   check(status == 400, "harmony must be text");
   cJSON_Delete(saved);
 
@@ -1125,7 +1008,7 @@ static void test_harmony(void) {
 /* Variants are listed, generated without saving, and saved as derived motifs. */
 static void test_variants(void) {
   int status = 0;
-  cJSON *answer = json_exchange("GET", "/api/materials/variant-operations", NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", "/api/materials/variant-operations", NULL, &status);
   check(status == 200 && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(answer, "operations")) >= 9,
         "the variant operations are listed");
   cJSON_Delete(answer);
@@ -1147,7 +1030,7 @@ static void test_variants(void) {
   check(status == 200 && strcmp(candidate_degrees(again, 0), first) == 0, "the same seed gives the same candidates");
   cJSON_Delete(again);
 
-  cJSON *items = json_exchange("GET", "/api/materials/items?type=motif", NULL, &status);
+  cJSON *items = test_http_json(PORT, "GET", "/api/materials/items?type=motif", NULL, &status);
   int before = cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(items, "items"));
   cJSON_Delete(items);
   check(status == 200, "the motif list reads");
@@ -1184,7 +1067,7 @@ static void test_variants(void) {
         "the saved motif has the candidate's degrees and the source's meter and pickup");
   cJSON_Delete(read);
 
-  items = json_exchange("GET", "/api/materials/items?type=motif", NULL, &status);
+  items = test_http_json(PORT, "GET", "/api/materials/items?type=motif", NULL, &status);
   check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(items, "items")) == before + 1, "saving adds one motif");
   cJSON_Delete(items);
 
@@ -1261,7 +1144,7 @@ static cJSON *recognize_post(const char *source, int source_version, const char 
   char request[512];
   snprintf(request, sizeof(request), "{\"source\":{\"item\":\"%s\",\"version\":%d},\"target\":{\"item\":\"%s\",\"version\":%d}}",
            source, source_version, target, target_version);
-  return json_exchange("POST", "/api/materials/recognize", request, status);
+  return test_http_json(PORT, "POST", "/api/materials/recognize", request, status);
 }
 
 /* Recognizing how an inverted motif derives from its source, and what the route refuses. */
@@ -1295,10 +1178,10 @@ static void test_recognize(void) {
   answer = recognize_post(id, 1, inverted, 9, &status);
   check(status == 404, "a version that is not there is 404");
   cJSON_Delete(answer);
-  answer = json_exchange("POST", "/api/materials/recognize", "{\"source\":{\"item\":\"x\"},\"target\":{}}", &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/recognize", "{\"source\":{\"item\":\"x\"},\"target\":{}}", &status);
   check(status == 400, "a reference without a version is 400");
   cJSON_Delete(answer);
-  answer = json_exchange("GET", "/api/materials/recognize", NULL, &status);
+  answer = test_http_json(PORT, "GET", "/api/materials/recognize", NULL, &status);
   check(status == 405, "recognize takes POST only");
   cJSON_Delete(answer);
 
@@ -1328,15 +1211,15 @@ static void test_theme_placeholder(void) {
   }
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/files/plan.json", theme);
-  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 404 && !ok_true(answer), "a version without files has no plan to serve");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/files/item.json", theme);
-  answer = json_exchange("GET", path, NULL, &status);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
   check(status == 404, "only the five file names are served");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme);
-  answer = finish_job(json_exchange("POST", path, "{}", &status), &status);
+  answer = finish_job(test_http_json(PORT, "POST", path, "{}", &status), &status);
   check(status == 400 && !ok_true(answer), "a placeholder theme cannot be composed");
   cJSON_Delete(answer);
   free(theme);
@@ -1411,7 +1294,7 @@ static void test_link_form(void) {
   refused = link_form_post(other, 9, inverted, recognition, &status);
   check(status == 404, "a source version that is not there is 404");
   cJSON_Delete(refused);
-  refused = json_exchange("POST", "/api/materials/items/nothing/link-form", "{}", &status);
+  refused = test_http_json(PORT, "POST", "/api/materials/items/nothing/link-form", "{}", &status);
   check(status == 400 || status == 404, "a request without a source is refused");
   cJSON_Delete(refused);
   cJSON_Delete(recognition);
@@ -1526,7 +1409,7 @@ static void test_variant_ownership(void) {
   check(status == 200 && strcmp(string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "variant_of"), child) == 0,
         "the item answer of a variant names its motif in variant_of");
   cJSON_Delete(answer);
-  answer = json_exchange("GET", "/api/materials/items?type=motif", NULL, &status);
+  answer = test_http_json(PORT, "GET", "/api/materials/items?type=motif", NULL, &status);
   const cJSON *items = cJSON_GetObjectItemCaseSensitive(answer, "items");
   int named = 0;
   const cJSON *entry = NULL;
@@ -1548,7 +1431,7 @@ static void test_variant_ownership(void) {
   check(theme != NULL, "a theme that uses the variant is created");
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s", source);
-  answer = json_exchange("DELETE", path, NULL, &status);
+  answer = test_http_json(PORT, "DELETE", path, NULL, &status);
   const cJSON *used_by = cJSON_GetObjectItemCaseSensitive(answer, "used_by");
   check(status == 409 && cJSON_GetArraySize(used_by) == 1 && strcmp(string_of(cJSON_GetArrayItem(used_by, 0), "id"), theme ? theme : "") == 0,
         "deleting a motif whose variant is used is 409 with that user");
@@ -1557,7 +1440,7 @@ static void test_variant_ownership(void) {
   check(status == 200, "the 409 deleted nothing");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s?force=1", source);
-  answer = json_exchange("DELETE", path, NULL, &status);
+  answer = test_http_json(PORT, "DELETE", path, NULL, &status);
   check(status == 200 && ok_true(answer), "a forced delete goes through");
   cJSON_Delete(answer);
   int gone = 0;
@@ -1578,7 +1461,7 @@ static void test_variant_ownership(void) {
   check(other && other_child, "a second motif and its variant are saved");
   if (other_child) {
     snprintf(path, sizeof(path), "/api/materials/items/%s", other);
-    answer = json_exchange("DELETE", path, NULL, &status);
+    answer = test_http_json(PORT, "DELETE", path, NULL, &status);
     check(status == 200, "deleting a motif without users is 200");
     cJSON_Delete(answer);
     answer = item_get(other_child, "", &status);
@@ -1695,7 +1578,7 @@ static void test_each_op(void) {
   const char *put =
       "{\"checks\":{\"invert\":{\"verdict\":\"wrong\",\"comment\":\"too low\",\"seed\":5,\"notes_text\":\"C4:q\","
       "\"date\":\"2026-10-23\"}}}";
-  marks = json_exchange("PUT", path, put, &status);
+  marks = test_http_json(PORT, "PUT", path, put, &status);
   check(status == 200 && ok_true(marks), "the marks are put");
   cJSON_Delete(marks);
   marks = item_get(id, "/op-checks", &status);
@@ -1707,10 +1590,10 @@ static void test_each_op(void) {
   cJSON *read = item_get(id, "", &status);
   check(status == 200 && version_count(read) == 1, "marking writes no version");
   cJSON_Delete(read);
-  refused = json_exchange("PUT", path, "{\"checks\":{\"invert\":{\"verdict\":\"fine\"}}}", &status);
+  refused = test_http_json(PORT, "PUT", path, "{\"checks\":{\"invert\":{\"verdict\":\"fine\"}}}", &status);
   check(status == 400, "a mark with a verdict that is not works or wrong is refused");
   cJSON_Delete(refused);
-  refused = json_exchange("PUT", "/api/materials/items/mot-0000000000000000/op-checks", put, &status);
+  refused = test_http_json(PORT, "PUT", "/api/materials/items/mot-0000000000000000/op-checks", put, &status);
   check(status == 404, "marks for a motif that is not there are 404");
   cJSON_Delete(refused);
   refused = item_post(id, "op-checks", put, &status);
@@ -1722,7 +1605,7 @@ static void test_each_op(void) {
 /* Random motifs come from the Composer unsaved, with a key of the mode, and bad inputs are refused. */
 static void test_random_motifs(void) {
   int status = 0;
-  cJSON *answer = json_exchange("POST", "/api/materials/motifs/random",
+  cJSON *answer = test_http_json(PORT, "POST", "/api/materials/motifs/random",
                                 "{\"mode\":\"minor\",\"meter\":\"3/4\",\"form\":\"full\",\"count\":3,\"seed\":5}", &status);
   const cJSON *motives = cJSON_GetObjectItemCaseSensitive(answer, "motives");
   check(status == 200 && ok_true(answer) && cJSON_GetArraySize(motives) == 3, "three minor 3/4 motives are drawn");
@@ -1732,55 +1615,55 @@ static void test_random_motifs(void) {
   char first[256];
   snprintf(first, sizeof(first), "%s", string_of(analysis, "notes_text"));
   cJSON_Delete(answer);
-  answer = json_exchange("POST", "/api/materials/motifs/random",
+  answer = test_http_json(PORT, "POST", "/api/materials/motifs/random",
                          "{\"mode\":\"minor\",\"meter\":\"3/4\",\"form\":\"full\",\"count\":3,\"seed\":5}", &status);
   analysis = cJSON_GetObjectItemCaseSensitive(
       cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "motives"), 0), "analysis");
   check(status == 200 && strcmp(string_of(analysis, "notes_text"), first) == 0, "the same seed draws the same motives");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/motifs/random",
+  answer = test_http_json(PORT, "POST", "/api/materials/motifs/random",
                          "{\"mode\":\"major\",\"meter\":\"4/4\",\"key\":\"D major\",\"form\":\"rhythm\",\"count\":1}", &status);
   analysis = cJSON_GetObjectItemCaseSensitive(
       cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "motives"), 0), "analysis");
   check(status == 200 && string_of(analysis, "rhythm_text")[0] != '\0', "a rhythm motive is drawn with a given key");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/motifs/random",
+  answer = test_http_json(PORT, "POST", "/api/materials/motifs/random",
                          "{\"mode\":\"major\",\"meter\":\"4/4\",\"style_id\":\"sty-0000000000000000\"}", &status);
   check(status == 400, "an unknown style is refused");
   cJSON_Delete(answer);
-  answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"four\"}", &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"four\"}", &status);
   check(status == 400, "a bad meter is refused");
   cJSON_Delete(answer);
-  answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"dorian\",\"meter\":\"4/4\"}", &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", "{\"mode\":\"dorian\",\"meter\":\"4/4\"}", &status);
   check(status == 400, "a church mode is refused");
   cJSON_Delete(answer);
-  answer = json_exchange("POST", "/api/materials/render",
+  answer = test_http_json(PORT, "POST", "/api/materials/render",
                          "{\"form\":\"melody\",\"degrees\":\"1:q\",\"meter\":\"4/4\",\"key\":\"C major\",\"render_key\":\"C major\","
                          "\"pickup\":\"0\"}",
                          &status);
   check(status == 400 && string_of(answer, "path")[0] == '/', "a form the Composer does not know is refused with its path");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/render",
+  answer = test_http_json(PORT, "POST", "/api/materials/render",
                          "{\"form\":\"full\",\"degrees\":\"1:q\",\"meter\":\"4/4\",\"key\":\"C major\",\"render_key\":\"C major\","
                          "\"pickup\":\"0\",\"tempo\":500}",
                          &status);
   check(status == 400 && strcmp(string_of(answer, "path"), "/tempo") == 0, "a tempo above 400 is refused at /tempo");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/render",
+  answer = test_http_json(PORT, "POST", "/api/materials/render",
                          "{\"form\":\"full\",\"degrees\":\"1:q\",\"meter\":\"4/4\",\"key\":\"C major\",\"render_key\":\"C major\","
                          "\"pickup\":\"0\",\"tempo\":\"195/2\"}",
                          &status);
   check(status == 200 && ok_true(answer), "a rational tempo is accepted by the render route");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":99}", &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":99}", &status);
   check(status == 400, "a count over 16 is refused");
   cJSON_Delete(answer);
-  answer = json_exchange("GET", "/api/materials/motifs/random", NULL, &status);
+  answer = test_http_json(PORT, "GET", "/api/materials/motifs/random", NULL, &status);
   check(status == 405, "random motifs take only POST");
   cJSON_Delete(answer);
 }
@@ -1797,7 +1680,7 @@ static void test_body_limit(void) {
   memset(big + length, 'a', size);
   length += size;
   length += (size_t)snprintf(big + length, 16, "\"}");
-  cJSON *answer = json_exchange("POST", "/api/materials/projects", big, &status);
+  cJSON *answer = test_http_json(PORT, "POST", "/api/materials/projects", big, &status);
   check(status == 413, "a body over 256 KB is 413");
   cJSON_Delete(answer);
   free(big);
@@ -1859,7 +1742,7 @@ static int save_version_with_notes(const char *id, const char *notes) {
   char path[300];
   int status = 0;
   snprintf(path, sizeof(path), "/api/materials/items/%s", id);
-  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  cJSON *answer = test_http_json(PORT, "GET", path, NULL, &status);
   cJSON *body = cJSON_DetachItemFromObjectCaseSensitive(answer, "body");
   cJSON_Delete(answer);
   cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
@@ -1870,7 +1753,7 @@ static int save_version_with_notes(const char *id, const char *notes) {
   char *text = cJSON_PrintUnformatted(request);
   cJSON_Delete(request);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions", id);
-  cJSON *saved = json_exchange("POST", path, text, &status);
+  cJSON *saved = test_http_json(PORT, "POST", path, text, &status);
   free(text);
   cJSON_Delete(saved);
   return status;
@@ -1920,25 +1803,6 @@ static void test_segments(void) {
 /* ---- the replies of the Composer routes (P27 B6) ---------------------------------------------------------------- */
 
 #ifdef URSATZ_GUI_TEST_COMPOSER_FIXTURES
-static char *read_whole_file(const char *path) {
-  FILE *file = fopen(path, "rb");
-  if (!file) {
-    return NULL;
-  }
-  fseek(file, 0, SEEK_END);
-  long size = ftell(file);
-  fseek(file, 0, SEEK_SET);
-  char *text = size > 0 ? malloc((size_t)size + 1) : NULL;
-  if (text && fread(text, 1, (size_t)size, file) != (size_t)size) {
-    free(text);
-    text = NULL;
-  } else if (text) {
-    text[size] = '\0';
-  }
-  fclose(file);
-  return text;
-}
-
 /* text with every occurrence of placeholder replaced by value (caller frees). */
 static char *replace_all(const char *text, const char *placeholder, const char *value) {
   size_t count = 0;
@@ -2070,13 +1934,13 @@ static void test_replies(void) {
     if (entry->raw_hex) {
       size_t size = 0;
       unsigned char *bytes = hex_bytes(entry->raw_hex, &size);
-      char *response = http_exchange(entry->method, entry->path, "Content-Type: application/octet-stream\r\n", bytes, size);
+      char *response = test_http_exchange(PORT, entry->method, entry->path, "application/octet-stream", (const char *)bytes, size);
       status = response && strncmp(response, "HTTP/1.1 ", 9) == 0 ? atoi(response + 9) : 0;
-      answer = response ? cJSON_Parse(response_body(response)) : NULL;
+      answer = response ? cJSON_Parse(test_http_body(response)) : NULL;
       free(response);
       free(bytes);
     } else {
-      answer = json_exchange(entry->method, entry->path, request, &status);
+      answer = test_http_json(PORT, entry->method, entry->path, request, &status);
     }
     free(request);
 
@@ -2102,7 +1966,7 @@ static void test_replies(void) {
 /* The mode and meter a seed draws and the cadence a section gets when none is chosen are the Composer's, and equal what
    the GUI computed before (fixtures/composer/b11_captures.json, captured at the start of P27 B11). */
 static void test_served_defaults_and_draws(void) {
-  char *text = read_whole_file(URSATZ_GUI_TEST_COMPOSER_FIXTURES "/b11_captures.json");
+  char *text = test_read_file(URSATZ_GUI_TEST_COMPOSER_FIXTURES "/b11_captures.json", NULL);
   cJSON *fixture = text ? cJSON_Parse(text) : NULL;
   free(text);
   check(fixture != NULL, "the captured draws and cadences are read");
@@ -2115,7 +1979,7 @@ static void test_served_defaults_and_draws(void) {
     char request[256];
     snprintf(request, sizeof(request), "{\"mode\":\"random\",\"meter\":\"random\",\"form\":\"full\",\"count\":1,\"seed\":%.0f}",
              cJSON_GetObjectItemCaseSensitive(draw, "seed")->valuedouble);
-    cJSON *answer = json_exchange("POST", "/api/materials/motifs/random", request, &status);
+    cJSON *answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", request, &status);
     const cJSON *drawn = cJSON_GetObjectItemCaseSensitive(answer, "drawn");
     check(status == 200 && ok_true(answer) && strcmp(string_of(drawn, "mode"), string_of(draw, "mode")) == 0 &&
               strcmp(string_of(drawn, "meter"), string_of(draw, "meter")) == 0,
@@ -2123,7 +1987,7 @@ static void test_served_defaults_and_draws(void) {
     cJSON_Delete(answer);
   }
 
-  cJSON *refused = json_exchange("POST", "/api/materials/motifs/random",
+  cJSON *refused = test_http_json(PORT, "POST", "/api/materials/motifs/random",
                                  "{\"mode\":\"random\",\"meter\":\"random\",\"seed\":4294967296}", &status);
   check(status == 400 && !ok_true(refused) && strcmp(string_of(refused, "path"), "/seed") == 0,
         "a seed over the Composer's limit is refused by the Composer at /seed");
@@ -2145,7 +2009,7 @@ static void test_served_defaults_and_draws(void) {
   strncat(body, "]}}}", sizeof(body) - strlen(body) - 1);
   char *request = malloc(strlen(body) + 64);
   snprintf(request, strlen(body) + 64, "{\"type\":\"piece\",\"body\":%s}", body);
-  cJSON *answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  cJSON *answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
   free(request);
   const cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "request"), "sections");
   const cJSON *want = cJSON_GetObjectItemCaseSensitive(cadences, "defaults");
@@ -2162,7 +2026,7 @@ static void test_served_defaults_and_draws(void) {
 /* A refusal by the Composer names the request member at fault (additive "path" of the error answer). */
 static void test_refusal_paths(void) {
   int status = 0;
-  cJSON *answer = json_exchange("POST", "/api/materials/render",
+  cJSON *answer = test_http_json(PORT, "POST", "/api/materials/render",
                          "{\"form\":\"full\",\"degrees\":\"1:q 9:q\",\"meter\":\"4/4\",\"key\":\"D minor\",\"render_key\":\"D minor\","
                          "\"pickup\":\"0\"}",
                          &status);
@@ -2170,7 +2034,7 @@ static void test_refusal_paths(void) {
         "a degree list that is not one is refused at /input/text");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":99}", &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":99}", &status);
   check(status == 400 && string_of(answer, "path")[0] == '\0', "a request the route refuses has no path");
   cJSON_Delete(answer);
 }
@@ -2184,14 +2048,14 @@ static void test_validation(void) {
   /* A motif: complete with the Composer's defaults filled, incomplete, refused with its path. */
   char request[4096];
   snprintf(request, sizeof(request), "{\"type\":\"motif\",\"body\":%s}", kMotifBody);
-  cJSON *answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  cJSON *answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
   const cJSON *filled = cJSON_GetObjectItemCaseSensitive(answer, "request");
   check(status == 200 && ok_true(answer) && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "complete")) &&
             strcmp(string_of(filled, "role"), "melodic") == 0,
         "a motif body is complete with the Composer's defaults filled");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/items/validate",
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate",
                          "{\"type\":\"motif\",\"body\":{\"uses\":[],\"motif\":{\"form\":\"full\",\"notes\":\"\",\"meter\":\"4/4\",\"pickup\":\"0\"}}}",
                          &status);
   check(status == 200 && ok_true(answer) && cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(answer, "complete")),
@@ -2199,12 +2063,12 @@ static void test_validation(void) {
   cJSON_Delete(answer);
 
   snprintf(request, sizeof(request), "{\"type\":\"motif\",\"body\":%s}", kBadMotifBody);
-  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
   check(status == 422 && !ok_true(answer) && strcmp(string_of(answer, "path"), "/input/text") == 0,
         "notes the Composer cannot read are refused at /input/text");
   cJSON_Delete(answer);
 
-  answer = json_exchange("POST", "/api/materials/items/validate",
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate",
                          "{\"type\":\"motif\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q D4:q\","
                          "\"meter\":\"4/4\",\"key\":null,\"pickup\":\"0\",\"harmony\":\"I V\"}}}",
                          &status);
@@ -2219,7 +2083,7 @@ static void test_validation(void) {
   char *keyed = create_item("motif", "Theme motif", project, kMotifBody);
   check(keyed != NULL, "a motif to use in a theme is saved");
   snprintf(request, sizeof(request), "{\"type\":\"motif\",\"body\":%s}", gui_key);
-  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
   check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "complete")),
         "the Composer's key reader accepts the GUI spelling");
   cJSON_Delete(answer);
@@ -2233,7 +2097,7 @@ static void test_validation(void) {
   char body[2048];
   snprintf(body, sizeof(body), theme, "4/4");
   snprintf(request, sizeof(request), "{\"type\":\"theme\",\"body\":%s}", body);
-  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
   check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "complete")) &&
             cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "request"), "slots")),
         "a theme body is complete and gives the Composer's request");
@@ -2243,13 +2107,13 @@ static void test_validation(void) {
   char *draft = create_item("theme", "Draft", project, body);
   check(draft != NULL, "a theme whose meter the Composer refuses still saves");
   snprintf(request, sizeof(request), "{\"type\":\"theme\",\"body\":%s}", body);
-  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
   check(status == 400 && !ok_true(answer) && strcmp(string_of(answer, "path"), "/meter") == 0,
         "validate refuses that meter at /meter");
   cJSON_Delete(answer);
   free(draft);
 
-  answer = json_exchange("POST", "/api/materials/items/validate",
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate",
                          "{\"type\":\"theme\",\"body\":{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"mode\":\"major\",\"meter\":\"4/4\"},\"slots\":[]}}}",
                          &status);
   check(status == 200 && cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(answer, "complete")) &&
@@ -2263,7 +2127,7 @@ static void test_validation(void) {
       "{\"id\":\"s0\",\"part\":\"body\",\"letter\":\"A\",\"beats\":16,\"pickup\":\"0\",\"cadence\":null,\"fill\":{\"kind\":\"empty\"}}]}}}";
   snprintf(body, sizeof(body), piece, "D");
   snprintf(request, sizeof(request), "{\"type\":\"piece\",\"body\":%s}", body);
-  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
   const cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "request"), "sections");
   check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "complete")) && cJSON_GetArraySize(sections) >= 1 &&
             strcmp(string_of(cJSON_GetArrayItem(sections, 0), "cadence"), "HC") == 0,
@@ -2275,15 +2139,15 @@ static void test_validation(void) {
   check(bad_key != NULL, "a piece whose key the Composer refuses still saves");
   free(bad_key);
   snprintf(request, sizeof(request), "{\"type\":\"piece\",\"body\":%s}", body);
-  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
   check(status == 400 && strcmp(string_of(answer, "path"), "/key") == 0, "validate refuses that key at /key");
   cJSON_Delete(answer);
 
   /* The request itself. */
-  answer = json_exchange("POST", "/api/materials/items/validate", "{\"type\":\"chord\",\"body\":{}}", &status);
+  answer = test_http_json(PORT, "POST", "/api/materials/items/validate", "{\"type\":\"chord\",\"body\":{}}", &status);
   check(status == 400 && !ok_true(answer), "a type that is not motif, theme or piece is refused");
   cJSON_Delete(answer);
-  answer = json_exchange("GET", "/api/materials/items/validate", NULL, &status);
+  answer = test_http_json(PORT, "GET", "/api/materials/items/validate", NULL, &status);
   check(status == 405, "validate accepts only POST");
   cJSON_Delete(answer);
   free(keyed);
@@ -2296,13 +2160,13 @@ static void test_validation(void) {
 static char *export_response(const char *id, const char *query) {
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s/export%s", id, query);
-  return http_exchange("GET", path, NULL, "", 0);
+  return test_http_exchange(PORT, "GET", path, NULL, "", 0);
 }
 
 /* Copies fixtures/export/one-bar.musicxml (one part, one 4/4 measure, a whole-note C4) into the folder of version 1 of
  * item id as name, as a composed version keeps its score. */
 static bool install_score(const char *id, const char *name) {
-  char *bytes = read_whole_file(URSATZ_GUI_TEST_EXPORT_FIXTURES "/one-bar.musicxml");
+  char *bytes = test_read_file(URSATZ_GUI_TEST_EXPORT_FIXTURES "/one-bar.musicxml", NULL);
   char dir[300];
   snprintf(dir, sizeof(dir), "materials/items/%s/v1", id);
   MKDIR(dir);
@@ -2334,8 +2198,8 @@ static void test_material_export(void) {
     return;
   }
   char *response = export_response(motif, "");
-  const char *text = response_body(response);
-  check(response_has_status(response, 200) && strstr(response, "Content-Type: text/plain; charset=utf-8") != NULL,
+  const char *text = test_http_body(response);
+  check(test_http_status(response) == 200 && strstr(response, "Content-Type: text/plain; charset=utf-8") != NULL,
         "the export is served as text/plain");
   check(strncmp(text, "# Ursatz export v2: motif\nname: Opening\n", 40) == 0, "the export starts with the header lines");
   check(strstr(text, "\n## motif\n") != NULL && strstr(text, "role: melodic\n") != NULL &&
@@ -2346,28 +2210,28 @@ static void test_material_export(void) {
   free(response);
 
   response = export_response(source, "?version=1");
-  text = response_body(response);
-  check(response_has_status(response, 200) && strstr(text, "\n## variant 1: invert\n") != NULL &&
+  text = test_http_body(response);
+  check(test_http_status(response) == 200 && strstr(text, "\n## variant 1: invert\n") != NULL &&
             strstr(text, "kind: motive-form\n") != NULL && strstr(text, "\nkept: rhythm") != NULL &&
             strstr(text, "\nchanged: intervals") != NULL && strstr(text, "\nfunctions: ") != NULL && strstr(text, "flag: unflagged\n") != NULL,
         "the source motif's export has a section for its variant with the derived facts");
   free(response);
   response = export_response(variant, "");
-  check(response_has_status(response, 200) && strstr(response_body(response), "## variant") == NULL,
+  check(test_http_status(response) == 200 && strstr(test_http_body(response), "## variant") == NULL,
         "a variant's own export has no variant sections");
   free(response);
 
   /* The version and the item must exist. */
   response = export_response(motif, "?version=2");
-  check(response_has_status(response, 404) && strstr(response_body(response), "\"ok\":false") != NULL,
+  check(test_http_status(response) == 404 && strstr(test_http_body(response), "\"ok\":false") != NULL,
         "an unknown version is a 404");
   free(response);
   response = export_response("mot-0000000000000000", "");
-  check(response_has_status(response, 404) && strstr(response_body(response), "\"error\"") != NULL,
+  check(test_http_status(response) == 404 && strstr(test_http_body(response), "\"error\"") != NULL,
         "an unknown item is a 404 in the route's error shape");
   free(response);
   response = export_response(motif, "?version=abc");
-  check(response_has_status(response, 400), "a version that is not a number is a 400");
+  check(test_http_status(response) == 400, "a version that is not a number is a 400");
   free(response);
 
   /* A theme with a form and its motif in the basic slot. */
@@ -2383,8 +2247,8 @@ static void test_material_export(void) {
   if (composed && plain) {
     check(install_score(composed, "theme.musicxml"), "the theme.musicxml is put in version 1");
     response = export_response(composed, "");
-    text = response_body(response);
-    check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v2: theme\n", 26) == 0 &&
+    text = test_http_body(response);
+    check(test_http_status(response) == 200 && strncmp(text, "# Ursatz export v2: theme\n", 26) == 0 &&
               strstr(text, "into: sentence\n") != NULL && strstr(text, "bars: 8\n") != NULL &&
               strstr(text, "bar 0: i\n") != NULL && strstr(text, "slot basic: Opening v1\n") != NULL,
           "a composed theme's header has its form, chords and slots");
@@ -2396,9 +2260,9 @@ static void test_material_export(void) {
     free(response);
 
     response = export_response(plain, "");
-    text = response_body(response);
+    text = test_http_body(response);
     const char *plain_theme = strstr(text, "\n## theme\n");
-    check(response_has_status(response, 200) && plain_theme && strstr(plain_theme, "not composed") != NULL,
+    check(test_http_status(response) == 200 && plain_theme && strstr(plain_theme, "not composed") != NULL,
           "an uncomposed theme says not composed");
     free(response);
   }
@@ -2415,8 +2279,8 @@ static void test_material_export(void) {
     check(install_score(piece, "loop.musicxml") && install_score(piece, "ending.musicxml"),
           "the loop.musicxml and ending.musicxml are put in version 1");
     response = export_response(piece, "");
-    text = response_body(response);
-    check(response_has_status(response, 200) && strncmp(text, "# Ursatz export v2: piece\n", 26) == 0 &&
+    text = test_http_body(response);
+    check(test_http_status(response) == 200 && strncmp(text, "# Ursatz export v2: piece\n", 26) == 0 &&
               strstr(text, "key: D\n") != NULL && strstr(text, "mode: minor\n") != NULL &&
               strstr(text, "A body: 32 beats, fill empty, cadence PAC\n") != NULL &&
               strstr(text, "I intro: 8 beats, fill empty, cadence none\n") != NULL,
@@ -2437,11 +2301,6 @@ static void test_material_export(void) {
 #endif
 
 int main(void) {
-#ifdef _WIN32
-  WSADATA wsa_data;
-  WSAStartup(MAKEWORD(2, 2), &wsa_data);
-#endif
-
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
   system("rmdir /s /q pieces collections materials subjects data 2> nul");
@@ -2450,12 +2309,12 @@ int main(void) {
 #endif
   MKDIR("pieces");
 
-  struct mg_context *ctx = ursatz_gui_server_start("18770", ".");
+  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
   check(ctx != NULL, "server starts");
   if (!ctx) {
     return 1;
   }
-  sleep_ms(200);
+  test_sleep_ms(200);
 
   test_projects();
   test_items();
@@ -2499,9 +2358,5 @@ int main(void) {
 
   ursatz_gui_server_stop(ctx);
 
-  if (failures > 0) {
-    fprintf(stderr, "%d check(s) failed\n", failures);
-    return 1;
-  }
-  return 0;
+  return test_finish("materials_route");
 }

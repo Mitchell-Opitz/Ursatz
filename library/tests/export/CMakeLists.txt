@@ -1,41 +1,18 @@
-add_ursatz_test(musicxml_score)
-add_ursatz_test(musicxml_score_values)
-add_ursatz_test(musicxml_score_beams)
-add_ursatz_test(musicxml_score_reference)
-target_compile_definitions(test_musicxml_score_reference PRIVATE
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
-add_ursatz_test(musicxml_score_overlaps)
-target_compile_definitions(test_musicxml_score_overlaps PRIVATE
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml")
-add_ursatz_test(musicxml_score_errors)
-add_ursatz_test(musicxml_score_fixtures)
-add_ursatz_test(score_quantize)
-add_ursatz_test(score_staves)
-add_ursatz_test(score_clefs)
-target_compile_definitions(test_musicxml_score_fixtures PRIVATE
-    URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml")
+ursatz_test(musicxml_score LIBS ursatz VALGRIND)
+ursatz_test(musicxml_score_values LIBS ursatz VALGRIND)
+ursatz_test(musicxml_score_beams LIBS ursatz VALGRIND)
+ursatz_test(musicxml_score_reference LIBS ursatz
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus" VALGRIND)
+ursatz_test(musicxml_score_overlaps LIBS ursatz ursatz_test_support
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus"
+    URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/musicxml" VALGRIND)
+ursatz_test(musicxml_score_errors LIBS ursatz VALGRIND)
+ursatz_test(musicxml_score_fixtures LIBS ursatz
+    DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/musicxml" VALGRIND)
+ursatz_test(score_quantize LIBS ursatz)
+ursatz_test(score_staves LIBS ursatz)
+ursatz_test(score_clefs LIBS ursatz VALGRIND)
 
-add_executable(test_musicxml_export_mozart545 test_musicxml_export_mozart545.c)
-target_link_libraries(test_musicxml_export_mozart545 PRIVATE ursatz)
-add_test(NAME musicxml_export_mozart545 COMMAND test_musicxml_export_mozart545
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+ursatz_test(musicxml_export_mozart545 LIBS ursatz ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(test_musicxml_export_bach_prelude test_musicxml_export_bach_prelude.c)
-target_link_libraries(test_musicxml_export_bach_prelude PRIVATE ursatz)
-add_test(NAME musicxml_export_bach_prelude COMMAND test_musicxml_export_bach_prelude
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_ursatz_architecture_test(export)
-
-# Scoped memcheck coverage for this module's own test binaries only (not a repo-wide valgrind mechanism -- see
-# docs/modules/export.md). Skips silently if valgrind isn't installed.
-find_program(URSATZ_EXPORT_VALGRIND valgrind)
-if(URSATZ_EXPORT_VALGRIND)
-  foreach(export_test_name musicxml_score musicxml_score_errors musicxml_score_fixtures musicxml_score_overlaps musicxml_score_reference musicxml_score_values musicxml_score_beams score_clefs)
-    add_test(NAME ${export_test_name}_valgrind
-             COMMAND ${URSATZ_EXPORT_VALGRIND} --leak-check=full --error-exitcode=1
-                     $<TARGET_FILE:test_${export_test_name}>
-             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-  endforeach()
-endif()
+ursatz_test(musicxml_export_bach_prelude LIBS ursatz ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

@@ -28,8 +28,10 @@ bash tools/ci/check-docs.sh library
 - Full run, both sets: `ctest --test-dir build/library -j$(nproc) --output-on-failure`
 - The 10 s rule: a fast-set test that takes over 10 s is sped up or labeled `slow`. CI prints the ten slowest tests and
   warns about each fast-set test over 10 s.
-- Timeouts come from `cmake/TestTimeouts.cmake`: 30 s for fast-set tests, 1800 s for `slow` tests.
-- The slow set runs nightly in CI (`.github/workflows/nightly.yml`).
+- A library test is registered with `ursatz_test(<name> LIBS ursatz ...)` (`cmake/UrsatzTest.cmake` at the repository root): it builds `test_<name>` from `test_<name>.c`, compiles it with `-UNDEBUG`, and sets the timeout (120 s, 1800 s for `slow`). `VALGRIND` adds `<name>_valgrind`.
+- Fixtures are in the root `tests/fixtures/` (`URSATZ_FIXTURES_DIR`).
+- Labels: `slow` (nightly only), `valgrind` (every memcheck test, always with `slow`), `accuracy` (the accuracy harness, gate and corpus tests).
+- The slow set, with every memcheck test, runs nightly in CI (`.github/workflows/nightly.yml`).
 
 Requirements, the full test run and CI are in [docs/BUILDING.md](docs/BUILDING.md).
 

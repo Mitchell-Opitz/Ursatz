@@ -10,6 +10,8 @@
 
 #include "api/api_grow.h"
 #include "support/test_support.h"
+#include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -44,7 +46,7 @@ typedef struct {
 static Fixture FIXTURES[2];
 
 static Motive load_motive(const char *path) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
@@ -55,16 +57,6 @@ static Motive load_motive(const char *path) {
     assert(result == MOTIVE_OK);
     free(text);
     return motive;
-}
-
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
 }
 
 /* The 8-bar period or sentence of the motive and seed under the contrast settings (NULL for none): the plan after grow_run. */
@@ -123,7 +115,7 @@ static void test_defaults_change_nothing(void) {
                     char *b = plan_text(with_similar);
                     char *c = plan_text(with_zero);
                     assert(strcmp(a, b) == 0 && strcmp(a, c) == 0);
-                    assert(find_node(with_zero, "new material") == PLAN_NODE_NONE);
+                    assert(test_find_node(with_zero, "new material") == PLAN_NODE_NONE);
                     free(a);
                     free(b);
                     free(c);
@@ -143,7 +135,7 @@ typedef struct {
 
 /* The notes of the theme's melody that start in the bars [from, to) of the 4/4 theme (0-based), their onsets counted from bar from. */
 static size_t melody_rhythm(const PiecePlan *plan, long from, long to, Beat *out, size_t size) {
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
     Rational origin = plan_node_span(plan, theme).start;
@@ -220,7 +212,7 @@ static void test_distant_changes_rhythm(void) {
                         continue;
                     }
                     composed[k]++;
-                    if (find_node(plan, NODE[k]) == PLAN_NODE_NONE) {
+                    if (test_find_node(plan, NODE[k]) == PLAN_NODE_NONE) {
                         continue;
                     }
                     made[k]++;
@@ -293,7 +285,7 @@ static void test_distant_composes(void) {
 
 /* The motive node an idea's melody span asks for, or PLAN_NODE_NONE. */
 static NodeId melody_motive(const PiecePlan *plan, const char *idea_name) {
-    NodeId idea = find_node(plan, idea_name);
+    NodeId idea = test_find_node(plan, idea_name);
     LaneSpanId spans[16];
     size_t count = idea == PLAN_NODE_NONE ? 0 : plan_node_lane_spans(plan, idea, spans, 16);
     for (size_t s = 0; s < count && s < 16; s++) {
@@ -335,7 +327,7 @@ static void test_new_material_recorded(void) {
             PiecePlan *plan = grow_with(&FIXTURES[f].motive, seed, true, &fresh);
             if (plan) {
                 composed++;
-                NodeId node = find_node(plan, "new material");
+                NodeId node = test_find_node(plan, "new material");
                 if (node != PLAN_NODE_NONE) {
                     made++;
                     NodeId first = melody_motive(plan, "contrasting idea");
@@ -352,7 +344,7 @@ static void test_new_material_recorded(void) {
             }
             plan = grow_with(&FIXTURES[f].motive, seed, false, &fresh);
             if (plan) {
-                sentence_made += find_node(plan, "new material") != PLAN_NODE_NONE ? 1 : 0;
+                sentence_made += test_find_node(plan, "new material") != PLAN_NODE_NONE ? 1 : 0;
                 plan_destroy(plan);
             }
         }
@@ -384,8 +376,8 @@ static void test_one_bar_motif_composes(void) {
                 continue;
             }
             composed[period]++;
-            made += find_node(plan, "distant for m1") != PLAN_NODE_NONE ||
-                            find_node(plan, "distant for m2") != PLAN_NODE_NONE
+            made += test_find_node(plan, "distant for m1") != PLAN_NODE_NONE ||
+                            test_find_node(plan, "distant for m2") != PLAN_NODE_NONE
                         ? 1
                         : 0;
             plan_destroy(plan);

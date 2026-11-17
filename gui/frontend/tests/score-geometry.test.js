@@ -6,20 +6,9 @@
 
 const ScoreGeometry = require("../public/score-geometry.js");
 
-let failures = 0;
+const { check, near: nearWithin, finish } = require("./support/check.js");
+const near = (a, b) => nearWithin(a, b, 1e-6);
 
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-
-function near(a, b) {
-  return Math.abs(a - b) < 1e-6;
-}
 
 const layout = {
   unit: 10,
@@ -127,8 +116,5 @@ check(against.join() === "true,false,true", "the gap is measured from the last d
 check(ScoreGeometry.chordLabelsToDraw([5, 6], [50, 50], 4)[0] === true, "the first label is always kept");
 check(ScoreGeometry.chordLabelsToDraw([], [], 4).length === 0, "no labels, nothing to draw");
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
-}
+finish();
 console.log("score-geometry: all checks passed");

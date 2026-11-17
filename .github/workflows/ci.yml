@@ -26,30 +26,21 @@ jobs:
         with:
           key: ${{ runner.os }}-ccache
 
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install -y python3-jsonschema
+
       - name: Configure
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
-        run: cmake -S . -B build
+        run: cmake -S . -B build -DURSATZ_REQUIRE="jsonschema;node"
 
       - name: Build
         run: cmake --build build -j
 
       # Boundary checks, run from the repository root against the build.
-      - name: Check Analyzer library includes
-        run: bash tools/ci/check-library-includes-analyzer.sh build
-      - name: Check Composer library includes
-        run: bash tools/ci/check-library-includes-composer.sh build
-      - name: Check GUI library includes
-        run: bash tools/ci/check-library-includes-gui.sh build
-      - name: Check chain builds
-        run: bash tools/ci/check-chain-builds.sh
-      - name: Check that the CLI includes only the composer API
-        run: bash tools/ci/check-cli-api.sh
       - name: Check file scope state
         run: bash tools/ci/check-statics.sh analyzer composer
-      - name: Check that API internals stay in the API layer
-        run: bash tools/ci/check-layers.sh
       - name: Check that music is heard through the Analyzer
         run: bash tools/ci/check-hearing.sh
       - name: Check frontend theory
@@ -65,8 +56,7 @@ jobs:
         if: always()
         run: bash tools/ci/slowest-tests.sh build
 
-      - name: Accuracy gate
-        run: ./build/library/tests/accuracy/accuracy_harness
+      # The fast set runs accuracy_harness, which writes the report.
       - name: Upload accuracy report
         if: always()
         uses: actions/upload-artifact@v4

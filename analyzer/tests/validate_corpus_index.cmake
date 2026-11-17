@@ -1,12 +1,6 @@
 # Runs the CLI over the reference and mixed corpora and validates each corpus index against the schema. Run with
-# cmake -P and -DCLI, -DPYTHON, -DHAVE_JSONSCHEMA, -DVALIDATOR, -DSCHEMA, -DCORPORA_DIR and -DWORK_DIR.
-# Prints a SKIPPED line (matched by the test's SKIP_REGULAR_EXPRESSION) when python3 with jsonschema was not found at
-# configure time.
-
-if(NOT HAVE_JSONSCHEMA)
-    message("SKIPPED: python3 with the jsonschema module was not found at configure time")
-    return()
-endif()
+# cmake -P and -DCLI, -DPYTHON, -DVALIDATOR, -DSCHEMA, -DCORPORA_DIR and -DWORK_DIR. The test is registered only when
+# python3 with jsonschema was found at configure time (-DPYTHON is that python3).
 
 foreach(corpus reference mixed)
     file(REMOVE_RECURSE "${WORK_DIR}")

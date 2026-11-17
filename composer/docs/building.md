@@ -8,6 +8,8 @@ tests (the grow fidelity sweep takes about 12 minutes alone, and several others 
 left out of that command and of CI. Run them all, with plain `ctest --test-dir build/composer -j8 --output-on-failure`,
 before pushing a branch.
 
+Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): it compiles the test with `-UNDEBUG` and sets its timeout when the test is registered (120 s, 1800 s for `slow`; `test_listen_cli_*` keep 300 s). Labels: `slow` (nightly only), `valgrind` (memcheck runs, always with `slow`) and `schema`. `test_plan_schema` and `test_api_schema` are registered only when python3 with jsonschema is installed (`-DURSATZ_REQUIRE=jsonschema` makes the configure fail without it). A test that writes a fixed file in the build directory takes a `RESOURCE_LOCK` (the plan files, the API files per test, `piece_fills`), so tests that share it never run together. The reference pieces come from the root `tests/fixtures/` (`URSATZ_FIXTURES_DIR`); the Composer's own requests, forms and styles stay in `tests/fixtures/` here. Checks, file and JSON helpers come from the root `tests/support/ursatz_test.h`; `tests/support/` here keeps the Composer's own (`test_composer.h`, the oracles, `find_node`). The memcheck runs of a test that sets up a fixture (`test_plan_json`, the `test_api_*` tests) are registered apart from it, so a test that requires the fixture does not pull a memcheck run into the fast set.
+
 The library, the Analyzer and cJSON are the root's targets, built from `library/`, `analyzer/` and `third_party/cjson`
 in the same tree, so there is nothing to pin or fetch.
 
@@ -18,7 +20,7 @@ cells per beat, the answer to a leap, a chord's member degree) stays in the Comp
 
 Library headers are included by their staged public paths only: kernel headers as `<time/meter_map.h>`, framework headers
 with their folder (`<standard-harmony/harmony_cadence_rules.h>`), Analyzer headers as `<ursatz_analyzer/...>`; Composer
-headers keep their own paths. `tools/ci/check-library-includes-composer.sh build` (run after the build, CI runs it) fails on an Ursatz
+headers keep their own paths. The layer table (`cmake/layer-table.txt`, test `layer_table`) fails on an Ursatz
 header outside the staged public roots in `build/library/public/manifest.txt`, an Analyzer header outside
 `analyzer/include/ursatz_analyzer/`, any `*_internal.h` of either, or a CMake file that reads the
 `SOURCE_DIR` of an Ursatz or Analyzer target or a path under `library/tests` or `analyzer/src`.

@@ -24,4 +24,4 @@ Layer L4 (`music-containers`). Path `src/containers/`, tests `tests/containers/`
 
 ## Dependencies
 
-Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), and `events` (L3) only. `tests/containers/test_architecture_containers.c` enforces the ceiling and is directory-driven.
+Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), and `events` (L3) only. The layer table enforces the ceiling.

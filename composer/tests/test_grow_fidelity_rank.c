@@ -13,6 +13,7 @@
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
 #include "util/plan_util.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -45,7 +46,7 @@ static const Case CASES[] = {
      PLAN_THEME_ENDING_CONSEQUENT}};
 
 static Motive load_motive(const char *path) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));

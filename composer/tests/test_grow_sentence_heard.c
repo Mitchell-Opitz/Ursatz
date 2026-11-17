@@ -40,16 +40,6 @@ typedef struct {
     size_t nothing;
 } Share;
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, Share *share) {
     Motive motive;
     MotiveOptions options;
@@ -76,7 +66,7 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
 
-    PlanSpan theme = plan_node_span(plan, find_node(plan, "theme"));
+    PlanSpan theme = plan_node_span(plan, test_find_node(plan, "theme"));
     assert(test_form_hear(plan, theme, &heard) == FORM_HEAR_OK);
     share->runs++;
     if (heard.count == 0) {

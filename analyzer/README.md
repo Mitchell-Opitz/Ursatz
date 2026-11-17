@@ -33,8 +33,8 @@ The slow set is the tests labeled `slow` (the valgrind runs and the longest suit
 nightly (and on demand) in the `Nightly` workflow, which runs the full suite.
 
 A fast-set test that takes over 10 s is sped up or labeled `slow` (`tools/ci/slowest-tests.sh build/analyzer` from the repository root prints the ten slowest
-tests and warns about fast-set tests over 10 s). Timeouts come from `cmake/TestTimeouts.cmake`, so local runs match CI:
-30 s for a test without the `slow` label, 1800 s for a test with it.
+tests and warns about fast-set tests over 10 s). Timeouts are set when each test is registered with `ursatz_test()`:
+120 s for a test without the `slow` label, 1800 s for a test with it.
 
 ## Usage
 

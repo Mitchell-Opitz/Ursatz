@@ -17,6 +17,7 @@
 #include <ursatz_composer/return_hear.h>
 #include "support/test_oracles.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * The figurate return (form_figure.h, R-497, R-498): tests/fixtures/forms/figure-form.json (a theme and three
@@ -48,29 +49,12 @@ typedef struct {
     unsigned unit;
 } Row;
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        fprintf(stderr, "cannot read %s\n", path);
-        exit(2);
-    }
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    size_t read = text ? fread(text, 1, (size_t)length, file) : 0;
-    assert(text && read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
 static FormSpec *load_form_named(const char *file) {
     char path[1024];
     FormSpec *form = NULL;
     FormSpecError error;
     snprintf(path, sizeof(path), "%s/forms/%s", COMPOSER_FIXTURE_DIR, file);
-    char *text = read_file(path);
+    char *text = test_must_read_file(path, NULL);
     if (form_spec_parse(text, &form, &error) != FORM_SPEC_OK) {
         fprintf(stderr, "%s: %s: %s\n", path, error.path, error.message);
         exit(2);

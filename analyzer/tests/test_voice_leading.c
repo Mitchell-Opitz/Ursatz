@@ -7,6 +7,8 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/musicxml_pipeline.h>
 
+#include "ursatz_test.h"
+
 /*
  * The voice leading of the report, on a constructed four-part chorale (tests/musicxml/chorale-voice-leading.musicxml,
  * C major, one whole-note chord per measure: I ii V I). It holds one fault of each kind the section flags and nothing
@@ -14,16 +16,6 @@
  * leading tone (voice 0) falling instead of rising to the tonic from measure 3 to 4. Asserted: the four voices, both
  * faults and only those, each at its measure, and the doubling of the first two chords.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* The entry starts at the beginning of the given measure of the 4/4 piece (measure 1 is time 0). */
 static bool starts_measure(const AnalysisReport *report, size_t entry, int measure) {
@@ -38,7 +30,7 @@ static void check_chorale(const char *dir) {
     AnalysisReport report;
     if (musicxml_pipeline_import_file(path, &notes) != MUSICXML_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
-        failures++;
+        test_failure_count++;
         return;
     }
     const AnalysisVoiceLeading *voice_leading = &report.voice_leading;
@@ -86,10 +78,5 @@ static void check_chorale(const char *dir) {
 
 int main(void) {
     check_chorale(URSATZ_MUSICXML_DIR);
-    if (failures > 0) {
-        fprintf(stderr, "test_voice_leading: %d check(s) failed\n", failures);
-        return 1;
-    }
-    printf("test_voice_leading: ok\n");
-    return 0;
+    return test_finish("test_voice_leading");
 }

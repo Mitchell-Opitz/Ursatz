@@ -22,7 +22,7 @@ The Library, Tags panel, Collections, Subjects, Motifs, Themes, Pieces, Motive l
 
 ## Test
 
-The tests are split into a fast set and a slow set. The `slow` label is new: a test carries it when it takes over 10 s.
+The tests are split into a fast set and a slow set (the `slow` label).
 
 - Fast set (every test without the `slow` label), what a pull request runs:
 
@@ -42,9 +42,9 @@ The tests are split into a fast set and a slow set. The `slow` label is new: a t
   ctest --test-dir build/gui -j$(nproc)
   ```
 
-A fast-set test that takes over 10 s is sped up or labeled `slow`. `tools/ci/slowest-tests.sh build/gui` (from the repository root) prints the ten slowest tests of the last run and warns about any fast-set test over 10 s.
+One rule: a fast-set test over 10 s is sped up or labeled `slow`. `tools/ci/slowest-tests.sh build/gui` (from the repository root) prints the ten slowest tests of the last run and warns about any fast-set test over 10 s.
 
-CMake sets the timeouts (`cmake/TestTimeouts.cmake`): 30 s for a test without the `slow` label, 1800 s for a slow one. The `Nightly` workflow runs the full suite, so the slow set runs nightly in CI.
+Each test gets its timeout when it is registered with `ursatz_test()`: 120 s for a test without the `slow` label, 1800 s for a slow one. The `Nightly` workflow runs the full suite, so the slow set runs nightly in CI.
 
 The tests and checks are in [docs/testing.md](docs/testing.md).
 
@@ -66,7 +66,7 @@ GUI; `-DURSATZ_TESTS=OFF` skips every part's tests. The library's own tests are 
 Boundary checks keep the GUI a client; CI runs them (the build is configured with `URSATZ_LEGACY_INCLUDE_DIRS` OFF, so
 only staged public headers are visible). Run them from anywhere in the repository after the build:
 
-- `tools/ci/check-library-includes-gui.sh build` fails when `backend/src`
+- The layer table (`cmake/layer-table.txt`, test `layer_table`) fails when `backend/src`
   includes an Ursatz header, an Analyzer header outside `ursatz_analyzer/`, a
   Composer header other than `ursatz_composer/composer_api.h`, or any `*_internal.h`.
 - `tools/ci/check-docs.sh gui` fails when a README is over 10 KB, another doc over 20 KB, a relative link or anchor does not resolve, or a file under `docs/` is missing from `docs/README.md`.

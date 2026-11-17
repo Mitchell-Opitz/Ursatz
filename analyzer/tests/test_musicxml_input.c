@@ -11,6 +11,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * MusicXML input: format choice, the notated metadata, a pickup, multi-part
@@ -93,8 +94,7 @@ static void test_format_detection(void) {
     assert(input_format_detect("/nowhere/dir.mid/piece") == INPUT_FORMAT_AUTO);
 
     /* By content when the extension says nothing. */
-    char path[512];
-    test_temp_path(path, sizeof(path), "sniff.dat");
+    char *path = test_temp_path("sniff.dat");
     write_bytes(path, "MThd\0\0\0\6", 8);
     assert(input_format_detect(path) == INPUT_FORMAT_MIDI);
     write_bytes(path, "\xEF\xBB\xBF  \n<?xml version=\"1.0\"?>", 29);
@@ -104,6 +104,7 @@ static void test_format_detection(void) {
     write_bytes(path, "plain text", 10);
     assert(input_format_detect(path) == INPUT_FORMAT_AUTO);
     remove(path);
+    free(path);
 }
 
 static void test_notated_metadata_and_pickup(void) {
@@ -203,7 +204,7 @@ static void test_enharmonic_spelling(void) {
 
 static void test_midi_keeps_rule_spelling(void) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_ANALYZER_FIXTURE_DIR);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
     ImportedNotes notes;
     cJSON *document = analyze(path, &notes);
     assert(notes.source.format == INPUT_FORMAT_MIDI);
@@ -248,14 +249,13 @@ static void test_errors(void) {
     /* A format forced against the content fails cleanly. */
     expect_failure(musicxml("pickup.musicxml"), INPUT_FORMAT_MIDI, INPUT_PIPELINE_ERR_IMPORT_FAILED);
     char midi[512];
-    snprintf(midi, sizeof(midi), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_ANALYZER_FIXTURE_DIR);
+    snprintf(midi, sizeof(midi), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
     expect_failure(midi, INPUT_FORMAT_MUSICXML, INPUT_PIPELINE_ERR_IMPORT_FAILED);
 }
 
 static void test_override_and_sniff(void) {
     /* A score named .mid is read as MusicXML only when the format is forced. */
-    char path[512];
-    test_temp_path(path, sizeof(path), "forced.mid");
+    char *path = test_temp_path("forced.mid");
     copy_file(musicxml("pickup.musicxml"), path);
     expect_failure(path, INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_IMPORT_FAILED);
     ImportedNotes notes;
@@ -265,12 +265,14 @@ static void test_override_and_sniff(void) {
     remove(path);
 
     /* With no extension to go on, the content decides. */
-    test_temp_path(path, sizeof(path), "sniffed");
+    free(path);
+    path = test_temp_path("sniffed");
     copy_file(musicxml("pickup.musicxml"), path);
     assert(input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK);
     assert(notes.source.format == INPUT_FORMAT_MUSICXML);
     imported_notes_destroy(&notes);
     remove(path);
+    free(path);
 }
 
 int main(void) {

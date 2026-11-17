@@ -11,6 +11,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Targeted chord tests on small constructed files (division 96, 4/4, C major
@@ -117,10 +118,9 @@ typedef struct {
 } Analyzed;
 
 static Analyzed analyze(const char *name, const Note *notes, size_t count) {
-    char path[512];
     char file_name[128];
     snprintf(file_name, sizeof(file_name), "chord_details_%s.mid", name);
-    test_temp_path(path, sizeof(path), file_name);
+    char *path = test_temp_path(file_name);
     write_fixture(path, notes, count);
 
     ImportedNotes imported;
@@ -138,6 +138,7 @@ static Analyzed analyze(const char *name, const Note *notes, size_t count) {
     analysis_report_destroy(&report);
     imported_notes_destroy(&imported);
     remove(path);
+    free(path);
     return analyzed;
 }
 

@@ -9,6 +9,7 @@
 #include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"
 #include "../key_index_test_util.h"
+#include "ursatz_test.h"
 
 /*
  * The repeats and returns the chain finds (R-400). The chain is analysis_chain_run to the form stage,
@@ -30,17 +31,6 @@ typedef struct {
 
 static const Piece CLEMENTI = {"Clementi 36", "Clementi 36.mid"};
 static const Piece MOZART = {"Mozart 545", "Mozart 545.mid"};
-
-static int failures = 0;
-
-#define CHECK(condition, ...)                \
-    do {                                     \
-        if (!(condition)) {                  \
-            printf("  FAIL " __VA_ARGS__);   \
-            printf("\n");                    \
-            failures++;                      \
-        }                                    \
-    } while (0)
 
 static double to_double(const MusicalTime *time) {
     return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
@@ -108,9 +98,9 @@ static void check_clementi(void) {
     printf("%s\n", CLEMENTI.name);
     const StandardFormRepeats *repeats = analysis_chain_repeats(chain);
     assert(repeats != NULL);
-    CHECK(repeats->count == 2 && kind_count(repeats, STANDARD_FORM_REPEAT) == 0, "Clementi: %zu items, expected 2 returns", repeats->count);
-    CHECK(has_item(repeats, STANDARD_FORM_RETURN, 1, 4, 24, 27, -12), "Clementi: return 1-4 to 24-27 (-12) missing");
-    CHECK(has_item(repeats, STANDARD_FORM_RETURN, 8, 12, 31, 35, -7), "Clementi: return 8-12 to 31-35 (-7) missing");
+    CHECKF(repeats->count == 2 && kind_count(repeats, STANDARD_FORM_REPEAT) == 0, "Clementi: %zu items, expected 2 returns", repeats->count);
+    CHECKF(has_item(repeats, STANDARD_FORM_RETURN, 1, 4, 24, 27, -12), "Clementi: return 1-4 to 24-27 (-12) missing");
+    CHECKF(has_item(repeats, STANDARD_FORM_RETURN, 8, 12, 31, 35, -7), "Clementi: return 8-12 to 31-35 (-7) missing");
     analysis_chain_destroy(chain);
     free(key_events);
     pipeline_destroy(&p);
@@ -123,11 +113,11 @@ static void check_mozart(void) {
     printf("%s\n", MOZART.name);
     const StandardFormRepeats *repeats = analysis_chain_repeats(chain);
     assert(repeats != NULL);
-    CHECK(repeats->count == 3 && kind_count(repeats, STANDARD_FORM_REPEAT) == 2, "Mozart: %zu items, expected 2 repeats and 1 return",
+    CHECKF(repeats->count == 3 && kind_count(repeats, STANDARD_FORM_REPEAT) == 2, "Mozart: %zu items, expected 2 repeats and 1 return",
           repeats->count);
-    CHECK(has_item(repeats, STANDARD_FORM_REPEAT, 1, 28, 29, 56, 0), "Mozart: repeat 1-28 to 29-56 missing");
-    CHECK(has_item(repeats, STANDARD_FORM_REPEAT, 57, 101, 102, 146, 0), "Mozart: repeat 57-101 to 102-146 missing");
-    CHECK(has_item(repeats, STANDARD_FORM_RETURN, 1, 8, 70, 77, 5), "Mozart: return 1-8 to 70-77 (+5) missing");
+    CHECKF(has_item(repeats, STANDARD_FORM_REPEAT, 1, 28, 29, 56, 0), "Mozart: repeat 1-28 to 29-56 missing");
+    CHECKF(has_item(repeats, STANDARD_FORM_REPEAT, 57, 101, 102, 146, 0), "Mozart: repeat 57-101 to 102-146 missing");
+    CHECKF(has_item(repeats, STANDARD_FORM_RETURN, 1, 8, 70, 77, 5), "Mozart: return 1-8 to 70-77 (+5) missing");
 
     /* The cadences of 102 to 146 are those of 57 to 101 moved by 45. */
     const ChainSegments *segments = analysis_chain_segments(chain);
@@ -149,10 +139,10 @@ static void check_mozart(void) {
         }
     }
     printf("  cadences 57-101: %zu, 102-146: %zu\n", earlier_count, later_count);
-    CHECK(earlier_count == 6 && later_count == 6, "Mozart: %zu cadences in 57-101 and %zu in 102-146, expected 6 and 6", earlier_count,
+    CHECKF(earlier_count == 6 && later_count == 6, "Mozart: %zu cadences in 57-101 and %zu in 102-146, expected 6 and 6", earlier_count,
           later_count);
     for (size_t i = 0; i < earlier_count && i < later_count; i++) {
-        CHECK(earlier[i][0] == later[i][0] && earlier[i][1] == later[i][1], "Mozart: cadence %zu is m%d type %d, expected m%d type %d", i,
+        CHECKF(earlier[i][0] == later[i][0] && earlier[i][1] == later[i][1], "Mozart: cadence %zu is m%d type %d, expected m%d type %d", i,
               later[i][0], later[i][1], earlier[i][0], earlier[i][1]);
     }
 
@@ -174,9 +164,9 @@ static void check_mozart(void) {
         }
     }
     printf("  phrases 57-101: %zu, 102-146: %zu\n", pe_count, pl_count);
-    CHECK(pe_count == 6 && pl_count == 6, "Mozart: %zu phrases in 57-101 and %zu in 102-146, expected 6 and 6", pe_count, pl_count);
+    CHECKF(pe_count == 6 && pl_count == 6, "Mozart: %zu phrases in 57-101 and %zu in 102-146, expected 6 and 6", pe_count, pl_count);
     for (size_t i = 0; i < pe_count && i < pl_count; i++) {
-        CHECK(pe[i][0] == pl[i][0] && pe[i][1] == pl[i][1], "Mozart: phrase %zu is %d-%d, expected %d-%d", i, pl[i][0], pl[i][1], pe[i][0],
+        CHECKF(pe[i][0] == pl[i][0] && pe[i][1] == pl[i][1], "Mozart: phrase %zu is %d-%d, expected %d-%d", i, pl[i][0], pl[i][1], pe[i][0],
               pe[i][1]);
     }
     analysis_chain_destroy(chain);
@@ -187,10 +177,5 @@ static void check_mozart(void) {
 int main(void) {
     check_clementi();
     check_mozart();
-    if (failures > 0) {
-        printf("test_reference_repeats: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_reference_repeats: ok\n");
-    return 0;
+    return test_finish("test_reference_repeats");
 }

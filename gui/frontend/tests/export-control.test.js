@@ -3,16 +3,7 @@
 
 const ExportControl = require("../public/export-control.js");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 const name = ExportControl.exportFilename;
 check(name("Mozart 545") === "mozart-545.txt", "a name becomes a lowercase slug with .txt");
@@ -36,4 +27,4 @@ check(range("a", "3") === null, "a non-integer from is null");
 check(range("3", "1.5") === null, "a non-integer to is null");
 check(range("-1", "3") === null, "a negative number is null");
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

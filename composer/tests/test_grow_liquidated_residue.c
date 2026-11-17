@@ -11,6 +11,8 @@
 
 #include "api/api_grow.h"
 #include "support/test_support.h"
+#include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -49,21 +51,11 @@ static const Case CASES[] = {
 };
 
 static Motive load_motive(const char *path) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     Motive motive;
     assert(motive_from_json(text, NULL, &motive, NULL) == MOTIVE_OK);
     free(text);
     return motive;
-}
-
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
 }
 
 static const PlanMotiveRef *ref_of(const PiecePlan *plan, NodeId node) {
@@ -128,8 +120,8 @@ static bool same_durations(const PlanNote *notes, const Motive *motive, size_t f
 /* Checks one cadential idea of a composed theme; the motive node is m<slot>. */
 static void check_idea(const PiecePlan *plan, const Motive *motive, const MotiveAnalysis *analysis, const char *idea,
                        const char *motive_name, int tonic, bool minor, Rational shortest) {
-    NodeId node = find_node(plan, motive_name);
-    NodeId idea_node = find_node(plan, idea);
+    NodeId node = test_find_node(plan, motive_name);
+    NodeId idea_node = test_find_node(plan, idea);
     assert(node != PLAN_NODE_NONE && idea_node != PLAN_NODE_NONE);
     const PlanMotiveRef *ref = ref_of(plan, node);
     assert(ref && ref->steps >= 1 && ref->segment[0] != '\0');
@@ -207,7 +199,7 @@ static void test_cadential_ideas(void) {
                 ideas += 2;
             } else {
                 /* A period has no cadential idea: nothing is liquidated. */
-                assert(find_node(plan, "cadential") == PLAN_NODE_NONE);
+                assert(test_find_node(plan, "cadential") == PLAN_NODE_NONE);
             }
             api_grow_run_destroy(&run);
         }
@@ -221,7 +213,7 @@ static void test_head_residue(void) {
     Motive motive;
     compose(&CASES[2], 1, &run, &motive);
     const PiecePlan *plan = run.themes[0].plan;
-    NodeId node = find_node(plan, "liquidated 3");
+    NodeId node = test_find_node(plan, "liquidated 3");
     assert(node != PLAN_NODE_NONE);
     const PlanNote *notes = NULL;
     assert(melody_of(plan, node, &notes) == 3);

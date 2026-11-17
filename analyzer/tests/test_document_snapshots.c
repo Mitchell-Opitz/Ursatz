@@ -10,6 +10,7 @@
 #include <ursatz_analyzer/input_pipeline.h>
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Golden snapshots of the analysis document of the five reference pieces
@@ -17,7 +18,7 @@
  * pipeline -> analysis document and is compared with
  * tests/snapshots/<slug>.analysis.json after the run-dependent metadata
  * members (analyzer_version, producer_key, input) are removed. With
- * UPDATE_SNAPSHOTS=1 (or URSATZ_UPDATE_SNAPSHOTS=1) in the environment the
+ * URSATZ_UPDATE_GOLDENS=1 in the environment (the run then exits 2) the
  * golden files are rewritten instead.
  */
 
@@ -31,7 +32,7 @@ static const struct {
 
 static char *render_piece(const char *fixture) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
 
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
@@ -65,16 +66,6 @@ static char *render_piece(const char *fixture) {
     return text;
 }
 
-static bool write_file(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    size_t length = strlen(text);
-    bool ok = fwrite(text, 1, length, file) == length;
-    return fclose(file) == 0 && ok;
-}
-
 /* Prints the 1-based number and both versions of the first line where
    expected and actual differ. */
 static void print_first_difference(const char *slug, const char *expected, const char *actual) {
@@ -96,11 +87,7 @@ static void print_first_difference(const char *slug, const char *expected, const
 }
 
 int main(void) {
-    const char *update_env = getenv("UPDATE_SNAPSHOTS");
-    if (!update_env) {
-        update_env = getenv("URSATZ_UPDATE_SNAPSHOTS");
-    }
-    bool update = update_env && strcmp(update_env, "1") == 0;
+    bool update = test_update_goldens();
     int failures = 0;
 
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
@@ -115,7 +102,7 @@ int main(void) {
         }
 
         if (update) {
-            if (write_file(snapshot_path, actual)) {
+            if (test_write_file(snapshot_path, actual, strlen(actual))) {
                 printf("%s: snapshot updated\n", PIECES[i].slug);
             } else {
                 fprintf(stderr, "%s: cannot write %s\n", PIECES[i].slug, snapshot_path);
@@ -125,9 +112,9 @@ int main(void) {
             continue;
         }
 
-        char *expected = test_read_file(snapshot_path);
+        char *expected = test_read_file(snapshot_path, NULL);
         if (!expected) {
-            fprintf(stderr, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)\n", PIECES[i].slug,
+            fprintf(stderr, "%s: missing %s (run with URSATZ_UPDATE_GOLDENS=1 to create it)\n", PIECES[i].slug,
                     snapshot_path);
             failures++;
         } else if (strcmp(expected, actual) != 0) {
@@ -140,5 +127,8 @@ int main(void) {
         free(actual);
     }
 
-    return failures == 0 ? 0 : 1;
+    if (failures != 0) {
+        return 1;
+    }
+    return update ? test_goldens_updated("test_document_snapshots") : 0;
 }

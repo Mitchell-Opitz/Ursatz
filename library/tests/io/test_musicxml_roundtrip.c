@@ -12,6 +12,7 @@
 #include "time/time_rational.h"
 #include "time/temporal_anchor.h"
 #include "../rational_test_util.h"
+#include "ursatz_test.h"
 
 /*
  * Round trip: each framework-v1 reference piece is imported from MIDI, written by MusicXmlExport, and read back by
@@ -35,20 +36,6 @@ typedef struct {
     Rational onset;
     Rational duration;
 } Item;
-
-static unsigned char *read_file(const char *path, size_t *out_size) {
-    FILE *f = fopen(path, "rb");
-    assert(f != NULL);
-    assert(fseek(f, 0, SEEK_END) == 0);
-    long size = ftell(f);
-    assert(size > 0);
-    assert(fseek(f, 0, SEEK_SET) == 0);
-    unsigned char *buffer = (unsigned char *)malloc((size_t)size);
-    assert(buffer != NULL && fread(buffer, 1, (size_t)size, f) == (size_t)size);
-    fclose(f);
-    *out_size = (size_t)size;
-    return buffer;
-}
 
 static Item *collect(NoteEvent *const *events, PitchNumericValue *const *values, size_t count) {
     Item *items = (Item *)calloc(count > 0 ? count : 1, sizeof(Item));
@@ -80,7 +67,7 @@ static void roundtrip(const char *file, bool exact) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, file);
     size_t size = 0;
-    unsigned char *data = read_file(path, &size);
+    unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
     NoteEvent **events = NULL;
     PitchNumericValue **values = NULL;
     size_t count = 0;

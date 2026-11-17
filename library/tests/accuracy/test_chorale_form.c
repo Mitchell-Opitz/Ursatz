@@ -9,6 +9,7 @@
 #include "score_layout.h"
 #include "semantics/analysis_key.h"
 #include "ursatz_chain/analysis_chain.h"
+#include "ursatz_test.h"
 
 /*
  * Every corpus chorale runs the whole analysis chain to the form stage. P41 B6 found chorale 16 failing there (its last note,
@@ -17,25 +18,11 @@
  * before it ends, and chorale 16's last phrase ends at m17. Pieces are found by scanning the directory.
  */
 
-static char *read_file(const char *path, size_t *size) {
-    FILE *f = fopen(path, "rb");
-    assert(f != NULL);
-    fseek(f, 0, SEEK_END);
-    long length = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buffer = (char *)malloc((size_t)length + 1);
-    assert(buffer != NULL);
-    *size = fread(buffer, 1, (size_t)length, f);
-    buffer[*size] = '\0';
-    fclose(f);
-    return buffer;
-}
-
 static void check_piece(const char *name) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s/score.musicxml", URSATZ_ACCURACY_CORPUS_DIR, name);
     size_t score_size = 0;
-    char *score = read_file(path, &score_size);
+    char *score = test_must_read_file(path, &score_size);
 
     MusicXmlImport imported;
     assert(musicxml_import_buffer(score, score_size, &imported) == MUSICXML_IMPORT_OK);

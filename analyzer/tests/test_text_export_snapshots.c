@@ -9,16 +9,19 @@
 #include <ursatz_analyzer/text_export.h>
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Golden snapshots of the text export of the five reference pieces (Ursatz framework-v1 corpus, MIDI files). Each piece
  * runs import -> analysis -> document -> text export and is compared with tests/snapshots/<slug>.export.txt after the
  * "analyzer:" line (the analyzer version and the Ursatz commit, which change with a release) is removed. With
- * UPDATE_SNAPSHOTS=1 (or URSATZ_UPDATE_SNAPSHOTS=1) in the environment the golden files are rewritten instead.
+ * URSATZ_UPDATE_GOLDENS=1 in the environment the golden files are rewritten instead (and the run exits 2).
  *
  * Size rule: an export is at most EXPORT_BYTES_PER_MEASURE bytes per measure plus EXPORT_BYTES_BASE bytes, checked on
  * the text as written, whatever the snapshot says. The plan was 500 bytes per measure; Field 5 (two staves, 12/8, four
  * voices) is 650 per measure with 496 of them the notes, so the rule is 700.
+ *
+ * With the argument "smoke" only the Bach 114 export runs (the fast set).
  */
 
 #define EXPORT_BYTES_PER_MEASURE 700
@@ -35,7 +38,7 @@ static const struct {
 /* The export of a piece, or NULL. */
 static char *export_piece(const char *fixture) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
 
     ImportedNotes notes;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
@@ -94,16 +97,6 @@ static size_t measure_count(const char *text) {
     return count;
 }
 
-static bool write_file(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    size_t length = strlen(text);
-    bool ok = fwrite(text, 1, length, file) == length;
-    return fclose(file) == 0 && ok;
-}
-
 /* Prints the 1-based number and both versions of the first line where expected and actual differ. */
 static void print_first_difference(const char *slug, const char *expected, const char *actual) {
     size_t line = 1;
@@ -123,15 +116,15 @@ static void print_first_difference(const char *slug, const char *expected, const
     fprintf(stderr, "  actual:   %.*s\n", (int)strcspn(actual_line, "\n"), actual_line);
 }
 
-int main(void) {
-    const char *update_env = getenv("UPDATE_SNAPSHOTS");
-    if (!update_env) {
-        update_env = getenv("URSATZ_UPDATE_SNAPSHOTS");
-    }
-    bool update = update_env && strcmp(update_env, "1") == 0;
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    bool update = test_update_goldens();
     int failures = 0;
 
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
+        if (smoke && strcmp(PIECES[i].slug, "bach-114") != 0) {
+            continue;
+        }
         char snapshot_path[512];
         snprintf(snapshot_path, sizeof(snapshot_path), "%s/%s.export.txt", URSATZ_SNAPSHOT_DIR, PIECES[i].slug);
 
@@ -154,16 +147,16 @@ int main(void) {
         }
 
         if (update) {
-            if (write_file(snapshot_path, actual)) {
+            if (test_write_file(snapshot_path, actual, strlen(actual))) {
                 printf("%s: snapshot updated (%zu bytes, %zu measures)\n", PIECES[i].slug, strlen(full), measures);
             } else {
                 fprintf(stderr, "%s: cannot write %s\n", PIECES[i].slug, snapshot_path);
                 failures++;
             }
         } else {
-            char *expected = test_read_file(snapshot_path);
+            char *expected = test_read_file(snapshot_path, NULL);
             if (!expected) {
-                fprintf(stderr, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)\n", PIECES[i].slug,
+                fprintf(stderr, "%s: missing %s (run with URSATZ_UPDATE_GOLDENS=1 to create it)\n", PIECES[i].slug,
                         snapshot_path);
                 failures++;
             } else if (strcmp(expected, actual) != 0) {
@@ -178,5 +171,8 @@ int main(void) {
         free(actual);
     }
 
-    return failures == 0 ? 0 : 1;
+    if (failures != 0) {
+        return 1;
+    }
+    return update ? test_goldens_updated(smoke ? "test_text_export_snapshots_smoke" : "test_text_export_snapshots") : 0;
 }

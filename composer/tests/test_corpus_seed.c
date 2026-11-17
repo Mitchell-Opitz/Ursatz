@@ -12,6 +12,7 @@
 #include <ursatz_composer/plan_json.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * Seeding from a corpus (corpus_seed.h, docs/style.md). The corpus is the output directory of `ursatz-analyzer --corpus`
@@ -162,19 +163,15 @@ static int run(const char *arguments) {
     return WEXITSTATUS(status);
 }
 
-static bool exists(const char *path) {
-    return access(path, F_OK) == 0;
-}
-
 static bool output_contains(const char *needle) {
-    char *text = test_read_file("seed_test_out.txt", NULL);
+    char *text = test_must_read_file("seed_test_out.txt", NULL);
     bool found = strstr(text, needle) != NULL;
     free(text);
     return found;
 }
 
 static bool error_contains(const char *needle) {
-    char *text = test_read_file("seed_test_err.txt", NULL);
+    char *text = test_must_read_file("seed_test_err.txt", NULL);
     bool found = strstr(text, needle) != NULL;
     free(text);
     return found;
@@ -264,10 +261,10 @@ static int test_progression(void) {
         snprintf(arguments, sizeof(arguments), "fill seed_progression.json --seed %d --out seed_filled.json", seed_number);
         remove("seed_filled.json");
         if (run(arguments) != 0) {
-            fprintf(stderr, "fill seed %d failed:\n%s\n", seed_number, test_read_file("seed_test_err.txt", NULL));
+            fprintf(stderr, "fill seed %d failed:\n%s\n", seed_number, test_must_read_file("seed_test_err.txt", NULL));
             return 1;
         }
-        assert(exists("seed_filled.json"));
+        assert(test_file_exists("seed_filled.json"));
     }
     printf("a seeded progression placed at B fills completely for seeds 1 to 5\n");
     return 0;
@@ -279,14 +276,14 @@ static int test_no_match(void) {
     assert(run("plan --form binary --key \"D major\" --meter 4/4 --from-corpus \"" COMPOSER_EMPTY_CORPUS
                "\" --like \"" PASSAGE "\" --out seed_none.json") == 2);
     assert(error_contains("no passage of the corpus"));
-    assert(!exists("seed_none.json"));
+    assert(!test_file_exists("seed_none.json"));
     assert(run("plan --form binary --key \"D major\" --meter 4/4 --from-corpus \"" COMPOSER_EMPTY_CORPUS
                "\" --like-progression \"I IV V I\" --at B --out seed_none.json") == 2);
-    assert(!exists("seed_none.json"));
+    assert(!test_file_exists("seed_none.json"));
     assert(run("grow --from-corpus \"" COMPOSER_EMPTY_CORPUS "\" --like \"" PASSAGE
                "\" --into sentence --key \"D major\" --meter 4/4 --out seed_none.json") == 2);
     assert(error_contains("no passage of the corpus"));
-    assert(!exists("seed_none.json"));
+    assert(!test_file_exists("seed_none.json"));
     CorpusSeed seed;
     PlanMeter meter = four_four();
     AnalysisKey d_major = key_of(2, KEY_STRUCTURE_MODE_MAJOR);
@@ -313,7 +310,7 @@ static int test_cli(void) {
     snprintf(arguments, sizeof(arguments), "%s --from-corpus \"%s\" --like-progression \"I IV V I\"", base,
              COMPOSER_SONATINAS_CORPUS);
     assert(run(arguments) == 1); /* a given progression needs its --at */
-    assert(!exists("seed_usage.json"));
+    assert(!test_file_exists("seed_usage.json"));
 
     snprintf(arguments, sizeof(arguments), "grow --like \"%s\" --into sentence --key \"D major\" --meter 4/4", PASSAGE);
     assert(run(arguments) == 1);

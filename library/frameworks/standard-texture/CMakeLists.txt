@@ -23,4 +23,6 @@ ursatz_public_headers(standard_texture
 )
 target_link_libraries(standard_texture PUBLIC ursatz)
 
-ursatz_add_tests()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+endif()

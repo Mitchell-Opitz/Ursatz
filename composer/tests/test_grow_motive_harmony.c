@@ -12,6 +12,8 @@
 
 #include "support/test_support.h"
 #include "util/plan_util.h"
+#include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -31,7 +33,7 @@
 #define HARMONY_TEST_CHORDS 64
 
 static Motive load_motive(const char *path) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
@@ -39,16 +41,6 @@ static Motive load_motive(const char *path) {
     assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_OK);
     free(text);
     return motive;
-}
-
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
 }
 
 /* The scale degree (1 to 7) a chord numeral names, whatever its case or figures. */
@@ -144,8 +136,8 @@ static Rational bars_of_three_four(long bars) {
 
 /* The sentence's ideas: the chords of the basic idea and the repetition, the fragments and the cadence. */
 static void check_sentence(const PiecePlan *plan, size_t seen[3]) {
-    NodeId basic = find_node(plan, "basic idea");
-    NodeId repetition = find_node(plan, "repetition");
+    NodeId basic = test_find_node(plan, "basic idea");
+    NodeId repetition = test_find_node(plan, "repetition");
     assert(basic != PLAN_NODE_NONE && repetition != PLAN_NODE_NONE);
     const PlanMotiveRef *ref = ref_of_node(plan, repetition, NULL);
     assert(ref);
@@ -177,7 +169,7 @@ static void check_sentence(const PiecePlan *plan, size_t seen[3]) {
     /* Each fragment opens on the chord its motive has at its start. */
     static const char *const FRAGMENTS[2] = {"fragment 1", "fragment 2"};
     for (size_t f = 0; f < 2; f++) {
-        NodeId idea = find_node(plan, FRAGMENTS[f]);
+        NodeId idea = test_find_node(plan, FRAGMENTS[f]);
         if (idea == PLAN_NODE_NONE) {
             continue;
         }
@@ -188,7 +180,7 @@ static void check_sentence(const PiecePlan *plan, size_t seen[3]) {
     }
 
     /* The cadence is a PAC: the dominant, then the tonic, on the last chord. */
-    PlanSpan theme = plan_node_span(plan, find_node(plan, "phrase"));
+    PlanSpan theme = plan_node_span(plan, test_find_node(plan, "phrase"));
     LaneSpanId all[HARMONY_TEST_CHORDS];
     size_t total = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, theme, all, HARMONY_TEST_CHORDS);
     assert(total >= 2 && total <= HARMONY_TEST_CHORDS);
@@ -242,7 +234,7 @@ int main(void) {
         if (!plan) {
             continue;
         }
-        Rational origin = plan_node_span(plan, find_node(plan, "phrase")).start;
+        Rational origin = plan_node_span(plan, test_find_node(plan, "phrase")).start;
         for (size_t i = 0; i < GIVEN; i++) {
             Rational at;
             assert(rational_add(origin, chords[i].onset, &at) == RATIONAL_OK);

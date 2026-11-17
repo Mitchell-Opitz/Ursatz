@@ -109,12 +109,9 @@ endfunction()
 #   architecture_public_headers  a public header includes only public headers
 #   public_headers_compile       every public header of a target compiles alone,
 #                                with only the staged roots of the target and its links
-#   architecture_header_paths    no bare include of another framework's header
 function(ursatz_add_public_header_tests)
-    add_test(NAME architecture_public_headers
-             COMMAND ${CMAKE_COMMAND} -DBINARY_DIR=${PROJECT_BINARY_DIR} -P ${PROJECT_SOURCE_DIR}/cmake/check_public_headers.cmake)
-    add_test(NAME architecture_header_paths
-             COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -P ${PROJECT_SOURCE_DIR}/cmake/check_header_paths.cmake)
+    ursatz_test(architecture_public_headers
+        COMMAND ${CMAKE_COMMAND} -DBINARY_DIR=${PROJECT_BINARY_DIR} -P ${PROJECT_SOURCE_DIR}/cmake/check_public_headers.cmake)
 
     file(STRINGS "${PROJECT_BINARY_DIR}/public/manifest.txt" lines)
     set(objects "")
@@ -162,6 +159,6 @@ function(ursatz_add_public_header_tests)
         list(APPEND objects public_headers_compile_${name})
     endforeach()
     add_custom_target(public_headers_compile_all DEPENDS ${objects})
-    add_test(NAME public_headers_compile
-             COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR} --target public_headers_compile_all)
+    ursatz_test(public_headers_compile
+        COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR} --target public_headers_compile_all)
 endfunction()

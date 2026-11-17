@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "grow/grow_internal.h"
+#include "support/test_composer.h"
 
 /*
  * A motif as long as the idea it fills is that idea (B1 of P33): grow_motive_fit for motives of 1, 1.5, 2 and 3 bars with
@@ -68,16 +69,6 @@ static void test_fit(void) {
     }
 }
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 static bool chord_has(const char *numeral, int pitch_class) {
     /* The chords of A minor the test gives. */
     static const int I[] = {9, 0, 4};
@@ -123,7 +114,7 @@ static void test_compose(void) {
         fprintf(stderr, "stuck at %s\n", grow_stage_name(outcome.stuck_stage));
     }
     assert(result == GROW_OK && !outcome.stuck);
-    NodeId idea = find_node(plan, "basic idea");
+    NodeId idea = test_find_node(plan, "basic idea");
     PlanSpan span = plan_node_span(plan, idea);
     assert(rational_cmp(span.length, (Rational){3, 2}) == 0);
     LaneSpanId ids[8];
@@ -183,7 +174,7 @@ static void test_cadence_note(void) {
             fprintf(stderr, "seed %lu: stuck at %s\n", seed, grow_stage_name(outcome.stuck_stage));
         }
         assert(result == GROW_OK && !outcome.stuck);
-        NodeId idea = find_node(plan, "cadential");
+        NodeId idea = test_find_node(plan, "cadential");
         PlanSpan span = plan_node_span(plan, idea);
         LaneSpanId ids[8];
         size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, 8);
@@ -296,7 +287,7 @@ static void test_period_slot(void) {
         fprintf(stderr, "period: stuck at %s\n", grow_stage_name(outcome.stuck_stage));
     }
     assert(result == GROW_OK && !outcome.stuck);
-    NodeId idea = find_node(plan, "contrasting idea");
+    NodeId idea = test_find_node(plan, "contrasting idea");
     assert(idea != PLAN_NODE_NONE);
     PlanSpan span = plan_node_span(plan, idea);
     assert(rational_cmp(span.length, (Rational){3, 2}) == 0);
@@ -315,7 +306,7 @@ static void test_period_slot(void) {
 static const char *const FOUR_BARS = "E4:q G4:e F4:e D4:q C4:q | G4:q E4:q D4:q C4:q | E4:q G4:q C5:q G4:q | D5:q B4:q A4:q G4:q";
 
 static void check_whole_part(PiecePlan *plan, const Motive *motive) {
-    NodeId idea = find_node(plan, "basic idea");
+    NodeId idea = test_find_node(plan, "basic idea");
     assert(idea != PLAN_NODE_NONE);
     PlanSpan span = plan_node_span(plan, idea);
     assert(rational_cmp(span.length, (Rational){4, 1}) == 0);

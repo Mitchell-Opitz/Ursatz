@@ -16,6 +16,7 @@
 
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -49,7 +50,7 @@ static const Row ROWS[] = {{"C major 3/4", 0, KEY_STRUCTURE_MODE_MAJOR, 3, 4},
 static FormSpec *load_form(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/liquidation-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     assert(text);
     FormSpec *form = NULL;
     FormSpecError error;
@@ -332,7 +333,7 @@ static void test_applies(const FormSpec *form) {
     /* A key lane that leaves home inside L (a key span of its own after the first): not a liquidation to grow. */
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/liquidation-form.json", COMPOSER_FIXTURE_DIR);
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     assert(text);
     const char *label = "\"label\": \"Liquidation form\",";
     const char *section = "\"role\": \"liquidation\", \"bars\": 4, \"cadence\": \"half\"";
@@ -358,7 +359,7 @@ static void test_applies(const FormSpec *form) {
 
     /* A motive of 2 bars fits no 4-bar section: the plan is not built. */
     snprintf(path, sizeof(path), "%s/rates/two-bar-3-4.json", COMPOSER_FIXTURE_DIR);
-    char *motive_text = test_read_file(path, NULL);
+    char *motive_text = test_must_read_file(path, NULL);
     Motive motive;
     assert(motive_text && motive_from_json(motive_text, NULL, &motive, NULL) == MOTIVE_OK);
     free(motive_text);

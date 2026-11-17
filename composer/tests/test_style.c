@@ -26,6 +26,7 @@
 #include "util/request_parse.h"
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 /*
  * Styles (style.h, docs/style.md): a StyleModel file the Analyzer wrote is loaded and the harmony and melody stages
@@ -1028,7 +1029,7 @@ static int run(const char *arguments, const char *out_file) {
 }
 
 static bool contains(const char *path, const char *needle) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     bool found = strstr(text, needle) != NULL;
     free(text);
     return found;
@@ -1048,12 +1049,12 @@ static int test_cli(void) {
            contains("style_test_out.txt", "melody") && contains("style_test_out.txt", "overall"));
     assert(run("fill style_test_plan.json --seed 1 --format json", "style_test_out.txt") == 0);
     assert(contains("style_test_out.txt", "\"style_distance\":{\"harmony\":"));
-    char *plan_run = test_read_file("style_test_out.txt", NULL);
+    char *plan_run = test_must_read_file("style_test_out.txt", NULL);
     /* --style overrides the plan's, and --style-weight its weight: another style gives other numbers */
     snprintf(arguments, sizeof(arguments), "fill style_test_plan.json --seed 1 --format json --style %s --style-weight 1/3",
              SONATINAS);
     assert(run(arguments, "style_test_out.txt") == 0);
-    char *override_run = test_read_file("style_test_out.txt", NULL);
+    char *override_run = test_must_read_file("style_test_out.txt", NULL);
     assert(strstr(override_run, "\"style_distance\"") && strcmp(plan_run, override_run) != 0);
     free(plan_run);
     free(override_run);

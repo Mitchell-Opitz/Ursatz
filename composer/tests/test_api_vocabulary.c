@@ -12,6 +12,7 @@
 #include <ursatz_composer/variant_registry.h>
 
 #include "support/test_support.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -29,7 +30,7 @@ static cJSON *vocabulary;
 static void write_response(const char *name, const ComposerResponse *response) {
     char path[128];
     snprintf(path, sizeof path, "api_%s_response_vocabulary.json", name);
-    test_write_file(path, response->json);
+    test_write_text(path, response->json);
 }
 
 static char *print(cJSON *value) {
@@ -93,7 +94,7 @@ static cJSON *random_request(const char *mode, const char *meter) {
 }
 
 static cJSON *read_json(const char *path) {
-    char *text = test_read_file(path, NULL);
+    char *text = test_must_read_file(path, NULL);
     cJSON *value = cJSON_Parse(text);
     assert(value);
     free(text);
@@ -738,7 +739,7 @@ static void test_harmony(void) {
     /* A request without harmony has none added, and a meter the file declares is filled in. */
     cJSON *file = cJSON_CreateObject();
     cJSON *file_input = cJSON_AddObjectToObject(file, "input");
-    char *musicxml = test_read_file(COMPOSER_FIXTURE_DIR "/motive_d_minor.musicxml", NULL);
+    char *musicxml = test_must_read_file(COMPOSER_FIXTURE_DIR "/motive_d_minor.musicxml", NULL);
     assert(file_input && cJSON_AddStringToObject(file_input, "format", "musicxml") && cJSON_AddStringToObject(file_input, "text", musicxml));
     free(musicxml);
     char *text = print(file);

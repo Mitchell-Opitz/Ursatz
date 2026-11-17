@@ -1,5 +1,6 @@
 # Builds each reject_* target of the consumer project and requires the compile to fail because the header is not found.
-# Arguments: -DBUILD_DIR=<the consumer build directory> -DTARGETS=<target;target;...>
+# Arguments: -DBUILD_DIR=<the consumer build directory> -DTARGETS=<target,target,...>
+string(REPLACE "," ";" TARGETS "${TARGETS}")
 foreach(target ${TARGETS})
     execute_process(COMMAND ${CMAKE_COMMAND} --build ${BUILD_DIR} --target ${target}
                     RESULT_VARIABLE result OUTPUT_VARIABLE out ERROR_VARIABLE err)

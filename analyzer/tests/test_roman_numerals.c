@@ -12,6 +12,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Roman numerals, applied chords and the chord vocabulary.
@@ -35,17 +36,9 @@
  * Every piece, constructed and reference, is also checked for the vocabulary's invariants: the counts of each
  * scope add up to the number of chords with a numeral, the shares add up to one, the entries are sorted, and
  * a run never exceeds its count.
+ *
+ * With the argument "smoke" only the first reference piece, Bach 114, runs (the fast set).
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* ---- MIDI writing ---- */
 
@@ -190,7 +183,7 @@ static void expect_numeral(const Analyzed *analyzed, const char *name, int measu
     if (!actual || strcmp(actual, expected) != 0) {
         fprintf(stderr, "%s: m. %d beat %d: expected %s, got %s\n", name, measure, beat, expected,
                 actual ? actual : "(unlabelled)");
-        failures++;
+        test_failure_count++;
     }
 }
 
@@ -201,7 +194,7 @@ static void expect_key(const Analyzed *analyzed, const char *name, int measure, 
     if (!actual || strcmp(actual, key) != 0) {
         fprintf(stderr, "%s: m. %d beat %d: expected key %s, got %s\n", name, measure, beat, key,
                 actual ? actual : "(none)");
-        failures++;
+        test_failure_count++;
     }
 }
 
@@ -259,7 +252,7 @@ static void check_vocabulary_scope(const cJSON *document, const char *name, long
     if (count_sum != labelled) {
         fprintf(stderr, "%s: %s scope %ld: counts add up to %d, but %d chords have a numeral\n", name, level, region,
                 count_sum, labelled);
-        failures++;
+        test_failure_count++;
     }
     if (labelled > 0) {
         CHECK(fabs(share_sum - 1.0) < 1e-6);
@@ -538,30 +531,30 @@ static void test_modulation(const char *path) {
 
 static void test_reference_piece(const char *file) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, file);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, file);
     Analyzed analyzed;
     analyze(path, &analyzed);
     check_vocabulary(&analyzed, file);
     release(&analyzed);
 }
 
-int main(void) {
-    char path[512];
-    test_temp_path(path, sizeof(path), "roman_numerals.mid");
-    test_major(path);
-    test_minor(path);
-    test_inversions(path);
-    test_applied(path);
-    test_borrowed(path);
-    test_modulation(path);
-    remove(path);
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
     static const char *const REFERENCE[] = {"Bach 114.mid", "Mozart 545.mid", "Clementi 36.mid", "Field 1.mid",
                                             "Field 5.mid"};
-    for (size_t i = 0; i < sizeof(REFERENCE) / sizeof(REFERENCE[0]); i++) {
+    if (!smoke) {
+        char *path = test_temp_path("roman_numerals.mid");
+        test_major(path);
+        test_minor(path);
+        test_inversions(path);
+        test_applied(path);
+        test_borrowed(path);
+        test_modulation(path);
+        remove(path);
+        free(path);
+    }
+    for (size_t i = 0; i < (smoke ? 1 : sizeof(REFERENCE) / sizeof(REFERENCE[0])); i++) {
         test_reference_piece(REFERENCE[i]);
     }
-    if (failures == 0) {
-        printf("test_roman_numerals: ok\n");
-    }
-    return failures == 0 ? 0 : 1;
+    return test_finish("test_roman_numerals");
 }

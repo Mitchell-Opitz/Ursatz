@@ -3,16 +3,7 @@
  * text. Plain Node script: `node frontend/tests/style-view.test.js`. */
 const V = require("../public/style-view.js");
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 const statistics = {
   harmony: {
@@ -65,4 +56,4 @@ check(
   "the note density category is titled with its unit",
 );
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

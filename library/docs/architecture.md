@@ -24,11 +24,11 @@ Ursatz depends on no other part of the repository. The Analyzer ([architecture](
 | `chain/` | The analysis chain `ursatz_chain` | [chain/README.md](../chain/README.md) |
 | `tests/` | Kernel tests mirrored by module, accuracy harness, integration tests | [testing](testing/accuracy.md) |
 | `docs/modules/` | Per-module docs | [README](README.md) |
-| `cmake/`, `scripts/` | Public header staging, app include report, docs check | [Public surface](public-surface.md) |
+| `cmake/`, `scripts/` | Public header staging, docs check | [Public surface](public-surface.md) |
 
 ## Public API
 
-The headers the apps include, from the union of `scripts/app_includes.sh` output over the three apps. A consumer sees headers by module path (kernel), folder name (framework) or `ursatz_chain/` (chain); see [Public surface](public-surface.md).
+The headers the apps include are the staged public headers (`build/library/public/manifest.txt`). A consumer sees headers by module path (kernel), folder name (framework) or `ursatz_chain/` (chain); see [Public surface](public-surface.md).
 
 | Directory | Header | Route or entry | What it does | Doc |
 |---|---|---|---|---|
@@ -80,8 +80,6 @@ Nothing. Ursatz sits at the bottom of the stack; its only dependencies are POSIX
 | Analyzer | 148 | frameworks (standard-form, standard-counterpoint, standard-harmony, standard-meter) and the kernel's semantics, time and pitch |
 | Composer | 114 | standard-counterpoint, standard-harmony, standard-form, time, pitch, semantics, io |
 | GUI | 0 | none: the GUI reads the library through the Analyzer |
-
-Made with `scripts/app_includes.sh <app checkout>...`; the combined list is in `docs/public-headers-baseline.txt`.
 
 ## Data flow
 

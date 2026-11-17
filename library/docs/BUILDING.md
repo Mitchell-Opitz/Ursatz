@@ -30,6 +30,4 @@ The tests include `accuracy_harness`, which measures the chain against annotated
 fixtures and fails when an overall metric drops below `tests/accuracy/baseline.json`. See
 [`docs/testing/accuracy.md`](testing/accuracy.md).
 
-Tests are controlled by the `URSATZ_BUILD_TESTS` option. It defaults to `ON` when Ursatz is the
-top-level project and `OFF` when another project adds Ursatz with `add_subdirectory`. Pass
-`-DURSATZ_BUILD_TESTS=ON` or `OFF` to override.
+Tests are controlled by the root `URSATZ_TESTS` option (ON by default; the library is built from the repository root only).

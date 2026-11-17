@@ -6,18 +6,9 @@
 #include <unistd.h>
 
 #include "service/id_service.h"
+#include "gui_check.h"
 
 #define ID_COUNT 10000
-
-static int failures = 0;
-
-#define CHECK(cond, msg)                                         \
-    do {                                                         \
-        if (!(cond)) {                                           \
-            fprintf(stderr, "FAIL: %s (line %d)\n", msg, __LINE__); \
-            failures++;                                          \
-        }                                                        \
-    } while (0)
 
 static int matches_piece_pattern(const char *id) {
     if (strlen(id) != strlen("piece-") + 16 || strncmp(id, "piece-", 6) != 0) {
@@ -37,7 +28,7 @@ static int compare_ids(const void *a, const void *b) {
 
 static void test_ids_distinct_and_well_formed(void) {
     char **ids = calloc(ID_COUNT, sizeof(char *));
-    CHECK(ids != NULL, "allocate id list");
+    check_quiet(ids != NULL, "allocate id list");
     if (!ids) {
         return;
     }
@@ -48,7 +39,7 @@ static void test_ids_distinct_and_well_formed(void) {
             malformed++;
         }
     }
-    CHECK(malformed == 0, "every id matches ^piece-[0-9a-f]{16}$");
+    check_quiet(malformed == 0, "every id matches ^piece-[0-9a-f]{16}$");
 
     int duplicates = 0;
     if (malformed == 0) {
@@ -59,7 +50,7 @@ static void test_ids_distinct_and_well_formed(void) {
             }
         }
     }
-    CHECK(duplicates == 0, "10,000 ids are all distinct");
+    check_quiet(duplicates == 0, "10,000 ids are all distinct");
 
     for (int i = 0; i < ID_COUNT; i++) {
         free(ids[i]);
@@ -69,7 +60,7 @@ static void test_ids_distinct_and_well_formed(void) {
 
 static void test_fork_differs_from_parent(void) {
     int fds[2];
-    CHECK(pipe(fds) == 0, "create pipe");
+    check_quiet(pipe(fds) == 0, "create pipe");
     pid_t pid = fork();
     if (pid == 0) {
         close(fds[0]);
@@ -87,29 +78,24 @@ static void test_fork_differs_from_parent(void) {
     close(fds[0]);
     int status = 0;
     waitpid(pid, &status, 0);
-    CHECK(parent_id != NULL, "parent id allocated");
-    CHECK(got > 0 && status == 0, "child produced an id");
+    check_quiet(parent_id != NULL, "parent id allocated");
+    check_quiet(got > 0 && status == 0, "child produced an id");
     if (parent_id && got > 0) {
-        CHECK(strcmp(parent_id, child_id) != 0, "forked child and parent ids differ");
+        check_quiet(strcmp(parent_id, child_id) != 0, "forked child and parent ids differ");
     }
     free(parent_id);
 }
 
 static void test_prefix_and_null(void) {
     char *id = ursatz_gui_new_id("comp");
-    CHECK(id != NULL && strncmp(id, "comp-", 5) == 0 && strlen(id) == 5 + 16, "prefix is kept");
+    check_quiet(id != NULL && strncmp(id, "comp-", 5) == 0 && strlen(id) == 5 + 16, "prefix is kept");
     free(id);
-    CHECK(ursatz_gui_new_id(NULL) == NULL, "NULL prefix gives NULL");
+    check_quiet(ursatz_gui_new_id(NULL) == NULL, "NULL prefix gives NULL");
 }
 
 int main(void) {
     test_ids_distinct_and_well_formed();
     test_fork_differs_from_parent();
     test_prefix_and_null();
-    if (failures) {
-        fprintf(stderr, "%d check(s) failed\n", failures);
-        return 1;
-    }
-    printf("test_id_service: ok\n");
-    return 0;
+    return test_finish("id_service");
 }

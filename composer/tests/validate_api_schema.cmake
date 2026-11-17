@@ -1,12 +1,6 @@
 # Validates the JSON the API tests wrote against schema/api/*.schema.json: <kind>_response_*.json in WRITTEN_DIR is checked
-# with <kind>.schema.json. Run with cmake -P and -DKINDS (a comma-separated list), -DPYTHON, -DHAVE_JSONSCHEMA, -DVALIDATOR, -DSCHEMA_DIR and -DWRITTEN_DIR.
-# Prints a SKIPPED line (matched by the test's SKIP_REGULAR_EXPRESSION) when python3 with jsonschema was not found at
-# configure time.
-
-if(NOT HAVE_JSONSCHEMA)
-    message("SKIPPED: python3 with the jsonschema module was not found at configure time")
-    return()
-endif()
+# with <kind>.schema.json. Run with cmake -P and -DKINDS (a comma-separated list), -DPYTHON, -DVALIDATOR, -DSCHEMA_DIR and -DWRITTEN_DIR.
+# The test is registered only when python3 with jsonschema was found at configure time (-DPYTHON is that python3).
 
 string(REPLACE "," ";" KINDS "${KINDS}")
 set(checked 0)

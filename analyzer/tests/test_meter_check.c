@@ -13,6 +13,7 @@
 #include "cJSON.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * The meter check: Bach 114 as the file declares it (4/4) is offered 3/4 at scale 2; read as 3/4 at scale 2 it is
@@ -20,6 +21,8 @@
  * is offered, never applied, and the harmony of that piece does not settle it. The claim is the first of the rhythm
  * section, has no notes, and carries the same readings as the report. The document is also validated against the
  * schema by test_analysis_document_schema.
+ *
+ * With the argument "smoke" only the two Bach 114 cases run (the fast set).
  */
 
 static char path_buffer[512];
@@ -181,9 +184,13 @@ static void test_empty_score(void) {
     imported_notes_destroy(&notes);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
     test_bach_as_declared();
     test_bach_with_reading_applied();
+    if (argc > 1 && strcmp(argv[1], "smoke") == 0) {
+        printf("test_meter_check smoke: ok\n");
+        return 0;
+    }
     test_mozart_has_no_alternative();
     test_clementi_has_no_alternative();
     test_empty_score();

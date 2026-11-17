@@ -12,6 +12,7 @@
 #include "pipeline/progression_pipeline.h"
 
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
  * Recurring progressions: the finder on hand-built chord lists, then the progressions section of two reference pieces
@@ -27,17 +28,8 @@
  *   test_progressions            the unit cases and the structure of Bach 114 and Mozart 545
  *   test_progressions bach-top   Bach 114's most common progression ends on I. The library's numerals give I > IV7
  *                                (6 occurrences, tied with ii > iii7), so this is expected to fail.
+ *   test_progressions smoke      the structure of Bach 114 only (the fast set)
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 /* ---- Hand-built chord lists ---- */
 
@@ -260,10 +252,10 @@ static void check_progressions(const cJSON *document, const AnalysisReport *repo
 
 static cJSON *analyze(const Piece *piece, AnalysisReport *report, ImportedNotes *notes) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, piece->file);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
     if (midi_pipeline_import_file(path, notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(notes, report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
-        failures++;
+        test_failure_count++;
         return NULL;
     }
     char *json = test_render_document(path, notes, report);
@@ -310,6 +302,8 @@ static void check_bach_top(void) {
 int main(int argc, char **argv) {
     if (argc > 1 && strcmp(argv[1], "bach-top") == 0) {
         check_bach_top();
+    } else if (argc > 1 && strcmp(argv[1], "smoke") == 0) {
+        run_piece(&PIECES[0]);
     } else {
         test_held_chords();
         test_region_break();
@@ -322,10 +316,5 @@ int main(int argc, char **argv) {
             run_piece(&PIECES[i]);
         }
     }
-    if (failures > 0) {
-        fprintf(stderr, "test_progressions: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_progressions: ok\n");
-    return 0;
+    return test_finish("test_progressions");
 }

@@ -13,26 +13,12 @@
 
 #include "service/job_queue.h"
 #include "ursatz_composer/composer_api.h"
+#include "gui_check.h"
+#include "test_http.h"
 
 #ifndef URSATZ_GUI_TEST_THEME_REQUEST
 #error "URSATZ_GUI_TEST_THEME_REQUEST must name the theme request fixture"
 #endif
-
-static int failures = 0;
-
-static void check(bool cond, const char *what) {
-  if (!cond) {
-    fprintf(stderr, "FAIL: %s\n", what);
-    failures++;
-  } else {
-    printf("PASS: %s\n", what);
-  }
-}
-
-static void sleep_ms(int ms) {
-  struct timespec ts = {0, (long)ms * 1000 * 1000};
-  nanosleep(&ts, NULL);
-}
 
 /* Polls job id until its state is one of the finished ones (or timeout_ms passes); the last state. */
 static UrsatzGuiJobState wait_finished(const char *id, int timeout_ms, UrsatzGuiJobInfo *info) {
@@ -46,35 +32,9 @@ static UrsatzGuiJobState wait_finished(const char *id, int timeout_ms, UrsatzGui
     if (state != URSATZ_GUI_JOB_QUEUED && state != URSATZ_GUI_JOB_RUNNING) {
       break;
     }
-    sleep_ms(20);
+    test_sleep_ms(20);
   }
   return state;
-}
-
-static char *read_file(const char *path) {
-  FILE *file = fopen(path, "rb");
-  if (!file) {
-    return NULL;
-  }
-  size_t capacity = 8192;
-  size_t length = 0;
-  char *buffer = malloc(capacity);
-  while (buffer) {
-    size_t n = fread(buffer + length, 1, capacity - length - 1, file);
-    length += n;
-    if (n == 0) {
-      break;
-    }
-    if (length + 1 >= capacity) {
-      capacity *= 2;
-      buffer = realloc(buffer, capacity);
-    }
-  }
-  fclose(file);
-  if (buffer) {
-    buffer[length] = '\0';
-  }
-  return buffer;
 }
 
 /* --- a job that answers ---------------------------------------------------- */
@@ -119,7 +79,7 @@ static void progress_job(void *input, const ComposerJob *job, UrsatzGuiJobResult
   (void)input;
   job->progress(job->user, "melody", 6, 9);
   for (int i = 0; i < 500 && !g_release; i++) {
-    sleep_ms(10);
+    test_sleep_ms(10);
   }
   out->http_status = 200;
   out->json = strdup("{}");
@@ -135,7 +95,7 @@ static void test_progress(void) {
     ursatz_gui_job_info_destroy(&info);
     seen = ursatz_gui_job_get(id, &info) && info.state == URSATZ_GUI_JOB_RUNNING && strcmp(info.stage, "melody") == 0 &&
            info.done == 6 && info.total == 9;
-    sleep_ms(10);
+    test_sleep_ms(10);
   }
   check(seen, "the stage and its count are seen while the job runs");
   g_release = 1;
@@ -156,7 +116,7 @@ static void theme_job(void *input, const ComposerJob *job, UrsatzGuiJobResult *o
 }
 
 static void test_cancel(void) {
-  char *text = read_file(URSATZ_GUI_TEST_THEME_REQUEST);
+  char *text = test_read_file(URSATZ_GUI_TEST_THEME_REQUEST, NULL);
   cJSON *request = text ? cJSON_Parse(text) : NULL;
   free(text);
   check(request != NULL, "the theme request fixture is read");
@@ -177,7 +137,7 @@ static void test_cancel(void) {
   for (int i = 0; i < 500 && !running; i++) {
     ursatz_gui_job_info_destroy(&info);
     running = ursatz_gui_job_get(id, &info) && info.state == URSATZ_GUI_JOB_RUNNING && info.stage[0] != '\0';
-    sleep_ms(10);
+    test_sleep_ms(10);
   }
   check(running, "the theme compose is running and has reported a stage");
   check(ursatz_gui_job_cancel(id), "the running job is asked to cancel");
@@ -226,7 +186,7 @@ static void meet_job(void *input, const ComposerJob *job, UrsatzGuiJobResult *ou
       pthread_mutex_unlock(&g_meet_lock);
       break;
     }
-    sleep_ms(10);
+    test_sleep_ms(10);
   }
   out->http_status = 200;
   out->json = strdup("{}");
@@ -251,7 +211,7 @@ static volatile int g_stopped_cleanly = 0;
 static void endless_job(void *input, const ComposerJob *job, UrsatzGuiJobResult *out) {
   (void)input;
   while (!job->cancelled(job->user)) {
-    sleep_ms(5);
+    test_sleep_ms(5);
   }
   g_stopped_cleanly = 1;
   out->http_status = 499;
@@ -264,7 +224,7 @@ static void test_stop(void) {
   int *input = malloc(sizeof(int));
   ursatz_gui_job_submit("endless", endless_job, NULL, NULL, id);
   ursatz_gui_job_submit("answer", answer_job, input, count_free, id);
-  sleep_ms(100);
+  test_sleep_ms(100);
   ursatz_gui_jobs_stop();
   check(g_stopped_cleanly == 1, "stop cancels a running job and joins its worker");
   check(g_freed > before, "stop frees the input of every job");
@@ -280,10 +240,5 @@ int main(void) {
   test_cancel();
   test_two_workers();
   test_stop();
-  if (failures > 0) {
-    fprintf(stderr, "%d check(s) failed\n", failures);
-    return 1;
-  }
-  printf("all checks passed\n");
-  return 0;
+  return test_finish("job_queue");
 }

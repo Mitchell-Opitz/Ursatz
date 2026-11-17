@@ -1,20 +1,12 @@
 /* Covers the Composer vocabulary client (public/vocabulary.js): loading from the route, reading the lists and limits
- * from the captured fixture (fixtures/vocabulary.json is the route's answer), and the debounced validator with a fake
- * fetch and fake timers. Also checks the model tables that map the Composer's request paths to form fields.
- * Plain Node script: `node frontend/tests/vocabulary.test.js`. */
+ * from the vocabulary the build generates from the Composer (vocabulary.json is the route's answer), and the debounced
+ * validator with a fake fetch and fake timers. Also checks the model tables that map the Composer's request paths to form fields.
+ * Plain Node script, run through ctest: it reads the vocabulary the build generates (support/fixtures.js). */
 const V = require("../public/vocabulary.js");
-const fixture = require("./fixtures/vocabulary.json");
+const { generated } = require("./support/fixtures.js");
+const fixture = require(generated("vocabulary.json"));
 
-let failures = 0;
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const { check, same, finish } = require("./support/check.js");
 
 async function main() {
   // before it is loaded
@@ -33,7 +25,7 @@ async function main() {
     return { status: 200, json: async () => (url === "/api/composer/forms" ? { forms: [] } : fixture) };
   });
   check(loaded === fixture && V.loaded() && same(calls, ["/api/composer/vocabulary", "/api/composer/forms"]), "load fetches the routes once and keeps the answers");
-  const forms = require("./fixtures/forms.json");
+  const forms = require(generated("forms.json"));
   V.set(fixture, forms);
   check(V.forms().length === forms.forms.length && V.form("game-loop").label === "Game loop" && V.form("rounded-binary").sections === "sizes" && V.form("nothing") === null,
         "the forms are the Composer's, each by name");
@@ -162,10 +154,7 @@ async function main() {
   check(V.entry("theme_extensions", "repeat").varied === true && V.entry("theme_extensions", "repeat").ideas.includes("fragment 1"), "a repeat may be varied and follows ideas");
   check(V.entry("theme_extensions", "evaded").ideas === undefined && V.entry("theme_extensions", "addition").ideas === undefined, "an addition and an evaded cadence follow no idea");
 
-  if (failures > 0) {
-    console.error(`${failures} check(s) failed`);
-    process.exit(1);
-  }
+  finish();
 }
 
 main();

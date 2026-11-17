@@ -6,16 +6,7 @@
 const ScoreNotes = require("../public/score-notes.js");
 const ScoreWorkspace = require("../public/score-workspace.js");
 
-let failures = 0;
-
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
+const { check, finish } = require("./support/check.js");
 
 check(
   ScoreNotes.meterCaption({ ok: true, meter_defaulted: true }) === "This file declares no time signature; shown in 4/4",
@@ -72,4 +63,4 @@ paused.length = 0;
 group.claim(entries[2]);
 check(paused.join() === "b" && group.size() === 2, "a destroyed workspace is no longer paused");
 
-process.exit(failures === 0 ? 0 : 1);
+finish();

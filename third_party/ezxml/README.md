@@ -17,7 +17,7 @@ for `src/io/musicxml_importer.c`, the only file in this repository that may use 
 
 `third_party/CMakeLists.txt` builds it as the private static target `ursatz_ezxml`, with `EZXML_NOMMAP` defined (the
 importer parses from a buffer, never a file descriptor) and warnings off for this target only. `ursatz` links it
-PRIVATE, so no consumer of `ursatz` sees it or its include path. `tests/test_architecture_third_party.c` fails if
+PRIVATE, so no consumer of `ursatz` sees it or its include path. the layer table (`cmake/layer-table.txt`) fails if
 any file other than `src/io/musicxml_importer.c` includes `ezxml.h`. Nothing in a public header exposes it, so it can
 be replaced (for example by yxml) by changing that one file.
 

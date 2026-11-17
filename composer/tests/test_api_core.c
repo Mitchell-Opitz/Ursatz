@@ -9,6 +9,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "ursatz_test.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -23,7 +24,7 @@
 static void write_response(const char *name, const ComposerResponse *response) {
     char path[128];
     snprintf(path, sizeof path, "api_%s_response_%s.json", name, "core");
-    test_write_file(path, response->json);
+    test_write_text(path, response->json);
 }
 
 static char *export_request(const char *plan_text, const char *options) {
@@ -60,9 +61,9 @@ static void test_versions(void) {
 }
 
 static void test_export(void) {
-    char *plan_text = test_read_file(COMPOSER_SNAPSHOT_DIR "/grow-period.plan.json", NULL);
+    char *plan_text = test_must_read_file(COMPOSER_SNAPSHOT_DIR "/grow-period.plan.json", NULL);
     size_t midi_size = 0;
-    char *midi = test_read_file(COMPOSER_SNAPSHOT_DIR "/grow-period.mid", &midi_size);
+    char *midi = test_must_read_file(COMPOSER_SNAPSHOT_DIR "/grow-period.mid", &midi_size);
 
     char *request = export_request(plan_text, "\"midi\":true,\"musicxml\":true,\"api_version\":1");
     ComposerResponse response;
@@ -123,7 +124,7 @@ static void expect_refused(const char *request, ComposerStatus status, const cha
 }
 
 static void test_refusals(void) {
-    char *plan_text = test_read_file(COMPOSER_SNAPSHOT_DIR "/grow-period.plan.json", NULL);
+    char *plan_text = test_must_read_file(COMPOSER_SNAPSHOT_DIR "/grow-period.plan.json", NULL);
     char *request = export_request(plan_text, "\"midi\":true,\"api_version\":2");
     expect_refused(request, COMPOSER_ERR_REQUEST, "/api_version");
     free(request);

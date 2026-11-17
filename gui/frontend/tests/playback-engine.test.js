@@ -7,18 +7,8 @@
 
 const PlaybackEngine = require("../public/playback-engine.js");
 
-let failures = 0;
+const { check, near, finish } = require("./support/check.js");
 
-function check(cond, what) {
-  if (!cond) {
-    console.error(`FAIL: ${what}`);
-    failures++;
-  } else {
-    console.log(`PASS: ${what}`);
-  }
-}
-
-const near = (a, b) => Math.abs(a - b) < 1e-9;
 
 /* Two tempo regions: 120 qpm for the first whole note, 60 qpm after. */
 const playback = {
@@ -336,7 +326,4 @@ function playEndingAfter(seconds) {
   made.transport.stop();
 }
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
-}
+finish();

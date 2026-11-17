@@ -15,11 +15,14 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
+#include "support/test_composer.h"
 
 /*
  * Growing a sentence from a motive in four keys and meters, 8 and 4 bars, seeds 1 to 10. Each run must complete;
  * the plan it leaves is read back here and held to standard-form's rule functions, worked out from the nodes and the
- * lanes and not from the operator; the same seed gives the same plan and the same records.
+ * lanes and not from the operator; the same seed gives the same plan and the same records. The argument `smoke` runs seed 1
+ * alone, in every scenario and size, with every check that holds for one seed and without the checks over the seeds (the
+ * distinct plans, the dominant form drawn at least once); B11 of P56 registers it as test_grow_sentence_smoke.
  */
 
 typedef struct {
@@ -66,16 +69,6 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     return request;
 }
 
-static NodeId find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 static long ticks(Rational time) {
     assert((time.num * TICKS) % (long)time.den == 0);
     return time.num * TICKS / (long)time.den;
@@ -100,7 +93,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
     Rational bar;
     assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
-    NodeId theme = find_node(plan, "theme");
+    NodeId theme = test_find_node(plan, "theme");
     assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
     assert(ticks(plan_node_span(plan, theme).length) == (long)bars * bar_ticks);
 
@@ -110,16 +103,16 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
     static const long STARTS[] = {0, 0, 0, 2, 4, 4, 5, 6};
     static const long LENGTHS[] = {8, 4, 2, 2, 4, 1, 1, 2};
     for (size_t i = 0; i < 8; i++) {
-        NodeId node = find_node(plan, NAMES[i]);
+        NodeId node = test_find_node(plan, NAMES[i]);
         assert(node != PLAN_NODE_NONE && plan_node_state(plan, node) == PLAN_STATE_REALIZED);
         PlanSpan span = plan_node_span(plan, node);
         assert(ticks(span.start) * 8 == STARTS[i] * (long)bars * bar_ticks);
         assert(ticks(span.length) * 8 == LENGTHS[i] * (long)bars * bar_ticks);
     }
-    assert(plan_node_kind(plan, find_node(plan, "phrase")) == PLAN_NODE_PHRASE);
-    assert(plan_node_kind(plan, find_node(plan, "presentation")) == PLAN_NODE_SUBPHRASE);
-    assert(plan_node_kind(plan, find_node(plan, "continuation")) == PLAN_NODE_SUBPHRASE);
-    assert(plan_node_kind(plan, find_node(plan, "cadential")) == PLAN_NODE_IDEA);
+    assert(plan_node_kind(plan, test_find_node(plan, "phrase")) == PLAN_NODE_PHRASE);
+    assert(plan_node_kind(plan, test_find_node(plan, "presentation")) == PLAN_NODE_SUBPHRASE);
+    assert(plan_node_kind(plan, test_find_node(plan, "continuation")) == PLAN_NODE_SUBPHRASE);
+    assert(plan_node_kind(plan, test_find_node(plan, "cadential")) == PLAN_NODE_IDEA);
 
     /* standard-form's hard rules, asked of what is in the plan. */
     PlanThemePairing pairing = {PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT};
@@ -135,20 +128,20 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
     assert(form == PHRASE_LEVEL_FORM_SENTENCE);
     assert(standard_form_subphrase_roles_in_order(SUBPHRASE_ROLE_PRESENTATION, SUBPHRASE_ROLE_CONTINUATION));
     assert(standard_form_phrase_is_sentential(true, true));
-    long basic = ticks(plan_node_span(plan, find_node(plan, "basic idea")).length);
+    long basic = ticks(plan_node_span(plan, test_find_node(plan, "basic idea")).length);
     assert(standard_form_basic_idea_length_valid((size_t)(basic / bar_ticks)));
     for (const char *const *fragment = (const char *const[]){"fragment 1", "fragment 2", NULL}; *fragment; fragment++) {
-        long length = ticks(plan_node_span(plan, find_node(plan, *fragment)).length);
+        long length = ticks(plan_node_span(plan, test_find_node(plan, *fragment)).length);
         assert(standard_form_is_fragmentation((size_t)basic, (size_t)length));
     }
     /* The fragments of the notes too: each is shorter than the motive it was made from. */
-    NodeId m0 = find_node(plan, "m0");
+    NodeId m0 = test_find_node(plan, "m0");
     LaneSpanId m0_span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, m0, &m0_span, 1) == 1);
     long m0_length = ticks(plan_lane_span_span(plan, m0_span).length);
     for (const char *const *name = (const char *const[]){"m2", "m3", NULL}; *name; name++) {
         LaneSpanId made = PLAN_LANE_SPAN_NONE;
-        assert(plan_node_lane_spans(plan, find_node(plan, *name), &made, 1) == 1);
+        assert(plan_node_lane_spans(plan, test_find_node(plan, *name), &made, 1) == 1);
         assert(plan_lane_span_state(plan, made) == PLAN_STATE_REALIZED);
         assert(standard_form_is_fragmentation((size_t)m0_length, (size_t)ticks(plan_lane_span_span(plan, made).length)));
     }
@@ -156,7 +149,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
 
 static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t bars) {
     LaneSpanId ids[64];
-    NodeId theme_node = find_node(plan, "theme");
+    NodeId theme_node = test_find_node(plan, "theme");
     PlanSpan theme = plan_node_span(plan, theme_node);
     Rational bar;
     assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
@@ -194,7 +187,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     size_t melodies = tiling(plan, PLAN_LANE_MELODY, theme, ids, 64);
     assert(melodies == 5);
     for (size_t i = 0; i < melodies; i++) {
-        assert(plan_lane_span_owner(plan, ids[i]) == find_node(plan,
+        assert(plan_lane_span_owner(plan, ids[i]) == test_find_node(plan,
                (const char *const[]){"basic idea", "repetition", "fragment 1", "fragment 2", "cadential"}[i]));
     }
     /* The cadence arrives on the tonic. */
@@ -291,10 +284,10 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     }
 }
 
-static void test_sentences(void) {
+static void test_sentences(unsigned long last_seed) {
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         for (size_t bars = 8; bars >= 4; bars -= 4) {
-            for (unsigned long seed = 1; seed <= 10; seed++) {
+            for (unsigned long seed = 1; seed <= last_seed; seed++) {
                 run_scenario(&SCENARIOS[s], bars, seed);
             }
         }
@@ -394,8 +387,8 @@ static void test_built_plan(void) {
     GrowRequest request = make_request(&SCENARIOS[1], &motive, 8);
     PiecePlan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
-    NodeId theme = find_node(plan, "theme");
-    NodeId material = find_node(plan, "material");
+    NodeId theme = test_find_node(plan, "theme");
+    NodeId material = test_find_node(plan, "material");
     assert(theme != PLAN_NODE_NONE && material != PLAN_NODE_NONE);
     assert(plan_node_state(plan, theme) == PLAN_STATE_CONSTRAINED && plan_node_child_count(plan, theme) == 0);
     bool archetype = false;
@@ -412,7 +405,7 @@ static void test_built_plan(void) {
     assert(archetype && pairing && cadence && key);
     assert(plan_node_constraint_count(plan, material) == 1 &&
            plan_node_constraint_at(plan, material, 0)->kind == PLAN_CONSTRAINT_MATERIAL);
-    NodeId m0 = find_node(plan, "m0");
+    NodeId m0 = test_find_node(plan, "m0");
     assert(m0 != PLAN_NODE_NONE && plan_node_state(plan, m0) == PLAN_STATE_GIVEN);
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, m0, &span, 1) == 1 && plan_lane_span_state(plan, span) == PLAN_STATE_GIVEN);
@@ -435,7 +428,7 @@ static Motive written_motive(const PiecePlan *plan, const char *name, const Moti
     AnalysisKey motive_key_value = plan_key_of_pitch_class(SCENARIOS[0].tonic, SCENARIOS[0].mode);
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
-    assert(plan_node_lane_spans(plan, find_node(plan, name), &span, 1) == 1);
+    assert(plan_node_lane_spans(plan, test_find_node(plan, name), &span, 1) == 1);
     const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
     motive_set_lane_notes(&motive, notes->notes, notes->note_count);
     motive.length = plan_lane_span_span(plan, span).length;
@@ -461,12 +454,12 @@ static bool same_notes(const Motive *a, const Motive *b) {
  * Motive-forms (B8): in a sentence the repetition answers in the dominant form where its chords go to V (bars 3 and 4),
  * the two fragments are the basic idea liquidated in units that halve, and the same seed gives the same theme.
  */
-static void test_motive_forms(void) {
+static void test_motive_forms(bool smoke) {
     Motive motive = make_motive(&SCENARIOS[0]);
     GrowRequest request = make_request(&SCENARIOS[0], &motive, 8);
     size_t dominant = 0;
     /* Seeds 1 to 10, and on to 30 until a dominant form has been drawn (the repetition is drawn by weight, B1 of P34). */
-    for (unsigned long seed = 1; seed <= 30 && (seed <= 10 || dominant == 0); seed++) {
+    for (unsigned long seed = 1; seed <= 30 && (smoke ? seed <= 1 : seed <= 10 || dominant == 0); seed++) {
         PiecePlan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
@@ -477,7 +470,7 @@ static void test_motive_forms(void) {
         assert(grow_run(plan, &config, &outcome) == GROW_OK);
 
         /* The repetition's chords: when the first one is the dominant, its motive is the basic idea's dominant form. */
-        NodeId repetition = find_node(plan, "repetition");
+        NodeId repetition = test_find_node(plan, "repetition");
         PlanSpan span = plan_node_span(plan, repetition);
         LaneSpanId chord = PLAN_LANE_SPAN_NONE;
         assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, &chord, 1) >= 1);
@@ -532,15 +525,23 @@ static void test_motive_forms(void) {
         plan_destroy(plan);
         plan_destroy(again);
     }
-    assert(dominant > 0);
+    /* A dominant form drawn at least once is a rate over the seeds. */
+    assert(smoke || dominant > 0);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    const bool smoke = argc == 2 && strcmp(argv[1], "smoke") == 0;
+    if (argc > 2 || (argc == 2 && !smoke)) {
+        fprintf(stderr, "usage: test_grow_sentence [smoke]\n");
+        return 2;
+    }
     test_built_plan();
     test_bad_requests();
-    test_sentences();
-    test_seeds_vary();
-    test_motive_forms();
-    puts("test_grow_sentence: ok");
+    test_sentences(smoke ? 1 : 10);
+    if (!smoke) {
+        test_seeds_vary();
+    }
+    test_motive_forms(smoke);
+    puts(smoke ? "test_grow_sentence smoke: ok" : "test_grow_sentence: ok");
     return 0;
 }

@@ -11,23 +11,14 @@
 #include "cJSON.h"
 #include "links/links_internal.h"
 #include "test_support.h"
+#include "ursatz_test.h"
 
 /*
- * Motive links over the four pieces of tests/links: a (C major) and b (G major, a's motive transposed and augmented 2:1)
+ * Motive links over the four pieces of tests/fixtures/links: a (C major) and b (G major, a's motive transposed and augmented 2:1)
  * link by one step across keys, d (a's motive inverted) links to both, c (unrelated) is in no link. Checks the chain
  * replays from one prototype sketch to the other, the cache (a second run compares nothing; adding a piece compares only
  * the pairs with its families; another analyzer version empties it), the scope's errors and the JSON text.
  */
-
-static int failures = 0;
-
-#define CHECK(condition)                                                                           \
-    do {                                                                                           \
-        if (!(condition)) {                                                                        \
-            fprintf(stderr, "%s:%d: check failed: %s\n", __FILE__, __LINE__, #condition);          \
-            failures++;                                                                            \
-        }                                                                                          \
-    } while (0)
 
 #define PIECES 4
 static const char *const piece_ids[PIECES] = {"a.musicxml", "b.musicxml", "c.musicxml", "d.musicxml"};
@@ -140,29 +131,6 @@ static void on_progress(size_t done, size_t total, void *context) {
     progress_calls++;
     progress_last_done = done;
     progress_last_total = total;
-}
-
-static char *read_text(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    char *text = malloc(1 << 20);
-    size_t length = text ? fread(text, 1, (1 << 20) - 1, file) : 0;
-    fclose(file);
-    if (text) {
-        text[length] = '\0';
-    }
-    return text;
-}
-
-static bool write_text(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = fputs(text, file) >= 0;
-    return fclose(file) == 0 && ok;
 }
 
 static void check_scope_errors(void) {
@@ -306,14 +274,14 @@ int main(void) {
     CHECK(motive_link_cache_save(cache, cache_path) == MOTIVE_LINKS_OK);
     motive_link_cache_destroy(cache);
     cache = NULL;
-    char *saved = read_text(cache_path);
+    char *saved = test_read_file(cache_path, NULL);
     CHECK(saved != NULL);
     char *at = saved ? strstr(saved, "\"analyzer_version\":\t\"") : NULL;
     CHECK(at != NULL);
     if (at) {
         char *value = at + strlen("\"analyzer_version\":\t\"");
         value[0] = '9';
-        CHECK(write_text(cache_path, saved));
+        CHECK(test_write_file(cache_path, saved, strlen(saved)));
     }
     free(saved);
     CHECK(motive_link_cache_load(cache_path, &cache) == MOTIVE_LINKS_OK);
@@ -337,12 +305,12 @@ int main(void) {
 
     /* a cache of schema version 1 (keyed by ursatz_commit) loads as an empty cache and is emptied by the next run */
     CHECK(motive_link_cache_save(cache, cache_path) == MOTIVE_LINKS_OK);
-    char *current = read_text(cache_path);
+    char *current = test_read_file(cache_path, NULL);
     char *version_at = current ? strstr(current, "\"schema_version\":\t2") : NULL;
     CHECK(version_at != NULL);
     if (version_at) {
         version_at[strlen("\"schema_version\":\t")] = '1';
-        CHECK(write_text(cache_path, current));
+        CHECK(test_write_file(cache_path, current, strlen(current)));
     }
     free(current);
     MotiveLinkCache *older = NULL;
@@ -356,7 +324,8 @@ int main(void) {
     }
 
     /* a file that is not a cache is refused */
-    CHECK(write_text(cache_path, "{\"schema\": \"other\"}"));
+    const char *other_schema = "{\"schema\": \"other\"}";
+    CHECK(test_write_file(cache_path, other_schema, strlen(other_schema)));
     MotiveLinkCache *refused = NULL;
     CHECK(motive_link_cache_load(cache_path, &refused) == MOTIVE_LINKS_ERR_FORMAT && refused == NULL);
 
@@ -366,10 +335,5 @@ int main(void) {
     for (int i = 0; i < PIECES; i++) {
         free(documents[i]);
     }
-    if (failures > 0) {
-        fprintf(stderr, "test_motive_links: %d failure(s)\n", failures);
-        return 1;
-    }
-    printf("test_motive_links: ok\n");
-    return 0;
+    return test_finish("test_motive_links");
 }

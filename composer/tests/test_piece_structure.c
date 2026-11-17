@@ -11,6 +11,7 @@
 #include <ursatz_composer/piece.h>
 
 #include "util/plan_util.h"
+#include "support/test_composer.h"
 
 /*
  * Piece structures (R-169, R-170): the checks, the default cadences, and the plans and composed runs of structures
@@ -502,21 +503,6 @@ static void function_structure(Fixture *fixture, FunctionRow *row) {
     k->function = PIECE_FUNCTION_CODA;
 }
 
-/* The first node under `node` (any depth) with this name, or PLAN_NODE_NONE. */
-static NodeId find_named(const PiecePlan *plan, NodeId node, const char *name) {
-    for (size_t i = 0; i < plan_node_child_count(plan, node); i++) {
-        NodeId child = plan_node_child_at(plan, node, i);
-        if (strcmp(plan_node_name(plan, child), name) == 0) {
-            return child;
-        }
-        NodeId inner = find_named(plan, child, name);
-        if (inner != PLAN_NODE_NONE) {
-            return inner;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 /* The motive reference of the motive node an idea's melody span names, or NULL (R-512: the plan, not the notes). */
 static const PlanMotiveRef *idea_motive_ref(const PiecePlan *plan, NodeId idea) {
     LaneSpanId melody;
@@ -552,7 +538,7 @@ static bool transition_ok(const PiecePlan *plan, NodeId t) {
         return false;
     }
     const char *numeral = plan_lane_span_payload(plan, last_chord(plan, t))->harmony.roman_numeral;
-    const PlanMotiveRef *residue = idea_motive_ref(plan, find_named(plan, t, "fragment 2"));
+    const PlanMotiveRef *residue = idea_motive_ref(plan, test_find_named(plan, t, "fragment 2"));
     return (strcmp(numeral, "V") == 0 || strcmp(numeral, "V7") == 0) && residue && residue->steps >= 1 &&
            residue->segment[0] != '\0';
 }

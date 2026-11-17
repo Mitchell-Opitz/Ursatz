@@ -68,4 +68,6 @@ ursatz_public_headers(standard_form
 )
 target_link_libraries(standard_form PUBLIC ursatz standard_harmony)
 
-ursatz_add_tests()
+if(URSATZ_TESTS)
+    add_subdirectory(tests)
+endif()
