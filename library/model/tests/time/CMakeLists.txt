@@ -10,6 +10,7 @@ ursatz_test(metrical_position LIBS ursatz_model)
 ursatz_test(tempo_map LIBS ursatz_model)
 ursatz_test(tuplet LIBS ursatz_model)
 ursatz_test(time_rational LIBS ursatz_model VALGRIND)
+ursatz_test(time_values LIBS ursatz_model VALGRIND)
 ursatz_test(meter_arithmetic LIBS ursatz_model VALGRIND)
 ursatz_test(score_time LIBS ursatz_model VALGRIND)
 
