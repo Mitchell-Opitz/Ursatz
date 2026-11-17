@@ -7,7 +7,7 @@
 #include "analysis_claim.h"
 #include "beginning_rules.h"
 #include "combination_rules.h"
-#include "core/value.h"
+#include "model/core/value.h"
 #include "ending_rules.h"
 #include "hybrid_rules.h"
 #include "period_rules.h"

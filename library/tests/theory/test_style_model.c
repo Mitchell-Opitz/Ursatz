@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/value.h"
-#include "identity/entity_id.h"
+#include "model/core/value.h"
+#include "model/identity/entity_id.h"
 #include "theory/style_model.h"
 
 /*

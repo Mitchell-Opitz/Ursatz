@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "interpretation/chord.h"
-#include "interpretation/key.h"
+#include "model/interpretation/chord.h"
+#include "model/interpretation/key.h"
 #include "standard-tonality/roman_numeral_analysis_rules.h"
-#include "time/musical_time.h"
+#include "model/time/musical_time.h"
 
 /*
  * The standard-tonality analysis adapter (L3): turns L2 facts into this framework's inputs. This file is

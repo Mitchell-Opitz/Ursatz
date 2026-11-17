@@ -4,8 +4,8 @@
 #include <stddef.h>
 
 #include "analysis/motif_window_matching.h"
-#include "identity/entity_id.h"
-#include "relationship/relationship.h"
+#include "model/identity/entity_id.h"
+#include "model/relationship/relationship.h"
 
 /*
  * ThematicReturnDetection (Procedure):

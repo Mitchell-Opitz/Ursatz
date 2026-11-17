@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "meter_analysis_input.h"
-#include "time/meter_map.h"
+#include "model/time/meter_map.h"
 
 /*
  * The meter check: whether the harmonic rhythm and the cadences read better in another meter than the one the music declares.

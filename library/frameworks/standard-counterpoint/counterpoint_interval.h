@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * The interval between two pitches, for standard-counterpoint-v1: its

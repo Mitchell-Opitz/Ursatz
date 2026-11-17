@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <pitch/pitch_arithmetic.h>
+#include <model/pitch/pitch_arithmetic.h>
 #include <standard-tonality/tonal_key.h>
 
 int util_absolute(int value) {

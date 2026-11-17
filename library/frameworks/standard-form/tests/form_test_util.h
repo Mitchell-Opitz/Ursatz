@@ -6,18 +6,18 @@
 #include <string.h>
 
 #include "analysis_input.h"
-#include "core/provenance_reference.h"
-#include "events/note_event.h"
+#include "model/core/provenance_reference.h"
+#include "model/events/note_event.h"
 #include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/kernel_owners.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_identity.h"
-#include "time/duration.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/note_value.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_identity.h"
+#include "model/time/duration.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/note_value.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_signature.h"
 
 /*
  * A form-analysis input built by hand: a MeterMap of `top`/4 (with a pickup of `pickup_quarters` quarter notes when it is

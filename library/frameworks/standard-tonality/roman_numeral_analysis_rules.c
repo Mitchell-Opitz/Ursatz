@@ -5,7 +5,7 @@
 
 #include "seventh_in_key_rules.h"
 #include "triad_in_key_rules.h"
-#include "pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 static bool valid_mode(StandardTonalityRomanKeyMode mode) {
     return mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR || mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;

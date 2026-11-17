@@ -22,10 +22,10 @@
 #include "semantics/beat_strength.h"
 #include "semantics/voice_grid.h"
 #include "semantics/sonority_segmentation.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/tuning_system.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/tuning_system.h"
 #include "common-practice-minimal/weighted_chord_identification.h"
 
 /*

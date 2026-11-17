@@ -3,7 +3,7 @@
 
 #include <assert.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "voicing_chord.h"
 
 /* Test helpers shared by the standard-voicing tests. Notes live in a

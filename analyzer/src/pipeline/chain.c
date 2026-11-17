@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "common-practice-minimal/key_regions.h"
-#include "time/time_span.h"
+#include "model/time/time_span.h"
 #include "pipeline/form_plan_pipeline.h"
 #include "pipeline/harmonic_rhythm_pipeline.h"
 #include "pipeline/key_region_pipeline.h"

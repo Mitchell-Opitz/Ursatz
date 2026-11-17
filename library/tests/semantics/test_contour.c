@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "pitch/pitch_identity.h"
+#include "model/pitch/pitch_identity.h"
 #include "semantics/contour.h"
 #include "semantics_test_access.h"
 

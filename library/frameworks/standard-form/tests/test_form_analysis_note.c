@@ -3,17 +3,17 @@
 #include <string.h>
 
 #include "analysis_input.h"
-#include "core/provenance_reference.h"
-#include "events/note_event.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_identity.h"
+#include "model/core/provenance_reference.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_identity.h"
 #include "semantics/analysis_note.h"
 #include "semantics/analysis_segment.h"
-#include "time/duration.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
-#include "time/time_span.h"
+#include "model/time/duration.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_span.h"
 
 static TimeSpan *make_span(long start, long end) {
     MusicalTime *from = NULL;

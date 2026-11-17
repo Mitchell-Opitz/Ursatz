@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "analysis/outer_voice.h"
 #include "common-practice-minimal/key_vocabulary.h"
 #include "common-practice-minimal/outer_scale_degrees.h"

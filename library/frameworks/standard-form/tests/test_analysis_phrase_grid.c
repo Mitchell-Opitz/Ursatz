@@ -3,7 +3,7 @@
 #include "analysis_theme.h"
 #include "form_test_util.h"
 #include "phrase_level_form.h"
-#include "time/meter_arithmetic.h"
+#include "model/time/meter_arithmetic.h"
 #include <math.h>
 #include <stdlib.h>
 

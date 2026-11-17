@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /* Test helpers shared by the standard-tonality tests. */
 

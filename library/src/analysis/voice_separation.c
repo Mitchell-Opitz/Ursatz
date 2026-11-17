@@ -5,9 +5,9 @@
 
 #include "analysis/beat_grid_length.h"
 #include "analysis/voice_separation_internal.h"
-#include "pitch/tuning_system.h"
-#include "time/time_span.h"
-#include "time/temporal_anchor.h"
+#include "model/pitch/tuning_system.h"
+#include "model/time/time_span.h"
+#include "model/time/temporal_anchor.h"
 
 #define VS_MAX_VOICES_LIMIT 8
 

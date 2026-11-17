@@ -4,16 +4,16 @@
 #include <string.h>
 
 #include "analysis/form_structure_detection.h"
-#include "containers/section.h"
-#include "core/occurrence.h"
-#include "core/provenance_reference.h"
-#include "core/value.h"
-#include "identity/entity_id.h"
-#include "interpretation/interpretation.h"
-#include "interpretation/uncertainty.h"
-#include "relationship/relationship.h"
+#include "model/containers/section.h"
+#include "model/core/occurrence.h"
+#include "model/core/provenance_reference.h"
+#include "model/core/value.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/interpretation.h"
+#include "model/interpretation/uncertainty.h"
+#include "model/relationship/relationship.h"
 #include "semantics/cadence_type.h"
-#include "structure/phrase_occurrence.h"
+#include "model/structure/phrase_occurrence.h"
 #include "relationship_test_access.h"
 
 /*

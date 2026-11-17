@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 
 /*
  * Framework (Category / base type): an interpretive system (theory) --

@@ -6,9 +6,9 @@
 #include "../../../tests/io/midi_import_split.h"
 #include "meter_test_util.h"
 #include "metric_position_rules.h"
-#include "time/meter_map.h"
-#include "time/metrical_position.h"
-#include "time/temporal_anchor.h"
+#include "model/time/meter_map.h"
+#include "model/time/metrical_position.h"
+#include "model/time/temporal_anchor.h"
 
 /*
  * Integration: MusicalTime -> MeterMap -> MetricalPosition (kernel) -> beat, subdivision and

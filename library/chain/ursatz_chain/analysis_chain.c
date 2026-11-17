@@ -5,11 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "interpretation/chord.h"
+#include "model/interpretation/chord.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "standard-meter/segmentation_beat_grid.h"
 #include "standard-tonality/analysis/applied_chords.h"
-#include "time/time_span.h"
+#include "model/time/time_span.h"
 #include "standard-form/analysis/analysis_phrase_grid.h"
 #include "standard-form/analysis/analysis_repeats.h"
 #include "standard-harmony/analysis/analysis_cadence_claims.h"

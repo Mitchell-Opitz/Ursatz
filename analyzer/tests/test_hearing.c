@@ -5,7 +5,7 @@
 
 #include <ursatz_chain/analysis_chain.h>
 
-#include "pitch/pitch_numeric_value.h"
+#include "model/pitch/pitch_numeric_value.h"
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_result.h>

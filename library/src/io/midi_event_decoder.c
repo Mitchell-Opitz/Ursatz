@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "time/note_value.h"
+#include "model/time/note_value.h"
 
 typedef struct {
     const unsigned char *data;

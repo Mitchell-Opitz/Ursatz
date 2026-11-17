@@ -10,11 +10,11 @@
 #include <stddef.h>
 
 #include "analysis_input.h"
-#include "interpretation/interpretation.h"
+#include "model/interpretation/interpretation.h"
 #include "semantics/beat_strength.h"
 #include "semantics/cadence_type.h"
-#include "structure/cadence.h"
-#include "time/time_span.h"
+#include "model/structure/cadence.h"
+#include "model/time/time_span.h"
 
 /*
  * Cadences from real music (the standard-harmony analysis adapter, step 5): found from harmony and meter alone, since

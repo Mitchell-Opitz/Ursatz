@@ -2,7 +2,7 @@
 
 #include <limits.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 
 static QueryFraction reduced(unsigned long numerator, unsigned long denominator) {
     unsigned long divisor = rational_gcd_unsigned(numerator, denominator);

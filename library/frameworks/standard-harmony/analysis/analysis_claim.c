@@ -4,8 +4,8 @@
 
 
 #include "harmony_framework.h"
-#include "identity/entity_id.h"
-#include "interpretation/claim_interpretation.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/claim_interpretation.h"
 #include "theory/framework.h"
 
 Interpretation *harmony_analysis_make_interpretation(const char *interpretation_id, const char *target_id,

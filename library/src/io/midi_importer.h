@@ -4,12 +4,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "events/note_event.h"
+#include "model/events/note_event.h"
 #include "io/midi_key_signature.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/tempo_map.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/tempo_map.h"
 
 /*
  * MIDIImporter (L9, music-io): parses a Standard MIDI File (SMF) type 0

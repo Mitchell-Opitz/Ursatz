@@ -4,22 +4,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/provenance_reference.h"
-#include "core/voice_reference.h"
-#include "identity/entity_id.h"
+#include "model/core/provenance_reference.h"
+#include "model/core/voice_reference.h"
+#include "model/identity/entity_id.h"
 #include "io/midi_key_signature.h"
-#include "pitch/pitch_arithmetic.h"
-#include "pitch/pitch_identity.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/pitch_spelling.h"
-#include "pitch/tuning_system.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_identity.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/pitch_spelling.h"
+#include "model/pitch/tuning_system.h"
 #include "standard-tonality/tonal_key.h"
 #include "theory/style_model_build.h"
-#include "time/duration.h"
-#include "time/metrical_position.h"
-#include "time/note_value.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/metrical_position.h"
+#include "model/time/note_value.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_signature.h"
 
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/style_profile.h>

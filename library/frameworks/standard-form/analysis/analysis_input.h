@@ -4,15 +4,15 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
+#include "model/events/note_event.h"
 #include "semantics/analysis_note.h"
 #include "semantics/analysis_segment.h"
 #include "semantics/cadence_type.h"
 #include "semantics/contour.h"
 #include "semantics/motive_occurrence_kind.h"
-#include "time/meter_map.h"
-#include "time/metrical_position.h"
-#include "time/time_span.h"
+#include "model/time/meter_map.h"
+#include "model/time/metrical_position.h"
+#include "model/time/time_span.h"
 
 /*
  * The standard-form form adapter (L3.6): phrases, ideas and subphrases, themes and phrase expansion from real cadences and

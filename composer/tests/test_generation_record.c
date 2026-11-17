@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <core/provenance_reference.h>
-#include <core/value.h>
-#include <identity/entity_id.h>
+#include <model/core/provenance_reference.h>
+#include <model/core/value.h>
+#include <model/identity/entity_id.h>
 
 #include <ursatz_composer/generation_record.h>
 

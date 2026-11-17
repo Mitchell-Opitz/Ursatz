@@ -6,19 +6,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/voice_reference.h"
-#include "pitch/key_signature.h"
-#include "pitch/pitch_spelling.h"
-#include "events/dynamics.h"
-#include "events/tempo_marking.h"
-#include "time/meter_map.h"
-#include "time/metronome_marking.h"
-#include "time/tempo_map.h"
-#include "time/time_span.h"
-#include "time/time_signature.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
+#include "model/core/voice_reference.h"
+#include "model/pitch/key_signature.h"
+#include "model/pitch/pitch_spelling.h"
+#include "model/events/dynamics.h"
+#include "model/events/tempo_marking.h"
+#include "model/time/meter_map.h"
+#include "model/time/metronome_marking.h"
+#include "model/time/tempo_map.h"
+#include "model/time/time_span.h"
+#include "model/time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
 
 /*
  * MusicXMLImporter tests. Each mapping rule has a small hand-written fixture under tests/fixtures/musicxml/

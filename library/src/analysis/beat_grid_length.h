@@ -3,9 +3,9 @@
 
 #include <stdbool.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "semantics/sonority_segmentation.h"
-#include "time/meter_map.h"
+#include "model/time/meter_map.h"
 
 /*
  * Internal to src/analysis/. The beat length from an injected beat grid: the length of the beat that holds a time. The grid is a

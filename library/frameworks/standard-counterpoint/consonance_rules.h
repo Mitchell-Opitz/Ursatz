@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "counterpoint_interval.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Consonance and dissonance rules for standard-counterpoint-v1. Counterpoint

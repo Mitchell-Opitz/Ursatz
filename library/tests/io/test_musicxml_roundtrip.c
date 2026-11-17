@@ -8,9 +8,9 @@
 #include "io/midi_importer.h"
 #include "midi_import_split.h"
 #include "io/musicxml_importer.h"
-#include "core/rational.h"
-#include "time/time_rational.h"
-#include "time/temporal_anchor.h"
+#include "model/core/rational.h"
+#include "model/time/time_rational.h"
+#include "model/time/temporal_anchor.h"
 #include "../rational_test_util.h"
 #include "ursatz_test.h"
 

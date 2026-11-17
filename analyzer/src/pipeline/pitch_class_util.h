@@ -8,7 +8,7 @@
 int pitch_class_of(long midi_note_number);
 
 /* pitch_class_name(pitch_class, prefer_flats) is the library's: the flat spelling when prefer_flats is true. */
-#include "pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 /* Whether the key on tonic_pitch_class (0-11) is signed in flats: the library's spelling of the tonic with the fewer
    accidentals in its signature (standard_tonality_key_tonic_of_pitch_class), a minor key judged by its relative major.

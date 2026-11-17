@@ -7,7 +7,7 @@
 #include <standard-counterpoint/counterpoint_limits.h>
 #include <standard-counterpoint/counterpoint_line.h>
 #include <standard-counterpoint/melodic_rules.h>
-#include <pitch/pitch_spelling.h>
+#include <model/pitch/pitch_spelling.h>
 
 #include <ursatz_composer/plan_state.h>
 

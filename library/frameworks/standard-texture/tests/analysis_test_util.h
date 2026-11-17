@@ -5,14 +5,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "texture_analysis_features.h"
 #include "texture_analysis_input.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/note_value.h"
-#include "time/time_signature.h"
-#include "time/time_span.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/note_value.h"
+#include "model/time/time_signature.h"
+#include "model/time/time_span.h"
 
 /* A piece for the unit tests: one MeterMap, a StandardTextureInput over it, and the spans it borrows. */
 typedef struct {

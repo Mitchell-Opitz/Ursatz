@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 
 #include <io/midi_importer.h>
-#include <time/tempo_map.h>
+#include <model/time/tempo_map.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>

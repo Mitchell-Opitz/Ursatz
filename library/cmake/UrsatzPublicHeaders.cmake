@@ -52,6 +52,7 @@ endfunction()
 # Call it first in a tests/CMakeLists.txt.
 macro(ursatz_test_includes)
     include_directories(
+        ${PROJECT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/src
         ${PROJECT_SOURCE_DIR}/frameworks
         ${PROJECT_SOURCE_DIR}/chain

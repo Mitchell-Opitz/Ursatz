@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "rules/preference.h"
 #include "rules/preference_internal.h"
 

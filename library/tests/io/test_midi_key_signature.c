@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "pitch/key_signature.h"
-#include "time/musical_time.h"
+#include "model/pitch/key_signature.h"
+#include "model/time/musical_time.h"
 
 /*
  * midi_key_signature tests: reading Key Signature meta-events (0xFF 0x59) through the complete MIDI import

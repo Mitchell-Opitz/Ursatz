@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "analysis_claim.h"
-#include "core/value.h"
-#include "identity/entity_id.h"
+#include "model/core/value.h"
+#include "model/identity/entity_id.h"
 #include "motion_rules.h"
 
 static double least_confidence(const StandardCounterpointVoiceCell *const cells[4]) {

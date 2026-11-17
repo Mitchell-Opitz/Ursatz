@@ -3,13 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "events/note_event.h"
+#include "model/events/note_event.h"
 #include "standard-texture/framework.h"
 #include "standard-texture/analysis/texture_analysis_classify.h"
 #include "theory/framework.h"
-#include "core/rational.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
+#include "model/core/rational.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
 
 /* a < b for the rationals na/da and nb/db (denominators positive). */
 static bool before(long long na, long long da, long long nb, long long db) {

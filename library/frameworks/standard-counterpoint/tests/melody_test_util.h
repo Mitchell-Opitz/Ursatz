@@ -6,8 +6,8 @@
 #include <string.h>
 
 #include "analysis_melody.h"
-#include "identity/entity_id.h"
-#include "pitch/tuning_system.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/tuning_system.h"
 
 /*
  * A melody line from MIDI semitone numbers, 0 meaning a rest. Notes get ids "m<index>", confidence 1, no spelling, no

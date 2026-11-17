@@ -5,7 +5,7 @@
 
 #include "counterpoint_line.h"
 #include "counterpoint_rules.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * First-species beginning and ending rules for standard-counterpoint-v1:

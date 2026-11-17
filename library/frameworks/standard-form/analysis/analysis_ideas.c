@@ -5,13 +5,13 @@
 #include <string.h>
 
 #include "analysis_claim.h"
-#include "core/value.h"
+#include "model/core/value.h"
 #include "segmentation_rules.h"
 #include "idea_label.h"
-#include "core/rational.h"
-#include "time/meter_arithmetic.h"
-#include "time/meter_map.h"
-#include "time/score_time.h"
+#include "model/core/rational.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/meter_map.h"
+#include "model/time/score_time.h"
 #include "sentence_rules.h"
 
 static double combine(double a, double b) {

@@ -2,8 +2,8 @@
 
 #include <stdlib.h>
 
-#include "time/meter_arithmetic.h"
-#include "time/time_rational.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/time_rational.h"
 
 bool beat_grid_beat_length(void *context, Rational at, Rational *out) {
     const BeatGridContext *grid = (const BeatGridContext *)context;

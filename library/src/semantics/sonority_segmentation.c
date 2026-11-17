@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "semantics/sonority_segmentation_internal.h"
-#include "time/duration.h"
-#include "time/temporal_anchor.h"
-#include "time/time_span.h"
-#include "pitch/midi_pitch.h"
+#include "model/time/duration.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_span.h"
+#include "model/pitch/midi_pitch.h"
 
 AdaptiveSegmentationConfig adaptive_segmentation_config_default(void) {
     AdaptiveSegmentationConfig config;

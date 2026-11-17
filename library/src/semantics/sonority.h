@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 
-#include "identity/entity_id.h"
-#include "time/time_span.h"
+#include "model/identity/entity_id.h"
+#include "model/time/time_span.h"
 
 /*
  * Sonority (Value): a selected collection of simultaneous pitch-bearing

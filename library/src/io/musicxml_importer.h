@@ -5,14 +5,14 @@
 
 #include <stdint.h>
 
-#include "events/dynamics.h"
-#include "events/note_event.h"
-#include "events/tempo_marking.h"
-#include "pitch/key_signature.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/tempo_map.h"
+#include "model/events/dynamics.h"
+#include "model/events/note_event.h"
+#include "model/events/tempo_marking.h"
+#include "model/pitch/key_signature.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/tempo_map.h"
 
 /*
  * MusicXMLImporter (L9, music-io): reads an uncompressed score-partwise MusicXML document into the same

@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "semantics/beat_strength.h"
-#include "time/duration.h"
-#include "time/metrical_position.h"
-#include "time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/metrical_position.h"
+#include "model/time/time_signature.h"
 
 /*
  * Metric position rules for standard-meter-v1: reading where a note falls in a measure as a beat, a

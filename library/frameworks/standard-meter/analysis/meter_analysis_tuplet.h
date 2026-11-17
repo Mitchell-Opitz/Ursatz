@@ -4,12 +4,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "interpretation/interpretation.h"
+#include "model/interpretation/interpretation.h"
 #include "meter_analysis_input.h"
 #include "standard-meter/meter_class_rules.h"
 #include "semantics/analysis_note.h"
 #include "standard-meter/borrowed_rules.h"
-#include "structure/structure.h"
+#include "model/structure/structure.h"
 
 /*
  * Tuplets and duplets from real music. Every note is read on a grid of 96 steps to the whole note (a twelfth is a triplet

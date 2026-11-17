@@ -4,14 +4,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/dynamics.h"
-#include "events/note_event.h"
-#include "events/tempo_marking.h"
+#include "model/events/dynamics.h"
+#include "model/events/note_event.h"
+#include "model/events/tempo_marking.h"
 #include "export/score_quantize.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/tempo_map.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/tempo_map.h"
 
 /*
  * MusicXmlExport (music-export): serializes an in-memory score (musicxml_export_write_score) into a multi-part

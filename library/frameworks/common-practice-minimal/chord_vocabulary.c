@@ -6,12 +6,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/framework_reference.h"
-#include "core/once.h"
-#include "core/provenance_reference.h"
-#include "core/value.h"
+#include "model/core/framework_reference.h"
+#include "model/core/once.h"
+#include "model/core/provenance_reference.h"
+#include "model/core/value.h"
 #include "framework.h"
-#include "interpretation/uncertainty.h"
+#include "model/interpretation/uncertainty.h"
 
 typedef struct {
     const char *label;

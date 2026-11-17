@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/value.h"
+#include "model/core/value.h"
 #include "preference_test_access.h"
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "rule_table.h"
 
 /* A table of three rules: "alpha" and "gamma" are hard, "beta" is soft. */

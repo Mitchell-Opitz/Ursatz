@@ -6,18 +6,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/framework_reference.h"
-#include "core/provenance_reference.h"
-#include "core/value.h"
+#include "model/core/framework_reference.h"
+#include "model/core/provenance_reference.h"
+#include "model/core/value.h"
 #include "framework.h"
-#include "identity/entity_id.h"
-#include "interpretation/uncertainty.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/uncertainty.h"
 #include "roman_numeral_analysis_rules.h"
 #include "roman_numeral_grammar.h"
 #include "seventh_rules.h"
 #include "theory/framework.h"
 #include "triad_rules.h"
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 #define CONFIDENCE_DENOMINATOR 1000000UL
 #define NO_RESOLUTION ((size_t)-1)

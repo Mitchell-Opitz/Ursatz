@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 #define FLAT_SIGN "\xE2\x99\xAD"
 #define SHARP_SIGN "\xE2\x99\xAF"

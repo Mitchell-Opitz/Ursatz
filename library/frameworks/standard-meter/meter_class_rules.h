@@ -4,9 +4,9 @@
 #include <stdbool.h>
 
 #include "grouping_rules.h"
-#include "time/duration.h"
-#include "time/note_value.h"
-#include "time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/note_value.h"
+#include "model/time/time_signature.h"
 
 /*
  * Meter class rules for standard-meter-v1: how a TimeSignature's two

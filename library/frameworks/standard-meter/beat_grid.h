@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-#include "time/duration.h"
-#include "time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/time_signature.h"
 
 /*
  * The beat grid of a measure: where beats fall inside it. Beats come from

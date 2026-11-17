@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-#include "core/rational.h"
-#include "time/time_rational.h"
+#include "model/core/rational.h"
+#include "model/time/time_rational.h"
 
 static bool span_bounds(const TimeSpan *span, Rational *start, Rational *end) {
     return rational_of_musical_time(time_span_start(span), start) == RATIONAL_OK &&

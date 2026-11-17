@@ -7,9 +7,9 @@
 
 #include "chord_vocabulary.h"
 #include "chord_vocabulary_seventh.h"
-#include "core/rational.h"
-#include "identity/entity_id.h"
-#include "pitch/midi_pitch.h"
+#include "model/core/rational.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/midi_pitch.h"
 
 #define CONFIDENCE_DENOMINATOR 1000000UL
 

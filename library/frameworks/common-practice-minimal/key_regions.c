@@ -5,10 +5,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/rational.h"
-#include "pitch/pitch_arithmetic.h"
-#include "time/time_rational.h"
-#include "pitch/midi_pitch.h"
+#include "model/core/rational.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/time/time_rational.h"
+#include "model/pitch/midi_pitch.h"
 
 CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void) {
     CommonPracticeKeyProfiles profiles = {

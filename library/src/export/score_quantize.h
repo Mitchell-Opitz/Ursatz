@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
-#include "time/meter_map.h"
+#include "model/events/note_event.h"
+#include "model/time/meter_map.h"
 
 /*
  * ScoreQuantize (music-export): turns the played times of notes into notated times on the beat grid of a MeterMap,

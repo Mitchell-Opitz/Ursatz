@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/string_copy.h"
+#include "model/core/string_copy.h"
 
 struct StyleModel {
     EntityID *id;

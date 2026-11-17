@@ -6,8 +6,8 @@
 #include "key_regions.h"
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_note.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 #include "weighted_identification.h"
 #include "../../../tests/key_index_test_util.h"
 

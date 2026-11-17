@@ -4,10 +4,10 @@
 #include <string.h>
 
 #include "common-practice-minimal/key_regions.h"
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "pipeline/pitch_class_util.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 static AnalysisKeyChangeExtent change_extent(KeyChangeExtent extent) {
     switch (extent) {

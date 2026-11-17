@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "events/note_event.h"
-#include "time/temporal_anchor.h"
+#include "model/events/note_event.h"
+#include "model/time/temporal_anchor.h"
 
 /*
  * Meter import fixtures: SMF files built in code in 3/4, 6/8 and 12/8, a 4/4 to 3/4 meter change at

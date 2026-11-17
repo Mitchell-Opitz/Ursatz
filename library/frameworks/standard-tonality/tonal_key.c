@@ -2,8 +2,8 @@
 
 #include <stddef.h>
 
-#include "pitch/pitch_arithmetic.h"
-#include "pitch/midi_pitch.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/midi_pitch.h"
 
 #define KEY_MAX_ACCIDENTALS 7
 #define KEY_MINOR_FIFTHS_OFFSET 3

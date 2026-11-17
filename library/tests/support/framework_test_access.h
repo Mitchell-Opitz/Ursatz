@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "theory/framework.h"
 #include "theory/framework_internal.h"
 

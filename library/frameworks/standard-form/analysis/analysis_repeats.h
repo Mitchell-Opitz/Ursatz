@@ -30,8 +30,8 @@
 #include <stddef.h>
 
 #include "analysis_input.h"
-#include "time/meter_map.h"
-#include "time/time_span.h"
+#include "model/time/meter_map.h"
+#include "model/time/time_span.h"
 
 typedef struct {
     const TimeSpan *span; /* borrowed */

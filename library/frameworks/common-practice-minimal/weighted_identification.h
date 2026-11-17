@@ -10,7 +10,7 @@
 #include "semantics/analysis_note.h"
 #include "semantics/beat_strength.h"
 #include "semantics/tone_line.h"
-#include "time/time_span.h"
+#include "model/time/time_span.h"
 
 /*
  * Weighted chord identification for common-practice-minimal-v1: a new way to choose a chord for a

@@ -7,9 +7,9 @@
 #include "hemiola_rules.h"
 #include "meter_analysis_claim.h"
 #include "meter_analysis_position.h"
-#include "time/meter_arithmetic.h"
-#include "time/score_time.h"
-#include "time/time_rational.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/score_time.h"
+#include "model/time/time_rational.h"
 
 typedef struct {
     Rational start;

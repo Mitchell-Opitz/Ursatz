@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 static bool same_note(const CommonPracticeMember *a, const CommonPracticeMember *b) {
     if (a->note_id != NULL && b->note_id != NULL) {

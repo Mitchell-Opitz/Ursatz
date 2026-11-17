@@ -4,8 +4,8 @@
 
 #include "chord_vocabulary.h"
 #include "chord_vocabulary_seventh.h"
-#include "identity/entity_id.h"
-#include "interpretation/chord.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/chord.h"
 #include "interpretation_test_access.h"
 
 /*

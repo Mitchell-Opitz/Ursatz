@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "analysis_claim.h"
-#include "core/value.h"
+#include "model/core/value.h"
 #include "external_expansion_rules.h"
 #include "internal_expansion_rules.h"
 #include "length_rules.h"
@@ -14,10 +14,10 @@
 #include "internal_expansion_technique.h"
 #include "phrase_length_change.h"
 #include "phrase_level_form.h"
-#include "core/rational.h"
-#include "time/meter_arithmetic.h"
-#include "time/meter_map.h"
-#include "time/score_time.h"
+#include "model/core/rational.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/meter_map.h"
+#include "model/time/score_time.h"
 
 static void destroy_expansion(StandardFormExpansion *expansion) {
     interpretation_destroy(expansion->interpretation);

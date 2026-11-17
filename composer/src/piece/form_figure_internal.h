@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <core/rational.h>
+#include <model/core/rational.h>
 
 #include "harmony/harmony_internal.h"
 #include <ursatz_composer/form_figure.h>

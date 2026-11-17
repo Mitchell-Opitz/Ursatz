@@ -3,15 +3,15 @@
 #include <string.h>
 
 #include "analysis/thematic_return_detection.h"
-#include "core/value.h"
-#include "identity/entity_id.h"
-#include "interpretation/interpretation.h"
-#include "interpretation/uncertainty.h"
-#include "pitch/pitch_identity.h"
-#include "relationship/relationship.h"
+#include "model/core/value.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/interpretation.h"
+#include "model/interpretation/uncertainty.h"
+#include "model/pitch/pitch_identity.h"
+#include "model/relationship/relationship.h"
 #include "semantics/contour.h"
 #include "semantics/rhythmic_pattern.h"
-#include "time/duration.h"
+#include "model/time/duration.h"
 #include "relationship_test_access.h"
 
 /*

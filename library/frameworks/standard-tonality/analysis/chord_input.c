@@ -1,7 +1,7 @@
 #include "chord_input.h"
 
 #include <stdlib.h>
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 /* a < b for two MusicalTimes (positive denominators): cross-multiplied, so no division. */
 static bool time_before(const MusicalTime *a, const MusicalTime *b) {

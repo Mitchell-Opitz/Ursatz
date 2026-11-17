@@ -9,10 +9,10 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "cJSON.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
 
 #include "test_support.h"
 #include "ursatz_test.h"

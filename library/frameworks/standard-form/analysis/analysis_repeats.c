@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
-#include "time/meter_arithmetic.h"
-#include "time/score_time.h"
+#include "model/core/rational.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/score_time.h"
 
 #define DEFAULT_MIN_MEASURES 4u
 

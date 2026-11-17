@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "interpretation/chord.h"
+#include "model/interpretation/chord.h"
 #include "non_chord_tones.h"
 #include "weighted_identification.h"
 

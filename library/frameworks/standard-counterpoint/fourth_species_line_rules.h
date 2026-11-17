@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "fourth_species_exercise.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Fourth-species counterpoint line rules for standard-counterpoint-v1: the

@@ -4,7 +4,7 @@
 #include "score_test_util.h"
 
 #include "io/musicxml_importer.h"
-#include "pitch/pitch_numeric_value.h"
+#include "model/pitch/pitch_numeric_value.h"
 
 static inline bool rt_metronome_equal(const MetronomeMarking *a, const MetronomeMarking *b) {
     return metronome_marking_beat_unit_numerator(a) == metronome_marking_beat_unit_numerator(b) &&

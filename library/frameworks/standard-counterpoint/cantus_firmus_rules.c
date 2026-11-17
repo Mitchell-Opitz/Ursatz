@@ -7,7 +7,7 @@
 #include "counterpoint_pitch.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT] = {
     "length",        "tonic-ends",        "final-step",   "melodic-consonance", "range",

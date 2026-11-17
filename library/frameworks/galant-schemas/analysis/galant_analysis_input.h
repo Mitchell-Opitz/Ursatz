@@ -8,8 +8,8 @@
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_segment.h"
 #include "semantics/beat_strength.h"
-#include "time/metrical_position.h"
-#include "time/time_span.h"
+#include "model/time/metrical_position.h"
+#include "model/time/time_span.h"
 
 /*
  * The galant-schemas analysis adapter (L3.10): schema prototypes matched against the outer-voice degrees of a piece's segments. The

@@ -4,10 +4,10 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "core/rational.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/time_rational.h"
+#include "model/core/rational.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_rational.h"
 
 /* The exact value of a time or duration in a test; aborts when it does not fit a Rational. */
 static inline Rational test_rational_of_time(const MusicalTime *time) {

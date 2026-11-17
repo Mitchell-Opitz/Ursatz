@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 typedef MotiveRelationResult (*ApplyFn)(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
 

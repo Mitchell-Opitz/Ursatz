@@ -1,7 +1,7 @@
 #include "harmony_applied.h"
 
 #include <stdio.h>
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 /* The label of the applied chord itself, by quality. */
 static const char *const QUALITY_SYMBOLS[HARMONY_APPLIED_QUALITY_COUNT] = {"V", "V7", "viio", "viio7", "vii%7"};

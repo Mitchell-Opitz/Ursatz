@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "events/note_event.h"
-#include "time/temporal_anchor.h"
+#include "model/events/note_event.h"
+#include "model/time/temporal_anchor.h"
 
 /*
  * Tempo import fixtures: SMF files built in code with a constant tempo, a step series that speeds up

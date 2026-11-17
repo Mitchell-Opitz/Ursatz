@@ -5,8 +5,8 @@
 #include <stddef.h>
 
 #include "semantics/sonority_segmentation.h"
-#include "core/rational.h"
-#include "time/time_rational.h"
+#include "model/core/rational.h"
+#include "model/time/time_rational.h"
 
 /*
  * Internal to adaptive sonority segmentation: the three algorithm steps as separate functions, so each

@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "mixed_texture_rules.h"
-#include "time/musical_time.h"
-#include "time/time_rational.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_rational.h"
 #include "texture_analysis_claim.h"
 
 /* A new left-closed TimeSpan [start, end) the caller destroys, or NULL. */

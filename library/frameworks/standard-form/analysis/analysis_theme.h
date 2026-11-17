@@ -6,7 +6,7 @@
 
 #include "analysis_ideas.h"
 #include "analysis_phrase_grid.h"
-#include "relationship/relationship.h"
+#include "model/relationship/relationship.h"
 
 /*
  * Themes (the form adapter, step 3): the phrase-level form of each theme, from the segmented phrases, idea similarity and

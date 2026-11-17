@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/value.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_spelling.h"
+#include "model/core/value.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_spelling.h"
 #include "scale_analysis_claim.h"
 #include "scale_harmonization.h"
 #include "scale_sequence_rules.h"

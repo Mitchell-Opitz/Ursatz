@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "interpretation/interpretation.h"
-#include "relationship/relationship.h"
-#include "structure/structure.h"
+#include "model/interpretation/interpretation.h"
+#include "model/relationship/relationship.h"
+#include "model/structure/structure.h"
 
 /*
  * The durable claim pattern for standard-meter's rhythm and meter analysis: an Interpretation targeting a note id, a Structure

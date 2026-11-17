@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "time/meter_arithmetic.h"
-#include "time/meter_map.h"
-#include "time/score_time.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/meter_map.h"
+#include "model/time/score_time.h"
 
 void standard_form_motive_line_destroy(StandardFormMotiveLine *line) {
     if (line == NULL) {

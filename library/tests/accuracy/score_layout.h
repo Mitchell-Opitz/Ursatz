@@ -5,9 +5,9 @@
 #include <stddef.h>
 
 #include "romantext.h"
-#include "core/rational.h"
-#include "time/time_rational.h"
-#include "time/meter_map.h"
+#include "model/core/rational.h"
+#include "model/time/time_rational.h"
+#include "model/time/meter_map.h"
 
 /*
  * The measure layout of a MusicXML score (test infrastructure). The importer lays measures from the time

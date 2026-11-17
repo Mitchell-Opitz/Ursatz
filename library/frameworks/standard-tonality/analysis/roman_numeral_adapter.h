@@ -5,8 +5,8 @@
 #include <stddef.h>
 
 #include "chord_input.h"
-#include "interpretation/interpretation.h"
-#include "relationship/relationship.h"
+#include "model/interpretation/interpretation.h"
+#include "model/relationship/relationship.h"
 #include "standard-tonality/roman_numeral_rules.h"
 #include "semantics/applied_chord_kind.h"
 

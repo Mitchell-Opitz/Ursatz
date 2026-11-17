@@ -6,10 +6,10 @@
 
 #include "analysis_claim.h"
 #include "analysis_runs.h"
-#include "core/value.h"
+#include "model/core/value.h"
 #include "harmony_steps.h"
-#include "identity/entity_id.h"
-#include "pitch/midi_pitch.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/midi_pitch.h"
 
 HarmonyResolutionConfig harmony_resolution_config_default(void) {
     HarmonyResolutionConfig config;

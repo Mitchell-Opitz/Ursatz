@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "semantics/analysis_note.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 /*
  * The standard-meter rhythm and meter adapter (L3.8): syncopation, hemiola, hypermeter and per-phrase rhythmic density read

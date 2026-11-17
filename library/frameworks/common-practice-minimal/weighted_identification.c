@@ -2,9 +2,9 @@
 
 #include <math.h>
 
-#include "core/rational.h"
-#include "time/time_rational.h"
-#include "pitch/midi_pitch.h"
+#include "model/core/rational.h"
+#include "model/time/time_rational.h"
+#include "model/pitch/midi_pitch.h"
 
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     CommonPracticeWeightedConfig config;

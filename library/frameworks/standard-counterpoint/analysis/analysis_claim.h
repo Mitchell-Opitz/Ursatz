@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 
-#include "interpretation/interpretation.h"
-#include "structure/structure.h"
+#include "model/interpretation/interpretation.h"
+#include "model/structure/structure.h"
 
 /*
  * The durable claim pattern for claims about notes: a Structure shell whose event refs are the involved note ids, and an

@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/voice_reference.h"
-#include "events/note_event.h"
-#include "identity/entity_id.h"
+#include "model/core/voice_reference.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
 #include "io/midi_importer.h"
 #include "../io/midi_import_split.h"
 #include "ursatz_test.h"

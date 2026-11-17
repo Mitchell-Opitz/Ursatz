@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "semantics/voice_part.h"
 #include "stem_rules.h"
 #include "voicing_chord.h"

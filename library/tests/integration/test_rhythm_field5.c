@@ -3,7 +3,7 @@
 
 #include <math.h>
 
-#include "interpretation/chord.h"
+#include "model/interpretation/chord.h"
 #include "standard-meter/analysis/meter_analysis_density.h"
 #include "standard-meter/analysis/meter_analysis_hemiola.h"
 #include "standard-meter/analysis/meter_analysis_hypermeter.h"

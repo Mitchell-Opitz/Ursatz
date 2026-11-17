@@ -8,7 +8,7 @@
 #include "counterpoint_line.h"
 #include "counterpoint_rules.h"
 #include "counterpoint_slots.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "semantics/beat_strength.h"
 
 /*

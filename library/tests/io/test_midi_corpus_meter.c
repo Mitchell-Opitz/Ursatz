@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "events/note_event.h"
-#include "time/temporal_anchor.h"
+#include "model/events/note_event.h"
+#include "model/time/temporal_anchor.h"
 
 /*
  * Meter of the framework-v1-corpus files, read through midi_importer_import_complete. The corpus

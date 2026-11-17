@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-#include "pitch/key_signature.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/key_signature.h"
+#include "model/pitch/pitch_spelling.h"
 #include "roman_numeral_analysis_rules.h"
 
 /*

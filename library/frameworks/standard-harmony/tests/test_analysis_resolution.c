@@ -2,8 +2,8 @@
 
 #include "analysis_resolution.h"
 #include "analysis_test_util.h"
-#include "identity/entity_id.h"
-#include "pitch/tuning_system.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/tuning_system.h"
 #include "interpretation_test_access.h"
 
 /* Seventh and leading tone resolution on separated voices. The fixture's segments are quarter notes; each test gives a

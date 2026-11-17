@@ -5,8 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "pitch/key_signature.h"
-#include "time/musical_time.h"
+#include "model/pitch/key_signature.h"
+#include "model/time/musical_time.h"
 
 /*
  * midi_key_signature: the key signature meta-events (0xFF 0x59) of a Standard MIDI File. The

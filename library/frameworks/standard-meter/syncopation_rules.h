@@ -4,8 +4,8 @@
 #include <stdbool.h>
 
 #include "metric_position_rules.h"
-#include "time/duration.h"
-#include "time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/time_signature.h"
 
 /*
  * Syncopation rules for standard-meter-v1. Syncopation happens when

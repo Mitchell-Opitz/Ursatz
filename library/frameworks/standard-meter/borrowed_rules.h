@@ -4,9 +4,9 @@
 #include <stdbool.h>
 
 #include "meter_class_rules.h"
-#include "time/duration.h"
-#include "time/time_signature.h"
-#include "time/tuplet.h"
+#include "model/time/duration.h"
+#include "model/time/time_signature.h"
+#include "model/time/tuplet.h"
 
 /*
  * Borrowed division rules for standard-meter-v1. A meter is defined by a

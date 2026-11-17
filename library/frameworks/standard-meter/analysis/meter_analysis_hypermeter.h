@@ -1,9 +1,9 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_HYPERMETER_H
 #define URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_HYPERMETER_H
 
-#include "interpretation/interpretation.h"
+#include "model/interpretation/interpretation.h"
 #include "meter_analysis_input.h"
-#include "relationship/relationship.h"
+#include "model/relationship/relationship.h"
 
 /*
  * Hypermeter from phrase and cadence placement (standard-meter's hypermeter rules, hypermeter_rules.h). Each phrase is read on

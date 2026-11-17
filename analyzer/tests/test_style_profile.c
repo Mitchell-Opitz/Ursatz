@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 
 #include "cJSON.h"
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "theory/style_model_build.h"
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/style_labels.h>

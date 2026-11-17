@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "time/meter_map.h"
-#include "time/musical_time.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
 
 /*
  * RomanText loader (test infrastructure, not shipped library code). RomanText (.rntxt) is the Roman numeral

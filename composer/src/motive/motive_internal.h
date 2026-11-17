@@ -7,7 +7,7 @@
 #include <cJSON.h>
 #include <analysis/motive_relation.h>
 #include <analysis/motive_sketch.h>
-#include <core/rational.h>
+#include <model/core/rational.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
 

@@ -11,11 +11,11 @@
 
 #include <standard-harmony/analysis/analysis_cadence.h>
 #include <standard-harmony/analysis/analysis_input.h>
-#include <time/duration.h>
-#include <time/metrical_position.h>
-#include <time/musical_time.h>
-#include <time/time_rational.h>
-#include <time/time_span.h>
+#include <model/time/duration.h>
+#include <model/time/metrical_position.h>
+#include <model/time/musical_time.h>
+#include <model/time/time_rational.h>
+#include <model/time/time_span.h>
 
 #define HEARD_KEY_REF "key"
 

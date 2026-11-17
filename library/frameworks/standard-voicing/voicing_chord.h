@@ -1,7 +1,7 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_VOICING_VOICING_CHORD_H
 #define URSATZ_FRAMEWORKS_STANDARD_VOICING_VOICING_CHORD_H
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "semantics/voice_part.h"
 
 /*

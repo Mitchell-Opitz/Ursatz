@@ -1,10 +1,10 @@
 #include "alignment.h"
 
-#include "events/note_event.h"
-#include "pitch/pitch_spelling.h"
-#include "core/rational.h"
-#include "time/time_rational.h"
-#include "time/temporal_anchor.h"
+#include "model/events/note_event.h"
+#include "model/pitch/pitch_spelling.h"
+#include "model/core/rational.h"
+#include "model/time/time_rational.h"
+#include "model/time/temporal_anchor.h"
 #include "../rational_test_util.h"
 
 static int pitch_class(const PitchSpelling *spelling) {

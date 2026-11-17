@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "counterpoint_line.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /* Test helpers shared by the standard-counterpoint tests. Notes live in a
    fixed pool for the life of the test process and are never freed. */

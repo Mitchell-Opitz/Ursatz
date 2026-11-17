@@ -1,8 +1,8 @@
 #ifndef URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_VOCABULARY_H
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_VOCABULARY_H
 
-#include "identity/entity_id.h"
-#include "interpretation/key.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/key.h"
 
 /*
  * Key vocabulary for common-practice-minimal-v1: major and natural

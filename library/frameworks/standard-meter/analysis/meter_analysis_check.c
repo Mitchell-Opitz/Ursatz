@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/value.h"
-#include "time/musical_time.h"
-#include "time/time_signature.h"
+#include "model/core/value.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_signature.h"
 
 /* ---- Exact time (whole notes) ---- */
 

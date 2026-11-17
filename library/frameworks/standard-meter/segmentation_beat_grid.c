@@ -4,10 +4,10 @@
 #include <stdlib.h>
 
 #include "metric_position_rules.h"
-#include "core/rational.h"
-#include "time/time_rational.h"
-#include "time/metrical_position.h"
-#include "time/time_span.h"
+#include "model/core/rational.h"
+#include "model/time/time_rational.h"
+#include "model/time/metrical_position.h"
+#include "model/time/time_span.h"
 
 static void destroy_starts(MusicalTime **starts, size_t count) {
     for (size_t i = 0; i < count; i++) {

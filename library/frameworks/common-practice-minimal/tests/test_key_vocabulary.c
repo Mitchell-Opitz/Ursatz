@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "identity/entity_id.h"
-#include "interpretation/key.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/key.h"
 #include "key_vocabulary.h"
 #include "interpretation_test_access.h"
 

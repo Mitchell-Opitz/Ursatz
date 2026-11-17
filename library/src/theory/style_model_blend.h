@@ -1,7 +1,7 @@
 #ifndef MUSIC_THEORY_STYLE_MODEL_BLEND_H
 #define MUSIC_THEORY_STYLE_MODEL_BLEND_H
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "theory/style_model.h"
 
 /*

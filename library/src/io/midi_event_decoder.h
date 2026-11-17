@@ -6,7 +6,7 @@
 
 #include "io/midi_key_signature.h"
 #include "io/smf_reader.h"
-#include "time/time_signature.h"
+#include "model/time/time_signature.h"
 
 /*
  * midi_event_decoder: walks the decoded byte stream of a single MTrk

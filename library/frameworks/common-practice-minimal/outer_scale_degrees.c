@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/framework_reference.h"
-#include "core/provenance_reference.h"
-#include "core/value.h"
+#include "model/core/framework_reference.h"
+#include "model/core/provenance_reference.h"
+#include "model/core/value.h"
 #include "framework.h"
-#include "interpretation/interpretation.h"
-#include "interpretation/uncertainty.h"
-#include "pitch/midi_pitch.h"
+#include "model/interpretation/interpretation.h"
+#include "model/interpretation/uncertainty.h"
+#include "model/pitch/midi_pitch.h"
 #include "standard-tonality/tonal_key.h"
 
 /* [degree - 1][alteration + 1]: flat, natural, sharp. */

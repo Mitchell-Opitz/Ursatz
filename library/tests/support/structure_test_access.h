@@ -1,14 +1,14 @@
 #ifndef URSATZ_TESTS_SUPPORT_STRUCTURE_TEST_ACCESS_H
 #define URSATZ_TESTS_SUPPORT_STRUCTURE_TEST_ACCESS_H
 
-#include "structure/cadence.h"
-#include "structure/cadence_internal.h"
-#include "structure/motif.h"
-#include "structure/motif_internal.h"
-#include "structure/motif_occurrence.h"
-#include "structure/motif_occurrence_internal.h"
-#include "structure/phrase_occurrence.h"
-#include "structure/phrase_occurrence_internal.h"
+#include "model/structure/cadence.h"
+#include "model/structure/cadence_internal.h"
+#include "model/structure/motif.h"
+#include "model/structure/motif_internal.h"
+#include "model/structure/motif_occurrence.h"
+#include "model/structure/motif_occurrence_internal.h"
+#include "model/structure/phrase_occurrence.h"
+#include "model/structure/phrase_occurrence_internal.h"
 
 /*
  * What the tests read of a Cadence, a Motif, a MotifOccurrence and a PhraseOccurrence. No application reads these, so

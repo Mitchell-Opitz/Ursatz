@@ -4,8 +4,8 @@
 #include <stddef.h>
 
 #include "context/context.h"
-#include "core/value.h"
-#include "identity/entity_id.h"
+#include "model/core/value.h"
+#include "model/identity/entity_id.h"
 #include "rules/constraint.h"
 #include "theory/framework.h"
 #include "framework_test_access.h"

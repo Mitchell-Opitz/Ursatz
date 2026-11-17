@@ -6,8 +6,8 @@
 #include <string.h>
 
 #include "pipeline/pitch_class_util.h"
-#include "pitch/pitch_arithmetic.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_spelling.h"
 
 bool spelled_note_name(const NoteEvent *note, long sounding_pitch, bool with_octave, char out[16]) {
     const PitchSpelling *spelling = note_event_optional_pitch_spelling(note);

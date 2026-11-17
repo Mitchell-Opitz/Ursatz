@@ -8,9 +8,9 @@
 #include "meter_test_util.h"
 #include "segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
-#include "core/rational.h"
-#include "time/time_rational.h"
-#include "time/time_span.h"
+#include "model/core/rational.h"
+#include "model/time/time_rational.h"
+#include "model/time/time_span.h"
 #include "ursatz_test.h"
 
 /*

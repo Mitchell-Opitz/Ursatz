@@ -3,8 +3,8 @@
 
 #include <ursatz_analyzer/analysis_report.h>
 
-#include "interpretation/interpretation.h"
-#include "interpretation/uncertainty.h"
+#include "model/interpretation/interpretation.h"
+#include "model/interpretation/uncertainty.h"
 
 /* The Interpretation's scalar confidence, or present = false for an
    unknown or candidate-set uncertainty. */

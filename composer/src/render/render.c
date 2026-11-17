@@ -4,20 +4,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <core/provenance_reference.h>
-#include <core/voice_reference.h>
-#include <identity/entity_id.h>
-#include <pitch/key_signature.h>
-#include <pitch/pitch_arithmetic.h>
-#include <pitch/pitch_identity.h>
-#include <pitch/pitch_spelling.h>
-#include <pitch/tuning_system.h>
+#include <model/core/provenance_reference.h>
+#include <model/core/voice_reference.h>
+#include <model/identity/entity_id.h>
+#include <model/pitch/key_signature.h>
+#include <model/pitch/pitch_arithmetic.h>
+#include <model/pitch/pitch_identity.h>
+#include <model/pitch/pitch_spelling.h>
+#include <model/pitch/tuning_system.h>
 #include <standard-tonality/tonal_key.h>
-#include <time/duration.h>
-#include <time/time_rational.h>
-#include <time/note_value.h>
-#include <time/temporal_anchor.h>
-#include <time/time_signature.h>
+#include <model/time/duration.h>
+#include <model/time/time_rational.h>
+#include <model/time/note_value.h>
+#include <model/time/temporal_anchor.h>
+#include <model/time/time_signature.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/plan_state.h>

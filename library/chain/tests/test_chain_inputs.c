@@ -1,8 +1,8 @@
 #include "ursatz_chain/chain_inputs.h"
 
 #include "chain_test_piece.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/tuning_system.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/tuning_system.h"
 #include "standard-harmony/harmony_cadence_rules.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "standard-meter/segmentation_beat_grid.h"

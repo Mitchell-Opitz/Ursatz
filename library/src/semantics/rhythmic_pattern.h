@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "time/duration.h"
+#include "model/time/duration.h"
 
 /*
  * RhythmicPattern (Value/Structural): an independently representable

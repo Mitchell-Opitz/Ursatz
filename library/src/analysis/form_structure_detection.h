@@ -3,10 +3,10 @@
 
 #include <stddef.h>
 
-#include "containers/section.h"
-#include "relationship/relationship.h"
+#include "model/containers/section.h"
+#include "model/relationship/relationship.h"
 #include "semantics/cadence_type.h"
-#include "structure/phrase_occurrence.h"
+#include "model/structure/phrase_occurrence.h"
 
 /*
  * FormStructureDetection (Procedure):

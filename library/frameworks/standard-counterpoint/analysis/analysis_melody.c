@@ -6,8 +6,8 @@
 #include <string.h>
 
 #include "analysis_melody_emit.h"
-#include "core/value.h"
-#include "identity/entity_id.h"
+#include "model/core/value.h"
+#include "model/identity/entity_id.h"
 
 #define DEFAULT_APPROXIMATE_PENALTY 0.25
 

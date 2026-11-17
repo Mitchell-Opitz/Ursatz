@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 
 static bool comparable(const StandardFormMotiveShape *a, const StandardFormMotiveShape *b) {
     return a != NULL && b != NULL && a->generic == b->generic && a->intervals == b->intervals && a->intervals > 0;

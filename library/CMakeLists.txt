@@ -7,6 +7,7 @@ if(URSATZ_TESTS)
     add_subdirectory(tests)
 endif()
 
+add_subdirectory(model)
 add_subdirectory(src)
 add_subdirectory(frameworks)
 add_subdirectory(chain)

@@ -1,10 +1,10 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "semantics/sonority.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 /*
  * Golden test: a known event set, voice set, time window, and event

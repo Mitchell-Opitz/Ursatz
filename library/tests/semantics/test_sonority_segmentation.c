@@ -6,14 +6,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/provenance_reference.h"
-#include "pitch/pitch_identity.h"
-#include "pitch/pitch_spelling.h"
+#include "model/core/provenance_reference.h"
+#include "model/pitch/pitch_identity.h"
+#include "model/pitch/pitch_spelling.h"
 #include "semantics/sonority_segmentation_internal.h"
-#include "time/duration.h"
-#include "time/note_value.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/note_value.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_signature.h"
 #include "../rational_test_util.h"
 
 /*

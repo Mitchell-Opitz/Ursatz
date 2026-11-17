@@ -2,8 +2,8 @@
 
 #include <math.h>
 
-#include "core/rational.h"
-#include "time/score_time.h"
+#include "model/core/rational.h"
+#include "model/time/score_time.h"
 
 bool standard_form_idea_similarity(const StandardFormNote *a, size_t a_count, const StandardFormNote *b, size_t b_count,
                                    double similarity_min, StandardFormSimilarity *out) {

@@ -4,8 +4,8 @@
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "ursatz_chain/chain_inputs.h"
 #include "weighted_pipeline.h"
-#include "pitch/tuning_system.h"
-#include "time/meter_map.h"
+#include "model/pitch/tuning_system.h"
+#include "model/time/meter_map.h"
 #include "reference_pieces.h"
 
 /*

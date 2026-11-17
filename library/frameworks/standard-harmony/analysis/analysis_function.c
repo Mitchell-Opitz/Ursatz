@@ -5,10 +5,10 @@
 #include <string.h>
 
 #include "analysis_claim.h"
-#include "core/value.h"
+#include "model/core/value.h"
 #include "harmony_applied.h"
 #include "harmony_functions.h"
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 
 static bool function_of(const HarmonySegment *segment, HarmonyFunctionResult *result) {
     const HarmonySegmentInput *input = segment->input;

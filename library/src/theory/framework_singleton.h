@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "core/once.h"
+#include "model/core/once.h"
 #include "theory/framework.h"
 
 /*

@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "analysis_test_util.h"
-#include "interpretation/interpretation.h"
+#include "model/interpretation/interpretation.h"
 #include "meter_analysis_tuplet.h"
 
 /* A piece plus the notes handed to the finder. */

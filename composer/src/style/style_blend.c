@@ -7,7 +7,7 @@
 
 #include "style/style_internal.h"
 
-#include <identity/entity_id.h>
+#include <model/identity/entity_id.h>
 #include <theory/style_model_blend.h>
 #include <theory/style_model_build.h>
 

@@ -9,14 +9,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "core/rational.h"
-#include "interpretation/key.h"
+#include "model/core/rational.h"
+#include "model/interpretation/key.h"
 #include "key_vocabulary.h"
 #include "semantics/analysis_key.h"
 #include "semantics/key_change_extent.h"
-#include "time/time_span.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
+#include "model/time/time_span.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
 #include "weighted_chord_identification.h"
 #include "weighted_identification.h"
 

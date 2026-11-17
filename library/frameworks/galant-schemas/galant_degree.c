@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 #include "standard-counterpoint/counterpoint_pitch.h"
 
 /* The semitones above the tonic of degrees 1 to 7 of the major scale. */

@@ -3,8 +3,8 @@
 #include <stdio.h>
 
 #include "analysis_claim.h"
-#include "core/entity.h"
-#include "identity/entity_id.h"
+#include "model/core/entity.h"
+#include "model/identity/entity_id.h"
 
 bool standard_counterpoint_melody_emit(const char *kind, const char *key, const char *const *note_ids,
                                        size_t note_count, const char *claim_type, const void *claim,

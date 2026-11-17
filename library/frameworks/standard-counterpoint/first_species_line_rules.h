@@ -5,7 +5,7 @@
 
 #include "cantus_firmus_rules.h"
 #include "counterpoint_line.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * First-species counterpoint line rules for standard-counterpoint-v1. The

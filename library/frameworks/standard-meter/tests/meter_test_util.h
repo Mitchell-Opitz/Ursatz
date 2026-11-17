@@ -3,9 +3,9 @@
 
 #include <assert.h>
 
-#include "time/duration.h"
-#include "time/note_value.h"
-#include "time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/note_value.h"
+#include "model/time/time_signature.h"
 
 /* beats over the beat unit with the given NoteValue exponent: (3, 2) is 3/4. */
 static inline TimeSignature *make_signature(unsigned beats, int beat_unit_exponent) {

@@ -4,7 +4,7 @@
 #include "semantics/analysis_note.h"
 
 #include <string.h>
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 /* The rule core: a line of notes (pitch and the chord mask of each), any length. */
 typedef struct {

@@ -1,7 +1,7 @@
 #include "species_helpers.h"
 
 #include "counterpoint_pitch.h"
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 bool standard_counterpoint_species_is_tonic(const PitchSpelling *note, const PitchSpelling *tonic) {
     return pitch_spelling_letter(note) == pitch_spelling_letter(tonic) &&

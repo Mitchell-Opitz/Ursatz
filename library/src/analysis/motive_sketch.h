@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "semantics/non_chord_tone.h"
-#include "time/time_rational.h"
+#include "model/time/time_rational.h"
 
 /*
  * MotiveSketch (L8 analysis value): a motive as plain data, the input of the motive relations

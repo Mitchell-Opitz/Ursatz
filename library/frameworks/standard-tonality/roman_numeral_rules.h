@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "identity/entity_id.h"
-#include "interpretation/chord.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/chord.h"
 #include "seventh_rules.h"
 #include "triad_rules.h"
 

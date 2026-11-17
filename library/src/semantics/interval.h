@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "pitch/pitch_identity.h"
+#include "model/pitch/pitch_identity.h"
 
 /*
  * Interval (Value): directed/undirected/chromatic distance between a

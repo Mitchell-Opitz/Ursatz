@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_result.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 
 /*
  * The joined chord sequence: the chords of an analysis in time order, where consecutive chord entries with the same

@@ -10,9 +10,9 @@
 #include <stddef.h>
 
 #include "analysis_grid.h"
-#include "interpretation/interpretation.h"
+#include "model/interpretation/interpretation.h"
 #include "standard-counterpoint/motion_type.h"
-#include "structure/structure.h"
+#include "model/structure/structure.h"
 
 /*
  * Motion between voice pairs (the standard-counterpoint analysis adapter, step 1). For every pair of voices and every pair

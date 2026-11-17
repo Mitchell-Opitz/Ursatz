@@ -4,14 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
-#include "core/value.h"
+#include "model/core/rational.h"
+#include "model/core/value.h"
 #include "meter_analysis_claim.h"
 #include "meter_analysis_position.h"
-#include "time/duration.h"
-#include "time/meter_arithmetic.h"
-#include "time/score_time.h"
-#include "time/tuplet.h"
+#include "model/time/duration.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/score_time.h"
+#include "model/time/tuplet.h"
 
 /* The finest grid a tuplet is read on: a twelfth of a whole note is a triplet eighth, a 24th a sixteenth triplet. The
    library's own grid is 1/32, so a time on the finer grid but off the coarser is a third of a step: a tuplet's. */

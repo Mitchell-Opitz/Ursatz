@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 typedef struct {
     uint64_t tick;

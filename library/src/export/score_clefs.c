@@ -4,14 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_spelling.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
-#include "time/time_rational.h"
-#include "time/time_span.h"
+#include "model/core/rational.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_spelling.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_rational.h"
+#include "model/time/time_span.h"
 
 /* The price of a change of clef, in ledger line quarter notes: a change is worth it when the other clef saves more
    than this many ledger line quarter notes before the clef changes again. */

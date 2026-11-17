@@ -5,8 +5,8 @@
 #include <stddef.h>
 
 #include "semantics/analysis_note.h"
-#include "time/meter_map.h"
-#include "time/time_span.h"
+#include "model/time/meter_map.h"
+#include "model/time/time_span.h"
 
 /*
  * The standard-texture analysis adapter (L3.9): texture features measured per measure from separated voices, a texture per

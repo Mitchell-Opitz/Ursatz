@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "harmony_framework.h"
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 
 bool harmony_build_rule_pair(const char *name, ConstraintType type, ConstraintEvaluateFn evaluate,
                              PreferenceScoreFn score, HarmonyRulePair *out) {

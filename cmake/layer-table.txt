@@ -9,17 +9,17 @@ module civetweb  third_party/civetweb  prefix civetweb.h
 free cjson ezxml civetweb
 
 # Library kernel, layers L0 to L9 (library/docs/layers-and-dependency-rules.md).
-module identity        library/src/identity        prefix identity/
-module core            library/src/core            prefix core/
-module time            library/src/time            prefix time/
-module pitch           library/src/pitch           prefix pitch/
-module events          library/src/events          prefix events/
-module containers      library/src/containers      prefix containers/
-module structure       library/src/structure       prefix structure/
+module identity        library/model/identity        prefix model/identity/
+module core            library/model/core            prefix model/core/
+module time            library/model/time            prefix model/time/
+module pitch           library/model/pitch           prefix model/pitch/
+module events          library/model/events          prefix model/events/
+module containers      library/model/containers      prefix model/containers/
+module structure       library/model/structure       prefix model/structure/
 module context         library/src/context         prefix context/
 module semantics       library/src/semantics       prefix semantics/
-module relationship    library/src/relationship    prefix relationship/
-module interpretation  library/src/interpretation  prefix interpretation/
+module relationship    library/model/relationship    prefix model/relationship/
+module interpretation  library/model/interpretation  prefix model/interpretation/
 module theory          library/src/theory          prefix theory/
 module rules           library/src/rules           prefix rules/
 module analysis        library/src/analysis        prefix analysis/
@@ -49,10 +49,10 @@ uses theory          L0-L6
 uses rules           L0-L6 theory
 uses analysis        L0-L7
 uses io              L0-L2 events ezxml
-uses export          identity time pitch events core/rational.h
+uses export          identity time pitch events model/core/rational.h
 uses query           L0-L1 semantics
-uses semantics       interpretation/key.h -- the analysis key holds a key (semantics/analysis_key.h)
-allow library/src/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
+uses semantics       model/interpretation/key.h -- the analysis key holds a key (semantics/analysis_key.h)
+allow library/model/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
 only ezxml library/src/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
 
 # Library frameworks: L0 to L6 and the framework and rule interfaces of L7 (R-007, R-025).
@@ -114,17 +114,17 @@ module tests-accuracy        library/tests/accuracy
 free test-support root-tests library-tests library-test-support tests-integration tests-accuracy
 group test-helpers library-tests library-test-support test-support
 
-module tests-identity        library/tests/identity        root library/tests library/tests/support
-module tests-core            library/tests/core            root library/tests library/tests/support
-module tests-time            library/tests/time            root library/tests library/tests/support
-module tests-pitch           library/tests/pitch           root library/tests library/tests/support
-module tests-events          library/tests/events          root library/tests library/tests/support
-module tests-containers      library/tests/containers      root library/tests library/tests/support
-module tests-structure       library/tests/structure       root library/tests library/tests/support
+module tests-identity        library/model/tests/identity        root library/tests library/tests/support
+module tests-core            library/model/tests/core            root library/tests library/tests/support
+module tests-time            library/model/tests/time            root library/tests library/tests/support
+module tests-pitch           library/model/tests/pitch           root library/tests library/tests/support
+module tests-events          library/model/tests/events          root library/tests library/tests/support
+module tests-containers      library/model/tests/containers      root library/tests library/tests/support
+module tests-structure       library/model/tests/structure       root library/tests library/tests/support
 module tests-context         library/tests/context         root library/tests library/tests/support
 module tests-semantics       library/tests/semantics       root library/tests library/tests/support
-module tests-relationship    library/tests/relationship    root library/tests library/tests/support
-module tests-interpretation  library/tests/interpretation  root library/tests library/tests/support
+module tests-relationship    library/model/tests/relationship    root library/tests library/tests/support
+module tests-interpretation  library/model/tests/interpretation  root library/tests library/tests/support
 module tests-theory          library/tests/theory          root library/tests library/tests/support
 module tests-rules           library/tests/rules           root library/tests library/tests/support
 module tests-analysis        library/tests/analysis        root library/tests library/tests/support

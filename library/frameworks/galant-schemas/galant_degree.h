@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Scale degrees for galant-schemas-v1. A degree is counted from a tonic in

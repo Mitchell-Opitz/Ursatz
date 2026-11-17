@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "theory/style_features.h"
 #include "theory/style_model.h"
 

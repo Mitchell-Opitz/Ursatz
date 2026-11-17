@@ -2,8 +2,8 @@
 #define URSATZ_FRAMEWORKS_STANDARD_METER_HEMIOLA_RULES_H
 
 #include <stdbool.h>
-#include "time/duration.h"
-#include "time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/time_signature.h"
 
 /*
  * Hemiola rules for standard-meter-v1. A hemiola is a stretch of triple meter that is felt as three

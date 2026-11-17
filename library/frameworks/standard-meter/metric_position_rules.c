@@ -3,7 +3,7 @@
 #include <limits.h>
 
 #include "beat_grid.h"
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "grouping_rules.h"
 #include "meter_class_rules.h"
 

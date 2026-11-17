@@ -7,23 +7,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/provenance_reference.h"
-#include "core/voice_reference.h"
-#include "events/note_event.h"
-#include "identity/entity_id.h"
+#include "model/core/provenance_reference.h"
+#include "model/core/voice_reference.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
 #include "io/midi_importer.h"
 #include "midi_import_split.h"
 #include "io/midi_key_signature.h"
 #include "io/midi_renderer.h"
 #include "io/smf_reader.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/tuning_system.h"
-#include "time/duration.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/tempo_map.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/tuning_system.h"
+#include "model/time/duration.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/tempo_map.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_signature.h"
 
 /*
  * Helpers for the MIDI renderer tests: notes built from whole-note fractions and MIDI note numbers, maps built from

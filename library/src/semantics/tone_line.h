@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "semantics/non_chord_tone.h"
 
 /*

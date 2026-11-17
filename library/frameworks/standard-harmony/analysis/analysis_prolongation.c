@@ -6,11 +6,11 @@
 
 #include "analysis_claim.h"
 #include "analysis_six_four.h"
-#include "core/provenance_reference.h"
-#include "core/value.h"
+#include "model/core/provenance_reference.h"
+#include "model/core/value.h"
 #include "harmony_functions.h"
 #include "harmony_prolongation.h"
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 
 static const char *const REASON_NAMES[HARMONY_PROLONGATION_REASON_COUNT] = {
     "passing-six-four", "neighbor-six-four", "arpeggiating-six-four", "tonic-line", "applied"};

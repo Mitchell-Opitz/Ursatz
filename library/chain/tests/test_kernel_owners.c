@@ -5,10 +5,10 @@
 #include <string.h>
 
 #include "analysis/motive_tone_roles.h"
-#include "core/rational.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/tuning_system.h"
+#include "model/core/rational.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/tuning_system.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "standard-form/analysis/analysis_motive_match.h"
 #include "ursatz_chain/kernel_owners.h"

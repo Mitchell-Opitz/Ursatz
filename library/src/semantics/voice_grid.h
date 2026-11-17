@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * AnalysisVoiceGrid: each voice's sounding note in each chord segment, the one grid the harmony and

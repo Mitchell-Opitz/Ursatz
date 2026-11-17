@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 
 #include <io/midi_importer.h>
-#include <time/tempo_map.h>
+#include <model/time/tempo_map.h>
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/composer_api.h>

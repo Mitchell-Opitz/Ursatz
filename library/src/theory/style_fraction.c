@@ -3,7 +3,7 @@
 #include <limits.h>
 #include <stddef.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 
 static StyleFractionResult validate(const StyleFraction *fraction) {
     if (fraction == NULL) {

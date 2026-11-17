@@ -9,10 +9,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
+#include "model/events/note_event.h"
 #include "semantics/sonority.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
 
 /*
  * Adaptive sonority segmentation (semantics): a meter-aware way to cut a stream of NoteEvents into

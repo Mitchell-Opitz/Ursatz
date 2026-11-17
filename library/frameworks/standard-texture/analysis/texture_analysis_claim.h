@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "interpretation/interpretation.h"
-#include "relationship/relationship.h"
+#include "model/interpretation/interpretation.h"
+#include "model/relationship/relationship.h"
 
 /*
  * The durable claim pattern for standard-texture's analysis: an Interpretation (FrameworkReference standard-texture) targeting a

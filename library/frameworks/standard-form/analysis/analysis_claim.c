@@ -2,10 +2,10 @@
 
 #include <stdio.h>
 
-#include "core/entity.h"
+#include "model/core/entity.h"
 #include "framework.h"
-#include "identity/entity_id.h"
-#include "interpretation/claim_interpretation.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/claim_interpretation.h"
 #include "theory/framework.h"
 
 Structure *standard_form_analysis_group(const char *shell_id, const char *const *note_ids, size_t count) {

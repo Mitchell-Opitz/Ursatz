@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "time/meter_map.h"
-#include "time/musical_time.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
 
 /*
  * The standard-meter beat-grid provider for adaptive sonority segmentation

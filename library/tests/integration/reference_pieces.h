@@ -6,13 +6,13 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "standard-tonality/analysis/applied_chords.h"
 #include "standard-tonality/analysis/roman_numeral_adapter.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/note_value.h"
-#include "time/time_signature.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/note_value.h"
+#include "model/time/time_signature.h"
 
 /*
  * What the tests that read the reference pieces (Bach 114, Mozart 545, Clementi 36, Field 1, the chorales) share:

@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <core/rational.h>
+#include <model/core/rational.h>
 
 /*
  * Positions and lengths inside an operator: library Rationals, in whole notes. The operators add, subtract and compare

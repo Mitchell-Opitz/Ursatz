@@ -9,8 +9,8 @@
 
 #include "galant_analysis_input.h"
 #include "galant_analysis_match.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 /* A run of segments for the unit tests. Time is counted in eighth notes ("units"); a beat is two units (a quarter note). */
 typedef struct {

@@ -5,7 +5,7 @@
 #include "counterpoint_line.h"
 #include "counterpoint_rules.h"
 #include "fourth_species_exercise.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "second_species_exercise.h"
 #include "third_species_exercise.h"
 

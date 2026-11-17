@@ -6,7 +6,7 @@
 
 #include <limits.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "standard-form/continuation_trait.h"
 #include "standard-form/expansion_placement.h"
 #include "standard-form/external_expansion_kind.h"
@@ -17,9 +17,9 @@
 #include "standard-form/phrase_beginning.h"
 #include "standard-form/phrase_ending.h"
 #include "standard-form/phrase_level_form.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
 
 #define CADENCE_ID_PREFIX "chain-"
 

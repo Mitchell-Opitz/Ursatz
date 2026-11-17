@@ -2,8 +2,8 @@
 #define URSATZ_FRAMEWORKS_SCALE_HARMONIZATION_ANALYSIS_SCALE_ANALYSIS_DETECT_H
 
 #include "galant-schemas/analysis/galant_analysis_input.h"
-#include "interpretation/interpretation.h"
-#include "relationship/relationship.h"
+#include "model/interpretation/interpretation.h"
+#include "model/relationship/relationship.h"
 #include "scale-harmonization/scale_patterns.h"
 #include "scale-harmonization/sequence_kind.h"
 

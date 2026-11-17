@@ -1,7 +1,7 @@
 #ifndef URSATZ_RULES_PREFERENCE_INTERNAL_H
 #define URSATZ_RULES_PREFERENCE_INTERNAL_H
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "rules/preference.h"
 #include "theory/framework.h"
 

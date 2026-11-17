@@ -6,8 +6,8 @@
 #include <string.h>
 
 #include "key_regions.h"
-#include "time/note_value.h"
-#include "time/time_signature.h"
+#include "model/time/note_value.h"
+#include "model/time/time_signature.h"
 #include "../../../tests/key_index_test_util.h"
 #include "interpretation_test_access.h"
 

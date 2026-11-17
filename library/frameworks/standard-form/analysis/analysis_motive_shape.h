@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "analysis_input.h"
-#include "core/rational.h"
+#include "model/core/rational.h"
 
 /*
  * Internal to the motive analysis: a line of notes prepared for windowing, and the SHAPE of a window (its interval sequences and its

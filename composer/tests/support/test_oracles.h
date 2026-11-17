@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <core/rational.h>
+#include <model/core/rational.h>
 #include <standard-harmony/analysis/analysis_cadence.h>
 
 #include <ursatz_composer/harmony_phrase.h>

@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "pitch/pitch_identity.h"
+#include "model/pitch/pitch_identity.h"
 
 /*
  * Contour (Value): a relative pitch change (up/down/same) over a

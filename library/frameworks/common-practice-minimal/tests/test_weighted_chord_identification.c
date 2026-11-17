@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "interpretation/interpretation.h"
-#include "interpretation/uncertainty.h"
+#include "model/interpretation/interpretation.h"
+#include "model/interpretation/uncertainty.h"
 #include "weighted_chord_identification.h"
 #include "interpretation_test_access.h"
 

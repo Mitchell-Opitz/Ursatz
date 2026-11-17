@@ -11,9 +11,9 @@
 
 #include "analysis_input.h"
 #include "analysis_phrase_grid.h"
-#include "interpretation/interpretation.h"
-#include "structure/phrase_occurrence.h"
-#include "time/time_span.h"
+#include "model/interpretation/interpretation.h"
+#include "model/structure/phrase_occurrence.h"
+#include "model/time/time_span.h"
 
 /*
  * Phrase segmentation (the form adapter, step 1). A phrase ends at the arrival of a cadence that is a phrase goal

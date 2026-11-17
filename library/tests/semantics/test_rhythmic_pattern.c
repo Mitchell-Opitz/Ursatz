@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "semantics/rhythmic_pattern.h"
-#include "time/duration.h"
+#include "model/time/duration.h"
 
 /*
  * Unit tests: construction and basic sequence access.

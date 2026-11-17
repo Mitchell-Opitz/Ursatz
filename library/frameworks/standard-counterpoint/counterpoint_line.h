@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "counterpoint_interval.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * A melodic line in strict counterpoint: an ordered run of sounding

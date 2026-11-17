@@ -7,7 +7,7 @@
 #include <ursatz_chain/analysis_chain.h>
 #include <ursatz_chain/chain_inputs.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "galant-schemas/analysis/galant_analysis_input.h"
 #include "galant-schemas/analysis/galant_analysis_match.h"
 #include "galant-schemas/galant_framework.h"
@@ -19,13 +19,13 @@
 #include "scale-harmonization/sequence_kind.h"
 #include "semantics/beat_strength.h"
 #include "theory/framework.h"
-#include "time/duration.h"
-#include "time/meter_arithmetic.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/time_rational.h"
-#include "time/time_signature.h"
-#include "time/time_span.h"
+#include "model/time/duration.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_rational.h"
+#include "model/time/time_signature.h"
+#include "model/time/time_span.h"
 
 /* The segments of the library's input (the chain's galant segments, borrowed) and the range of chord entries each
    segment covers (parallel to list.items). */

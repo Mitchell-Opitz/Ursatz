@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 static int pitch_class_of(long semitone) {
     return pitch_class_of_midi((int)(semitone % 12));

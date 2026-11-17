@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "interpretation/interpretation.h"
-#include "structure/structure.h"
+#include "model/interpretation/interpretation.h"
+#include "model/structure/structure.h"
 
 /*
  * The one place the melody analyses build their durable claims (a note-id shell and an Interpretation targeting it), so the

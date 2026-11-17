@@ -6,7 +6,7 @@
 
 #include "galant_exemplar.h"
 #include "galant_framework.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "semantics/beat_strength.h"
 
 /* Test helpers shared by the galant-schemas tests. Notes live in a fixed pool

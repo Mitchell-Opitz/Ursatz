@@ -8,13 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/voice_reference.h"
-#include "events/note_event.h"
-#include "identity/entity_id.h"
+#include "model/core/voice_reference.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
 #include "io/midi_key_signature.h"
-#include "time/duration.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
+#include "model/time/duration.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_signature.h"
 
 /*
  * Complete MIDI import: midi_importer_import_complete returns notes, meter, tempo, key signatures and the tracks

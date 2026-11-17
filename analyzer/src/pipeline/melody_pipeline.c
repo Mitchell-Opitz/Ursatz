@@ -8,11 +8,11 @@
 
 #include "common-practice-minimal/key_vocabulary.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/spelling_util.h"
 #include <ursatz_chain/analysis_chain.h>
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "semantics/beat_strength.h"
 #include "standard-counterpoint/analysis/analysis_melody.h"
 #include "standard-counterpoint/analysis/analysis_melody_climax.h"

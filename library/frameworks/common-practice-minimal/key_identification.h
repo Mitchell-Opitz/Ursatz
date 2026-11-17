@@ -9,8 +9,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "identity/entity_id.h"
-#include "interpretation/key.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/key.h"
 #include "key_vocabulary.h"
 
 /*

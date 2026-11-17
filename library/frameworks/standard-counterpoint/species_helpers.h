@@ -6,7 +6,7 @@
 
 #include "consonance_rules.h"
 #include "counterpoint_interval.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Checks shared by the species rule files. Internal: not in the manifest and not part of the public API.

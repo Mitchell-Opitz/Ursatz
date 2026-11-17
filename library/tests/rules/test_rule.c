@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "core/value.h"
-#include "identity/entity_id.h"
+#include "model/core/value.h"
+#include "model/identity/entity_id.h"
 #include "rules/rule.h"
 #include "theory/framework.h"
 #include "framework_test_access.h"

@@ -1,9 +1,9 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_HEMIOLA_H
 #define URSATZ_FRAMEWORKS_STANDARD_METER_ANALYSIS_METER_ANALYSIS_HEMIOLA_H
 
-#include "interpretation/interpretation.h"
+#include "model/interpretation/interpretation.h"
 #include "meter_analysis_input.h"
-#include "structure/structure.h"
+#include "model/structure/structure.h"
 
 /*
  * Hemiola from real music (standard-meter's hemiola rules, hemiola_rules.h). Each window the rule defines for the measure's

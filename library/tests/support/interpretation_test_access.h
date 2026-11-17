@@ -1,12 +1,12 @@
 #ifndef URSATZ_TESTS_SUPPORT_INTERPRETATION_TEST_ACCESS_H
 #define URSATZ_TESTS_SUPPORT_INTERPRETATION_TEST_ACCESS_H
 
-#include "interpretation/interpretation.h"
-#include "interpretation/interpretation_internal.h"
-#include "interpretation/key.h"
-#include "interpretation/key_internal.h"
-#include "interpretation/texture.h"
-#include "interpretation/texture_internal.h"
+#include "model/interpretation/interpretation.h"
+#include "model/interpretation/interpretation_internal.h"
+#include "model/interpretation/key.h"
+#include "model/interpretation/key_internal.h"
+#include "model/interpretation/texture.h"
+#include "model/interpretation/texture_internal.h"
 
 /*
  * What the tests read of an Interpretation, a Key and a Texture. No application reads these, so they are not in

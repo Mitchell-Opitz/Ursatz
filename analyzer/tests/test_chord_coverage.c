@@ -7,10 +7,10 @@
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include "events/note_event.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
+#include "model/events/note_event.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
 
 /*
  * Chord coverage: the fraction of the piece's sounding notes, by duration,

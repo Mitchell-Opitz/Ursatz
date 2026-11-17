@@ -1,7 +1,7 @@
 #include <math.h>
 
 #include "analysis_melody.h"
-#include "core/framework_reference.h"
+#include "model/core/framework_reference.h"
 #include "melody_test_util.h"
 #include "interpretation_test_access.h"
 #include "semantics_test_access.h"

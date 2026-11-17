@@ -10,9 +10,9 @@
 #include "semantics/analysis_segment.h"
 #include "semantics/applied_chord_kind.h"
 #include "semantics/beat_strength.h"
-#include "time/duration.h"
-#include "time/metrical_position.h"
-#include "time/time_span.h"
+#include "model/time/duration.h"
+#include "model/time/metrical_position.h"
+#include "model/time/time_span.h"
 
 /*
  * The standard-harmony analysis adapter (L3): turns chord segments into this framework's inputs and returns

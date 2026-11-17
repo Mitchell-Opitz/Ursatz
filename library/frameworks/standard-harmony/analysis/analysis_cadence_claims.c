@@ -4,10 +4,10 @@
 #include <string.h>
 
 #include "analysis_cadence_build.h"
-#include "time/duration.h"
-#include "time/metrical_position.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/duration.h"
+#include "model/time/metrical_position.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 /* --- segments in measures --- */
 

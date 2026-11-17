@@ -1,8 +1,8 @@
 #include "harmony/harmony_internal.h"
 
 #include <standard-meter/metric_position_rules.h>
-#include <time/note_value.h>
-#include <time/time_signature.h>
+#include <model/time/note_value.h>
+#include <model/time/time_signature.h>
 
 /*
  * The harmonic rhythm of the meters this operator knows. A chord changes only

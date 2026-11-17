@@ -6,9 +6,9 @@
 #include <string.h>
 
 #include "chord_input.h"
-#include "interpretation/chord.h"
-#include "interpretation/key.h"
-#include "time/musical_time.h"
+#include "model/interpretation/chord.h"
+#include "model/interpretation/key.h"
+#include "model/time/musical_time.h"
 
 /* Builders for the kernel Chords and Keys the adapter reads. They stand in for a producer such as
    common-practice-minimal, which standard-tonality does not include. */

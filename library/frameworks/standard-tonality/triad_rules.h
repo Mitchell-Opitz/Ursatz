@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Triad structure rules for standard-tonality-v1. A chord is any

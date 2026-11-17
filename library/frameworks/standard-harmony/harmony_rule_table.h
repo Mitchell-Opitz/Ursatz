@@ -3,11 +3,11 @@
 
 #include <stdbool.h>
 
-#include "core/once.h"
+#include "model/core/once.h"
 #include <stddef.h>
 
 #include "harmony_rule_pair.h"
-#include "core/value.h"
+#include "model/core/value.h"
 #include "rules/constraint.h"
 #include "rules/preference.h"
 #include "rules/rule.h"

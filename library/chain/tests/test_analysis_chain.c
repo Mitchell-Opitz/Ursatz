@@ -6,14 +6,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "../../tests/import_notes_test_util.h"
 #include "io/midi_importer.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/meter_map.h"
-#include "time/note_value.h"
-#include "time/time_signature.h"
-#include "time/time_span.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/meter_map.h"
+#include "model/time/note_value.h"
+#include "model/time/time_signature.h"
+#include "model/time/time_span.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "../../tests/integration/reference_pieces.h"
 #include "../../tests/key_index_test_util.h"

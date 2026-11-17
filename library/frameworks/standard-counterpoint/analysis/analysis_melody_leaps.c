@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "analysis_melody_emit.h"
-#include "core/value.h"
+#include "model/core/value.h"
 
 /* The size from which the existing rule asks a leap to be recovered (a fourth). */
 #define RECOVERY_FROM_SIZE 4

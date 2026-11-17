@@ -5,13 +5,13 @@
 #include <stddef.h>
 
 #include "analysis_theme.h"
-#include "identity/entity_id.h"
-#include "relationship/relationship.h"
+#include "model/identity/entity_id.h"
+#include "model/relationship/relationship.h"
 #include "semantics/contour.h"
 #include "semantics/motif_window.h"
 #include "semantics/rhythmic_pattern.h"
-#include "structure/motif.h"
-#include "structure/motif_occurrence.h"
+#include "model/structure/motif.h"
+#include "model/structure/motif_occurrence.h"
 
 /*
  * Motive analysis (the form adapter, L3.7): motives of the soprano (and, by config, the bass) found by interval and rhythm, and the

@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "interpretation/interpretation.h"
-#include "relationship/relationship.h"
-#include "structure/structure.h"
+#include "model/interpretation/interpretation.h"
+#include "model/relationship/relationship.h"
+#include "model/structure/structure.h"
 
 /*
  * The durable claim pattern for standard-form's form analysis: a Structure shell (the L5 shell of a phrase part, idea, subphrase

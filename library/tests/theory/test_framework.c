@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "theory/framework.h"
 #include "framework_test_access.h"
 

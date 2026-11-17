@@ -2,10 +2,10 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "core/rational.h"
-#include "pitch/midi_pitch.h"
-#include "time/meter_arithmetic.h"
-#include "time/score_time.h"
+#include "model/core/rational.h"
+#include "model/pitch/midi_pitch.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/score_time.h"
 
 typedef unsigned long long Mask;
 

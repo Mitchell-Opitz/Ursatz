@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "analysis_test_util.h"
-#include "interpretation/texture.h"
+#include "model/interpretation/texture.h"
 #include "texture_analysis_classify.h"
 #include "interpretation_test_access.h"
 

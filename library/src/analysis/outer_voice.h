@@ -8,13 +8,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_numeric_value.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_numeric_value.h"
 #include "semantics/analysis_note.h"
 #include "semantics/sonority_segmentation.h"
-#include "time/meter_map.h"
-#include "time/time_span.h"
+#include "model/time/meter_map.h"
+#include "model/time/time_span.h"
 
 /*
  * OuterVoice (analysis, theory-neutral): the soprano (highest) and bass (lowest) sounding lines of a

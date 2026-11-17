@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "counterpoint_line.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Cantus firmus rules for standard-counterpoint-v1. A cantus firmus

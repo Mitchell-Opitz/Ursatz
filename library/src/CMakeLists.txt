@@ -1,46 +1,4 @@
 add_library(ursatz
-    identity/entity_id.c
-    identity/schema_version.c
-    core/entity.c
-    core/string_copy.c
-    core/once.c
-    core/rational.c
-    core/value.c
-    core/occurrence.c
-    core/voice_reference.c
-    core/provenance_reference.c
-    core/framework_reference.c
-    time/duration.c
-    time/musical_time.c
-    time/time_span.c
-    time/temporal_anchor.c
-    time/metronome_marking.c
-    time/note_value.c
-    time/time_signature.c
-    time/meter_map.c
-    time/metrical_position.c
-    time/tempo_map.c
-    time/tuplet.c
-    time/time_rational.c
-    time/meter_arithmetic.c
-    time/score_time.c
-    pitch/pitch_identity.c
-    pitch/pitch_spelling.c
-    pitch/pitch_arithmetic.c
-    pitch/tuning_system.c
-    pitch/pitch_numeric_value.c
-    pitch/key_signature.c
-    pitch/midi_pitch.c
-    events/note_event.c
-    events/dynamics.c
-    events/tempo_marking.c
-    containers/id_array.c
-    containers/section.c
-    structure/structure.c
-    structure/motif.c
-    structure/motif_occurrence.c
-    structure/cadence.c
-    structure/phrase_occurrence.c
     semantics/interval.c
     semantics/sonority.c
     semantics/sonority_segmentation.c
@@ -56,13 +14,6 @@ add_library(ursatz
     semantics/key_change_extent.c
     semantics/analysis_note.c
     semantics/analysis_key.c
-    relationship/relationship.c
-    interpretation/uncertainty.c
-    interpretation/interpretation.c
-    interpretation/claim_interpretation.c
-    interpretation/chord.c
-    interpretation/key.c
-    interpretation/texture.c
     theory/framework.c
     theory/framework_singleton.c
     rules/rule.c
@@ -118,44 +69,16 @@ ursatz_public_headers(ursatz
         analysis/progression_patterns.h
         analysis/thematic_return_detection.h
         analysis/voice_separation.h
-        containers/section.h
         context/context.h
-        core/entity.h
-        core/framework_reference.h
-        core/occurrence.h
-        core/once.h
-        core/provenance_reference.h
-        core/rational.h
-        core/value.h
-        core/voice_reference.h
-        events/dynamics.h
-        events/note_event.h
-        events/tempo_marking.h
         export/musicxml_export.h
         export/score_quantize.h
         export/score_staves.h
-        identity/entity_id.h
-        identity/schema_version.h
-        interpretation/chord.h
-        interpretation/claim_interpretation.h
-        interpretation/interpretation.h
-        interpretation/key.h
-        interpretation/texture.h
-        interpretation/uncertainty.h
         io/midi_importer.h
         io/midi_key_signature.h
         io/midi_renderer.h
         io/musicxml_importer.h
-        pitch/key_signature.h
-        pitch/midi_pitch.h
-        pitch/pitch_arithmetic.h
-        pitch/pitch_identity.h
-        pitch/pitch_numeric_value.h
-        pitch/pitch_spelling.h
-        pitch/tuning_system.h
         query/similarity_model.h
         query/similarity_scoring.h
-        relationship/relationship.h
         rules/constraint.h
         rules/preference.h
         rules/rule.h
@@ -178,37 +101,17 @@ ursatz_public_headers(ursatz
         semantics/tone_line.h
         semantics/voice_grid.h
         semantics/voice_part.h
-        structure/cadence.h
-        structure/motif.h
-        structure/motif_occurrence.h
-        structure/phrase_occurrence.h
-        structure/structure.h
         theory/framework.h
         theory/framework_singleton.h
         theory/style_features.h
         theory/style_model.h
         theory/style_model_blend.h
         theory/style_model_build.h
-        time/duration.h
-        time/meter_arithmetic.h
-        time/meter_map.h
-        time/metrical_position.h
-        time/metronome_marking.h
-        time/musical_time.h
-        time/note_value.h
-        time/score_time.h
-        time/tempo_map.h
-        time/temporal_anchor.h
-        time/time_rational.h
-        time/time_signature.h
-        time/time_span.h
-        time/tuplet.h
 )
 
 # The XML parser used by io/musicxml_importer.c only (third_party/ezxml); PRIVATE so no consumer sees it.
 target_link_libraries(ursatz PRIVATE ursatz_ezxml)
-# lround, floor and friends (musicxml_importer.c)
-target_link_libraries(ursatz PUBLIC m)
-# core/once.c (thread-safe lazy initialization)
-find_package(Threads REQUIRED)
-target_link_libraries(ursatz PUBLIC Threads::Threads)
+# The model group (lround, threads and the value types come through it).
+target_link_libraries(ursatz PUBLIC ursatz_model)
+# Sources include model headers by their path from library/.
+target_include_directories(ursatz PRIVATE ${PROJECT_SOURCE_DIR})

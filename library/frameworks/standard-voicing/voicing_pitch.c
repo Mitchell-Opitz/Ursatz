@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 int standard_voicing_semitone_number(const PitchSpelling *spelling) {
     return STANDARD_VOICING_SEMITONES_PER_OCTAVE * pitch_spelling_octave(spelling) +

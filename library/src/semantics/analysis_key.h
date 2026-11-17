@@ -3,9 +3,9 @@
 
 #include <stdbool.h>
 
-#include "interpretation/key.h"
-#include "pitch/pitch_spelling.h"
-#include "time/musical_time.h"
+#include "model/interpretation/key.h"
+#include "model/pitch/pitch_spelling.h"
+#include "model/time/musical_time.h"
 
 /*
  * AnalysisKey: the neutral key framework adapters accept (R-242): a tonic spelled as letter and

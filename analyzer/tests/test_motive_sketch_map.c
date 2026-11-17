@@ -8,7 +8,7 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 #include <ursatz_analyzer/motive_links.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "links/links_internal.h"
 #include "pipeline/motive_sketch_map.h"
 #include "test_support.h"

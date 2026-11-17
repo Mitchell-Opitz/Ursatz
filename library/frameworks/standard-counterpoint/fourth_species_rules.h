@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "counterpoint_rules.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "fourth_species_exercise.h"
 
 /*

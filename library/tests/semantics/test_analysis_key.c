@@ -3,8 +3,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "pitch/pitch_arithmetic.h"
-#include "time/musical_time.h"
+#include "model/pitch/pitch_arithmetic.h"
+#include "model/time/musical_time.h"
 
 static void test_from_fifths_all_keys(void) {
     int count = 0;

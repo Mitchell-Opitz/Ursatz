@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
-#include "pitch/pitch_spelling.h"
-#include "time/meter_map.h"
-#include "time/time_span.h"
+#include "model/events/note_event.h"
+#include "model/pitch/pitch_spelling.h"
+#include "model/time/meter_map.h"
+#include "model/time/time_span.h"
 
 /*
  * AnalysisNote: the neutral note every framework adapter accepts (R-242). Imports and chain stages build

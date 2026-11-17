@@ -5,7 +5,7 @@
 
 #include "counterpoint_limits.h"
 #include "counterpoint_line.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Checking a whole two-part exercise against the rule groups of

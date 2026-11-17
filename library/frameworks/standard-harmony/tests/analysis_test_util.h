@@ -7,8 +7,8 @@
 
 #include "analysis_function.h"
 #include "analysis_input.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
 
 /*
  * A small fixture of segments for the adapter tests: each segment is a quarter note in 4/4 (measure 1, beats

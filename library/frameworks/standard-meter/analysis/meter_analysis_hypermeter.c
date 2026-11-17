@@ -5,11 +5,11 @@
 #include <string.h>
 
 #include "hypermeter_rules.h"
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "meter_analysis_claim.h"
 #include "meter_analysis_position.h"
-#include "time/meter_arithmetic.h"
-#include "time/score_time.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/score_time.h"
 
 typedef struct {
     int measures;

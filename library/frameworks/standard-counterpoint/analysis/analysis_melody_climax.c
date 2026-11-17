@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "analysis_melody_emit.h"
-#include "core/value.h"
+#include "model/core/value.h"
 
 static void destroy_climax(StandardCounterpointClimax *climax) {
     interpretation_destroy(climax->interpretation);

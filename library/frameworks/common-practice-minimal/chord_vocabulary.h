@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-#include "identity/entity_id.h"
-#include "interpretation/chord.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/chord.h"
 
 /*
  * Chord vocabulary for common-practice-minimal-v1: exactly the seven

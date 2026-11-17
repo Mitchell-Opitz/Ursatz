@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-#include "core/rational.h"
-#include "time/meter_map.h"
+#include "model/core/rational.h"
+#include "model/time/meter_map.h"
 #include "standard-meter/metric_position_rules.h"
 
 /*

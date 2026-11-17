@@ -5,16 +5,16 @@
 
 #include "analysis/motif_window_matching.h"
 #include "analysis/phrase_boundary_detection.h"
-#include "core/provenance_reference.h"
-#include "events/note_event.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_identity.h"
+#include "model/core/provenance_reference.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_identity.h"
 #include "semantics/cadence_type.h"
 #include "semantics/contour.h"
 #include "semantics/rhythmic_pattern.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
 #include "ursatz_chain/form_bridge.h"
 
 /*

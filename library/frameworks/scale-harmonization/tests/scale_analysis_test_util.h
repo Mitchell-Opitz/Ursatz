@@ -9,8 +9,8 @@
 
 #include "galant-schemas/analysis/galant_analysis_input.h"
 #include "scale_analysis_detect.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 /* A run of segments for the unit tests, one beat (a quarter note) each from the start. */
 typedef struct {

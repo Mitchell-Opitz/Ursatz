@@ -2,12 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "semantics/analysis_note.h"
 #include "texture_analysis_input.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 static TimeSpan *make_span(long start, long end) {
     MusicalTime *from = NULL;

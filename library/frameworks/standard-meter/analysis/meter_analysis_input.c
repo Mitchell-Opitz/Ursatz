@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "time/score_time.h"
+#include "model/time/score_time.h"
 
 StandardMeterConfig standard_meter_config_default(void) {
     StandardMeterConfig config = {false, 2, 32, 256, 64};

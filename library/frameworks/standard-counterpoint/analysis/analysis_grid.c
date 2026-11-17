@@ -2,7 +2,7 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 void standard_counterpoint_grid_destroy(StandardCounterpointPreparedGrid *prepared) {
     if (prepared == NULL) {

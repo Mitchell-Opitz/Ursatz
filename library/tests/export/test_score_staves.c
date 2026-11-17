@@ -1,8 +1,8 @@
 #include "score_test_util.h"
 
 #include "export/score_staves.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/tuning_system.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/tuning_system.h"
 
 /* score_staves: the grand staff program table, the pairing of two piano streams and the treble / bass assignment of a
    two-staff part. The assignment follows the notes sounding together (no fixed split at middle C, R-362); cases the old

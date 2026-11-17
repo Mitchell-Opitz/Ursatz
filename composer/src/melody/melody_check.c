@@ -11,7 +11,7 @@
 #include <standard-counterpoint/harmonic_rules.h>
 #include <standard-harmony/harmony_resolution_rules.h>
 #include <standard-counterpoint/melodic_rules.h>
-#include <pitch/pitch_spelling.h>
+#include <model/pitch/pitch_spelling.h>
 #include <semantics/non_chord_tone.h>
 
 #include <ursatz_composer/harmony_phrase.h>

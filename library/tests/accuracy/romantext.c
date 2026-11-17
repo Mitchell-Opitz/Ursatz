@@ -8,13 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
-#include "time/duration.h"
-#include "time/meter_map.h"
-#include "time/metrical_position.h"
-#include "time/time_rational.h"
-#include "time/time_signature.h"
-#include "time/time_span.h"
+#include "model/core/rational.h"
+#include "model/time/duration.h"
+#include "model/time/meter_map.h"
+#include "model/time/metrical_position.h"
+#include "model/time/time_rational.h"
+#include "model/time/time_signature.h"
+#include "model/time/time_span.h"
 
 static void set_error(RomanTextAnalysis *out, const char *format, int line, const char *detail) {
     snprintf(out->error_message, sizeof(out->error_message), format, line, detail);

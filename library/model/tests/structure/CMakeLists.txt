@@ -1,0 +1,5 @@
+ursatz_test(structure LIBS ursatz_model)
+ursatz_test(motif LIBS ursatz_model)
+ursatz_test(motif_occurrence LIBS ursatz_model)
+ursatz_test(cadence LIBS ursatz_model)
+ursatz_test(phrase_occurrence LIBS ursatz_model)

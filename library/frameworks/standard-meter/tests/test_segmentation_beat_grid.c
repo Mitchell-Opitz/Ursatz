@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/provenance_reference.h"
+#include "model/core/provenance_reference.h"
 #include "meter_test_util.h"
-#include "pitch/pitch_identity.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_identity.h"
+#include "model/pitch/pitch_spelling.h"
 #include "segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
-#include "time/temporal_anchor.h"
-#include "time/time_span.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_span.h"
 
 /*
  * The standard-meter beat-grid provider for adaptive sonority segmentation: the beat starts of a

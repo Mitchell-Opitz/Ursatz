@@ -3,8 +3,8 @@
 #include <stdlib.h>
 
 #include "key_regions.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 /*
  * Home key tests: one key, a key returning after a modulation, a tie, overflow, empty and NULL input.

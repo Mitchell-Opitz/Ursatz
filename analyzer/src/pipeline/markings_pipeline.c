@@ -8,7 +8,7 @@
 #include "standard-markings/framework.h"
 #include "theory/framework.h"
 #include "standard-markings/tempo_rules.h"
-#include "time/musical_time.h"
+#include "model/time/musical_time.h"
 
 
 static const char *tempo_group_name(TempoGroup group) {

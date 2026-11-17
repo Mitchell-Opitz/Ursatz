@@ -5,8 +5,8 @@
 
 #include "analysis/beat_grid_length.h"
 #include "analysis/outer_voice_internal.h"
-#include "core/rational.h"
-#include "time/temporal_anchor.h"
+#include "model/core/rational.h"
+#include "model/time/temporal_anchor.h"
 
 OuterVoiceConfig outer_voice_config_default(void) {
     OuterVoiceConfig config;

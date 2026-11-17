@@ -8,7 +8,7 @@
 #include <ursatz_analyzer/imported_notes.h>
 
 #include "pipeline/segmentation.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * The note's name as the input spells it: "Db4", or "Db" without the octave.

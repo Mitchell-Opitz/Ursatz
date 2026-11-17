@@ -8,7 +8,7 @@
 #include "counterpoint_subject.h"
 #include "rule_table.h"
 #include "species_helpers.h"
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT] = {
     "begin", "cantus-ends-re-do", "penultimate-suspension", "final-bar"};

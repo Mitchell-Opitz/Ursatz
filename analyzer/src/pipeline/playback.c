@@ -8,9 +8,9 @@
 
 #include <cJSON.h>
 
-#include "events/note_event.h"
-#include "time/temporal_anchor.h"
-#include "time/time_rational.h"
+#include "model/events/note_event.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_rational.h"
 #include "util/json_util.h"
 
 #define DEFAULT_QUARTERS_PER_MINUTE 120.0

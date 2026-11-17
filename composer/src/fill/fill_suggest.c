@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <core/provenance_reference.h>
-#include <identity/entity_id.h>
+#include <model/core/provenance_reference.h>
+#include <model/identity/entity_id.h>
 
 #include <ursatz_composer/composer.h>
 

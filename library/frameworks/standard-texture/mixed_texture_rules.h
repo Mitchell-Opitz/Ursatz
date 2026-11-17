@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "identity/entity_id.h"
-#include "interpretation/texture.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/texture.h"
 #include "texture_rules.h"
 
 /*

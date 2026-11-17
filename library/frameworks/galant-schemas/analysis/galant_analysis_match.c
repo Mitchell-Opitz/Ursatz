@@ -8,11 +8,11 @@
 #include "galant_analysis_claim.h"
 #include "galant_matching_rules.h"
 #include "galant_prototypes.h"
-#include "core/rational.h"
-#include "core/value.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_spelling.h"
-#include "time/time_rational.h"
+#include "model/core/rational.h"
+#include "model/core/value.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_spelling.h"
+#include "model/time/time_rational.h"
 
 #define NONE ((size_t)-1)
 #define MAX_FRAMES 8

@@ -8,14 +8,14 @@
 #include "analysis_motive_match.h"
 #include "analysis_motive_shape.h"
 #include "phrase_ending.h"
-#include "core/occurrence.h"
-#include "core/rational.h"
-#include "core/value.h"
-#include "pitch/pitch_identity.h"
-#include "time/duration.h"
-#include "time/meter_arithmetic.h"
-#include "time/meter_map.h"
-#include "time/score_time.h"
+#include "model/core/occurrence.h"
+#include "model/core/rational.h"
+#include "model/core/value.h"
+#include "model/pitch/pitch_identity.h"
+#include "model/time/duration.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/meter_map.h"
+#include "model/time/score_time.h"
 
 int standard_form_motive_kind_rank(StandardFormMotiveKind kind) {
     return motive_occurrence_kind_rank(kind);

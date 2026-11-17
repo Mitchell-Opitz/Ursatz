@@ -7,8 +7,8 @@
 #include "analysis_input.h"
 #include "analysis_voices.h"
 #include "standard-harmony/harmony_resolution_rules.h"
-#include "interpretation/interpretation.h"
-#include "structure/structure.h"
+#include "model/interpretation/interpretation.h"
+#include "model/structure/structure.h"
 
 /*
  * Seventh and leading tone resolution on separated voices (the standard-harmony analysis adapter, step 6). The rules are

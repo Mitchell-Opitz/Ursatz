@@ -9,14 +9,14 @@
 #include "analysis_cadence_readings.h"
 #include "analysis_claim.h"
 #include "analysis_runs.h"
-#include "core/value.h"
+#include "model/core/value.h"
 #include "harmony_cadence_rules.h"
 #include "harmony_deceptive.h"
 #include "harmony_functions.h"
 #include "harmony_plagal.h"
-#include "identity/entity_id.h"
-#include "time/metrical_position.h"
-#include "time/musical_time.h"
+#include "model/identity/entity_id.h"
+#include "model/time/metrical_position.h"
+#include "model/time/musical_time.h"
 
 HarmonyCadenceConfig harmony_cadence_config_default(void) {
     HarmonyCadenceConfig config;

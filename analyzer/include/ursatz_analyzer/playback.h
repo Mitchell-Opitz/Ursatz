@@ -6,7 +6,7 @@
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/imported_notes.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 
 /*
  * Playback timing of an import: the tempo regions and the notes as a player needs them. It is what the GUI asked the

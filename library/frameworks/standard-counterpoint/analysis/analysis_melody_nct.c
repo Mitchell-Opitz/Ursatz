@@ -5,11 +5,11 @@
 #include <string.h>
 
 #include "analysis_melody_emit.h"
-#include "core/rational.h"
-#include "core/value.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/core/rational.h"
+#include "model/core/value.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 static void destroy_label(StandardCounterpointNctLabel *label) {
     interpretation_destroy(label->interpretation);

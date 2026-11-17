@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/pitch_spelling.h"
 #include "semantics/voice_grid.h"
 
 /*

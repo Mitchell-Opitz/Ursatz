@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "core/value.h"
+#include "model/core/value.h"
 
 /*
  * The content of a StyleModel's style_features Value: a list of corpus

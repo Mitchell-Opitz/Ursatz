@@ -5,17 +5,17 @@
 #include <stddef.h>
 
 #include "standard-counterpoint/counterpoint_interval.h"
-#include "interpretation/interpretation.h"
-#include "pitch/pitch_identity.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pitch/pitch_spelling.h"
+#include "model/interpretation/interpretation.h"
+#include "model/pitch/pitch_identity.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/pitch/pitch_spelling.h"
 #include "semantics/beat_strength.h"
 #include "semantics/contour.h"
 #include "semantics/interval.h"
 #include "semantics/non_chord_tone.h"
-#include "structure/structure.h"
-#include "time/metrical_position.h"
-#include "time/time_span.h"
+#include "model/structure/structure.h"
+#include "model/time/metrical_position.h"
+#include "model/time/time_span.h"
 
 /*
  * The melody adapter of standard-counterpoint (L3.5, step 1): melodic intervals and contour of ONE line. There is no

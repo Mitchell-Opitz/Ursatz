@@ -2,8 +2,8 @@
 
 
 #include "scale_framework.h"
-#include "identity/entity_id.h"
-#include "interpretation/claim_interpretation.h"
+#include "model/identity/entity_id.h"
+#include "model/interpretation/claim_interpretation.h"
 #include "theory/framework.h"
 
 Interpretation *scale_analysis_interpretation(const char *interpretation_id, const char *target_id,

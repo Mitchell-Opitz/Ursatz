@@ -15,7 +15,7 @@
 #include "standard-harmony/analysis/analysis_input.h"
 #include <ursatz_chain/analysis_chain.h>
 #include <ursatz_chain/chain_inputs.h>
-#include "time/meter_map.h"
+#include "model/time/meter_map.h"
 
 /*
  * Ursatz's standard-harmony analysis over the library chain's chord segments. The cadences are the chain's

@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "scale_framework.h"
 #include "scale_harmonization.h"
 

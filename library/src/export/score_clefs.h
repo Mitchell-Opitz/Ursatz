@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
+#include "model/events/note_event.h"
 #include "export/score_quantize.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/meter_map.h"
+#include "model/pitch/pitch_numeric_value.h"
+#include "model/time/meter_map.h"
 
 /*
  * ScoreClefs (music-export): decides which clef each staff of a score is written in, measure by measure, from the

@@ -5,8 +5,8 @@
 #include "analysis_input.h"
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_segment.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 static void test_segment(void) {
     MusicalTime *from = NULL;

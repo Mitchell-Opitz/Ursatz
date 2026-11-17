@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Slots for the species with more than one note against the cantus firmus

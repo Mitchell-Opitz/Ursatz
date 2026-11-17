@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 
 static void create_framework(void *arg) {
     FrameworkSingleton *singleton = arg;

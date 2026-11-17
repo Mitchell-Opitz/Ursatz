@@ -6,8 +6,8 @@
 
 #include "analysis_input.h"
 #include "standard-harmony/harmonic_function.h"
-#include "interpretation/interpretation.h"
-#include "relationship/relationship.h"
+#include "model/interpretation/interpretation.h"
+#include "model/relationship/relationship.h"
 
 /*
  * Prolongations of tonic and dominant (the standard-harmony analysis adapter, step 4). To prolong a harmony is to

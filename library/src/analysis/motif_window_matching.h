@@ -9,7 +9,7 @@
 
 #include <stddef.h>
 
-#include "identity/entity_id.h"
+#include "model/identity/entity_id.h"
 #include "semantics/contour.h"
 #include "semantics/motif_window.h"
 #include "semantics/rhythmic_pattern.h"

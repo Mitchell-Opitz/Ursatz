@@ -2,10 +2,10 @@
 #include <stdlib.h>
 
 #include "analysis/outer_voice.h"
-#include "identity/entity_id.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/time_span.h"
+#include "model/identity/entity_id.h"
+#include "model/time/meter_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/time_span.h"
 
 /*
  * outer_voice_attack_soprano: the highest note sounding at each onset, kept when attacked there. Times are in

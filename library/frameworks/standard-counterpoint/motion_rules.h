@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "counterpoint_line.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 #include "motion_type.h"
 
 /*

@@ -6,8 +6,8 @@
 #include <string.h>
 
 #include "analysis_grid.h"
-#include "identity/entity_id.h"
-#include "pitch/tuning_system.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/tuning_system.h"
 
 /*
  * A grid built from MIDI semitone numbers, one row per segment: rows[segment][voice], 0 meaning the voice rests. Voice 0

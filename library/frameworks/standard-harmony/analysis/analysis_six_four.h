@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "analysis_input.h"
-#include "interpretation/interpretation.h"
+#include "model/interpretation/interpretation.h"
 #include "standard-harmony/six_four_type.h"
 
 /*

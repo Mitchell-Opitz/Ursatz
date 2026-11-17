@@ -1,8 +1,8 @@
 #ifndef URSATZ_TESTS_SUPPORT_RELATIONSHIP_TEST_ACCESS_H
 #define URSATZ_TESTS_SUPPORT_RELATIONSHIP_TEST_ACCESS_H
 
-#include "relationship/relationship.h"
-#include "relationship/relationship_internal.h"
+#include "model/relationship/relationship.h"
+#include "model/relationship/relationship_internal.h"
 
 /* What the tests read of a Relationship. No application reads these, so they are not in relationship/relationship.h. */
 

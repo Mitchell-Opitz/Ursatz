@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 
-#include "interpretation/interpretation.h"
-#include "structure/structure.h"
+#include "model/interpretation/interpretation.h"
+#include "model/structure/structure.h"
 
 /*
  * Builds one standard-harmony Interpretation (the durable claim pattern: a generic Interpretation targeting an

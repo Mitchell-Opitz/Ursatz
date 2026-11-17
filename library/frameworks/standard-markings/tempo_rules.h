@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include "time/metronome_marking.h"
+#include "model/time/metronome_marking.h"
 
 /*
  * Tempo rules for standard-markings-v1. Tempo is how fast or slow a

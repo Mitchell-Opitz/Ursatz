@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "harmony_functions.h"
-#include "time/musical_time.h"
+#include "model/time/musical_time.h"
 
 #define SHARE_MIN 50
 #define SHARE_MAX 950

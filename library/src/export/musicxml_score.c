@@ -6,21 +6,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "events/note_event.h"
+#include "model/events/note_event.h"
 #include "export/musicxml_export.h"
 #include "export/score_clefs.h"
 #include "export/score_quantize.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_spelling.h"
-#include "events/dynamics.h"
-#include "time/duration.h"
-#include "core/rational.h"
-#include "time/metronome_marking.h"
-#include "time/tempo_map.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
-#include "time/time_span.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_spelling.h"
+#include "model/events/dynamics.h"
+#include "model/time/duration.h"
+#include "model/core/rational.h"
+#include "model/time/metronome_marking.h"
+#include "model/time/tempo_map.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_signature.h"
+#include "model/time/time_span.h"
 
 /*
  * musicxml_export_write_score: lays a score out on the measures of a MeterMap and writes it as MusicXML 3.1.

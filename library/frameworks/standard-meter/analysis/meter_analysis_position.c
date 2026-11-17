@@ -3,14 +3,14 @@
 #include <stdlib.h>
 
 #include "beat_grid.h"
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "meter_class_rules.h"
-#include "time/meter_arithmetic.h"
-#include "time/duration.h"
-#include "time/metrical_position.h"
-#include "time/score_time.h"
-#include "time/time_rational.h"
-#include "time/time_signature.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/duration.h"
+#include "model/time/metrical_position.h"
+#include "model/time/score_time.h"
+#include "model/time/time_rational.h"
+#include "model/time/time_signature.h"
 
 static bool time_of(Rational q, MusicalTime **out) {
     return q.num >= 0 && musical_time_create((long)q.num, (unsigned long)q.den, out) == MUSICAL_TIME_OK;

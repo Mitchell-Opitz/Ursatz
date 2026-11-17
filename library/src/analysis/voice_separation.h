@@ -8,11 +8,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_numeric_value.h"
+#include "model/events/note_event.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_numeric_value.h"
 #include "semantics/sonority_segmentation.h"
-#include "time/meter_map.h"
+#include "model/time/meter_map.h"
 
 /*
  * VoiceSeparation (analysis, theory-neutral): assigns each note of a stream to a voice by pitch HEIGHT

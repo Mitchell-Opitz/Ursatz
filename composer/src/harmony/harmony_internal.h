@@ -8,7 +8,7 @@
 #include <standard-harmony/analysis/analysis_input.h>
 #include <standard-harmony/harmony_chord.h>
 #include <standard-harmony/harmony_pivot.h>
-#include <pitch/pitch_spelling.h>
+#include <model/pitch/pitch_spelling.h>
 #include <semantics/beat_strength.h>
 #include <semantics/cadence_type.h>
 

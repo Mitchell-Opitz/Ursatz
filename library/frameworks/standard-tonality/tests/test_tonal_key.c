@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 #define KEY_COUNT 15
 

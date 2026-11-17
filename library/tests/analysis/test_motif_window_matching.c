@@ -2,11 +2,11 @@
 #include <stdio.h>
 
 #include "analysis/motif_window_matching.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_identity.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_identity.h"
 #include "semantics/contour.h"
 #include "semantics/rhythmic_pattern.h"
-#include "time/duration.h"
+#include "model/time/duration.h"
 
 /*
  * Analysis-regression tests: exact repetition and transposition (same

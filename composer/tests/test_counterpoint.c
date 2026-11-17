@@ -8,7 +8,7 @@
 #include <standard-counterpoint/counterpoint_slots.h>
 #include <standard-counterpoint/first_species_rules.h>
 #include <standard-counterpoint/fourth_species_rules.h>
-#include <pitch/pitch_spelling.h>
+#include <model/pitch/pitch_spelling.h>
 #include <standard-counterpoint/second_species_rules.h>
 #include <standard-counterpoint/third_species_rules.h>
 

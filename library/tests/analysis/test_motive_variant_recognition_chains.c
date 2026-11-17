@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive_variant_recognition.h"
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * The three depth two variants the Composer's variant round trip did not recover. The notes are the

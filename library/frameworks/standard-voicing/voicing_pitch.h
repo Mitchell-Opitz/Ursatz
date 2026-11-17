@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "pitch/pitch_spelling.h"
+#include "model/pitch/pitch_spelling.h"
 
 /*
  * Pitch arithmetic for standard-voicing-v1.

@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include <cJSON.h>
-#include <core/rational.h>
+#include <model/core/rational.h>
 
 #include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/similar_material.h>

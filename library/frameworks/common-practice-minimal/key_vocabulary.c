@@ -4,12 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/framework_reference.h"
-#include "core/provenance_reference.h"
-#include "core/value.h"
+#include "model/core/framework_reference.h"
+#include "model/core/provenance_reference.h"
+#include "model/core/value.h"
 #include "framework.h"
-#include "interpretation/uncertainty.h"
-#include "pitch/midi_pitch.h"
+#include "model/interpretation/uncertainty.h"
+#include "model/pitch/midi_pitch.h"
 
 static const char *mode_suffix(CommonPracticeKeyMode mode) {
     switch (mode) {

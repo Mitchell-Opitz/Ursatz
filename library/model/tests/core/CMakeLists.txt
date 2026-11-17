@@ -1,0 +1,8 @@
+ursatz_test(entity LIBS ursatz_model)
+ursatz_test(value LIBS ursatz_model)
+ursatz_test(occurrence LIBS ursatz_model)
+ursatz_test(references LIBS ursatz_model)
+ursatz_test(string_copy LIBS ursatz_model VALGRIND)
+ursatz_test(rational LIBS ursatz_model VALGRIND)
+ursatz_test(once LIBS ursatz_model VALGRIND)
+

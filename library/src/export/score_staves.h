@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "events/note_event.h"
-#include "pitch/pitch_numeric_value.h"
+#include "model/events/note_event.h"
+#include "model/pitch/pitch_numeric_value.h"
 
 /*
  * ScoreStaves (music-export): decides which instruments are written on a grand staff (treble and bass) and, for

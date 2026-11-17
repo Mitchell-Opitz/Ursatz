@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "analysis/motive_sketch.h"
-#include "pitch/midi_pitch.h"
+#include "model/pitch/midi_pitch.h"
 
 /*
  * Internal to the motive analysis: how a sketch's chords are looked up and compared, shared by the harmony

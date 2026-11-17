@@ -3,8 +3,8 @@
 
 #include "galant_analysis_input.h"
 #include "galant-schemas/galant_prototype.h"
-#include "interpretation/interpretation.h"
-#include "relationship/relationship.h"
+#include "model/interpretation/interpretation.h"
+#include "model/relationship/relationship.h"
 
 /*
  * Schema matching (the galant-schemas adapter): the prototypes of galant_prototypes.h (none added) matched against the outer-voice degrees of

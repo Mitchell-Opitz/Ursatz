@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "identity/entity_id.h"
-#include "pitch/pitch_identity.h"
+#include "model/identity/entity_id.h"
+#include "model/pitch/pitch_identity.h"
 #include "semantics/interval.h"
 #include "semantics_test_access.h"
 

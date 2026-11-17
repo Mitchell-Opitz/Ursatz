@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "core/value.h"
+#include "model/core/value.h"
 #include "preference_test_access.h"
 #include "harmony_rule_table.h"
 

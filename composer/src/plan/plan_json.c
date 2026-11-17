@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include <cJSON.h>
-#include <pitch/pitch_arithmetic.h>
+#include <model/pitch/pitch_arithmetic.h>
 #include <standard-harmony/harmonic_function.h>
 #include <standard-tonality/tonal_key.h>
 #include <ursatz_analyzer/version.h>

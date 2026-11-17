@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <core/rational.h>
+#include <model/core/rational.h>
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/melody_fill.h>

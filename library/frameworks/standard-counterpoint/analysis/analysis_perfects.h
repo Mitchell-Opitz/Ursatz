@@ -5,8 +5,8 @@
 #include <stddef.h>
 
 #include "analysis_grid.h"
-#include "interpretation/interpretation.h"
-#include "structure/structure.h"
+#include "model/interpretation/interpretation.h"
+#include "model/structure/structure.h"
 
 /*
  * Parallel and direct perfect intervals across separated voices (the standard-counterpoint analysis adapter, step 2). The

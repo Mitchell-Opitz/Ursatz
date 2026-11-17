@@ -6,14 +6,14 @@
 #include <string.h>
 
 #include "analysis/voice_separation.h"
-#include "core/rational.h"
-#include "events/note_event.h"
+#include "model/core/rational.h"
+#include "model/events/note_event.h"
 #include "pipeline/spelling_util.h"
 #include "pipeline/voicing_check.h"
 #include <ursatz_chain/chain_inputs.h>
 
-#include "pitch/midi_pitch.h"
-#include "pitch/pitch_numeric_value.h"
+#include "model/pitch/midi_pitch.h"
+#include "model/pitch/pitch_numeric_value.h"
 #include "standard-counterpoint/analysis/analysis_grid.h"
 #include "standard-counterpoint/analysis/analysis_motion.h"
 #include "standard-counterpoint/analysis/analysis_perfects.h"
@@ -23,9 +23,9 @@
 #include "standard-harmony/analysis/analysis_voices.h"
 #include "standard-meter/segmentation_beat_grid.h"
 #include "theory/framework.h"
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
+#include "model/time/duration.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
 #include "util/misc_util.h"
 
 #define NO_NOTE SIZE_MAX

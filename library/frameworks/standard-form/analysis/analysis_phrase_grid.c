@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
-#include "time/meter_arithmetic.h"
-#include "time/meter_map.h"
-#include "time/score_time.h"
+#include "model/core/rational.h"
+#include "model/time/meter_arithmetic.h"
+#include "model/time/meter_map.h"
+#include "model/time/score_time.h"
 
 #define CADENCE_PERFECT 1.0
 #define CADENCE_OTHER 0.8

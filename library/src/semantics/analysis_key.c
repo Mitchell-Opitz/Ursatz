@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 int analysis_key_tonic_pitch_class(const AnalysisKey *key) {
     if (key == NULL) {

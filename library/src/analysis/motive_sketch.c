@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "pitch/pitch_arithmetic.h"
+#include "model/pitch/pitch_arithmetic.h"
 
 static const int MAJOR_STEPS[7] = {0, 2, 4, 5, 7, 9, 11};
 static const int MINOR_STEPS[7] = {0, 2, 3, 5, 7, 8, 10};

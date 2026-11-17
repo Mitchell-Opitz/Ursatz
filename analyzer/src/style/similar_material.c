@@ -13,7 +13,7 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/style_labels.h>
 
-#include "core/rational.h"
+#include "model/core/rational.h"
 #include "pipeline/chord_sequence_internal.h"
 #include "pipeline/corpus_walk.h"
 #include "pipeline/run_file.h"

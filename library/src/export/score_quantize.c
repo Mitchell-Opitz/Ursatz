@@ -4,14 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/rational.h"
-#include "identity/entity_id.h"
-#include "time/duration.h"
-#include "time/time_rational.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
-#include "time/time_span.h"
+#include "model/core/rational.h"
+#include "model/identity/entity_id.h"
+#include "model/time/duration.h"
+#include "model/time/time_rational.h"
+#include "model/time/musical_time.h"
+#include "model/time/temporal_anchor.h"
+#include "model/time/time_signature.h"
+#include "model/time/time_span.h"
 
 ScoreQuantizeOptions score_quantize_options_default(void) {
     ScoreQuantizeOptions options;

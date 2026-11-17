@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "identity/entity_id.h"
-#include "time/note_value.h"
-#include "time/time_signature.h"
+#include "model/identity/entity_id.h"
+#include "model/time/note_value.h"
+#include "model/time/time_signature.h"
 
 typedef struct {
     ScoreLayout *layout;
