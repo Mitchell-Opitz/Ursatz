@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <analysis/notes/analysis_key.h>
 #include <ursatz_composer/composer_api.h>
 
 #include "theory/knowledge/knowledge_snapshot.h"
@@ -52,6 +53,15 @@ static inline const ComposerContext *test_context(void) {
 static inline const CommonPracticeMaterials *test_materials(void) {
     (void)test_knowledge();
     return &test_knowledge_materials_value;
+}
+
+/*
+ * A key written as a literal with a mode and no material, given the material of test_knowledge() for its mode (the major or the
+ * natural minor): what the Composer reads a key's mode from.
+ */
+static inline AnalysisKey test_key_with_material(AnalysisKey key) {
+    key.material = key.mode == KEY_STRUCTURE_MODE_MINOR ? test_materials()->natural_minor : test_materials()->major;
+    return key;
 }
 
 #endif

@@ -301,16 +301,16 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
         snprintf(tonic_key, sizeof tonic_key, "%s major", key_text);
         key_text = tonic_key;
     }
-    if (!request_parse_key(key_text, &out->key)) {
+    if (!request_parse_key(key_text, out->materials, &out->key)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, for "
                         "example \"D minor\"",
                         text->key);
     }
     if (text->mode && request_equals_ignore_case(text->mode, "major")) {
-        out->key.mode = KEY_STRUCTURE_MODE_MAJOR;
+        composer_key_set_minor(&out->key, out->materials, false);
     } else if (text->mode && request_equals_ignore_case(text->mode, "minor")) {
-        out->key.mode = KEY_STRUCTURE_MODE_MINOR;
+        composer_key_set_minor(&out->key, out->materials, true);
     }
     if (!request_parse_meter(text->meter, &out->meter) || !harmony_meter_supported(&out->meter)) {
         return api_fail_meter(error, "/meter", text->meter);
@@ -525,7 +525,7 @@ ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *
         if (!composer_style_mode(out->style, &minor)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode style needs a style with a mode category");
         }
-        out->key.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+        composer_key_set_minor(&out->key, out->materials, minor);
     }
     out->mode_from = from_style ? "style" : "request";
     return COMPOSER_OK;
@@ -1521,7 +1521,7 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     memset(out, 0, sizeof(*out));
     out->tempo = setup->tempo;
     out->tempo_from = setup->tempo_from;
-    out->minor = setup->key.mode == KEY_STRUCTURE_MODE_MINOR;
+    out->minor = composer_key_is_minor(&setup->key);
     out->mode_from = setup->mode_from;
     out->has_density = composer_style_density(setup->style, &out->density);
     out->without = setup->without;
@@ -1657,7 +1657,7 @@ static cJSON *given_construction_json(const PlanConstruction *construction) {
 cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const GrowThemeInfo *info) {
     const GrowBriefText *text = setup->text;
     char key[24];
-    util_key_name(analysis_key_tonic_pitch_class(&setup->key), setup->key.mode == KEY_STRUCTURE_MODE_MINOR, key, sizeof key);
+    util_key_name(analysis_key_tonic_pitch_class(&setup->key), composer_key_is_minor(&setup->key), key, sizeof key);
     char pairing[64];
     snprintf(pairing, sizeof(pairing), "%s + %s", BEGINNING_NAMES[setup->pairing.beginning],
              ENDING_NAMES[setup->pairing.ending]);

@@ -270,6 +270,7 @@ void harmony_seam_score(const PhraseProgression *progression, FillCheck *out) {
     SeamNotes notes;
     SeamHeard heard;
     memset(&notes, 0, sizeof(notes));
+    notes.key.material = progression->request.key.material;
     notes.key.mode = progression->request.mode;
     notes.has_chords = true;
     notes.before_function = last->function;

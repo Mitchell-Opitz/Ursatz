@@ -19,6 +19,7 @@
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
 #include "util/request_parse.h"
+#include "util/util.h"
 
 /*
  * `plan` as a composer API entry (docs/cli-plan.md): the plan of a whole short piece from a form template, with the
@@ -101,6 +102,7 @@ typedef struct {
     char *notices[MAX_NOTICES];
     size_t notice_count;
     const KnowledgeSnapshot *knowledge; /* the call context's */
+    const CommonPracticeMaterials *materials; /* its materials, resolved once for the call */
 } PlanBuild;
 
 /* --- reading the request --------------------------------------------------------------------------- */
@@ -372,7 +374,7 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     }
     if (snprintf(state->key_request, sizeof(state->key_request), has_mode_in_key ? "%s" : "%s %s", state->key_text,
                  state->mode_text ? state->mode_text : "major") >= (int)sizeof(state->key_request) ||
-        !request_parse_key(state->key_request, &state->key)) {
+        !request_parse_key(state->key_request, state->materials, &state->key)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\" with mode "
                         "\"minor\", or \"D minor\"",
@@ -522,7 +524,7 @@ static ComposerStatus read_motive(const PlanBuild *state, const cJSON *motive, c
         cJSON_Delete(request);
         return api_fail_alloc(error);
     }
-    ComposerStatus status = api_read_motive(request, base, out, NULL, error);
+    ComposerStatus status = api_read_motive(request, base, state->materials, out, NULL, error);
     cJSON_Delete(request);
     return status;
 }
@@ -729,7 +731,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
             continue;
         }
         CorpusSeedResult result =
-            corpus_seed_progression(state->knowledge, state->from_corpus, given->numerals, state->key.mode, &given->found);
+            corpus_seed_progression(state->knowledge, state->from_corpus, given->numerals, composer_key_mode(&state->key), &given->found);
         if (result != CORPUS_SEED_OK) {
             char path[64];
             snprintf(path, sizeof path, "/given/%zu", i);
@@ -835,7 +837,8 @@ ComposerStatus composer_api_plan(const ComposerContext *context, const char *req
                                  const ComposerJob *job, ComposerResponse *out) {
     (void)job;
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }
@@ -843,6 +846,7 @@ ComposerStatus composer_api_plan(const ComposerContext *context, const char *req
     PiecePlan *plan = NULL;
     if (state) {
         state->knowledge = context->knowledge;
+        state->materials = &materials;
     }
     ComposerStatus status = state ? api_parse_request(request_json, (cJSON **)&state->root, &out->error) : api_fail_alloc(&out->error);
     if (status == COMPOSER_OK) {

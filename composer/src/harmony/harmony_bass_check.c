@@ -70,7 +70,7 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
         } else if (util_pitch_class(note->pitch) != pc) {
             verdict->hard = "not the chord's bass member";
         } else {
-            spellings[made] = harmony_spell_pitch(&context->key, harmony_member_degree(context->key.mode, &context->chords[note->chord]),
+            spellings[made] = harmony_spell_pitch(&context->key, harmony_member_degree(composer_key_mode(&context->key), &context->chords[note->chord]),
                                     note->pitch);
             if (!spellings[made]) {
                 ok = false;
@@ -138,7 +138,7 @@ bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, AnalysisKey key, c
     BassContext *context = &line->context;
     context->span = span;
     context->key = key;
-    bool ok = harmony_read_lane(plan, span, key.mode, context->chords, &context->count, &context->metre);
+    bool ok = harmony_read_lane(plan, span, composer_key_mode(&key), context->chords, &context->count, &context->metre);
 
     /* Each chord has one bass span of its own span, whose notes follow one another to its end. */
     for (size_t i = 0; ok && i < context->count; i++) {

@@ -319,7 +319,7 @@ static uint64_t piece_hash(const char *name, const char *theme) {
     assert(spec);
     ComposerError error;
     memset(&error, 0, sizeof(error));
-    if (api_piece_read_request(spec, test_knowledge(), root, "", NULL, false, NULL, &error) != COMPOSER_OK) {
+    if (api_piece_read_request(spec, test_knowledge(), test_materials(), root, "", NULL, false, NULL, &error) != COMPOSER_OK) {
         fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);
         exit(1);
     }

@@ -109,7 +109,7 @@ static bool starts_in_home_key(const PiecePlan *plan, const GrowThemeRequest *re
     }
     const AnalysisKey *home = &plan_lane_span_payload(plan, spans[0])->key;
     return analysis_key_tonic_pitch_class(home) == analysis_key_tonic_pitch_class(&request->key) &&
-           home->mode == request->key.mode;
+           composer_key_mode(home) == composer_key_mode(&request->key);
 }
 
 static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest *out) {
@@ -476,7 +476,7 @@ bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out) {
 
 size_t grow_chords_before_last(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence) {
     /* A tonic, the predominants the mode has (two in a major key, one in a minor), a dominant unless the cadence is half. */
-    return (shape == PLAN_HARMONY_SHAPE_CADENTIAL ? 0 : 1) + (request->key.mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 2) +
+    return (shape == PLAN_HARMONY_SHAPE_CADENTIAL ? 0 : 1) + (composer_key_is_minor(&request->key) ? 1 : 2) +
            (cadence == CADENCE_TYPE_HALF ? 0 : 1);
 }
 
@@ -656,7 +656,7 @@ static bool draw_motif(const GrowThemeRequest *request, FillRng *rng, const Grow
     preferences.plan_count = 0;
     MotiveRandomOptions options;
     memset(&options, 0, sizeof(options));
-    options.mode = request->key.mode;
+    options.mode = composer_key_mode(&request->key);
     options.meter = request->meter;
     options.has_key = true;
     options.key = request->key;
@@ -1518,7 +1518,7 @@ static PlanResult add_chord_targets(GrowBuild *build, NodeId owner, const PlanHa
                                     const PlanConstraint *cadence, int degree, const PlanSpan *over) {
     PiecePlan *plan = build->plan;
     PhraseChord fixed;
-    if (degree > 0 && !harmony_make_chord(build->request->key.mode, degree, 0, false, false, 1, &fixed)) {
+    if (degree > 0 && !harmony_make_chord(composer_key_mode(&build->request->key), degree, 0, false, false, 1, &fixed)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     PlanSpan span = over ? *over : plan_node_span(plan, owner);

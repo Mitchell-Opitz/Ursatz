@@ -12,6 +12,7 @@
 #include "grow/grow_internal.h"
 #include "piece/piece_internal.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 
 /* The placeholder note an open melody span holds until motive-invent writes it. */
 #define INVENT_PLACEHOLDER 60
@@ -486,7 +487,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     if (!form_spec_meter_allowed(form, &request->meter) || !grow_cells_per_bar(&request->meter, &cells_per_bar) ||
         analysis_key_tonic_pitch_class(&request->key) < 0 ||
         analysis_key_tonic_pitch_class(&request->key) > 11 ||
-        (request->key.mode != KEY_STRUCTURE_MODE_MAJOR && request->key.mode != KEY_STRUCTURE_MODE_MINOR) ||
+        !composer_key_valid(&request->key) ||
         (request->motive && request->motive->note_count < 2) ||
         (accompanied && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
         !size_buildable(size, &request->meter, request->motive, constructions, has_construction)) {

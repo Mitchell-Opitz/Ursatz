@@ -10,6 +10,7 @@
 #include <ursatz_composer/voicing.h>
 
 #include "accompaniment_check.h"
+#include "support/test_knowledge.h"
 
 /*
  * The voicing operator on short realized progressions, a chord a bar in 4/4: I IV V I, I ii6 V7 I in C major and
@@ -96,7 +97,7 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
     assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = progression->key;
+    payload.key = test_key_with_material(progression->key);
     assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     for (size_t b = 0; b < CHORDS; b++) {

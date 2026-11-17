@@ -13,6 +13,8 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "support/test_knowledge.h"
+
 /*
  * Motivic development. Every transformation is run through the fill loop, across seeds and parameters, on source
  * motives with a rest, a dotted rhythm, a leading rest and a minor key. Each development is then judged a relative of
@@ -82,7 +84,7 @@ static Motive load(const char *notes, const PlanMeter *meter, const AnalysisKey 
     options.meter = *meter;
     if (key) {
         options.has_key = true;
-        options.key = *key;
+        options.key = test_key_with_material(*key);
     }
     Motive motive;
     MotiveError error;
@@ -151,7 +153,7 @@ static MotiveDevelopContext context_for(const Source *source) {
     motive_develop_context_default(&context);
     context.meter = source->meter;
     context.has_key = true;
-    context.key = source->key;
+    context.key = test_key_with_material(source->key);
     return context;
 }
 
@@ -164,7 +166,8 @@ static bool read_target(const Scene *scene, const Source *source, Motive *out) {
     const PlanLanePayload *payload = plan_lane_span_payload(scene->plan, ids[0]);
     Motive motive;
     motive_init(&motive, source->meter);
-    motive_set_key(&motive, &source->key, MOTIVE_SKETCH_KEY_GIVEN);
+    AnalysisKey source_key = test_key_with_material(source->key);
+    motive_set_key(&motive, &source_key, MOTIVE_SKETCH_KEY_GIVEN);
     motive_set_lane_notes(&motive, payload->notes.notes, payload->notes.note_count);
     PlanSpan span = plan_lane_span_span(scene->plan, ids[0]);
     motive.length = span.length;
@@ -549,10 +552,10 @@ static void test_every_development_is_a_relative(void) {
                             families[f].name, seed, (int)run.status);
                 }
                 assert(run.completed && written);
-                if (!families[f].related(&source, &result, &families[f].ref, SOURCES[s].key)) {
+                if (!families[f].related(&source, &result, &families[f].ref, test_key_with_material(SOURCES[s].key))) {
                     fprintf(stderr, "%s / %s / seed %lu: not a relative\n", SOURCES[s].name, families[f].name, seed);
                 }
-                assert(families[f].related(&source, &result, &families[f].ref, SOURCES[s].key));
+                assert(families[f].related(&source, &result, &families[f].ref, test_key_with_material(SOURCES[s].key)));
 
                 /* Given material is never modified: the source is as it was, still Given. */
                 Motive after;
@@ -758,7 +761,7 @@ static void test_explicit_parameters(void) {
 
 static void test_degenerate_cases(void) {
     PlanMeter meter = {4, 4, 0};
-    AnalysisKey c_major = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+    AnalysisKey c_major = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     Motive single = load("C4:q", &meter, &c_major);
     Motive four = load("D4:q F4:e A4:e D5:h", &meter, &c_major);
     Motive result;
@@ -904,7 +907,7 @@ static bool score_is(MotiveScore score, unsigned long num, unsigned long den) {
 /* The pickup scales with augmentation and diminution, and a tonal transposition or inversion spells F and B as degrees. */
 static void test_pickups_and_tonal_spelling(void) {
     const PlanMeter three_four = {3, 4, 0};
-    const AnalysisKey c_major = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+    const AnalysisKey c_major = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     Motive source = load("C4:q E4:q G4:q E4:q", &three_four, &c_major);
     Motive result;
     MotiveRelationStep spec;
@@ -946,7 +949,7 @@ static void test_pickups_and_tonal_spelling(void) {
 
 static void test_recognizability(void) {
     PlanMeter meter = {4, 4, 0};
-    AnalysisKey d_minor = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR, NULL};
+    AnalysisKey d_minor = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
     Motive source = load("D4:q F4:e A4:e D5:h", &meter, &d_minor);
     MotiveRecognizability r;
 

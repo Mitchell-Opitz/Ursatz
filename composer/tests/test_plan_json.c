@@ -15,6 +15,7 @@
 #include <ursatz_composer/plan_state.h>
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * A plan written as JSON and read back is the same plan: tree, spans, states,
@@ -1500,6 +1501,7 @@ static void test_spelling_round_trip(void) {
     key.key.tonic_letter = PITCH_LETTER_F;
     key.key.tonic_accidental = 1;
     key.key.mode = KEY_STRUCTURE_MODE_MAJOR;
+    key.key.material = test_materials()->major;
     add_lane(plan, form, PLAN_LANE_KEY, 0, bars(0, 1), &key);
     Rational quarter;
     assert(rational_make(1, 4, &quarter) == RATIONAL_OK);

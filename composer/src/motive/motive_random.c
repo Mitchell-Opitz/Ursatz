@@ -8,6 +8,7 @@
 #include <ursatz_composer/motive_analysis.h>
 
 #include "motive/motive_random_internal.h"
+#include "util/util.h"
 
 /*
  * Random motives: a rhythm drawn in half-beats, then a frame of chord tones of I (a walk on the tonic triad) on the beats
@@ -190,7 +191,7 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
     AnalysisKey key;
     if (options->has_key) {
         key = options->key;
-        if (key.mode != options->mode || analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
+        if (composer_key_mode(&key) != options->mode || analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
             return MOTIVE_RANDOM_ERR_KEY;
         }
     } else {

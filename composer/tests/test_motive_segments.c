@@ -7,12 +7,13 @@
 #include <ursatz_composer/motive_analysis.h>
 
 #include "motive/motive_segments.h"
+#include "support/test_knowledge.h"
 
 /* The segment proposal and the segments of a motive analysis (docs/motive-format.md, "Segments"). */
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter THREE_FOUR = {3, 4, 0};
-static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+static AnalysisKey C_MAJOR; /* made in main: a key carries the material of the knowledge snapshot */
 
 static MotiveAnalysis analyze(const char *text, const PlanMeter *meter, const MotiveOptions *extra) {
     MotiveOptions options;
@@ -129,6 +130,7 @@ static void test_deterministic(void) {
 }
 
 int main(void) {
+    C_MAJOR = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     test_repeated_rhythm();
     test_rest_splits();
     test_long_note_splits();

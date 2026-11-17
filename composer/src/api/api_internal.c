@@ -21,9 +21,13 @@ ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char 
     return status;
 }
 
-ComposerStatus api_require_knowledge(const ComposerContext *context, ComposerError *error) {
+ComposerStatus api_require_knowledge(const ComposerContext *context, CommonPracticeMaterials *materials, ComposerError *error) {
     if (!context || !context->knowledge) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "", "a knowledge snapshot is required");
+    }
+    char message[256];
+    if (materials && !common_practice_materials_resolve(context->knowledge, materials, message, sizeof(message))) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "", "%s", message);
     }
     return COMPOSER_OK;
 }

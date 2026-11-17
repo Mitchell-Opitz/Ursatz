@@ -36,10 +36,10 @@ static HarmonyMode mode_of(KeyStructureMode mode) {
  * standard-harmony calls closely related.
  */
 bool piece_region_key(AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
-    bool minor = home.mode == KEY_STRUCTURE_MODE_MINOR;
+    bool minor = composer_key_is_minor(&home);
     const int *degrees = minor ? region->minor : region->major;
     size_t count = minor ? region->minor_count : region->major_count;
-    HarmonyMode home_mode = mode_of(home.mode);
+    HarmonyMode home_mode = mode_of(composer_key_mode(&home));
     HarmonyRelatedKey related;
     int semitone;
     int degree = degrees[fill_rng_below(rng, count)];
@@ -88,13 +88,13 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
         /* A section in the parallel mode (R-499) is on the home tonic in the other mode: no draw, and modulates stays as it is. */
         if (size->sections[i].parallel) {
             keys[i].start = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home),
-                                                    home.mode == KEY_STRUCTURE_MODE_MINOR ? KEY_STRUCTURE_MODE_MAJOR
+                                                    composer_key_is_minor(&home) ? KEY_STRUCTURE_MODE_MAJOR
                                                                                           : KEY_STRUCTURE_MODE_MINOR);
             keys[i].end = keys[i].start;
         }
         /* A section in the tonic major (R-517) is on the home tonic in its major key: home in a major piece, the parallel major in a
          * minor one. No draw, so the draws after it are unchanged. */
-        if (size->sections[i].tonic_major && home.mode == KEY_STRUCTURE_MODE_MINOR) {
+        if (size->sections[i].tonic_major && composer_key_is_minor(&home)) {
             keys[i].start = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home), KEY_STRUCTURE_MODE_MAJOR);
             keys[i].end = keys[i].start;
         }
@@ -109,7 +109,7 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
     }
     for (size_t r = 0; r < form->region_count; r++) {
         const FormRegion *region = &form->regions[r];
-        if (region_has_degree_one(region, home.mode == KEY_STRUCTURE_MODE_MINOR) || !piece_region_key(home, region, rng, &away[r])) {
+        if (region_has_degree_one(region, composer_key_is_minor(&home)) || !piece_region_key(home, region, rng, &away[r])) {
             return false;
         }
     }
@@ -266,8 +266,8 @@ static bool read_key_lane(const PiecePlan *plan, KeyLane *lane) {
 
 /* Whether the key is the home key's or one of its closely related keys. */
 static bool related_to_home(AnalysisKey home, AnalysisKey key) {
-    HarmonyMode home_mode = mode_of(home.mode);
-    HarmonyMode mode = mode_of(key.mode);
+    HarmonyMode home_mode = mode_of(composer_key_mode(&home));
+    HarmonyMode mode = mode_of(composer_key_mode(&key));
     if (analysis_key_equals(&home, &key)) {
         return true;
     }

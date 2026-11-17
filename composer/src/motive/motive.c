@@ -131,6 +131,8 @@ static bool meter_valid(const PlanMeter *meter) {
 AnalysisKey motive_key_from_signature(int sharps_flats, KeyStructureMode mode) {
     AnalysisKey key;
     if (analysis_key_from_fifths(sharps_flats, mode, &key)) {
+        /* The mode-based maker leaves the material NULL: the builtin one stands in (TRANSITIONAL, P58 B13). */
+        key.material = composer_builtin_material(mode == KEY_STRUCTURE_MODE_MINOR);
         return key;
     }
     int major_tonic = util_pitch_class(sharps_flats * 7);
@@ -215,7 +217,7 @@ void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKe
     /* The key's own material; a key written by the mode-based code has none yet, and takes the builtin one (until P58 B13). */
     const CommonPracticeMaterials *builtin = common_practice_materials_builtin();
     sketch->material = key->material != NULL ? key->material
-                                             : (key->mode == KEY_STRUCTURE_MODE_MINOR ? builtin->natural_minor : builtin->major);
+                                             : (composer_key_is_minor(key) ? builtin->natural_minor : builtin->major);
     sketch->key_source = source;
     sketch->has_tonic_spelling = true;
     sketch->tonic_letter = (int)key->tonic_letter;
@@ -761,7 +763,7 @@ static cJSON *meter_json(const PlanMeter *meter) {
 static cJSON *key_json(const AnalysisKey *key) {
     cJSON *object = cJSON_CreateObject();
     if (object && !(plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(key))) &&
-                    plan_json_add(object, "mode", cJSON_CreateString(key->mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major")))) {
+                    plan_json_add(object, "mode", cJSON_CreateString(composer_key_is_minor(key) ? "minor" : "major")))) {
         cJSON_Delete(object);
         return NULL;
     }

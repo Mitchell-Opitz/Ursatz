@@ -605,7 +605,7 @@ bool api_vocabulary_build(cJSON *root) {
 
 ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }

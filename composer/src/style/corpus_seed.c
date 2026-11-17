@@ -7,6 +7,7 @@
 
 #include <cJSON.h>
 #include <model/core/rational.h>
+#include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/tonal_key.h>
 
 #include <ursatz_analyzer/chord_sequence.h>
@@ -157,7 +158,8 @@ static bool same_place(int measure_a, double beat_a, int measure_b, double beat_
 /* --- the key the source was heard in ------------------------------------------------ */
 
 /* The key of the last chord that starts at or before the passage, else of the first chord; false when no chord names one. */
-static bool source_key(const DocumentChord *chords, size_t count, int measure, double beat, AnalysisKey *out) {
+static bool source_key(const CommonPracticeMaterials *materials, const DocumentChord *chords, size_t count, int measure,
+                       double beat, AnalysisKey *out) {
     const DocumentChord *found = NULL;
     for (size_t i = 0; i < count; i++) {
         bool before = chords[i].measure < measure || same_place(chords[i].measure, chords[i].beat, measure, beat) ||
@@ -169,7 +171,7 @@ static bool source_key(const DocumentChord *chords, size_t count, int measure, d
             break;
         }
     }
-    return found && request_parse_key(found->key_label, out);
+    return found && request_parse_key(found->key_label, materials, out);
 }
 
 /* --- the motive ------------------------------------------------------------------- */
@@ -184,11 +186,11 @@ static int transposition(int pitch, const AnalysisKey *source, const AnalysisKey
     int degree = 1;
     int beyond = 0;
     standard_tonality_degree_at_or_below_semitone(above,
-                                                  source->mode == KEY_STRUCTURE_MODE_MINOR
+                                                  composer_key_is_minor(source)
                                                       ? STANDARD_TONALITY_MODE_NATURAL_MINOR
                                                       : STANDARD_TONALITY_MODE_MAJOR,
                                                   &degree, &beyond);
-    int landed = (analysis_key_tonic_pitch_class(target) + util_scale_semitone(target->mode == KEY_STRUCTURE_MODE_MINOR, degree) + beyond) % 12;
+    int landed = (analysis_key_tonic_pitch_class(target) + util_scale_semitone(composer_key_is_minor(target), degree) + beyond) % 12;
     int shift = util_pitch_class(landed - (pitch % 12));
     return shift > 6 ? shift - 12 : shift;
 }
@@ -286,6 +288,10 @@ CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const ch
         meter->beat_unit < 1) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }
+    CommonPracticeMaterials materials;
+    if (!common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
+        return CORPUS_SEED_ERR_ARGUMENT;
+    }
     SimilarQuery query;
     SimilarResult read = similar_query_from_file(passage_path, knowledge, &query);
     if (read == SIMILAR_ERR_ALLOC) {
@@ -328,7 +334,7 @@ CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const ch
             size_t chord_count = 0;
             AnalysisKey from;
             if (read_chords(text, document, &chords, &chord_count, &stale) &&
-                source_key(chords, chord_count, match->start_measure, match->start_beat, &from)) {
+                source_key(&materials, chords, chord_count, match->start_measure, match->start_beat, &from)) {
                 shift = transposition(match->notes[0].pitch, &from, key);
             }
             chords_free(chords, chord_count);

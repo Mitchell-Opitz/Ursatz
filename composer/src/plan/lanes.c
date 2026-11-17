@@ -3,22 +3,29 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/tonal_key.h>
 
 #include "plan/plan_internal.h"
 #include "util/plan_util.h"
 #include "util/util.h"
 
-AnalysisKey plan_key_of_pitch_class(int pitch_class, KeyStructureMode mode) {
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, mode, NULL};
+AnalysisKey plan_key_of_material(int pitch_class, const PitchMaterial *material) {
+    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, material};
+    key.mode = composer_key_mode(&key);
     PitchLetter letter;
     int accidental;
-    if (standard_tonality_key_tonic_of_pitch_class(util_pitch_class(pitch_class), mode == KEY_STRUCTURE_MODE_MINOR, &letter,
+    if (standard_tonality_key_tonic_of_pitch_class(util_pitch_class(pitch_class), key.mode == KEY_STRUCTURE_MODE_MINOR, &letter,
                                                    &accidental)) {
         key.tonic_letter = letter;
         key.tonic_accidental = accidental;
     }
     return key;
+}
+
+/* TRANSITIONAL (P58 B13): the builtin materials stand in for the call's, which a caller with only a mode does not hold. */
+AnalysisKey plan_key_of_pitch_class(int pitch_class, KeyStructureMode mode) {
+    return plan_key_of_material(pitch_class, composer_builtin_material(mode == KEY_STRUCTURE_MODE_MINOR));
 }
 
 void plan_lanes_free(PiecePlan *plan) {
@@ -106,7 +113,7 @@ bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePaylo
                payload->meter.bars_per_hyperbar >= 0;
     case PLAN_LANE_KEY:
         return analysis_key_tonic_pitch_class(&payload->key) >= 0 && analysis_key_tonic_pitch_class(&payload->key) <= 11 &&
-               (payload->key.mode == KEY_STRUCTURE_MODE_MAJOR || payload->key.mode == KEY_STRUCTURE_MODE_MINOR);
+               composer_key_valid(&payload->key);
     case PLAN_LANE_HARMONY: {
         size_t length = strnlen(payload->harmony.roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
         return length > 0 && length < PLAN_ROMAN_NUMERAL_MAX;

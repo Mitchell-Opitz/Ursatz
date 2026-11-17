@@ -62,7 +62,7 @@ bool request_parse_ratio(const char *text, ComposerRatio *out) {
     return true;
 }
 
-bool request_parse_key(const char *text, AnalysisKey *key) {
+bool request_parse_key(const char *text, const CommonPracticeMaterials *materials, AnalysisKey *key) {
     while (isspace((unsigned char)*text)) {
         text++;
     }
@@ -99,14 +99,18 @@ bool request_parse_key(const char *text, AnalysisKey *key) {
     if (*rest != '\0') {
         return false;
     }
+    const PitchMaterial *material;
     if (request_equals_ignore_case(mode, "major")) {
-        key->mode = KEY_STRUCTURE_MODE_MAJOR;
+        material = common_practice_material(materials, COMMON_PRACTICE_KEY_MAJOR);
     } else if (request_equals_ignore_case(mode, "minor")) {
-        key->mode = KEY_STRUCTURE_MODE_MINOR;
+        material = common_practice_material(materials, COMMON_PRACTICE_KEY_MINOR);
     } else {
         return false;
     }
-    *key = plan_key_of_pitch_class(util_pitch_class(pc), key->mode);
+    if (!material) {
+        return false;
+    }
+    *key = plan_key_of_material(util_pitch_class(pc), material);
     return true;
 }
 

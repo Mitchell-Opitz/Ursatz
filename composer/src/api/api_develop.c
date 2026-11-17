@@ -513,7 +513,8 @@ static ComposerStatus render_best(Scene *scene, const FillSuggestions *suggestio
 ComposerStatus composer_api_develop(const ComposerContext *context, const char *request_json,
                                     const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }
@@ -568,7 +569,7 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
         status = api_read_outputs(request, false, &outputs, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_read_motive(request, "", &source, NULL, &out->error);
+        status = api_read_motive(request, "", &materials, &source, NULL, &out->error);
     }
     MotiveDevelopContext develop_context;
     PlanMotiveRef ref;

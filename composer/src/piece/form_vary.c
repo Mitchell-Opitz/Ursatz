@@ -53,7 +53,7 @@ static long cell_ticks(const PlanMeter *meter) {
 }
 
 static bool in_scale(AnalysisKey key, int pitch) {
-    unsigned scale = util_scale_mask(analysis_key_tonic_pitch_class(&key), key.mode != KEY_STRUCTURE_MODE_MAJOR);
+    unsigned scale = util_scale_mask(analysis_key_tonic_pitch_class(&key), composer_key_is_minor(&key));
     return (scale >> util_pitch_class(pitch)) & 1u;
 }
 

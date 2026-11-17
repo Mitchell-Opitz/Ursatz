@@ -369,7 +369,7 @@ static bool cadence_as_planned(const PiecePlan *plan, const ComposeHeard *heard)
 /* The melody's notes that start a bar are tones of the chord there; the chords at the bass notes stand on them. */
 static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
     PlanLaneKind lane = kind == SCENARIO_MELODY ? PLAN_LANE_MELODY : PLAN_LANE_BASS;
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+    AnalysisKey key = test_key_with_material((AnalysisKey){NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL});
     Rational half = {1, 2}; /* a harmony cell of 4/4 */
     if (kind == SCENARIO_PROGRESSION) {
         return;

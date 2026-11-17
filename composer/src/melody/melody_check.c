@@ -42,7 +42,7 @@ static const char BASS_VOICE[] = "bass";
 static int pitch_degree(const AnalysisKey *key, int pitch) {
     int degree = 1;
     int alteration;
-    util_scale_degree(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, pitch, &degree,
+    util_scale_degree(analysis_key_tonic_pitch_class(key), composer_key_is_minor(key), pitch, &degree,
                       &alteration);
     return degree;
 }
@@ -59,7 +59,7 @@ unsigned melody_cadence_mask(const MelodyContext *context) {
         return 0xFFFu;
     }
     unsigned tonic = 1u << analysis_key_tonic_pitch_class(&context->key);
-    unsigned third = 1u << ((analysis_key_tonic_pitch_class(&context->key) + (context->key.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12);
+    unsigned third = 1u << ((analysis_key_tonic_pitch_class(&context->key) + (composer_key_is_minor(&context->key) ? 3 : 4)) % 12);
     switch (context->cadence) {
     case CADENCE_TYPE_PERFECT_AUTHENTIC:
     case CADENCE_TYPE_PLAGAL:
@@ -507,7 +507,7 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
         }
         const PhraseChord *chord = &context->chords[context->bass[b].chord];
         upper[samples] = spell_melody(&context->key, melody->notes[m].pitch);
-        lower[samples] = harmony_spell_pitch(&context->key, harmony_member_degree(context->key.mode, chord),
+        lower[samples] = harmony_spell_pitch(&context->key, harmony_member_degree(composer_key_mode(&context->key), chord),
                                              context->bass[b].pitch);
         if (!upper[samples] || !lower[samples]) {
             verdict->hard = "a pitch cannot be spelled";
@@ -612,7 +612,7 @@ bool melody_dissonant_over_bass(const MelodyContext *context, int pitch, Rationa
         }
         size_t sounding = context->bass[b].chord;
         PitchSpelling *upper = spell_melody(&context->key, pitch);
-        PitchSpelling *lower = harmony_spell_pitch(&context->key, harmony_member_degree(context->key.mode, &context->chords[sounding]),
+        PitchSpelling *lower = harmony_spell_pitch(&context->key, harmony_member_degree(composer_key_mode(&context->key), &context->chords[sounding]),
                                                    context->bass[b].pitch);
         dissonant = upper && lower && !standard_counterpoint_pitches_consonant(lower, upper) &&
                     (context->chord_mask[sounding] & pitch_bit) && !(context->chord_seventh[sounding] & pitch_bit);
@@ -639,7 +639,7 @@ static void check_tendency(const MelodyCandidate *melody, PhraseVerdict *verdict
         }
         HarmonyVoiceResolution move;
         memset(&move, 0, sizeof(move));
-        move.mode = harmony_mode_of(context->key.mode);
+        move.mode = harmony_mode_of(composer_key_mode(&context->key));
         move.from = context->chords[i].chord;
         move.to = context->chords[i + 1].chord;
         move.from_step = pitch_step(&context->key, melody->notes[from].pitch);

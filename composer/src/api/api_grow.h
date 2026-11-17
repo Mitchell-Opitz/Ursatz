@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <cJSON.h>
+#include <theory/tonality/common_practice_materials.h>
 
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/composer_api.h>
@@ -127,6 +128,7 @@ typedef struct {
     const MelodyFillParams *melody;          /* NULL for the defaults; not owned */
     const ComposerJob *job;
     const KnowledgeSnapshot *knowledge;      /* the call context's; required, must outlive the run */
+    const CommonPracticeMaterials *materials; /* its materials, resolved once for the call; read by api_grow_read_brief */
 } GrowSetup;
 
 /* A theme made, with what the output of it needs. */

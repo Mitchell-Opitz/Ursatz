@@ -24,7 +24,7 @@ static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "com
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 
 const char *api_key_name(const AnalysisKey *key, char *out, size_t size) {
-    util_key_name(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, out, size);
+    util_key_name(analysis_key_tonic_pitch_class(key), composer_key_is_minor(key), out, size);
     return out;
 }
 

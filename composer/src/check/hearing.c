@@ -1,4 +1,5 @@
 #include "check/hearing_result.h"
+#include "util/util.h"
 
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -221,7 +222,7 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
         return HEARING_ERR_ANALYSIS;
     }
     input.key_material = common_practice_material(
-        &materials, key.mode == KEY_STRUCTURE_MODE_MINOR ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
+        &materials, composer_key_is_minor(&key) ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
     input.streams = heard.streams;
     AnalyzerHearingOptions options = hearing_analyzer_options(hearing->knowledge);
     atomic_fetch_add(&hearing_analyzer_calls_made, 1);

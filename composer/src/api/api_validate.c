@@ -30,10 +30,11 @@ static bool default_string(cJSON *object, const char *name, const char *value) {
     return (item && !cJSON_IsNull(item)) || cJSON_AddStringToObject(object, name, value) != NULL;
 }
 
-static ComposerStatus validate_motive(const cJSON *request, cJSON *filled, ComposerError *error) {
+static ComposerStatus validate_motive(const cJSON *request, const CommonPracticeMaterials *materials, cJSON *filled,
+                                      ComposerError *error) {
     Motive motive;
     MotiveOptions options;
-    ComposerStatus status = api_read_motive(request, "", &motive, &options, error);
+    ComposerStatus status = api_read_motive(request, "", materials, &motive, &options, error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -68,7 +69,8 @@ static ComposerStatus validate_motive(const cJSON *request, cJSON *filled, Compo
 ComposerStatus composer_api_validate(const ComposerContext *context, const char *kind, const char *request_json,
                                      ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }
@@ -94,13 +96,13 @@ ComposerStatus composer_api_validate(const ComposerContext *context, const char 
     }
     if (status == COMPOSER_OK) {
         if (strcmp(kind, "motive") == 0) {
-            status = validate_motive(request, filled, error);
+            status = validate_motive(request, &materials, filled, error);
         } else if (strcmp(kind, "theme") == 0) {
-            status = api_theme_validate(context->knowledge, request, error);
+            status = api_theme_validate(context->knowledge, &materials, request, error);
         } else if (strcmp(kind, "piece") == 0) {
-            status = api_piece_validate(context->knowledge, request, filled, error);
+            status = api_piece_validate(context->knowledge, &materials, request, filled, error);
         } else {
-            status = api_random_validate(context->knowledge, request, filled, error);
+            status = api_random_validate(context->knowledge, &materials, request, filled, error);
         }
     }
     if (status == COMPOSER_OK && !cJSON_AddItemToObject(root, "request", filled)) {

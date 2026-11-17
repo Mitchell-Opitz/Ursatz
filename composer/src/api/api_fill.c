@@ -158,7 +158,7 @@ static cJSON *candidates_json(const ComposeCandidates *candidates, unsigned long
 ComposerStatus composer_api_fill(const ComposerContext *context, const char *request_json,
                                  const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }

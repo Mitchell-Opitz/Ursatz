@@ -11,6 +11,7 @@
 
 #include "api_internal.h"
 #include "util/request_parse.h"
+#include "util/util.h"
 
 /* Random motives (docs/api.md): the request of the `random-motive` command. */
 
@@ -29,9 +30,9 @@ static unsigned long mix_seed(unsigned long seed) {
 }
 
 /* Reads the members that make the options, without the style. drawn_mode and drawn_meter are set to what was drawn. */
-static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *out, bool *accompaniment, bool *has_role,
-                                   const char **drawn_mode, const char **drawn_meter, ComposerPreferences *preferences,
-                                   bool *has_preferences, ComposerError *error) {
+static ComposerStatus read_options(const cJSON *request, const CommonPracticeMaterials *materials, MotiveRandomOptions *out,
+                                   bool *accompaniment, bool *has_role, const char **drawn_mode, const char **drawn_meter,
+                                   ComposerPreferences *preferences, bool *has_preferences, ComposerError *error) {
     memset(out, 0, sizeof *out);
     *drawn_mode = NULL;
     *drawn_meter = NULL;
@@ -86,13 +87,13 @@ static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *ou
                         "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8", meter_text);
     }
     if (has_key) {
-        if (!request_parse_key(key_text, &out->key)) {
+        if (!request_parse_key(key_text, materials, &out->key)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                             "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                             "for example \"D minor\"",
                             key_text);
         }
-        if (out->key.mode != out->mode) {
+        if (composer_key_mode(&out->key) != out->mode) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "key '%s' is not %s, the mode asked for", key_text,
                             mode_text);
         }
@@ -199,7 +200,8 @@ static cJSON *random_document(unsigned long seed, const Motive *motives, size_t 
     return document;
 }
 
-static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, ComposerResponse *out) {
+static ComposerStatus make_random(const cJSON *request, const CommonPracticeMaterials *materials, const ComposerJob *job,
+                                  ComposerResponse *out) {
     ComposerError *error = &out->error;
     MotiveRandomOptions options;
     bool accompaniment = false;
@@ -208,7 +210,7 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    ComposerStatus status = read_options(request, materials, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     if (status != COMPOSER_OK) {
         return status;
@@ -245,8 +247,8 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     return api_respond_json(out, document);
 }
 
-ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, cJSON *filled,
-                                   ComposerError *error) {
+ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *request,
+                                   cJSON *filled, ComposerError *error) {
     (void)knowledge;
     MotiveRandomOptions options;
     bool accompaniment = false;
@@ -255,7 +257,7 @@ ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJS
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    ComposerStatus status = read_options(request, materials, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     ComposerStyle *style = NULL;
     if (status == COMPOSER_OK) {
@@ -282,7 +284,8 @@ ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJS
 ComposerStatus composer_api_random_motive(const ComposerContext *context, const char *request_json,
                                           const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }
@@ -291,7 +294,7 @@ ComposerStatus composer_api_random_motive(const ComposerContext *context, const 
     if (status != COMPOSER_OK) {
         return status;
     }
-    status = make_random(request, job, out);
+    status = make_random(request, &materials, job, out);
     cJSON_Delete(request);
     if (status != COMPOSER_OK) {
         ComposerError error = out->error;

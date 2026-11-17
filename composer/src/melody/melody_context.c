@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/seam_hear.h>
 #include "util/plan_util.h"
+#include "util/util.h"
 
 void melody_context_zero(MelodyContext *context) {
     memset(context, 0, sizeof(*context));
@@ -44,15 +45,15 @@ bool melody_chord_mask(const AnalysisKey *key, const PhraseChord *chord, unsigne
         if (!harmony_applied_intervals(&chord->applied_chord, intervals, &count)) {
             return false;
         }
-        root = harmony_applied_root_semitone(harmony_mode_of(key->mode), &chord->applied_chord);
+        root = harmony_applied_root_semitone(harmony_mode_of(composer_key_mode(key)), &chord->applied_chord);
     } else {
-        if (!harmony_diatonic_intervals(key->mode, &chord->chord, intervals, &count)) {
+        if (!harmony_diatonic_intervals(composer_key_mode(key), &chord->chord, intervals, &count)) {
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = key->mode == KEY_STRUCTURE_MODE_MINOR && chord->chord.leading_tone
+        root = composer_key_is_minor(key) && chord->chord.leading_tone
                    ? 11
-                   : harmony_applied_scale_semitone(harmony_mode_of(key->mode), chord->chord.degree);
+                   : harmony_applied_scale_semitone(harmony_mode_of(composer_key_mode(key)), chord->chord.degree);
     }
     if (root < 0) {
         return false;
@@ -262,7 +263,7 @@ bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, Anal
     context->owner = owner;
     context->span = span;
     context->key = key;
-    if (!harmony_read_lane(plan, span, key.mode, context->chords, &context->count, &context->metre)) {
+    if (!harmony_read_lane(plan, span, composer_key_mode(&key), context->chords, &context->count, &context->metre)) {
         return false;
     }
     context->length = span.length;
@@ -371,7 +372,7 @@ static bool read_idea_chords(const PiecePlan *plan, MelodyContext *context) {
     for (size_t i = 0; i < found; i++) {
         PlanSpan chord_span = plan_lane_span_span(plan, ids[i]);
         if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED ||
-            !harmony_read_chord(plan, ids[i], context->key.mode, context->metre.cell_length, &context->chords[i]) ||
+            !harmony_read_chord(plan, ids[i], composer_key_mode(&context->key), context->metre.cell_length, &context->chords[i]) ||
             !melody_chord_mask(&context->key, &context->chords[i], &context->chord_mask[i],
                                &context->chord_seventh[i])) {
             return false;
@@ -673,7 +674,7 @@ static bool read_pickup(const PiecePlan *plan, Rational start, Rational pickup, 
     if (found > 0 && plan_lane_span_state(plan, ids[found - 1]) != PLAN_STATE_CONSTRAINED) {
         PhraseChord chord;
         unsigned seventh;
-        if (!harmony_read_chord(plan, ids[found - 1], context->key.mode, context->metre.cell_length, &chord) ||
+        if (!harmony_read_chord(plan, ids[found - 1], composer_key_mode(&context->key), context->metre.cell_length, &chord) ||
             !melody_chord_mask(&context->key, &chord, &context->pickup_mask, &seventh)) {
             return false;
         }

@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <theory/tonality/common_practice_materials.h>
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
@@ -19,8 +21,11 @@ bool request_parse_whole_number(const char *text, unsigned long maximum, unsigne
 /* "3/2" or "3": a weight, both parts whole numbers up to 4294967295 and the denominator at least 1. */
 bool request_parse_ratio(const char *text, ComposerRatio *out);
 
-/* A tonic letter, an optional # or b, whitespace, then major or minor ("D minor", "F# major"); any case for the mode. */
-bool request_parse_key(const char *text, AnalysisKey *key);
+/*
+ * A tonic letter, an optional # or b, whitespace, then major or minor ("D minor", "F# major"); any case for the mode. The key's
+ * material is the major or the natural minor of the materials (the call's, resolved once from its snapshot), its mode set from it.
+ */
+bool request_parse_key(const char *text, const CommonPracticeMaterials *materials, AnalysisKey *key);
 
 /* "3/4", "6/8": 1 to 64 beats over a beat unit of 1, 2, 4, 8 or 16. The meters the harmony operators support are checked by the caller (harmony_meter_supported). */
 bool request_parse_meter(const char *text, PlanMeter *meter);

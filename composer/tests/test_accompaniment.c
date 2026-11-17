@@ -44,7 +44,7 @@ static Rational fraction(long num, unsigned long den) {
 }
 
 static AnalysisKey c_major(void) {
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+    AnalysisKey key = test_key_with_material((AnalysisKey){NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL});
     return key;
 }
 

@@ -12,6 +12,7 @@
 #include "api_internal.h"
 #include "api_vocabulary.h"
 #include "api_piece.h"
+#include "util/util.h"
 #include "api_workflow.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
@@ -344,15 +345,15 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
         snprintf(tonic_key, sizeof(tonic_key), "%s major", key_text);
         key_text = tonic_key;
     }
-    if (!request_parse_key(key_text, &piece->key)) {
+    if (!request_parse_key(key_text, request->materials, &piece->key)) {
         snprintf(path, sizeof path, "%s/key", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\"", request->key_text);
     }
     if (request_equals_ignore_case(mode, "major")) {
-        piece->key.mode = KEY_STRUCTURE_MODE_MAJOR;
+        composer_key_set_minor(&piece->key, request->materials, false);
     } else if (request_equals_ignore_case(mode, "minor")) {
-        piece->key.mode = KEY_STRUCTURE_MODE_MINOR;
+        composer_key_set_minor(&piece->key, request->materials, true);
     }
     if (!request_parse_meter(request->meter_text, &piece->meter) || !harmony_meter_supported(&piece->meter)) {
         snprintf(path, sizeof path, "%s/meter", base);
@@ -485,7 +486,7 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
             snprintf(path, sizeof path, "%s/mode", base);
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"mode\": \"style\" needs a style with a mode category");
         }
-        request->request.key.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+        composer_key_set_minor(&request->request.key, request->materials, minor);
         request->mode_from = "style";
     }
     if (request->style) {
@@ -710,12 +711,14 @@ static ComposerStatus read_sized(PieceSpec *request, const cJSON *root, const ch
     return COMPOSER_OK;
 }
 
-ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot *knowledge, const cJSON *root, const char *base,
-                                      const char *style_path, bool plain_midi, const ComposerJob *job, ComposerError *error) {
+ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials,
+                                      const cJSON *root, const char *base, const char *style_path, bool plain_midi,
+                                      const ComposerJob *job, ComposerError *error) {
     char path[128];
     memset(request, 0, sizeof(*request));
     request->job = job;
     request->knowledge = knowledge;
+    request->materials = materials;
     request->style_path = style_path;
     if (!cJSON_IsObject(root)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, base, "the piece request must be a JSON object");
@@ -811,12 +814,13 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapsho
     return COMPOSER_OK;
 }
 
-ComposerStatus api_piece_validate(const KnowledgeSnapshot *knowledge, const cJSON *root, cJSON *filled, ComposerError *error) {
+ComposerStatus api_piece_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *root,
+                                  cJSON *filled, ComposerError *error) {
     PieceSpec *request = calloc(1, sizeof(*request));
     if (!request) {
         return api_fail_alloc(error);
     }
-    ComposerStatus status = api_piece_read_request(request, knowledge, root, "", NULL, false, NULL, error);
+    ComposerStatus status = api_piece_read_request(request, knowledge, materials, root, "", NULL, false, NULL, error);
     cJSON *sections = cJSON_GetObjectItemCaseSensitive(filled, "sections");
     size_t given = (size_t)cJSON_GetArraySize(sections);
     if (status == COMPOSER_OK && request->form->request_sections) {

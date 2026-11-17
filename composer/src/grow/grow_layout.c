@@ -330,7 +330,7 @@ bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec) 
     AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
     int tonic = analysis_key_tonic_pitch_class(&ends_in);
     int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
-               : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + (ends_in.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12
+               : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + (composer_key_is_minor(&ends_in) ? 3 : 4)) % 12
                                                                       : -1;
     for (size_t k = 0; k < layout->extension_count; k++) {
         const GrowLayoutExtension *extension = &layout->extensions[k];

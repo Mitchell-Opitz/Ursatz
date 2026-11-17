@@ -4,6 +4,7 @@
  * written music is heard through the Analyzer once per run (check/hearing.h).
  */
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -301,7 +302,7 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, KeyStructureMo
         LaneSpanId key_id = PLAN_LANE_SPAN_NONE;
         AnalysisKey key;
         if (modes && key_under(plan, chord_span, &key_id, &key)) {
-            chord_mode = key.mode;
+            chord_mode = composer_key_mode(&key);
         }
         /* Chords must start where the last ended, in whole cells. */
         if (rational_cmp(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||

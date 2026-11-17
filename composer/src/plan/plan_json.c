@@ -22,6 +22,7 @@
 #include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 
 #define COMPOSER_FRAMEWORK "ursatz-composer"
 #define PLAN_FORMAT_NAME "ursatz-composer-plan"
@@ -105,7 +106,7 @@ static bool key_members_json(cJSON *object, const AnalysisKey *key) {
     char tonic[8];
     return pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic)) &&
            plan_json_add(object, "tonic", cJSON_CreateString(tonic)) &&
-           plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[key->mode]));
+           plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[composer_key_mode(key)]));
 }
 
 static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *constraint) {
@@ -423,7 +424,7 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
 static void plan_key_label(const AnalysisKey *key, char *out, size_t size) {
     char tonic[8] = "?";
     pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic));
-    snprintf(out, size, "%s %s", tonic, MODE_NAMES[key->mode]);
+    snprintf(out, size, "%s %s", tonic, MODE_NAMES[composer_key_mode(key)]);
 }
 
 static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *out, size_t size) {
@@ -1279,7 +1280,8 @@ static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *pat
         json_child_path(at, path, "tonic_pitch_class");
         return json_bad_format(reader, at, "no key on this pitch class");
     }
-    AnalysisKey key = {NULL, letter, accidental, mode, NULL};
+    /* TRANSITIONAL (P58 B13): a plan file names a mode, not a material; the builtin one stands in until the formats carry ids. */
+    AnalysisKey key = {NULL, letter, accidental, mode, composer_builtin_material(mode == KEY_STRUCTURE_MODE_MINOR)};
     *out = key;
     return true;
 }
@@ -1304,7 +1306,8 @@ static bool read_key_members(JsonReader *reader, const cJSON *object, const char
     if (!cJSON_IsString(tonic) || !pitch_spelling_parse_name(tonic->valuestring, &letter, &accidental, NULL)) {
         return json_bad_format(reader, at, "expected a tonic like \"C\", \"F#\" or \"Bb\"");
     }
-    AnalysisKey key = {NULL, letter, accidental, (KeyStructureMode)mode, NULL};
+    AnalysisKey key = {NULL, letter, accidental, (KeyStructureMode)mode,
+                       composer_builtin_material((KeyStructureMode)mode == KEY_STRUCTURE_MODE_MINOR)};
     *out = key;
     return true;
 }

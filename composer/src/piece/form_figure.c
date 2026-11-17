@@ -141,7 +141,7 @@ FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
     PhraseMetre *metre = &reading->metre;
     if (!section_key(plan, span, &reading->key) ||
-        !harmony_read_lane(plan, span, reading->key.mode, reading->chords, &reading->chord_count, metre) ||
+        !harmony_read_lane(plan, span, composer_key_mode(&reading->key), reading->chords, &reading->chord_count, metre) ||
         !rational_is_zero(metre->lead) || !rational_is_zero(metre->tail) || !rational_is_zero(metre->offset) ||
         metre->cells == 0 || metre->cells_per_bar == 0 || !figure_cell_length(&metre->meter, &reading->cell_length, &reading->cells_per_bar) ||
         metre->bars * reading->cells_per_bar > FORM_SKELETON_MAX) {
@@ -300,7 +300,7 @@ bool form_figure_kept_notes(const FigureReading *reading, size_t cell, int octav
 /* The scale a cell is figured in: the key's, with the raised seventh in minor over a chord that holds the leading tone. */
 static unsigned scale_pitch_classes(const AnalysisKey *key, unsigned chord_mask) {
     int tonic = analysis_key_tonic_pitch_class(key);
-    if (key->mode != KEY_STRUCTURE_MODE_MINOR) {
+    if (!composer_key_is_minor(key)) {
         return standard_tonality_mode_pitch_classes(tonic, STANDARD_TONALITY_MODE_MAJOR);
     }
     bool raised = (chord_mask >> ((tonic + 11) % 12)) & 1u;

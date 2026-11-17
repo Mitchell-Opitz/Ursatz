@@ -11,6 +11,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "piece/form_return_internal.h"
+#include "util/util.h"
 
 const char *given_result_name(GivenResult result) {
     switch (result) {
@@ -260,7 +261,7 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
         return GIVEN_ERR_PLAN;
     }
     for (size_t i = 0; i < count; i++) {
-        if (!numeral_payload(key.mode, numerals[i], &payloads[i])) {
+        if (!numeral_payload(composer_key_mode(&key), numerals[i], &payloads[i])) {
             free(payloads);
             return GIVEN_ERR_BAD_NUMERAL;
         }
@@ -302,7 +303,7 @@ GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *
         }
         spans[i].length = chords[i].length;
         result = check_room(plan, &placement, PLAN_LANE_HARMONY, 0, spans[i], &key);
-        if (result == GIVEN_OK && !numeral_payload(key.mode, chords[i].numeral, &payloads[i])) {
+        if (result == GIVEN_OK && !numeral_payload(composer_key_mode(&key), chords[i].numeral, &payloads[i])) {
             result = GIVEN_ERR_BAD_NUMERAL;
         }
         for (size_t j = 0; result == GIVEN_OK && j < i; j++) {

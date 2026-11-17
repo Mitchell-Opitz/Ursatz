@@ -6,6 +6,7 @@
 
 #include <model/pitch/midi_pitch.h>
 #include <model/pitch/pitch_arithmetic.h>
+#include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/tonal_key.h>
 
 int util_absolute(int value) {
@@ -31,6 +32,30 @@ int util_pitch_class(int pitch) {
 void util_pitch_name(int midi, bool prefer_flats, char *out, size_t size) {
     snprintf(out, size, "%s%d", pitch_class_name(util_pitch_class(midi), prefer_flats),
              midi / PITCH_SEMITONES_PER_OCTAVE - 1);
+}
+
+bool composer_key_is_minor(const AnalysisKey *key) {
+    CommonPracticeKeyMode mode;
+    return key && common_practice_key_mode_of(key->material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
+}
+
+bool composer_key_valid(const AnalysisKey *key) {
+    CommonPracticeKeyMode mode;
+    return key && (key->material == NULL || common_practice_key_mode_of(key->material, &mode));
+}
+
+KeyStructureMode composer_key_mode(const AnalysisKey *key) {
+    return composer_key_is_minor(key) ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+}
+
+const PitchMaterial *composer_builtin_material(bool minor) {
+    return common_practice_material(common_practice_materials_builtin(),
+                                    minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
+}
+
+void composer_key_set_minor(AnalysisKey *key, const CommonPracticeMaterials *materials, bool minor) {
+    key->material = common_practice_material(materials, minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
+    key->mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
 }
 
 static StandardTonalityMode scale_mode(bool minor) {

@@ -198,14 +198,14 @@ static void compare_key(const AnalysisReport *report, AnalysisKey key, Items *it
     char planned[32];
     char heard[32] = "none";
     bool agreed = false;
-    util_key_name(analysis_key_tonic_pitch_class(&key), key.mode == KEY_STRUCTURE_MODE_MINOR, planned, sizeof(planned));
+    util_key_name(analysis_key_tonic_pitch_class(&key), composer_key_is_minor(&key), planned, sizeof(planned));
     if (report->key_region_count > 0) {
         const AnalysisKeyRegion *region = &report->key_regions[0];
         CommonPracticeKeyMode mode;
         if (common_practice_key_mode_of(region->material, &mode)) {
             util_key_name(region->tonic_pitch_class, mode == COMMON_PRACTICE_KEY_MINOR, heard, sizeof(heard));
             agreed = region->tonic_pitch_class == analysis_key_tonic_pitch_class(&key) &&
-                     (mode == COMMON_PRACTICE_KEY_MAJOR) == (key.mode == KEY_STRUCTURE_MODE_MAJOR);
+                     (mode == COMMON_PRACTICE_KEY_MAJOR) == (!composer_key_is_minor(&key));
         }
     }
     add_item(items, ANALYZER_CHECK_KEY, 0, planned, heard, agreed);

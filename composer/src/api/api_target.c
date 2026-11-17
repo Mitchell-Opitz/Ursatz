@@ -194,7 +194,7 @@ ComposerStatus composer_api_lock(const ComposerContext *context, const char *req
                                  const ComposerJob *job, ComposerResponse *out) {
     (void)job;
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }

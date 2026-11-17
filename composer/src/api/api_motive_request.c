@@ -182,8 +182,9 @@ static ComposerStatus load_failure(ComposerError *error, const char *base, bool 
                    detail->location[0] ? " at " : "", detail->location, detail->message);
 }
 
-static ComposerStatus read_motive(const cJSON *request, const char *base, const unsigned char *bytes, size_t size,
-                                  Motive *out, MotiveOptions *options_out, ComposerError *error) {
+static ComposerStatus read_motive(const cJSON *request, const char *base, const CommonPracticeMaterials *materials,
+                                  const unsigned char *bytes, size_t size, Motive *out, MotiveOptions *options_out,
+                                  ComposerError *error) {
     MotiveOptions options;
     memset(&options, 0, sizeof options);
     const char *meter_text = NULL;
@@ -205,7 +206,7 @@ static ComposerStatus read_motive(const cJSON *request, const char *base, const 
         return status;
     }
     if (present) {
-        if (!request_parse_key(key_text, &options.key)) {
+        if (!request_parse_key(key_text, materials, &options.key)) {
             return fail_at(error, COMPOSER_ERR_REQUEST, base, "/key",
                            "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                            "for example \"D minor\"",
@@ -273,14 +274,15 @@ static ComposerStatus read_motive(const cJSON *request, const char *base, const 
     return COMPOSER_OK;
 }
 
-ComposerStatus api_read_motive(const cJSON *request, const char *base, Motive *out, MotiveOptions *options,
-                               ComposerError *error) {
-    return read_motive(request, base ? base : "", NULL, 0, out, options, error);
+ComposerStatus api_read_motive(const cJSON *request, const char *base, const CommonPracticeMaterials *materials, Motive *out,
+                               MotiveOptions *options, ComposerError *error) {
+    return read_motive(request, base ? base : "", materials, NULL, 0, out, options, error);
 }
 
-ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const unsigned char *bytes, size_t size,
-                                     Motive *out, MotiveOptions *options, ComposerError *error) {
-    return read_motive(request, base ? base : "", bytes, size, out, options, error);
+ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const CommonPracticeMaterials *materials,
+                                     const unsigned char *bytes, size_t size, Motive *out, MotiveOptions *options,
+                                     ComposerError *error) {
+    return read_motive(request, base ? base : "", materials, bytes, size, out, options, error);
 }
 
 /* --- the motives of a theme or piece request ------------------------------------------------------------ */

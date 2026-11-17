@@ -21,6 +21,7 @@
 #include "grow/grow_internal.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
+#include "util/util.h"
 
 /*
  * The theme request (docs/theme-request.md, schema "ursatz-theme-request" version 2) as an API entry: the motives of the
@@ -314,7 +315,7 @@ static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, 
             harmony.inversion = chord->inversion;
             harmony.seventh = chord->seventh;
             size_t at = material->chord_count;
-            if (!harmony_roman_format(key->mode, &harmony, material->chord_numerals[at])) {
+            if (!harmony_roman_format(composer_key_mode(key), &harmony, material->chord_numerals[at])) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: that chord does not exist in the key", bar);
             }
             if (c + 1 < count) {
@@ -756,13 +757,15 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
 ComposerStatus composer_api_theme(const ComposerContext *context, const char *request_json,
                                   const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }
     ThemeState state;
     memset(&state, 0, sizeof(state));
     state.setup.knowledge = context->knowledge;
+    state.setup.materials = &materials;
     ApiOutputOptions outputs;
     ComposerStatus status = api_parse_request(request_json, &state.request, &out->error);
     if (status == COMPOSER_OK) {
@@ -812,10 +815,12 @@ ComposerStatus composer_api_theme(const ComposerContext *context, const char *re
     return status;
 }
 
-ComposerStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, ComposerError *error) {
+ComposerStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *request,
+                                  ComposerError *error) {
     ThemeState state;
     memset(&state, 0, sizeof(state));
     state.setup.knowledge = knowledge;
+    state.setup.materials = materials;
     ApiOutputOptions outputs;
     memset(&outputs, 0, sizeof(outputs));
     state.request = cJSON_Duplicate(request, true);

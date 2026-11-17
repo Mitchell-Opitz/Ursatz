@@ -61,8 +61,7 @@ bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template
     }
     if (developed->has_scale && (!template_motive->has_scale || developed->tonic_pc != template_motive->tonic_pc ||
                                  motive_sketch_minor(developed) != motive_sketch_minor(template_motive))) {
-        AnalysisKey moved = plan_key_of_pitch_class(developed->tonic_pc, motive_sketch_minor(developed) ? KEY_STRUCTURE_MODE_MINOR
-                                                                                           : KEY_STRUCTURE_MODE_MAJOR);
+        AnalysisKey moved = plan_key_of_material(developed->tonic_pc, developed->material);
         motive_set_key(&result, &moved, MOTIVE_SKETCH_KEY_GIVEN);
     }
     result.chord_count = developed->chord_count;

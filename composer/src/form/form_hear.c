@@ -172,7 +172,8 @@ FormHearResult form_hear_in(ComposerHearing *hearing, const PiecePlan *plan, Pla
 }
 
 /* The key regions the Analyzer heard over the span, with where each starts. */
-static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out, size_t *count) {
+static FormHearResult copy_keys(const AnalyzerResult *result, const CommonPracticeMaterials *materials, FormHeardKey **out,
+                                size_t *count) {
     const CommonPracticeKeyRegions *regions = analysis_chain_key_regions(analyzer_result_chain(result));
     if (!regions || regions->region_count == 0) {
         return FORM_HEAR_OK;
@@ -184,7 +185,7 @@ static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out
     for (size_t i = 0; i < regions->region_count; i++) {
         const CommonPracticeKeyRegion *region = &regions->regions[i];
         keys[i].start = region->span.start.value;
-        if (!common_practice_key_region_analysis_key(region, common_practice_materials_builtin(), &keys[i].key)) {
+        if (!common_practice_key_region_analysis_key(region, materials, &keys[i].key)) {
             free(keys);
             return FORM_HEAR_ERR_ANALYSIS;
         }
@@ -210,6 +211,11 @@ FormHearResult form_hear_keys(const PiecePlan *plan, const KnowledgeSnapshot *kn
     if (status != FORM_HEAR_OK) {
         return status;
     }
+    CommonPracticeMaterials materials;
+    if (!common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
+        hearing_destroy(hearing);
+        return FORM_HEAR_ERR_ANALYSIS;
+    }
     if (lane_open(plan, PLAN_LANE_MELODY, span) || lane_open(plan, PLAN_LANE_BASS, span) ||
         lane_open(plan, PLAN_LANE_HARMONY, span)) {
         status = FORM_HEAR_ERR_NOT_WRITTEN;
@@ -223,7 +229,7 @@ FormHearResult form_hear_keys(const PiecePlan *plan, const KnowledgeSnapshot *kn
         status = result_of(hearing_section(hearing, span, &result));
     }
     if (status == FORM_HEAR_OK) {
-        status = copy_keys(result, out, count);
+        status = copy_keys(result, &materials, out, count);
     }
     hearing_destroy(hearing);
     return status;

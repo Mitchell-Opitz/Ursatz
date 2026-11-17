@@ -7,6 +7,7 @@
 #include <ursatz_composer/variant_registry.h>
 
 #include "util/request_parse.h"
+#include "support/test_knowledge.h"
 
 /*
  * The round trip of R-139: every variant the Composer makes is recovered. Four fixtures (a full motive in major, a full
@@ -69,7 +70,7 @@ static Motive load(const char *notes, const char *meter, const char *key, Motive
         exit(2);
     }
     options.has_meter = true;
-    options.has_key = key && request_parse_key(key, &options.key);
+    options.has_key = key && request_parse_key(key, test_materials(), &options.key);
     Motive motive;
     MotiveError error;
     if (motive_load(notes, strlen(notes), format, &options, &motive, &error) != MOTIVE_OK) {

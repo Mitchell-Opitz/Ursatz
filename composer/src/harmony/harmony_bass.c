@@ -46,16 +46,16 @@ bool harmony_chord_bass_pc(const AnalysisKey *key, const PhraseChord *chord, int
         if (!harmony_applied_intervals(&chord->applied_chord, intervals, &count)) {
             return false;
         }
-        root = harmony_applied_root_semitone(harmony_mode_of(key->mode), &chord->applied_chord);
+        root = harmony_applied_root_semitone(harmony_mode_of(composer_key_mode(key)), &chord->applied_chord);
         member = chord->applied_inversion;
     } else {
-        if (!harmony_diatonic_intervals(key->mode, &chord->chord, intervals, &count)) {
+        if (!harmony_diatonic_intervals(composer_key_mode(key), &chord->chord, intervals, &count)) {
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = key->mode == KEY_STRUCTURE_MODE_MINOR && chord->chord.leading_tone
+        root = composer_key_is_minor(key) && chord->chord.leading_tone
                    ? 11
-                   : harmony_applied_scale_semitone(harmony_mode_of(key->mode), chord->chord.degree);
+                   : harmony_applied_scale_semitone(harmony_mode_of(composer_key_mode(key)), chord->chord.degree);
         member = chord->chord.inversion;
     }
     if (root < 0 || member < 0 || (size_t)member >= count) {
@@ -76,7 +76,7 @@ bool harmony_bass_context_read(const PiecePlan *plan, LaneSpanId target, BassCon
     context.owner = plan_lane_span_owner(plan, target);
     context.span = plan_lane_span_span(plan, target);
     if (!harmony_find_key(plan, target, context.owner, context.span, &context.key) ||
-        !harmony_read_lane(plan, context.span, context.key.mode, context.chords, &context.count,
+        !harmony_read_lane(plan, context.span, composer_key_mode(&context.key), context.chords, &context.count,
                            &context.metre)) {
         return false;
     }

@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 #define DEFAULT_MIN_REPEATS 2
 #define DEFAULT_MAX_REPEATS 4
@@ -119,7 +120,7 @@ static bool offer(const SkeletonContext *read, const HarmonySequenceParams *para
     unsigned drawn = low + (unsigned)fill_rng_below(rng, high - low + 1);
     int start = 1 + (int)fill_rng_below(rng, 7);
     size_t cpb = read->metre.cells_per_bar;
-    KeyStructureMode mode = read->key.mode;
+    KeyStructureMode mode = composer_key_mode(&read->key);
     memset(skeleton, 0, sizeof(*skeleton));
     skeleton->schema = -1;
     skeleton->context = *read;

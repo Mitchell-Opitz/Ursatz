@@ -212,7 +212,7 @@ static ComposerStatus read_brief(const cJSON *request, GrowRequestText *brief, C
 /* The motive request with the key the brief settled on, and the meter and the role of an accompaniment motive. */
 static ComposerStatus make_lines(State *state, ComposerError *error) {
     char key[24];
-    util_key_name(analysis_key_tonic_pitch_class(&state->setup.key), state->setup.key.mode == KEY_STRUCTURE_MODE_MINOR, key,
+    util_key_name(analysis_key_tonic_pitch_class(&state->setup.key), composer_key_is_minor(&state->setup.key), key,
                   sizeof key);
     state->line = cJSON_Duplicate(state->request, true);
     if (!state->line) {
@@ -354,13 +354,14 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
         setup->seeded = true;
         state->motive = setup->seed_found.motive;
     } else {
-        status = api_read_motive(state->line, "", &state->motive, NULL, error);
+        status = api_read_motive(state->line, "", state->setup.materials, &state->motive, NULL, error);
         if (status != COMPOSER_OK) {
             return status;
         }
     }
     if (state->accompaniment_line) {
-        status = api_read_motive(state->accompaniment_line, "/accompaniment_motive", &state->accompaniment_motive, NULL, error);
+        status = api_read_motive(state->accompaniment_line, "/accompaniment_motive", state->setup.materials, &state->accompaniment_motive,
+                                NULL, error);
         if (status != COMPOSER_OK) {
             return status;
         }
@@ -457,7 +458,8 @@ static ComposerStatus add_notices(cJSON *document, const State *state, const Api
 ComposerStatus composer_api_grow(const ComposerContext *context, const char *request_json,
                                  const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }
@@ -466,6 +468,7 @@ ComposerStatus composer_api_grow(const ComposerContext *context, const char *req
     memset(&state, 0, sizeof(state));
     memset(&outputs, 0, sizeof(outputs));
     state.setup.knowledge = context->knowledge;
+    state.setup.materials = &materials;
     ComposerStatus status = api_parse_request(request_json, &state.request, &out->error);
     if (status == COMPOSER_OK) {
         status = grow_prepare(&state, job, &outputs, &out->error);

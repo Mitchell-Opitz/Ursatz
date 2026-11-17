@@ -779,7 +779,7 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
     AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
     int tonic = analysis_key_tonic_pitch_class(&ends_in);
     int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
-               : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + (ends_in.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12
+               : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + (composer_key_is_minor(&ends_in) ? 3 : 4)) % 12
                                                       : -1;
     /* A contrasting idea with a motive of its own is that motive as it is: nothing to draw. */
     bool own_contrast = grow_idea_own(spec, GROW_PLACE_CONSEQUENT_CONTRAST);

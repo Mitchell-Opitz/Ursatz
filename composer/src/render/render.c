@@ -190,7 +190,7 @@ static int key_sharps_flats(const AnalysisKey *key) {
     int accidental;
     int fifths = 0;
     if (!key_tonic(key, &letter, &accidental) ||
-        !standard_tonality_key_fifths(letter, accidental, key->mode == KEY_STRUCTURE_MODE_MINOR, &fifths)) {
+        !standard_tonality_key_fifths(letter, accidental, composer_key_is_minor(key), &fifths)) {
         return 0;
     }
     return fifths;
@@ -239,7 +239,7 @@ static Spelling spell(int midi, const AnalysisKey *key) {
     int tonic_accidental = 0;
     KeySignature *signature = NULL;
     if (key && key_tonic(key, &tonic_letter, &tonic_accidental) &&
-        standard_tonality_key_signature_of(tonic_letter, tonic_accidental, key->mode == KEY_STRUCTURE_MODE_MINOR, &signature)) {
+        standard_tonality_key_signature_of(tonic_letter, tonic_accidental, composer_key_is_minor(key), &signature)) {
         for (int step = 0; step < 7; step++) {
             PitchLetter letter = pitch_letter_offset(PITCH_LETTER_C, step);
             int accidental = 0;
@@ -554,7 +554,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         keys[i].plan_span = span;
         keys[i].key = *key;
         out->keys[i].sharps_flats = key_sharps_flats(key);
-        out->keys[i].mode = key->mode;
+        out->keys[i].mode = composer_key_mode(key);
         out->keys[i].position = musical_time_of(key_start);
         out->key_count++;
     }

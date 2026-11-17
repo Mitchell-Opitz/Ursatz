@@ -8,6 +8,7 @@
 
 #include "plan/plan_internal.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 
 void constraint_list_free(ConstraintList *list) {
     free(list->items);
@@ -38,7 +39,7 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     }
     case PLAN_CONSTRAINT_KEY:
         return analysis_key_tonic_pitch_class(&constraint->params.key) >= 0 && analysis_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
-               (constraint->params.key.mode == KEY_STRUCTURE_MODE_MAJOR || constraint->params.key.mode == KEY_STRUCTURE_MODE_MINOR);
+               composer_key_valid(&constraint->params.key);
     case PLAN_CONSTRAINT_ARCHETYPE:
         return constraint->params.archetype >= PLAN_ARCHETYPE_SENTENCE &&
                constraint->params.archetype <= PLAN_ARCHETYPE_HYBRID;

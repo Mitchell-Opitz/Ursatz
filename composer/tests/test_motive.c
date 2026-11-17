@@ -11,6 +11,7 @@
 
 #include "util/request_parse.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Motive input and analysis. The same motive is loaded from MIDI, MusicXML, a note list and JSON and must come out
@@ -22,9 +23,10 @@
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter THREE_FOUR = {3, 4, 0};
-static const AnalysisKey D_MINOR = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR, NULL};
-static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
-static const AnalysisKey G_MAJOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR, NULL};
+/* The keys the tests read motives in: made in main, since a key carries the material of the knowledge snapshot. */
+static AnalysisKey D_MINOR;
+static AnalysisKey C_MAJOR;
+static AnalysisKey G_MAJOR;
 
 static MotiveOptions options_with(const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
@@ -191,10 +193,10 @@ static void test_options(void) {
     assert(strcmp(error.location, "meter") == 0);
 
     AnalysisKey key;
-    assert(request_parse_key("Bb minor", &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
-    assert(request_parse_key("F# major", &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
-    assert(!request_parse_key("H major", &key));
-    assert(!request_parse_key("D dorian", &key));
+    assert(request_parse_key("Bb minor", test_materials(), &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(request_parse_key("F# major", test_materials(), &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
+    assert(!request_parse_key("H major", test_materials(), &key));
+    assert(!request_parse_key("D dorian", test_materials(), &key));
     PlanMeter meter;
     assert(request_parse_meter("6/8", &meter) && meter.beats_per_bar == 6 && meter.beat_unit == 8);
     assert(!request_parse_meter("4/5", &meter));
@@ -1000,7 +1002,7 @@ static void test_analysis_by_form(void) {
 static void test_render_in_another_key(void) {
     /* D minor 1 b3 5 1' (D4 F4 A4 D5) in G minor: the same degrees, a fourth up. */
     Motive source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
-    static const AnalysisKey G_MINOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MINOR, NULL};
+    const AnalysisKey G_MINOR = plan_key_of_pitch_class(7, KEY_STRUCTURE_MODE_MINOR);
     Motive moved;
     assert(motive_in_key(&source, &G_MINOR, &moved));
     assert(moved.key_source == MOTIVE_SKETCH_KEY_GIVEN && moved.tonic_pc == 7 && motive_sketch_minor(&moved));
@@ -1353,6 +1355,9 @@ static void test_features_follow_the_notes(void) {
 }
 
 int main(void) {
+    D_MINOR = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    C_MAJOR = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    G_MAJOR = plan_key_of_pitch_class(7, KEY_STRUCTURE_MODE_MAJOR);
     test_same_motive_from_each_format();
     test_musicxml_keeps_spelling();
     test_options();

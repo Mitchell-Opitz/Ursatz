@@ -12,6 +12,7 @@
 #include "api_grow.h"
 #include "api_internal.h"
 #include "api_piece.h"
+#include "util/util.h"
 
 /*
  * Variations of one section of a loop plan (docs/api.md): the section is written again from one seed after another (as a
@@ -43,7 +44,7 @@ static ComposerStatus variations_document(const PieceSpec *request, const PieceE
     memset(&brief, 0, sizeof(brief));
     brief.tempo = request->tempo;
     brief.tempo_from = request->tempo_from;
-    brief.minor = request->request.key.mode == KEY_STRUCTURE_MODE_MINOR;
+    brief.minor = composer_key_is_minor(&request->request.key);
     brief.mode_from = request->mode_from;
     brief.has_density = composer_style_density(request->style, &brief.density);
     brief.without = request->without;
@@ -123,7 +124,8 @@ static ComposerStatus read_variations(const cJSON *root, PieceEdit *edit, unsign
 ComposerStatus composer_api_piece_variations(const ComposerContext *context, const char *request_json,
                                              const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }
@@ -181,7 +183,7 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
         }
     }
     if (status == COMPOSER_OK) {
-        status = api_piece_read_request(request, context->knowledge, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request",
+        status = api_piece_read_request(request, context->knowledge, &materials, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request",
                                         style, plain_midi, job, &out->error);
     }
     if (status == COMPOSER_OK) {

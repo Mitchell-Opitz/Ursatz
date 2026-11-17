@@ -72,9 +72,9 @@ bool harmony_key_before(const PiecePlan *plan, Rational start, AnalysisKey *out)
 
 /* The closely related key of `from` that is the key `to`. */
 static bool related_key_of(AnalysisKey from, AnalysisKey to, HarmonyMode *home, HarmonyRelatedKey *out) {
-    *home = from.mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+    *home = composer_key_is_minor(&from) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
     int semitone = util_pitch_class(analysis_key_tonic_pitch_class(&to) - analysis_key_tonic_pitch_class(&from));
-    HarmonyMode mode = to.mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+    HarmonyMode mode = composer_key_is_minor(&to) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
     for (int i = 0; i < harmony_related_key_count(*home); i++) {
         HarmonyRelatedKey key;
         if (harmony_related_key_at(*home, i, &key) && key.mode == mode &&
@@ -109,8 +109,8 @@ size_t harmony_pivot_degrees(AnalysisKey from, AnalysisKey to, int degrees[HARMO
         HarmonyChord chord = triad_on(pivots[i].new_degree);
         HarmonicFunction function;
         /* A phrase cannot open on a dominant, a diminished triad (vii in major, ii in minor) or the minor v. */
-        bool diminished = to.mode == KEY_STRUCTURE_MODE_MINOR ? pivots[i].new_degree == 2 : pivots[i].new_degree == 7;
-        bool minor_v = to.mode == KEY_STRUCTURE_MODE_MINOR && (pivots[i].new_degree == 5 || pivots[i].new_degree == 7);
+        bool diminished = composer_key_is_minor(&to) ? pivots[i].new_degree == 2 : pivots[i].new_degree == 7;
+        bool minor_v = composer_key_is_minor(&to) && (pivots[i].new_degree == 5 || pivots[i].new_degree == 7);
         if (!harmony_pivot_rank(home, &related, &pivots[i], &rank) || rank == HARMONY_PIVOT_POOR || diminished ||
             minor_v ||
             !harmony_function_of(related.mode, &chord, &function) || function == HARMONIC_FUNCTION_DOMINANT) {
@@ -151,7 +151,7 @@ bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanS
     if (!harmony_find_key(plan, id, owner, span, &key)) {
         return false;
     }
-    *out = key.mode;
+    *out = composer_key_mode(&key);
     return true;
 }
 
@@ -432,7 +432,7 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
     if (!harmony_find_key(plan, target, request.owner, request.span, &request.key)) {
         return false;
     }
-    request.mode = request.key.mode;
+    request.mode = composer_key_mode(&request.key);
     if (request.has_shape && request.shape.starts_on == PLAN_HARMONY_ANCHOR_PIVOT) {
         /* A pivot opens a phrase model on a key change; a prolongation does not open one. */
         request.pivot = true;

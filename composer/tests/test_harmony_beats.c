@@ -12,6 +12,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_oracles.h"
+#include "support/test_knowledge.h"
 
 /*
  * Harmony and bass over spans that start and end on any beat (R-168), run through the fill loop with the checker. Beats
@@ -392,6 +393,7 @@ static void test_off_beat_is_not_a_target(void) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
     payload.key.mode = KEY_STRUCTURE_MODE_MAJOR;
+    payload.key.material = test_materials()->major;
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));

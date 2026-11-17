@@ -10,6 +10,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "texture/voicing_internal.h"
+#include "util/util.h"
 
 /* The pitches a spelling table covers. */
 #define TABLE_LOW 24
@@ -69,7 +70,7 @@ static bool read_chords(const PiecePlan *plan, VoicingContext *out, Rational *ce
     PhraseMetre metre;
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
     size_t count;
-    if (!harmony_read_lane(plan, out->span, out->key.mode, chords, &count, &metre) || count == 0 ||
+    if (!harmony_read_lane(plan, out->span, composer_key_mode(&out->key), chords, &count, &metre) || count == 0 ||
         count > HARMONY_MAX_CHORDS ||
         plan_lane_find(plan, PLAN_LANE_HARMONY, 0, out->span, harmony, HARMONY_MAX_CHORDS) != count ||
         !position_is_positive(out->span.length) || !position_is_positive(metre.cell_length)) {
@@ -104,7 +105,7 @@ static bool read_tones(VoicingContext *out, size_t i) {
     if (!accomp_chord_tones(&out->key, chord, out->pcs[i], &out->tone_count[i])) {
         return false;
     }
-    root_degree = chord->applied ? harmony_applied_root_degree(harmony_mode_of(out->key.mode), &chord->applied_chord)
+    root_degree = chord->applied ? harmony_applied_root_degree(harmony_mode_of(composer_key_mode(&out->key)), &chord->applied_chord)
                                  : chord->chord.degree;
     if (root_degree < 1 || root_degree > 7) {
         return false;
@@ -167,9 +168,9 @@ static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, Rational ce
     before_span = plan_lane_span_span(plan, before);
     if (plan_span_end(before_span, &before_end) != PLAN_OK || rational_cmp(before_end, out->span.start) != 0 ||
         plan_lane_span_state(plan, before) == PLAN_STATE_CONSTRAINED ||
-        !harmony_read_chord(plan, before, out->key.mode, cell_length, &chord) ||
+        !harmony_read_chord(plan, before, composer_key_mode(&out->key), cell_length, &chord) ||
         (harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, before_span, &key) &&
-         (analysis_key_tonic_pitch_class(&key) != analysis_key_tonic_pitch_class(&out->key) || key.mode != out->key.mode)) ||
+         (analysis_key_tonic_pitch_class(&key) != analysis_key_tonic_pitch_class(&out->key) || composer_key_mode(&key) != composer_key_mode(&out->key))) ||
         !position_is_positive(before_span.length)) {
         return true;
     }
@@ -212,7 +213,7 @@ static void limit_cadence_soprano(const PiecePlan *plan, VoicingContext *out) {
         if (constraint->params.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC) {
             out->soprano_mask[last] = 1u << analysis_key_tonic_pitch_class(&out->key);
         } else if (constraint->params.cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
-            out->soprano_mask[last] = 1u << ((analysis_key_tonic_pitch_class(&out->key) + (out->key.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12);
+            out->soprano_mask[last] = 1u << ((analysis_key_tonic_pitch_class(&out->key) + (composer_key_is_minor(&out->key) ? 3 : 4)) % 12);
         }
     }
 }

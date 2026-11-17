@@ -76,7 +76,7 @@ static ComposerStatus variations_document(const PlanVariations *variations, cons
 static ComposerStatus run_variations(const ComposerContext *context, const char *request_json, const ComposerJob *job,
                                      ComposerResponse *out, bool harmonize) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }

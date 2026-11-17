@@ -15,6 +15,7 @@
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 const char *grow_result_name(GrowResult result) {
     switch (result) {
@@ -440,7 +441,7 @@ static const char *motive_reason(const GrowRequest *request, const Motive *motiv
     }
     if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
         (motive->tonic_pc != analysis_key_tonic_pitch_class(&request->key) ||
-         motive_sketch_minor(motive) != (request->key.mode == KEY_STRUCTURE_MODE_MINOR))) {
+         motive_sketch_minor(motive) != (composer_key_is_minor(&request->key)))) {
         return "is not in the theme's key";
     }
     /* The idea has units eighths of the theme; the longest motive is as long as that idea. */

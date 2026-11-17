@@ -34,7 +34,7 @@ void counterpoint_context_free(CounterpointContext *context) {
 /* The scale degree of a pitch class above the tonic, 1 to 7, or 0 when the key's scale has no such note. */
 static int scale_degree(const AnalysisKey *key, int pitch) {
     int tonic = analysis_key_tonic_pitch_class(key);
-    bool minor = key->mode == KEY_STRUCTURE_MODE_MINOR;
+    bool minor = composer_key_is_minor(key);
     int degree;
     int alteration;
     /* The minor scale as it is written in counterpoint: the natural minor, with the raised sixth and seventh. */

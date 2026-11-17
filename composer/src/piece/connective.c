@@ -198,7 +198,7 @@ PieceResult piece_connective_write(PiecePlan *plan, NodeId section) {
     /* The line, written backwards from its last note: one scale step from the target, on the side of the downbeat note. */
     AnalysisKey key = plan_lane_span_payload(plan, key_span)->key;
     int tonic = analysis_key_tonic_pitch_class(&key);
-    bool minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
+    bool minor = composer_key_is_minor(&key);
     int side = from > target ? 1 : -1;
     int line[CONNECTIVE_MAX_NOTES];
     line[count - 1] = scale_step(tonic, minor, target, side);

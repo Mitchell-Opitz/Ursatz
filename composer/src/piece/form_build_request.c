@@ -140,7 +140,7 @@ static PieceResult check(const FormSpec *form, const PieceRequest *request) {
     size_t cells;
     if (!grow_cells_per_bar(&request->meter, &cells) || analysis_key_tonic_pitch_class(&request->key) < 0 ||
         analysis_key_tonic_pitch_class(&request->key) > 11 ||
-        (request->key.mode != KEY_STRUCTURE_MODE_MAJOR && request->key.mode != KEY_STRUCTURE_MODE_MINOR) ||
+        !composer_key_valid(&request->key) ||
         request->meter.beats_per_bar <= 0 || request->meter.beat_unit <= 0 ||
         request->section_count > PIECE_STRUCTURE_MAX_SECTIONS || (request->has_accompaniment && request->has_voicing)) {
         return PIECE_ERR_BAD_REQUEST;
@@ -346,7 +346,7 @@ static bool theme_motive(const PieceRequest *request, const PieceSection *sectio
     }
     span = plan_node_span(theme_plan, theme);
     if (!return_meter_over(theme_plan, span, &meter) || !key_over(theme_plan, span, &key) ||
-        key.mode != request->key.mode || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
+        composer_key_mode(&key) != composer_key_mode(&request->key) || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
         return false;
     }
     int shift = util_pitch_class(analysis_key_tonic_pitch_class(&request->key) - analysis_key_tonic_pitch_class(&key));
@@ -421,7 +421,7 @@ static bool loop_motive(const PieceRequest *request, const PiecePlan *loop_plan,
     }
     PlanSpan span = plan_node_span(loop_plan, source);
     return return_meter_over(loop_plan, span, &meter) && key_over(loop_plan, span, &key) &&
-           key.mode == request->key.mode && analysis_key_tonic_pitch_class(&key) == analysis_key_tonic_pitch_class(&request->key) &&
+           composer_key_mode(&key) == composer_key_mode(&request->key) && analysis_key_tonic_pitch_class(&key) == analysis_key_tonic_pitch_class(&request->key) &&
            grow_read_motive(loop_plan, source, &meter, &key, out);
 }
 

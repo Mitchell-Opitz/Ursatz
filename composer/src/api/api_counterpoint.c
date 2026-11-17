@@ -58,8 +58,8 @@ static const char *value_text(const cJSON *item, char *buffer, size_t size) {
 
 /* --- reading the request ---------------------------------------------------------------------------------- */
 
-static ComposerStatus read_request(const cJSON *request, Options *options, ApiOutputs *outputs, cJSON **line,
-                                   ComposerError *error) {
+static ComposerStatus read_request(const cJSON *request, const CommonPracticeMaterials *materials, Options *options,
+                                   ApiOutputs *outputs, cJSON **line, ComposerError *error) {
     const char *mode_text = NULL;
     const char *position_text = NULL;
     bool found;
@@ -103,10 +103,10 @@ static ComposerStatus read_request(const cJSON *request, Options *options, ApiOu
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "key already names a mode; give a tonic alone with mode");
         }
         snprintf(combined, sizeof(combined), "%s %s", options->key_text, mode_text);
-        if (!request_parse_key(combined, &options->key)) {
+        if (!request_parse_key(combined, materials, &options->key)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "unknown key '%s'", options->key_text);
         }
-    } else if (!request_parse_key(options->key_text, &options->key)) {
+    } else if (!request_parse_key(options->key_text, materials, &options->key)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, for "
                         "example \"D minor\"",
@@ -348,7 +348,8 @@ static ComposerStatus result_json(const Options *options, const Result *result, 
 ComposerStatus composer_api_counterpoint(const ComposerContext *context, const char *request_json,
                                          const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }
@@ -366,13 +367,13 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
     memset(&outputs, 0, sizeof(outputs));
     ComposerStatus status = api_parse_request(request_json, &request, &out->error);
     if (status == COMPOSER_OK) {
-        status = read_request(request, &options, &outputs, &line, &out->error);
+        status = read_request(request, &materials, &options, &outputs, &line, &out->error);
         options.job = job;
         last_seed = options.seed;
     }
     if (status == COMPOSER_OK) {
         /* A line of any length is read here: the one-bar limit belongs to a motive, not to a line to write against. */
-        status = api_read_motive(line, "", &motive, NULL, &out->error);
+        status = api_read_motive(line, "", &materials, &motive, NULL, &out->error);
     }
     /* Whether the line is one the species can be written against, before any seed is tried. */
     if (status == COMPOSER_OK) {
@@ -419,7 +420,7 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
         char key[24];
         char meter[16];
         PlanSpan span = {fraction(0, 1), motive.length};
-        util_key_name(analysis_key_tonic_pitch_class(&options.key), options.key.mode == KEY_STRUCTURE_MODE_MINOR, key, sizeof(key));
+        util_key_name(analysis_key_tonic_pitch_class(&options.key), composer_key_is_minor(&options.key), key, sizeof(key));
         snprintf(meter, sizeof(meter), "%d/%d", options.meter.beats_per_bar, options.meter.beat_unit);
         document = cJSON_CreateObject();
         cJSON *list = document ? cJSON_CreateArray() : NULL;

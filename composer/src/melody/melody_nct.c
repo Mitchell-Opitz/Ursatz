@@ -28,7 +28,7 @@ static bool leap_allowed(int move) {
 
 unsigned melody_scale_mask(const MelodyContext *context, size_t chord) {
     int tonic = analysis_key_tonic_pitch_class(&context->key);
-    if (context->key.mode != KEY_STRUCTURE_MODE_MINOR) {
+    if (!composer_key_is_minor(&context->key)) {
         return util_scale_mask(tonic, false);
     }
     /* The harmonic minor where the chord has the raised seventh (the natural seventh beside it makes no melody), else the natural minor. */

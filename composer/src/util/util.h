@@ -4,7 +4,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <analysis/notes/analysis_key.h>
 #include <theory/harmony/harmonic_function.h>
+#include <theory/tonality/common_practice_materials.h>
 
 /* Small helpers the sources share. Private: not installed, not part of the API. */
 
@@ -43,6 +45,37 @@ bool util_scale_degree(int tonic_pitch_class, bool minor, int pitch, int *degree
 
 /* The semitones above the tonic of a degree (1 to 7) in the major scale or the natural minor. */
 int util_scale_semitone(bool minor, int degree);
+
+/*
+ * Whether the key reads as a minor key: its material has a minor third (common_practice_key_mode_of). False for a key with no
+ * material (the zero key reads as major, as a request left at its defaults holds) or a material that is neither major nor
+ * minor; the Composer writes keys that have one (P58 B13). Every read of a key's mode goes through this.
+ */
+bool composer_key_is_minor(const AnalysisKey *key);
+
+/*
+ * The builtin major (or natural minor) material, common_practice_materials_builtin's, for code that holds a mode and no materials.
+ * TRANSITIONAL: goes with the mode types and the builtin materials (P58 B13).
+ */
+const PitchMaterial *composer_builtin_material(bool minor);
+
+/*
+ * Makes the key a major or a minor key, keeping its tonic spelling: its material becomes the major or the natural minor of
+ * materials and its mode follows. The one way the Composer writes a mode (P58 B13).
+ */
+void composer_key_set_minor(AnalysisKey *key, const CommonPracticeMaterials *materials, bool minor);
+
+/*
+ * Whether the key has a material the Composer writes: a major third or a minor third (common_practice_key_mode_of). The zero key
+ * (C, no material) is valid and reads as C major, which a request left at its defaults holds.
+ */
+bool composer_key_valid(const AnalysisKey *key);
+
+/*
+ * The key's mode as the code still written on KeyStructureMode reads it: KEY_STRUCTURE_MODE_MINOR when composer_key_is_minor,
+ * else KEY_STRUCTURE_MODE_MAJOR. TRANSITIONAL: goes with the mode types (P58 B13).
+ */
+KeyStructureMode composer_key_mode(const AnalysisKey *key);
 
 /* The name of a chord's harmonic function, "unknown" for a chord with none. */
 const char *util_function_name(bool has_function, HarmonicFunction function);

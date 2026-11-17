@@ -1143,7 +1143,7 @@ static int test_brief(void) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.has_meter = request_parse_meter("4/4", &options.meter);
-    options.has_key = request_parse_key("C major", &options.key);
+    options.has_key = request_parse_key("C major", test_materials(), &options.key);
     Motive basic;
     assert(motive_from_notes_text("E4:q G4:e F4:e D4:q C4:q", &options, &basic, NULL) == MOTIVE_OK);
     MotiveScore remote = {5, 8};

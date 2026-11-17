@@ -9,6 +9,7 @@
 #include <theory/tonality/roman_numeral_rules.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 #define DEFAULT_PREFERENCE 250
 #define PREFERENCE_LIMIT 1000000
@@ -65,7 +66,7 @@ static bool bass_accepts(const AnalysisKey *key, const PhraseChord *chord, const
     if (!harmony_chord_bass_pc(key, chord, &pc)) {
         return false;
     }
-    PitchSpelling *pitch = harmony_spell_pitch(key, harmony_member_degree(key->mode, chord), 48 + pc);
+    PitchSpelling *pitch = harmony_spell_pitch(key, harmony_member_degree(composer_key_mode(key), chord), 48 + pc);
     PitchSpelling *tonic = harmony_spell_tonic(key, 3);
     GalantPitchDegree actual;
     bool ok = pitch && tonic && galant_degree_of(pitch, tonic, &actual) && galant_degree_allows(wanted, &actual);
@@ -76,7 +77,7 @@ static bool bass_accepts(const AnalysisKey *key, const PhraseChord *chord, const
 
 /* The chord of one stage, one cell long, or false when the data does not make one consistent chord. */
 static bool derive_stage(const AnalysisKey *key, const GalantStage *stage, PhraseChord *out) {
-    KeyStructureMode mode = key->mode;
+    KeyStructureMode mode = composer_key_mode(key);
     bool seventh;
     int inversion;
     if (!read_figures(stage->figures, &seventh, &inversion)) {

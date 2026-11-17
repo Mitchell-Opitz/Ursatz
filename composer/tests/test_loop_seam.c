@@ -204,6 +204,7 @@ static void test_rules(void) {
     assert(plan_node_add_constraint(plan, seam, &mark) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
     payload.key.mode = KEY_STRUCTURE_MODE_MAJOR;
+    payload.key.material = test_materials()->major;
     assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, (PlanSpan){whole(0, 1), whole(2, 1)}, &payload, &id) ==
            PLAN_OK);
     assert(seam_hear(plan, seam, &heard) == SEAM_HEAR_ERR_NOT_WRITTEN);

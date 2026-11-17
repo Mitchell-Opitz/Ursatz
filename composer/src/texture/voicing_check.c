@@ -108,7 +108,7 @@ static bool voice_resolves(const VoicingContext *context, size_t chord, const in
         return true;
     }
     if (!before->applied) {
-        resolution.mode = harmony_mode_of(context->key.mode);
+        resolution.mode = harmony_mode_of(composer_key_mode(&context->key));
         resolution.from = before->chord;
         resolution.to = after->applied ? (HarmonyChord){0} : after->chord;
         if (after->applied) {

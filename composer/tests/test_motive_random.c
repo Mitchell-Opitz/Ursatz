@@ -7,6 +7,7 @@
 #include <ursatz_composer/motive_random.h>
 
 #include "motive/motive_internal.h"
+#include "support/test_knowledge.h"
 
 /*
  * Random motives: in C major 4/4, D minor 4/4, A minor 3/4, D major 6/8 and G major 2/4, seeds 1 to 20 give motives of
@@ -271,7 +272,7 @@ static void test_refusals(void) {
     Motive motives[COUNT];
     size_t made = 99;
     MotiveRandomOptions options = options_of(&SCENARIOS[0], 1);
-    options.key.mode = KEY_STRUCTURE_MODE_MINOR;
+    options.key = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&options.key), KEY_STRUCTURE_MODE_MINOR);
     options.has_key = true;
     assert(motive_random(&options, motives, &made) == MOTIVE_RANDOM_ERR_KEY && made == 0);
     options = options_of(&SCENARIOS[0], 1);
