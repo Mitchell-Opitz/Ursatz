@@ -10,4 +10,14 @@ static inline const AnalysisChainMeter *analysis_chain_meter(const AnalysisChain
     return chain != NULL && chain->have_densities ? &chain->meter : NULL;
 }
 
+/* The name of the stage whose failure a status reports, or NULL for a status that is not a stage's. */
+static inline const char *analysis_chain_stage_name(AnalysisChainStatus status) {
+    for (size_t row = 0; row < ANALYSIS_CHAIN_STAGE_COUNT; row++) {
+        if (analysis_chain_stages[row].error == status) {
+            return analysis_chain_stages[row].name;
+        }
+    }
+    return NULL;
+}
+
 #endif

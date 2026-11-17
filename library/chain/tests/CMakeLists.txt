@@ -3,6 +3,8 @@ ursatz_test_includes()
 ursatz_test_executable(test_form_bridge LIBS ursatz_chain)
 ursatz_test(chain_form_bridge TARGET test_form_bridge VALGRIND)
 
+ursatz_test(chain_stage_table SOURCES test_stage_table.c LIBS ursatz_chain ursatz_test_support)
+
 ursatz_test(chain_inputs LIBS ursatz_chain ursatz_io VALGRIND)
 
 # The chain on four reference pieces against fixed expected results (captured while it was proven equal to the test glue it replaced).
