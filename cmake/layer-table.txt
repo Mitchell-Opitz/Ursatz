@@ -100,7 +100,14 @@ module composer-api  composer/include  prefix ursatz_composer/composer_api.h
 module composer      composer/src      prefix ursatz_composer/  root composer/src composer/src/include composer/include
 module composer-cli  composer/cli
 module gui           gui/backend/src   root gui/backend/src
-staged analyzer-api analyzer composer
+# A CMake target builds these modules; an include between two modules of one target needs no staging, one between targets (or from
+# an application) must name a staged header, and a staged header nothing outside its target includes is an error.
+target ursatz_model model
+target ursatz_theory theory
+target ursatz_analysis analysis
+target ursatz_chain chain
+target ursatz_io io
+staged model theory analysis chain io analyzer-api analyzer composer
 generated analyzer version.h ursatz_analyzer_producer_key.h
 
 uses analyzer-api  model theory analysis io

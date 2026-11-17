@@ -13,15 +13,22 @@ Rows of the table, one per line; # starts a comment and " -- " starts the reason
   like <name> <module>                <name> may also include <module> and everything <module> may include
   allow <file> <module|group|header>...  one file's extra edge
   only <module|header> <path>...      only files under these paths may include this module or header
-  staged <name>...                    a library header these modules include is one the build stages (manifest)
+  target <name> <module or group>...  the modules one CMake target builds (an include within one target is free)
+  staged <name>...                    a library header these modules include is one the build stages (manifest), unless
+                                      it stays within one target; an application is in no target, so it always needs one
   generated <name> <include>...       headers the build writes for <name>
   forbid <path> <regex>               no C or CMake file under <path> matches <regex> (whole file, ^ and $ per line;
                                       write \\s, not a space)
   free <name>...                      these modules' own includes are not checked
 An include is looked up beside the including file (for "..."), then in the module's root dirs, then by prefix.
 One found nowhere is a system header when written with <...> and an error when written with "...".
+With the staged header manifest given, a second rule reports every staged header that no include from outside its
+target reaches, directly or through another staged header: "<header> is staged but nothing outside <target> includes
+it". An include from a library test does not count (a test sees the library folders, not only the staged headers);
+an include from an application, an application test, a root test or a library file of another target does.
 Exit 0 when clean, 1 with one line per problem, 2 on a bad table.
 """
+import collections
 import os
 import re
 import sys
@@ -37,7 +44,7 @@ def bad_table(lineno, text):
 
 def read_table(path):
     t = {"module": {}, "prefix": [], "root": {}, "group": {}, "uses": {}, "like": {}, "allow": {}, "only": [],
-         "staged": set(), "generated": {}, "forbid": [], "free": set()}
+         "staged": set(), "generated": {}, "forbid": [], "free": set(), "target": {}}
     refs = []  # (lineno, token) to check once every module and group is known
     with open(path, encoding="utf-8") as f:
         for lineno, raw in enumerate(f, 1):
@@ -74,6 +81,9 @@ def read_table(path):
                 refs += [(lineno, args[0]), (lineno, args[1])]
             elif kind == "only" and len(args) >= 2:
                 t["only"].append((args[0], [a.rstrip("/") for a in args[1:]]))
+            elif kind == "target" and len(args) >= 2:
+                t["target"].setdefault(args[0], []).extend(args[1:])
+                refs += [(lineno, a) for a in args[1:]]
             elif kind in ("staged", "free") and args:
                 t[kind].update(args)
                 refs += [(lineno, a) for a in args]
@@ -121,12 +131,14 @@ def allowed_sets(t):
 
 
 def read_manifest(path):
-    staged = set()
+    """The staged headers, and the target each is staged by."""
+    staged = {}
     with open(path, encoding="utf-8") as f:
         for line in f:
             parts = line.rstrip("\n").split("|")
             if len(parts) >= 4 and parts[3]:
-                staged.update(parts[3].split(","))
+                for header in parts[3].split(","):
+                    staged[header] = parts[0]
     return staged
 
 
@@ -137,6 +149,11 @@ def main():
     root = os.path.abspath(sys.argv[1])
     t = read_table(os.path.join(root, "cmake", "layer-table.txt"))
     staged_headers = read_manifest(sys.argv[2]) if len(sys.argv) == 3 else None
+    staged_modules = expand(t, t["staged"])
+    target_of = {}
+    for target_name, members in t["target"].items():
+        for module in expand(t, members):
+            target_of[module] = target_name
     allowed_by = allowed_sets(t)
     owners = sorted(((p, n) for n, paths in t["module"].items() for p in paths), key=lambda pair: -len(pair[0]))
     library = {n for n, paths in t["module"].items() if all(p.startswith("library/") for p in paths)}
@@ -161,7 +178,12 @@ def main():
             elif n == "CMakeLists.txt" or n.endswith(".cmake"):
                 cmake_files.append(rel)
 
+    def is_library_test(rel):
+        return rel.startswith("library/") and ("/tests/" in rel or rel.startswith("library/tests/"))
+
     errors = []
+    included_from_outside = set()  # staged headers an include from outside their target names
+    includes_of = collections.defaultdict(set)  # file -> staged headers it includes
     for rel in c_files + cmake_files:
         rules = [(regex, why) for path, regex, why in t["forbid"] if under(rel, [path])]
         if rules:
@@ -208,13 +230,31 @@ def main():
             for what, paths in t["only"]:
                 if what in (target, inc, target_path) and not under(rel, paths):
                     errors.append(f'{rel}:{i}: includes "{inc}", which only {", ".join(paths)} may include')
+            header = (target_path[len("library/"):] if target_path and target_path.startswith("library/") else inc)
+            if staged_headers is not None and header in staged_headers and target in library:
+                includes_of[rel].add(header)
+                if (target_of.get(name) != staged_headers[header] and not is_library_test(rel)
+                        and (target_of.get(name) is not None or not name.startswith("tests-"))):
+                    included_from_outside.add(header)
             if target == name:
                 continue
             if target not in allowed and inc not in allowed and target_path not in allowed:
                 errors.append(f'{rel}:{i}: {name} includes "{inc}" ({target}), which it does not use')
-            elif (staged_headers is not None and name in t["staged"] and target in library and target_path is None
-                    and inc not in staged_headers):
+            elif (staged_headers is not None and name in staged_modules and target in library and target_path is None
+                    and inc not in staged_headers and target_of.get(name) != target_of.get(target)):
                 errors.append(f'{rel}:{i}: "{inc}" is not a staged library header')
+    if staged_headers is not None and t["target"]:
+        reached = set()
+        pending = sorted(included_from_outside)
+        while pending:
+            header = pending.pop()
+            if header in reached:
+                continue
+            reached.add(header)
+            pending += sorted(includes_of.get(os.path.join("library", header), set()) - reached)
+        for header in sorted(staged_headers):
+            if header not in reached:
+                errors.append(f"{header} is staged but nothing outside {staged_headers[header]} includes it")
     for e in errors:
         print(f"layer-table: {e}")
     return 1 if errors else 0
