@@ -45,11 +45,11 @@ static bool lower_hex16(const char *text) {
 
 static void test_embedded_modes(void) {
     KnowledgeSnapshot *snapshot = build(NULL, 0);
-    assert(knowledge_snapshot_entry_count(snapshot) == 27);
+    assert(knowledge_snapshot_entry_count(snapshot) == 36);
     /* in id order */
-    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 0)->id, "omt.material.dorian") == 0);
-    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 26)->id, "omt.relation.two-steps-darker") == 0);
-    assert(knowledge_snapshot_entry_at(snapshot, 27) == NULL);
+    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 0)->id, "omt.chord-type.augmented-triad") == 0);
+    assert(strcmp(knowledge_snapshot_entry_at(snapshot, 35)->id, "omt.relation.two-steps-darker") == 0);
+    assert(knowledge_snapshot_entry_at(snapshot, 36) == NULL);
 
     for (int mode = 0; mode < 4; mode++) {
         const KnowledgeEntry *entry = knowledge_snapshot_entry(snapshot, MODE_IDS[mode]);
@@ -102,7 +102,7 @@ static void test_hash(void) {
     /* two snapshots in one process are independent: their entries are not shared */
     assert(knowledge_snapshot_entry(first, "omt.material.major") != knowledge_snapshot_entry(second, "omt.material.major"));
     knowledge_snapshot_destroy(first);
-    assert(knowledge_snapshot_entry_count(second) == 27);
+    assert(knowledge_snapshot_entry_count(second) == 36);
     knowledge_snapshot_destroy(second);
 }
 
@@ -110,7 +110,7 @@ static void test_user_file(void) {
     KnowledgeSnapshot *plain = build(NULL, 0);
     KnowledgeUserFile file = {"mine.json", USER_FILE};
     KnowledgeSnapshot *with_user = build(&file, 1);
-    assert(knowledge_snapshot_entry_count(with_user) == 29);
+    assert(knowledge_snapshot_entry_count(with_user) == 38);
     assert(strcmp(knowledge_snapshot_hash(plain), knowledge_snapshot_hash(with_user)) != 0);
     const PitchMaterial *test = knowledge_snapshot_material(with_user, "user.material.test");
     assert(test != NULL && test->step_count == 3 && test->steps[2] == 7 && test->descending_step_count == 0);

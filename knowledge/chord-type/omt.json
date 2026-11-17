@@ -1,0 +1,88 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.chord-type.major-triad", "kind": "chord-type", "name": "major triad",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 4}, {"role": "fifth", "semitones": 7}],
+                   "symbols": ["C"] },
+      "citations": [{"source": "omt", "part": "I", "chapter": 17, "note": "a major third with a minor third above it, the fifth perfect"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "E", "G"], "symbol": "C"}],
+      "version": 1
+    },
+    {
+      "id": "omt.chord-type.minor-triad", "kind": "chord-type", "name": "minor triad",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 3}, {"role": "fifth", "semitones": 7}],
+                   "symbols": ["Cm"] },
+      "citations": [{"source": "omt", "part": "I", "chapter": 17, "note": "a minor third with a major third above it, the fifth perfect"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "Eb", "G"], "symbol": "Cm"}],
+      "version": 1
+    },
+    {
+      "id": "omt.chord-type.diminished-triad", "kind": "chord-type", "name": "diminished triad",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 3}, {"role": "fifth", "semitones": 6}],
+                   "symbols": ["Co"] },
+      "citations": [{"source": "omt", "part": "I", "chapter": 17, "note": "two minor thirds stacked, the fifth diminished"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "Eb", "Gb"], "symbol": "Co"}],
+      "version": 1
+    },
+    {
+      "id": "omt.chord-type.augmented-triad", "kind": "chord-type", "name": "augmented triad",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 4}, {"role": "fifth", "semitones": 8}],
+                   "symbols": ["C+"] },
+      "citations": [{"source": "omt", "part": "I", "chapter": 17, "note": "two major thirds stacked, the fifth augmented"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "E", "G#"], "symbol": "C+"}],
+      "version": 1
+    },
+    {
+      "id": "omt.chord-type.dominant-seventh", "kind": "chord-type", "name": "dominant seventh",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 4}, {"role": "fifth", "semitones": 7}, {"role": "seventh", "semitones": 10}],
+                   "symbols": ["C7"] },
+      "citations": [{"source": "omt", "part": "I", "chapter": 18, "note": "a major triad with a minor seventh above the root"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "E", "G", "Bb"], "symbol": "C7"}],
+      "version": 1
+    },
+    {
+      "id": "omt.chord-type.major-seventh", "kind": "chord-type", "name": "major seventh",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 4}, {"role": "fifth", "semitones": 7}, {"role": "seventh", "semitones": 11}],
+                   "symbols": ["Cmaj7"] },
+      "citations": [{"source": "omt", "part": "I", "chapter": 18, "note": "a major triad with a major seventh above the root"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "E", "G", "B"], "symbol": "Cmaj7"}],
+      "version": 1
+    },
+    {
+      "id": "omt.chord-type.minor-seventh", "kind": "chord-type", "name": "minor seventh",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 3}, {"role": "fifth", "semitones": 7}, {"role": "seventh", "semitones": 10}],
+                   "symbols": ["Cm7"] },
+      "citations": [{"source": "omt", "part": "I", "chapter": 18, "note": "a minor triad with a minor seventh above the root"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "Eb", "G", "Bb"], "symbol": "Cm7"}],
+      "version": 1
+    },
+    {
+      "id": "omt.chord-type.half-diminished-seventh", "kind": "chord-type", "name": "half-diminished seventh",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 3}, {"role": "fifth", "semitones": 6}, {"role": "seventh", "semitones": 10}],
+                   "symbols": ["Cø7"] },
+      "citations": [{"source": "omt", "part": "I", "chapter": 18, "note": "a diminished triad with a minor seventh above the root"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "Eb", "Gb", "Bb"], "symbol": "Cø7"}],
+      "version": 1
+    },
+    {
+      "id": "omt.chord-type.diminished-seventh", "kind": "chord-type", "name": "diminished seventh",
+      "content": { "construction": "tertian", "members": [{"role": "root", "semitones": 0}, {"role": "third", "semitones": 3}, {"role": "fifth", "semitones": 6}, {"role": "seventh", "semitones": 9}],
+                   "symbols": ["Co7"] },
+      "citations": [{"source": "omt", "part": "I", "chapter": 18, "note": "a diminished triad with a diminished seventh above the root, spelled with A for B double flat"}],
+      "status": "active",
+      "examples": [{"root": "C", "pitches": ["C", "Eb", "Gb", "A"], "symbol": "Co7"}],
+      "version": 1
+    }
+  ]
+}
