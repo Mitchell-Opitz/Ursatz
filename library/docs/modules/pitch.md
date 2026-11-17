@@ -6,7 +6,7 @@ Layer L2 (`music-pitch`). Path `model/pitch/`, tests `tests/pitch/`. Depends on 
 
 ## Provides
 
-`PitchIdentity` (an opaque token identifying a pitch), `PitchSpelling` (a written pitch name made of letter, accidental, and octave), `TuningSystem` (a tuning definition), `KeySignature` (an ordered list of letter and accidental-offset entries, offsets -2 to +2), `ChordType` (a K2 chord type: its members above the root, read by the snapshot) and `PitchMaterial` (a K1 pitch material: a collection of pitch classes above a center, with its family, brightness and color notes; it moved here from `theory/knowledge`, and the knowledge snapshot reads it from the entries).
+`PitchIdentity` (an opaque token identifying a pitch), `PitchSpelling` (a written pitch name made of letter, accidental, and octave), `TuningSystem` (a tuning definition), `KeySignature` (an ordered list of letter and accidental-offset entries, offsets -2 to +2), `ChordType` (a K2 chord type: its members above the root, read by the snapshot), `Region` (a kind, a center, a material and a strength: where music sits in pitch; relations resolve to it in `theory/tonality`) and `PitchMaterial` (a K1 pitch material: a collection of pitch classes above a center, with its family, brightness and color notes; it moved here from `theory/knowledge`, and the knowledge snapshot reads it from the entries).
 
 The notation types `Clef`, `StaffPosition`, `Accidental` and `GenericInterval`, and clef resolution, were deleted (P55): no application and no framework used them.
 
