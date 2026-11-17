@@ -13,6 +13,8 @@ add_library(ursatz_theory
     rules/rule.c
     rules/rule_pair.c
     rules/rule_table.c
+    knowledge/knowledge_snapshot.c
+    knowledge/pitch_material.c
     vocabulary/applied_chord_kind.c
     vocabulary/beat_strength.c
     vocabulary/cadence_type.c
@@ -292,7 +294,7 @@ ursatz_public_headers(ursatz_theory
         theory/markings/framework.h
         theory/markings/tempo_rules.h
 )
-target_link_libraries(ursatz_theory PUBLIC ursatz_model)
+target_link_libraries(ursatz_theory PUBLIC ursatz_model PRIVATE cjson)
 
 # The knowledge files are embedded in the library (target architecture 5): no binary reads knowledge/ at run time. The four tonality
 # modes' steps come out of their entries in the same step (StandardTonalityMode order).

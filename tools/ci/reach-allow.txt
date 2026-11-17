@@ -6,3 +6,24 @@ gui/backend/src/service/import_cache.c ursatz_gui_import_cache_reset  # test hoo
 gui/backend/src/service/piece_lock.c ursatz_gui_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
+library/theory/knowledge/knowledge_snapshot.c compare_slots  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c fail  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c find_slot  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c fnv  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c hex16  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c is_integer  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_build  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_destroy  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_at  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_count  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_material  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c member  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c read_entry  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c read_file  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c read_status  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c read_steps  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/knowledge_snapshot.c text_field  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/pitch_material.c pitch_material_contains  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/theory/knowledge/pitch_material.c pitch_material_step  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
