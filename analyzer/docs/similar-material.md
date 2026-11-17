@@ -10,7 +10,8 @@ Library: `include/ursatz_analyzer/similar_material.h`. Output schema: `schema/si
 
 The search finds passages of an analyzed corpus that look like a motive or a progression. It reads only the analysis
 documents of a corpus run (see [corpus.md](corpus.md)), never the scores. A match says how much two passages agree on
-the dimensions scored; it does not say the passage is the motive.
+the dimensions scored; it does not say the passage is the motive. The search takes the knowledge snapshot that gives the key words
+of the documents' key labels their materials (`similar_material_find`).
 
 ## Queries
 

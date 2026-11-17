@@ -33,7 +33,7 @@ most 8 tries.
 
 - `source.mid` or `source.musicxml`: the upload's bytes, written unchanged. A
   `.xml` or `.mxl` upload keeps its extension (`source.xml`, `source.mxl`).
-- `analysis.json`: the Analyzer's analysis document (schema v12).
+- `analysis.json`: the Analyzer's analysis document (schema v13).
 - `meta.json`: `{"filename", "format": "midi"|"musicxml", "uploaded_at"
   (ISO 8601 UTC), "analyzer_version", "document_schema_version",
   "ursatz_commit"}` plus the

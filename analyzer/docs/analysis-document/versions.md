@@ -2,6 +2,11 @@
 
 Every `schema_version` of the analysis document and what changed. Back to the [docs index](../README.md) and the [analysis document](../analysis-document.md).
 
+- **13**: A key region's `mode` (`"major"` or `"minor"`) becomes `material`, the id of the pitch material (K1) the key reads its scale
+  from, and a motive's `features.minor` (a boolean) becomes `features.material`, the same id for the key region the first note
+  starts in. `key_signatures[].mode_hint` stays: it is the file's own word. A renamed field and a changed value are breaking
+  changes under the rule above. A stored document of version 12 reads as stale and is analyzed again. The corpus index states
+  `document_schema_version` 13.
 - **12**: Removes the top-level `counterpoint_check` (the counterpoint check is gone) from `required` and
   `properties`, and renames `metadata.ursatz_commit` to `metadata.producer_key` (the value was always the producer
   key). A removed section and a renamed field are breaking changes under the rule above. A stored document of another

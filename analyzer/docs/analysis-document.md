@@ -14,9 +14,9 @@ newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v12 content |
+| Key | Type | v13 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `11`. |
+| `schema_version` | integer | Always `13`. |
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
 | `keys` | object | Filled: the key regions, the home key and the opening and closing regions. See below. |
