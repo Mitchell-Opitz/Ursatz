@@ -130,7 +130,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         }
     }
     for (size_t b = 0; b < effective.phrase_boundary_count; b++) {
-        if (effective.phrase_boundaries[b] == NULL || !key_regions_time_ok(*effective.phrase_boundaries[b])) {
+        if (!key_regions_time_ok(effective.phrase_boundaries[b])) {
             return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT;
         }
     }
@@ -206,7 +206,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         size_t slot_count = 0;
         for (size_t b = 0; b < effective.phrase_boundary_count && status == COMMON_PRACTICE_KEY_REGIONS_OK; b++) {
             int measure = 0;
-            status = key_regions_nearest_barline(map, *effective.phrase_boundaries[b], &measure);
+            status = key_regions_nearest_barline(map, effective.phrase_boundaries[b], &measure);
             long slot = (long)measure - (long)measures.first_measure;
             if (status == COMMON_PRACTICE_KEY_REGIONS_OK && slot > 0 && (size_t)slot < measures.measure_count) {
                 slots[slot_count++] = (size_t)slot;

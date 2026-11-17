@@ -8,7 +8,7 @@
 #include "theory/meter/segmentation_beat_grid.h"
 
 /* The length of a beat, from the first measure's beat grid. */
-static bool beat_duration(const MeterMap *map, Duration **out) {
+static bool beat_duration(const MeterMap *map, Duration *out) {
     MusicalTime *starts = NULL;
     size_t count = 0;
     TimeSpan span;
@@ -20,8 +20,7 @@ static bool beat_duration(const MeterMap *map, Duration **out) {
         Rational first = starts[0].value;
         Rational next = count > 1 ? starts[1].value : span.end.value;
         Rational length;
-        ok = rational_sub(next, first, &length) == RATIONAL_OK &&
-             duration_create((long)length.num, (unsigned long)length.den, out) == DURATION_OK;
+        ok = rational_sub(next, first, &length) == RATIONAL_OK && duration_of(length, out) == DURATION_OK;
     }
     free(starts);
     return ok;
@@ -86,7 +85,7 @@ ChainInputStatus chain_build_harmony_segments(const ChainSegments *segments, siz
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
         input->has_beat_length = true;
-        input->beat_length = *built.beat_length;
+        input->beat_length = built.beat_length;
         if (!romans[s].has_numeral) {
             input->degree = 0;
             input->interval_count = 3;
@@ -120,14 +119,13 @@ void chain_harmony_inputs_destroy(ChainHarmonyInputs *inputs) {
     for (size_t s = 0; s < inputs->count && inputs->positions != NULL; s++) {
         metrical_position_destroy(inputs->positions[s]);
     }
-    duration_destroy(inputs->beat_length);
     free(inputs->positions);
     free(inputs->inputs);
     memset(inputs, 0, sizeof(*inputs));
 }
 
-static double time_double(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+static double time_double(MusicalTime time) {
+    return rational_to_double(time.value);
 }
 
 ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, size_t count, const CommonPracticeKeyRegions *regions,
@@ -142,7 +140,7 @@ ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, siz
     size_t n = 0;
     for (size_t i = 1; i < regions->region_count; i++) {
         if (regions->regions[i].key_index == home_key_index && regions->regions[i - 1].key_index != home_key_index) {
-            starts[n++] = time_double(&regions->regions[i].span.start);
+            starts[n++] = time_double(regions->regions[i].span.start);
         }
     }
     HarmonyCadenceAnalysisStatus status = harmony_analysis_add_boundary_cadences(prepared, count, NULL, starts, n, cadences);
@@ -169,8 +167,8 @@ ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, co
         }
         const CommonPracticeKeyRegion *into = &regions->regions[change->to_region];
         KeyChangeExtent confirmed = change->extent;
-        if (!harmony_key_change_confirm(change->extent, time_double(&into->span.start),
-                                        time_double(&into->span.end), arrivals, cadences->count, &confirmed)) {
+        if (!harmony_key_change_confirm(change->extent, time_double(into->span.start),
+                                        time_double(into->span.end), arrivals, cadences->count, &confirmed)) {
             status = CHAIN_INPUT_ERR_KEYS;
             break;
         }

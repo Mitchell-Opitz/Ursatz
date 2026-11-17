@@ -135,7 +135,7 @@ ChainInputStatus chain_build_segment_lines(const ChainSegments *voice_segments, 
 typedef struct {
     HarmonySegmentInput *inputs;  /* owned; count entries */
     MetricalPosition **positions; /* owned */
-    Duration *beat_length;        /* owned */
+    Duration beat_length;
     size_t count;
 } ChainHarmonyInputs;
 
@@ -176,17 +176,14 @@ ChainInputStatus chain_build_pitches(const AnalysisNoteSet *notes, ChainPitches 
 void chain_pitches_destroy(ChainPitches *pitches);
 
 /*
- * The input of standard-form's adapter (analysis_input.h) as the chain builds it: spans copied for the input to borrow, kept here.
+ * The input of standard-form's adapter (analysis_input.h) as the chain builds it: the soprano notes kept here for the input to borrow.
  */
 typedef struct {
     StandardFormInput input;
-    AnalysisNote *notes;  /* owned: the soprano notes the input borrows (copies; their spans are the note set's or in spans) */
+    AnalysisNote *notes;  /* owned: the soprano notes the input borrows (copies) */
     size_t note_count;
     size_t note_capacity;
     int *degrees;         /* owned: the scale degree of each note, for the motive input; NULL for the others */
-    TimeSpan **spans;     /* owned: every span the input borrows */
-    size_t span_count;
-    size_t span_capacity;
 } ChainFormInput;
 
 /*
@@ -233,12 +230,6 @@ typedef struct {
     StandardMeterInput input;
     AnalysisNote *notes;   /* owned: the scoped copies of the notes, each with its line (0, 1 or 2) as its voice; the input borrows them */
     size_t note_count;
-    TimeSpan **spans;      /* owned: every span the input borrows */
-    size_t span_count;
-    size_t span_capacity;
-    MusicalTime **times;   /* owned: every time the input borrows */
-    size_t time_count;
-    size_t time_capacity;
 } ChainMeterInput;
 
 /* The meter input over the measures [first_measure, last_measure]; `lines` are the voice lines (analysis_chain_outer_voices): the input reads only their note ids (which notes are the soprano and the bass), so every melody note counts, not only the one sounding at each chord segment's start. */
@@ -320,9 +311,6 @@ void chain_melody_line_destroy(ChainMelodyLine *melody);
  */
 typedef struct {
     GalantSegmentList list;  /* owned */
-    TimeSpan **spans;        /* owned: the spans of merged segments */
-    size_t span_count;
-    size_t span_capacity;
 } ChainGalantSegments;
 
 ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size_t count, const MeterMap *map,

@@ -188,9 +188,6 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     standard_form_repeats_destroy(&chain->repeats);
     free(chain->key_phrases);
     free(chain->key_repeats);
-    for (size_t i = 0; i < chain->boundary_count; i++) {
-        musical_time_destroy(chain->boundaries[i]);
-    }
     free(chain->boundaries);
     chain_key_segments_destroy(chain->key_segments);
     if (chain->have_segment_lines) {
@@ -213,15 +210,15 @@ void analysis_chain_destroy(AnalysisChain *chain) {
 
 /* --- the stages --- */
 
-static double time_double(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+static double time_double(MusicalTime time) {
+    return rational_to_double(time.value);
 }
 
 /* The region holding the segment that starts at `start` whole notes: the last whose start is not after it. */
 static size_t region_at(const CommonPracticeKeyRegions *regions, double start) {
     size_t found = 0;
     for (size_t i = 0; i < regions->region_count; i++) {
-        if (time_double(&regions->regions[i].span.start) <= start + 1e-12) {
+        if (time_double(regions->regions[i].span.start) <= start + 1e-12) {
             found = i;
         }
     }
@@ -294,7 +291,7 @@ static bool read_numerals(AnalysisChain *chain) {
             continue;
         }
         MusicalTime after_pivot = chain->key_segments[change->pivot_segment + 1].start;
-        if (time_double(&after_pivot) < time_double(&p->region_inputs[change->to_region].start) - 1e-12) {
+        if (time_double(after_pivot) < time_double(p->region_inputs[change->to_region].start) - 1e-12) {
             p->region_inputs[change->to_region].start = after_pivot;
         }
     }
@@ -706,7 +703,7 @@ static bool scope_count(AnalysisChain *chain) {
     if (meter_map_measure_span(chain->notes->map, chain->config.last_measure, &last) != METER_MAP_OK) {
         return false;
     }
-    double end = time_double(&last.end);
+    double end = time_double(last.end);
     size_t count = 0;
     while (count < chain->segs.count && chain->segs.starts[count] < end - 1e-12) {
         count++;
@@ -725,7 +722,7 @@ static bool find_chain_repeats(AnalysisChain *chain) {
         if (meter_map_measure_span(set->map, chain->config.last_measure, &last) != METER_MAP_OK) {
             return false;
         }
-        end = time_double(&last.end);
+        end = time_double(last.end);
     }
     StandardFormRepeatNote *items = calloc(set->count > 0 ? set->count : 1, sizeof(StandardFormRepeatNote));
     if (items == NULL) {
@@ -734,7 +731,7 @@ static bool find_chain_repeats(AnalysisChain *chain) {
     size_t count = 0;
     for (size_t i = 0; i < set->count; i++) {
         const AnalysisNote *note = &set->notes[i];
-        if (note->midi == ANALYSIS_PITCH_UNKNOWN || (scoped && time_double(&note->span.start) >= end - 1e-12)) {
+        if (note->midi == ANALYSIS_PITCH_UNKNOWN || (scoped && time_double(note->span.start) >= end - 1e-12)) {
             continue;
         }
         items[count].span = note->span;
@@ -960,17 +957,12 @@ static bool phrase_boundaries(AnalysisChain *chain) {
     if (phrases->count <= 1) {
         return true;
     }
-    chain->boundaries = calloc(phrases->count, sizeof(MusicalTime *));
+    chain->boundaries = calloc(phrases->count, sizeof(MusicalTime));
     if (chain->boundaries == NULL) {
         return false;
     }
     for (size_t k = 0; k + 1 < phrases->count; k++) {
-        const MusicalTime *end = &phrases->items[k].span.end;
-        if (musical_time_create(musical_time_numerator(end), musical_time_denominator(end), &chain->boundaries[chain->boundary_count]) !=
-            MUSICAL_TIME_OK) {
-            return false;
-        }
-        chain->boundary_count++;
+        chain->boundaries[chain->boundary_count++] = phrases->items[k].span.end;
     }
     return true;
 }
@@ -1048,8 +1040,7 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
                 status = ANALYSIS_CHAIN_ERR_FORM;
             } else {
                 /* the boundaries are the phrase ends of the first pass, or, with no form, the caller's own */
-                const MusicalTime *const *boundaries = from_phrases ? (const MusicalTime *const *)chain->boundaries
-                                                                    : chain->config.key_regions.phrase_boundaries;
+                const MusicalTime *boundaries = from_phrases ? chain->boundaries : chain->config.key_regions.phrase_boundaries;
                 size_t boundary_count = from_phrases ? chain->boundary_count : chain->config.key_regions.phrase_boundary_count;
                 pass_destroy(chain);
                 status = run_pass(chain, &(AnalysisChainPass){boundaries, boundary_count, true});

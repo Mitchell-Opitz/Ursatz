@@ -241,11 +241,11 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(chain_build_harmony_segments(segments, count + 1, map, chords, romans, lines, &harmony) == CHAIN_INPUT_ERR_BAD_NOTES);
     assert(harmony.inputs == NULL);
     assert(chain_build_harmony_segments(segments, count, map, chords, romans, lines, &harmony) == CHAIN_INPUT_OK);
-    assert(harmony.count == count && harmony.beat_length != NULL);
+    assert(harmony.count == count);
     for (size_t s = 0; s < count; s++) {
         const HarmonySegmentInput *input = &harmony.inputs[s];
         assert(strcmp(input->segment.id, segments->ids[s]) == 0 && input->segment.position == harmony.positions[s]);
-        assert(input->has_beat_length && duration_same(input->beat_length, *harmony.beat_length) && strcmp(input->key_ref, "key") == 0);
+        assert(input->has_beat_length && duration_same(input->beat_length, harmony.beat_length) && strcmp(input->key_ref, "key") == 0);
         if (romans[s].has_numeral) {
             assert(input->degree == romans[s].claim.degree && input->inversion == romans[s].claim.inversion);
             assert(input->interval_count == 3 || input->interval_count == 4);

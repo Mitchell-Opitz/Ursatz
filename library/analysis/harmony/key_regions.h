@@ -129,7 +129,7 @@ typedef struct {
     const char *context_id_prefix;             /* default "key-region": region n is "<prefix>-<n>" (from 1) */
     size_t pivot_search_measures;              /* default 2: how far back a pivot chord is looked for */
     double evidence_weight;                    /* default 0.8: the weight of functional chord evidence in a window's score */
-    const MusicalTime *const *phrase_boundaries; /* optional: phrase boundary times, whole notes, any order; borrowed */
+    const MusicalTime *phrase_boundaries;      /* optional: phrase boundary times, whole notes, any order; borrowed array */
     size_t phrase_boundary_count;              /* default 0 */
     size_t snap_reach_measures;                /* default 1: how far an edge may move to a phrase boundary */
     double hold_tolerance;                     /* default 0.05: the weight share outside the old key that allows a switch */

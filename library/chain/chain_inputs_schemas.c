@@ -13,7 +13,6 @@ void chain_galant_segments_destroy(ChainGalantSegments *segments) {
         return;
     }
     galant_segments_destroy(&segments->list);
-    chain_release_spans(segments->spans, segments->span_count);
     memset(segments, 0, sizeof(*segments));
 }
 

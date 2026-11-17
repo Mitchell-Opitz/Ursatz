@@ -818,7 +818,7 @@ static void test_edges_snap_to_a_nearby_phrase_boundary(void) {
     /* a boundary one measure from the edge, whichever side it is on, takes the edge */
     for (int target = edge - 1; target <= edge + 1; target++) {
         MusicalTime *boundary = time_at(&piece, target - 1, 1); /* the start of measure `target` */
-        const MusicalTime *list[1] = {boundary};
+        const MusicalTime list[1] = {*boundary};
         CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
         config.phrase_boundaries = list;
         config.phrase_boundary_count = 1;
@@ -832,7 +832,7 @@ static void test_edges_snap_to_a_nearby_phrase_boundary(void) {
 
     /* a boundary beyond the reach is ignored, and reach 0 keeps every edge */
     MusicalTime *far = time_at(&piece, edge + 2, 1);
-    const MusicalTime *far_list[1] = {far};
+    const MusicalTime far_list[1] = {*far};
     CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
     config.phrase_boundaries = far_list;
     config.phrase_boundary_count = 1;
@@ -852,7 +852,7 @@ static void test_edges_snap_to_a_nearby_phrase_boundary(void) {
     /* a boundary at the start of the piece, or past its end, moves nothing */
     MusicalTime *before = time_at(&piece, 0, 1);
     MusicalTime *after = time_at(&piece, 40, 1);
-    const MusicalTime *outside[2] = {before, after};
+    const MusicalTime outside[2] = {*before, *after};
     config = common_practice_key_regions_config_default();
     config.phrase_boundaries = outside;
     config.phrase_boundary_count = 2;
@@ -864,7 +864,9 @@ static void test_edges_snap_to_a_nearby_phrase_boundary(void) {
     config.phrase_boundaries = NULL;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    const MusicalTime *missing[1] = {NULL};
+    MusicalTime negative;
+    assert(musical_time_make(-1, 1, &negative) == MUSICAL_TIME_OK);
+    const MusicalTime missing[1] = {negative};
     config.phrase_boundaries = missing;
     config.phrase_boundary_count = 1;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) ==
@@ -880,7 +882,7 @@ static void test_an_edge_at_a_key_signature_does_not_snap(void) {
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 8);
     CommonPracticeKeySignatureEvent events[2] = {make_event(&piece, 0, 1, 0), make_event(&piece, 8, 1, 1)};
-    const MusicalTime *list[1] = {time_at(&piece, 9, 1)};
+    const MusicalTime list[1] = {*time_at(&piece, 9, 1)};
     CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
     config.phrase_boundaries = list;
     config.phrase_boundary_count = 1;

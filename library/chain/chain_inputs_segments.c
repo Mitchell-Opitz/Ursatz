@@ -45,12 +45,8 @@ ChainInputStatus chain_build_segments(const AnalysisNoteSet *notes, const Adapti
     }
     for (size_t s = 0; s < built.count; s++) {
         const TimeSpan *window = sonority_time_window(built.sonorities.items[s].sonority);
-        Rational start;
-        Rational end;
-        if (!chain_rational_of(time_span_start(window), &start) || !chain_rational_of(time_span_end(window), &end)) {
-            chain_segments_destroy(&built);
-            return CHAIN_INPUT_ERR_SEGMENTATION;
-        }
+        Rational start = window->start.value;
+        Rational end = window->end.value;
         built.starts[s] = rational_to_double(start);
         built.ends[s] = rational_to_double(end);
         snprintf(built.ids[s], sizeof(built.ids[s]), "seg-%zu", s);
@@ -79,10 +75,9 @@ BeatStrength chain_attack_strength(const MeterMap *map, const MusicalTime *onset
 /* The beat a segment [start, end) lies inside, as a non-zero index (measure and beat), or 0 when it spans beats or the grid cannot be
    read. It is CommonPracticeSegment.beat, which the context chord reading shares. */
 static long beat_index(const MeterMap *map, Rational start, Rational end) {
-    MusicalTime *at = musical_time_from_rational_or_null(start);
+    MusicalTime at = musical_time_of(start);
     int measure = 0;
-    bool found = at != NULL && meter_map_measure_index_at(map, at, &measure) == METER_MAP_OK;
-    musical_time_destroy(at);
+    bool found = meter_map_measure_index_at(map, &at, &measure) == METER_MAP_OK;
     MusicalTime *starts = NULL;
     size_t count = 0;
     if (!found || !standard_meter_segmentation_beat_grid(map, measure, NULL, &starts, &count)) {
@@ -141,12 +136,8 @@ ChainInputStatus chain_build_members(const AnalysisNoteSet *notes, ChainSegments
     for (size_t s = 0; s < segments->count && status == CHAIN_INPUT_OK; s++) {
         const AdaptiveSonority *segment = &segments->sonorities.items[s];
         const TimeSpan *window = sonority_time_window(segment->sonority);
-        Rational start;
-        Rational end;
-        if (!chain_rational_of(time_span_start(window), &start) || !chain_rational_of(time_span_end(window), &end)) {
-            status = CHAIN_INPUT_ERR_MEMBER;
-            break;
-        }
+        Rational start = window->start.value;
+        Rational end = window->end.value;
         size_t count = sonority_event_id_count(segment->sonority);
         views[s].members = &members[next];
         views[s].member_count = count;

@@ -49,7 +49,7 @@ typedef struct {
 /* What a pass of the stages from the keys to the form is given: the phrase ends of the pass before as the key regions' boundaries
    (NULL for none) and whether it is the final pass (the form stage then finds the phrases first, on the grid). */
 typedef struct {
-    const MusicalTime *const *boundaries;
+    const MusicalTime *boundaries;
     size_t boundary_count;
     bool final;
 } AnalysisChainPass;
@@ -98,7 +98,7 @@ struct AnalysisChain {
     OuterVoiceLines segment_lines; /* the same lines on the chord segments */
     bool have_segment_lines;
     CommonPracticeKeySegment *key_segments;
-    MusicalTime **boundaries; /* the second pass: the phrase ends of the first, owned copies */
+    MusicalTime *boundaries; /* the second pass: the phrase ends of the first, owned */
     size_t boundary_count;
     int home;
     StandardFormRepeats repeats; /* the written-out repeats and returns, found once in prepare (R-400) */

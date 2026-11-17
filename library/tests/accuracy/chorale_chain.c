@@ -45,7 +45,7 @@ typedef struct {
     AnalysisChain *chain;  /* pass 2: the key regions again, on pass 1's chords and the cadence ends as boundaries */
     CommonPracticeKeySegment *key_segments;
     size_t segment_count;
-    MusicalTime **boundaries; /* the phrase ends found from pass 1, owned copies */
+    MusicalTime *boundaries;  /* the phrase ends found from pass 1, owned */
     size_t boundary_count;
     const CommonPracticeKeyRegions *regions;
     const StandardTonalityChordInput *chain_inputs;
@@ -75,9 +75,6 @@ static void run_destroy(Run *r) {
         key_destroy(r->annotation_keys[i]);
     }
     free(r->annotation_keys);
-    for (size_t i = 0; i < r->boundary_count; i++) {
-        musical_time_destroy(r->boundaries[i]);
-    }
     free(r->boundaries);
     chain_key_segments_destroy(r->key_segments);
     analysis_chain_destroy(r->chain);
@@ -322,13 +319,10 @@ static bool find_phrase_ends(Run *r) {
     ok = ok && harmony_analysis_prepare(inputs, n, &prepared) == HARMONY_ANALYSIS_OK &&
          harmony_analysis_find_cadences(prepared, n, NULL, &cadences) == HARMONY_CADENCE_ANALYSIS_OK;
     if (ok && cadences.count > 0) {
-        r->boundaries = (MusicalTime **)calloc(cadences.count, sizeof(MusicalTime *));
+        r->boundaries = (MusicalTime *)calloc(cadences.count, sizeof(MusicalTime));
         ok = r->boundaries != NULL;
         for (size_t k = 0; k < cadences.count && ok; k++) {
-            const MusicalTime *end = &r->key_segments[cadences.items[k].arrival_last].end;
-            ok = musical_time_create(musical_time_numerator(end), musical_time_denominator(end),
-                                     &r->boundaries[r->boundary_count]) == MUSICAL_TIME_OK;
-            r->boundary_count += ok ? 1 : 0;
+            r->boundaries[r->boundary_count++] = r->key_segments[cadences.items[k].arrival_last].end;
         }
     }
     harmony_cadences_destroy(&cadences);
@@ -540,7 +534,7 @@ ChoraleChainStatus chorale_chain_run(const char *piece_dir, ChoraleScore *out, c
     }
     config.refine_keys = true;
     config.refine_with_given_boundaries = true;
-    config.key_regions.phrase_boundaries = (const MusicalTime *const *)r.boundaries;
+    config.key_regions.phrase_boundaries = r.boundaries;
     config.key_regions.phrase_boundary_count = r.boundary_count;
     if (analysis_chain_run(&set, r.key_events, r.key_event_count, &config, &r.chain) != ANALYSIS_CHAIN_OK) {
         fail(message, message_size, "the second pass failed");

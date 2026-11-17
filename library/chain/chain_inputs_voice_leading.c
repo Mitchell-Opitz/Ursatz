@@ -49,19 +49,11 @@ ChainInputStatus chain_build_voice_grid(const AnalysisNoteSet *notes, const Chai
     for (size_t s = 0; s < count; s++) {
         built.segment_ids[s] = segments->ids[s];
         const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
-        Rational start;
-        if (!chain_rational_of(time_span_start(window), &start)) {
-            chain_voice_grid_destroy(&built);
-            return CHAIN_INPUT_ERR_SEGMENTATION;
-        }
+        Rational start = window->start.value;
         for (size_t i = 0; i < notes->count; i++) {
             const AnalysisNote *note = &notes->notes[i];
-            Rational on;
-            Rational off;
-            if (!chain_rational_of(&note->span.start, &on) || !chain_rational_of(&note->span.end, &off)) {
-                chain_voice_grid_destroy(&built);
-                return CHAIN_INPUT_ERR_SEGMENTATION;
-            }
+            Rational on = note->span.start.value;
+            Rational off = note->span.end.value;
             if (!(rational_cmp(on, start) <= 0 && rational_cmp(start, off) < 0)) {
                 continue;
             }

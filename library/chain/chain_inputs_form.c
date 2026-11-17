@@ -32,7 +32,6 @@ void chain_form_input_destroy(ChainFormInput *input) {
     standard_form_input_destroy(&input->input);
     free(input->notes);
     free(input->degrees);
-    chain_release_spans(input->spans, input->span_count);
     memset(input, 0, sizeof(*input));
 }
 
@@ -64,13 +63,13 @@ static ChainInputStatus add_cadences(ChainFormInput *build, const ChainSegments 
         }
         const TimeSpan *first = sonority_time_window(segments->sonorities.items[c->arrival_first].sonority);
         const TimeSpan *last = sonority_time_window(segments->sonorities.items[c->arrival_last].sonority);
-        const TimeSpan *span = chain_keep_span(&build->spans, &build->span_count, &build->span_capacity, time_span_start(first), time_span_end(last));
+        TimeSpan span;
+        if (time_span_make(first->start, last->end, &span) != TIME_SPAN_OK) {
+            return CHAIN_INPUT_ERR_BAD_NOTES;
+        }
         char id[32];
         snprintf(id, sizeof(id), "chain-%zu", i);
-        if (span == NULL) {
-            return CHAIN_INPUT_ERR_ALLOC;
-        }
-        if (standard_form_input_add_cadence(&build->input, id, span, c->type, harmony_cadence_strength(c->type), c->post_cadential,
+        if (standard_form_input_add_cadence(&build->input, id, &span, c->type, harmony_cadence_strength(c->type), c->post_cadential,
                                             c->uncertainty) != STANDARD_FORM_ANALYSIS_OK) {
             return CHAIN_INPUT_ERR_BAD_NOTES;
         }
@@ -152,10 +151,6 @@ typedef struct {
     long semitone;
 } MotiveNote;
 
-static Rational q_of_time(const MusicalTime *time) {
-    return rational_ratio(musical_time_numerator(time), (long long)musical_time_denominator(time));
-}
-
 /* The soprano notes of the measures [first, last], in time order. *out is allocated; its count is returned.
    Only notes starting in the measures compete, so a note held in from an earlier measure does not hide an attack. */
 static bool motive_soprano(const AnalysisNoteSet *notes, int first_measure, int last_measure, MotiveNote **out, size_t *kept_out) {
@@ -188,8 +183,8 @@ static bool motive_soprano(const AnalysisNoteSet *notes, int first_measure, int 
     for (size_t k = 0; ok && k < kept; k++) {
         const AnalysisNote *source = &window[picked[k]];
         line[k].index = origin[picked[k]];
-        line[k].start = q_of_time(&source->span.start);
-        line[k].end = q_of_time(&source->span.end);
+        line[k].start = source->span.start.value;
+        line[k].end = source->span.end.value;
         line[k].semitone = source->midi;
     }
     free(window);
@@ -266,13 +261,9 @@ static ChainInputStatus add_grid_cadence(ChainFormInput *build, const ChainSegme
         return CHAIN_INPUT_ERR_BAD_NOTES;
     }
     const TimeSpan *window = sonority_time_window(segments->sonorities.items[arrival_first].sonority);
-    const TimeSpan *span = chain_keep_span(&build->spans, &build->span_count, &build->span_capacity, time_span_start(window), time_span_end(window));
-    if (span == NULL) {
-        return CHAIN_INPUT_ERR_ALLOC;
-    }
     char id[32];
     snprintf(id, sizeof(id), "grid-cadence-%zu", (*serial)++);
-    if (standard_form_input_add_cadence(&build->input, id, span, type, harmony_cadence_strength(type), post_cadential, uncertainty) !=
+    if (standard_form_input_add_cadence(&build->input, id, window, type, harmony_cadence_strength(type), post_cadential, uncertainty) !=
         STANDARD_FORM_ANALYSIS_OK) {
         return CHAIN_INPUT_ERR_BAD_NOTES;
     }
