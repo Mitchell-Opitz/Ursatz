@@ -25,9 +25,9 @@ The folder name, the `kind` field and the middle part of an id are the same keyw
 | Keyword | Kind | Schema now |
 |---|---|---|
 | `material` | K1 pitch material | `unordered` (a collection above a center), `ordered` (a row) |
-| `chord-type` | K2 chord type | yes |
+| `chord-type` | K2 chord type | yes; `omt.json` holds the triads and seventh chords |
 | `voicing`, `vocabulary`, `schema`, `function`, `theme-type`, `form`, `operation`, `pattern`, `instrument`, `rule`, `preset`, `term` | K3 to K5 and K7 to K15 | none yet |
-| `relation` | K6 relation | `tonal`, `modal`, `neo-riemannian`, `set`, `serial` |
+| `relation` | K6 relation | `tonal`, `modal`, `neo-riemannian`, `set`, `serial`; `omt.json` holds the tonal, modal and neo-Riemannian relations (no set or serial entries yet) |
 
 A kind with no schema file accepts no entry. A schema is added with the first entries of its kind.
 
@@ -54,7 +54,7 @@ A kind with no schema file accepts no entry. A schema is added with the first en
 python3 tools/ci/check-knowledge.py knowledge
 ```
 
-It prints one line per problem, `knowledge: <file>: <id>: <what>`, and exits 0 when clean. It needs python3 with `jsonschema`. The tests `knowledge_validate` and `knowledge_validate_fixtures` run it in CI.
+It prints one line per problem, `knowledge: <file>: <id>: <what>`, and exits 0 when clean. It also checks that a relation's examples resolve (the target is what the relation gives from the anchor, over the materials of the folder), that a material's key word and brightness rank are its own, and that a `rotation-of` target is the same collection rotated. It needs python3 with `jsonschema`. The tests `knowledge_validate` and `knowledge_validate_fixtures` run it in CI.
 
 ## In code
 
