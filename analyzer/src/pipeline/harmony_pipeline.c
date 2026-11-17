@@ -6,7 +6,7 @@
 #include "theory/harmony/harmonic_function.h"
 #include "theory/harmony/harmony_functions.h"
 #include "theory/harmony/phrase_model_label.h"
-#include "standard-harmony/analysis/analysis_phrase.h"
+#include "analysis/harmony/analysis_phrase.h"
 #include "theory/harmony/six_four_type.h"
 
 bool harmony_stage_prepare(const AnalysisChain *library, HarmonyStage *out) {

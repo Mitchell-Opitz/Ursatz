@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "model/core/rational.h"
-#include "standard-meter/analysis/meter_analysis_check.h"
+#include "analysis/meter/meter_analysis_check.h"
 #include "model/time/meter_map.h"
 #include "model/time/metrical_position.h"
 #include "model/time/musical_time.h"

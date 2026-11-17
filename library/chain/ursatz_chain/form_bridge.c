@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/motif_window_matching.h"
-#include "analysis/phrase_boundary_detection.h"
+#include "analysis/motive/motif_window_matching.h"
+#include "analysis/form/phrase_boundary_detection.h"
 
 StandardFormAnalysisStatus chain_form_boundary_detect(const StandardFormBoundaryPoint *points, size_t count, size_t max_length,
                                                       StandardFormBoundary *out, void *context) {

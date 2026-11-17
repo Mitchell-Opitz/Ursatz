@@ -4,7 +4,7 @@
 #include "model/pitch/pitch_numeric_value.h"
 #include "model/pitch/tuning_system.h"
 #include "theory/harmony/harmony_cadence_rules.h"
-#include "common-practice-minimal/outer_scale_degrees.h"
+#include "analysis/harmony/outer_scale_degrees.h"
 #include "theory/meter/segmentation_beat_grid.h"
 #include "ursatz_chain/analysis_chain.h"
 

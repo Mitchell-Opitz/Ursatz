@@ -8,8 +8,8 @@
 #include <ursatz_chain/analysis_chain.h>
 
 #include "pipeline/chord_pipeline.h"
-#include "standard-tonality/analysis/chord_input.h"
-#include "standard-tonality/analysis/roman_numeral_adapter.h"
+#include "analysis/harmony/chord_input.h"
+#include "analysis/harmony/roman_numeral_adapter.h"
 
 /*
  * The Roman numeral of every chord segment, from the library chain (analysis_chain_chord_inputs and

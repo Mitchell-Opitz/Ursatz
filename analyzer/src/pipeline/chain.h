@@ -10,7 +10,7 @@
 
 #include <ursatz_chain/analysis_chain.h>
 
-#include "analysis/outer_voice.h"
+#include "analysis/voices/outer_voice.h"
 #include "pipeline/chain_input.h"
 #include "pipeline/chord_pipeline.h"
 #include "pipeline/form_pipeline.h"

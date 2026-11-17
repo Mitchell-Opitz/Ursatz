@@ -9,10 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-counterpoint/analysis/analysis_grid.h>
-#include <standard-counterpoint/analysis/analysis_perfects.h>
-#include <standard-harmony/analysis/analysis_resolution.h>
-#include <standard-harmony/analysis/analysis_voices.h>
+#include <analysis/counterpoint/analysis_grid.h>
+#include <analysis/counterpoint/analysis_perfects.h>
+#include <analysis/harmony/analysis_resolution.h>
+#include <analysis/harmony/analysis_voices.h>
 #include <model/identity/entity_id.h>
 #include <model/pitch/pitch_numeric_value.h>
 #include <model/pitch/tuning_system.h>

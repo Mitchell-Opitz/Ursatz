@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-harmony/analysis/analysis_cadence.h>
-#include <standard-harmony/analysis/analysis_input.h>
+#include <analysis/harmony/analysis_cadence.h>
+#include <analysis/harmony/analysis_input.h>
 #include <model/time/duration.h>
 #include <model/time/metrical_position.h>
 #include <model/time/musical_time.h>

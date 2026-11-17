@@ -4,7 +4,7 @@
 #include <string.h>
 #include "../integration/reference_pieces.h"
 
-#include "analysis/outer_voice.h"
+#include "analysis/voices/outer_voice.h"
 #include "weighted_pipeline.h"
 
 /*

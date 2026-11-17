@@ -11,7 +11,7 @@
 
 #include "pipeline/chain_input.h"
 /* Prefixed: standard-harmony has headers of the same names. */
-#include "standard-form/analysis/analysis_motive.h"
+#include "analysis/form/analysis_motive.h"
 
 /*
  * Ursatz's standard-form motive analysis over the library chain (analysis_chain_motives). The analyzer adds no music

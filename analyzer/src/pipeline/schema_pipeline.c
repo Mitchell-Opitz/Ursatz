@@ -8,10 +8,10 @@
 #include <ursatz_chain/chain_inputs.h>
 
 #include "model/core/rational.h"
-#include "galant-schemas/analysis/galant_analysis_input.h"
-#include "galant-schemas/analysis/galant_analysis_match.h"
+#include "analysis/galant/galant_analysis_input.h"
+#include "analysis/galant/galant_analysis_match.h"
 #include "theory/galant/galant_framework.h"
-#include "scale-harmonization/analysis/scale_analysis_detect.h"
+#include "analysis/galant/scale_analysis_detect.h"
 #include "theory/galant/scale_direction.h"
 #include "theory/galant/scale_framework.h"
 #include "theory/galant/scale_patterns.h"

@@ -1,10 +1,10 @@
 #ifndef URSATZ_TESTS_SUPPORT_SEMANTICS_TEST_ACCESS_H
 #define URSATZ_TESTS_SUPPORT_SEMANTICS_TEST_ACCESS_H
 
-#include "semantics/contour.h"
-#include "semantics/contour_internal.h"
-#include "semantics/interval.h"
-#include "semantics/interval_internal.h"
+#include "analysis/notes/contour.h"
+#include "analysis/notes/contour_internal.h"
+#include "analysis/notes/interval.h"
+#include "analysis/notes/interval_internal.h"
 
 /* What the tests read of a Contour and an Interval. No application reads these, so they are not in semantics/. */
 

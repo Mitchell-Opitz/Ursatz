@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common-practice-minimal/key_regions.h"
+#include "analysis/harmony/key_regions.h"
 #include "model/core/rational.h"
 #include "pipeline/pitch_class_util.h"
 #include "model/time/musical_time.h"

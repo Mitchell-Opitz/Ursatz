@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include "weighted_pipeline.h"
-#include "semantics/analysis_key.h"
+#include "analysis/notes/analysis_key.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "../key_index_test_util.h"
 

@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "standard-tonality/analysis/applied_chords.h"
-#include "standard-tonality/analysis/chord_input.h"
-#include "standard-tonality/analysis/roman_numeral_adapter.h"
+#include "analysis/harmony/applied_chords.h"
+#include "analysis/harmony/chord_input.h"
+#include "analysis/harmony/roman_numeral_adapter.h"
 
 #define REASON_NO_REGION "no key region"
 #define REASON_NO_CHORD "the library identified no chord"

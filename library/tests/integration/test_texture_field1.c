@@ -1,5 +1,5 @@
-#include "standard-texture/analysis/texture_analysis_classify.h"
-#include "standard-texture/analysis/texture_analysis_input.h"
+#include "analysis/texture/texture_analysis_classify.h"
+#include "analysis/texture/texture_analysis_input.h"
 #include "ursatz_chain/chain_inputs.h"
 #include "weighted_pipeline.h"
 

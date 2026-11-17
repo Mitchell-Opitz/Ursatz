@@ -1,5 +1,0 @@
-ursatz_test_includes()
-
-ursatz_test(galant_schemas_analysis_match SOURCES test_analysis_match.c LIBS galant_schemas)
-
-ursatz_test(galant_schemas_analysis_segment SOURCES test_galant_analysis_segment.c LIBS galant_schemas VALGRIND)

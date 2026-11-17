@@ -5,8 +5,8 @@
 #include <stdlib.h>
 
 #include <cJSON.h>
-#include <analysis/motive_relation.h>
-#include <analysis/motive_sketch.h>
+#include <analysis/motive/motive_relation.h>
+#include <analysis/motive/motive_sketch.h>
 #include <model/core/rational.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>

@@ -17,7 +17,7 @@
 #include "pipeline/chord_sequence_internal.h"
 #include "pipeline/corpus_walk.h"
 #include "pipeline/run_file.h"
-#include "query/similarity_model.h"
+#include "analysis/similarity/similarity_model.h"
 #include "theory/tonality/roman_numeral_grammar.h"
 #include "util/json_util.h"
 

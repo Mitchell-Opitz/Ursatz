@@ -28,13 +28,13 @@
 #include "test_cadences_reference_pieces.c"
 #undef main
 
-#include "standard-form/analysis/analysis_expansion.h"
-#include "standard-form/analysis/analysis_ideas.h"
-#include "standard-form/analysis/analysis_phrase.h"
-#include "standard-form/analysis/analysis_theme.h"
+#include "analysis/form/analysis_expansion.h"
+#include "analysis/form/analysis_ideas.h"
+#include "analysis/form/analysis_phrase.h"
+#include "analysis/form/analysis_theme.h"
 #include "ursatz_chain/form_bridge.h"
 #include "hand_cadences.h"
-#include "standard-form/analysis/analysis_input.h"
+#include "analysis/form/analysis_input.h"
 #include "theory/harmony/harmony_cadence_rules.h"
 #include "theory/form/phrase_level_form.h"
 

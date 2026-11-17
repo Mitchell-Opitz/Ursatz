@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <theory/harmony/harmony_cadence_rules.h>
-#include <standard-texture/texture_rules.h>
+#include <analysis/texture/texture_rules.h>
 
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>

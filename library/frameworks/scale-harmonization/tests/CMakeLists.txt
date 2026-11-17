@@ -1,3 +1,0 @@
-ursatz_test_includes()
-
-ursatz_test(scale_harmonization_analysis_detect SOURCES test_analysis_detect.c LIBS scale_harmonization)

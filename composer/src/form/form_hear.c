@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-form/analysis/analysis_theme.h>
+#include <analysis/form/analysis_theme.h>
 #include <theory/form/phrase_level_form.h>
 #include <model/time/time_rational.h>
 #include <model/time/time_span.h>

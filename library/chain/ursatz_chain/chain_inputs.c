@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/outer_voice.h"
+#include "analysis/voices/outer_voice.h"
 #include "model/core/rational.h"
 #include "theory/tonality/seventh_rules.h"
 #include "theory/tonality/tonal_key.h"
@@ -13,8 +13,8 @@
 #include "model/time/time_signature.h"
 #include "theory/harmony/harmony_cadence_rules.h"
 #include "theory/harmony/harmony_key_change.h"
-#include "common-practice-minimal/outer_scale_degrees.h"
-#include "semantics/analysis_segment.h"
+#include "analysis/harmony/outer_scale_degrees.h"
+#include "analysis/notes/analysis_segment.h"
 #include "model/interpretation/chord.h"
 #include "model/time/duration.h"
 #include "model/time/temporal_anchor.h"

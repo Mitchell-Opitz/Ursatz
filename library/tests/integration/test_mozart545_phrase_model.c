@@ -5,14 +5,14 @@
 #include <string.h>
 #include "reference_pieces.h"
 
-#include "standard-harmony/analysis/analysis_phrase.h"
-#include "standard-harmony/analysis/analysis_six_four.h"
-#include "standard-tonality/analysis/applied_chords.h"
-#include "standard-tonality/analysis/chord_input.h"
-#include "common-practice-minimal/key_regions.h"
-#include "standard-tonality/analysis/roman_numeral_adapter.h"
+#include "analysis/harmony/analysis_phrase.h"
+#include "analysis/harmony/analysis_six_four.h"
+#include "analysis/harmony/applied_chords.h"
+#include "analysis/harmony/chord_input.h"
+#include "analysis/harmony/key_regions.h"
+#include "analysis/harmony/roman_numeral_adapter.h"
 #include "weighted_pipeline.h"
-#include "analysis/outer_voice.h"
+#include "analysis/voices/outer_voice.h"
 
 /*
  * Phrase model labels for Mozart, Piano Sonata K. 545, first movement, exposition, against

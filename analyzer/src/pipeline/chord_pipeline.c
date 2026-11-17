@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include "theory/tonality/chord_vocabulary_seventh.h"
-#include "common-practice-minimal/weighted_chord_identification.h"
-#include "common-practice-minimal/weighted_identification.h"
+#include "analysis/harmony/weighted_chord_identification.h"
+#include "analysis/harmony/weighted_identification.h"
 #include "model/core/rational.h"
 #include "model/interpretation/chord.h"
 #include "pipeline/interpretation_util.h"

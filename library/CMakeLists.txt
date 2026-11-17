@@ -9,8 +9,8 @@ endif()
 
 add_subdirectory(model)
 add_subdirectory(theory)
+add_subdirectory(analysis)
 add_subdirectory(src)
-add_subdirectory(frameworks)
 add_subdirectory(chain)
 
 ursatz_write_public_manifest()

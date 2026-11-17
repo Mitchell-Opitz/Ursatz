@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <common-practice-minimal/non_chord_tones.h>
+#include <analysis/harmony/non_chord_tones.h>
 #include <theory/counterpoint/consonance_rules.h>
 #include <theory/counterpoint/counterpoint_limits.h>
 #include <theory/counterpoint/counterpoint_line.h>

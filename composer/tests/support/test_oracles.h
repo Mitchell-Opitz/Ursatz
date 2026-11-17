@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <model/core/rational.h>
-#include <standard-harmony/analysis/analysis_cadence.h>
+#include <analysis/harmony/analysis_cadence.h>
 
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/melody_fill.h>

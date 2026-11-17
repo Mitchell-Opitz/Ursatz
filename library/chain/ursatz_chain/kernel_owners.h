@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "standard-form/analysis/analysis_input.h"
-#include "standard-form/analysis/analysis_motive_shape.h"
+#include "analysis/form/analysis_input.h"
+#include "analysis/form/analysis_motive_shape.h"
 #include "ursatz_chain/chain_inputs.h"
-#include "semantics/tone_line.h"
-#include "common-practice-minimal/weighted_chord_identification.h"
+#include "analysis/notes/tone_line.h"
+#include "analysis/harmony/weighted_chord_identification.h"
 
 /*
  * The callbacks that put the kernel owners (R-243) behind the frameworks: the chain, which may include L8, hands them to the weighted

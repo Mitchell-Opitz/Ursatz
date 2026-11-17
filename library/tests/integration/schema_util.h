@@ -7,10 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/outer_voice.h"
-#include "galant-schemas/analysis/galant_analysis_input.h"
-#include "standard-tonality/analysis/chord_input.h"
-#include "standard-tonality/analysis/roman_numeral_adapter.h"
+#include "analysis/voices/outer_voice.h"
+#include "analysis/galant/galant_analysis_input.h"
+#include "analysis/harmony/chord_input.h"
+#include "analysis/harmony/roman_numeral_adapter.h"
 #include "weighted_pipeline.h"
 
 /*

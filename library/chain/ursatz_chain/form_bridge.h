@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "standard-form/analysis/analysis_motive.h"
-#include "standard-form/analysis/analysis_phrase.h"
+#include "analysis/form/analysis_motive.h"
+#include "analysis/form/analysis_phrase.h"
 
 /*
  * The bridges from standard-form's injected detectors to the kernel. A framework may not include kernel analysis, so the glue that

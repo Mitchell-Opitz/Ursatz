@@ -1,0 +1,5 @@
+ursatz_test(galant_schemas_analysis_match SOURCES test_analysis_match.c LIBS ursatz_analysis)
+
+ursatz_test(galant_schemas_analysis_segment SOURCES test_galant_analysis_segment.c LIBS ursatz_analysis VALGRIND)
+
+ursatz_test(scale_harmonization_analysis_detect SOURCES test_analysis_detect.c LIBS ursatz_analysis)

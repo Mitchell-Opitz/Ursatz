@@ -6,7 +6,7 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include "analysis/outer_voice.h"
+#include "analysis/voices/outer_voice.h"
 #include "pipeline/form_pipeline.h"
 
 /*

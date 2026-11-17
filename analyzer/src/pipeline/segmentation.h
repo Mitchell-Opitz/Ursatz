@@ -7,10 +7,10 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "pipeline/pitch_class_util.h"
-#include "semantics/sonority_segmentation.h"
+#include "analysis/notes/sonority_segmentation.h"
 #include "model/time/meter_map.h"
 #include "model/time/musical_time.h"
-#include "common-practice-minimal/weighted_chord_identification.h"
+#include "analysis/harmony/weighted_chord_identification.h"
 
 /*
  * One sonority segment of the library chain (analysis_chain_segments, analysis_chain_voice_segments: Ursatz's adaptive

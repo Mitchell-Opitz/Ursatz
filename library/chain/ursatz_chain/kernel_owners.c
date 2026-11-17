@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/motive_sketch.h"
-#include "analysis/motive_tone_roles.h"
-#include "analysis/motive_variant_recognition.h"
-#include "standard-counterpoint/analysis/analysis_melody_nct.h"
-#include "standard-form/analysis/analysis_motive_match.h"
+#include "analysis/motive/motive_sketch.h"
+#include "analysis/motive/motive_tone_roles.h"
+#include "analysis/motive/motive_variant_recognition.h"
+#include "analysis/counterpoint/analysis_melody_nct.h"
+#include "analysis/form/analysis_motive_match.h"
 
 bool chain_classify_tones(const ToneLineNote *notes, size_t count, ToneLineLabel *out, void *context) {
     return motive_tone_roles_line(notes, count, out, context);

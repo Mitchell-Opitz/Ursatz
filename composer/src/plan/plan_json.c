@@ -12,7 +12,7 @@
 #include <ursatz_analyzer/version.h>
 #include <ursatz_composer/composer.h>
 #include <theory/galant/galant_prototypes.h>
-#include <standard-texture/texture_rules.h>
+#include <analysis/texture/texture_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>

@@ -5,9 +5,9 @@
 #include <string.h>
 
 #include "model/core/rational.h"
-#include "analysis/outer_voice.h"
+#include "analysis/voices/outer_voice.h"
 #include "theory/tonality/key_vocabulary.h"
-#include "common-practice-minimal/outer_scale_degrees.h"
+#include "analysis/harmony/outer_scale_degrees.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/spelling_util.h"
 

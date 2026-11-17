@@ -1,7 +1,0 @@
-ursatz_test_includes()
-
-ursatz_test(standard_tonality_chord_input SOURCES test_chord_input.c LIBS standard_tonality)
-
-ursatz_test(standard_tonality_roman_numeral_adapter SOURCES test_roman_numeral_adapter.c LIBS standard_tonality)
-
-ursatz_test(standard_tonality_applied_chords SOURCES test_applied_chords.c LIBS standard_tonality)

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <semantics/analysis_key.h>
+#include <analysis/notes/analysis_key.h>
 #include <theory/harmony/harmonic_function.h>
 
 #include <ursatz_composer/piece_plan.h>

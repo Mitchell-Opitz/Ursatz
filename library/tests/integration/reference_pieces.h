@@ -7,8 +7,8 @@
 #include <string.h>
 
 #include "model/identity/entity_id.h"
-#include "standard-tonality/analysis/applied_chords.h"
-#include "standard-tonality/analysis/roman_numeral_adapter.h"
+#include "analysis/harmony/applied_chords.h"
+#include "analysis/harmony/roman_numeral_adapter.h"
 #include "model/time/meter_map.h"
 #include "model/time/musical_time.h"
 #include "model/time/note_value.h"

@@ -3,15 +3,15 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "analysis/motif_window_matching.h"
-#include "analysis/phrase_boundary_detection.h"
+#include "analysis/motive/motif_window_matching.h"
+#include "analysis/form/phrase_boundary_detection.h"
 #include "model/core/provenance_reference.h"
 #include "model/events/note_event.h"
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_identity.h"
 #include "theory/vocabulary/cadence_type.h"
-#include "semantics/contour.h"
-#include "semantics/rhythmic_pattern.h"
+#include "analysis/notes/contour.h"
+#include "analysis/notes/rhythmic_pattern.h"
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"

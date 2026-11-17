@@ -6,13 +6,13 @@
 #include <string.h>
 
 #include "model/interpretation/chord.h"
-#include "common-practice-minimal/outer_scale_degrees.h"
+#include "analysis/harmony/outer_scale_degrees.h"
 #include "theory/meter/segmentation_beat_grid.h"
-#include "standard-tonality/analysis/applied_chords.h"
+#include "analysis/harmony/applied_chords.h"
 #include "model/time/time_span.h"
-#include "standard-form/analysis/analysis_phrase_grid.h"
-#include "standard-form/analysis/analysis_repeats.h"
-#include "standard-harmony/analysis/analysis_cadence_claims.h"
+#include "analysis/form/analysis_phrase_grid.h"
+#include "analysis/form/analysis_repeats.h"
+#include "analysis/harmony/analysis_cadence_claims.h"
 #include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/kernel_owners.h"
 

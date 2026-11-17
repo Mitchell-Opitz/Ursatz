@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "semantics/analysis_key.h"
+#include "analysis/notes/analysis_key.h"
 #include "theory/form/phrase_level_form.h"
 #include "ursatz_chain/analysis_chain.h"
 #include "weighted_pipeline.h"

@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-texture/analysis/texture_analysis_classify.h>
-#include <standard-texture/texture_rules.h>
+#include <analysis/texture/texture_analysis_classify.h>
+#include <analysis/texture/texture_rules.h>
 
 #include <model/identity/entity_id.h>
 #include <model/time/meter_map.h>

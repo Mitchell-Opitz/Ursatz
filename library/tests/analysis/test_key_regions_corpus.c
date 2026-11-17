@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include "io/midi_key_signature.h"
-#include "common-practice-minimal/key_identification.h"
-#include "common-practice-minimal/key_regions.h"
+#include "analysis/harmony/key_identification.h"
+#include "analysis/harmony/key_regions.h"
 #include "weighted_pipeline.h"
 #include "../io/midi_import_split.h"
 #include "../key_index_test_util.h"

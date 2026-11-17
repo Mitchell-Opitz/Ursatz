@@ -1,0 +1,58 @@
+ursatz_test(progression_patterns LIBS ursatz_analysis VALGRIND)
+
+ursatz_test(common_practice_minimal_key_identification SOURCES test_key_identification.c LIBS ursatz_analysis)
+
+ursatz_test(common_practice_minimal_weighted_identification SOURCES test_weighted_identification.c
+    LIBS ursatz_analysis)
+
+ursatz_test(common_practice_minimal_minor_vocabulary SOURCES test_minor_vocabulary.c LIBS ursatz_analysis)
+
+ursatz_test(common_practice_minimal_non_chord_tones SOURCES test_non_chord_tones.c LIBS ursatz_analysis)
+
+ursatz_test(common_practice_minimal_weighted_chord_identification SOURCES test_weighted_chord_identification.c
+    LIBS ursatz_analysis)
+
+ursatz_test(common_practice_minimal_outer_scale_degrees SOURCES test_outer_scale_degrees.c
+    LIBS ursatz_analysis)
+
+ursatz_test(common_practice_minimal_key_regions SOURCES test_key_regions.c LIBS ursatz_analysis)
+
+ursatz_test(common_practice_minimal_analysis_note SOURCES test_common_practice_analysis_note.c
+    LIBS ursatz_analysis VALGRIND)
+
+ursatz_test(common_practice_minimal_home_key_region SOURCES test_home_key_region.c LIBS ursatz_analysis
+    VALGRIND)
+
+ursatz_test(common_practice_minimal_ranked_chord_names SOURCES test_ranked_chord_names.c LIBS ursatz_analysis)
+
+ursatz_test(common_practice_minimal_scale_degree_of SOURCES test_scale_degree_of.c LIBS ursatz_analysis)
+
+ursatz_test(common_practice_minimal_injected_classifier SOURCES test_injected_classifier.c
+    LIBS ursatz_analysis VALGRIND)
+
+ursatz_test(common_practice_minimal_harmonic_spans SOURCES test_harmonic_spans.c LIBS ursatz_analysis VALGRIND)
+
+ursatz_test(standard_harmony_analysis_function SOURCES test_analysis_function.c LIBS ursatz_analysis)
+
+ursatz_test(standard_harmony_analysis_phrase SOURCES test_analysis_phrase.c LIBS ursatz_analysis)
+
+ursatz_test(standard_harmony_analysis_six_four SOURCES test_analysis_six_four.c LIBS ursatz_analysis)
+
+ursatz_test(standard_harmony_analysis_prolongation SOURCES test_analysis_prolongation.c LIBS ursatz_analysis)
+
+ursatz_test(standard_harmony_analysis_cadence SOURCES test_analysis_cadence.c LIBS ursatz_analysis)
+
+ursatz_test(standard_harmony_analysis_resolution SOURCES test_analysis_resolution.c LIBS ursatz_analysis)
+
+ursatz_test(standard_harmony_analysis_cadence_readings SOURCES test_analysis_cadence_readings.c LIBS ursatz_analysis)
+
+ursatz_test(standard_harmony_analysis_cadence_claims SOURCES test_analysis_cadence_claims.c LIBS ursatz_analysis
+    VALGRIND)
+
+ursatz_test(standard_harmony_analysis_key SOURCES test_harmony_analysis_key.c LIBS ursatz_analysis VALGRIND)
+
+ursatz_test(standard_tonality_chord_input SOURCES test_chord_input.c LIBS ursatz_analysis)
+
+ursatz_test(standard_tonality_roman_numeral_adapter SOURCES test_roman_numeral_adapter.c LIBS ursatz_analysis)
+
+ursatz_test(standard_tonality_applied_chords SOURCES test_applied_chords.c LIBS ursatz_analysis)

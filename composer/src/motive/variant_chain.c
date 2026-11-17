@@ -9,7 +9,7 @@
 
 #include <ursatz_composer/motive_analysis.h>
 
-#include <analysis/motive_relation.h>
+#include <analysis/motive/motive_relation.h>
 
 #include "motive/motive_internal.h"
 #include "motive/variant_internal.h"

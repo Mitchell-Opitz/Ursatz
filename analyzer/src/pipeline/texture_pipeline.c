@@ -4,8 +4,8 @@
 #include <string.h>
 
 #include "model/events/note_event.h"
-#include "standard-texture/framework.h"
-#include "standard-texture/analysis/texture_analysis_classify.h"
+#include "analysis/texture/framework.h"
+#include "analysis/texture/texture_analysis_classify.h"
 #include "theory/framework/framework.h"
 #include "model/core/rational.h"
 #include "model/time/musical_time.h"

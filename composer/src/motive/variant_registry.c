@@ -6,7 +6,7 @@
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_tones.h>
 
-#include <analysis/motive_relation.h>
+#include <analysis/motive/motive_relation.h>
 
 #include "motive/motive_internal.h"
 #include "plan/plan_json_internal.h"

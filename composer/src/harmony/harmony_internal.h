@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <standard-harmony/analysis/analysis_cadence.h>
-#include <standard-harmony/analysis/analysis_input.h>
+#include <analysis/harmony/analysis_cadence.h>
+#include <analysis/harmony/analysis_input.h>
 #include <theory/harmony/harmony_chord.h>
 #include <theory/harmony/harmony_pivot.h>
 #include <model/pitch/pitch_spelling.h>

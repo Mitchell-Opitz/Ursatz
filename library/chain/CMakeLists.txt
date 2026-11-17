@@ -16,18 +16,7 @@ ursatz_public_headers(ursatz_chain
         analysis_chain.h
         chain_inputs.h
 )
-target_link_libraries(ursatz_chain PUBLIC
-    ursatz
-    common_practice_minimal
-    standard_tonality
-    standard_harmony
-    standard_form
-    standard_meter
-    standard_texture
-    standard_counterpoint
-    galant_schemas
-    scale_harmonization
-)
+target_link_libraries(ursatz_chain PUBLIC ursatz_analysis ursatz)
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

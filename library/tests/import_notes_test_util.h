@@ -10,7 +10,7 @@
 #include "io/midi_importer.h"
 #include "io/musicxml_importer.h"
 #include "model/pitch/pitch_numeric_value.h"
-#include "semantics/analysis_note.h"
+#include "analysis/notes/analysis_note.h"
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"

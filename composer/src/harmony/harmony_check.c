@@ -10,9 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-harmony/analysis/analysis_cadence.h>
-#include <standard-harmony/analysis/analysis_prolongation.h>
-#include <standard-harmony/analysis/analysis_six_four.h>
+#include <analysis/harmony/analysis_cadence.h>
+#include <analysis/harmony/analysis_prolongation.h>
+#include <analysis/harmony/analysis_six_four.h>
 #include <theory/harmony/harmony_cadence_rules.h>
 #include <theory/harmony/harmony_deceptive.h>
 #include <theory/harmony/harmony_phrase_rules.h>

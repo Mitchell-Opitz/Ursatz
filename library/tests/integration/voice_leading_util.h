@@ -8,13 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/voice_separation.h"
+#include "analysis/voices/voice_separation.h"
 #include "model/core/provenance_reference.h"
 #include "model/pitch/pitch_spelling.h"
 #include "model/time/time_span.h"
-#include "standard-counterpoint/analysis/analysis_grid.h"
-#include "standard-harmony/analysis/analysis_input.h"
-#include "standard-harmony/analysis/analysis_voices.h"
+#include "analysis/counterpoint/analysis_grid.h"
+#include "analysis/harmony/analysis_input.h"
+#include "analysis/harmony/analysis_voices.h"
 #include "model/pitch/pitch_identity.h"
 #include "model/pitch/tuning_system.h"
 #include "theory/meter/segmentation_beat_grid.h"

@@ -64,7 +64,7 @@ configure_file(version.h.in ${PROJECT_BINARY_DIR}/include/ursatz_analyzer/versio
 # index and cache and compared by the stale check. A change to a test, a doc or the GUI leaves it as it was.
 get_filename_component(URSATZ_REPO_ROOT ${PROJECT_SOURCE_DIR}/.. ABSOLUTE)
 set(producer_sources "")
-foreach(producer_dir IN ITEMS library/src library/frameworks library/chain analyzer/src analyzer/include third_party/cjson third_party/ezxml)
+foreach(producer_dir IN ITEMS library/model library/theory library/analysis library/src library/chain analyzer/src analyzer/include third_party/cjson third_party/ezxml)
     file(GLOB_RECURSE found CONFIGURE_DEPENDS RELATIVE ${URSATZ_REPO_ROOT}
         ${URSATZ_REPO_ROOT}/${producer_dir}/*.c ${URSATZ_REPO_ROOT}/${producer_dir}/*.h)
     list(APPEND producer_sources ${found})
@@ -91,9 +91,8 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz
-    PRIVATE ursatz_chain common_practice_minimal standard_meter standard_tonality standard_harmony standard_form cjson
-    standard_counterpoint standard_texture standard_voicing standard_markings galant_schemas scale_harmonization
+    PUBLIC ursatz ursatz_analysis
+    PRIVATE ursatz_chain cjson
 )
 
 # Reading the chain's claims (analyzer_result_chain): the chain headers reach only a consumer that links this target.

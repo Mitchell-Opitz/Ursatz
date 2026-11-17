@@ -1,0 +1,13 @@
+ursatz_test(standard_counterpoint_analysis_motion SOURCES test_analysis_motion.c LIBS ursatz_analysis)
+
+ursatz_test(standard_counterpoint_analysis_perfects SOURCES test_analysis_perfects.c LIBS ursatz_analysis)
+
+ursatz_test(standard_counterpoint_analysis_melody SOURCES test_analysis_melody.c LIBS ursatz_analysis)
+
+ursatz_test(standard_counterpoint_analysis_melody_leaps SOURCES test_analysis_melody_leaps.c
+    LIBS ursatz_analysis)
+
+ursatz_test(standard_counterpoint_analysis_melody_nct SOURCES test_analysis_melody_nct.c LIBS ursatz_analysis)
+
+ursatz_test(standard_counterpoint_melody_nct_injected SOURCES test_melody_nct_injected.c LIBS ursatz_analysis
+    VALGRIND)

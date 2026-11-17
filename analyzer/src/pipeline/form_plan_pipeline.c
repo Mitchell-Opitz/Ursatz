@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/form_structure_detection.h"
-#include "analysis/thematic_return_detection.h"
+#include "analysis/form/form_structure_detection.h"
+#include "analysis/form/thematic_return_detection.h"
 #include "model/containers/section.h"
 #include "model/core/value.h"
 #include "model/events/note_event.h"
@@ -13,8 +13,8 @@
 #include "model/pitch/pitch_identity.h"
 #include "model/relationship/relationship.h"
 #include "theory/vocabulary/cadence_type.h"
-#include "semantics/contour.h"
-#include "semantics/rhythmic_pattern.h"
+#include "analysis/notes/contour.h"
+#include "analysis/notes/rhythmic_pattern.h"
 #include "model/structure/phrase_occurrence.h"
 #include "model/structure/structure.h"
 #include "model/time/duration.h"
