@@ -34,8 +34,8 @@ static void test_offset_is_copied_and_reduced(void) {
     Duration offset = dur(6, 16);
     MetricalPosition *p = NULL;
     assert(metrical_position_create(1, offset, &p) == METRICAL_POSITION_OK); /* the position copies it */
-    assert(duration_numerator(metrical_position_offset(p)) == 3);
-    assert(duration_denominator(metrical_position_offset(p)) == 8);
+    assert(metrical_position_offset(p)->value.num == 3);
+    assert(metrical_position_offset(p)->value.den == 8);
     metrical_position_destroy(p);
 }
 
@@ -57,9 +57,9 @@ static TimeSignature *sig(unsigned top, int bottom_exponent) {
     return ts;
 }
 
-static MusicalTime *at(long n, unsigned long d) {
-    MusicalTime *t = NULL;
-    assert(musical_time_create(n, d, &t) == MUSICAL_TIME_OK);
+static MusicalTime at(long n, unsigned long d) {
+    MusicalTime t;
+    assert(musical_time_make(n, (long long)d, &t) == MUSICAL_TIME_OK);
     return t;
 }
 
@@ -72,13 +72,11 @@ typedef struct {
 
 static MeterMap *build(const Change *changes, size_t count) {
     TimeSignature *signatures[8];
-    MusicalTime *starts[8];
     MeterMapChangePoint points[8];
     for (size_t i = 0; i < count; i++) {
         signatures[i] = sig(changes[i].top, changes[i].bottom_exponent);
-        starts[i] = at(changes[i].start_n, changes[i].start_d);
         points[i].time_signature = signatures[i];
-        points[i].start = *starts[i];
+        points[i].start = at(changes[i].start_n, changes[i].start_d);
     }
     EntityID *id = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK);
@@ -86,7 +84,6 @@ static MeterMap *build(const Change *changes, size_t count) {
     assert(meter_map_create(id, points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
@@ -94,13 +91,12 @@ static MeterMap *build(const Change *changes, size_t count) {
 /* from_time must give (measure, offset). */
 static void assert_position(const MeterMap *map, long tn, unsigned long td, int measure, long on,
                             unsigned long od) {
-    MusicalTime *t = at(tn, td);
+    MusicalTime t = at(tn, td);
     MetricalPosition *p = NULL;
-    assert(metrical_position_from_time(map, t, &p) == METRICAL_POSITION_OK);
+    assert(metrical_position_from_time(map, &t, &p) == METRICAL_POSITION_OK);
     assert(metrical_position_measure(p) == measure);
     assert(duration_same(*metrical_position_offset(p), dur(on, (long long)od)));
     metrical_position_destroy(p);
-    musical_time_destroy(t);
 }
 
 static void test_four_four(void) {
@@ -232,11 +228,10 @@ static void test_errors(void) {
     Change changes[] = {{4, 2, 0, 1}};
     MeterMap *map = build(changes, 1);
 
-    MusicalTime *negative = at(-1, 8);
+    MusicalTime negative = at(-1, 8);
     MetricalPosition *p = NULL;
-    assert(metrical_position_from_time(map, negative, &p) == METRICAL_POSITION_ERR_TIME_BEFORE_START);
+    assert(metrical_position_from_time(map, &negative, &p) == METRICAL_POSITION_ERR_TIME_BEFORE_START);
     assert(p == NULL);
-    musical_time_destroy(negative);
 
     assert(metrical_position_from_time(NULL, NULL, &p) == METRICAL_POSITION_ERR_NULL_ARGUMENT);
     const TimeSignature *reading = NULL;
@@ -248,11 +243,10 @@ static void test_a_measure_number_past_int_is_an_overflow_error(void) {
     Change changes[] = {{4, 2, 0, 1}};
     MeterMap *map = build(changes, 1);
     /* 3,000,000,000 whole notes in 4/4 is measure 3,000,000,001: past int. */
-    MusicalTime *far = at(3000000000L, 1);
+    MusicalTime far = at(3000000000L, 1);
     MetricalPosition *p = NULL;
-    assert(metrical_position_from_time(map, far, &p) == METRICAL_POSITION_ERR_OVERFLOW);
+    assert(metrical_position_from_time(map, &far, &p) == METRICAL_POSITION_ERR_OVERFLOW);
     assert(p == NULL);
-    musical_time_destroy(far);
     meter_map_destroy(map);
 }
 

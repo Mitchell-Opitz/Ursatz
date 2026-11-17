@@ -24,22 +24,20 @@ static TimeSignature *sig(unsigned top, int bottom_exponent) {
     return ts;
 }
 
-static MusicalTime *at(long n, unsigned long d) {
-    MusicalTime *t = NULL;
-    assert(musical_time_create(n, d, &t) == MUSICAL_TIME_OK);
+static MusicalTime at(long n, unsigned long d) {
+    MusicalTime t;
+    assert(musical_time_make(n, (long long)d, &t) == MUSICAL_TIME_OK);
     return t;
 }
 
 static MeterMap *single(unsigned top, int bottom_exponent) {
     TimeSignature *ts = sig(top, bottom_exponent);
-    MusicalTime *start = at(0, 1);
-    MeterMapChangePoint point = {ts, *start};
+    MeterMapChangePoint point = {ts, at(0, 1)};
     EntityID *id = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK);
     MeterMap *map = NULL;
     assert(meter_map_create(id, &point, 1, &map) == METER_MAP_OK);
     time_signature_destroy(ts);
-    musical_time_destroy(start);
     return map;
 }
 
@@ -50,24 +48,19 @@ static Rational q(long long n, long long d) {
 }
 
 static void test_span(void) {
-    MusicalTime *from = at(1, 4);
-    MusicalTime *to = at(3, 4);
-    TimeSpan *span = NULL;
-    assert(time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
+    TimeSpan span;
+    assert(time_span_make(at(1, 4), at(3, 4), &span) == TIME_SPAN_OK);
     Rational start = q(9, 9);
     Rational end = q(9, 9);
-    assert(score_time_span(span, &start, &end));
+    assert(score_time_span(&span, &start, &end));
     assert(rational_equals(start, q(1, 4)) && rational_equals(end, q(3, 4)));
-    assert(score_time_span(span, NULL, NULL));
+    assert(score_time_span(&span, NULL, NULL));
     assert(!score_time_span(NULL, &start, &end));
-    time_span_destroy(span);
 
-    /* A denominator above LLONG_MAX does not fit a Rational: no time can be built from it. */
-    MusicalTime *huge = NULL;
-    assert(musical_time_create(1, ULONG_MAX, &huge) == MUSICAL_TIME_ERR_OVERFLOW);
-    assert(huge == NULL);
-    musical_time_destroy(from);
-    musical_time_destroy(to);
+    /* A time that does not fit a Rational cannot be built. */
+    MusicalTime huge = at(0, 1);
+    assert(musical_time_make(LLONG_MIN, 1, &huge) == MUSICAL_TIME_ERR_OVERFLOW);
+    assert(musical_time_same(huge, at(0, 1)));
 }
 
 static void test_measure_bounds_and_beat(void) {

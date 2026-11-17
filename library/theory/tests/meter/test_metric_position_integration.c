@@ -27,10 +27,10 @@ typedef struct {
 /* Reads the position of the time tn/td in the map, with the signature the map says that measure is
    read in. */
 static Reading read_time(const MeterMap *map, long tn, unsigned long td) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(tn, td, &time) == MUSICAL_TIME_OK);
+    MusicalTime time;
+    assert(musical_time_make(tn, (long long)td, &time) == MUSICAL_TIME_OK);
     MetricalPosition *position = NULL;
-    assert(metrical_position_from_time(map, time, &position) == METRICAL_POSITION_OK);
+    assert(metrical_position_from_time(map, &time, &position) == METRICAL_POSITION_OK);
 
     Reading reading;
     reading.measure = metrical_position_measure(position);
@@ -41,7 +41,6 @@ static Reading read_time(const MeterMap *map, long tn, unsigned long td) {
     assert(standard_meter_beat_strength(signature, position, &reading.strength));
 
     metrical_position_destroy(position);
-    musical_time_destroy(time);
     return reading;
 }
 
@@ -63,13 +62,12 @@ typedef struct {
 
 static MeterMap *build(const Change *changes, size_t count) {
     TimeSignature *signatures[4];
-    MusicalTime *starts[4];
     MeterMapChangePoint points[4];
     for (size_t i = 0; i < count; i++) {
         signatures[i] = make_signature(changes[i].top, changes[i].bottom_exponent);
-        assert(musical_time_create(changes[i].start_n, changes[i].start_d, &starts[i]) == MUSICAL_TIME_OK);
+        assert(musical_time_make(changes[i].start_n, (long long)changes[i].start_d, &points[i].start) ==
+               MUSICAL_TIME_OK);
         points[i].time_signature = signatures[i];
-        points[i].start = *starts[i];
     }
     EntityID *id = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK);
@@ -77,7 +75,6 @@ static MeterMap *build(const Change *changes, size_t count) {
     assert(meter_map_create(id, points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
@@ -171,19 +168,17 @@ static void release(Imported *imported) {
 
 /* The note starting at `tick` with MIDI pitch `midi_note`, read in the file's own meter. */
 static Reading read_note(const Imported *imported, long tick, unsigned long ticks_per_whole, long midi_note) {
-    MusicalTime *when = NULL;
-    assert(musical_time_create(tick, ticks_per_whole, &when) == MUSICAL_TIME_OK);
+    MusicalTime when;
+    assert(musical_time_make(tick, (long long)ticks_per_whole, &when) == MUSICAL_TIME_OK);
     for (size_t i = 0; i < imported->count; i++) {
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(imported->events[i]));
-        if (musical_time_equals(position, when) &&
+        if (musical_time_same(*position, when) &&
             pitch_numeric_value_position_numerator(imported->pitch_values[i]) == midi_note) {
-            musical_time_destroy(when);
-            return read_time(imported->meter.meter_map, musical_time_numerator(position),
-                             musical_time_denominator(position));
+            return read_time(imported->meter.meter_map, (long)position->value.num,
+                             (unsigned long)position->value.den);
         }
     }
     assert(!"no note at that tick with that pitch");
-    musical_time_destroy(when);
     Reading none = {0};
     return none;
 }

@@ -19,9 +19,9 @@ static TimeSignature *sig(unsigned top, int bottom_exponent) {
     return ts;
 }
 
-static MusicalTime *at(long n, unsigned long d) {
-    MusicalTime *t = NULL;
-    assert(musical_time_create(n, d, &t) == MUSICAL_TIME_OK);
+static MusicalTime at(long n, unsigned long d) {
+    MusicalTime t;
+    assert(musical_time_make(n, (long long)d, &t) == MUSICAL_TIME_OK);
     return t;
 }
 
@@ -40,19 +40,16 @@ typedef struct {
 
 static MeterMap *build(const Change *changes, size_t count) {
     TimeSignature *signatures[8];
-    MusicalTime *starts[8];
     MeterMapChangePoint points[8];
     for (size_t i = 0; i < count; i++) {
         signatures[i] = sig(changes[i].top, changes[i].bottom_exponent);
-        starts[i] = at(changes[i].start_n, changes[i].start_d);
         points[i].time_signature = signatures[i];
-        points[i].start = *starts[i];
+        points[i].start = at(changes[i].start_n, changes[i].start_d);
     }
     MeterMap *map = NULL;
     assert(meter_map_create(id("map"), points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }

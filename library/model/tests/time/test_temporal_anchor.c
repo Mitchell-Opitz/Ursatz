@@ -26,8 +26,8 @@ static void test_create_accepts_negative_position(void) {
     assert(r == TEMPORAL_ANCHOR_OK);
 
     const MusicalTime *anchor_position = temporal_anchor_position(anchor);
-    assert(musical_time_numerator(anchor_position) == -1);
-    assert(musical_time_denominator(anchor_position) == 4);
+    assert(anchor_position->value.num == -1);
+    assert(anchor_position->value.den == 4);
 
     temporal_anchor_destroy(anchor);
 }
@@ -40,8 +40,8 @@ static void test_position_accessor_matches_wrapped_time(void) {
     temporal_anchor_create(position, &anchor);
 
     const MusicalTime *anchor_position = temporal_anchor_position(anchor);
-    assert(musical_time_numerator(anchor_position) == 1);
-    assert(musical_time_denominator(anchor_position) == 4);
+    assert(anchor_position->value.num == 1);
+    assert(anchor_position->value.den == 4);
 
     temporal_anchor_destroy(anchor);
 }

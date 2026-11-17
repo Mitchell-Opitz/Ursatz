@@ -34,10 +34,8 @@ static void test_borrowed(void) {
 
 static bool level_of(const TimeSignature *time_signature, long numerator, unsigned long denominator,
                      TupletLevel *level) {
-    Duration *span = make_duration(numerator, denominator);
-    bool result = standard_meter_tuplet_level(time_signature, span, level);
-    duration_destroy(span);
-    return result;
+    Duration span = make_duration(numerator, denominator);
+    return standard_meter_tuplet_level(time_signature, &span, level);
 }
 
 /* Beat, subdivision, and multi-beat triplets in 2/4 (Example 1). */

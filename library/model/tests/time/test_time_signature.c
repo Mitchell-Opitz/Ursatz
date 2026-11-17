@@ -74,8 +74,8 @@ static void test_bounds(void) {
 }
 
 static void assert_duration(const Duration *duration, long numerator, unsigned long denominator) {
-    assert(duration_numerator(duration) == numerator);
-    assert(duration_denominator(duration) == denominator);
+    assert(duration->value.num == numerator);
+    assert(duration->value.den == (long long)denominator);
 }
 
 static void test_unit_and_measure_duration(void) {

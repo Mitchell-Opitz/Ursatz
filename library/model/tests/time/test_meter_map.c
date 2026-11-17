@@ -20,9 +20,9 @@ static TimeSignature *sig(unsigned top, int bottom_exponent) {
     return ts;
 }
 
-static MusicalTime *at(long n, unsigned long d) {
-    MusicalTime *t = NULL;
-    assert(musical_time_create(n, d, &t) == MUSICAL_TIME_OK);
+static MusicalTime at(long n, unsigned long d) {
+    MusicalTime t;
+    assert(musical_time_make(n, (long long)d, &t) == MUSICAL_TIME_OK);
     return t;
 }
 
@@ -41,49 +41,40 @@ typedef struct {
 
 static MeterMap *build(const Change *changes, size_t count) {
     TimeSignature *signatures[8];
-    MusicalTime *starts[8];
     MeterMapChangePoint points[8];
     for (size_t i = 0; i < count; i++) {
         signatures[i] = sig(changes[i].top, changes[i].bottom_exponent);
-        starts[i] = at(changes[i].start_n, changes[i].start_d);
         points[i].time_signature = signatures[i];
-        points[i].start = *starts[i];
+        points[i].start = at(changes[i].start_n, changes[i].start_d);
     }
     MeterMap *map = NULL;
     assert(meter_map_create(id("map"), points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
 
 static int index_at(const MeterMap *map, long n, unsigned long d) {
-    MusicalTime *t = at(n, d);
+    MusicalTime t = at(n, d);
     int index = -99;
-    assert(meter_map_measure_index_at(map, t, &index) == METER_MAP_OK);
-    musical_time_destroy(t);
+    assert(meter_map_measure_index_at(map, &t, &index) == METER_MAP_OK);
     return index;
 }
 
 static size_t count_at(const MeterMap *map, long n, unsigned long d) {
-    MusicalTime *t = at(n, d);
+    MusicalTime t = at(n, d);
     size_t count = 99999;
-    assert(meter_map_measure_count(map, t, &count) == METER_MAP_OK);
-    musical_time_destroy(t);
+    assert(meter_map_measure_count(map, &t, &count) == METER_MAP_OK);
     return count;
 }
 
 static void assert_span(const MeterMap *map, int index, long sn, unsigned long sd, long en, unsigned long ed) {
     TimeSpan span;
     assert(meter_map_measure_span(map, index, &span) == METER_MAP_OK);
-    MusicalTime *start = at(sn, sd);
-    MusicalTime *end = at(en, ed);
-    assert(musical_time_equals(&span.start, start));
-    assert(musical_time_equals(&span.end, end));
+    assert(musical_time_same(span.start, at(sn, sd)));
+    assert(musical_time_same(span.end, at(en, ed)));
     assert(time_span_boundary(&span) == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
 }
 
 static void test_single_region(void) {
@@ -125,14 +116,12 @@ static void test_barline_belongs_to_following_measure(void) {
     assert(index_at(map, 7, 2) == 4); /* just inside measure 4 */
 
     const MeterMapRegion *region = NULL;
-    MusicalTime *change = at(4, 1);
-    assert(meter_map_region_at(map, change, &region) == METER_MAP_OK);
+    MusicalTime change = at(4, 1);
+    assert(meter_map_region_at(map, &change, &region) == METER_MAP_OK);
     assert(time_signature_top_number(meter_map_region_time_signature(region)) == 3);
-    musical_time_destroy(change);
-    MusicalTime *before = at(15, 4);
-    assert(meter_map_region_at(map, before, &region) == METER_MAP_OK);
+    MusicalTime before = at(15, 4);
+    assert(meter_map_region_at(map, &before, &region) == METER_MAP_OK);
     assert(time_signature_top_number(meter_map_region_time_signature(region)) == 4);
-    musical_time_destroy(before);
 
     meter_map_destroy(map);
 }
@@ -295,31 +284,27 @@ static void test_rejects_bad_input(void) {
     assert(meter_map_create(id("map"), NULL, 0, &map) == METER_MAP_ERR_NO_CHANGE_POINTS);
 
     TimeSignature *ts = sig(4, 2);
-    MusicalTime *negative = at(-1, 4);
-    MeterMapChangePoint below = {ts, *negative};
+    MusicalTime negative = at(-1, 4);
+    MeterMapChangePoint below = {ts, negative};
     assert(meter_map_create(id("map"), &below, 1, &map) == METER_MAP_ERR_NEGATIVE_START);
 
-    MusicalTime *one = at(1, 1);
-    MusicalTime *zero = at(0, 1);
-    MeterMapChangePoint descending[2] = {{ts, *one}, {ts, *zero}};
+    MusicalTime one = at(1, 1);
+    MusicalTime zero = at(0, 1);
+    MeterMapChangePoint descending[2] = {{ts, one}, {ts, zero}};
     assert(meter_map_create(id("map"), descending, 2, &map) == METER_MAP_ERR_NOT_ASCENDING);
-    MeterMapChangePoint same[2] = {{ts, *one}, {ts, *one}};
+    MeterMapChangePoint same[2] = {{ts, one}, {ts, one}};
     assert(meter_map_create(id("map"), same, 2, &map) == METER_MAP_ERR_NOT_ASCENDING);
 
     assert(map == NULL);
-    musical_time_destroy(negative);
-    musical_time_destroy(one);
-    musical_time_destroy(zero);
     time_signature_destroy(ts);
 }
 
 static void test_lookup_before_zero_fails(void) {
     MeterMap *map = NULL;
     assert(meter_map_create_defaulted(id("map"), &map) == METER_MAP_OK);
-    MusicalTime *negative = at(-1, 8);
+    MusicalTime negative = at(-1, 8);
     int index = 0;
-    assert(meter_map_measure_index_at(map, negative, &index) == METER_MAP_ERR_TIME_BEFORE_START);
-    musical_time_destroy(negative);
+    assert(meter_map_measure_index_at(map, &negative, &index) == METER_MAP_ERR_TIME_BEFORE_START);
     meter_map_destroy(map);
 }
 
@@ -328,23 +313,21 @@ static void test_lookup_before_zero_fails(void) {
 static void test_grid_overflow_is_refused(void) {
     TimeSignature *first = sig(3, 2);
     TimeSignature *second = sig(4, 2);
-    MusicalTime *a = at(1, 4000000000000000001UL);
-    MusicalTime *b = at(1, 4000000000000000000UL);
-    MeterMapChangePoint points[2] = {{first, *a}, {second, *b}};
+    MusicalTime a = at(1, 4000000000000000001UL);
+    MusicalTime b = at(1, 4000000000000000000UL);
+    MeterMapChangePoint points[2] = {{first, a}, {second, b}};
     MeterMap *map = NULL;
     assert(meter_map_create(id("map"), points, 2, &map) == METER_MAP_ERR_OVERFLOW);
     assert(map == NULL);
     time_signature_destroy(first);
     time_signature_destroy(second);
-    musical_time_destroy(a);
-    musical_time_destroy(b);
 }
 
-/* A time past LLONG_MAX in its denominator cannot be built, so no lookup can be handed one. */
+/* A time that does not fit a Rational cannot be built, so no lookup can be handed one. */
 static void test_lookup_overflow_is_refused(void) {
-    MusicalTime *huge = NULL;
-    assert(musical_time_create(1, ULONG_MAX, &huge) == MUSICAL_TIME_ERR_OVERFLOW);
-    assert(huge == NULL);
+    MusicalTime huge = {{0, 1}};
+    assert(musical_time_make(LLONG_MIN, 1, &huge) == MUSICAL_TIME_ERR_OVERFLOW);
+    assert(musical_time_same(huge, at(0, 1)));
 }
 
 int main(void) {
