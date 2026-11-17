@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "K6 relation, tonal: the target center above the anchor's",
+  "title": "K6 relation, tonal: the target center above the anchor's, by semitones or by scale degree",
   "type": "object",
   "required": [
     "content"
@@ -9,7 +9,6 @@
     "content": {
       "type": "object",
       "required": [
-        "root_semitones",
         "material"
       ],
       "additionalProperties": false,
@@ -19,12 +18,18 @@
           "minimum": 0,
           "maximum": 11
         },
+        "degree": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7
+        },
         "material": {
           "anyOf": [
             {
               "enum": [
                 "same",
-                "other"
+                "parallel",
+                "diatonic"
               ]
             },
             {
@@ -52,6 +57,33 @@
             ]
           }
         }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "root_semitones"
+          ]
+        },
+        {
+          "required": [
+            "degree"
+          ]
+        }
+      ],
+      "if": {
+        "properties": {
+          "material": {
+            "const": "diatonic"
+          }
+        },
+        "required": [
+          "material"
+        ]
+      },
+      "then": {
+        "required": [
+          "degree"
+        ]
       }
     },
     "examples": {
