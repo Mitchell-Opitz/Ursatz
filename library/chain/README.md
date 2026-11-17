@@ -9,7 +9,8 @@ An extension above the numbered stack. It may include kernel L0 to L8 and the fr
 ## Contents
 
 - `analysis_chain.h/.c`: `analysis_chain_run` and the opaque `AnalysisChain` that owns every result (below).
-- `chain_inputs.h/.c`: the input builders, one per framework input, each owning what it allocates with a matching `_destroy`. A failed builder leaves its output untouched. `ChainInputStatus` names the failure.
+- `chain_inputs.h`: the input builders, one per framework input, each owning what it allocates with a matching `_destroy`. A failed builder leaves its output untouched. `ChainInputStatus` names the failure. They sit in one file per stage, `chain_inputs_<stage>.c` (segments, keys, outer_voices, cadences, form, meter, texture, voice_leading, melody, schemas), over `chain_inputs_common.c` (the note key order, the rational and measure readers, the degree parser and the span helper `chain_keep_span` with `chain_release_spans`) and its unstaged header `chain_inputs_internal.h`.
+- `analysis_chain_internal.h`: the `AnalysisChain` struct and the stage table (below). Not staged.
 - `form_bridge.h/.c`: `chain_form_boundary_detect` (standard-form's boundary detector, over the kernel's Phrase Boundary Detection) and `chain_form_match_windows` (standard-form's window matcher, over the kernel's Motif Window Matching).
 
 ## The run
@@ -25,7 +26,7 @@ analysis_chain_destroy(chain);
 
 `notes` is an `AnalysisNoteSet` (sorted by `analysis_note_compare`, every note with its `NoteEvent` and a known pitch, one `MeterMap`). The key events are `AnalysisKeyEvent`s (a key signature as a key at a time). Everything is borrowed and must outlive the chain.
 
-Stages, in the order they run, with the owner each calls ([docs/analytic-job-owners.md](../docs/analytic-job-owners.md)):
+Stages, in the order they run (the order of the rows of the stage table, below), with the owner each calls ([docs/analytic-job-owners.md](../docs/analytic-job-owners.md)):
 
 | Stage (`ANALYSIS_CHAIN_STAGE_*`) | Builder | Owner |
 |---|---|---|
@@ -45,6 +46,12 @@ Stages, in the order they run, with the owner each calls ([docs/analytic-job-own
 A stage pulls in the stages it needs (keys pull segments, chords keys, numerals chords, cadences numerals and outer voices, form cadences, meter form and chords and outer voices, voice leading cadences, melody chords and outer voices, schemas numerals and outer voices; texture reads only the notes). The accessors (`analysis_chain_chords`, `_key_regions`, `_numerals`, `_outer_voices`, `_cadences`, `_phrases`, `_ideas`, `_themes`, `_expansions`, `_motives`, `_texture`, `_voice_leading`, `_melody`, `_schemas`, `_sequences`) return the frameworks' own result structs and their Interpretations, or NULL for a stage that did not run. The meter result has no accessor in `analysis_chain.h`: no application reads it, and the tests read it through `analysis_chain_meter` in `tests/support/chain_test_access.h`.
 
 The chain also keeps the inputs it builds for its stages, until `analysis_chain_destroy`, so a caller that maps results back to its own notes does not rebuild them: `analysis_chain_harmony_inputs` and `_prepared_harmony` (of the final pass), `_form_input` (final pass), `_motive_input`, `_voice_grid` and `_galant_segments`. Each is NULL when the stage that builds it did not run.
+
+## The stage table
+
+`analysis_chain_stages` (`analysis_chain_internal.h`, defined in `analysis_chain.c`) has one `AnalysisChainStage` row per stage bit, in dependency order, which is the run order: the bit, the bits it `needs` (every row needs only earlier rows), whether it `reads_pitches`, the `AnalysisChainStatus` its failure reports, its `name`, and up to three functions: `prepare` (before the passes), `run_pass` (once per pass of the keys and form refinement, over an `AnalysisChainPass`) and `finish` (after the last pass). The closure of a stage mask is one backward pass over the table; the prepare, pass and finish loops run the rows in table order. The refinement loop in `analysis_chain_run` stays hand-written. `ANALYSIS_CHAIN_STAGE_COUNT` and `ANALYSIS_CHAIN_STAGE_ALL` are in `analysis_chain.h`. The test `chain_stage_table` checks the table; tests name a failing stage with `analysis_chain_stage_name` in `tests/support/chain_test_access.h`.
+
+To add a stage: add its bit and `ANALYSIS_CHAIN_ERR_*` status (in bit order), one row in the table (after the rows it needs), and one builder file `chain_inputs_<stage>.c` listed in `chain/CMakeLists.txt`, with its builder declared in `chain_inputs.h`.
 
 ## Config
 
