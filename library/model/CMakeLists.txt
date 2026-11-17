@@ -33,6 +33,7 @@ add_library(ursatz_model
     pitch/key_signature.c
     pitch/midi_pitch.c
     pitch/pitch_material.c
+    pitch/region.c
     events/note_event.c
     events/dynamics.c
     events/tempo_marking.c
