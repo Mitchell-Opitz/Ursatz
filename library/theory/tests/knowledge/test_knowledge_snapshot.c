@@ -6,7 +6,8 @@
 #include "theory/knowledge/pitch_material.h"
 
 /*
- * The knowledge snapshot: the four tonality modes the build embeds, found by id with their fields and steps; the hash; a user's own
+ * The knowledge snapshot: the four tonality modes the build embeds, found by id with their fields and steps; the entries it holds by
+ * kind (nine materials, eighteen relations, nine chord types) and the steps of the seven diatonic modes; the hash; a user's own
  * file; the files and entries it refuses, each with its status and a message naming the file, the id and the field.
  */
 
@@ -77,6 +78,46 @@ static void test_embedded_modes(void) {
     assert(knowledge_snapshot_entry(snapshot, "omt.material.missing") == NULL);
     assert(knowledge_snapshot_material(snapshot, "omt.material.missing") == NULL);
     assert(knowledge_snapshot_entry(snapshot, NULL) == NULL);
+    knowledge_snapshot_destroy(snapshot);
+}
+
+static const char *DIATONIC_IDS[7] = {"omt.material.locrian", "omt.material.phrygian", "omt.material.natural-minor",
+                                      "omt.material.dorian", "omt.material.mixolydian", "omt.material.major",
+                                      "omt.material.lydian"};
+static const int DIATONIC_STEPS[7][7] = {{0, 1, 3, 5, 6, 8, 10}, {0, 1, 3, 5, 7, 8, 10}, {0, 2, 3, 5, 7, 8, 10},
+                                         {0, 2, 3, 5, 7, 9, 10}, {0, 2, 4, 5, 7, 9, 10}, {0, 2, 4, 5, 7, 9, 11},
+                                         {0, 2, 4, 6, 7, 9, 11}};
+
+static void test_embedded_counts(void) {
+    KnowledgeSnapshot *snapshot = build(NULL, 0);
+    size_t materials = 0, relations = 0, chord_types = 0, others = 0;
+    for (size_t i = 0; i < knowledge_snapshot_entry_count(snapshot); i++) {
+        const KnowledgeEntry *entry = knowledge_snapshot_entry_at(snapshot, i);
+        assert(entry != NULL && entry->status == KNOWLEDGE_STATUS_ACTIVE);
+        if (strcmp(entry->kind, "material") == 0) {
+            materials++;
+        } else if (strcmp(entry->kind, "relation") == 0) {
+            relations++;
+        } else if (strcmp(entry->kind, "chord-type") == 0) {
+            chord_types++;
+        } else {
+            others++;
+        }
+    }
+    assert(materials == 9 && relations == 18 && chord_types == 9 && others == 0);
+    /* the seven diatonic modes, darkest to brightest: each a rotation of the major scale with its own steps */
+    for (int mode = 0; mode < 7; mode++) {
+        const PitchMaterial *material = knowledge_snapshot_material(snapshot, DIATONIC_IDS[mode]);
+        assert(material != NULL && material->step_count == 7 && material->descending_step_count == 0);
+        for (int d = 0; d < 7; d++) {
+            assert(material->steps[d] == DIATONIC_STEPS[mode][d]);
+        }
+    }
+    /* relations and chord types are entries, not pitch materials */
+    assert(knowledge_snapshot_entry(snapshot, "omt.relation.supertonic") != NULL);
+    assert(knowledge_snapshot_material(snapshot, "omt.relation.supertonic") == NULL);
+    assert(knowledge_snapshot_entry(snapshot, "omt.chord-type.diminished-seventh") != NULL);
+    assert(knowledge_snapshot_material(snapshot, "omt.chord-type.diminished-seventh") == NULL);
     knowledge_snapshot_destroy(snapshot);
 }
 
@@ -190,6 +231,7 @@ static void test_null_arguments(void) {
 
 int main(void) {
     test_embedded_modes();
+    test_embedded_counts();
     test_material_queries();
     test_hash();
     test_user_file();
