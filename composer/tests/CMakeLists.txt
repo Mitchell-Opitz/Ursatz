@@ -398,11 +398,11 @@ ursatz_test(test_cli_snapshot_compare COMMAND ${CMAKE_COMMAND} -DWORK=${CMAKE_CU
 
 # Seeded CLI output against tests/snapshots; URSATZ_UPDATE_GOLDENS=1 (cmake --build build --target update-goldens)
 # recaptures them.
-# Measured 20.1 s of CPU, over the 10 s fast-set limit.
+# Comparing runs only the CLI front end (cli_snapshots.cmake): about 5 s of CPU, so it is in the fast set.
 ursatz_test(test_cli_snapshots COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots
                  -DSNAPSHOTS=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshots.cmake
-    LABELS golden slow)
+    LABELS golden)
 
 ursatz_test_executable(test_analyzer_check LIBS ursatz_composer composer_test_support)
 # The Analyzer check (docs/analyzer-check.md): the modes are quick except the sweep, which CI leaves out (ctest -LE slow);
