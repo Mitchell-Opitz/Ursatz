@@ -81,3 +81,7 @@ The library's tests run analysis through the chain: `tests/analysis/weighted_pip
 ## Kernel owners (`ursatz_chain/kernel_owners.h`)
 
 The chain hands `chain_classify_tones` (`motive_tone_roles_line`) to the frameworks, which cannot call L8, as the `NonChordToneClassifier` of the weighted chord identifier and of the melody stage (`chain_relabel_melody_line`). `chain_match_motive_relation` (`motive_variant_recognize` at depth 1: exact, transpose, invert, retrograde, augment 2:1, diminish 1:2, and a leading or trailing fragment) is the `StandardFormRelationMatchFn` (`relation_match`) of the motive stage, which requires one. A classifier or matcher already set in `weighting` or `form` is kept.
+
+## Smoke run
+
+`analysis_chain_field1` runs `test_analysis_chain` on Field 1 alone (`URSATZ_CHAIN_PIECE=field1`, 0.3 s) in the fast set; `analysis_chain` (four reference pieces, about 22 s) stays `slow`.

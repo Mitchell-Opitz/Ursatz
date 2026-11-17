@@ -52,3 +52,7 @@ brief of fixture pieces whose `plan.json`, `theme.mid` and `theme.musicxml` are 
 
 CI (`.github/workflows/ci.yml`) builds the whole repository once and runs the checks and the fast set on every push and
 pull request; no secret is needed.
+
+## Smoke runs
+
+`piece_route_smoke`, `theme_route_smoke`, `analyzer_route_smoke` and `styles_route_smoke` run the slow route tests' first case with the real Composer or the Analyzer (server start, the setup, then `test_real_composer`; the Bach 114 upload and its detail, score meter, document sections and export; Clementi 36 and one style) in 2 to 4 s each, in the fast set. The full route tests stay `slow` (nightly).
