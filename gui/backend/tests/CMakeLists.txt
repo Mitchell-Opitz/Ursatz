@@ -16,9 +16,15 @@ add_custom_target(gui_frontend_fixtures ALL
     DEPENDS ${URSATZ_GUI_GENERATED_FIXTURES}/vocabulary.json ${URSATZ_GUI_GENERATED_FIXTURES}/forms.json)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
-ursatz_test(analyzer_route LIBS ursatz_gui_core ursatz_test_http LABELS slow
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route_smoke)
+ursatz_test_executable(test_analyzer_route LIBS ursatz_gui_core ursatz_test_http)
+ursatz_test(analyzer_route TARGET test_analyzer_route LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route)
 # Slow: about 363 s in a -j4 run (R-307).
+# analyzer_route_smoke (argument smoke, port 18778, its own working directory) uploads Bach 114 alone and runs the checks
+# on it that hold for any piece: the detail, the score's meter, the document's sections and the text export.
+ursatz_test(analyzer_route_smoke TARGET test_analyzer_route ARGS smoke
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/analyzer_route_smoke)
 # The test creates pieces/ in its own working directory. It does not run the Analyzer CLI: the Analyzer's own tests
 # check the CLI's output.
 
@@ -51,8 +57,14 @@ ursatz_test(composer_route LIBS ursatz_gui_core ursatz_test_http
 add_dependencies(test_composer_route gui_frontend_fixtures)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
-ursatz_test(styles_route LIBS ursatz_gui_core ursatz_test_http LABELS slow WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route_smoke)
+ursatz_test_executable(test_styles_route LIBS ursatz_gui_core ursatz_test_http)
+ursatz_test(styles_route TARGET test_styles_route LABELS slow WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
 # Slow: about 260 s in a -j4 run (R-307).
+# styles_route_smoke (argument smoke, port 18779, its own working directory) uploads Clementi 36 alone, builds a style from
+# it, lists it and reads it back.
+ursatz_test(styles_route_smoke TARGET test_styles_route ARGS smoke
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/styles_route_smoke)
 # The test builds styles from the reference pieces; it creates pieces/, collections/ and styles/ in its own
 # working directory.
 
@@ -94,21 +106,32 @@ ursatz_test(links_route LIBS ursatz_gui_core ursatz_test_http
 # The test creates pieces/, collections/, materials/, subjects/ and links/ in its own working directory.
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
-ursatz_test(theme_route LIBS ursatz_gui_core ursatz_test_http
-    DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links" LABELS slow
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route_smoke)
+ursatz_test_executable(test_theme_route LIBS ursatz_gui_core ursatz_test_http
+    DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links")
+ursatz_test(theme_route TARGET test_theme_route LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
 # Slow: every theme the real Composer composes now measures its developments (Composer API 1.10, about 1 s a theme), which
 # took the test to about 30 s (R-307).
 # The test composes with the Composer API in its own working directory (materials/, subjects/ and pieces/ are created
 # there), uploads the link fixtures for the brief and checks the stored files and the served playback (version_check.h).
+# theme_route_smoke (argument smoke, port 18777, its own working directory) saves the motifs and runs the real Composer
+# case only.
+ursatz_test(theme_route_smoke TARGET test_theme_route ARGS smoke
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_route_smoke)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_route)
-ursatz_test(piece_route LIBS ursatz_gui_core ursatz_test_http
-    DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links" LABELS slow
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_route_smoke)
+ursatz_test_executable(test_piece_route LIBS ursatz_gui_core ursatz_test_http
+    DEFINITIONS URSATZ_GUI_TEST_LINK_FIXTURES="${URSATZ_FIXTURES_DIR}/links")
+ursatz_test(piece_route TARGET test_piece_route LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_route)
 # Slow: about 279 s in a -j4 run (R-307).
 # The test composes with the Composer API in its own working directory (materials/, subjects/ and pieces/ are created
 # there), uploads the link fixtures for the brief and checks the stored files and the served playback (version_check.h).
+# piece_route_smoke (argument smoke, port 18776, its own working directory) runs the real Composer case only.
+ursatz_test(piece_route_smoke TARGET test_piece_route ARGS smoke
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_route_smoke)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_snapshot)
 ursatz_test(piece_snapshot LIBS ursatz_gui_core ursatz_test_http

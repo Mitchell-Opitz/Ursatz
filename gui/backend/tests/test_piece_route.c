@@ -21,7 +21,9 @@
 #include "test_http.h"
 #include "version_check.h"
 
-#define PORT "18774"
+/* The full test serves on 18774, the smoke run (the argument smoke) on 18776, so both can run at once. */
+static const char *g_port = "18774";
+#define PORT g_port
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
@@ -1671,7 +1673,11 @@ static void test_real_composer(void) {
   free(piece);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  const bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+  if (smoke) {
+    g_port = "18776";
+  }
   system("rm -rf materials subjects pieces collections styles");
 
   struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
@@ -1685,6 +1691,13 @@ int main(void) {
   cJSON *projects = exchange("GET", "/api/materials/projects", NULL, &status);
   snprintf(g_project, sizeof(g_project), "%s", string_of(cJSON_GetArrayItem(member(projects, "projects"), 0), "id"));
   cJSON_Delete(projects);
+
+  if (smoke) {
+    /* The smoke run composes one piece with the real Composer and nothing else: it needs only the project. */
+    test_real_composer();
+    ursatz_gui_server_stop(ctx);
+    return test_finish("piece_route smoke");
+  }
 
   Items items;
   memset(&items, 0, sizeof(items));

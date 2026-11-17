@@ -29,7 +29,9 @@
 #include "server.h"
 #include "test_http.h"
 
-#define PORT "18769"
+/* The full test serves on 18769, the smoke run (the argument smoke) on 18779, so both can run at once. */
+static const char *g_port = "18769";
+#define PORT g_port
 #include "service/style_service.h"
 
 static const char *string_of(const cJSON *object, const char *key) {
@@ -91,7 +93,61 @@ static bool model_reads_with_pieces(const char *id, size_t expected_pieces) {
   return pieces == expected_pieces;
 }
 
-int main(void) {
+/* The smoke run: Clementi 36 alone, a style built from its tag, listed and read back. */
+static int smoke_run(const char *clementi_path) {
+  struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
+  check(ctx != NULL, "server starts");
+  if (!ctx) {
+    return 1;
+  }
+  test_sleep_ms(200);
+
+  char *clementi_id = test_http_upload(PORT, clementi_path, "Clementi%2036.mid", NULL);
+  check(clementi_id != NULL, "Clementi 36 uploads");
+  if (!clementi_id) {
+    mg_stop(ctx);
+    return test_finish("styles_route smoke");
+  }
+  patch_piece(clementi_id, "{\"add_tags\":[\"sonatina\"]}");
+  int status = 0;
+  check(listed_styles() == 0, "no styles are listed before one is built");
+
+  cJSON *answer = build_style("{\"filter\":{\"tag\":\"sonatina\"}}", &status);
+  const cJSON *style = style_of(answer);
+  check(status == 200 && ok_true(answer), "building a style from a tag answers 200");
+  check(number_of(style, "piece_count") == 1, "a style from the tag holds the one piece");
+  check(strcmp(string_of(style, "name"), "Tag: sonatina") == 0, "its default name is \"Tag: sonatina\"");
+  check(skipped_count(answer) == 0, "no piece was skipped");
+  char style_id[128];
+  snprintf(style_id, sizeof(style_id), "%s", string_of(style, "id"));
+  cJSON_Delete(answer);
+  check(strncmp(style_id, "sty-", 4) == 0, "the id is a sty- id");
+  check(model_reads_with_pieces(style_id, 1), "the Analyzer reads the model back with 1 piece");
+  check(listed_styles() == 1, "the list holds the new style");
+
+  char path[256];
+  snprintf(path, sizeof(path), "/api/styles/%s", style_id);
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
+  style = style_of(answer);
+  check(status == 200 && strcmp(string_of(style, "id"), style_id) == 0, "GET one style answers it");
+  const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(style, "pieces");
+  check(cJSON_IsArray(pieces) && cJSON_GetArraySize(pieces) == 1, "it names the 1 piece used");
+  const cJSON *numerals = cJSON_GetObjectItemCaseSensitive(
+      cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(style, "statistics"), "harmony"), "chord-numeral");
+  const cJSON *labels = cJSON_GetObjectItemCaseSensitive(numerals, "labels");
+  check(cJSON_IsArray(labels) && cJSON_GetArraySize(labels) > 0, "its statistics hold chord-numeral labels");
+  cJSON_Delete(answer);
+
+  free(clementi_id);
+  mg_stop(ctx);
+  return test_finish("styles_route smoke");
+}
+
+int main(int argc, char **argv) {
+  const bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+  if (smoke) {
+    g_port = "18779";
+  }
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
   system("rmdir /s /q pieces collections styles data 2> nul");
@@ -105,6 +161,9 @@ int main(void) {
   char mozart_path[512];
   snprintf(clementi_path, sizeof(clementi_path), "%s/Clementi 36.mid", fixtures);
   snprintf(mozart_path, sizeof(mozart_path), "%s/Mozart 545.mid", fixtures);
+  if (smoke) {
+    return smoke_run(clementi_path);
+  }
 
   struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
   check(ctx != NULL, "server starts");

@@ -33,7 +33,9 @@
 #include "service/subject_service.h"
 #include "test_http.h"
 
-#define PORT "18766"
+/* The full test serves on 18766, the smoke run (the argument smoke) on 18778, so both can run at once. */
+static const char *g_port = "18766";
+#define PORT g_port
 
 static bool is_directory(const char *path) {
 #ifdef _WIN32
@@ -857,7 +859,11 @@ static void check_import_cache(const char *id) {
   check(ursatz_gui_import_cache_entries() <= 8, "the import cache holds at most 8 pieces");
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  const bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+  if (smoke) {
+    g_port = "18778";
+  }
   /* Fresh state: this test's working directory is its own. */
 #ifdef _WIN32
   system("rmdir /s /q pieces 2> nul");
@@ -885,6 +891,23 @@ int main(void) {
     return 1;
   }
   test_sleep_ms(200);
+
+  if (smoke) {
+    /* One piece, Bach 114, through the checks that hold for any uploaded piece: the detail, the score's meter, the
+       document's sections and the text export. (The smoke run leaves out the Mozart 545 upload and every check that
+       needs more than one piece.) */
+    char *smoke_id = test_http_upload(PORT, bach_path, "Bach%20114.mid", NULL);
+    check(smoke_id != NULL, "Bach 114.mid uploads");
+    if (smoke_id) {
+      check_detail(smoke_id, "midi", "midi-note-0", "Bach 114");
+      check_score_meter(smoke_id, false, "Bach 114");
+      check_document_sections(smoke_id);
+      check_piece_export(smoke_id, "Bach 114");
+    }
+    free(smoke_id);
+    ursatz_gui_server_stop(ctx);
+    return test_finish("analyzer_route smoke");
+  }
 
   /* A MIDI upload. */
   char *response = NULL;

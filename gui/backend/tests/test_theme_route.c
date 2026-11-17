@@ -21,7 +21,9 @@
 #include "test_http.h"
 #include "version_check.h"
 
-#define PORT "18773"
+/* The full test serves on 18773, the smoke run (the argument smoke) on 18777, so both can run at once. */
+static const char *g_port = "18773";
+#define PORT g_port
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
@@ -1272,7 +1274,11 @@ static void test_two_bar_theme(void) {
   free(motif);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  const bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+  if (smoke) {
+    g_port = "18777";
+  }
   system("rm -rf materials subjects pieces collections styles");
 
   struct mg_context *ctx = ursatz_gui_server_start(PORT, ".");
@@ -1292,20 +1298,25 @@ int main(void) {
   bool made = make_motifs(&motifs);
   check(made, "the motifs and their forms are saved");
   if (made) {
-    test_bodies(&motifs);
-    test_compose(&motifs);
-    test_files(&motifs);
-    test_brief(&motifs);
-    test_update_uses(&motifs);
-    test_failures(&motifs);
-    test_concurrent(&motifs);
-    test_jobs_route(&motifs);
-    test_real_composer(&motifs);
-    test_development(&motifs);
-    test_construction(&motifs);
-    test_two_bar_theme();
+    if (smoke) {
+      /* The smoke run composes one theme with the real Composer (the motifs are its setup) and nothing else. */
+      test_real_composer(&motifs);
+    } else {
+      test_bodies(&motifs);
+      test_compose(&motifs);
+      test_files(&motifs);
+      test_brief(&motifs);
+      test_update_uses(&motifs);
+      test_failures(&motifs);
+      test_concurrent(&motifs);
+      test_jobs_route(&motifs);
+      test_real_composer(&motifs);
+      test_development(&motifs);
+      test_construction(&motifs);
+      test_two_bar_theme();
+    }
   }
 
   ursatz_gui_server_stop(ctx);
-  return test_finish("theme_route");
+  return test_finish(smoke ? "theme_route smoke" : "theme_route");
 }
