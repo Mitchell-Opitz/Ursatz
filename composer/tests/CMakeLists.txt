@@ -567,10 +567,12 @@ ursatz_test(test_api_piece LIBS ursatz_composer composer_test_support cjson
 ursatz_test(test_api_parts LIBS ursatz_composer composer_test_support cjson
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} PROPERTIES FIXTURES_SETUP api_responses_written RESOURCE_LOCK api_parts_files)
 
-ursatz_test(test_api_rondo LIBS ursatz_composer composer_test_support cjson LABELS slow
+ursatz_test_executable(test_api_form_families LIBS ursatz_composer composer_test_support cjson)
+# The rows of the rondo and sonata forms in the piece document: one test per family, both slow.
+ursatz_test(test_api_rondo TARGET test_api_form_families ARGS rondo LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-ursatz_test(test_api_sonata LIBS ursatz_composer composer_test_support cjson LABELS slow
+ursatz_test(test_api_sonata TARGET test_api_form_families ARGS sonata LABELS slow
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 ursatz_test(test_api_plan_workflow LIBS ursatz_composer composer_test_support cjson
