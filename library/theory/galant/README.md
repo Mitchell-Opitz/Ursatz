@@ -101,4 +101,4 @@ Owned here (moved from `theory/vocabulary/`; type names and values unchanged):
 
 ## Neutral analysis input
 
-`galant_segment_set_analysis_segment` (`analysis/galant_analysis_input.h`) sets the id, span, position and strength of a `GalantSegment` from an `AnalysisSegment`.
+`GalantSegment` (`analysis/galant/galant_analysis_input.h`) embeds an `AnalysisSegment` (`analysis/notes/analysis_segment.h`) as `segment`: its id (borrowed), span, position and strength; `galant_segments_add` refuses a NULL, empty or too long id and a NULL span.

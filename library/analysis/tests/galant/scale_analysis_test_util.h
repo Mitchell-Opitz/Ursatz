@@ -17,6 +17,8 @@ typedef struct {
     GalantSegmentList list;
     TimeSpan **spans;
     size_t span_count;
+    char **ids; /* the segment ids the list borrows */
+    size_t id_count;
     int next_id;
 } Run;
 
@@ -31,6 +33,10 @@ static inline void run_destroy(Run *run) {
         time_span_destroy(run->spans[i]);
     }
     free(run->spans);
+    for (size_t i = 0; i < run->id_count; i++) {
+        free(run->ids[i]);
+    }
+    free(run->ids);
 }
 
 static inline GalantPitchDegree deg(int degree, int alteration) {
@@ -54,10 +60,16 @@ static inline void run_add(Run *run, int bass, int soprano, int root, int applie
     run->spans[run->span_count++] = span;
     GalantSegment segment;
     memset(&segment, 0, sizeof(segment));
-    snprintf(segment.id, sizeof(segment.id), "s%d", run->next_id++);
+    char id[16];
+    snprintf(id, sizeof(id), "s%d", run->next_id++);
+    run->ids = (char **)realloc(run->ids, (run->id_count + 1) * sizeof(char *));
+    run->ids[run->id_count] = (char *)malloc(strlen(id) + 1);
+    assert(run->ids != NULL && run->ids[run->id_count] != NULL);
+    strcpy(run->ids[run->id_count], id);
+    segment.segment.id = run->ids[run->id_count++];
     snprintf(segment.key_id, sizeof(segment.key_id), "key-1-0");
-    segment.span = span;
-    segment.strength = BEAT_STRENGTH_WEAK;
+    segment.segment.span = span;
+    segment.segment.strength = BEAT_STRENGTH_WEAK;
     segment.beat_numerator = 1;
     segment.beat_denominator = 4;
     segment.key = HOME;

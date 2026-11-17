@@ -300,7 +300,7 @@ static void test_bad_calls(void) {
     segment.bass = deg(8, 0);
     assert(galant_segments_add(&seq.list, &segment) == GALANT_ANALYSIS_ERR_INVALID);
     segment = seq.list.items[0];
-    segment.id[0] = '\0';
+    segment.segment.id = "";
     assert(galant_segments_add(&seq.list, &segment) == GALANT_ANALYSIS_ERR_INVALID);
     segment = seq.list.items[0];
     segment.uncertainty = 1.5;

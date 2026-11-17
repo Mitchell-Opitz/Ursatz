@@ -1676,10 +1676,7 @@ ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size
         GalantSegment segment;
         memset(&segment, 0, sizeof(segment));
         AnalysisSegment analysis = {segments->ids[s], window, NULL, chain_attack_strength(map, time_span_start(window))};
-        if (!galant_segment_set_analysis_segment(&segment, &analysis)) {
-            status = CHAIN_INPUT_ERR_BAD_NOTES;
-            break;
-        }
+        segment.segment = analysis;
         beat_length_at(map, time_span_start(window), &segment.beat_numerator, &segment.beat_denominator);
         snprintf(segment.key_id, sizeof(segment.key_id), "key-%d%s", tonic_pc, minor ? "m" : "");
         segment.key = galant_degree_of_semitones(tonic_pc - home_pc);
@@ -1718,12 +1715,12 @@ ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size
         if (build.list.count > 0) {
             GalantSegment *last = &build.list.items[build.list.count - 1];
             if (same_harmony(last, &segment)) {
-                const TimeSpan *merged = galant_span(&build, time_span_start(last->span), time_span_end(window));
+                const TimeSpan *merged = galant_span(&build, time_span_start(last->segment.span), time_span_end(window));
                 if (merged == NULL) {
                     status = CHAIN_INPUT_ERR_ALLOC;
                     break;
                 }
-                last->span = merged;
+                last->segment.span = merged;
                 last->uncertainty = last->uncertainty > segment.uncertainty ? last->uncertainty : segment.uncertainty;
                 continue;
             }

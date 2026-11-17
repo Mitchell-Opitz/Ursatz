@@ -45,10 +45,7 @@ typedef enum {
 } GalantAnalysisStatus;
 
 typedef struct {
-    char id[GALANT_ANALYSIS_ID_MAX];
-    const TimeSpan *span;
-    const MetricalPosition *position; /* may be NULL */
-    BeatStrength strength;
+    AnalysisSegment segment; /* the neutral segment: id (borrowed, non-empty, under GALANT_ANALYSIS_ID_MAX), span, position (may be NULL), strength */
     long beat_numerator;
     unsigned long beat_denominator;
     char key_id[GALANT_ANALYSIS_ID_MAX];
@@ -74,14 +71,10 @@ typedef struct {
 
 void galant_segments_init(GalantSegmentList *list);
 
-/* Adds a copy of the segment. ERR_INVALID for an empty or too long id, a NULL span or one that is not ahead (end after start), a segment
+/* Adds a copy of the segment (its id and span stay the caller's, borrowed). ERR_INVALID for a NULL, empty or too long id, a NULL span or one that is not ahead (end after start), a segment
    that starts before the one before it, a strength that is not a BeatStrength, a beat of no length, a degree outside 1 to 7 or an alteration
    outside -2 to 2 (in the key, the bass, the soprano or the root when present), an inversion outside 0 to 3 or an uncertainty outside [0, 1]. */
 GalantAnalysisStatus galant_segments_add(GalantSegmentList *list, const GalantSegment *segment);
-
-/* Sets the id, span, position and strength of `segment` from an AnalysisSegment, and nothing else. False for a NULL argument, an empty
-   or too long id, or a NULL span. */
-bool galant_segment_set_analysis_segment(GalantSegment *segment, const AnalysisSegment *analysis);
 
 void galant_segments_destroy(GalantSegmentList *list);
 

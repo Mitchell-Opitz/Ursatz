@@ -56,8 +56,8 @@ static bool entry_ranges(const AnalysisReport *report, SchemaBuild *build) {
     }
     size_t next = 0;
     for (size_t s = 0; s < list->count; s++) {
-        const MusicalTime *start = time_span_start(list->items[s].span);
-        const MusicalTime *end = time_span_end(list->items[s].span);
+        const MusicalTime *start = time_span_start(list->items[s].segment.span);
+        const MusicalTime *end = time_span_end(list->items[s].segment.span);
         long start_n = musical_time_numerator(start);
         unsigned long start_d = musical_time_denominator(start);
         long end_n = musical_time_numerator(end);
@@ -87,7 +87,7 @@ static bool entry_ranges(const AnalysisReport *report, SchemaBuild *build) {
    the id is not one of ours. */
 static bool segment_of_id(const SchemaBuild *build, const char *id, size_t *out) {
     for (size_t i = 0; i < build->galant.list.count; i++) {
-        if (strcmp(build->galant.list.items[i].id, id) == 0) {
+        if (strcmp(build->galant.list.items[i].segment.id, id) == 0) {
             *out = i;
             return true;
         }

@@ -332,7 +332,7 @@ static GalantAnalysisStatus emit(const GalantSegmentList *segments, const Chord 
     for (size_t i = 0; i < c->stage_count; i++) {
         const Chord *chord = &chords[c->first + i];
         ScaleStageClaim *stage = &claim->stages[i];
-        snprintf(stage->segment_id, sizeof(stage->segment_id), "%s", segments->items[chord->original].id);
+        snprintf(stage->segment_id, sizeof(stage->segment_id), "%s", segments->items[chord->original].segment.id);
         stage->bass_degree = chord->bass.degree;
         stage->bass_alteration = chord->bass.alteration;
         stage->has_soprano = chord->has_soprano ? 1 : 0;
@@ -346,8 +346,8 @@ static GalantAnalysisStatus emit(const GalantSegmentList *segments, const Chord 
     char key[96];
     char interpretation_id[160];
     snprintf(key, sizeof(key), "%s-%d", claim->kind_name, index);
-    out->relationship = scale_analysis_relationship("sequence", key, segments->items[claim->first_segment].id,
-                                                    segments->items[claim->last_segment].id, "harmonic-sequence");
+    out->relationship = scale_analysis_relationship("sequence", key, segments->items[claim->first_segment].segment.id,
+                                                    segments->items[claim->last_segment].segment.id, "harmonic-sequence");
     if (out->relationship == NULL) {
         return GALANT_ANALYSIS_ERR_ALLOC;
     }

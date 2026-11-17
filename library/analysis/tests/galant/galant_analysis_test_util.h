@@ -17,6 +17,8 @@ typedef struct {
     GalantSegmentList list;
     TimeSpan **spans;
     size_t span_count;
+    char **ids; /* the segment ids the list borrows */
+    size_t id_count;
     int next_id;
 } Seq;
 
@@ -31,6 +33,10 @@ static inline void seq_destroy(Seq *seq) {
         time_span_destroy(seq->spans[i]);
     }
     free(seq->spans);
+    for (size_t i = 0; i < seq->id_count; i++) {
+        free(seq->ids[i]);
+    }
+    free(seq->ids);
 }
 
 static inline GalantPitchDegree deg(int degree, int alteration) {
@@ -52,10 +58,16 @@ static inline void seq_add(Seq *seq, int start, int length, BeatStrength strengt
     seq->spans[seq->span_count++] = span;
     GalantSegment segment;
     memset(&segment, 0, sizeof(segment));
-    snprintf(segment.id, sizeof(segment.id), "s%d", seq->next_id++);
+    char id[16];
+    snprintf(id, sizeof(id), "s%d", seq->next_id++);
+    seq->ids = (char **)realloc(seq->ids, (seq->id_count + 1) * sizeof(char *));
+    seq->ids[seq->id_count] = (char *)malloc(strlen(id) + 1);
+    assert(seq->ids != NULL && seq->ids[seq->id_count] != NULL);
+    strcpy(seq->ids[seq->id_count], id);
+    segment.segment.id = seq->ids[seq->id_count++];
     snprintf(segment.key_id, sizeof(segment.key_id), "key-%d-%d", key.degree, key.alteration);
-    segment.span = span;
-    segment.strength = strength;
+    segment.segment.span = span;
+    segment.segment.strength = strength;
     segment.beat_numerator = 1;
     segment.beat_denominator = 4;
     segment.key = key;

@@ -66,15 +66,15 @@ GalantAnalysisStatus galant_segments_add(GalantSegmentList *list, const GalantSe
     if (list == NULL || segment == NULL) {
         return GALANT_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (segment->id[0] == '\0' || memchr(segment->id, '\0', GALANT_ANALYSIS_ID_MAX) == NULL ||
-        memchr(segment->key_id, '\0', GALANT_ANALYSIS_ID_MAX) == NULL || !time_span_is_valid(segment->span) ||
-        !beat_strength_valid(segment->strength) || segment->beat_numerator <= 0 || segment->beat_denominator == 0 ||
+    if (segment->segment.id == NULL || segment->segment.id[0] == '\0' || strlen(segment->segment.id) >= GALANT_ANALYSIS_ID_MAX ||
+        memchr(segment->key_id, '\0', GALANT_ANALYSIS_ID_MAX) == NULL || !time_span_is_valid(segment->segment.span) ||
+        !beat_strength_valid(segment->segment.strength) || segment->beat_numerator <= 0 || segment->beat_denominator == 0 ||
         !degree_ok(segment->key) || (segment->has_bass && !degree_ok(segment->bass)) ||
         (segment->has_soprano && !degree_ok(segment->soprano)) || (segment->has_numeral && !degree_ok(segment->root)) ||
         segment->inversion < 0 || segment->inversion > 3 || !(segment->uncertainty >= 0.0 && segment->uncertainty <= 1.0)) {
         return GALANT_ANALYSIS_ERR_INVALID;
     }
-    if (list->count > 0 && starts_before(segment->span, list->items[list->count - 1].span)) {
+    if (list->count > 0 && starts_before(segment->segment.span, list->items[list->count - 1].segment.span)) {
         return GALANT_ANALYSIS_ERR_INVALID;
     }
     if (list->count == list->capacity) {
@@ -96,17 +96,5 @@ void galant_segments_destroy(GalantSegmentList *list) {
     }
     free(list->items);
     memset(list, 0, sizeof(*list));
-}
-
-bool galant_segment_set_analysis_segment(GalantSegment *segment, const AnalysisSegment *analysis) {
-    if (segment == NULL || analysis == NULL || analysis->id == NULL || analysis->id[0] == '\0' ||
-        strlen(analysis->id) >= GALANT_ANALYSIS_ID_MAX || analysis->span == NULL) {
-        return false;
-    }
-    strcpy(segment->id, analysis->id);
-    segment->span = analysis->span;
-    segment->position = analysis->position;
-    segment->strength = analysis->strength;
-    return true;
 }
 

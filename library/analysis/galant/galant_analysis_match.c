@@ -27,11 +27,11 @@ GalantMatchConfig galant_match_config_default(void) {
 
 /* The time of a segment edge, read exactly. False when it does not fit a Rational. */
 static bool seg_start(const GalantSegmentList *s, size_t i, Rational *out) {
-    return rational_of_musical_time(time_span_start(s->items[i].span), out) == RATIONAL_OK;
+    return rational_of_musical_time(time_span_start(s->items[i].segment.span), out) == RATIONAL_OK;
 }
 
 static bool seg_end(const GalantSegmentList *s, size_t i, Rational *out) {
-    return rational_of_musical_time(time_span_end(s->items[i].span), out) == RATIONAL_OK;
+    return rational_of_musical_time(time_span_end(s->items[i].segment.span), out) == RATIONAL_OK;
 }
 
 /* The start of segment `i` less `from`, as whole notes. False when a step does not fit a Rational. */
@@ -96,7 +96,7 @@ static StageEval eval_stage(const GalantSegmentList *s, size_t j, const GalantSt
                             GalantPitchDegree frame, bool bass_only_free) {
     StageEval eval = {false, 0.0, false, NONE};
     const GalantSegment *segment = &s->items[j];
-    if (stage_strength(segment->strength) != stage->strength || !segment->has_bass) {
+    if (stage_strength(segment->segment.strength) != stage->strength || !segment->has_bass) {
         return eval;
     }
     GalantPitchDegree bass = in_frame(segment, segment->bass, frame);
@@ -200,7 +200,7 @@ static bool framework_agrees(const Search *search, const Candidate *c) {
         ok = melody_pitch != NULL && bass_pitch != NULL && (c->seg2[k] == NONE || second_pitch != NULL);
         stages[k].melody = melody_pitch;
         stages[k].bass = bass_pitch;
-        stages[k].strength = stage_strength(segment->strength);
+        stages[k].strength = stage_strength(segment->segment.strength);
         stages[k].melody_next = second_pitch;
     }
     PitchSpelling *tonic = spell((GalantPitchDegree){1, 0}, 4);
@@ -240,7 +240,7 @@ static void finish(Search *search, Candidate *c) {
     for (size_t k = 1; k < c->stage_count; k++) {
         size_t previous_last = c->seg2[k - 1] != NONE ? c->seg2[k - 1] : c->seg[k - 1];
         for (size_t b = previous_last + 1; b < c->seg[k]; b++) {
-            if (rank_of(s->items[c->seg[k]].strength) > rank_of(s->items[b].strength)) {
+            if (rank_of(s->items[c->seg[k]].segment.strength) > rank_of(s->items[b].segment.strength)) {
                 strong_enough = false;
             }
         }
@@ -412,7 +412,7 @@ static GalantAnalysisStatus emit(const GalantSegmentList *s, const Candidate *c,
     for (size_t k = 0; k < c->stage_count; k++) {
         GalantStageClaim *stage = &claim->stages[k];
         const GalantSegment *segment = &s->items[c->seg[k]];
-        snprintf(stage->segment_id, sizeof(stage->segment_id), "%s", segment->id);
+        snprintf(stage->segment_id, sizeof(stage->segment_id), "%s", segment->segment.id);
         GalantPitchDegree bass = in_frame(segment, segment->bass, c->frame);
         stage->bass_degree = bass.degree;
         stage->bass_alteration = bass.alteration;
@@ -428,7 +428,7 @@ static GalantAnalysisStatus emit(const GalantSegmentList *s, const Candidate *c,
         if (c->seg2[k] != NONE) {
             const GalantSegment *next = &s->items[c->seg2[k]];
             GalantPitchDegree second = in_frame(next, next->soprano, c->frame);
-            snprintf(stage->second_segment_id, sizeof(stage->second_segment_id), "%s", next->id);
+            snprintf(stage->second_segment_id, sizeof(stage->second_segment_id), "%s", next->segment.id);
             stage->has_second = 1;
             stage->second_degree = second.degree;
             stage->second_alteration = second.alteration;
@@ -438,7 +438,7 @@ static GalantAnalysisStatus emit(const GalantSegmentList *s, const Candidate *c,
     char key[96];
     char interpretation_id[160];
     snprintf(key, sizeof(key), "%s-%d", prototype->name, index);
-    out->relationship = galant_analysis_relationship("match", key, s->items[c->first].id, s->items[c->last].id, "galant-schema");
+    out->relationship = galant_analysis_relationship("match", key, s->items[c->first].segment.id, s->items[c->last].segment.id, "galant-schema");
     if (out->relationship == NULL) {
         return GALANT_ANALYSIS_ERR_ALLOC;
     }

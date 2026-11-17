@@ -8,6 +8,7 @@
 #include "model/time/musical_time.h"
 #include "model/time/time_span.h"
 
+/* The adapter reads the neutral AnalysisSegment it embeds: the list takes its id, span, position and strength, and refuses what it cannot read. */
 static void test_segment(void) {
     MusicalTime *from = NULL;
     MusicalTime *to = NULL;
@@ -20,34 +21,32 @@ static void test_segment(void) {
     galant.beat_numerator = 1;
     galant.beat_denominator = 4;
     galant.uncertainty = 0.5;
-    AnalysisSegment segment = {"seg-3", span, NULL, BEAT_STRENGTH_STRONG};
-    assert(galant_segment_set_analysis_segment(&galant, &segment));
-    assert(strcmp(galant.id, "seg-3") == 0);
-    assert(galant.span == span);
-    assert(galant.position == NULL);
-    assert(galant.strength == BEAT_STRENGTH_STRONG);
-    assert(galant.beat_numerator == 1 && galant.beat_denominator == 4 && galant.uncertainty == 0.5);
+    galant.key.degree = 1;
+    galant.segment = (AnalysisSegment){"seg-3", span, NULL, BEAT_STRENGTH_STRONG};
+    GalantSegmentList list;
+    galant_segments_init(&list);
+    assert(galant_segments_add(&list, &galant) == GALANT_ANALYSIS_OK && list.count == 1);
+    assert(strcmp(list.items[0].segment.id, "seg-3") == 0 && list.items[0].segment.span == span);
+    assert(list.items[0].segment.position == NULL && list.items[0].segment.strength == BEAT_STRENGTH_STRONG);
+    assert(list.items[0].beat_numerator == 1 && list.items[0].beat_denominator == 4 && list.items[0].uncertainty == 0.5);
 
-    AnalysisSegment no_id = {NULL, span, NULL, BEAT_STRENGTH_WEAK};
-    assert(!galant_segment_set_analysis_segment(&galant, &no_id));
-    AnalysisSegment empty_id = {"", span, NULL, BEAT_STRENGTH_WEAK};
-    assert(!galant_segment_set_analysis_segment(&galant, &empty_id));
-    AnalysisSegment no_span = {"x", NULL, NULL, BEAT_STRENGTH_WEAK};
-    assert(!galant_segment_set_analysis_segment(&galant, &no_span));
+    GalantSegment bad = galant;
+    bad.segment.id = NULL;
+    assert(galant_segments_add(&list, &bad) == GALANT_ANALYSIS_ERR_INVALID);
+    bad = galant;
+    bad.segment.id = "";
+    assert(galant_segments_add(&list, &bad) == GALANT_ANALYSIS_ERR_INVALID);
+    bad = galant;
+    bad.segment.span = NULL;
+    assert(galant_segments_add(&list, &bad) == GALANT_ANALYSIS_ERR_INVALID);
     char long_id[GALANT_ANALYSIS_ID_MAX + 8];
     memset(long_id, 'a', sizeof(long_id));
     long_id[sizeof(long_id) - 1] = '\0';
-    AnalysisSegment too_long = {long_id, span, NULL, BEAT_STRENGTH_WEAK};
-    assert(!galant_segment_set_analysis_segment(&galant, &too_long));
-    assert(!galant_segment_set_analysis_segment(&galant, NULL));
-    assert(!galant_segment_set_analysis_segment(NULL, &segment));
-    assert(strcmp(galant.id, "seg-3") == 0);
-
-    /* A segment set this way is accepted by the list when the rest is filled. */
-    galant.key.degree = 1;
-    GalantSegmentList list;
-    galant_segments_init(&list);
-    assert(galant_segments_add(&list, &galant) == GALANT_ANALYSIS_OK);
+    bad = galant;
+    bad.segment.id = long_id;
+    assert(galant_segments_add(&list, &bad) == GALANT_ANALYSIS_ERR_INVALID);
+    assert(galant_segments_add(&list, NULL) == GALANT_ANALYSIS_ERR_NULL_ARGUMENT);
+    assert(list.count == 1);
     galant_segments_destroy(&list);
 
     time_span_destroy(span);
