@@ -1,4 +1,5 @@
 #include "chain/chain_inputs.h"
+#include "chain/chain_inputs_internal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,19 +25,6 @@
 #include "model/time/time_rational.h"
 #include "model/time/time_span.h"
 #include "model/pitch/midi_pitch.h"
-
-typedef struct {
-    const char *id;
-    size_t index;
-} NoteKey;
-
-static int compare_keys(const void *a, const void *b) {
-    return strcmp(((const NoteKey *)a)->id, ((const NoteKey *)b)->id);
-}
-
-static bool rational_of(const MusicalTime *time, Rational *out) {
-    return rational_of_musical_time(time, out) == RATIONAL_OK;
-}
 
 ChainInputStatus chain_build_segments(const AnalysisNoteSet *notes, const AdaptiveSegmentationConfig *config, ChainSegments *out) {
     if (notes == NULL || out == NULL) {
@@ -77,7 +65,7 @@ ChainInputStatus chain_build_segments(const AnalysisNoteSet *notes, const Adapti
         const TimeSpan *window = sonority_time_window(built.sonorities.items[s].sonority);
         Rational start;
         Rational end;
-        if (!rational_of(time_span_start(window), &start) || !rational_of(time_span_end(window), &end)) {
+        if (!chain_rational_of(time_span_start(window), &start) || !chain_rational_of(time_span_end(window), &end)) {
             chain_segments_destroy(&built);
             return CHAIN_INPUT_ERR_SEGMENTATION;
         }
@@ -122,11 +110,11 @@ static long beat_index(const MeterMap *map, Rational start, Rational end) {
     long index = 0;
     if (meter_map_measure_span(map, measure, &span) == METER_MAP_OK) {
         Rational measure_end;
-        if (rational_of(time_span_end(span), &measure_end)) {
+        if (chain_rational_of(time_span_end(span), &measure_end)) {
             for (size_t b = 0; b < count; b++) {
                 Rational beat_start;
                 Rational beat_end = measure_end;
-                if (!rational_of(starts[b], &beat_start) || (b + 1 < count && !rational_of(starts[b + 1], &beat_end))) {
+                if (!chain_rational_of(starts[b], &beat_start) || (b + 1 < count && !chain_rational_of(starts[b + 1], &beat_end))) {
                     break;
                 }
                 if (rational_cmp(beat_start, start) <= 0 && rational_cmp(start, beat_end) < 0) {
@@ -161,7 +149,7 @@ ChainInputStatus chain_build_members(const AnalysisNoteSet *notes, ChainSegments
         keys[i].id = notes->notes[i].note_id;
         keys[i].index = i;
     }
-    qsort(keys, notes->count, sizeof(NoteKey), compare_keys);
+    qsort(keys, notes->count, sizeof(NoteKey), chain_compare_keys);
 
     size_t total = 0;
     for (size_t s = 0; s < segments->count; s++) {
@@ -182,7 +170,7 @@ ChainInputStatus chain_build_members(const AnalysisNoteSet *notes, ChainSegments
         const TimeSpan *window = sonority_time_window(segment->sonority);
         Rational start;
         Rational end;
-        if (!rational_of(time_span_start(window), &start) || !rational_of(time_span_end(window), &end)) {
+        if (!chain_rational_of(time_span_start(window), &start) || !chain_rational_of(time_span_end(window), &end)) {
             status = CHAIN_INPUT_ERR_MEMBER;
             break;
         }
@@ -193,7 +181,7 @@ ChainInputStatus chain_build_members(const AnalysisNoteSet *notes, ChainSegments
         views[s].beat = beat_index(notes->map, start, end);
         for (size_t j = 0; j < count; j++) {
             NoteKey probe = {entity_id_value(sonority_event_id_at(segment->sonority, j)), 0};
-            const NoteKey *found = bsearch(&probe, keys, notes->count, sizeof(NoteKey), compare_keys);
+            const NoteKey *found = bsearch(&probe, keys, notes->count, sizeof(NoteKey), chain_compare_keys);
             if (found == NULL) {
                 status = CHAIN_INPUT_ERR_UNKNOWN_NOTE;
                 break;
@@ -478,8 +466,8 @@ static bool beat_duration(const MeterMap *map, Duration **out) {
         Rational first;
         Rational next;
         Rational length;
-        ok = rational_of(starts[0], &first) &&
-             (count > 1 ? rational_of(starts[1], &next) : rational_of(time_span_end(span), &next)) &&
+        ok = chain_rational_of(starts[0], &first) &&
+             (count > 1 ? chain_rational_of(starts[1], &next) : chain_rational_of(time_span_end(span), &next)) &&
              rational_sub(next, first, &length) == RATIONAL_OK &&
              duration_create((long)length.num, (unsigned long)length.den, out) == DURATION_OK;
         time_span_destroy(span);
@@ -778,36 +766,6 @@ void chain_pitches_destroy(ChainPitches *pitches) {
     memset(pitches, 0, sizeof(*pitches));
 }
 
-/* --- kept spans, shared by the form, meter and galant inputs --- */
-
-/* Keeps a span [start, end) in a build's array of spans (the array grows from 256; capacity does not change output), or NULL on failure. */
-static const TimeSpan *chain_keep_span(TimeSpan ***spans, size_t *count, size_t *capacity, const MusicalTime *start,
-                                       const MusicalTime *end) {
-    if (*count == *capacity) {
-        size_t grown_capacity = *capacity == 0 ? 256 : *capacity * 2;
-        TimeSpan **grown = realloc(*spans, grown_capacity * sizeof(TimeSpan *));
-        if (grown == NULL) {
-            return NULL;
-        }
-        *spans = grown;
-        *capacity = grown_capacity;
-    }
-    TimeSpan *span = NULL;
-    if (time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
-        return NULL;
-    }
-    (*spans)[(*count)++] = span;
-    return span;
-}
-
-/* Destroys the spans a build kept and its array. */
-static void chain_release_spans(TimeSpan **spans, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        time_span_destroy(spans[i]);
-    }
-    free(spans);
-}
-
 /* --- the form input --- */
 
 /* Keeps a copy of a soprano note, which the input borrows. */
@@ -836,15 +794,10 @@ void chain_form_input_destroy(ChainFormInput *input) {
     memset(input, 0, sizeof(*input));
 }
 
-static int measure_of(const MeterMap *map, const MusicalTime *time) {
-    int measure = 0;
-    return meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK ? measure : -1;
-}
-
 /* The note with this id, or NULL. `keys` is the set's ids sorted. */
 static const AnalysisNote *find_note(const AnalysisNoteSet *notes, const NoteKey *keys, const char *id) {
     NoteKey probe = {id, 0};
-    const NoteKey *found = bsearch(&probe, keys, notes->count, sizeof(NoteKey), compare_keys);
+    const NoteKey *found = bsearch(&probe, keys, notes->count, sizeof(NoteKey), chain_compare_keys);
     return found != NULL ? &notes->notes[found->index] : NULL;
 }
 
@@ -857,7 +810,7 @@ static NoteKey *sorted_keys(const AnalysisNoteSet *notes) {
         keys[i].id = notes->notes[i].note_id;
         keys[i].index = i;
     }
-    qsort(keys, notes->count, sizeof(NoteKey), compare_keys);
+    qsort(keys, notes->count, sizeof(NoteKey), chain_compare_keys);
     return keys;
 }
 
@@ -905,7 +858,7 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
     int current_semitone = 0;
     for (size_t s = 0; s <= line_segments->count && status == CHAIN_INPUT_OK; s++) {
         const TimeSpan *window = s < line_segments->count ? sonority_time_window(line_segments->sonorities.items[s].sonority) : NULL;
-        int measure = window != NULL ? measure_of(notes->map, time_span_start(window)) : -1;
+        int measure = window != NULL ? chain_measure_of(notes->map, time_span_start(window)) : -1;
         bool in_range = window != NULL && measure >= first_measure && measure <= last_measure;
         const char *id = in_range && lines->soprano[s].present ? entity_id_value(lines->soprano[s].note_id) : NULL;
         if (current_id != NULL && (id == NULL || strcmp(id, current_id) != 0)) {
@@ -961,25 +914,6 @@ static Rational q_of_time(const MusicalTime *time) {
     return rational_ratio(musical_time_numerator(time), (long long)musical_time_denominator(time));
 }
 
-static bool parse_degree(const char *label, int *degree, int *alteration) {
-    *alteration = 0;
-    if (label == NULL) {
-        return false;
-    }
-    if (*label == 'b') {
-        *alteration = -1;
-        label++;
-    } else if (*label == '#') {
-        *alteration = 1;
-        label++;
-    }
-    if (*label < '1' || *label > '7') {
-        return false;
-    }
-    *degree = *label - '0';
-    return true;
-}
-
 /* The soprano notes of the measures [first, last], in time order. *out is allocated; its count is returned.
    Only notes starting in the measures compete, so a note held in from an earlier measure does not hide an attack. */
 static bool motive_soprano(const AnalysisNoteSet *notes, int first_measure, int last_measure, MotiveNote **out, size_t *kept_out) {
@@ -992,7 +926,7 @@ static bool motive_soprano(const AnalysisNoteSet *notes, int first_measure, int 
     }
     size_t count = 0;
     for (size_t i = 0; i < notes->count; i++) {
-        int measure = measure_of(notes->map, time_span_start(notes->notes[i].span));
+        int measure = chain_measure_of(notes->map, time_span_start(notes->notes[i].span));
         if (measure < first_measure || measure > last_measure) {
             continue;
         }
@@ -1059,7 +993,7 @@ ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const Ch
         int pitch_class = pitch_class_of_midi((int)line[k].semitone);
         int degree = 0;
         int alteration = 0;
-        if (!parse_degree(common_practice_scale_degree_label(pitch_class, tonic_pitch_class, mode), &degree, &alteration)) {
+        if (!chain_parse_degree(common_practice_scale_degree_label(pitch_class, tonic_pitch_class, mode), &degree, &alteration)) {
             status = CHAIN_INPUT_ERR_BAD_NOTES;
             break;
         }
@@ -1255,7 +1189,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
     }
     for (size_t i = 0; i < notes->count && status == CHAIN_INPUT_OK; i++) {
         AnalysisNote note = notes->notes[i];
-        int measure = measure_of(notes->map, time_span_start(note.span));
+        int measure = chain_measure_of(notes->map, time_span_start(note.span));
         if (measure < first_measure || measure > last_measure) {
             continue;
         }
@@ -1278,7 +1212,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
             continue;
         }
         const MusicalTime *start = time_span_start(sonority_time_window(segments->sonorities.items[s].sonority));
-        int measure = measure_of(notes->map, start);
+        int measure = chain_measure_of(notes->map, start);
         if (measure < first_measure || measure > last_measure) {
             continue;
         }
@@ -1437,7 +1371,7 @@ ChainInputStatus chain_build_voice_grid(const AnalysisNoteSet *notes, const Chai
         built.segment_ids[s] = segments->ids[s];
         const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
         Rational start;
-        if (!rational_of(time_span_start(window), &start)) {
+        if (!chain_rational_of(time_span_start(window), &start)) {
             chain_voice_grid_destroy(&built);
             return CHAIN_INPUT_ERR_SEGMENTATION;
         }
@@ -1445,7 +1379,7 @@ ChainInputStatus chain_build_voice_grid(const AnalysisNoteSet *notes, const Chai
             const AnalysisNote *note = &notes->notes[i];
             Rational on;
             Rational off;
-            if (!rational_of(time_span_start(note->span), &on) || !rational_of(time_span_end(note->span), &off)) {
+            if (!chain_rational_of(time_span_start(note->span), &on) || !chain_rational_of(time_span_end(note->span), &off)) {
                 chain_voice_grid_destroy(&built);
                 return CHAIN_INPUT_ERR_SEGMENTATION;
             }
@@ -1543,7 +1477,7 @@ ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, siz
         note.pitch = entry->pitch;
         note.confidence = 1.0;
         long midi = pitch_numeric_value_position_numerator(entry->pitch);
-        if (!parse_degree(common_practice_scale_degree_label(pitch_class_of_midi(midi), tonic_pitch_class, mode), &note.degree,
+        if (!chain_parse_degree(common_practice_scale_degree_label(pitch_class_of_midi(midi), tonic_pitch_class, mode), &note.degree,
                           &note.alteration)) {
             chain_melody_line_destroy(&built);
             return CHAIN_INPUT_ERR_BAD_NOTES;

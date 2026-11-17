@@ -3,6 +3,7 @@
 add_library(ursatz_chain
     analysis_chain.c
     chain_inputs.c
+    chain_inputs_common.c
     form_bridge.c
     kernel_owners.c
 )
