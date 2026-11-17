@@ -1,8 +1,10 @@
 #include <string.h>
 
 #include <ursatz_composer/variant_registry.h>
+#include <theory/tonality/tonal_key.h>
 
 #include "grow/grow_internal.h"
+#include "util/util.h"
 
 
 static void set_value(VariantValue *value, long number, long den) {
@@ -115,16 +117,16 @@ bool grow_develop_motive(const Motive *source, const PlanMotiveRef *ref, Motive 
 }
 
 bool grow_motive_in_range(const Motive *motive, int low, int high, bool in_scale) {
-    static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
-    static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
+    unsigned scale = standard_tonality_mode_pitch_classes_with_leading_tone(
+        0, motive->minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
     for (size_t i = 0; i < motive->note_count; i++) {
         int pitch = motive_pitch(motive, i);
         if (pitch < low || pitch > high) {
             return false;
         }
         if (in_scale && motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
-            int degree = ((pitch - motive->tonic_pc) % 12 + 12) % 12;
-            if (!(motive->minor ? MINOR : MAJOR)[degree]) {
+            int degree = util_pitch_class(pitch - motive->tonic_pc);
+            if (!((scale >> degree) & 1u)) {
                 return false;
             }
         }

@@ -11,6 +11,7 @@
 #include <theory/voicing/voicing_rules.h>
 
 #include "texture/voicing_internal.h"
+#include "util/util.h"
 
 static const VoicePart PART_OF[VOICING_PARTS] = {VOICE_PART_SOPRANO, VOICE_PART_ALTO, VOICE_PART_TENOR};
 
@@ -22,7 +23,7 @@ bool voicing_chord_valid(const VoicingContext *context, size_t chord, const int 
     if (chord >= context->chord_count || !context->chord_ok[chord]) {
         return false;
     }
-    if (context->write_soprano && !(context->soprano_mask[chord] & (1u << (((pitch[VOICING_SOPRANO] % 12) + 12) % 12)))) {
+    if (context->write_soprano && !(context->soprano_mask[chord] & (1u << (util_pitch_class(pitch[VOICING_SOPRANO]))))) {
         return false;
     }
     for (size_t part = 0; part < VOICING_PARTS; part++) {

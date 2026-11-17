@@ -16,6 +16,8 @@
 #include <model/time/musical_time.h>
 #include <model/time/time_rational.h>
 #include <model/time/time_span.h>
+#include <theory/tonality/seventh_in_key_rules.h>
+#include <theory/tonality/triad_in_key_rules.h>
 
 #define HEARD_KEY_REF "key"
 
@@ -26,41 +28,36 @@
  * diminished seventh on the leading tone).
  */
 bool harmony_diatonic_intervals(KeyStructureMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
-    static const int MAJOR_TRIAD[3] = {0, 4, 7};
-    static const int MINOR_TRIAD[3] = {0, 3, 7};
-    static const int DIMINISHED_TRIAD[3] = {0, 3, 6};
-    static const int MAJOR_SEVENTH[4] = {0, 4, 7, 11};
-    static const int MINOR_SEVENTH[4] = {0, 3, 7, 10};
-    static const int DOMINANT_SEVENTH[4] = {0, 4, 7, 10};
-    static const int HALF_DIMINISHED_SEVENTH[4] = {0, 3, 6, 10};
-    static const int DIMINISHED_SEVENTH[4] = {0, 3, 6, 9};
-    /* Quality by degree: 0 major, 1 minor, 2 diminished, 3 dominant (a major triad with a minor seventh). */
-    static const int MAJOR_QUALITY[8] = {0, 0, 1, 1, 0, 3, 1, 2};
-    static const int MINOR_QUALITY[8] = {0, 1, 2, 0, 1, 3, 0, 3};
-    int quality = mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_QUALITY[chord->degree] : MAJOR_QUALITY[chord->degree];
-    /* In a minor key the chord on the raised seventh degree is diminished; the subtonic is a dominant seventh. */
-    if (mode == KEY_STRUCTURE_MODE_MINOR && chord->degree == 7 && chord->leading_tone) {
-        quality = 2;
-    }
+    bool minor = mode == KEY_STRUCTURE_MODE_MINOR;
+    /* A minor key's chords are the natural scale's, but the dominant is major and the leading-tone chord diminished. */
+    bool raised = minor && (chord->degree == 5 || (chord->degree == 7 && chord->leading_tone));
     memset(intervals, 0, 4 * sizeof(int));
     if (!chord->seventh) {
-        const int *triad = quality == 1 ? MINOR_TRIAD : (quality == 2 ? DIMINISHED_TRIAD : MAJOR_TRIAD);
-        memcpy(intervals, triad, 3 * sizeof(int));
+        StandardTonalityTriadQuality triad;
+        StandardTonalityTriadKey key = !minor ? STANDARD_TONALITY_TRIAD_KEY_MAJOR
+                                       : raised ? STANDARD_TONALITY_TRIAD_KEY_MINOR_HARMONIC
+                                                : STANDARD_TONALITY_TRIAD_KEY_MINOR_NATURAL;
+        if (!standard_tonality_triad_quality_in_key(key, chord->degree, &triad) ||
+            !standard_tonality_triad_quality_semitones(triad, intervals)) {
+            return false;
+        }
         *count = 3;
         return true;
     }
-    const int *seventh = NULL;
-    if (quality == 3) {
-        seventh = DOMINANT_SEVENTH;
-    } else if (quality == 2) {
-        /* The leading-tone seventh is fully diminished; on ii of a minor key it is half diminished. */
-        seventh = chord->degree == 7 ? DIMINISHED_SEVENTH : HALF_DIMINISHED_SEVENTH;
-    } else if (quality == 1) {
-        seventh = MINOR_SEVENTH;
-    } else {
-        seventh = MAJOR_SEVENTH;
+    StandardTonalitySeventhQuality seventh;
+    StandardTonalitySeventhKey key = !minor ? STANDARD_TONALITY_SEVENTH_KEY_MAJOR
+                                     : raised ? STANDARD_TONALITY_SEVENTH_KEY_MINOR_RAISED_LEADING_TONE
+                                              : STANDARD_TONALITY_SEVENTH_KEY_MINOR_NATURAL;
+    if (!minor && chord->degree == 7) {
+        /* Kept on purpose (R-582): the library owner reads the seventh on the leading tone of a major key as half
+           diminished, the Composer has always played it fully diminished, and changing it changes what is played. */
+        seventh = STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED;
+    } else if (!standard_tonality_seventh_quality_in_key(key, chord->degree, &seventh)) {
+        return false;
     }
-    memcpy(intervals, seventh, 4 * sizeof(int));
+    if (!standard_tonality_seventh_quality_semitones(seventh, intervals)) {
+        return false;
+    }
     *count = 4;
     return true;
 }

@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 #define DEFAULT_RANGE_LOW 40
 #define DEFAULT_RANGE_HIGH 60
@@ -95,7 +96,7 @@ bool harmony_bass_context_read(const PiecePlan *plan, LaneSpanId target, BassCon
 static size_t pitches_in_range(int pc, int low, int high, int *out, size_t capacity) {
     size_t count = 0;
     for (int pitch = low; pitch <= high && count < capacity; pitch++) {
-        if (((pitch % 12) + 12) % 12 == pc) {
+        if (util_pitch_class(pitch) == pc) {
             out[count++] = pitch;
         }
     }

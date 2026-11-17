@@ -7,6 +7,7 @@
 #include <ursatz_composer/motive_tones.h>
 
 #include <analysis/motive/motive_relation.h>
+#include <theory/tonality/roman_numeral_rules.h>
 
 #include "motive/motive_internal.h"
 #include "plan/plan_json_internal.h"
@@ -527,10 +528,9 @@ static void describe_shift_feature(const VariantValue *values, char *out, size_t
 
 /* ---------------------------------------------------------------- harmony */
 
-static const char *const ROMAN[] = {"", "I", "II", "III", "IV", "V", "VI", "VII"};
-
 static const char *roman_of(long degree) {
-    return degree >= 1 && degree <= 7 ? ROMAN[degree] : "I";
+    const char *roman = degree >= 1 && degree <= 7 ? standard_tonality_roman_numeral_degree((int)degree, true) : NULL;
+    return roman ? roman : "I";
 }
 
 /* "the first chord", or "chord 12". */

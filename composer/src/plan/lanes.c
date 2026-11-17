@@ -7,12 +7,13 @@
 
 #include "plan/plan_internal.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 
 AnalysisKey plan_key_of_pitch_class(int pitch_class, KeyStructureMode mode) {
     AnalysisKey key = {NULL, PITCH_LETTER_C, 0, mode};
     PitchLetter letter;
     int accidental;
-    if (standard_tonality_key_tonic_of_pitch_class(((pitch_class % 12) + 12) % 12, mode == KEY_STRUCTURE_MODE_MINOR, &letter,
+    if (standard_tonality_key_tonic_of_pitch_class(util_pitch_class(pitch_class), mode == KEY_STRUCTURE_MODE_MINOR, &letter,
                                                    &accidental)) {
         key.tonic_letter = letter;
         key.tonic_accidental = accidental;

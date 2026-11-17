@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <model/pitch/pitch_arithmetic.h>
+
 #include "util/plan_util.h"
 #include "util/util.h"
 
@@ -61,15 +63,14 @@ bool request_parse_ratio(const char *text, ComposerRatio *out) {
 }
 
 bool request_parse_key(const char *text, AnalysisKey *key) {
-    static const int NATURAL[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
     while (isspace((unsigned char)*text)) {
         text++;
     }
-    char letter = (char)toupper((unsigned char)*text);
-    if (letter < 'A' || letter > 'G') {
+    PitchLetter tonic_letter;
+    if (!pitch_letter_from_char((char)toupper((unsigned char)*text), &tonic_letter)) {
         return false;
     }
-    int pc = NATURAL[letter - 'A'];
+    int pc = pitch_letter_semitone(tonic_letter);
     text++;
     if (*text == '#') {
         pc++;
@@ -105,7 +106,7 @@ bool request_parse_key(const char *text, AnalysisKey *key) {
     } else {
         return false;
     }
-    *key = plan_key_of_pitch_class((pc % 12 + 12) % 12, key->mode);
+    *key = plan_key_of_pitch_class(util_pitch_class(pc), key->mode);
     return true;
 }
 

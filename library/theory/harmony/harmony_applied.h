@@ -73,6 +73,13 @@ bool harmony_applied_valid(HarmonyMode mode, const HarmonyAppliedChord *chord);
    buffer too small. */
 bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, char *out, size_t size);
 
+/* The label with the chord in an inversion: the figure goes between the chord and its target, "V6/5/V" for V7/V in first
+   inversion, "viio6/V" for viio/V (a triad in root position or first inversion, a seventh chord in any). The
+   figures are the plan style of the numeral grammar. False (*out untouched) for an invalid chord or mode, an
+   inversion the chord cannot have, a NULL pointer, or a buffer too small. */
+bool harmony_applied_label_inverted(HarmonyMode mode, const HarmonyAppliedChord *chord, int inversion, char *out,
+                                    size_t size);
+
 /* The semitones above the tonic of the scale degree (1 to 7) in the mode: major 0 2 4 5 7 9 11,
    natural minor 0 2 3 5 7 8 10. -1 for an invalid mode or degree. */
 int harmony_applied_scale_semitone(HarmonyMode mode, int degree);

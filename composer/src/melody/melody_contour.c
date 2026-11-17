@@ -119,7 +119,7 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
             if (best == first && best > 0 && !standard_counterpoint_melodic_semitones_allowed(pitch - melody->notes[best - 1].pitch)) {
                 continue;
             }
-            if (((mask >> (((pitch % 12) + 12) % 12)) & 1u) &&
+            if (((mask >> (util_pitch_class(pitch))) & 1u) &&
                 (found < 0 || util_absolute(pitch - peak) < util_absolute(found - peak))) {
                 found = pitch;
             }

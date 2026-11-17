@@ -15,6 +15,7 @@
 #include "check/hearing.h"
 #include "form/form_internal.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 
 /* A key lane span before it is added: its key and where it lies. */
 typedef struct {
@@ -274,7 +275,7 @@ static bool related_to_home(AnalysisKey home, AnalysisKey key) {
     if (analysis_key_tonic_pitch_class(&home) == analysis_key_tonic_pitch_class(&key)) {
         return true;
     }
-    int semitone = ((analysis_key_tonic_pitch_class(&key) - analysis_key_tonic_pitch_class(&home)) % 12 + 12) % 12;
+    int semitone = util_pitch_class(analysis_key_tonic_pitch_class(&key) - analysis_key_tonic_pitch_class(&home));
     for (int i = 0; i < harmony_related_key_count(home_mode); i++) {
         HarmonyRelatedKey related;
         if (harmony_related_key_at(home_mode, i, &related) && related.mode == mode &&

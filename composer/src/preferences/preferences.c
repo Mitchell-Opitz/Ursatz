@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <theory/tonality/roman_numeral_rules.h>
 
 #define WEIGHT_MAX COMPOSER_PREFERENCES_WEIGHT_MAX
 #define SCALE_MAX COMPOSER_PREFERENCES_SCALE_MAX
@@ -359,9 +360,6 @@ static const WeightedList MOTIF_LISTS_L3[] = {
     {"syncopation_levels", offsetof(MotiveRandomPreferences, syncopation_levels), 2, {"eighth", "sixteenth"}}};
 #define MOTIF_LIST_L3_COUNT (sizeof(MOTIF_LISTS_L3) / sizeof(MOTIF_LISTS_L3[0]))
 
-/* The Roman numerals a plan chord may name, upper case, by degree 1 to 7. */
-static const char *const PLAN_NUMERALS[] = {"I", "II", "III", "IV", "V", "VI", "VII"};
-
 typedef enum { PLAN_CHORD_OK, PLAN_CHORD_SYNTAX, PLAN_CHORD_BAR, PLAN_CHORD_BEAT } PlanChordResult;
 
 /* Digits of the text from *at, up to 4 of them; false when there is none. */
@@ -383,21 +381,14 @@ static bool plan_digits(const char *text, size_t *at, unsigned *out) {
 
 /* One plan chord: a Roman numeral I to VII in any case, an optional o or degree sign, an optional @bar or @bar:beat. */
 static PlanChordResult parse_plan_chord(const char *text, MotiveRandomPlanChord *out) {
-    char numeral[8];
     size_t n = 0;
     size_t at = 0;
-    int degree = 0;
     unsigned value;
     while ((text[at] == 'i' || text[at] == 'I' || text[at] == 'v' || text[at] == 'V') && n < 7) {
-        numeral[n++] = (char)(text[at] == 'i' || text[at] == 'I' ? 'I' : 'V');
+        n++;
         at++;
     }
-    numeral[n] = '\0';
-    for (int d = 0; d < 7; d++) {
-        if (strcmp(numeral, PLAN_NUMERALS[d]) == 0) {
-            degree = d + 1;
-        }
-    }
+    int degree = standard_tonality_roman_numeral_degree_of(text, n);
     if (degree == 0) {
         return PLAN_CHORD_SYNTAX;
     }
@@ -1032,9 +1023,9 @@ static bool write_plan(cJSON *group, const MotiveRandomPreferences *motif) {
         char text[24];
         const MotiveRandomPlanChord *chord = &motif->plan[k];
         if (chord->bar > 0) {
-            snprintf(text, sizeof(text), "%s@%u:%u", PLAN_NUMERALS[chord->degree - 1], chord->bar, chord->beat);
+            snprintf(text, sizeof(text), "%s@%u:%u", standard_tonality_roman_numeral_degree(chord->degree, true), chord->bar, chord->beat);
         } else {
-            snprintf(text, sizeof(text), "%s", PLAN_NUMERALS[chord->degree - 1]);
+            snprintf(text, sizeof(text), "%s", standard_tonality_roman_numeral_degree(chord->degree, true));
         }
         cJSON *string = cJSON_CreateString(text);
         if (!string || !cJSON_AddItemToArray(array, string)) {

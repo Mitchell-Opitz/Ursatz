@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <model/pitch/midi_pitch.h>
 #include <model/pitch/pitch_arithmetic.h>
 #include <theory/tonality/tonal_key.h>
 
@@ -24,7 +25,7 @@ int util_sign(int value) {
 }
 
 int util_pitch_class(int pitch) {
-    return ((pitch % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE;
+    return pitch_class_of_midi(pitch);
 }
 
 void util_pitch_name(int midi, bool prefer_flats, char *out, size_t size) {

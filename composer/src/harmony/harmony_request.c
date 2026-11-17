@@ -8,6 +8,7 @@
 
 #include "util/plan_util.h"
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 /* The most bars a phrase can span, and the most barlines searched before a phrase; guards for the loops below. */
 #define MAX_PHRASE_BARS 1024
@@ -72,7 +73,7 @@ bool harmony_key_before(const PiecePlan *plan, Rational start, AnalysisKey *out)
 /* The closely related key of `from` that is the key `to`. */
 static bool related_key_of(AnalysisKey from, AnalysisKey to, HarmonyMode *home, HarmonyRelatedKey *out) {
     *home = from.mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
-    int semitone = ((analysis_key_tonic_pitch_class(&to) - analysis_key_tonic_pitch_class(&from)) % 12 + 12) % 12;
+    int semitone = util_pitch_class(analysis_key_tonic_pitch_class(&to) - analysis_key_tonic_pitch_class(&from));
     HarmonyMode mode = to.mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
     for (int i = 0; i < harmony_related_key_count(*home); i++) {
         HarmonyRelatedKey key;

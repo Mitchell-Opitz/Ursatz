@@ -184,6 +184,7 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/roman_numeral_analysis_rules.h
         theory/tonality/roman_numeral_grammar.h
         theory/tonality/roman_numeral_rules.h
+        theory/tonality/seventh_in_key_rules.h
         theory/tonality/seventh_rules.h
         theory/tonality/tonal_key.h
         theory/tonality/triad_in_key_rules.h

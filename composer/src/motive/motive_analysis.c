@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <model/pitch/midi_pitch.h>
 
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
@@ -315,9 +316,10 @@ static const char *direction_name(ContourDirection direction) {
 }
 
 static void key_text(const AnalysisKey *key, char *out, size_t size) {
-    static const char *const MAJOR[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
-    static const char *const MINOR[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"};
-    snprintf(out, size, "%s %s", key->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR[analysis_key_tonic_pitch_class(key)] : MAJOR[analysis_key_tonic_pitch_class(key)],
+    /* The minor key's tonic is named as a minor key is written (key_tonic_name_minor, R-582: Eb minor, not D# minor). */
+    int tonic = analysis_key_tonic_pitch_class(key);
+    snprintf(out, size, "%s %s",
+             key->mode == KEY_STRUCTURE_MODE_MINOR ? key_tonic_name_minor(tonic) : key_tonic_name(tonic),
              key->mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major");
 }
 

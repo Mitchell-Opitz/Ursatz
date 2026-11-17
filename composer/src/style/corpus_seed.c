@@ -7,6 +7,7 @@
 
 #include <cJSON.h>
 #include <model/core/rational.h>
+#include <theory/tonality/tonal_key.h>
 
 #include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/similar_material.h>
@@ -173,26 +174,22 @@ static bool source_key(const DocumentChord *chords, size_t count, int measure, d
 
 /* --- the motive ------------------------------------------------------------------- */
 
-static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
-static const int MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
-
 /*
  * How far to move a melody that starts on pitch so the note keeps its scale degree: the degree of the note in the
  * source key (a note off the scale keeps its distance above the degree below it), placed in the target key, with the
  * move from the pitch within a tritone either way so the melody stays where it was heard.
  */
 static int transposition(int pitch, const AnalysisKey *source, const AnalysisKey *target) {
-    const int *from = source->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
-    const int *to = target->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
-    int above = (((pitch - analysis_key_tonic_pitch_class(source)) % 12) + 12) % 12;
-    int degree = 0;
-    for (int d = 0; d < 7; d++) {
-        if (from[d] <= above) {
-            degree = d;
-        }
-    }
-    int landed = (analysis_key_tonic_pitch_class(target) + to[degree] + (above - from[degree])) % 12;
-    int shift = ((landed - (pitch % 12)) % 12 + 12) % 12;
+    int above = util_pitch_class(pitch - analysis_key_tonic_pitch_class(source));
+    int degree = 1;
+    int beyond = 0;
+    standard_tonality_degree_at_or_below_semitone(above,
+                                                  source->mode == KEY_STRUCTURE_MODE_MINOR
+                                                      ? STANDARD_TONALITY_MODE_NATURAL_MINOR
+                                                      : STANDARD_TONALITY_MODE_MAJOR,
+                                                  &degree, &beyond);
+    int landed = (analysis_key_tonic_pitch_class(target) + util_scale_semitone(target->mode == KEY_STRUCTURE_MODE_MINOR, degree) + beyond) % 12;
+    int shift = util_pitch_class(landed - (pitch % 12));
     return shift > 6 ? shift - 12 : shift;
 }
 

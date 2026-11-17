@@ -492,6 +492,7 @@ static bool beat_duration(const MeterMap *map, Duration **out) {
 }
 
 /* The degree (1..7) of an outer line's note in the major key on `tonic`, or 0 for a chromatic or an absent note. */
+/* Already the tonality owner's reading (standard_tonality_degree_of_semitone); kept as the one chain wrapper (R-582). */
 static int degree_of(const OuterVoiceEntry *entry, int tonic) {
     if (entry == NULL || !entry->present) {
         return 0;

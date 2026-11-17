@@ -1,5 +1,7 @@
 #include <string.h>
 
+#include <theory/tonality/roman_numeral_rules.h>
+
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/variant_registry.h>
 
@@ -10,25 +12,11 @@ static int roman_degree(const char *roman) {
     while (*roman == 'b' || *roman == '#') {
         roman++;
     }
-    int value = 0;
-    int count = 0;
+    size_t count = 0;
     while (roman[count] == 'i' || roman[count] == 'I' || roman[count] == 'v' || roman[count] == 'V') {
         count++;
     }
-    char letters[8] = "";
-    if (count == 0 || count >= (int)sizeof(letters)) {
-        return 0;
-    }
-    for (int i = 0; i < count; i++) {
-        letters[i] = (char)(roman[i] | 0x20);
-    }
-    static const char *const NAMES[] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};
-    for (int degree = 0; degree < 7; degree++) {
-        if (strcmp(letters, NAMES[degree]) == 0) {
-            value = degree + 1;
-        }
-    }
-    return value;
+    return standard_tonality_roman_numeral_degree_of(roman, count);
 }
 
 /*

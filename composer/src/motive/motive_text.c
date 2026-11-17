@@ -5,6 +5,9 @@
 
 #include <ursatz_composer/motive_analysis.h>
 
+#include <theory/tonality/roman_numeral_grammar.h>
+#include <theory/tonality/roman_numeral_rules.h>
+
 #include "motive/motive_internal.h"
 
 /*
@@ -212,19 +215,6 @@ char *motive_to_contour_text(const Motive *motive) {
 
 /* ---------------------------------------------------------------- harmony */
 
-static const char *const NUMERALS[] = {"VII", "VI", "V", "IV", "III", "II", "I"};
-static const int NUMERAL_DEGREES[] = {7, 6, 5, 4, 3, 2, 1};
-
-/* The figure of a chord: "" and "6" and "64" for a triad, "7", "65", "43" and "42" for a seventh; NULL when none. */
-static const char *chord_figure(int inversion, bool seventh) {
-    static const char *const TRIAD[] = {"", "6", "64"};
-    static const char *const SEVENTH[] = {"7", "65", "43", "42"};
-    if (inversion < 0 || inversion > 3 || (!seventh && inversion > 2)) {
-        return NULL;
-    }
-    return seventh ? SEVENTH[inversion] : TRIAD[inversion];
-}
-
 /* Reads "6", "64", "7", "65", "43", "42" or nothing. False when the figure is something else. */
 static bool read_figure(const char *figure, int *inversion, bool *seventh) {
     static const char *const FIGURES[] = {"", "6", "64", "7", "65", "43", "42"};
@@ -316,10 +306,12 @@ MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, Moti
             symbol++;
         }
         bool numeral = false;
-        for (size_t k = 0; k < sizeof(NUMERALS) / sizeof(NUMERALS[0]) && !numeral; k++) {
-            size_t size = strlen(NUMERALS[k]);
-            if (strncmp(symbol, NUMERALS[k], size) == 0) {
-                chord.degree = NUMERAL_DEGREES[k];
+        /* The longest numeral first: VII before VI before V. */
+        for (int degree = 7; degree >= 1 && !numeral; degree--) {
+            const char *name = standard_tonality_roman_numeral_degree(degree, true);
+            size_t size = strlen(name);
+            if (strncmp(symbol, name, size) == 0) {
+                chord.degree = degree;
                 symbol += size;
                 numeral = true;
             }
@@ -347,14 +339,16 @@ MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, Moti
 }
 
 bool motive_chord_numeral(const MotiveSketchChord *chord, char *out, size_t size) {
-    const char *figure = chord ? chord_figure(chord->inversion, chord->seventh) : NULL;
-    size_t numeral = chord && chord->degree >= 1 && chord->degree <= 7 ? (size_t)(7 - chord->degree) : 7;
-    if (!figure || numeral == 7 || chord->alteration < -1 || chord->alteration > 1 || !out) {
+    if (!chord || !out || chord->degree < 1 || chord->degree > 7 || chord->alteration < -1 || chord->alteration > 1) {
         return false;
     }
-    int written = snprintf(out, size, "%s%s%s", chord->alteration < 0 ? "b" : (chord->alteration > 0 ? "#" : ""),
-                           NUMERALS[numeral], figure);
-    return written > 0 && (size_t)written < size;
+    StandardTonalityNumeralText numeral;
+    memset(&numeral, 0, sizeof(numeral));
+    numeral.alteration = chord->alteration;
+    numeral.degree = chord->degree;
+    numeral.quality = chord->seventh ? STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH : STANDARD_TONALITY_NUMERAL_MAJOR;
+    numeral.inversion = chord->inversion;
+    return standard_tonality_numeral_format(&numeral, out, size);
 }
 
 char *motive_harmony_to_text(const Motive *motive) {

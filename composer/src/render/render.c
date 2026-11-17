@@ -23,6 +23,7 @@
 #include <ursatz_composer/plan_state.h>
 #include "render/render_notes.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 
 const char *rendered_part_lane_name(const RenderedPart *part) {
     return plan_lane_name(part->lane);
@@ -237,7 +238,7 @@ typedef struct {
  * placed on the line of fifths, its sharp spelling in a sharp key or none, its flat spelling in a flat key.
  */
 static Spelling spell(int midi, const AnalysisKey *key) {
-    int pitch_class = ((midi % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE;
+    int pitch_class = util_pitch_class(midi);
     int sharps_flats = key ? key_sharps_flats(key) : 0;
     PitchLetter tonic_letter = PITCH_LETTER_C;
     int tonic_accidental = 0;
@@ -262,7 +263,7 @@ static Spelling spell(int midi, const AnalysisKey *key) {
     }
     int lowest = sharps_flats < 0 ? FLATS_LOWEST_FIFTHS : SHARPS_LOWEST_FIFTHS;
     int fifths = lowest;
-    while (((fifths * 7) % PITCH_SEMITONES_PER_OCTAVE + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE !=
+    while (util_pitch_class(fifths * 7) !=
            pitch_class) {
         fifths++;
     }

@@ -8,6 +8,7 @@
 #include <theory/form/phrase_beginning.h>
 #include <theory/form/phrase_ending.h>
 #include <theory/form/phrase_level_form.h>
+#include <theory/tonality/tonal_key.h>
 
 #include <ursatz_composer/form_return.h>
 #include <ursatz_composer/given.h>
@@ -20,6 +21,7 @@
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 /* How many candidates are drawn for each one asked for before the search is given up. */
 #define DRAWS_PER_CANDIDATE 6
@@ -499,7 +501,7 @@ static bool same_kind(const MotiveRelationStep *a, const MotiveRelationStep *b) 
 
 /* Whether the last note of a development lands on the pitch class asked for (any when want is negative). */
 static bool lands_on(const Motive *result, int want) {
-    return want < 0 || ((motive_pitch(result, result->note_count - 1) % 12) + 12) % 12 == want;
+    return want < 0 || util_pitch_class(motive_pitch(result, result->note_count - 1)) == want;
 }
 
 bool grow_shorten_source(GrowThemeSpec *spec, GrowPlace place) {
@@ -627,13 +629,12 @@ static bool same_rhythm_over_common(const Motive *a, const Motive *b) {
 
 /* The pitch one step of the key's scale from `pitch` in `direction` (the nearest scale pitch that way). */
 static int scale_step(int pitch, int direction, int tonic_pc, bool minor) {
-    static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
-    static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
-    const bool *scale = minor ? MINOR : MAJOR;
+    unsigned scale = standard_tonality_mode_pitch_classes_with_leading_tone(
+        0, minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
     int next = pitch;
     do {
         next += direction;
-    } while (!scale[((next - tonic_pc) % 12 + 12) % 12]);
+    } while (!((scale >> util_pitch_class(next - tonic_pc)) & 1u));
     return next;
 }
 

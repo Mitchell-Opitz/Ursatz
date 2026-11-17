@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <theory/counterpoint/melodic_rules.h>
+#include <theory/tonality/tonal_key.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
@@ -28,19 +29,11 @@
 /* The most melody spans read over a section. */
 #define CONNECTIVE_MAX_SPANS 64
 
-static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
-/* Harmonic minor: the raised seventh. */
-static const int MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 11};
-
+/* The scale a line is written in: major, or harmonic minor (the raised seventh). */
 static bool in_scale(int tonic, bool minor, int pitch) {
-    int pitch_class = ((pitch - tonic) % 12 + 12) % 12;
-    const int *scale = minor ? MINOR_SCALE : MAJOR_SCALE;
-    for (int i = 0; i < 7; i++) {
-        if (scale[i] == pitch_class) {
-            return true;
-        }
-    }
-    return false;
+    unsigned scale = standard_tonality_mode_pitch_classes(0, minor ? STANDARD_TONALITY_MODE_HARMONIC_MINOR
+                                                                   : STANDARD_TONALITY_MODE_MAJOR);
+    return (scale >> util_pitch_class(pitch - tonic)) & 1u;
 }
 
 /* The next pitch of the scale strictly above (direction 1) or below (-1) the pitch. */

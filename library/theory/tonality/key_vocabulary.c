@@ -24,7 +24,8 @@ static const char *mode_suffix(CommonPracticeKeyMode mode) {
 }
 
 /* The pitch class of a tonic name: a letter A-G then any number of '#' or 'b' accidentals. -1 if it is not
-   one, in which case the Key is built without a structure. */
+   one, in which case the Key is built without a structure. The accidental loop stays here on purpose (R-582): a name
+   with three or more accidentals is read as written, which no owner function does. */
 static int tonic_pitch_class_of(const char *name) {
     PitchLetter letter;
     if (!pitch_letter_from_char(name[0], &letter)) {

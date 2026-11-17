@@ -7,6 +7,7 @@
 #include <theory/counterpoint/counterpoint_limits.h>
 #include <theory/counterpoint/counterpoint_line.h>
 #include <theory/counterpoint/melodic_rules.h>
+#include <model/pitch/pitch_arithmetic.h>
 #include <model/pitch/pitch_spelling.h>
 
 #include <ursatz_composer/plan_state.h>
@@ -14,21 +15,6 @@
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "util/util.h"
-
-/* The pitch class of each letter's natural note, C D E F G A B. */
-static const int NATURAL_PC[7] = {0, 2, 4, 5, 7, 9, 11};
-static const PitchLetter LETTERS[7] = {PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_E, PITCH_LETTER_F,
-                                       PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_B};
-
-/* The place of a letter in the order C D E F G A B. */
-static int letter_index(PitchLetter letter) {
-    for (int i = 0; i < 7; i++) {
-        if (LETTERS[i] == letter) {
-            return i;
-        }
-    }
-    return 0;
-}
 
 /* The scale degree of the bass member of the chord, which names the letter of its note. */
 int harmony_member_degree(KeyStructureMode mode, const PhraseChord *chord) {
@@ -44,12 +30,12 @@ PitchSpelling *harmony_spell_pitch(const AnalysisKey *key, int degree, int pitch
     if (degree < 1 || degree > 7) {
         return NULL;
     }
-    int letter = (letter_index(key->tonic_letter) + degree - 1) % 7;
-    int pc = ((pitch % 12) + 12) % 12;
-    int accidental = ((pc - NATURAL_PC[letter] + 6) % 12 + 12) % 12 - 6;
+    PitchLetter letter = pitch_letter_offset(key->tonic_letter, degree - 1);
+    int pc = util_pitch_class(pitch);
+    int accidental = util_pitch_class(pc - pitch_letter_semitone(letter) + 6) - 6;
     int octave = (pitch - accidental) / 12 - 1;
     PitchSpelling *spelling = NULL;
-    if (pitch_spelling_create(LETTERS[letter], accidental, octave, &spelling) != PITCH_SPELLING_OK) {
+    if (pitch_spelling_create(letter, accidental, octave, &spelling) != PITCH_SPELLING_OK) {
         return NULL;
     }
     return spelling;
@@ -81,7 +67,7 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
             verdict->hard = "bass note without a chord";
         } else if (note->pitch < line->params.range_low || note->pitch > line->params.range_high) {
             verdict->hard = "outside the bass range";
-        } else if (((note->pitch % 12) + 12) % 12 != pc) {
+        } else if (util_pitch_class(note->pitch) != pc) {
             verdict->hard = "not the chord's bass member";
         } else {
             spellings[made] = harmony_spell_pitch(&context->key, harmony_member_degree(context->key.mode, &context->chords[note->chord]),

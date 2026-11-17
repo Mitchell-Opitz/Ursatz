@@ -10,6 +10,8 @@
 #include "piece/form_return_internal.h"
 #include "util/util.h"
 
+#include <theory/tonality/tonal_key.h>
+
 /*
  * The motive of variation (R-497): the skeleton of a figurate return, and the figure written over it. Time in this
  * file is Rational, from the start of the section.
@@ -73,12 +75,8 @@ static bool section_key(const PiecePlan *plan, PlanSpan span, AnalysisKey *key) 
     return true;
 }
 
-static int pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
 bool form_figure_has_pitch_class(unsigned mask, int pitch) {
-    return (mask >> pitch_class(pitch)) & 1u;
+    return (mask >> util_pitch_class(pitch)) & 1u;
 }
 
 /* The chord tone of the mask nearest a pitch (the lower of two equally near); false when the mask is empty. */
@@ -293,18 +291,13 @@ bool form_figure_kept_notes(const FigureReading *reading, size_t cell, int octav
 
 /* The scale a cell is figured in: the key's, with the raised seventh in minor over a chord that holds the leading tone. */
 static unsigned scale_pitch_classes(const AnalysisKey *key, unsigned chord_mask) {
-    static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
-    static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 10};
     int tonic = analysis_key_tonic_pitch_class(key);
-    bool minor = key->mode == KEY_STRUCTURE_MODE_MINOR;
-    bool raised = minor && ((chord_mask >> ((tonic + 11) % 12)) & 1u);
-    unsigned scale = 0;
-    for (size_t i = 0; i < 7; i++) {
-        int degree = minor ? MINOR[i] : MAJOR[i];
-        degree = raised && degree == 10 ? 11 : degree;
-        scale |= 1u << ((tonic + degree) % 12);
+    if (key->mode != KEY_STRUCTURE_MODE_MINOR) {
+        return standard_tonality_mode_pitch_classes(tonic, STANDARD_TONALITY_MODE_MAJOR);
     }
-    return scale;
+    bool raised = (chord_mask >> ((tonic + 11) % 12)) & 1u;
+    return standard_tonality_mode_pitch_classes(tonic, raised ? STANDARD_TONALITY_MODE_HARMONIC_MINOR
+                                                              : STANDARD_TONALITY_MODE_NATURAL_MINOR);
 }
 
 /* The tone of a pitch-class mask next to a pitch, above (direction 1) or below (-1). */

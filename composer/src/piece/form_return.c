@@ -230,7 +230,7 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
         for (size_t c = 0; c < node->constraint_count; c++) {
             if (node->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
                 AnalysisKey *key = &node->constraints[c].params.key;
-                *key = plan_key_of_pitch_class(((analysis_key_tonic_pitch_class(key) + transpose) % 12 + 12) % 12, key->mode);
+                *key = plan_key_of_pitch_class(util_pitch_class(analysis_key_tonic_pitch_class(key) + transpose), key->mode);
             }
         }
     }
@@ -245,7 +245,7 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
         for (size_t c = 0; c < span->constraint_count; c++) {
             if (span->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
                 AnalysisKey *key = &span->constraints[c].params.key;
-                *key = plan_key_of_pitch_class(((analysis_key_tonic_pitch_class(key) + transpose) % 12 + 12) % 12, key->mode);
+                *key = plan_key_of_pitch_class(util_pitch_class(analysis_key_tonic_pitch_class(key) + transpose), key->mode);
             }
         }
     }
@@ -254,7 +254,7 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
 
 /* The pitch moved from the other mode of the tonic into `to` (R-499). */
 int return_map_pitch(int tonic, KeyStructureMode to, int pitch) {
-    int degree = ((pitch - tonic) % 12 + 12) % 12;
+    int degree = util_pitch_class(pitch - tonic);
     if (to == KEY_STRUCTURE_MODE_MINOR) {
         return degree == 4 || degree == 9 ? pitch - 1 : pitch;
     }
@@ -416,7 +416,7 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
         return false;
     }
     for (size_t i = 0; i < na; i++) {
-        int step = ((analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key)) % 12 + 12) % 12;
+        int step = util_pitch_class(analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
             a[i].key.mode != b[i].key.mode || (difference >= 0 && difference != step)) {
             return false;
@@ -438,7 +438,7 @@ bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const P
         return false;
     }
     for (size_t i = 0; i < na; i++) {
-        int step = ((analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key)) % 12 + 12) % 12;
+        int step = util_pitch_class(analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
             a[i].key.mode == b[i].key.mode || b[i].key.mode != b[0].key.mode || (difference >= 0 && difference != step)) {
             return false;
@@ -625,7 +625,7 @@ bool form_return_melody_fits(const PiecePlan *plan, NodeId section) {
                 }
                 unsigned mask;
                 unsigned seventh;
-                int pitch_class = ((notes->notes[n].midi % 12) + 12) % 12;
+                int pitch_class = util_pitch_class(notes->notes[n].midi);
                 fits = cell < starts[chord_count] && melody_chord_mask(&key, &chords[c], &mask, &seventh) &&
                        ((mask >> pitch_class) & 1u);
             }

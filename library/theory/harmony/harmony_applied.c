@@ -70,8 +70,10 @@ bool harmony_applied_function(HarmonyMode mode, const HarmonyAppliedChord *chord
     return true;
 }
 
-bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, char *out, size_t size) {
-    if (out == NULL || !harmony_applied_valid(mode, chord)) {
+bool harmony_applied_label_inverted(HarmonyMode mode, const HarmonyAppliedChord *chord, int inversion, char *out,
+                                    size_t size) {
+    if (out == NULL || !harmony_applied_valid(mode, chord) || inversion < 0 ||
+        inversion > (harmony_applied_quality_is_seventh(chord->quality) ? 3 : 1)) {
         return false;
     }
     /* The target is a triad of its key: the natural scale's, but with the major dominant of the harmonic minor. */
@@ -86,10 +88,15 @@ bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, c
     memset(&text, 0, sizeof(text));
     text.degree = QUALITY_NUMERALS[chord->quality].degree;
     text.quality = QUALITY_NUMERALS[chord->quality].quality;
+    text.inversion = inversion;
     text.has_target = true;
     text.target_degree = chord->target;
     text.target_minor = target_quality == STANDARD_TONALITY_TRIAD_MINOR;
     return standard_tonality_numeral_format_styled(&text, STANDARD_TONALITY_NUMERAL_STYLE_PLAN, out, size);
+}
+
+bool harmony_applied_label(HarmonyMode mode, const HarmonyAppliedChord *chord, char *out, size_t size) {
+    return harmony_applied_label_inverted(mode, chord, 0, out, size);
 }
 
 int harmony_applied_scale_semitone(HarmonyMode mode, int degree) {
