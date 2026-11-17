@@ -12,3 +12,10 @@ ursatz_test_library(ursatz_test_http SOURCES support/test_http.c LIBS ursatz_tes
 if(WIN32)
     target_link_libraries(ursatz_test_http PUBLIC ws2_32)
 endif()
+
+# Every knowledge entry follows its kind's schema and the rules around ids, citations, relations and examples
+# (tools/ci/check-knowledge.py, target architecture 5). Needs jsonschema, like the other schema tests.
+if(URSATZ_JSONSCHEMA_PYTHON)
+    ursatz_test(knowledge_validate COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${CMAKE_SOURCE_DIR}/tools/ci/check-knowledge.py
+        ${CMAKE_SOURCE_DIR}/knowledge LABELS schema)
+endif()
