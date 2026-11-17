@@ -46,6 +46,37 @@ typedef struct {
     bool have_expansions;
 } Pass;
 
+/* What a pass of the stages from the keys to the form is given: the phrase ends of the pass before as the key regions' boundaries
+   (NULL for none) and whether it is the final pass (the form stage then finds the phrases first, on the grid). */
+typedef struct {
+    const MusicalTime *const *boundaries;
+    size_t boundary_count;
+    bool final;
+} AnalysisChainPass;
+
+struct AnalysisChain;
+
+/*
+ * One stage of the chain. The table below lists them in dependency order, which is the order they run: every row needs only rows
+ * before it. `needs` are the stages a wanted stage pulls in (analysis_chain_run closes the wanted set over them in one backward pass);
+ * `reads_pitches` marks a row that reads the notes' pitches, so they are built when one is wanted; `error` is the status a failure of
+ * the row reports (ANALYSIS_CHAIN_ERR_SEGMENTS plus the bit's index). A row has any of the three steps, each run over the wanted rows
+ * in table order: `prepare` once before the passes, `run_pass` in every pass of the stages from the keys to the form, `finish` once after
+ * them.
+ */
+typedef struct {
+    unsigned bit;
+    unsigned needs;
+    bool reads_pitches;
+    AnalysisChainStatus error;
+    const char *name;
+    AnalysisChainStatus (*prepare)(struct AnalysisChain *chain);
+    AnalysisChainStatus (*run_pass)(struct AnalysisChain *chain, const AnalysisChainPass *pass);
+    AnalysisChainStatus (*finish)(struct AnalysisChain *chain);
+} AnalysisChainStage;
+
+extern const AnalysisChainStage analysis_chain_stages[ANALYSIS_CHAIN_STAGE_COUNT];
+
 struct AnalysisChain {
     AnalysisChainConfig config;
     ChainRelationContext relation_context; /* the key the motive stage reads generic shapes in */

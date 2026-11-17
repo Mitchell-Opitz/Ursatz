@@ -40,42 +40,13 @@ AnalysisChainConfig analysis_chain_config_default(void) {
     return config;
 }
 
-/* A stage pulls in the stages it needs. */
+/* A stage pulls in the stages it needs: one backward pass over the table, every row needing only rows before it. */
 static unsigned stage_closure(unsigned stages) {
-    unsigned before;
-    do {
-        before = stages;
-        if ((stages & ANALYSIS_CHAIN_STAGE_KEYS) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_SEGMENTS;
+    for (size_t i = ANALYSIS_CHAIN_STAGE_COUNT; i-- > 0;) {
+        if ((stages & analysis_chain_stages[i].bit) != 0) {
+            stages |= analysis_chain_stages[i].needs;
         }
-        if ((stages & ANALYSIS_CHAIN_STAGE_CHORDS) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_KEYS;
-        }
-        if ((stages & ANALYSIS_CHAIN_STAGE_NUMERALS) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_CHORDS;
-        }
-        if ((stages & ANALYSIS_CHAIN_STAGE_OUTER_VOICES) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_SEGMENTS;
-        }
-        if ((stages & ANALYSIS_CHAIN_STAGE_CADENCES) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_NUMERALS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES;
-        }
-        if ((stages & ANALYSIS_CHAIN_STAGE_FORM) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_CADENCES;
-        }
-        if ((stages & ANALYSIS_CHAIN_STAGE_METER) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_FORM | ANALYSIS_CHAIN_STAGE_CHORDS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES;
-        }
-        if ((stages & ANALYSIS_CHAIN_STAGE_VOICE_LEADING) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_CADENCES | ANALYSIS_CHAIN_STAGE_SEGMENTS;
-        }
-        if ((stages & ANALYSIS_CHAIN_STAGE_MELODY) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_CHORDS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES;
-        }
-        if ((stages & ANALYSIS_CHAIN_STAGE_SCHEMAS) != 0) {
-            stages |= ANALYSIS_CHAIN_STAGE_NUMERALS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES;
-        }
-    } while (stages != before);
+    }
     return stages;
 }
 
@@ -490,41 +461,58 @@ static AnalysisChainStatus form_stage(AnalysisChain *chain, bool final) {
     return ANALYSIS_CHAIN_OK;
 }
 
-/* The stages from the key regions to the form, over the segments. A pass can be run again after pass_destroy. */
-static AnalysisChainStatus run_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size_t boundary_count, bool final) {
+/* The key regions of a pass: the pitch classes alone in the first, with the phrase ends of the pass before as boundaries in the next. */
+static AnalysisChainStatus pass_keys(AnalysisChain *chain, const AnalysisChainPass *pass) {
     Pass *p = &chain->pass;
-    if (wants(chain, ANALYSIS_CHAIN_STAGE_KEYS)) {
-        CommonPracticeKeyRegionsConfig key_config = chain->config.key_regions;
-        key_config.phrase_boundaries = boundaries;
-        key_config.phrase_boundary_count = boundary_count;
-        if (chain->key_phrase_count > 0) {
-            key_config.phrases = chain->key_phrases; /* the third pass: keys on phrases (R-397) */
-            key_config.phrase_count = chain->key_phrase_count;
-            key_config.repeats = chain->key_repeats;
-            key_config.repeat_count = chain->key_repeat_count;
+    CommonPracticeKeyRegionsConfig key_config = chain->config.key_regions;
+    key_config.phrase_boundaries = pass->boundaries;
+    key_config.phrase_boundary_count = pass->boundary_count;
+    if (chain->key_phrase_count > 0) {
+        key_config.phrases = chain->key_phrases; /* the third pass: keys on phrases (R-397) */
+        key_config.phrase_count = chain->key_phrase_count;
+        key_config.repeats = chain->key_repeats;
+        key_config.repeat_count = chain->key_repeat_count;
+    }
+    if (chain_estimate_key_regions(chain->key_segments, chain->count, chain->notes->map, chain->key_events, chain->key_event_count,
+                                   &key_config, &p->regions) != CHAIN_INPUT_OK) {
+        return ANALYSIS_CHAIN_ERR_KEYS;
+    }
+    p->have_regions = true;
+    chain->home = resolved_home(chain);
+    return ANALYSIS_CHAIN_OK;
+}
+
+static AnalysisChainStatus pass_chords(AnalysisChain *chain, const AnalysisChainPass *pass) {
+    (void)pass;
+    return identify_chords(chain) ? ANALYSIS_CHAIN_OK : ANALYSIS_CHAIN_ERR_CHORDS;
+}
+
+static AnalysisChainStatus pass_numerals(AnalysisChain *chain, const AnalysisChainPass *pass) {
+    (void)pass;
+    return read_numerals(chain) ? ANALYSIS_CHAIN_OK : ANALYSIS_CHAIN_ERR_NUMERALS;
+}
+
+static AnalysisChainStatus pass_cadences(AnalysisChain *chain, const AnalysisChainPass *pass) {
+    bool on_grid = wants(chain, ANALYSIS_CHAIN_STAGE_FORM) && pass->final;
+    return cadence_stage(chain, !on_grid);
+}
+
+static AnalysisChainStatus pass_form(AnalysisChain *chain, const AnalysisChainPass *pass) {
+    return form_stage(chain, pass->final);
+}
+
+/* The stages from the key regions to the form, over the segments, each wanted row's pass in table order. A pass can be run again
+   after pass_destroy. */
+static AnalysisChainStatus run_pass(AnalysisChain *chain, const AnalysisChainPass *pass) {
+    for (size_t i = 0; i < ANALYSIS_CHAIN_STAGE_COUNT; i++) {
+        const AnalysisChainStage *stage = &analysis_chain_stages[i];
+        if (stage->run_pass == NULL || !wants(chain, stage->bit)) {
+            continue;
         }
-        if (chain_estimate_key_regions(chain->key_segments, chain->count, chain->notes->map, chain->key_events,
-                                       chain->key_event_count, &key_config, &p->regions) != CHAIN_INPUT_OK) {
-            return ANALYSIS_CHAIN_ERR_KEYS;
-        }
-        p->have_regions = true;
-        chain->home = resolved_home(chain);
-    }
-    if (wants(chain, ANALYSIS_CHAIN_STAGE_CHORDS) && !identify_chords(chain)) {
-        return ANALYSIS_CHAIN_ERR_CHORDS;
-    }
-    if (wants(chain, ANALYSIS_CHAIN_STAGE_NUMERALS) && !read_numerals(chain)) {
-        return ANALYSIS_CHAIN_ERR_NUMERALS;
-    }
-    if (wants(chain, ANALYSIS_CHAIN_STAGE_CADENCES)) {
-        bool on_grid = wants(chain, ANALYSIS_CHAIN_STAGE_FORM) && final;
-        AnalysisChainStatus status = cadence_stage(chain, !on_grid);
+        AnalysisChainStatus status = stage->run_pass(chain, pass);
         if (status != ANALYSIS_CHAIN_OK) {
             return status;
         }
-    }
-    if (wants(chain, ANALYSIS_CHAIN_STAGE_FORM)) {
-        return form_stage(chain, final);
     }
     return ANALYSIS_CHAIN_OK;
 }
@@ -790,52 +778,75 @@ static bool merge_into_spans(AnalysisChain *chain) {
     return scope_count(chain);
 }
 
-static AnalysisChainStatus prepare(AnalysisChain *chain) {
-    if (wants(chain, ANALYSIS_CHAIN_STAGE_OUTER_VOICES | ANALYSIS_CHAIN_STAGE_TEXTURE | ANALYSIS_CHAIN_STAGE_VOICE_LEADING)) {
-        if (chain_build_pitches(chain->notes, &chain->pitches) != CHAIN_INPUT_OK) {
-            return ANALYSIS_CHAIN_ERR_NOTES;
-        }
-        chain->have_pitches = true;
+/* The segments, with the scope, the repeats and the span merge (R-369 to R-375). */
+static AnalysisChainStatus prepare_segments(AnalysisChain *chain) {
+    if (chain_build_segments(chain->notes, &chain->config.segmentation, &chain->segs) != CHAIN_INPUT_OK) {
+        return ANALYSIS_CHAIN_ERR_SEGMENTS;
     }
-    if (wants(chain, ANALYSIS_CHAIN_STAGE_SEGMENTS)) {
-        if (chain_build_segments(chain->notes, &chain->config.segmentation, &chain->segs) != CHAIN_INPUT_OK) {
-            return ANALYSIS_CHAIN_ERR_SEGMENTS;
-        }
-        chain->have_segs = true;
-        if (chain_build_members(chain->notes, &chain->segs) != CHAIN_INPUT_OK) {
-            return ANALYSIS_CHAIN_ERR_SEGMENTS;
-        }
-        if (!scope_count(chain)) {
-            return ANALYSIS_CHAIN_ERR_NOTES;
-        }
-        if (!find_chain_repeats(chain)) {
-            return ANALYSIS_CHAIN_ERR_NOTES;
-        }
+    chain->have_segs = true;
+    if (chain_build_members(chain->notes, &chain->segs) != CHAIN_INPUT_OK) {
+        return ANALYSIS_CHAIN_ERR_SEGMENTS;
+    }
+    if (!scope_count(chain)) {
+        return ANALYSIS_CHAIN_ERR_NOTES;
+    }
+    if (!find_chain_repeats(chain)) {
+        return ANALYSIS_CHAIN_ERR_NOTES;
     }
     if (chain->config.harmonic_spans && wants(chain, ANALYSIS_CHAIN_STAGE_CHORDS) && !merge_into_spans(chain)) {
         return ANALYSIS_CHAIN_ERR_SEGMENTS;
     }
-    if (wants(chain, ANALYSIS_CHAIN_STAGE_OUTER_VOICES)) {
-        AdaptiveSegmentationConfig voice_config = chain->config.segmentation;
-        voice_config.merge_unchanged_harmony = false;
-        if (chain_build_segments(chain->notes, &voice_config, &chain->voice_segs) != CHAIN_INPUT_OK) {
-            return ANALYSIS_CHAIN_ERR_OUTER_VOICES;
-        }
-        chain->have_voice_segs = true;
-        if (outer_voice_extract(&chain->voice_segs.sonorities, chain->pitches.events, chain->pitches.values, chain->notes->count,
-                                chain->notes->map, standard_meter_segmentation_beat_grid, NULL, &chain->config.outer_voices,
-                                &chain->lines) != OUTER_VOICE_OK) {
-            return ANALYSIS_CHAIN_ERR_OUTER_VOICES;
-        }
-        chain->have_lines = true;
-        if (chain_build_segment_lines(&chain->voice_segs, &chain->lines, &chain->segs, chain->segs.count, &chain->segment_lines) != CHAIN_INPUT_OK) {
-            return ANALYSIS_CHAIN_ERR_OUTER_VOICES;
-        }
-        chain->have_segment_lines = true;
+    return ANALYSIS_CHAIN_OK;
+}
+
+/* The voice segments and the outer lines, on the voice segments and on the chord segments. */
+static AnalysisChainStatus prepare_outer_voices(AnalysisChain *chain) {
+    AdaptiveSegmentationConfig voice_config = chain->config.segmentation;
+    voice_config.merge_unchanged_harmony = false;
+    if (chain_build_segments(chain->notes, &voice_config, &chain->voice_segs) != CHAIN_INPUT_OK) {
+        return ANALYSIS_CHAIN_ERR_OUTER_VOICES;
     }
-    if (wants(chain, ANALYSIS_CHAIN_STAGE_KEYS) &&
-        chain_build_key_segments(&chain->segs, chain->count, &chain->config.weighting, &chain->key_segments) != CHAIN_INPUT_OK) {
-        return ANALYSIS_CHAIN_ERR_KEYS;
+    chain->have_voice_segs = true;
+    if (outer_voice_extract(&chain->voice_segs.sonorities, chain->pitches.events, chain->pitches.values, chain->notes->count,
+                            chain->notes->map, standard_meter_segmentation_beat_grid, NULL, &chain->config.outer_voices,
+                            &chain->lines) != OUTER_VOICE_OK) {
+        return ANALYSIS_CHAIN_ERR_OUTER_VOICES;
+    }
+    chain->have_lines = true;
+    if (chain_build_segment_lines(&chain->voice_segs, &chain->lines, &chain->segs, chain->segs.count, &chain->segment_lines) !=
+        CHAIN_INPUT_OK) {
+        return ANALYSIS_CHAIN_ERR_OUTER_VOICES;
+    }
+    chain->have_segment_lines = true;
+    return ANALYSIS_CHAIN_OK;
+}
+
+static AnalysisChainStatus prepare_keys(AnalysisChain *chain) {
+    return chain_build_key_segments(&chain->segs, chain->count, &chain->config.weighting, &chain->key_segments) == CHAIN_INPUT_OK
+               ? ANALYSIS_CHAIN_OK
+               : ANALYSIS_CHAIN_ERR_KEYS;
+}
+
+/* The pitches when a wanted row reads them, then each wanted row's prepare in table order. */
+static AnalysisChainStatus prepare(AnalysisChain *chain) {
+    for (size_t i = 0; i < ANALYSIS_CHAIN_STAGE_COUNT; i++) {
+        if (analysis_chain_stages[i].reads_pitches && wants(chain, analysis_chain_stages[i].bit)) {
+            if (chain_build_pitches(chain->notes, &chain->pitches) != CHAIN_INPUT_OK) {
+                return ANALYSIS_CHAIN_ERR_NOTES;
+            }
+            chain->have_pitches = true;
+            break;
+        }
+    }
+    for (size_t i = 0; i < ANALYSIS_CHAIN_STAGE_COUNT; i++) {
+        const AnalysisChainStage *stage = &analysis_chain_stages[i];
+        if (stage->prepare == NULL || !wants(chain, stage->bit)) {
+            continue;
+        }
+        AnalysisChainStatus status = stage->prepare(chain);
+        if (status != ANALYSIS_CHAIN_OK) {
+            return status;
+        }
     }
     return ANALYSIS_CHAIN_OK;
 }
@@ -966,6 +977,31 @@ static bool phrase_boundaries(AnalysisChain *chain) {
     return true;
 }
 
+/* --- the stage table --- */
+
+#define STAGE_ERROR(bit_index) ((AnalysisChainStatus)(ANALYSIS_CHAIN_ERR_SEGMENTS + (bit_index)))
+
+const AnalysisChainStage analysis_chain_stages[ANALYSIS_CHAIN_STAGE_COUNT] = {
+    {ANALYSIS_CHAIN_STAGE_SEGMENTS, 0, false, STAGE_ERROR(0), "segments", prepare_segments, NULL, NULL},
+    {ANALYSIS_CHAIN_STAGE_OUTER_VOICES, ANALYSIS_CHAIN_STAGE_SEGMENTS, true, STAGE_ERROR(4), "outer voices", prepare_outer_voices, NULL,
+     NULL},
+    {ANALYSIS_CHAIN_STAGE_KEYS, ANALYSIS_CHAIN_STAGE_SEGMENTS, false, STAGE_ERROR(1), "keys", prepare_keys, pass_keys, NULL},
+    {ANALYSIS_CHAIN_STAGE_CHORDS, ANALYSIS_CHAIN_STAGE_KEYS, false, STAGE_ERROR(2), "chords", NULL, pass_chords, NULL},
+    {ANALYSIS_CHAIN_STAGE_NUMERALS, ANALYSIS_CHAIN_STAGE_CHORDS, false, STAGE_ERROR(3), "numerals", NULL, pass_numerals, NULL},
+    {ANALYSIS_CHAIN_STAGE_CADENCES, ANALYSIS_CHAIN_STAGE_NUMERALS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES, false, STAGE_ERROR(5),
+     "cadences", NULL, pass_cadences, NULL},
+    {ANALYSIS_CHAIN_STAGE_FORM, ANALYSIS_CHAIN_STAGE_CADENCES, false, STAGE_ERROR(6), "form", NULL, pass_form, motive_stage},
+    {ANALYSIS_CHAIN_STAGE_METER, ANALYSIS_CHAIN_STAGE_FORM | ANALYSIS_CHAIN_STAGE_CHORDS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES, false,
+     STAGE_ERROR(7), "meter", NULL, NULL, meter_stage},
+    {ANALYSIS_CHAIN_STAGE_TEXTURE, 0, true, STAGE_ERROR(8), "texture", NULL, NULL, texture_stage},
+    {ANALYSIS_CHAIN_STAGE_VOICE_LEADING, ANALYSIS_CHAIN_STAGE_CADENCES | ANALYSIS_CHAIN_STAGE_SEGMENTS, true, STAGE_ERROR(9),
+     "voice leading", NULL, NULL, voice_leading_stage},
+    {ANALYSIS_CHAIN_STAGE_MELODY, ANALYSIS_CHAIN_STAGE_CHORDS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES, false, STAGE_ERROR(10), "melody",
+     NULL, NULL, melody_stage},
+    {ANALYSIS_CHAIN_STAGE_SCHEMAS, ANALYSIS_CHAIN_STAGE_NUMERALS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES, false, STAGE_ERROR(11), "schemas",
+     NULL, NULL, schema_stage},
+};
+
 AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const AnalysisKeyEvent *key_events, size_t key_event_count,
                                        const AnalysisChainConfig *config, AnalysisChain **out) {
     if (notes == NULL || out == NULL || (key_event_count > 0 && key_events == NULL)) {
@@ -1003,7 +1039,7 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
     if (status == ANALYSIS_CHAIN_OK && wants(chain, ANALYSIS_CHAIN_STAGE_KEYS)) {
         bool from_phrases = wants(chain, ANALYSIS_CHAIN_STAGE_FORM);
         bool refining = chain->config.refine_keys && (from_phrases || chain->config.refine_with_given_boundaries);
-        status = run_pass(chain, NULL, 0, !refining);
+        status = run_pass(chain, &(AnalysisChainPass){NULL, 0, !refining});
         /* The keys depend on the phrases, which depend on the cadences, which depend on the keys: the chords of the first pass are
            evidence for the keys and its phrase ends their boundaries, and everything from the keys on runs once more. */
         if (status == ANALYSIS_CHAIN_OK && refining) {
@@ -1018,7 +1054,7 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
                                                                     : chain->config.key_regions.phrase_boundaries;
                 size_t boundary_count = from_phrases ? chain->boundary_count : chain->config.key_regions.phrase_boundary_count;
                 pass_destroy(chain);
-                status = run_pass(chain, boundaries, boundary_count, true);
+                status = run_pass(chain, &(AnalysisChainPass){boundaries, boundary_count, true});
                 /* The third pass (R-398): the keys are placed on the phrases of the second, which read everything once more in them. */
                 if (status == ANALYSIS_CHAIN_OK && from_phrases && chain->pass.have_grid) {
                     for (size_t s = 0; s < chain->count; s++) {
@@ -1028,29 +1064,18 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
                         status = ANALYSIS_CHAIN_ERR_ALLOC;
                     } else if (chain->key_phrase_count > 0) {
                         pass_destroy(chain);
-                        status = run_pass(chain, NULL, 0, true);
+                        status = run_pass(chain, &(AnalysisChainPass){NULL, 0, true});
                     }
                 }
             }
         }
     }
-    if (status == ANALYSIS_CHAIN_OK && wants(chain, ANALYSIS_CHAIN_STAGE_FORM)) {
-        status = motive_stage(chain);
-    }
-    if (status == ANALYSIS_CHAIN_OK && wants(chain, ANALYSIS_CHAIN_STAGE_METER)) {
-        status = meter_stage(chain);
-    }
-    if (status == ANALYSIS_CHAIN_OK && wants(chain, ANALYSIS_CHAIN_STAGE_TEXTURE)) {
-        status = texture_stage(chain);
-    }
-    if (status == ANALYSIS_CHAIN_OK && wants(chain, ANALYSIS_CHAIN_STAGE_VOICE_LEADING)) {
-        status = voice_leading_stage(chain);
-    }
-    if (status == ANALYSIS_CHAIN_OK && wants(chain, ANALYSIS_CHAIN_STAGE_MELODY)) {
-        status = melody_stage(chain);
-    }
-    if (status == ANALYSIS_CHAIN_OK && wants(chain, ANALYSIS_CHAIN_STAGE_SCHEMAS)) {
-        status = schema_stage(chain);
+    /* What the stages after the passes add, each wanted row's finish in table order. */
+    for (size_t i = 0; status == ANALYSIS_CHAIN_OK && i < ANALYSIS_CHAIN_STAGE_COUNT; i++) {
+        const AnalysisChainStage *stage = &analysis_chain_stages[i];
+        if (stage->finish != NULL && wants(chain, stage->bit)) {
+            status = stage->finish(chain);
+        }
     }
     if (status != ANALYSIS_CHAIN_OK) {
         analysis_chain_destroy(chain);

@@ -79,7 +79,8 @@
 #define ANALYSIS_CHAIN_STAGE_VOICE_LEADING (1u << 9)
 #define ANALYSIS_CHAIN_STAGE_MELODY        (1u << 10)
 #define ANALYSIS_CHAIN_STAGE_SCHEMAS       (1u << 11)
-#define ANALYSIS_CHAIN_STAGE_ALL           ((1u << 12) - 1u)
+#define ANALYSIS_CHAIN_STAGE_COUNT         12u
+#define ANALYSIS_CHAIN_STAGE_ALL           ((1u << ANALYSIS_CHAIN_STAGE_COUNT) - 1u)
 
 /*
  * The seventh penalty (CommonPracticeWeightedConfig.seventh_penalty) of the chord identification on harmonic spans (R-376). A span reads
