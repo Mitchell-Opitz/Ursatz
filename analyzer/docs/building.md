@@ -52,8 +52,9 @@ Tests:
 - `test_long_labels`: labels past 31 characters render intact.
 - `test_document_snapshots`: the analysis
   document (MIDI, without `analyzer_version`, `producer_key` and `input`) of the five reference pieces, byte for byte
-  against `tests/snapshots/<piece>.analysis.json`. Run a test with `UPDATE_SNAPSHOTS=1` (or
-  `URSATZ_UPDATE_SNAPSHOTS=1`) to rewrite its files; a claim that moves is recaptured in its own commit.
+  against `tests/snapshots/<piece>.analysis.json`. Rewrite its files with
+  `cmake --build build --target update-goldens` (every test labelled `golden`, see "Goldens" in the root `README.md`);
+  a claim that moves is recaptured in its own commit.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
   and beat of the chords covering chosen positions, for the five reference pieces and two

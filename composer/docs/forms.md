@@ -114,8 +114,8 @@ compose. A form whose sections the request gives takes no sizes and no `piece_pl
 
 | Test | What it checks | Label |
 | --- | --- | --- |
-| `test_form_plans_templates` | The plan of every built-in form at every size, in C major 4/4 and A minor 3/4, with an invented motive, without `modulate` and with it and seeds 1 to 5, hashes as `tests/fixtures/forms/template-plans.txt` records them (R-417). `test_form_plans record` writes the file. | |
-| `test_form_plans_pieces` | The loop plan of each piece request in `tests/fixtures/piece` (loop and ending, progression fill, structure only, theme fill), hashes as `tests/fixtures/forms/piece-plans.txt` records them (R-417). The ending plan is pinned by the `piece-loop-and-ending.*` snapshots. `test_form_plans record-pieces` writes the file. | |
+| `test_form_plans_templates` | The plan of every built-in form at every size, in C major 4/4 and A minor 3/4, with an invented motive, without `modulate` and with it and seeds 1 to 5, hashes as `tests/fixtures/forms/template-plans.txt` records them (R-417). `update-goldens` writes the file. | |
+| `test_form_plans_pieces` | The loop plan of each piece request in `tests/fixtures/piece` (loop and ending, progression fill, structure only, theme fill), hashes as `tests/fixtures/forms/piece-plans.txt` records them (R-417). The ending plan is pinned by the `piece-loop-and-ending.*` snapshots. `update-goldens` writes the file. | |
 | `test_form_spec` | Every built-in parses and is as the table says; each refusal of the reader with its path; `form_spec_size` for every size, count and bad size of each built-in; the game loop document, the refusals of its members and the default cadences for each layout of parts. | |
 | `test_piece_structure_*`, `test_loop_seam_*`, `test_piece_fills_*` | The game loop's checks, defaults, plans and composed runs, built as a `PieceRequest` of the form `game-loop`. | |
 | `test_form_spec_custom` | A form added as a document alone composes (seeds 1 to 10); with `checks` set to `sections` alone the same seed writes the same plan and hears no return. | |

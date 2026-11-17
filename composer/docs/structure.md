@@ -32,13 +32,16 @@ The source directories of the Composer, the CLI snapshot tests and the file scop
 `test_cli_snapshots` (`tests/cli_snapshots.cmake`) runs the seeded commands on the fixtures and compares each output with
 `tests/snapshots/<case>.<ext>`. The values of `analyzer_version`, `composer_version` and `ursatz_commit` (the producer key) are ignored; files
 ending `.json` are compared as JSON values (member order and indentation do not matter, `test_cli_snapshot_compare` proves
-it); MIDI, MusicXML and text are compared byte for byte. After a change that is meant to move output, recapture and review
-the diff:
+it); MIDI, MusicXML and text are compared byte for byte. Comparing runs only the CLI front end: the cases no API test
+reads and one case per command the API tests cover (`COMPARED_CASES` in the script; the refusal cases always run); the
+API tests compare the rest of each command's output against the same files. After a change that is meant to move output,
+recapture and review the diff with the target that updates every golden (it runs every case):
 
 ```sh
-cmake -DCOMPOSER=build/cli/ursatz-composer -DWORK=build/tests/cli_snapshots -DSNAPSHOTS=tests/snapshots \
-      -DFIXTURES=tests/fixtures -DUPDATE=1 -P tests/cli_snapshots.cmake
+cmake --build build --target update-goldens
 ```
+
+See "Goldens" in the root `README.md`.
 
 The GUI runs the CLI per request, so the cases below lock every shape it uses (fixtures in `tests/fixtures/gui/`). They must
 not move while the CLI is moved onto the composer API:

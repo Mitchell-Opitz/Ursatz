@@ -32,6 +32,8 @@ ctest --test-dir build --output-on-failure -LE slow
 
 Tests are registered with `ursatz_test()` (`cmake/UrsatzTest.cmake`; `ursatz_test_executable()` and `ursatz_test_library()` build shared helpers). It compiles every test executable with `-UNDEBUG`, so asserts hold in any build type, defines `URSATZ_FIXTURES_DIR` (the root `tests/fixtures`), and sets the timeout (120 s, or 1800 s for a `slow` test). Labels: `slow` (nightly only), `valgrind` (always with `slow`), `schema`, `accuracy`, `golden`. Some tests need valgrind, python3 with jsonschema or node (`cmake/UrsatzTools.cmake`); a test whose tool is missing is not registered, and `-DURSATZ_REQUIRE="valgrind;jsonschema;node"` makes the configure fail when a named tool is missing.
 
+Goldens: the tests labelled `golden` compare their output with checked-in files (`analyzer/tests/snapshots`, `composer/tests/snapshots`, `tests/fixtures/forms`, `gui/backend/tests/fixtures/pieces`). One switch updates all of them: `cmake --build build --target update-goldens` (build the tree first) runs `ctest -L golden` with `URSATZ_UPDATE_GOLDENS=1`, which makes every golden test write its files, then runs `ctest -L golden` again without the switch and fails when that run does. The update run fails on purpose: a test run with `URSATZ_UPDATE_GOLDENS` set exits 2 and prints `<test>: goldens updated (URSATZ_UPDATE_GOLDENS)`, so CI can never pass in update mode. Review the changed files with `git diff` and commit them in their own commit. The chain digests (inline in `test_analysis_chain.c`, printed by `URSATZ_CHAIN_DUMP=1`) and the accuracy baseline (`accuracy_harness --update-baseline`) are not goldens in this sense.
+
 Options (both ON by default):
 
 - `URSATZ_TESTS`: build and register the tests of every part.
