@@ -403,9 +403,12 @@ static void test_pickup_at_start(void) {
 /* A pickup is on the meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division), and not a
    bar or more of the longest meter. */
 static void test_pickup_constraint(void) {
-    static const long NUM[4] = {1, 1, 0, 3};
-    static const unsigned long DEN[4] = {3, 64, 4, 2};
-    static const PlanResult EXPECTED[4] = {PLAN_OK, PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD, PLAN_OK};
+    /* 1/3 is four triplet eighths, 1/6 a triplet of the beat, 1/12 a triplet of the division; 1/24 and 1/48 are on no level */
+    static const long NUM[9] = {1, 1, 0, 3, 1, 1, 1, 1, 5};
+    static const unsigned long DEN[9] = {3, 64, 4, 2, 6, 12, 24, 48, 32};
+    static const PlanResult EXPECTED[9] = {PLAN_OK,          PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD,
+                                           PLAN_OK,          PLAN_OK,              PLAN_OK,
+                                           PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD, PLAN_OK};
     Piece piece = build(PICKUP_CHORDS, 5, false);
     NodeId motive = add_melody_motive(&piece);
     PlanSpan span = {beats(3), beats(9)};
@@ -413,7 +416,7 @@ static void test_pickup_constraint(void) {
     memset(&pickup, 0, sizeof(pickup));
     pickup.kind = PLAN_CONSTRAINT_PICKUP;
     add_melody_target(&piece, span, motive, 0);
-    for (size_t i = 0; i < 4; i++) {
+    for (size_t i = 0; i < 9; i++) {
         pickup.params.pickup.num = NUM[i];
         pickup.params.pickup.den = DEN[i];
         assert(plan_lane_span_add_constraint(piece.plan, piece.target, &pickup) == EXPECTED[i]);

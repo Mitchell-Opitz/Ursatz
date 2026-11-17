@@ -148,6 +148,27 @@ static void test_checks(void) {
     assert(piece_request_check(&fixture.request) == PIECE_OK);
     assert(rational_make(1, 64, &section->pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+    /* every multiple of 1/32 is still on the grid; a triplet of the beat is too; 1/24 and 1/48 are on no level */
+    assert(rational_make(3, 32, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(rational_make(1, 6, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(rational_make(1, 24, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+    assert(rational_make(1, 48, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+
+    /* in 6/8 the division is an eighth: a dotted eighth is on the grid, a triplet eighth (1/12) is not */
+    fixture_init(&fixture);
+    fixture.request.meter.beats_per_bar = 6;
+    fixture.request.meter.beat_unit = 8;
+    section = add_section(&fixture, "a", "A", PIECE_PART_BODY, 12, PIECE_FILL_EMPTY);
+    assert(rational_make(3, 16, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(rational_make(1, 32, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(rational_make(1, 12, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
     /* Too many sections, and too many bars. */
     fixture_init(&fixture);

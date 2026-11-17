@@ -173,6 +173,30 @@ static void test_id_stable_under_round_trip(void) {
     note_event_destroy(note_event);
 }
 
+/* The notated tuplet is optional: none until set, any valid Tuplet ratio after, a refusal leaves the note as it was. */
+static void test_notated_tuplet(void) {
+    NoteEvent *note_event = make_minimal_note_event("note-tuplet");
+    unsigned actual = 99;
+    unsigned normal = 99;
+    assert(!note_event_tuplet(note_event, &actual, &normal));
+    assert(actual == 99 && normal == 99);
+
+    assert(note_event_set_tuplet(note_event, 5, 4) == NOTE_EVENT_OK);
+    assert(note_event_tuplet(note_event, &actual, &normal) && actual == 5 && normal == 4);
+    assert(note_event_tuplet(note_event, NULL, NULL));
+
+    assert(note_event_set_tuplet(note_event, 2, 3) == NOTE_EVENT_OK); /* a duplet */
+    assert(note_event_tuplet(note_event, &actual, &normal) && actual == 2 && normal == 3);
+
+    /* equal counts, a single note, and counts beyond the Tuplet bounds are not tuplets */
+    assert(note_event_set_tuplet(note_event, 3, 3) == NOTE_EVENT_ERR_BAD_TUPLET);
+    assert(note_event_set_tuplet(note_event, 1, 2) == NOTE_EVENT_ERR_BAD_TUPLET);
+    assert(note_event_set_tuplet(note_event, 3, 0) == NOTE_EVENT_ERR_BAD_TUPLET);
+    assert(note_event_set_tuplet(note_event, 65, 4) == NOTE_EVENT_ERR_BAD_TUPLET);
+    assert(note_event_tuplet(note_event, &actual, &normal) && actual == 2 && normal == 3);
+    note_event_destroy(note_event);
+}
+
 int main(void) {
     test_create_rejects_null_id();
     test_create_rejects_null_pitch();
@@ -182,5 +206,6 @@ int main(void) {
     test_duration_invariant_enforced_by_duration_type();
     test_optional_voice_exposes_only_opaque_reference();
     test_id_stable_under_round_trip();
+    test_notated_tuplet();
     return 0;
 }

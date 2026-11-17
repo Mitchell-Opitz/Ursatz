@@ -94,6 +94,14 @@ static inline void bag_add_note(TestBag *bag, const char *id, long pos_n, unsign
     bag_add(bag, tu_note(id, pos_n, pos_d, dur_n, dur_d, letter, 0, 4, voice), 0, 1);
 }
 
+/* A note with a notated tuplet: actual notes in the time of normal of the same written value. */
+static inline void bag_add_tuplet_note(TestBag *bag, const char *id, long pos_n, unsigned long pos_d, long dur_n,
+                                       unsigned long dur_d, PitchLetter letter, unsigned actual, unsigned normal) {
+    NoteEvent *event = tu_note(id, pos_n, pos_d, dur_n, dur_d, letter, 0, 4, NULL);
+    assert(note_event_set_tuplet(event, actual, normal) == NOTE_EVENT_OK);
+    bag_add(bag, event, 0, 1);
+}
+
 static inline void bag_free(TestBag *bag) {
     for (size_t i = 0; i < bag->count; i++) {
         note_event_destroy(bag->events[i]);
