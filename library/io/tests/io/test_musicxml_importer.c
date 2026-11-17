@@ -380,9 +380,11 @@ static void test_additive_and_unsupported_meters(void) {
     assert(import_text(DOC("<attributes><divisions>2</divisions><time><beats>3+2</beats><beat-type>8</beat-type></time></attributes>"
                            "<note><rest/><duration>5</duration></note>"),
                        &import) == MUSICXML_IMPORT_OK);
-    assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "additive") != NULL);
+    assert(import.warnings.count == 0);
     const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
     assert(time_signature_top_number(signature) == 5 && time_signature_bottom_number(signature) == 8);
+    assert(time_signature_group_count(signature) == 2 && time_signature_group_at(signature, 0) == 3 &&
+           time_signature_group_at(signature, 1) == 2);
     musicxml_import_destroy(&import);
 
     assert(import_text(DOC("<attributes><divisions>4</divisions><time><beats>4</beats><beat-type>3</beat-type></time></attributes>"

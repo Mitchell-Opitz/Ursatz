@@ -63,7 +63,7 @@ read by Ursatz's MusicXMLImporter.
 - **Not supported.** Compressed `.mxl` (the Ursatz importer reads uncompressed documents only; the
   analyzer reports it as unsupported rather than unzipping it: export the score as uncompressed
   MusicXML), `score-timewise`, grace notes, wedges (crescendo and diminuendo), additive meters
-  (summed) and senza-misura. Repeats and endings are not unfolded: the score is analyzed once, in
+  (read as beat groups, analyzed as the summed meter) and senza-misura. Repeats and endings are not unfolded: the score is analyzed once, in
   written order.
 - **Schema.** The analysis document is schema version 9 (see
   [analysis-document.md](analysis-document.md)).

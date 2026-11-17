@@ -43,7 +43,7 @@
  * detects a pickup only from a short first region, so the importer ends that region at the pickup's length). The
  * measure numbers, and where every barline falls, come from the MeterMap and the time signatures alone: a measure
  * of the document whose length differs from its signature's (other than an implicit one) cannot be represented
- * and is a warning. Additive meters (3+2) are summed, with a warning; senza-misura and beat types that are not
+ * and is a warning. An additive meter (3+2) is read as beat groups (time_signature_create_grouped); one with more than 16 groups or a group above 16 units is summed, with a warning; senza-misura and beat types that are not
  * a power of two are skipped.
  *
  * Keys. Each <key> gives a key-signature event {KeySignature, mode hint, position}, the same entry shape as

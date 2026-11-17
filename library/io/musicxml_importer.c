@@ -65,6 +65,8 @@ typedef struct {
     Rational position;
     unsigned beats;
     int exponent;       /* the beat unit is 2^-exponent of a whole note: 0 whole, 2 quarter, 3 eighth */
+    size_t group_count; /* the beat groups of an additive "3+2", else 0 for the signature's default groups */
+    unsigned groups[TIME_SIGNATURE_MAX_GROUPS];
     size_t part;
 } TimeEvent;
 
@@ -498,7 +500,7 @@ static bool grow(Ctx *ctx, void **array, size_t *capacity, size_t count, size_t 
     return true;
 }
 
-/* <time>: <beats> (a whole number, or "3+2") and <beat-type> (a power of two). */
+/* <time>: <beats> (a whole number, or "3+2", the beat groups) and <beat-type> (a power of two). */
 static bool handle_time(Ctx *ctx, PartState *state, ezxml_t time) {
     if (ezxml_child(time, "senza-misura") != NULL) {
         return true;
@@ -511,6 +513,9 @@ static bool handle_time(Ctx *ctx, PartState *state, ezxml_t time) {
         return true;
     }
     unsigned long beats = 0;
+    unsigned groups[TIME_SIGNATURE_MAX_GROUPS];
+    size_t group_count = 0;
+    bool groupable = true; /* every part fits a beat group and there are few enough of them */
     bool additive = false;
     bool valid = true;
     for (const char *cursor = beats_text; *cursor != '\0' && valid;) {
@@ -521,6 +526,11 @@ static bool handle_time(Ctx *ctx, PartState *state, ezxml_t time) {
             break;
         }
         beats += (unsigned long)part;
+        if (group_count < TIME_SIGNATURE_MAX_GROUPS && part <= TIME_SIGNATURE_MAX_GROUP_UNITS) {
+            groups[group_count++] = (unsigned)part;
+        } else {
+            groupable = false;
+        }
         cursor = end;
         if (*cursor == '+') {
             additive = true;
@@ -542,16 +552,22 @@ static bool handle_time(Ctx *ctx, PartState *state, ezxml_t time) {
         warn(ctx, "time signature %s/%ld skipped (not a whole number of beats over a power of two)", beats_text, beat_type);
         return true;
     }
-    if (additive) {
-        warn(ctx, "additive meter %s/%ld summed to %lu/%ld", beats_text, beat_type, beats, beat_type);
+    if (additive && !groupable) {
+        warn(ctx, "additive meter %s/%ld summed to %lu/%ld (beat groups are 1 to %d of up to %d units)", beats_text,
+             beat_type, beats, beat_type, TIME_SIGNATURE_MAX_GROUPS, TIME_SIGNATURE_MAX_GROUP_UNITS);
     }
     if (!grow(ctx, (void **)&ctx->times, &ctx->time_capacity, ctx->time_count, sizeof(TimeEvent))) {
         return false;
     }
     TimeEvent *event = &ctx->times[ctx->time_count++];
+    memset(event, 0, sizeof(*event));
     event->position = state->cursor;
     event->beats = (unsigned)beats;
     event->exponent = exponent;
+    if (additive && groupable) {
+        event->group_count = group_count;
+        memcpy(event->groups, groups, group_count * sizeof(unsigned));
+    }
     event->part = ctx->current_part;
     state->has_signature = true;
     state->measure_length = rational_ratio(beats, 1ull << exponent);
@@ -1040,7 +1056,8 @@ static int compare_key_events(const void *a, const void *b) {
 }
 
 static bool same_signature(const TimeEvent *a, const TimeEvent *b) {
-    return a->beats == b->beats && a->exponent == b->exponent;
+    return a->beats == b->beats && a->exponent == b->exponent && a->group_count == b->group_count &&
+           memcmp(a->groups, b->groups, a->group_count * sizeof(unsigned)) == 0;
 }
 
 static bool build_meter_map(Ctx *ctx) {
@@ -1096,7 +1113,9 @@ static bool build_meter_map(Ctx *ctx) {
     for (size_t i = 0; i < kept_count && ok; i++) {
         NoteValue *unit = NULL;
         ok = note_value_create(kept[i].exponent, &unit) == NOTE_VALUE_OK &&
-             time_signature_create(kept[i].beats, unit, &signatures[i]) == TIME_SIGNATURE_OK;
+             (kept[i].group_count > 0
+                  ? time_signature_create_grouped(kept[i].groups, kept[i].group_count, unit, &signatures[i])
+                  : time_signature_create(kept[i].beats, unit, &signatures[i])) == TIME_SIGNATURE_OK;
         note_value_destroy(unit);
         points[i].time_signature = signatures[i];
         points[i].start = musical_time_of(kept[i].position);

@@ -1677,6 +1677,28 @@ typedef struct {
     long long measure_start;
 } DirCtx;
 
+/* The text of <beats>: the top number, or the beat groups joined by "+" ("3+2") when they differ in size. */
+static void write_beats(const TimeSignature *signature, char *out, size_t capacity) {
+    size_t count = time_signature_group_count(signature);
+    bool equal = true;
+    for (size_t i = 1; i < count; i++) {
+        equal = equal && time_signature_group_at(signature, i) == time_signature_group_at(signature, 0);
+    }
+    if (equal) {
+        snprintf(out, capacity, "%u", time_signature_top_number(signature));
+        return;
+    }
+    size_t used = 0;
+    out[0] = '\0';
+    for (size_t i = 0; i < count && used + 1 < capacity; i++) {
+        int written = snprintf(out + used, capacity - used, i == 0 ? "%u" : "+%u", time_signature_group_at(signature, i));
+        if (written < 0 || (size_t)written >= capacity - used) {
+            break;
+        }
+        used += (size_t)written;
+    }
+}
+
 static void write_key(XmlBuf *buf, const MusicXmlExportKeySignature *key, const char *indent) {
     xmlbuf_append(buf, "%s<key>\n%s  <fifths>%d</fifths>\n", indent, indent, key->sharps_flats);
     if (key->mode == MUSICXML_EXPORT_MODE_MAJOR) {
@@ -1953,10 +1975,12 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
     }
     if (has_time) {
         const TimeSignature *signature = meter_map_region_time_signature(region);
+        char beats[TIME_SIGNATURE_MAX_TOP_NUMBER * 3 + 8];
+        write_beats(signature, beats, sizeof(beats));
         xmlbuf_append(buf,
-                      "        <time>\n          <beats>%u</beats>\n          <beat-type>%u</beat-type>\n"
+                      "        <time>\n          <beats>%s</beats>\n          <beat-type>%u</beat-type>\n"
                       "        </time>\n",
-                      time_signature_top_number(signature), time_signature_bottom_number(signature));
+                      beats, time_signature_bottom_number(signature));
     }
     if (has_staves) {
         xmlbuf_append(buf, "        <staves>%d</staves>\n", prep->parts[part].staff_count);
