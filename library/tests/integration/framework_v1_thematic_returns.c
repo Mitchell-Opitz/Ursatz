@@ -66,7 +66,7 @@ static bool fv1_window_of_events(const NoteEvent *const *events, size_t count, c
     }
     PitchIdentity **pitch_ids = (PitchIdentity **)calloc(count, sizeof(PitchIdentity *));
     ContourDirection *directions = (ContourDirection *)calloc(count - 1, sizeof(ContourDirection));
-    Duration **durations = (Duration **)calloc(count, sizeof(Duration *));
+    Duration *durations = (Duration *)calloc(count, sizeof(Duration));
     assert(pitch_ids != NULL && directions != NULL && durations != NULL);
     long previous = 0;
     for (size_t i = 0; i < count; i++) {
@@ -76,12 +76,11 @@ static bool fv1_window_of_events(const NoteEvent *const *events, size_t count, c
             directions[i - 1] = semitone > previous ? CONTOUR_DIRECTION_UP : (semitone < previous ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);
         }
         previous = semitone;
-        const Duration *d = note_event_duration(events[i]);
-        assert(duration_create(duration_numerator(d), duration_denominator(d), &durations[i]) == DURATION_OK);
+        durations[i] = *note_event_duration(events[i]);
     }
     assert(contour_create(pitch_ids, count, directions, count - 1, contour) == CONTOUR_OK);
     assert(rhythmic_pattern_create(durations, count, rhythm) == RHYTHMIC_PATTERN_OK);
-    /* the Contour and the RhythmicPattern own the elements and copy the arrays, which are ours to free */
+    /* the Contour owns the elements and copies the arrays; the pattern copies the durations; the arrays are ours to free */
     free(pitch_ids);
     free(directions);
     free(durations);

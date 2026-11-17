@@ -167,30 +167,20 @@ static void free_pitch_ids(PitchIdentity **ids, size_t count) {
     free(ids);
 }
 
-static void free_durations(Duration **durations, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        if (durations[i]) {
-            duration_destroy(durations[i]);
-        }
-    }
-    free(durations);
-}
-
 /* The contour and rhythm of the notes of input->notes at `positions` (count >= 2). On false nothing is kept. */
 static bool make_contour_and_rhythm(const StandardFormInput *input, const size_t *positions, size_t count,
                                     Contour **contour, RhythmicPattern **rhythm) {
     PitchIdentity **pitch_ids = calloc(count, sizeof(PitchIdentity *));
     ContourDirection *directions = calloc(count - 1, sizeof(ContourDirection));
-    Duration **durations = calloc(count, sizeof(Duration *));
+    Duration *durations = calloc(count, sizeof(Duration));
     bool ok = pitch_ids && directions && durations;
     for (size_t i = 0; ok && i < count; i++) {
         const AnalysisNote *note = &input->notes[positions[i]];
         char token[48];
         int length = snprintf(token, sizeof(token), "p%ld-%zu", (long)note->midi, i);
         const Duration *duration = note_event_duration(note->event);
-        ok = pitch_identity_create(token, (size_t)length, &pitch_ids[i]) == PITCH_IDENTITY_OK &&
-             duration_create(duration_numerator(duration), duration_denominator(duration), &durations[i]) ==
-                 DURATION_OK;
+        ok = pitch_identity_create(token, (size_t)length, &pitch_ids[i]) == PITCH_IDENTITY_OK;
+        durations[i] = *duration;
         if (ok && i > 0) {
             long previous = input->notes[positions[i - 1]].midi;
             directions[i - 1] = note->midi > previous ? CONTOUR_DIRECTION_UP
@@ -199,7 +189,7 @@ static bool make_contour_and_rhythm(const StandardFormInput *input, const size_t
         }
     }
     if (ok) {
-        /* On success the contour and the pattern own the ids and the durations and copy the arrays. */
+        /* On success the contour owns the ids and copies the arrays; the pattern copies the durations. */
         ok = contour_create(pitch_ids, count, directions, count - 1, contour) == CONTOUR_OK;
         if (ok) {
             ok = rhythmic_pattern_create(durations, count, rhythm) == RHYTHMIC_PATTERN_OK;
@@ -208,7 +198,7 @@ static bool make_contour_and_rhythm(const StandardFormInput *input, const size_t
                 *contour = NULL;
                 free(pitch_ids);
                 free(directions);
-                free_durations(durations, count);
+                free(durations);
                 return false;
             }
             free(pitch_ids);
@@ -219,7 +209,7 @@ static bool make_contour_and_rhythm(const StandardFormInput *input, const size_t
     }
     free_pitch_ids(pitch_ids, count);
     free(directions);
-    free_durations(durations, count);
+    free(durations);
     return false;
 }
 

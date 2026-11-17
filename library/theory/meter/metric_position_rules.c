@@ -171,7 +171,7 @@ bool standard_meter_accent_beats(const TimeSignature *time_signature, unsigned *
     for (unsigned index = 0; ok && index < per_measure && index < 64; index++) {
         MetricalPosition *position = NULL;
         BeatStrength strength;
-        ok = metrical_position_create(1, start, &position) == METRICAL_POSITION_OK &&
+        ok = metrical_position_create(1, *start, &position) == METRICAL_POSITION_OK &&
              standard_meter_beat_strength(time_signature, position, &strength);
         metrical_position_destroy(position);
         if (!ok) {

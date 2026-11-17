@@ -12,10 +12,10 @@
  */
 
 static MetricalPosition *position(long n, unsigned long d) {
-    Duration *offset = make_duration(n, d);
+    Duration offset;
+    assert(duration_make(n, (long long)d, &offset) == DURATION_OK);
     MetricalPosition *p = NULL;
     assert(metrical_position_create(1, offset, &p) == METRICAL_POSITION_OK);
-    duration_destroy(offset);
     return p;
 }
 

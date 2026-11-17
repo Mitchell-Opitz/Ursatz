@@ -44,22 +44,22 @@ static Contour *make_contour_up_same(const char *p0, const char *p1, const char 
 }
 
 static RhythmicPattern *make_rhythm_quarter_quarter(void) {
-    Duration *quarter_a;
-    assert(duration_create(1, 4, &quarter_a) == DURATION_OK);
-    Duration *quarter_b;
-    assert(duration_create(1, 4, &quarter_b) == DURATION_OK);
-    Duration *durations[2] = {quarter_a, quarter_b};
+    Duration quarter_a;
+    assert(duration_make(1, 4, &quarter_a) == DURATION_OK);
+    Duration quarter_b;
+    assert(duration_make(1, 4, &quarter_b) == DURATION_OK);
+    Duration durations[2] = {quarter_a, quarter_b};
     RhythmicPattern *pattern;
     assert(rhythmic_pattern_create(durations, 2, &pattern) == RHYTHMIC_PATTERN_OK);
     return pattern;
 }
 
 static RhythmicPattern *make_rhythm_quarter_half(void) {
-    Duration *quarter;
-    assert(duration_create(1, 4, &quarter) == DURATION_OK);
-    Duration *half;
-    assert(duration_create(1, 2, &half) == DURATION_OK);
-    Duration *durations[2] = {quarter, half};
+    Duration quarter;
+    assert(duration_make(1, 4, &quarter) == DURATION_OK);
+    Duration half;
+    assert(duration_make(1, 2, &half) == DURATION_OK);
+    Duration durations[2] = {quarter, half};
     RhythmicPattern *pattern;
     assert(rhythmic_pattern_create(durations, 2, &pattern) == RHYTHMIC_PATTERN_OK);
     return pattern;

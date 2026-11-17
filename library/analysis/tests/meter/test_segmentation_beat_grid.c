@@ -182,11 +182,10 @@ static EntityID *make_id(const char *value) {
 
 static NoteEvent *make_note(const char *id, long on_n, unsigned long on_d, long dur_n, unsigned long dur_d,
                             PitchLetter letter) {
-    MusicalTime *position = NULL;
-    assert(musical_time_create(on_n, on_d, &position) == MUSICAL_TIME_OK);
-    TemporalAnchor *anchor = NULL;
-    assert(temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK);
-    Duration *duration = make_duration(dur_n, dur_d);
+    MusicalTime position;
+    assert(musical_time_make(on_n, (long long)on_d, &position) == MUSICAL_TIME_OK);
+    Duration duration;
+    assert(duration_make(dur_n, (long long)dur_d, &duration) == DURATION_OK);
     PitchIdentity *pitch = NULL;
     assert(pitch_identity_create("pitch", 6, &pitch) == PITCH_IDENTITY_OK);
     PitchSpelling *spelling = NULL;
@@ -194,7 +193,7 @@ static NoteEvent *make_note(const char *id, long on_n, unsigned long on_d, long 
     ProvenanceReference *provenance = NULL;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
     NoteEvent *note = NULL;
-    assert(note_event_create(make_id(id), anchor, duration, pitch, spelling, NULL, provenance, &note) ==
+    assert(note_event_create(make_id(id), position, duration, pitch, spelling, NULL, provenance, &note) ==
            NOTE_EVENT_OK);
     return note;
 }

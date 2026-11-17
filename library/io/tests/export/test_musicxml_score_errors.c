@@ -16,17 +16,15 @@ static MusicXmlExportResult write_failing(const MusicXmlExportScore *score) {
 }
 
 static NoteEvent *unspelled_note(void) {
-    TemporalAnchor *anchor = NULL;
-    assert(temporal_anchor_create(tu_time(0, 1), &anchor) == TEMPORAL_ANCHOR_OK);
-    Duration *duration = NULL;
-    assert(duration_create(1, 4, &duration) == DURATION_OK);
+    Duration duration;
+    assert(duration_make(1, 4, &duration) == DURATION_OK);
     PitchIdentity *pitch = NULL;
     unsigned char token[1] = {60};
     assert(pitch_identity_create(token, sizeof(token), &pitch) == PITCH_IDENTITY_OK);
     ProvenanceReference *provenance = NULL;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
     NoteEvent *event = NULL;
-    assert(note_event_create(tu_id("bare"), anchor, duration, pitch, NULL, NULL, provenance, &event) == NOTE_EVENT_OK);
+    assert(note_event_create(tu_id("bare"), tu_time_value(0, 1), duration, pitch, NULL, NULL, provenance, &event) == NOTE_EVENT_OK);
     return event;
 }
 

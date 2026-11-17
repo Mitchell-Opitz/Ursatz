@@ -127,10 +127,9 @@ static bool read_notes(const PiecePlan *plan, PlanSpan range, int **pitches, Rat
 static bool make_window(Theme *theme, const int *pitches, const Rational *durations, size_t count) {
     PitchIdentity **pitch_ids = calloc(count, sizeof(PitchIdentity *));
     ContourDirection *directions = calloc(count - 1, sizeof(ContourDirection));
-    Duration **duration_objects = calloc(count, sizeof(Duration *));
-    bool ok = pitch_ids && directions && duration_objects;
+    Duration *duration_values = calloc(count, sizeof(Duration));
+    bool ok = pitch_ids && directions && duration_values;
     size_t made_pitches = 0;
-    size_t made_durations = 0;
     for (size_t i = 0; ok && i < count; i++) {
         char token[ID_SIZE];
         int length = snprintf(token, sizeof(token), "p%d-%zu", pitches[i], i);
@@ -141,29 +140,23 @@ static bool make_window(Theme *theme, const int *pitches, const Rational *durati
                                 : pitches[i] < pitches[i - 1] ? CONTOUR_DIRECTION_DOWN
                                                               : CONTOUR_DIRECTION_SAME;
         }
-        ok = ok && duration_create(durations[i].num, durations[i].den, &duration_objects[i]) == DURATION_OK;
-        made_durations += ok;
+        ok = ok && duration_of(durations[i], &duration_values[i]) == DURATION_OK;
     }
-    /* The Contour and the RhythmicPattern own the elements they are given and copy the arrays. */
+    /* The Contour owns the elements it is given and copies the arrays; the pattern copies the durations. */
     if (ok && contour_create(pitch_ids, count, directions, count - 1, &theme->contour) == CONTOUR_OK) {
         made_pitches = 0;
     } else {
         ok = false;
     }
-    if (ok && rhythmic_pattern_create(duration_objects, count, &theme->rhythm) == RHYTHMIC_PATTERN_OK) {
-        made_durations = 0;
-    } else {
+    if (!ok || rhythmic_pattern_create(duration_values, count, &theme->rhythm) != RHYTHMIC_PATTERN_OK) {
         ok = false;
     }
     for (size_t i = 0; pitch_ids && i < made_pitches; i++) {
         pitch_identity_destroy(pitch_ids[i]);
     }
-    for (size_t i = 0; duration_objects && i < made_durations; i++) {
-        duration_destroy(duration_objects[i]);
-    }
     free(pitch_ids);
     free(directions);
-    free(duration_objects);
+    free(duration_values);
     if (!ok) {
         return false;
     }

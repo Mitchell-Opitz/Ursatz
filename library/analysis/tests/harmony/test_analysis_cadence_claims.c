@@ -62,10 +62,9 @@ static void put(Piece *p, int measure, int beat, int beats, Chord chord) {
     assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &p->spans[n]) == TIME_SPAN_OK);
     musical_time_destroy(start);
     musical_time_destroy(end);
-    Duration *offset = NULL;
-    assert(duration_create((long)(beat - 1), 4, &offset) == DURATION_OK);
+    Duration offset;
+    assert(duration_make((long)(beat - 1), 4, &offset) == DURATION_OK);
     assert(metrical_position_create(measure, offset, &p->positions[n]) == METRICAL_POSITION_OK);
-    duration_destroy(offset);
 
     memset(in, 0, sizeof(*in));
     in->segment.id = p->ids[n];

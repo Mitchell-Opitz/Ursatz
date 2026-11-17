@@ -305,11 +305,11 @@ static bool merged_sonority(const ChainSegments *segs, size_t first, size_t last
             }
         }
     }
-    TimeSpan *window = NULL;
+    TimeSpan window;
     const TimeSpan *from = sonority_time_window(segs->sonorities.items[first].sonority);
     const TimeSpan *to = sonority_time_window(segs->sonorities.items[last].sonority);
     Sonority *sonority = NULL;
-    ok = ok && n > 0 && time_span_create(time_span_start(from), time_span_end(to), TIME_SPAN_BOUNDARY_LEFT_CLOSED, &window) == TIME_SPAN_OK &&
+    ok = ok && n > 0 && time_span_make(*time_span_start(from), *time_span_end(to), &window) == TIME_SPAN_OK &&
          sonority_create(window, ids, n, NULL, 0, SONORITY_EVENT_DOMAIN_SOUNDING, &sonority) == SONORITY_OK;
     if (!ok) {
         if (ids != NULL) {
@@ -317,15 +317,12 @@ static bool merged_sonority(const ChainSegments *segs, size_t first, size_t last
                 entity_id_destroy(ids[k]);
             }
         }
-        if (sonority == NULL) {
-            time_span_destroy(window);
-        }
         free(ids);
         free(held);
         free(values);
         return false;
     }
-    free(ids); /* the sonority took the ids and the window */
+    free(ids); /* the sonority took the ids and copied the window */
     free(values);
     out->sonority = sonority;
     out->held = held;

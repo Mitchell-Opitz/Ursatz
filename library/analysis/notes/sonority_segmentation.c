@@ -614,18 +614,8 @@ void adaptive_sonorities_destroy(AdaptiveSonorities *sonorities) {
 /* One AdaptiveSonority for a non-empty segment. */
 static AdaptiveSegmentationResult assemble_one(NoteEvent *const *notes, const Segment *segment,
                                                 AdaptiveSonority *out) {
-    MusicalTime *start = musical_time_from_rational_or_null(segment->start);
-    MusicalTime *end = musical_time_from_rational_or_null(segment->end);
-    if (start == NULL || end == NULL) {
-        musical_time_destroy(start);
-        musical_time_destroy(end);
-        return AD_SEGMENTATION_ERR_OVERFLOW;
-    }
-    TimeSpan *window = NULL;
-    TimeSpanResult span_result = time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &window);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
-    if (span_result != TIME_SPAN_OK) {
+    TimeSpan window;
+    if (time_span_make(musical_time_of(segment->start), musical_time_of(segment->end), &window) != TIME_SPAN_OK) {
         return AD_SEGMENTATION_ERR_ALLOC;
     }
 
@@ -659,10 +649,9 @@ static AdaptiveSegmentationResult assemble_one(NoteEvent *const *notes, const Se
         }
         free(ids);
         free(held);
-        time_span_destroy(window);
         return failure;
     }
-    /* sonority_create took the window and the ids; the array itself is ours. */
+    /* sonority_create copied the window and took the ids; the array itself is ours. */
     free(ids);
     out->sonority = sonority;
     out->held = held;

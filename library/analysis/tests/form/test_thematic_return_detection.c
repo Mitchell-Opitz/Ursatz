@@ -56,9 +56,9 @@ static Contour *make_contour_down_up(const char *p0, const char *p1, const char 
 }
 
 static RhythmicPattern *make_rhythm(size_t count) {
-    Duration *durations[4];
+    Duration durations[4];
     for (size_t i = 0; i < count; i++) {
-        assert(duration_create(1, 4, &durations[i]) == DURATION_OK);
+        assert(duration_make(1, 4, &durations[i]) == DURATION_OK);
     }
     RhythmicPattern *pattern;
     assert(rhythmic_pattern_create(durations, count, &pattern) == RHYTHMIC_PATTERN_OK);
@@ -80,13 +80,13 @@ static void make_theme(TestTheme *theme, const char *name, const char *direction
     theme->occurrence_id = make_id(name);
     PitchIdentity *pitch_ids[16];
     ContourDirection directions[15];
-    Duration *durations[16];
+    Duration durations[16];
     for (size_t i = 0; i < count; i++) {
         char note[48];
         snprintf(note, sizeof(note), "%s-note-%zu", name, i);
         theme->event_ids[i] = make_id(note);
         pitch_ids[i] = make_pitch("c\0");
-        assert(duration_create(eighths[i], 8, &durations[i]) == DURATION_OK);
+        assert(duration_make(eighths[i], 8, &durations[i]) == DURATION_OK);
         if (i > 0) {
             char c = directions_text[i - 1];
             directions[i - 1] = c == 'u' ? CONTOUR_DIRECTION_UP : (c == 'd' ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);

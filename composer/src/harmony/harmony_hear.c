@@ -126,7 +126,6 @@ typedef struct {
     MusicalTime *start;
     MusicalTime *end;
     TimeSpan *span;
-    Duration *offset;
     MetricalPosition *position;
     Duration *beat_length; /* a part cell's beat, when the recognizer should not read it as shorter than one */
 } SegmentTimes;
@@ -148,7 +147,6 @@ void harmony_segments_destroy(SegmentSet *set) {
         duration_destroy(set->times[i].beat_length);
         time_span_destroy(set->times[i].span);
         metrical_position_destroy(set->times[i].position);
-        duration_destroy(set->times[i].offset);
         musical_time_destroy(set->times[i].end);
         musical_time_destroy(set->times[i].start);
     }
@@ -179,12 +177,13 @@ static bool times_create(const HeardPhrase *phrase, size_t first_cell, size_t ce
         rational_mul_int(phrase->cell_length, (long long)(first_cell % phrase->cells_per_bar), &offset) != RATIONAL_OK) {
         return false;
     }
+    Duration offset_duration;
     return musical_time_from_rational(start, &times->start) == TIME_RATIONAL_OK &&
            musical_time_from_rational(end, &times->end) == TIME_RATIONAL_OK &&
            time_span_create(times->start, times->end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &times->span) ==
                TIME_SPAN_OK &&
-           duration_create(offset.num, offset.den, &times->offset) == DURATION_OK &&
-           metrical_position_create((int)bar + 1, times->offset, &times->position) == METRICAL_POSITION_OK;
+           duration_of(offset, &offset_duration) == DURATION_OK &&
+           metrical_position_create((int)bar + 1, offset_duration, &times->position) == METRICAL_POSITION_OK;
 }
 
 /* soprano[i] is the soprano degree over chord i, or NULL for the one the requested cadence implies. */

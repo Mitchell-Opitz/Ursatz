@@ -274,30 +274,20 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         return NOTE_EVENT_ERR_ALLOC;
     }
 
-    MusicalTime *position = NULL;
-    if (musical_time_create((long)matched->start_tick, ticks_denominator, &position) != MUSICAL_TIME_OK) {
+    MusicalTime position;
+    if (musical_time_make((long)matched->start_tick, (long long)ticks_denominator, &position) != MUSICAL_TIME_OK) {
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
 
-    TemporalAnchor *anchor = NULL;
-    if (temporal_anchor_create(position, &anchor) != TEMPORAL_ANCHOR_OK) {
-        musical_time_destroy(position);
-        entity_id_destroy(id);
-        return NOTE_EVENT_ERR_ALLOC;
-    }
-
-    Duration *duration = NULL;
-    if (duration_create((long)matched->duration_ticks, ticks_denominator, &duration) != DURATION_OK) {
-        temporal_anchor_destroy(anchor);
+    Duration duration;
+    if (duration_make((long)matched->duration_ticks, (long long)ticks_denominator, &duration) != DURATION_OK) {
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
 
     PitchNumericValue *numeric = NULL;
     if (pitch_numeric_value_create(tuning_system, matched->note, 1, &numeric) != PITCH_NUMERIC_VALUE_OK) {
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -306,8 +296,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
     PitchNumericValueToIdentityResult to_identity_result = pitch_numeric_value_to_identity(numeric, &pitch);
     if (to_identity_result != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK) {
         pitch_numeric_value_destroy(numeric);
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -316,8 +304,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
     if (!pitch_spelling_of_midi(matched->note, 0, &spelling)) {
         pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -327,8 +313,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -339,8 +323,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -354,8 +336,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
             pitch_spelling_destroy(spelling);
             pitch_numeric_value_destroy(numeric);
             pitch_identity_destroy(pitch);
-            duration_destroy(duration);
-            temporal_anchor_destroy(anchor);
             entity_id_destroy(id);
             return NOTE_EVENT_ERR_ALLOC;
         }
@@ -364,18 +344,19 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
             pitch_spelling_destroy(spelling);
             pitch_numeric_value_destroy(numeric);
             pitch_identity_destroy(pitch);
-            duration_destroy(duration);
-            temporal_anchor_destroy(anchor);
             entity_id_destroy(id);
             return NOTE_EVENT_ERR_ALLOC;
         }
     }
 
-    NoteEventResult result = note_event_create(id, anchor, duration, pitch, spelling, voice, provenance, out);
+    NoteEventResult result = note_event_create(id, position, duration, pitch, spelling, voice, provenance, out);
     if (result != NOTE_EVENT_OK) {
         voice_reference_destroy(voice);
         pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
+        pitch_identity_destroy(pitch);
+        provenance_reference_destroy(provenance);
+        entity_id_destroy(id);
         return result;
     }
 

@@ -335,9 +335,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
                                    const TuningSystem *tuning, NoteEvent **out_event,
                                    PitchNumericValue **out_value) {
     EntityID *id = NULL;
-    MusicalTime *position = NULL;
-    TemporalAnchor *anchor = NULL;
-    Duration *duration = NULL;
+    Duration duration;
     PitchNumericValue *value = NULL;
     PitchIdentity *identity = NULL;
     PitchSpelling *spelling = NULL;
@@ -350,12 +348,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
     /* A note the plan spells is written as spelled; any other is spelled in the key under it. */
     Spelling written = note->spelled ? (Spelling){note->letter, note->accidental} : spell(note->midi, key);
     bool ok = entity_id_create(text, &id) == ENTITY_ID_OK &&
-              musical_time_from_rational(note->onset, &position) == TIME_RATIONAL_OK &&
-              temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK;
-    if (ok) {
-        position = NULL;
-    }
-    ok = ok && duration_create(note->duration.num, note->duration.den, &duration) == DURATION_OK &&
+              duration_of(note->duration, &duration) == DURATION_OK &&
          pitch_numeric_value_create(tuning, note->midi, 1, &value) == PITCH_NUMERIC_VALUE_OK &&
          pitch_numeric_value_to_identity(value, &identity) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK &&
          pitch_spelling_create(written.letter, written.accidental, spelling_octave(note->midi, written), &spelling) ==
@@ -369,16 +362,13 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
     ok = ok && provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK;
 
     NoteEvent *event = NULL;
-    if (ok && note_event_create(id, anchor, duration, identity, spelling, voice, provenance, &event) ==
+    if (ok && note_event_create(id, musical_time_of(note->onset), duration, identity, spelling, voice, provenance, &event) ==
                   NOTE_EVENT_OK) {
         *out_event = event;
         *out_value = value;
         return PLAN_RENDER_OK;
     }
     entity_id_destroy(id);
-    musical_time_destroy(position);
-    temporal_anchor_destroy(anchor);
-    duration_destroy(duration);
     pitch_numeric_value_destroy(value);
     pitch_identity_destroy(identity);
     pitch_spelling_destroy(spelling);

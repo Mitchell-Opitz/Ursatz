@@ -29,19 +29,17 @@ static TimeSpan *make_span(long start, long end) {
 
 static NoteEvent *make_event(const char *name, long start) {
     EntityID *id = NULL;
-    MusicalTime *position = NULL;
-    TemporalAnchor *anchor = NULL;
-    Duration *duration = NULL;
+    MusicalTime position;
+    Duration duration;
     PitchIdentity *pitch = NULL;
     ProvenanceReference *provenance = NULL;
     NoteEvent *event = NULL;
     assert(entity_id_create(name, &id) == ENTITY_ID_OK);
-    assert(musical_time_create(start, 4, &position) == MUSICAL_TIME_OK);
-    assert(temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK);
-    assert(duration_create(1, 4, &duration) == DURATION_OK);
+    assert(musical_time_make(start, 4, &position) == MUSICAL_TIME_OK);
+    assert(duration_make(1, 4, &duration) == DURATION_OK);
     assert(pitch_identity_create("pitch", 5, &pitch) == PITCH_IDENTITY_OK);
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
-    assert(note_event_create(id, anchor, duration, pitch, NULL, NULL, provenance, &event) == NOTE_EVENT_OK);
+    assert(note_event_create(id, position, duration, pitch, NULL, NULL, provenance, &event) == NOTE_EVENT_OK);
     return event;
 }
 

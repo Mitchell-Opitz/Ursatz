@@ -30,18 +30,16 @@ static EntityID *make_id(const char *value) {
 }
 
 static NoteEvent *make_note_event(const char *id_value, const char *pitch_token) {
-    MusicalTime *position;
-    assert(musical_time_create(0, 4, &position) == MUSICAL_TIME_OK);
-    TemporalAnchor *anchor;
-    assert(temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK);
-    Duration *duration;
-    assert(duration_create(1, 4, &duration) == DURATION_OK);
+    MusicalTime position;
+    assert(musical_time_make(0, 4, &position) == MUSICAL_TIME_OK);
+    Duration duration;
+    assert(duration_make(1, 4, &duration) == DURATION_OK);
     PitchIdentity *pitch;
     assert(pitch_identity_create(pitch_token, strlen(pitch_token) + 1, &pitch) == PITCH_IDENTITY_OK);
     ProvenanceReference *provenance;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
     NoteEvent *note_event;
-    assert(note_event_create(make_id(id_value), anchor, duration, pitch, NULL, NULL, provenance, &note_event) == NOTE_EVENT_OK);
+    assert(note_event_create(make_id(id_value), position, duration, pitch, NULL, NULL, provenance, &note_event) == NOTE_EVENT_OK);
     return note_event;
 }
 
@@ -85,11 +83,11 @@ static Contour *make_contour(const char *p0, const char *p1, const char *p2, Con
 }
 
 static RhythmicPattern *make_rhythm(long second_numerator, unsigned long second_denominator) {
-    Duration *first;
-    assert(duration_create(1, 4, &first) == DURATION_OK);
-    Duration *second;
-    assert(duration_create(second_numerator, second_denominator, &second) == DURATION_OK);
-    Duration *durations[2] = {first, second};
+    Duration first;
+    assert(duration_make(1, 4, &first) == DURATION_OK);
+    Duration second;
+    assert(duration_make(second_numerator, (long long)second_denominator, &second) == DURATION_OK);
+    Duration durations[2] = {first, second};
     RhythmicPattern *pattern;
     assert(rhythmic_pattern_create(durations, 2, &pattern) == RHYTHMIC_PATTERN_OK);
     return pattern;

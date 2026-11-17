@@ -12,25 +12,19 @@
  * exactly as given, nothing implicit added or dropped.
  */
 
-static TimeSpan *make_window(void) {
-    MusicalTime *start;
-    assert(musical_time_create(0, 1, &start) == MUSICAL_TIME_OK);
-    MusicalTime *end;
-    assert(musical_time_create(1, 1, &end) == MUSICAL_TIME_OK);
+static TimeSpan make_window(void) {
+    MusicalTime start;
+    assert(musical_time_make(0, 1, &start) == MUSICAL_TIME_OK);
+    MusicalTime end;
+    assert(musical_time_make(1, 1, &end) == MUSICAL_TIME_OK);
 
-    TimeSpan *span;
-    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_CLOSED, &span) == TIME_SPAN_OK);
-
-    /* time_span_create copies start/end rather than taking ownership
-       (time/time_span.c) -- the caller (here) still owns the originals. */
-    musical_time_destroy(start);
-    musical_time_destroy(end);
-
+    TimeSpan span;
+    assert(time_span_make(start, end, &span) == TIME_SPAN_OK);
     return span;
 }
 
 int main(void) {
-    TimeSpan *window = make_window();
+    TimeSpan window = make_window();
 
     EntityID *event_a;
     assert(entity_id_create("note-a", &event_a) == ENTITY_ID_OK);
@@ -51,7 +45,9 @@ int main(void) {
         sonority_create(window, event_ids, 3, voice_ids, 2, SONORITY_EVENT_DOMAIN_SOUNDING, &sonority);
     assert(result == SONORITY_OK);
 
-    assert(sonority_time_window(sonority) == window);
+    /* The window is copied: the sonority holds the same times as a value. */
+    assert(musical_time_same(sonority_time_window(sonority)->start, window.start));
+    assert(musical_time_same(sonority_time_window(sonority)->end, window.end));
 
     assert(sonority_event_id_count(sonority) == 3);
     EntityID *expected_a;
@@ -70,7 +66,7 @@ int main(void) {
     sonority_destroy(sonority);
 
     /* Empty voice set is a valid, explicit "no restriction" selection. */
-    TimeSpan *window_2 = make_window();
+    TimeSpan window_2 = make_window();
     EntityID *event_solo;
     assert(entity_id_create("note-solo", &event_solo) == ENTITY_ID_OK);
     EntityID *solo_ids[1] = {event_solo};
@@ -82,12 +78,11 @@ int main(void) {
     sonority_destroy(unrestricted);
 
     /* An empty event set is not a Sonority. */
-    TimeSpan *window_3 = make_window();
+    TimeSpan window_3 = make_window();
     Sonority *empty;
     SonorityResult empty_result =
         sonority_create(window_3, NULL, 0, NULL, 0, SONORITY_EVENT_DOMAIN_SOUNDING, &empty);
     assert(empty_result == SONORITY_ERR_NULL_EVENT_IDS);
-    time_span_destroy(window_3);
 
     printf("test_sonority: ok\n");
     return 0;

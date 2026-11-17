@@ -60,12 +60,10 @@ static inline void test_notes_add_exact(TestNotes *notes, long position_numerato
     snprintf(id_text, sizeof(id_text), "test-note-%zu", notes->count);
     EntityID *id = NULL;
     assert(entity_id_create(id_text, &id) == ENTITY_ID_OK);
-    MusicalTime *position = NULL;
-    assert(musical_time_create(position_numerator, position_denominator, &position) == MUSICAL_TIME_OK);
-    TemporalAnchor *anchor = NULL;
-    assert(temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK);
-    Duration *duration = NULL;
-    assert(duration_create(duration_numerator, duration_denominator, &duration) == DURATION_OK);
+    MusicalTime position;
+    assert(musical_time_make(position_numerator, (long long)position_denominator, &position) == MUSICAL_TIME_OK);
+    Duration duration;
+    assert(duration_make(duration_numerator, (long long)duration_denominator, &duration) == DURATION_OK);
     PitchNumericValue *numeric = NULL;
     assert(pitch_numeric_value_create(notes->tuning, pitch_numerator, pitch_denominator, &numeric) ==
            PITCH_NUMERIC_VALUE_OK);
@@ -80,7 +78,7 @@ static inline void test_notes_add_exact(TestNotes *notes, long position_numerato
     ProvenanceReference *provenance = NULL;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
     NoteEvent *event = NULL;
-    assert(note_event_create(id, anchor, duration, pitch, NULL, voice_reference, provenance, &event) == NOTE_EVENT_OK);
+    assert(note_event_create(id, position, duration, pitch, NULL, voice_reference, provenance, &event) == NOTE_EVENT_OK);
     notes->events[notes->count] = event;
     notes->pitches[notes->count] = numeric;
     notes->count++;

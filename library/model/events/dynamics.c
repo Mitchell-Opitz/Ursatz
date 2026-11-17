@@ -19,12 +19,9 @@ static char *copy_marking(const char *marking) {
     return copy;
 }
 
-DynamicsResult dynamics_create_for_time_span(const char *marking, TimeSpan *time_span, Dynamics **out) {
+DynamicsResult dynamics_create_for_time_span(const char *marking, TimeSpan time_span, Dynamics **out) {
     if (marking == NULL || marking[0] == '\0') {
         return DYNAMICS_ERR_NULL_MARKING;
-    }
-    if (time_span == NULL) {
-        return DYNAMICS_ERR_NULL_TIME_SPAN;
     }
 
     char *marking_copy = copy_marking(marking);
@@ -41,8 +38,7 @@ DynamicsResult dynamics_create_for_time_span(const char *marking, TimeSpan *time
     dynamics->marking = marking_copy;
     dynamics->target_kind = DYNAMICS_TARGET_TIME_SPAN;
     dynamics->target_event_id = NULL;
-    dynamics->target_time_span = *time_span;
-    time_span_destroy(time_span);
+    dynamics->target_time_span = time_span;
 
     *out = dynamics;
     return DYNAMICS_OK;

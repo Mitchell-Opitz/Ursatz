@@ -923,9 +923,7 @@ static int compare_items(const void *a, const void *b) {
 static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const TuningSystem *tuning, NoteEvent **out_event,
                         PitchNumericValue **out_value) {
     EntityID *id = NULL;
-    MusicalTime *position = NULL;
-    TemporalAnchor *anchor = NULL;
-    Duration *duration = NULL;
+    Duration duration;
     PitchNumericValue *numeric = NULL;
     PitchIdentity *pitch = NULL;
     PitchSpelling *spelling = NULL;
@@ -939,11 +937,9 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
     snprintf(id_text, sizeof(id_text), "musicxml-%s-%zu", part_id, note->order);
     char voice_text[128];
     snprintf(voice_text, sizeof(voice_text), "musicxml-voice-%s-%s", part_id, note->voice);
-    position = musical_time_from_rational_or_null(note->onset);
     bool fits = note->duration.num <= (unsigned long long)LONG_MAX && note->duration.den <= (unsigned long long)ULONG_MAX;
-    bool ok = position != NULL && fits && entity_id_create(id_text, &id) == ENTITY_ID_OK &&
-              temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK &&
-              duration_create((long)note->duration.num, (unsigned long)note->duration.den, &duration) == DURATION_OK &&
+    bool ok = fits && entity_id_create(id_text, &id) == ENTITY_ID_OK &&
+              duration_make((long long)note->duration.num, (long long)note->duration.den, &duration) == DURATION_OK &&
               pitch_numeric_value_create(tuning, note->midi, 1, &numeric) == PITCH_NUMERIC_VALUE_OK &&
               pitch_numeric_value_to_identity(numeric, &pitch) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK &&
               pitch_spelling_create(note->letter, note->accidental, note->octave, &spelling) == PITCH_SPELLING_OK &&
@@ -958,20 +954,15 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
                 voice_id = NULL; /* owned by the voice reference */
             }
         }
-        ok = ok && note_event_create(id, anchor, duration, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK;
+        ok = ok && note_event_create(id, musical_time_of(note->onset), duration, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK;
     }
     if (!ok) {
-        if (!fits || position == NULL) {
+        if (!fits) {
             fail(ctx, MUSICXML_IMPORT_ERR_OVERFLOW, "a note's position or duration does not fit");
         } else {
             fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory");
         }
         entity_id_destroy(id);
-        temporal_anchor_destroy(anchor);
-        if (anchor == NULL) {
-            musical_time_destroy(position);
-        }
-        duration_destroy(duration);
         pitch_identity_destroy(pitch);
         pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
@@ -1266,11 +1257,10 @@ static bool build_tempo_markings(Ctx *ctx) {
     }
     for (size_t i = 0; i < ctx->marking_count; i++) {
         const MarkingEvent *event = &ctx->markings[i];
-        MusicalTime *position = musical_time_from_rational_or_null(event->position);
         TemporalAnchor *anchor = NULL;
         Duration *unit = NULL;
         MetronomeMarking *metronome = NULL;
-        bool ok = position != NULL && temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK;
+        bool ok = temporal_anchor_create(musical_time_of(event->position), &anchor) == TEMPORAL_ANCHOR_OK;
         if (ok && event->has_metronome) {
             ok = event->beat_unit.num <= (unsigned long long)LONG_MAX && event->beat_unit.den <= (unsigned long long)ULONG_MAX &&
                  duration_create((long)event->beat_unit.num, (unsigned long)event->beat_unit.den, &unit) == DURATION_OK &&
@@ -1282,11 +1272,7 @@ static bool build_tempo_markings(Ctx *ctx) {
         ok = ok && tempo_marking_create(anchor, event->has_text ? event->text : NULL, metronome, &marking) ==
                        TEMPO_MARKING_OK;
         if (!ok) {
-            if (anchor != NULL) {
-                temporal_anchor_destroy(anchor);
-            } else {
-                musical_time_destroy(position);
-            }
+            temporal_anchor_destroy(anchor);
             metronome_marking_destroy(metronome);
             return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "a tempo marking could not be built") == MUSICXML_IMPORT_OK;
         }
@@ -1323,17 +1309,11 @@ static bool build_dynamics(Ctx *ctx) {
             warn(ctx, "dynamic marking %s has no extent (it is at or after the end of the part); skipped", event->name);
             continue;
         }
-        MusicalTime *from = musical_time_from_rational_or_null(event->position);
-        MusicalTime *to = musical_time_from_rational_or_null(end);
-        TimeSpan *span = NULL;
+        TimeSpan span;
         Dynamics *dynamics = NULL;
-        bool ok = from != NULL && to != NULL &&
-                  time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK;
-        musical_time_destroy(from);
-        musical_time_destroy(to);
-        ok = ok && dynamics_create_for_time_span(event->name, span, &dynamics) == DYNAMICS_OK;
+        bool ok = time_span_make(musical_time_of(event->position), musical_time_of(end), &span) == TIME_SPAN_OK &&
+                  dynamics_create_for_time_span(event->name, span, &dynamics) == DYNAMICS_OK;
         if (!ok) {
-            time_span_destroy(span);
             return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "a dynamic marking could not be built") == MUSICXML_IMPORT_OK;
         }
         out->dynamics[out->dynamics_count] = dynamics;

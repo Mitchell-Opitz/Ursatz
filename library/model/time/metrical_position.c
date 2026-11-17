@@ -10,8 +10,8 @@ struct MetricalPosition {
     Duration offset;
 };
 
-MetricalPositionResult metrical_position_create(int measure, const Duration *offset, MetricalPosition **out) {
-    if (offset == NULL || out == NULL) {
+MetricalPositionResult metrical_position_create(int measure, Duration offset, MetricalPosition **out) {
+    if (out == NULL) {
         return METRICAL_POSITION_ERR_NULL_ARGUMENT;
     }
 
@@ -19,7 +19,7 @@ MetricalPositionResult metrical_position_create(int measure, const Duration *off
     if (position == NULL) {
         return METRICAL_POSITION_ERR_ALLOC;
     }
-    position->offset = *offset;
+    position->offset = offset;
     position->measure = measure;
 
     *out = position;
@@ -202,11 +202,9 @@ MetricalPositionResult metrical_position_from_time(const MeterMap *map, const Mu
     if (!fits(offset)) {
         return METRICAL_POSITION_ERR_OVERFLOW;
     }
-    Duration *offset_duration = NULL;
-    if (duration_create((long)offset.num, (unsigned long)offset.den, &offset_duration) != DURATION_OK) {
-        return METRICAL_POSITION_ERR_ALLOC;
+    Duration offset_duration;
+    if (duration_of(offset, &offset_duration) != DURATION_OK) {
+        return METRICAL_POSITION_ERR_OVERFLOW;
     }
-    MetricalPositionResult created = metrical_position_create(measure, offset_duration, out);
-    duration_destroy(offset_duration);
-    return created;
+    return metrical_position_create(measure, offset_duration, out);
 }

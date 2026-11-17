@@ -54,25 +54,23 @@ typedef struct NoteEvent NoteEvent;
 typedef enum {
     NOTE_EVENT_OK = 0,
     NOTE_EVENT_ERR_NULL_ID,
-    NOTE_EVENT_ERR_NULL_TEMPORAL_ANCHOR,
-    NOTE_EVENT_ERR_NULL_DURATION,
     NOTE_EVENT_ERR_NULL_PITCH,
     NOTE_EVENT_ERR_NULL_PROVENANCE,
     NOTE_EVENT_ERR_ALLOC
 } NoteEventResult;
 
 /*
- * Takes ownership of id, temporal_anchor, duration, pitch, provenance,
- * and (when non-NULL) optional_pitch_spelling and optional_voice, on
- * success (destroyed by note_event_destroy). optional_pitch_spelling and
- * optional_voice may be NULL; every other parameter is required.
+ * Takes ownership of id, pitch, provenance, and (when non-NULL)
+ * optional_pitch_spelling and optional_voice, on success (destroyed by
+ * note_event_destroy). onset and duration are values and are copied: the
+ * event builds its own TemporalAnchor at onset. optional_pitch_spelling
+ * and optional_voice may be NULL; every other pointer is required.
  *
  * duration's own invariant (>= 0) is enforced by Duration itself
- * (time/duration.h rejects a negative numerator at duration_create) --
- * a caller cannot construct a negative Duration to pass here, so this
- * constructor does not re-check it.
+ * (time/duration.h makes no negative Duration) -- so this constructor
+ * does not re-check it.
  */
-NoteEventResult note_event_create(EntityID *id, TemporalAnchor *temporal_anchor, Duration *duration,
+NoteEventResult note_event_create(EntityID *id, MusicalTime onset, Duration duration,
                                    PitchIdentity *pitch, PitchSpelling *optional_pitch_spelling,
                                    VoiceReference *optional_voice, ProvenanceReference *provenance,
                                    NoteEvent **out);

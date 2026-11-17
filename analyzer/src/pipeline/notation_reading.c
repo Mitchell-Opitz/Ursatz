@@ -139,21 +139,16 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
     }
 
     EntityID *id = entity_id_copy(note_event_id(note));
-    MusicalTime *time = NULL;
-    TemporalAnchor *anchor = NULL;
-    Duration *length = NULL;
+    MusicalTime time;
+    Duration length;
     PitchIdentity *pitch = NULL;
     PitchSpelling *spelling = NULL;
     VoiceReference *voice = NULL;
     ProvenanceReference *provenance = NULL;
     NoteEvent *event = NULL;
 
-    bool ok = id && musical_time_create(start_num, start_den, &time) == MUSICAL_TIME_OK &&
-              temporal_anchor_create(time, &anchor) == TEMPORAL_ANCHOR_OK;
-    if (ok) {
-        time = NULL; /* the anchor owns it */
-    }
-    ok = ok && duration_create(length_num, length_den, &length) == DURATION_OK;
+    bool ok = id && musical_time_make(start_num, (long long)start_den, &time) == MUSICAL_TIME_OK &&
+              duration_make(length_num, (long long)length_den, &length) == DURATION_OK;
 
     if (ok) {
         size_t token_size = 0;
@@ -184,13 +179,10 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
         ok = provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK;
     }
 
-    if (ok && note_event_create(id, anchor, length, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK) {
+    if (ok && note_event_create(id, time, length, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK) {
         return event;
     }
     entity_id_destroy(id);
-    musical_time_destroy(time);
-    temporal_anchor_destroy(anchor);
-    duration_destroy(length);
     pitch_identity_destroy(pitch);
     pitch_spelling_destroy(spelling);
     voice_reference_destroy(voice);

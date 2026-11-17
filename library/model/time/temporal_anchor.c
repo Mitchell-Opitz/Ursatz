@@ -6,18 +6,13 @@ struct TemporalAnchor {
     MusicalTime position;
 };
 
-TemporalAnchorResult temporal_anchor_create(MusicalTime *position, TemporalAnchor **out) {
-    if (position == NULL) {
-        return TEMPORAL_ANCHOR_ERR_NULL_POSITION;
-    }
-
+TemporalAnchorResult temporal_anchor_create(MusicalTime position, TemporalAnchor **out) {
     TemporalAnchor *anchor = (TemporalAnchor *)malloc(sizeof(TemporalAnchor));
     if (anchor == NULL) {
         return TEMPORAL_ANCHOR_ERR_ALLOC;
     }
 
-    anchor->position = *position;
-    musical_time_destroy(position);
+    anchor->position = position;
 
     *out = anchor;
     return TEMPORAL_ANCHOR_OK;

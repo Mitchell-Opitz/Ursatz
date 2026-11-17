@@ -5,8 +5,8 @@
 #include <string.h>
 
 static TemporalAnchor *anchor_at(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+    MusicalTime time;
+    assert(musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK);
     TemporalAnchor *anchor = NULL;
     assert(temporal_anchor_create(time, &anchor) == TEMPORAL_ANCHOR_OK);
     return anchor;

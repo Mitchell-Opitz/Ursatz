@@ -75,9 +75,8 @@ static NoteEvent *make_event(TuningSystem *tuning, size_t number, int midi, long
     char name[32];
     snprintf(name, sizeof name, "fragment-note-%zu", number);
     EntityID *id = NULL;
-    MusicalTime *position = NULL;
-    TemporalAnchor *anchor = NULL;
-    Duration *duration = NULL;
+    MusicalTime position;
+    Duration duration;
     PitchNumericValue *value = NULL;
     PitchIdentity *pitch = NULL;
     ProvenanceReference *provenance = NULL;
@@ -88,15 +87,14 @@ static NoteEvent *make_event(TuningSystem *tuning, size_t number, int midi, long
     PitchLetter letter;
     int accidental;
     pitch_spelling_from_fifths(fifths == 11 ? -1 : fifths, &letter, &accidental);
-    if (entity_id_create(name, &id) != ENTITY_ID_OK || musical_time_create(start_half, 2, &position) != MUSICAL_TIME_OK ||
-        temporal_anchor_create(position, &anchor) != TEMPORAL_ANCHOR_OK ||
-        duration_create(length_half, 2, &duration) != DURATION_OK ||
+    if (entity_id_create(name, &id) != ENTITY_ID_OK || musical_time_make(start_half, 2, &position) != MUSICAL_TIME_OK ||
+        duration_make(length_half, 2, &duration) != DURATION_OK ||
         pitch_numeric_value_create(tuning, midi, 1, &value) != PITCH_NUMERIC_VALUE_OK ||
         pitch_numeric_value_to_identity(value, &pitch) != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK ||
         pitch_spelling_create(letter, accidental, midi / PITCH_SEMITONES_PER_OCTAVE - 1, &spelling) !=
             PITCH_SPELLING_OK ||
         provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK ||
-        note_event_create(id, anchor, duration, pitch, spelling, NULL, provenance, &event) != NOTE_EVENT_OK) {
+        note_event_create(id, position, duration, pitch, spelling, NULL, provenance, &event) != NOTE_EVENT_OK) {
         return NULL;
     }
     pitch_numeric_value_destroy(value);

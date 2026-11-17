@@ -174,11 +174,10 @@ static void test_a_weak_arrival_on_the_half_beat_after_a_weak_dominant(void) {
     fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 1 */
     fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 2: weak, on the beat */
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, beat 3 */
-    Duration *eighth = NULL;
-    assert(duration_create(1, 8, &eighth) == DURATION_OK);
+    Duration eighth;
+    assert(duration_make(1, 8, &eighth) == DURATION_OK);
     metrical_position_destroy(f.positions[2]);
     assert(metrical_position_create(1, eighth, &f.positions[2]) == METRICAL_POSITION_OK);
-    duration_destroy(eighth);
     f.inputs[2].segment.position = f.positions[2];
     f.inputs[2].segment.strength = BEAT_STRENGTH_WEAK; /* off the beat: weak, like the beat before it */
     f.inputs[1].segment.strength = BEAT_STRENGTH_WEAK;

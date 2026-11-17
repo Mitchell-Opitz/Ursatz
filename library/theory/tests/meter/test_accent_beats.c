@@ -75,7 +75,7 @@ static void test_agrees_with_beat_strength(void) {
         for (unsigned i = 0; i < per_measure; i++) {
             MetricalPosition *position = NULL;
             BeatStrength strength;
-            assert(metrical_position_create(1, start, &position) == METRICAL_POSITION_OK);
+            assert(metrical_position_create(1, *start, &position) == METRICAL_POSITION_OK);
             assert(standard_meter_beat_strength(ts, position, &strength));
             if (strength != BEAT_STRENGTH_WEAK) {
                 assert(next < count && got[next] == i && strengths[next] == strength);

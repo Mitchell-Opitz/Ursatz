@@ -56,10 +56,9 @@ static inline HarmonySegmentInput *fixture_add(Fixture *f, int degree, const int
     assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &f->spans[n]) == TIME_SPAN_OK);
     musical_time_destroy(start);
     musical_time_destroy(end);
-    Duration *offset = NULL;
-    assert(duration_create((long)(n % 4), 4, &offset) == DURATION_OK);
+    Duration offset;
+    assert(duration_make((long)(n % 4), 4, &offset) == DURATION_OK);
     assert(metrical_position_create((int)(n / 4) + 1, offset, &f->positions[n]) == METRICAL_POSITION_OK);
-    duration_destroy(offset);
 
     memset(in, 0, sizeof(*in));
     in->segment.id = f->ids[n];

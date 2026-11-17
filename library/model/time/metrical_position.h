@@ -39,8 +39,8 @@ typedef enum {
     METRICAL_POSITION_ERR_ALLOC
 } MetricalPositionResult;
 
-/* measure may be 0 (a pickup) or any other int. offset is read and copied, not owned. */
-MetricalPositionResult metrical_position_create(int measure, const Duration *offset, MetricalPosition **out);
+/* measure may be 0 (a pickup) or any other int. offset is copied. */
+MetricalPositionResult metrical_position_create(int measure, Duration offset, MetricalPosition **out);
 void metrical_position_destroy(MetricalPosition *position);
 
 int metrical_position_measure(const MetricalPosition *position);

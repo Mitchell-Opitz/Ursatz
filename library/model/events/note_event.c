@@ -12,18 +12,12 @@ struct NoteEvent {
     ProvenanceReference *provenance;
 };
 
-NoteEventResult note_event_create(EntityID *id, TemporalAnchor *temporal_anchor, Duration *duration,
+NoteEventResult note_event_create(EntityID *id, MusicalTime onset, Duration duration,
                                    PitchIdentity *pitch, PitchSpelling *optional_pitch_spelling,
                                    VoiceReference *optional_voice, ProvenanceReference *provenance,
                                    NoteEvent **out) {
     if (id == NULL) {
         return NOTE_EVENT_ERR_NULL_ID;
-    }
-    if (temporal_anchor == NULL) {
-        return NOTE_EVENT_ERR_NULL_TEMPORAL_ANCHOR;
-    }
-    if (duration == NULL) {
-        return NOTE_EVENT_ERR_NULL_DURATION;
     }
     if (pitch == NULL) {
         return NOTE_EVENT_ERR_NULL_PITCH;
@@ -36,11 +30,15 @@ NoteEventResult note_event_create(EntityID *id, TemporalAnchor *temporal_anchor,
     if (note_event == NULL) {
         return NOTE_EVENT_ERR_ALLOC;
     }
+    TemporalAnchor *temporal_anchor = NULL;
+    if (temporal_anchor_create(onset, &temporal_anchor) != TEMPORAL_ANCHOR_OK) {
+        free(note_event);
+        return NOTE_EVENT_ERR_ALLOC;
+    }
 
     note_event->id = id;
     note_event->temporal_anchor = temporal_anchor;
-    note_event->duration = *duration;
-    duration_destroy(duration);
+    note_event->duration = duration;
     note_event->pitch = pitch;
     note_event->optional_pitch_spelling = optional_pitch_spelling;
     note_event->optional_voice = optional_voice;
