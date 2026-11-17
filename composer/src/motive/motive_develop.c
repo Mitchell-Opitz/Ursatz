@@ -46,7 +46,7 @@ bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template
     Motive result = *template_motive;
     PlanMeter meter;
     if (!motive_sketch_validate(developed) || !motive_meter_of(developed, &meter) || !time_fits(developed->pickup) ||
-        32 % developed->pickup.den != 0) {
+        !plan_meter_pickup_on_grid(meter, developed->pickup)) {
         return false;
     }
     result.bar = developed->bar;

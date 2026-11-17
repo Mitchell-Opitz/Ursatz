@@ -444,7 +444,7 @@ typedef struct {
         char letter[PLAN_SECTION_LETTER_MAX];
         PlanStyle style;
         PlanSource source;
-        Rational pickup; /* the anacrusis: a multiple of 1/32 of a whole note, shorter than a bar */
+        Rational pickup; /* the anacrusis: on the meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division), shorter than two wholes */
         PlanPiecePart piece_part;
         PlanMotiveTones motive_tones;
         PlanPedal pedal;

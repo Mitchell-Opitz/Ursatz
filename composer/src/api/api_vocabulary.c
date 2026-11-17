@@ -43,8 +43,8 @@ const ApiChoice API_ACCOMPANIMENT_PATTERNS[] = {{"any", "Any pattern"},       {"
                                                 {"oom-pah", "Oom-pah"},       {"motive", "From a motive"},
                                                 {NULL, NULL}};
 const ApiChoice API_PIECE_INTOS[] = {{"sentence", "Sentence"}, {"period", "Period"}, {"hybrid", "Hybrid"}, {NULL, NULL}};
-/* The pickups an application offers, in beats of the meter: a pickup is also accepted when it is any other multiple of 1/32
-   of a whole note shorter than a bar. */
+/* The pickups an application offers, in beats of the meter: a pickup is also accepted when it is any other length on the
+   meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division) shorter than a bar. */
 const ApiChoice API_PICKUPS[] = {{"0", "0"},   {"1/4", "1/4"}, {"1/2", "1/2"}, {"1", "1"},
                                  {"3/2", "3/2"}, {"2", "2"},   {"3", "3"},     {NULL, NULL}};
 
@@ -241,7 +241,7 @@ static bool add_cadences(cJSON *root) {
     return all && theme;
 }
 
-/* The pickups of each meter: the offered values the readers accept (a number of beats shorter than a bar, on the 1/32 grid). */
+/* The pickups of each meter: the offered values the readers accept (a number of beats shorter than a bar, on the meter's grid). */
 static bool add_pickups(cJSON *root) {
     cJSON *pickups = cJSON_AddObjectToObject(root, "pickups");
     for (size_t m = 0; pickups && API_METERS[m].value; m++) {
@@ -252,10 +252,9 @@ static bool add_pickups(cJSON *root) {
         cJSON *list = cJSON_AddArrayToObject(pickups, API_METERS[m].value);
         for (size_t i = 0; list && API_PICKUPS[i].value; i++) {
             Rational pickup;
-            Rational grid;
             if (!request_parse_pickup(API_PICKUPS[i].value, meter.beat_unit, &pickup) ||
                 rational_cmp(pickup, (Rational){meter.beats_per_bar, meter.beat_unit}) >= 0 ||
-                rational_make(pickup.num * PIECE_PICKUP_GRID, pickup.den, &grid) != RATIONAL_OK || grid.den != 1) {
+                !plan_meter_pickup_on_grid(meter, pickup)) {
                 continue;
             }
             cJSON *text = cJSON_CreateString(API_PICKUPS[i].value);

@@ -18,6 +18,19 @@
    (a beat unit that is not 1, 2, 4, 8 or 16, or beats_per_bar outside 1 to 64). The caller destroys *out. */
 bool plan_meter_signature(PlanMeter meter, TimeSignature **out);
 
+/* The finest level a pickup may be written at: 1/PLAN_PICKUP_FINEST of a whole note. */
+#define PLAN_PICKUP_FINEST 32
+
+/* The beat of the meter's first measure and its division (half a beat in a simple meter, a third of one in a compound
+   one: the local rhythmic grid, meter_map_grid_at); false for a meter a signature cannot hold. */
+bool plan_meter_grid(PlanMeter meter, Rational *beat, Rational *division);
+
+/* Whether a pickup of this length is on the meter's grid: zero (no pickup), or a whole number of the first measure's
+   beat, division, the division halved down to 1/32, or the 3:2 tuplet of the beat or of the division (meter_grid_holds).
+   Every length on 1/32 qualifies; a triplet of the beat or the division does too (1/6 and 1/12 in 4/4), 1/48 and 1/64 do
+   not. The bounds a pickup must also keep (shorter than a bar, longer than nothing) belong to the caller. */
+bool plan_meter_pickup_on_grid(PlanMeter meter, Rational pickup);
+
 /* Whether two spans share any time (touching ends do not overlap); false when a span's end overflows. */
 bool plan_spans_overlap(PlanSpan a, PlanSpan b);
 

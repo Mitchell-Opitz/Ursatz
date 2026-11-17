@@ -125,12 +125,12 @@ static PieceResult request_form(const PieceRequest *request, FormSpec **form) {
 
 /* ------------------------------------------------------------- the checks and the defaults */
 
-/* Whether the pickup is a multiple of 1/32 of a whole note, not negative and shorter than a bar. */
-static bool pickup_valid(Rational pickup, Rational bar) {
+/* Whether the pickup is on the meter's grid, not negative and shorter than a bar. */
+static bool pickup_valid(PlanMeter meter, Rational pickup, Rational bar) {
     if (pickup.den == 0 || pickup.num < 0 || rational_cmp(pickup, bar) >= 0) {
         return false;
     }
-    return (pickup.num * (long)PIECE_PICKUP_GRID) % (long)pickup.den == 0;
+    return plan_meter_pickup_on_grid(meter, pickup);
 }
 
 static PieceResult check(const FormSpec *form, const PieceRequest *request) {
@@ -153,7 +153,7 @@ static PieceResult check(const FormSpec *form, const PieceRequest *request) {
         const PieceSection *section = &request->sections[i];
         if (section->id[0] == '\0' || strnlen(section->id, PIECE_SECTION_ID_MAX) == PIECE_SECTION_ID_MAX ||
             section->part < PIECE_PART_INTRO || section->part > PIECE_PART_ENDING || (int)section->part < last_part ||
-            !form_spec_has_role(form, role_of(section->part)) || section->beats < 1 || !pickup_valid(section->pickup, bar) ||
+            !form_spec_has_role(form, role_of(section->part)) || section->beats < 1 || !pickup_valid(request->meter, section->pickup, bar) ||
             section->fill < PIECE_FILL_EMPTY || section->fill > PIECE_FILL_PROGRESSION ||
             section->function < PIECE_FUNCTION_NONE || section->function > PIECE_FUNCTION_CODA ||
             /* A transition leads on to the next section: not the turnaround (it leads back) or the ending. A coda closes. */

@@ -80,7 +80,7 @@ bool motive_implied_chord(const Motive *motive, MotiveSketchChord *out);
  * The motive a library sketch result makes: the template with the notes, meter, pickup, harmony, features and role of
  * the sketch, and its scale when it moved (marked given), the length where the last note ends. The template's form, key
  * source and tone labels stay. False, with *out untouched, for a sketch the Composer cannot hold: not valid, a meter it
- * does not have, a time past a billion, a pickup off the thirty-second grid, notes that fail motive_check_notes. out may
+ * does not have, a time past a billion, a pickup off the meter's grid, notes that fail motive_check_notes. out may
  * be the template.
  */
 bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template_motive, Motive *out);
@@ -90,7 +90,7 @@ bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template
  * pickup, harmony, features, role and (for the dominant form) key the relation gives, its length where the last note
  * ends. The motive's form, key source and tone labels stay. The library's refusals keep their meaning as MOTIVE_DEV_*:
  * OK, UNCHANGED, RANGE, NOT_EXPRESSIBLE; NO_SCALE is NO_KEY, INVALID is INVALID, any other is NOT_APPLICABLE. A result
- * the Composer cannot hold (a time past a billion, a pickup off the thirty-second grid, a meter it does not have) is
+ * the Composer cannot hold (a time past a billion, a pickup off the meter's grid, a meter it does not have) is
  * NOT_EXPRESSIBLE. A full motive with a key and no harmony of its own is given its best implied chord at 0 for the
  * relation; the result leaves that chord out when it is the best implied chord of the result's notes, unless keep_implied
  * (the harmony rows, whose chords are the variant's own). *out is written only on OK. applied, when not NULL,

@@ -69,8 +69,6 @@ bool piece_fill_from_name(const char *name, PieceFillKind *out);
 #define PIECE_SECTION_ID_MAX FORM_SPEC_ID_MAX
 #define PIECE_STRUCTURE_MAX_SECTIONS 32
 #define PIECE_STRUCTURE_MAX_BARS 512
-/* The pickup is a multiple of this fraction of a whole note and shorter than a bar. */
-#define PIECE_PICKUP_GRID 32
 
 typedef struct {
     char id[PIECE_SECTION_ID_MAX];
@@ -206,7 +204,7 @@ PieceResult piece_build_ending(const PiecePlan *loop_plan, const PieceRequest *r
 /*
  * PIECE_OK, or PIECE_ERR_BAD_REQUEST for: a form that is not a built-in whose sections the request gives; no body section;
  * parts out of order; ids that are empty or repeat; more than PIECE_STRUCTURE_MAX_SECTIONS sections or
- * PIECE_STRUCTURE_MAX_BARS bars; a length under one beat; a pickup that is not a multiple of 1/32 or not shorter than a
+ * PIECE_STRUCTURE_MAX_BARS bars; a length under one beat; a pickup that is not on the meter's grid or not shorter than a
  * bar; a meter or key not supported; an accompaniment and a voicing both.
  */
 PieceResult piece_request_check(const PieceRequest *request);

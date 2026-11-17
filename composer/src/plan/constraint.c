@@ -14,6 +14,17 @@ void constraint_list_free(ConstraintList *list) {
     memset(list, 0, sizeof(*list));
 }
 
+/* The meter the plan starts in, from its first meter lane span; 4/4 while it has none (a pickup on 1/32 is on every
+   meter's grid, so only a triplet pickup depends on which meter is chosen). */
+static PlanMeter first_meter(const PiecePlan *plan) {
+    LaneSpanId id;
+    PlanSpan whole = plan_node_span(plan, plan_root(plan));
+    if (plan_lane_find(plan, PLAN_LANE_METER, 0, whole, &id, 1) == 0) {
+        return (PlanMeter){4, 4, 0};
+    }
+    return plan_lane_span_payload(plan, id)->meter;
+}
+
 static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *constraint) {
     switch (constraint->kind) {
     case PLAN_CONSTRAINT_LENGTH_BARS:
@@ -122,8 +133,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     case PLAN_CONSTRAINT_PICKUP: {
         /* The bar it must be shorter than is the meter's, which the melody operator reads; no bar is as long as two wholes. */
         Rational pickup = constraint->params.pickup;
-        return pickup.den != 0 && pickup.num > 0 && (pickup.num * 32) % (long)pickup.den == 0 &&
-               pickup.num < 2 * (long)pickup.den;
+        return pickup.den > 0 && pickup.num > 0 && pickup.num < 2 * pickup.den &&
+               plan_meter_pickup_on_grid(first_meter(plan), pickup);
     }
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:

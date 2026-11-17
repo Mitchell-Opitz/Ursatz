@@ -47,7 +47,7 @@ A section is:
 | `part` | `PIECE_PART_INTRO`, `_BODY`, `_TURNAROUND` or `_ENDING`: the form's role of that name. |
 | `function` | `PIECE_FUNCTION_NONE` (default), `_TRANSITION` or `_CODA`: the part of a larger form the section is (R-508, see [Functions](#functions)). |
 | `beats` | The length in beats of the meter: any whole number, 1 or more. |
-| `pickup` | The anacrusis before the section: a multiple of 1/32 of a whole note and shorter than a bar; 0 for none. It is the section's own, not part of `beats`. |
+| `pickup` | The anacrusis before the section: on the meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division) and shorter than a bar; 0 for none. It is the section's own, not part of `beats`. |
 | `has_cadence`, `cadence` | The cadence the section ends in; without one `piece_default_cadences` decides. |
 | `fill` | `PIECE_FILL_EMPTY`, `_MOTIF`, `_THEME` or `_PROGRESSION` (see [Fills](#fills)). |
 | `motive`, `has_into`, `into`, `hybrid` | A motif section's motive (read as the piece's basic motive when it is the first), and the archetype a theme section is built as (`into`: sentence by default; a hybrid names its pairing in `hybrid`). |
@@ -56,7 +56,7 @@ A section is:
 
 `piece_request_check` returns `PIECE_ERR_BAD_REQUEST` for a form that is not a built-in whose sections the request gives, a
 request with no body section, parts out of order, ids that repeat, more than 32 sections or 512 bars, a length under one
-beat, a pickup that is not a multiple of 1/32 or not shorter than a bar, a meter or key that is not supported, or an
+beat, a pickup that is not on the meter's grid or not shorter than a bar, a meter or key that is not supported, or an
 accompaniment and a voicing together.
 
 ## Functions

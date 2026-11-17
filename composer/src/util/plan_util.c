@@ -1,5 +1,8 @@
 #include "util/plan_util.h"
 
+#include <model/identity/entity_id.h>
+#include <model/time/meter_arithmetic.h>
+#include <model/time/meter_map.h>
 #include <model/time/note_value.h>
 
 const CadenceType plan_cadence_types[PLAN_CADENCE_COUNT] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC,
@@ -26,6 +29,54 @@ bool plan_meter_signature(PlanMeter meter, TimeSignature **out) {
     TimeSignatureResult made = time_signature_create((unsigned)meter.beats_per_bar, unit, out);
     note_value_destroy(unit);
     return made == TIME_SIGNATURE_OK;
+}
+
+/* The grid of the first measure of a one-region map of the meter. The map owns the signature the grid borrows, so the
+   caller destroys *map when it is done with the grid. */
+static bool first_measure_grid(PlanMeter meter, MeterMap **map, MeterGrid *grid) {
+    TimeSignature *signature = NULL;
+    EntityID *id = NULL;
+    bool ok = false;
+    *map = NULL;
+    if (plan_meter_signature(meter, &signature) && entity_id_create("composer-plan-meter", &id) == ENTITY_ID_OK) {
+        MeterMapChangePoint start = {signature, musical_time_of(rational_ratio(0, 1))};
+        if (meter_map_create(id, &start, 1, map) != METER_MAP_OK) {
+            entity_id_destroy(id);
+        } else if (meter_map_grid_at(*map, start.start, grid) == METER_MAP_OK) {
+            ok = true;
+        } else {
+            meter_map_destroy(*map);
+            *map = NULL;
+        }
+    }
+    time_signature_destroy(signature);
+    return ok;
+}
+
+bool plan_meter_grid(PlanMeter meter, Rational *beat, Rational *division) {
+    MeterMap *map = NULL;
+    MeterGrid grid;
+    if (!first_measure_grid(meter, &map, &grid)) {
+        return false;
+    }
+    *beat = grid.beat;
+    *division = grid.division;
+    meter_map_destroy(map);
+    return true;
+}
+
+bool plan_meter_pickup_on_grid(PlanMeter meter, Rational pickup) {
+    if (pickup.den <= 0 || pickup.num < 0) {
+        return false;
+    }
+    MeterMap *map = NULL;
+    MeterGrid grid;
+    if (!first_measure_grid(meter, &map, &grid)) {
+        return false;
+    }
+    bool holds = pickup.num == 0 || meter_grid_holds(&grid, pickup, rational_ratio(1, PLAN_PICKUP_FINEST));
+    meter_map_destroy(map);
+    return holds;
 }
 
 bool plan_cadence_index(CadenceType type, size_t *index) {

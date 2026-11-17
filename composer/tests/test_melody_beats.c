@@ -400,11 +400,12 @@ static void test_pickup_at_start(void) {
     assert(fill_seeds(chords, 4, span, 8, check_pickup_melody) > 0);
 }
 
-/* A pickup is a multiple of 1/32 of a whole note, and not a bar or more of the longest meter. */
+/* A pickup is on the meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division), and not a
+   bar or more of the longest meter. */
 static void test_pickup_constraint(void) {
     static const long NUM[4] = {1, 1, 0, 3};
     static const unsigned long DEN[4] = {3, 64, 4, 2};
-    static const PlanResult EXPECTED[4] = {PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD, PLAN_OK};
+    static const PlanResult EXPECTED[4] = {PLAN_OK, PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD, PLAN_OK};
     Piece piece = build(PICKUP_CHORDS, 5, false);
     NodeId motive = add_melody_motive(&piece);
     PlanSpan span = {beats(3), beats(9)};

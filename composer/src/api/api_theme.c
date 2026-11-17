@@ -19,6 +19,7 @@
 #include "api_internal.h"
 #include "api_vocabulary.h"
 #include "grow/grow_internal.h"
+#include "util/plan_util.h"
 #include "util/request_parse.h"
 
 /*
@@ -233,6 +234,11 @@ static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, 
     if (rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar_length) != RATIONAL_OK) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "the meter has no bar length");
     }
+    Rational beat;
+    Rational division;
+    if (!plan_meter_grid(*meter, &beat, &division)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "the meter has no rhythmic grid");
+    }
     bool seen[GROW_EXT_CHORDS / 2 + 1] = {false};
     const cJSON *entry = NULL;
     size_t index = 0;
@@ -273,11 +279,10 @@ static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, 
         }
         for (size_t c = 0; c < count; c++) {
             const MotiveSketchChord *chord = &parsed[c];
-            Rational half_beats;
+            Rational divisions;
             Rational end = bar_length;
-            /* An onset is a multiple of half a beat of the beat unit, inside the bar. */
-            if (rational_make(chord->onset.num * 2 * meter->beat_unit, chord->onset.den, &half_beats) != RATIONAL_OK ||
-                half_beats.den != 1) {
+            /* An onset is a whole number of the meter's division (half a beat, a third in a compound meter). */
+            if (rational_div(chord->onset, division, &divisions) != RATIONAL_OK || divisions.den != 1) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: a chord starts on a beat or a half beat",
                                 bar);
             }

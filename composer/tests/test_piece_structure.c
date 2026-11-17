@@ -137,7 +137,7 @@ static void test_checks(void) {
     add_section(&fixture, "a", "A", PIECE_PART_BODY, 0, PIECE_FILL_EMPTY);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
-    /* Pickups: a quarter is fine, a bar is not, a triplet sixteenth is not a multiple of 1/32. */
+    /* Pickups: a quarter is fine, a bar is not, a triplet eighth (1/12) is on the 4/4 grid, 1/64 is not. */
     fixture_init(&fixture);
     PieceSection *section = add_section(&fixture, "a", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
     assert(rational_make(1, 4, &section->pickup) == RATIONAL_OK);
@@ -145,6 +145,8 @@ static void test_checks(void) {
     assert(rational_make(1, 1, &section->pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
     assert(rational_make(1, 12, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(rational_make(1, 64, &section->pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
     /* Too many sections, and too many bars. */
