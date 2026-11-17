@@ -29,4 +29,9 @@ if(URSATZ_GUI)
 endif()
 if(URSATZ_TESTS)
     add_subdirectory(tests)
+    # cmake --build build --target update-goldens: rewrites every golden (cmake/UpdateGoldens.cmake).
+    add_custom_target(update-goldens
+        COMMAND ${CMAKE_COMMAND} -DCTEST=${CMAKE_CTEST_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR}
+                -P ${CMAKE_SOURCE_DIR}/cmake/UpdateGoldens.cmake
+        USES_TERMINAL)
 endif()
