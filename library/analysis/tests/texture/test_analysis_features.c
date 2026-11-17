@@ -308,11 +308,17 @@ static void test_bad_calls(void) {
     bad = standard_texture_config_default();
     bad.release_tolerance_denominator = 16; /* wider than half a grid step */
     assert(!standard_texture_config_valid(&bad));
-    assert(standard_texture_input_add_note(&piece.input, "", piece_span(&piece, 0, 1, 1, 4), 60, 0, 0, 1.0) ==
-           STANDARD_TEXTURE_ANALYSIS_ERR_INVALID);
-    assert(standard_texture_input_add_note(&piece.input, "x", NULL, 60, 0, 0, 1.0) == STANDARD_TEXTURE_ANALYSIS_ERR_INVALID);
-    assert(standard_texture_input_add_note(&piece.input, "x", piece_span(&piece, 0, 1, 1, 4), 60, 0, 0, 1.5) ==
-           STANDARD_TEXTURE_ANALYSIS_ERR_INVALID);
+    /* a note the analysis cannot read is refused when the windows are measured */
+    const TimeSpan *readable = piece_span(&piece, 0, 1, 1, 4);
+    AnalysisNote bad_id = {"", NULL, readable, 60, NULL, NULL, 0, 0, 1.0};
+    AnalysisNote no_span = {"x", NULL, NULL, 60, NULL, NULL, 0, 0, 1.0};
+    AnalysisNote bad_confidence = {"x", NULL, readable, 60, NULL, NULL, 0, 0, 1.5};
+    AnalysisNote unknown = {"x", NULL, readable, ANALYSIS_PITCH_UNKNOWN, NULL, NULL, 0, 0, 1.0};
+    AnalysisNote *refused[4] = {&bad_id, &no_span, &bad_confidence, &unknown};
+    for (size_t i = 0; i < 4; i++) {
+        AnalysisNoteSet one = {refused[i], 1, piece.map};
+        assert(standard_texture_measure_windows(&one, NULL, &windows) == STANDARD_TEXTURE_ANALYSIS_ERR_INVALID);
+    }
     assert(standard_texture_measure_windows(&piece.input, NULL, &windows) == STANDARD_TEXTURE_ANALYSIS_OK && windows.count == 0);
     standard_texture_windows_destroy(&windows);
     piece_destroy(&piece);

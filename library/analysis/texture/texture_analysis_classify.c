@@ -343,13 +343,13 @@ static StandardTextureAnalysisStatus standard_texture_analyze_windows(const Stan
     return STANDARD_TEXTURE_ANALYSIS_OK;
 }
 
-StandardTextureAnalysisStatus standard_texture_analyze(const StandardTextureInput *input, const StandardTextureConfig *config,
+StandardTextureAnalysisStatus standard_texture_analyze(const AnalysisNoteSet *notes, const StandardTextureConfig *config,
                                                        StandardTextureAnalysis *out) {
-    if (input == NULL || out == NULL) {
+    if (notes == NULL || out == NULL) {
         return STANDARD_TEXTURE_ANALYSIS_ERR_NULL_ARGUMENT;
     }
     StandardTextureWindows windows = {NULL, 0};
-    StandardTextureAnalysisStatus status = standard_texture_measure_windows(input, config, &windows);
+    StandardTextureAnalysisStatus status = standard_texture_measure_windows(notes, config, &windows);
     if (status != STANDARD_TEXTURE_ANALYSIS_OK) {
         return status;
     }

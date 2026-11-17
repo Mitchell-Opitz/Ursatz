@@ -608,7 +608,7 @@ static AnalysisChainStatus texture_stage(AnalysisChain *chain) {
         return ANALYSIS_CHAIN_ERR_TEXTURE;
     }
     chain->have_texture_input = true;
-    if (standard_texture_analyze(&chain->texture_input.input, &chain->config.texture, &chain->texture) !=
+    if (standard_texture_analyze(&chain->texture_input.set, &chain->config.texture, &chain->texture) !=
         STANDARD_TEXTURE_ANALYSIS_OK) {
         return ANALYSIS_CHAIN_ERR_TEXTURE;
     }

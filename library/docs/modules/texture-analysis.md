@@ -6,7 +6,7 @@ Adapter in `analysis/texture/` (`texture_analysis_*.c`). It measures texture fea
 
 ## Input
 
-`StandardTextureInput` (`texture_analysis_input.h`) is built with `standard_texture_input_init`, `_add_note` and `_destroy`. Ids are copied; the `TimeSpan`s and the `MeterMap` are borrowed and must outlive the input and every result.
+The input is an `AnalysisNoteSet` (`analysis/notes/analysis_note.h`, in any order), read by `standard_texture_measure_windows` and `standard_texture_analyze`. Everything in it is borrowed and must outlive every result; a note the analysis cannot read is `ERR_INVALID`.
 
 | Field | Meaning |
 |---|---|

@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "analysis/notes/analysis_note.h"
 #include "model/core/rational.h"
 #include "analysis/texture/texture_analysis_input.h"
 
@@ -172,10 +173,10 @@ typedef struct {
 } StandardTextureWindows;
 
 /*
- * Measures every window of the input: one per measure from the first measure that has a note to the last, hop one measure (a pickup
+ * Measures every window of the notes (unsorted is fine; ERR_INVALID for a note the analysis cannot read: no id, an id too long, an invalid span, an unknown midi, a confidence outside 0 to 1): one per measure from the first measure that has a note to the last, hop one measure (a pickup
  * measure is its own short window). `config` may be NULL for the defaults. *out is untouched on failure.
  */
-StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTextureInput *input, const StandardTextureConfig *config,
+StandardTextureAnalysisStatus standard_texture_measure_windows(const AnalysisNoteSet *notes, const StandardTextureConfig *config,
                                                                StandardTextureWindows *out);
 void standard_texture_windows_destroy(StandardTextureWindows *windows);
 

@@ -54,4 +54,4 @@ kinds of polyphony such as imitative or free) are not in this framework.
 
 ## Neutral analysis input
 
-`standard_texture_input_add_analysis_note` (`analysis/texture_analysis_input.h`) takes an `AnalysisNote` (`semantics/analysis_note.h`): id, span, `midi` as the pitch, track, voice and voice confidence carry over. A note with an unknown pitch is rejected.
+`standard_texture_analyze` and `standard_texture_measure_windows` (`analysis/texture/texture_analysis_classify.h`, `texture_analysis_features.h`) read an `AnalysisNoteSet` (`analysis/notes/analysis_note.h`, any order): id, span, `midi` as the pitch, track, voice and voice confidence. A note with an unknown pitch, no id, an invalid span or a confidence outside 0 to 1 is `ERR_INVALID`.

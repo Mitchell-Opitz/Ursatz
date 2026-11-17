@@ -38,12 +38,12 @@ static inline bool texture_matches(int heard, int asked) {
                                               (int)category == asked));
 }
 
-static inline void heard_add(StandardTextureInput *input, TimeSpan ***spans, size_t *span_count, unsigned *next, size_t track,
+/* Adds one note to the array, without its id (texture_heard names them once all are in, so the array may move). */
+static inline void heard_add(AnalysisNote **notes, size_t *note_count, TimeSpan ***spans, size_t *span_count, size_t track,
                              size_t voice, Rational start, Rational length, int pitch) {
     MusicalTime *from = NULL;
     MusicalTime *to = NULL;
     TimeSpan *span = NULL;
-    char id[STANDARD_TEXTURE_ID_MAX];
     Rational end;
     assert(plan_span_end((PlanSpan){start, length}, &end) == PLAN_OK);
     assert(musical_time_create(start.num, start.den, &from) == MUSICAL_TIME_OK);
@@ -54,8 +54,10 @@ static inline void heard_add(StandardTextureInput *input, TimeSpan ***spans, siz
     *spans = realloc(*spans, (*span_count + 1) * sizeof(**spans));
     assert(*spans);
     (*spans)[(*span_count)++] = span;
-    snprintf(id, sizeof(id), "n%u", (*next)++);
-    assert(standard_texture_input_add_note(input, id, span, pitch, track, voice, 1.0) == STANDARD_TEXTURE_ANALYSIS_OK);
+    *notes = realloc(*notes, (*note_count + 1) * sizeof(**notes));
+    assert(*notes);
+    AnalysisNote note = {NULL, NULL, span, pitch, NULL, NULL, track, voice, 1.0};
+    (*notes)[(*note_count)++] = note;
 }
 
 /* The texture of every measure of span, and how many of them are the texture asked for. */
@@ -66,11 +68,11 @@ static inline TextureHeard texture_heard(const PiecePlan *plan, PlanSpan span, P
     MusicalTime *zero = NULL;
     EntityID *id = NULL;
     MeterMap *map = NULL;
-    StandardTextureInput input;
+    AnalysisNote *notes = NULL;
+    size_t note_count = 0;
     StandardTextureAnalysis analysis;
     TimeSpan **spans = NULL;
     size_t span_count = 0;
-    unsigned next = 0;
     int exponent = 0;
     for (int beat = meter.beat_unit; beat > 1; beat /= 2) {
         exponent++;
@@ -80,8 +82,6 @@ static inline TextureHeard texture_heard(const PiecePlan *plan, PlanSpan span, P
     assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK && entity_id_create("test-texture-meter", &id) == ENTITY_ID_OK);
     MeterMapChangePoint point = {signature, zero};
     assert(meter_map_create(id, &point, 1, &map) == METER_MAP_OK);
-    assert(standard_texture_input_init(&input, map) == STANDARD_TEXTURE_ANALYSIS_OK);
-
     for (int part = 0; part < 5; part++) {
         PlanLaneKind lane = part == 0 ? PLAN_LANE_MELODY : (part == 1 ? PLAN_LANE_BASS : PLAN_LANE_INNER_VOICE);
         int voice = part < 2 ? 0 : part - 1;
@@ -90,15 +90,22 @@ static inline TextureHeard texture_heard(const PiecePlan *plan, PlanSpan span, P
         assert(found <= 256);
         for (size_t i = 0; i < found; i++) {
             PlanSpan lane_span = plan_lane_span_span(plan, ids[i]);
-            const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
-            for (size_t n = 0; n < notes->note_count; n++) {
+            const PlanNotes *lane_notes = &plan_lane_span_payload(plan, ids[i])->notes;
+            for (size_t n = 0; n < lane_notes->note_count; n++) {
                 Rational start;
-                assert(rational_add(lane_span.start, notes->notes[n].offset, &start) == RATIONAL_OK);
-                heard_add(&input, &spans, &span_count, &next, part < 2 ? (size_t)part : 2, part < 2 ? 0 : (size_t)voice - 1,
-                          start, notes->notes[n].duration, notes->notes[n].midi);
+                assert(rational_add(lane_span.start, lane_notes->notes[n].offset, &start) == RATIONAL_OK);
+                heard_add(&notes, &note_count, &spans, &span_count, part < 2 ? (size_t)part : 2,
+                          part < 2 ? 0 : (size_t)voice - 1, start, lane_notes->notes[n].duration, lane_notes->notes[n].midi);
             }
         }
     }
+    char(*names)[STANDARD_TEXTURE_ID_MAX] = calloc(note_count > 0 ? note_count : 1, sizeof(*names));
+    assert(names);
+    for (size_t n = 0; n < note_count; n++) {
+        snprintf(names[n], sizeof(names[n]), "n%zu", n);
+        notes[n].note_id = names[n];
+    }
+    AnalysisNoteSet input = {notes, note_count, map};
     memset(&analysis, 0, sizeof(analysis));
     assert(standard_texture_analyze(&input, NULL, &analysis) == STANDARD_TEXTURE_ANALYSIS_OK);
     for (size_t w = 0; w < analysis.windows.count; w++) {
@@ -107,7 +114,8 @@ static inline TextureHeard texture_heard(const PiecePlan *plan, PlanSpan span, P
         result.heard += texture_matches(analysis.window_texture[w], asked) ? 1 : 0;
     }
     standard_texture_analysis_destroy(&analysis);
-    standard_texture_input_destroy(&input);
+    free(names);
+    free(notes);
     for (size_t i = 0; i < span_count; i++) {
         time_span_destroy(spans[i]);
     }

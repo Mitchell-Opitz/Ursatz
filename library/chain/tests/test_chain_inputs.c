@@ -333,7 +333,7 @@ static void test_stage_inputs(TestPiece *piece) {
     memset(&texture, 0, sizeof(texture));
     assert(chain_build_texture_input(&piece->set, NULL, &texture) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
     assert(chain_build_texture_input(&piece->set, &pitches, &texture) == CHAIN_INPUT_OK);
-    assert(texture.input.note_count == piece->count && texture.assignment.count == piece->count && texture.stream_count == 1);
+    assert(texture.set.count == piece->count && texture.assignment.count == piece->count && texture.stream_count == 1);
     chain_texture_input_destroy(&texture);
     chain_texture_input_destroy(NULL);
 

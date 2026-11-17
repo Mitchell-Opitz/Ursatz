@@ -93,7 +93,7 @@ int main(void) {
     ChainTextureInput build;
     assert(chain_build_texture_input(&p.set, &pitches, &build) == CHAIN_INPUT_OK);
     printf("Field 1, measures %d-%d (draft hand analysis): %zu notes in %zu track(s)\n", annotation.range_first, annotation.range_last,
-           build.input.note_count, build.stream_count);
+           build.set.count, build.stream_count);
     size_t per_track[8] = {0};
     for (size_t s = 0; s < build.assignment.stream_count && s < 8; s++) {
         per_track[s] = build.assignment.streams[s].voice_count;
@@ -106,7 +106,7 @@ int main(void) {
 
     StandardTextureAnalysis analysis;
     memset(&analysis, 0, sizeof(analysis));
-    assert(standard_texture_analyze(&build.input, NULL, &analysis) == STANDARD_TEXTURE_ANALYSIS_OK);
+    assert(standard_texture_analyze(&build.set, NULL, &analysis) == STANDARD_TEXTURE_ANALYSIS_OK);
     printf("  %zu window(s), %zu passage(s), %zu change(s)\n", analysis.windows.count, analysis.passage_count, analysis.change_count);
 
     /* the measures */

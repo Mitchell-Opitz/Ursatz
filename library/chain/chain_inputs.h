@@ -243,13 +243,14 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
 void chain_meter_input_destroy(ChainMeterInput *input);
 
 /*
- * The input of standard-texture's adapter (texture_analysis_input.h): every note with the voice the kernel's rule-based voice separation
+ * The input of standard-texture's adapter (texture_analysis_classify.h): every note with the voice the kernel's rule-based voice separation
  * (voice_separate, L2.7) gives it. The separation runs per stream, and a note's stream is its track (a MIDI track chunk is usually a hand);
  * a note with no track is in stream 0. The note's voice is the separation's index inside its stream (0 the top) and its confidence the
  * separation's. Destroy with chain_texture_input_destroy.
  */
 typedef struct {
-    StandardTextureInput input;
+    AnalysisNote *notes;         /* owned: the note set's notes with the track, voice and confidence the separation gives */
+    AnalysisNoteSet set;         /* over notes, against the note set's MeterMap */
     VoiceAssignment assignment;  /* owned; one entry per note, in the note set's order */
     size_t stream_count;
 } ChainTextureInput;

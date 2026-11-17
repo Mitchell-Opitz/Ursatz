@@ -1313,7 +1313,7 @@ void chain_texture_input_destroy(ChainTextureInput *input) {
     if (input == NULL) {
         return;
     }
-    standard_texture_input_destroy(&input->input);
+    free(input->notes);
     voice_assignment_destroy(&input->assignment);
     memset(input, 0, sizeof(*input));
 }
@@ -1342,19 +1342,24 @@ ChainInputStatus chain_build_texture_input(const AnalysisNoteSet *notes, const C
         free(stream);
         return CHAIN_INPUT_ERR_SEGMENTATION;
     }
-    ChainInputStatus status = standard_texture_input_init(&build.input, notes->map) == STANDARD_TEXTURE_ANALYSIS_OK
-                                  ? CHAIN_INPUT_OK
-                                  : CHAIN_INPUT_ERR_ALLOC;
+    build.notes = (AnalysisNote *)calloc(notes->count, sizeof(AnalysisNote));
+    ChainInputStatus status = build.notes != NULL ? CHAIN_INPUT_OK : CHAIN_INPUT_ERR_ALLOC;
     for (size_t i = 0; i < notes->count && status == CHAIN_INPUT_OK; i++) {
-        AnalysisNote note = notes->notes[i];
+        AnalysisNote *note = &build.notes[i];
         const VoiceAssignmentEntry *entry = &build.assignment.entries[i];
-        note.track = stream[i];
-        note.voice = entry->voice;
-        note.voice_confidence = entry->confidence;
-        if (standard_texture_input_add_analysis_note(&build.input, &note) != STANDARD_TEXTURE_ANALYSIS_OK) {
+        *note = notes->notes[i];
+        note->track = stream[i];
+        note->voice = entry->voice;
+        note->voice_confidence = entry->confidence;
+        /* A note the texture analysis cannot read is refused here, where the input is built. */
+        if (note->midi == ANALYSIS_PITCH_UNKNOWN || note->note_id[0] == '\0' ||
+            strlen(note->note_id) >= STANDARD_TEXTURE_ID_MAX || !(note->voice_confidence >= 0.0 && note->voice_confidence <= 1.0)) {
             status = CHAIN_INPUT_ERR_BAD_NOTES;
         }
     }
+    build.set.notes = build.notes;
+    build.set.count = notes->count;
+    build.set.map = notes->map;
     free(stream);
     if (status != CHAIN_INPUT_OK) {
         chain_texture_input_destroy(&build);

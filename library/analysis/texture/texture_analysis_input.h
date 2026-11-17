@@ -4,23 +4,19 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "analysis/notes/analysis_note.h"
-#include "model/time/meter_map.h"
-#include "model/time/time_span.h"
 
 /*
  * The standard-texture analysis adapter (L3.9): texture features measured per measure from separated voices, a texture per
  * window classified with standard-texture's rules, and windows merged into passages. standard-texture includes no other
- * framework and no kernel analysis (the architecture test enforces both): the input is the neutral structs below, which the
- * caller fills (tests/integration/ builds them from the rule-based voice separation and the import).
+ * framework and no kernel analysis (the architecture test enforces both): the input is the neutral AnalysisNoteSet
+ * (analysis/notes/analysis_note.h), in any order, which the caller fills (tests/integration/ builds it from the rule-based
+ * voice separation and the import). Everything in it is BORROWED: it must outlive every result computed from it.
  *
- * THE INPUT is built with the functions below: init with the MeterMap, add notes, run an analysis, destroy. Ids are copied.
- * TimeSpans and the MeterMap are BORROWED: they must outlive the input and every result computed from it.
- *
- *   note   id; its TimeSpan (onset to release); its pitch as a PitchNumericValue's position (a semitone number); the `track` it
- *          comes from (a piano file's hand: voices are separated per track by default); the voice index the separation gave it
- *          inside that track (any whole number, 0 the top); and the voice's confidence in [0, 1]. A voice is the pair
- *          (track, voice index); notes of one voice may overlap only as chord members
+ *   note   note_id (non-empty, under STANDARD_TEXTURE_ID_MAX); its TimeSpan (onset to release, valid); its midi (a semitone
+ *          number, not unknown); the `track` it comes from (a piano file's hand: voices are separated per track by default);
+ *          the `voice` index the separation gave it inside that track (any whole number, 0 the top); and the voice's
+ *          confidence in [0, 1]. A voice is the pair (track, voice index); notes of one voice may overlap only as chord
+ *          members. A note the analysis cannot read is ERR_INVALID
  *
  * THE SNAP. Onsets and releases are read on a grid so a performed file's near-simultaneous attacks are simultaneous: an onset within
  * 1/onset_tolerance_denominator of a whole note of a multiple of 1/onset_grid_denominator is read as that multiple, a release within
@@ -49,15 +45,6 @@ typedef enum {
 } StandardTextureAnalysisStatus;
 
 typedef struct {
-    char id[STANDARD_TEXTURE_ID_MAX];
-    const TimeSpan *span;
-    long pitch;
-    size_t track;
-    size_t voice;
-    double voice_confidence;
-} StandardTextureNote;
-
-typedef struct {
     unsigned onset_grid_denominator;
     unsigned onset_tolerance_denominator;
     unsigned release_tolerance_denominator;
@@ -69,27 +56,7 @@ typedef struct {
     double pattern_min;
 } StandardTextureConfig;
 
-typedef struct {
-    const MeterMap *map;
-    StandardTextureNote *notes;
-    size_t note_count;
-    size_t note_capacity;
-} StandardTextureInput;
-
 StandardTextureConfig standard_texture_config_default(void);
 bool standard_texture_config_valid(const StandardTextureConfig *config);
-
-StandardTextureAnalysisStatus standard_texture_input_init(StandardTextureInput *input, const MeterMap *map);
-
-/* Adds a note. ERR_INVALID for an empty or too long id, a NULL span or one that is not ahead (end after start), or a confidence
-   outside [0, 1]. */
-StandardTextureAnalysisStatus standard_texture_input_add_note(StandardTextureInput *input, const char *id, const TimeSpan *span,
-                                                              long pitch, size_t track, size_t voice, double voice_confidence);
-
-/* Adds an AnalysisNote (semantics/analysis_note.h) field for field: id, span, `pitch` is midi, track, voice and voice_confidence
-   carried. ERR_INVALID for an unknown pitch or what standard_texture_input_add_note rejects. */
-StandardTextureAnalysisStatus standard_texture_input_add_analysis_note(StandardTextureInput *input, const AnalysisNote *note);
-
-void standard_texture_input_destroy(StandardTextureInput *input);
 
 #endif

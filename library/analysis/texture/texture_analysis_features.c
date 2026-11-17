@@ -6,6 +6,7 @@
 #include "model/pitch/midi_pitch.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/score_time.h"
+#include "model/time/time_span.h"
 
 typedef unsigned long long Mask;
 
@@ -875,9 +876,9 @@ static void snap_time(const StandardTextureConfig *config, Rational *time, bool 
     }
 }
 
-StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTextureInput *input, const StandardTextureConfig *config,
+StandardTextureAnalysisStatus standard_texture_measure_windows(const AnalysisNoteSet *notes, const StandardTextureConfig *config,
                                                                StandardTextureWindows *out) {
-    if (input == NULL || out == NULL || input->map == NULL) {
+    if (notes == NULL || out == NULL || notes->map == NULL || (notes->count > 0 && notes->notes == NULL)) {
         return STANDARD_TEXTURE_ANALYSIS_ERR_NULL_ARGUMENT;
     }
     StandardTextureConfig fallback = standard_texture_config_default();
@@ -887,25 +888,33 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTex
     if (!standard_texture_config_valid(config)) {
         return STANDARD_TEXTURE_ANALYSIS_ERR_INVALID;
     }
+    for (size_t i = 0; i < notes->count; i++) {
+        const AnalysisNote *note = &notes->notes[i];
+        if (note->note_id == NULL || note->note_id[0] == '\0' || strlen(note->note_id) >= STANDARD_TEXTURE_ID_MAX ||
+            note->midi == ANALYSIS_PITCH_UNKNOWN || !time_span_is_valid(note->span) ||
+            !(note->voice_confidence >= 0.0 && note->voice_confidence <= 1.0)) {
+            return STANDARD_TEXTURE_ANALYSIS_ERR_INVALID;
+        }
+    }
     StandardTextureWindows found = {NULL, 0};
-    if (input->note_count == 0) {
+    if (notes->count == 0) {
         *out = found;
         return STANDARD_TEXTURE_ANALYSIS_OK;
     }
-    VoiceKey *keys = (VoiceKey *)malloc(input->note_count * sizeof(VoiceKey));
-    StandardTextureEvent *events = (StandardTextureEvent *)malloc(input->note_count * sizeof(StandardTextureEvent));
+    VoiceKey *keys = (VoiceKey *)malloc(notes->count * sizeof(VoiceKey));
+    StandardTextureEvent *events = (StandardTextureEvent *)malloc(notes->count * sizeof(StandardTextureEvent));
     if (keys == NULL || events == NULL) {
         free(keys);
         free(events);
         return STANDARD_TEXTURE_ANALYSIS_ERR_ALLOC;
     }
-    for (size_t i = 0; i < input->note_count; i++) {
-        keys[i].track = input->notes[i].track;
-        keys[i].voice = input->notes[i].voice;
+    for (size_t i = 0; i < notes->count; i++) {
+        keys[i].track = notes->notes[i].track;
+        keys[i].voice = notes->notes[i].voice;
     }
-    qsort(keys, input->note_count, sizeof(VoiceKey), compare_keys);
+    qsort(keys, notes->count, sizeof(VoiceKey), compare_keys);
     size_t distinct = 0;
-    for (size_t i = 0; i < input->note_count; i++) {
+    for (size_t i = 0; i < notes->count; i++) {
         if (i == 0 || compare_keys(&keys[i], &keys[i - 1]) != 0) {
             keys[distinct++] = keys[i];
         }
@@ -918,10 +927,10 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTex
     size_t usable = 0;
     Rational first = rational_ratio(0, 1);
     Rational last = rational_ratio(0, 1);
-    for (size_t i = 0; i < input->note_count; i++) {
+    for (size_t i = 0; i < notes->count; i++) {
         Rational onset;
         Rational release;
-        if (!score_time_span(input->notes[i].span, &onset, &release)) {
+        if (!score_time_span(notes->notes[i].span, &onset, &release)) {
             continue;
         }
         snap_time(config, &onset, false);
@@ -929,14 +938,14 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTex
         if (rational_cmp(release, onset) <= 0) {
             continue;
         }
-        VoiceKey key = {input->notes[i].track, input->notes[i].voice};
+        VoiceKey key = {notes->notes[i].track, notes->notes[i].voice};
         const VoiceKey *at = (const VoiceKey *)bsearch(&key, keys, distinct, sizeof(VoiceKey), compare_keys);
         events[usable].onset = onset;
         events[usable].release = release;
-        events[usable].pitch = input->notes[i].pitch;
+        events[usable].pitch = (long)notes->notes[i].midi;
         events[usable].voice = (size_t)(at - keys);
-        events[usable].confidence = input->notes[i].voice_confidence;
-        events[usable].track = input->notes[i].track;
+        events[usable].confidence = notes->notes[i].voice_confidence;
+        events[usable].track = notes->notes[i].track;
         if (usable == 0 || rational_cmp(onset, first) < 0) {
             first = onset;
         }
@@ -948,16 +957,16 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTex
     int first_measure = 0;
     int last_measure = 0;
     StandardTextureAnalysisStatus status = STANDARD_TEXTURE_ANALYSIS_OK;
-    if (usable > 0 && meter_map_measure_of(input->map, first, &first_measure) == METER_MAP_OK &&
-        meter_map_last_measure_touched(input->map, last, &last_measure) == METER_MAP_OK && last_measure >= first_measure) {
+    if (usable > 0 && meter_map_measure_of(notes->map, first, &first_measure) == METER_MAP_OK &&
+        meter_map_last_measure_touched(notes->map, last, &last_measure) == METER_MAP_OK && last_measure >= first_measure) {
         found.items = (StandardTextureWindowFeatures *)calloc((size_t)(last_measure - first_measure + 1), sizeof(*found.items));
         if (found.items == NULL) {
             status = STANDARD_TEXTURE_ANALYSIS_ERR_ALLOC;
         }
         for (int measure = first_measure; status == STANDARD_TEXTURE_ANALYSIS_OK && measure <= last_measure; measure++) {
             StandardTextureWindow window;
-            if (!score_time_measure_bounds(input->map, measure, &window.start, &window.end) ||
-                !score_time_beat_length(input->map, measure, &window.beat)) {
+            if (!score_time_measure_bounds(notes->map, measure, &window.start, &window.end) ||
+                !score_time_beat_length(notes->map, measure, &window.beat)) {
                 continue;
             }
             standard_texture_measure_features(events, usable, &window, measure, &found.items[found.count]);

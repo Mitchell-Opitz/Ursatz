@@ -129,7 +129,7 @@ typedef struct {
 } StandardTextureAnalysis;
 
 /* The whole analysis: windows, classes, passages and changes. `config` may be NULL for the defaults. *out is untouched on failure. */
-StandardTextureAnalysisStatus standard_texture_analyze(const StandardTextureInput *input, const StandardTextureConfig *config,
+StandardTextureAnalysisStatus standard_texture_analyze(const AnalysisNoteSet *notes, const StandardTextureConfig *config,
                                                        StandardTextureAnalysis *out);
 
 void standard_texture_analysis_destroy(StandardTextureAnalysis *analysis);
