@@ -131,6 +131,12 @@ static KnowledgeStatus read_entry(KnowledgeSnapshot *snapshot, const cJSON *entr
         return KNOWLEDGE_ERR_FIELD;
     }
     id = id_item->valuestring;
+    for (size_t i = 0; i < snapshot->count; i++) {
+        if (strcmp(snapshot->slots[i].entry.id, id) == 0) {
+            fail(message, message_size, path, id, "id", "already defined");
+            return KNOWLEDGE_ERR_DUPLICATE;
+        }
+    }
     bool user_id = strncmp(id, USER_PREFIX, strlen(USER_PREFIX)) == 0;
     if (user != user_id) {
         fail(message, message_size, path, id, "id", user ? "a user id starts with \"user.\"" : "a repository id may not start with \"user.\"");
@@ -186,13 +192,6 @@ static KnowledgeStatus read_entry(KnowledgeSnapshot *snapshot, const cJSON *entr
                 fail(message, message_size, path, id, "content.descending_steps", problem);
                 return KNOWLEDGE_ERR_FIELD;
             }
-        }
-    }
-
-    for (size_t i = 0; i < snapshot->count; i++) {
-        if (strcmp(snapshot->slots[i].entry.id, id) == 0) {
-            fail(message, message_size, path, id, "id", "already defined");
-            return KNOWLEDGE_ERR_DUPLICATE;
         }
     }
 
