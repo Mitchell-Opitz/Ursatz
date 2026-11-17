@@ -82,7 +82,7 @@ size_t tempo_map_region_count(const TempoMap *map);
 /* The i-th region in time order, or NULL if i is out of range. Borrowed from the map. */
 const TempoMapRegion *tempo_map_region(const TempoMap *map, size_t index);
 
-const MusicalTime *tempo_map_region_start(const TempoMapRegion *region);
+MusicalTime tempo_map_region_start(const TempoMapRegion *region);
 unsigned long tempo_map_region_microseconds_per_quarter(const TempoMapRegion *region);
 bool tempo_map_region_is_defaulted(const TempoMapRegion *region);
 

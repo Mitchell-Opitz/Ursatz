@@ -38,7 +38,7 @@ static void test_unclassified_tops(void) {
         assert(meter.grouping == METER_GROUPING_NONE);
 
         unsigned beats = 77;
-        Duration *beat = NULL;
+        Duration beat;
         assert(!standard_meter_beats_per_measure(time_signature, &beats));
         assert(!standard_meter_beat_duration(time_signature, &beat));
         time_signature_destroy(time_signature);
@@ -103,10 +103,9 @@ static void test_category_table(void) {
 static void test_beat_duration_and_value(void) {
     /* 4/4: quarter, 1/4 */
     TimeSignature *four_four = make_signature(4, 2);
-    Duration *beat = NULL;
+    Duration beat;
     assert(standard_meter_beat_duration(four_four, &beat));
-    assert_duration(beat, 1, 4);
-    duration_destroy(beat);
+    assert_duration(&beat, 1, 4);
     time_signature_destroy(four_four);
 
     /* a bottom number of 2 is a dotted whole; 1 a dotted breve */
@@ -123,15 +122,12 @@ static void test_beats_times_beat_is_measure(void) {
         for (int exponent = 0; exponent <= 4; exponent++) {
             TimeSignature *time_signature = make_signature(tops[i], exponent);
             unsigned beats;
-            Duration *beat = NULL;
-            Duration *measure = NULL;
+            Duration beat;
+            Duration measure;
             assert(standard_meter_beats_per_measure(time_signature, &beats));
             assert(standard_meter_beat_duration(time_signature, &beat));
             assert(time_signature_measure_duration(time_signature, &measure) == DURATION_OK);
-            assert(duration_numerator(beat) * (long)beats * (long)duration_denominator(measure) ==
-                   duration_numerator(measure) * (long)duration_denominator(beat));
-            duration_destroy(beat);
-            duration_destroy(measure);
+            assert(beat.value.num * (long long)beats * measure.value.den == measure.value.num * beat.value.den);
             time_signature_destroy(time_signature);
         }
     }

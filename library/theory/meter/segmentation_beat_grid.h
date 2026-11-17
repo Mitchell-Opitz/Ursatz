@@ -31,6 +31,6 @@
 
 /* A BeatGridProvider (semantics/sonority_segmentation.h). context is unused and may be NULL. */
 bool standard_meter_segmentation_beat_grid(const MeterMap *map, int measure, void *context,
-                                            MusicalTime ***out_beat_starts, size_t *out_count);
+                                            MusicalTime **out_beat_starts, size_t *out_count);
 
 #endif

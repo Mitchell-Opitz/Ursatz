@@ -234,11 +234,11 @@ static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *m
     if (tempo_map != NULL) {
         for (size_t i = 0; i < tempo_map_region_count(tempo_map); i++) {
             const TempoMapRegion *region = tempo_map_region(tempo_map, i);
-            const MusicalTime *start = tempo_map_region_start(region);
+            MusicalTime start = tempo_map_region_start(region);
             unsigned long microseconds = tempo_map_region_microseconds_per_quarter(region);
             uint32_t tick;
             if (microseconds == 0 || microseconds > MAX_MICROSECONDS_PER_QUARTER ||
-                !to_tick(musical_time_numerator(start), musical_time_denominator(start), division, &tick)) {
+                !to_tick(musical_time_numerator(&start), musical_time_denominator(&start), division, &tick)) {
                 return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
             }
             unsigned char meta[6] = {0xFF, 0x51, 0x03, (unsigned char)((microseconds >> 16) & 0xFF),
@@ -251,13 +251,13 @@ static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *m
     if (meter_map != NULL) {
         for (size_t i = 0; i < meter_map_region_count(meter_map); i++) {
             const MeterMapRegion *region = meter_map_region(meter_map, i);
-            const MusicalTime *start = meter_map_region_start(region);
+            MusicalTime start = meter_map_region_start(region);
             const TimeSignature *signature = meter_map_region_time_signature(region);
             unsigned top = time_signature_top_number(signature);
             int exponent = time_signature_bottom_unit_exponent(signature);
             uint32_t tick;
             if (top == 0 || top > 255 || exponent < 0 || exponent > 7 ||
-                !to_tick(musical_time_numerator(start), musical_time_denominator(start), division, &tick)) {
+                !to_tick(musical_time_numerator(&start), musical_time_denominator(&start), division, &tick)) {
                 return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
             }
             unsigned char meta[7] = {0xFF, 0x58, 0x04, (unsigned char)top, (unsigned char)exponent,

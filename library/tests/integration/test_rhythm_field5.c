@@ -142,24 +142,21 @@ static const TimeSpan *hand_span(HandSpans *kept, const MusicalTime *start, cons
 }
 
 static void add_hand_phrase(StandardMeterInput *input, HandSpans *kept, int index, int first, int last, int arrival, bool elided) {
-    TimeSpan *from = NULL;
-    TimeSpan *to = NULL;
-    TimeSpan *cadence = NULL;
+    TimeSpan from;
+    TimeSpan to;
+    TimeSpan cadence;
     assert(meter_map_measure_span(input->map, first, &from) == METER_MAP_OK);
     assert(meter_map_measure_span(input->map, last, &to) == METER_MAP_OK);
-    const TimeSpan *span = hand_span(kept, time_span_start(from), time_span_end(to));
+    const TimeSpan *span = hand_span(kept, &from.start, &to.end);
     const TimeSpan *arrival_span = NULL;
     if (arrival > 0) {
         assert(meter_map_measure_span(input->map, arrival, &cadence) == METER_MAP_OK);
-        arrival_span = hand_span(kept, time_span_start(cadence), time_span_end(cadence));
+        arrival_span = hand_span(kept, &cadence.start, &cadence.end);
     }
     char id[32];
     snprintf(id, sizeof(id), "phrase-%d", index);
     assert(standard_meter_input_add_phrase(input, id, span, arrival_span, STANDARD_METER_EXPANSION_NONE, 0, elided) ==
            STANDARD_METER_ANALYSIS_OK);
-    time_span_destroy(from);
-    time_span_destroy(to);
-    time_span_destroy(cadence);
 }
 
 static void hand_spans_destroy(HandSpans *kept) {

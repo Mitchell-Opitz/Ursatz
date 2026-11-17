@@ -115,18 +115,12 @@ static ScoreQuantizeResult locate_beat(const MeterMap *meter, Rational t, Span *
     int index = 0;
     MeterMapResult status = meter_map_measure_index_at(meter, time, &index);
     musical_time_destroy(time);
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (status != METER_MAP_OK || meter_map_measure_span(meter, index, &span) != METER_MAP_OK) {
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
     }
-    Rational measure_start;
-    Rational measure_end;
-    bool converted = rational_of_musical_time(time_span_start(span), &measure_start) == RATIONAL_OK &&
-                     rational_of_musical_time(time_span_end(span), &measure_end) == RATIONAL_OK;
-    time_span_destroy(span);
-    if (!converted) {
-        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
-    }
+    Rational measure_start = span.start.value;
+    Rational measure_end = span.end.value;
     const MeterMapRegion *region = NULL;
     if (meter_map_region_of_measure(meter, index, &region) != METER_MAP_OK) {
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;

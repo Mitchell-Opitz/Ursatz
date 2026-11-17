@@ -75,13 +75,8 @@ static Rational beat_length(Calc *calc, unsigned top, unsigned bottom) {
     return calc_make(calc, signature_is_compound(top, bottom) ? 3 : 1, (long long)bottom);
 }
 
-static Rational time_rat(Calc *calc, const MusicalTime *time) {
-    unsigned long den = musical_time_denominator(time);
-    if (den > (unsigned long)LLONG_MAX) {
-        calc->overflow = true;
-        return rational_ratio(0, 1);
-    }
-    return calc_make(calc, (long long)musical_time_numerator(time), (long long)den);
+static Rational time_rat(MusicalTime time) {
+    return time.value;
 }
 
 /* The MusicalTime of x, or NULL when x is negative or does not fit. */
@@ -121,10 +116,11 @@ static void grid_place(Calc *calc, const Grid *grid, Rational x, bool *downbeat,
     unsigned top = time_signature_top_number(signature);
     unsigned bottom = time_signature_bottom_number(signature);
     /* a pickup region's grid is laid back from its end, the first barline */
-    const MusicalTime *anchor_time =
-        meter_map_region_is_pickup(region) && meter_map_region_end(region) ? meter_map_region_end(region)
-                                                                           : meter_map_region_start(region);
-    Rational from = calc_sub(calc, x, time_rat(calc, anchor_time));
+    MusicalTime anchor_time = meter_map_region_start(region);
+    if (meter_map_region_is_pickup(region)) {
+        meter_map_region_end(region, &anchor_time);
+    }
+    Rational from = calc_sub(calc, x, time_rat(anchor_time));
     Rational measure = calc_make(calc, (long long)top, (long long)bottom);
     Rational measures = calc_div(calc, from, measure);
     *downbeat = is_integer(measures);
@@ -312,9 +308,9 @@ static bool effective_candidate(Calc *calc, const MeterMap *map, Candidate *effe
     unsigned bottom = time_signature_bottom_number(signature);
     Rational pickup = {0, 1};
     if (index == 1) {
-        const MusicalTime *end = meter_map_region_end(meter_map_region(map, 0));
-        if (end) {
-            pickup = time_rat(calc, end);
+        MusicalTime end;
+        if (meter_map_region_end(meter_map_region(map, 0), &end)) {
+            pickup = time_rat(end);
         }
     }
     memset(effective, 0, sizeof(*effective));

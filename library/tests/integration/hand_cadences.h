@@ -30,13 +30,13 @@ static inline HarmonyCadences hand_cadences_make(const ChainSegments *segments, 
     cadences.items = (HarmonyCadenceResult *)calloc(count > 0 ? count : 1, sizeof(HarmonyCadenceResult));
     assert(cadences.items != NULL);
     for (size_t i = 0; i < count; i++) {
-        TimeSpan *measure = NULL;
+        TimeSpan measure;
         assert(meter_map_measure_span(map, hand[i].measure, &measure) == METER_MAP_OK);
         bool found = false;
         for (size_t s = 0; s < segments->count; s++) {
             const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
-            if (hand_time_compare(time_span_start(window), time_span_start(measure)) < 0 ||
-                hand_time_compare(time_span_end(window), time_span_end(measure)) > 0) {
+            if (hand_time_compare(time_span_start(window), &measure.start) < 0 ||
+                hand_time_compare(time_span_end(window), &measure.end) > 0) {
                 continue;
             }
             if (!found) {
@@ -47,7 +47,6 @@ static inline HarmonyCadences hand_cadences_make(const ChainSegments *segments, 
         }
         assert(found);
         cadences.items[i].type = hand[i].type;
-        time_span_destroy(measure);
     }
     return cadences;
 }

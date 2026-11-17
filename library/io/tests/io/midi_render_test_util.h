@@ -318,10 +318,13 @@ static inline void test_assert_same_meter(const MeterMap *a, const MeterMap *b) 
         const MeterMapRegion *x = meter_map_region(a, i);
         const MeterMapRegion *y = meter_map_region(b, i);
         assert(time_signature_equals(meter_map_region_time_signature(x), meter_map_region_time_signature(y)));
-        assert(musical_time_equals(meter_map_region_start(x), meter_map_region_start(y)));
-        assert((meter_map_region_end(x) == NULL) == (meter_map_region_end(y) == NULL));
-        if (meter_map_region_end(x) != NULL) {
-            assert(musical_time_equals(meter_map_region_end(x), meter_map_region_end(y)));
+        assert(musical_time_same(meter_map_region_start(x), meter_map_region_start(y)));
+        MusicalTime end_x;
+        MusicalTime end_y;
+        bool closed_x = meter_map_region_end(x, &end_x);
+        assert(closed_x == meter_map_region_end(y, &end_y));
+        if (closed_x) {
+            assert(musical_time_same(end_x, end_y));
         }
         assert(meter_map_region_first_measure_number(x) == meter_map_region_first_measure_number(y));
         assert(meter_map_region_is_pickup(x) == meter_map_region_is_pickup(y));
@@ -335,7 +338,7 @@ static inline void test_assert_same_tempo(const TempoMap *a, const TempoMap *b) 
         const TempoMapRegion *x = tempo_map_region(a, i);
         const TempoMapRegion *y = tempo_map_region(b, i);
         assert(tempo_map_region_microseconds_per_quarter(x) == tempo_map_region_microseconds_per_quarter(y));
-        assert(musical_time_equals(tempo_map_region_start(x), tempo_map_region_start(y)));
+        assert(musical_time_same(tempo_map_region_start(x), tempo_map_region_start(y)));
     }
 }
 

@@ -276,18 +276,18 @@ static cJSON *time_signature_json(const TimeSignature *time_signature) {
    no beat grid). */
 static cJSON *pickup_json(DocBuild *build, const MeterMap *map) {
     const MeterMapRegion *region = meter_map_region(map, 0);
-    const MusicalTime *end = meter_map_region_end(region);
+    MusicalTime end;
     const TimeSignature *reading = NULL;
-    if (!end || metrical_position_reading_signature(map, 0, &reading) != METRICAL_POSITION_OK) {
+    if (!meter_map_region_end(region, &end) ||
+        metrical_position_reading_signature(map, 0, &reading) != METRICAL_POSITION_OK) {
         return NULL;
     }
-    Rational length = time_rational(build, end);
+    Rational length = time_rational(build, &end);
 
     cJSON *beats = NULL;
-    Duration *beat = NULL;
+    Duration beat;
     if (standard_meter_beat_start(reading, 1, &beat)) {
-        beats = rational_json(doc_in_beats(build, length, beat));
-        duration_destroy(beat);
+        beats = rational_json(doc_in_beats(build, length, &beat));
     } else {
         beats = cJSON_CreateNull();
     }
@@ -311,10 +311,11 @@ static cJSON *meter_changes_json(DocBuild *build, const MeterMap *map, size_t fi
     }
     for (size_t i = first_index; i < meter_map_region_count(map); i++) {
         const MeterMapRegion *region = meter_map_region(map, i);
+        MusicalTime region_start = meter_map_region_start(region);
         cJSON *change = cJSON_CreateObject();
         if (!(change &&
               json_add(change, "measure", cJSON_CreateNumber((double)meter_map_region_first_measure_number(region))) &&
-              json_add(change, "start", rational_json(time_rational(build, meter_map_region_start(region)))) &&
+              json_add(change, "start", rational_json(time_rational(build, &region_start))) &&
               json_add(change, "time_signature", time_signature_json(meter_map_region_time_signature(region))) &&
               json_add(change, "inferred", cJSON_CreateBool(meter_map_region_is_defaulted(region))))) {
             cJSON_Delete(change);
@@ -931,7 +932,7 @@ static cJSON *span_beats_json(DocBuild *build, const MeterMap *map, Rational sta
         return cJSON_CreateNull();
     }
     const TimeSignature *reading = NULL;
-    Duration *beat = NULL;
+    Duration beat;
     bool readable = metrical_position_reading_signature(map, metrical_position_measure(position), &reading) ==
                         METRICAL_POSITION_OK &&
                     standard_meter_beat_start(reading, 1, &beat);
@@ -941,9 +942,7 @@ static cJSON *span_beats_json(DocBuild *build, const MeterMap *map, Rational sta
     }
 
     Rational length = doc_sub(build, end, start);
-    cJSON *beats = rational_json(doc_in_beats(build, length, beat));
-    duration_destroy(beat);
-    return beats;
+    return rational_json(doc_in_beats(build, length, &beat));
 }
 
 static cJSON *optional_string_json(const char *value) {

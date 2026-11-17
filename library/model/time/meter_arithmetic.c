@@ -54,24 +54,15 @@ MeterMapResult meter_map_measure_bounds(const MeterMap *map, int measure, Ration
     if (map == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;
     }
-    TimeSpan *span = NULL;
+    TimeSpan span;
     TRY(meter_map_measure_span(map, measure, &span));
-    Rational from;
-    Rational to;
-    MeterMapResult result = from_rational(rational_of_musical_time(time_span_start(span), &from));
-    if (result == METER_MAP_OK) {
-        result = from_rational(rational_of_musical_time(time_span_end(span), &to));
+    if (start != NULL) {
+        *start = span.start.value;
     }
-    time_span_destroy(span);
-    if (result == METER_MAP_OK) {
-        if (start != NULL) {
-            *start = from;
-        }
-        if (end != NULL) {
-            *end = to;
-        }
+    if (end != NULL) {
+        *end = span.end.value;
     }
-    return result;
+    return METER_MAP_OK;
 }
 
 MeterMapResult meter_map_last_measure_touched(const MeterMap *map, Rational end, int *measure) {
@@ -96,14 +87,11 @@ MeterMapResult meter_map_beat_length(const MeterMap *map, int measure, Rational 
     const MeterMapRegion *region = NULL;
     TRY(meter_map_region_of_measure(map, measure, &region));
     const TimeSignature *signature = meter_map_region_time_signature(region);
-    Duration *unit = NULL;
+    Duration unit;
     if (signature == NULL || time_signature_unit_duration(signature, &unit) != DURATION_OK) {
         return METER_MAP_ERR_NOT_FOUND;
     }
-    Rational length;
-    RationalResult read = rational_of_duration(unit, &length);
-    duration_destroy(unit);
-    TRY(from_rational(read));
+    Rational length = unit.value;
     unsigned top = time_signature_top_number(signature);
     if ((top == 6 || top == 9 || top == 12) && time_signature_bottom_number(signature) >= 8) {
         TRY(from_rational(rational_mul_int(length, 3, &length)));

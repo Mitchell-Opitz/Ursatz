@@ -59,11 +59,11 @@ int time_signature_bottom_unit_exponent(const TimeSignature *time_signature);
 unsigned time_signature_bottom_number(const TimeSignature *time_signature);
 
 /* The exact length of one bottom unit: 1/bottom number of a whole note. */
-DurationResult time_signature_unit_duration(const TimeSignature *time_signature, Duration **out);
+DurationResult time_signature_unit_duration(const TimeSignature *time_signature, Duration *out);
 
 /* The exact length of one measure: the top number times the unit
    duration. 4/4 and 2/2 are both 1, 3/4 is 3/4, and 6/8 is 3/4. */
-DurationResult time_signature_measure_duration(const TimeSignature *time_signature, Duration **out);
+DurationResult time_signature_measure_duration(const TimeSignature *time_signature, Duration *out);
 
 bool time_signature_equals(const TimeSignature *a, const TimeSignature *b);
 

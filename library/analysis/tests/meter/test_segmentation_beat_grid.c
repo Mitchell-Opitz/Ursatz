@@ -48,16 +48,14 @@ static MeterMap *build_map(const Change *changes, size_t count) {
 
 /* The beat starts of `measure` must be exactly the given fractions (num/den pairs), in order. */
 static void check_beats(const MeterMap *map, int measure, size_t expected_count, const long expected[][2]) {
-    MusicalTime **starts = NULL;
+    MusicalTime *starts = NULL;
     size_t count = 0;
     assert(standard_meter_segmentation_beat_grid(map, measure, NULL, &starts, &count));
     assert(count == expected_count);
     for (size_t i = 0; i < count; i++) {
-        MusicalTime *want = NULL;
-        assert(musical_time_create(expected[i][0], (unsigned long)expected[i][1], &want) == MUSICAL_TIME_OK);
-        assert(musical_time_equals(starts[i], want));
-        musical_time_destroy(want);
-        musical_time_destroy(starts[i]);
+        MusicalTime want;
+        assert(musical_time_make(expected[i][0], expected[i][1], &want) == MUSICAL_TIME_OK);
+        assert(musical_time_same(starts[i], want));
     }
     free(starts);
 }
@@ -163,7 +161,7 @@ static void test_a_pickup_measure(void) {
 static void test_declines_bad_input(void) {
     Change changes[] = {{4, 2, 0, 1}};
     MeterMap *map = build_map(changes, 1);
-    MusicalTime **starts = NULL;
+    MusicalTime *starts = NULL;
     size_t count = 7;
     assert(!standard_meter_segmentation_beat_grid(NULL, 1, NULL, &starts, &count));
     assert(!standard_meter_segmentation_beat_grid(map, 1, NULL, NULL, &count));

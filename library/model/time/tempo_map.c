@@ -10,9 +10,6 @@
 
 struct TempoMapRegion {
     EntityID *id;
-    /* tempo_map_region_start still returns a pointer; this holds the value it points at until
-       the accessor is changed to give a value. */
-    MusicalTime start_time;
     Rational start_r;
     Rational end_r; /* meaningful only when !open */
     bool open;
@@ -48,7 +45,6 @@ static TempoMapResult region_fill(TempoMapRegion *region, Rational start, unsign
         return TEMPO_MAP_ERR_OVERFLOW;
     }
     memset(region, 0, sizeof(*region));
-    region->start_time = musical_time_of(start);
     region->start_r = start;
     region->open = true;
     region->microseconds_per_quarter = microseconds_per_quarter;
@@ -210,8 +206,8 @@ const TempoMapRegion *tempo_map_region(const TempoMap *map, size_t index) {
     return index < map->count ? &map->regions[index] : NULL;
 }
 
-const MusicalTime *tempo_map_region_start(const TempoMapRegion *region) {
-    return &region->start_time;
+MusicalTime tempo_map_region_start(const TempoMapRegion *region) {
+    return musical_time_of(region->start_r);
 }
 
 unsigned long tempo_map_region_microseconds_per_quarter(const TempoMapRegion *region) {

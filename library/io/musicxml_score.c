@@ -558,8 +558,9 @@ static MusicXmlExportResult gather_tempo(Prep *prep) {
         dir->kind = DIR_TEMPO;
         dir->part = 0;
         dir->staff = 1;
-        dir->raw_n = musical_time_numerator(tempo_map_region_start(region));
-        dir->raw_d = musical_time_denominator(tempo_map_region_start(region));
+        MusicalTime region_start = tempo_map_region_start(region);
+        dir->raw_n = musical_time_numerator(&region_start);
+        dir->raw_d = musical_time_denominator(&region_start);
         dir->source = i;
     }
     return MUSICXML_EXPORT_OK;
@@ -818,19 +819,16 @@ static MusicXmlExportResult build_measures(Prep *prep) {
 
     long long divisions = prep->divisions;
     for (size_t m = 0; m < count && result == MUSICXML_EXPORT_OK; m++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         status = meter_map_measure_span(prep->meter, prep->first_measure_number + (int)m, &span);
         if (status != METER_MAP_OK) {
             result = from_meter_status(status);
             break;
         }
-        const MusicalTime *start = time_span_start(span);
-        const MusicalTime *end = time_span_end(span);
-        start_n[m] = musical_time_numerator(start);
-        start_d[m] = musical_time_denominator(start);
-        end_n[m] = musical_time_numerator(end);
-        end_d[m] = musical_time_denominator(end);
-        time_span_destroy(span);
+        start_n[m] = musical_time_numerator(&span.start);
+        start_d[m] = musical_time_denominator(&span.start);
+        end_n[m] = musical_time_numerator(&span.end);
+        end_d[m] = musical_time_denominator(&span.end);
         long long den = 0;
         TimeStatus time_status = time_denominator(start_n[m], start_d[m], &den);
         if (time_status == TIME_OK && !lcm_into(&divisions, den)) {
@@ -1925,8 +1923,8 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
         return from_meter_status(status);
     }
     long long region_start = 0;
-    if (time_ticks(musical_time_numerator(meter_map_region_start(region)),
-                   musical_time_denominator(meter_map_region_start(region)), prep->divisions,
+    MusicalTime region_time = meter_map_region_start(region);
+    if (time_ticks(musical_time_numerator(&region_time), musical_time_denominator(&region_time), prep->divisions,
                    &region_start) != TIME_OK) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }

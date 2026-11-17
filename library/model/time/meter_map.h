@@ -113,9 +113,9 @@ MeterMapResult meter_map_measure_index_at(const MeterMap *map, const MusicalTime
 
 /* The span [start, end) of measure `index`. A short measure's span is its real, short extent.
    The last region is open, so its measures continue without end.
-   METER_MAP_ERR_INDEX_OUT_OF_RANGE if the index is below the first measure number. *out is a new
-   TimeSpan, left-closed, that the caller destroys. */
-MeterMapResult meter_map_measure_span(const MeterMap *map, int index, TimeSpan **out);
+   METER_MAP_ERR_INDEX_OUT_OF_RANGE if the index is below the first measure number. *out is a
+   left-closed span value. */
+MeterMapResult meter_map_measure_span(const MeterMap *map, int index, TimeSpan *out);
 
 /* The region that holds measure `index`. */
 MeterMapResult meter_map_region_of_measure(const MeterMap *map, int index, const MeterMapRegion **out);
@@ -126,9 +126,9 @@ MeterMapResult meter_map_region_of_measure(const MeterMap *map, int index, const
 MeterMapResult meter_map_measure_count(const MeterMap *map, const MusicalTime *end_time, size_t *out_count);
 
 const TimeSignature *meter_map_region_time_signature(const MeterMapRegion *region);
-const MusicalTime *meter_map_region_start(const MeterMapRegion *region);
-/* NULL for the open (last) region. */
-const MusicalTime *meter_map_region_end(const MeterMapRegion *region);
+MusicalTime meter_map_region_start(const MeterMapRegion *region);
+/* False, leaving *out untouched, for the open (last) region. */
+bool meter_map_region_end(const MeterMapRegion *region, MusicalTime *out);
 int meter_map_region_first_measure_number(const MeterMapRegion *region);
 bool meter_map_region_is_defaulted(const MeterMapRegion *region);
 bool meter_map_region_is_pickup(const MeterMapRegion *region);

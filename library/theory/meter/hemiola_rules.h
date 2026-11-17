@@ -37,7 +37,7 @@
  * duple meter (6/8: the pulse is the bottom unit, one measure). False, leaving the outputs untouched, for
  * any other signature, for a NULL argument or on allocation failure. On success the caller owns *out_pulse.
  */
-bool standard_meter_hemiola_window(const TimeSignature *time_signature, Duration **out_pulse, unsigned *out_measures);
+bool standard_meter_hemiola_window(const TimeSignature *time_signature, Duration *out_pulse, unsigned *out_measures);
 
 /* DURATION: the attacks (a flag per pulse of the window) read as three duple units. */
 bool standard_meter_hemiola_duration_evidence(const bool attack[STANDARD_METER_HEMIOLA_PULSES]);

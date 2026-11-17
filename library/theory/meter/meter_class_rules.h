@@ -86,6 +86,6 @@ bool standard_meter_beat_division(MeterType type, unsigned *out_division, unsign
  * *out untouched, when unclassified or on allocation failure. On success
  * the caller owns *out.
  */
-bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration **out);
+bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration *out);
 
 #endif

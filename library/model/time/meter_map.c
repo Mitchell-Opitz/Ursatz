@@ -55,10 +55,6 @@ static Rational rat_min(Rational a, Rational b) {
 struct MeterMapRegion {
     EntityID *id;
     TimeSignature *time_signature;
-    /* The accessors meter_map_region_start/end still return pointers; these hold the values they
-       point at until they are changed to give values. */
-    MusicalTime start_time;
-    MusicalTime end_time; /* meaningful only when !open */
     Rational start_r;
     Rational end_r; /* meaningful only when !open */
     bool open;
@@ -106,20 +102,14 @@ static void region_release(MeterMapRegion *region) {
 /* Takes ownership of time_signature on success only. */
 static MeterMapResult region_fill(MeterMapRegion *region, TimeSignature *time_signature, Rational start,
                                   bool defaulted) {
-    Duration *measure = NULL;
+    Duration measure;
     if (time_signature_measure_duration(time_signature, &measure) != DURATION_OK) {
-        return METER_MAP_ERR_ALLOC;
-    }
-    Rational measure_len;
-    RationalResult read = rational_of_duration(measure, &measure_len);
-    duration_destroy(measure);
-    if (read != RATIONAL_OK) {
         return METER_MAP_ERR_OVERFLOW;
     }
+    Rational measure_len = measure.value;
 
     memset(region, 0, sizeof(*region));
     region->time_signature = time_signature;
-    region->start_time = musical_time_of(start);
     region->start_r = start;
     region->open = true;
     region->measure_len = measure_len;
@@ -143,7 +133,6 @@ static MeterMapResult finalize(MeterMap *map) {
         MeterMapRegion *region = &map->regions[i];
         region->end_r = map->regions[i + 1].start_r;
         region->open = false;
-        region->end_time = musical_time_of(region->end_r);
     }
 
     if (map->count >= 2) {
@@ -411,7 +400,7 @@ MeterMapResult meter_map_region_of_measure(const MeterMap *map, int index, const
     return METER_MAP_ERR_INDEX_OUT_OF_RANGE;
 }
 
-MeterMapResult meter_map_measure_span(const MeterMap *map, int index, TimeSpan **out) {
+MeterMapResult meter_map_measure_span(const MeterMap *map, int index, TimeSpan *out) {
     if (out == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;
     }
@@ -431,10 +420,9 @@ MeterMapResult meter_map_measure_span(const MeterMap *map, int index, TimeSpan *
         end = rat_min(end, region->end_r);
     }
 
-    MusicalTime start_time = musical_time_of(start);
-    MusicalTime end_time = musical_time_of(end);
-    TimeSpanResult created = time_span_create(&start_time, &end_time, TIME_SPAN_BOUNDARY_LEFT_CLOSED, out);
-    return created == TIME_SPAN_OK ? METER_MAP_OK : METER_MAP_ERR_ALLOC;
+    return time_span_make(musical_time_of(start), musical_time_of(end), out) == TIME_SPAN_OK
+               ? METER_MAP_OK
+               : METER_MAP_ERR_OVERFLOW;
 }
 
 MeterMapResult meter_map_measure_count(const MeterMap *map, const MusicalTime *end_time, size_t *out_count) {
@@ -473,12 +461,16 @@ const TimeSignature *meter_map_region_time_signature(const MeterMapRegion *regio
     return region->time_signature;
 }
 
-const MusicalTime *meter_map_region_start(const MeterMapRegion *region) {
-    return &region->start_time;
+MusicalTime meter_map_region_start(const MeterMapRegion *region) {
+    return musical_time_of(region->start_r);
 }
 
-const MusicalTime *meter_map_region_end(const MeterMapRegion *region) {
-    return region->open ? NULL : &region->end_time;
+bool meter_map_region_end(const MeterMapRegion *region, MusicalTime *out) {
+    if (region->open) {
+        return false;
+    }
+    *out = musical_time_of(region->end_r);
+    return true;
 }
 
 int meter_map_region_first_measure_number(const MeterMapRegion *region) {

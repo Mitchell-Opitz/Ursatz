@@ -48,13 +48,12 @@ static double to_double(const MusicalTime *time) {
 /* The measure a time in whole notes lies in, and whether it is the measure's first beat. */
 static int measure_of(const MeterMap *map, double at, bool *beat_one) {
     for (int measure = 1; measure < 400; measure++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
             break;
         }
-        double from = to_double(time_span_start(span));
-        double to = to_double(time_span_end(span));
-        time_span_destroy(span);
+        double from = to_double(&span.start);
+        double to = to_double(&span.end);
         if (from - 1e-9 <= at && at < to - 1e-9) {
             if (beat_one != NULL) {
                 *beat_one = fabs(at - from) < 1e-9;

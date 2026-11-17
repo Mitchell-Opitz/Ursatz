@@ -261,6 +261,10 @@ static void assert_time(const MusicalTime *time, long numerator, unsigned long d
     assert(equals(musical_time_numerator(time), musical_time_denominator(time), numerator, denominator));
 }
 
+static void assert_time_value(MusicalTime time, long numerator, unsigned long denominator) {
+    assert_time(&time, numerator, denominator);
+}
+
 static MusicalTime *at(long numerator, unsigned long denominator) {
     MusicalTime *time = NULL;
     assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
@@ -317,8 +321,8 @@ static void test_a_meter_change(void) {
     assert(time_signature_top_number(first) == 4 && time_signature_bottom_number(first) == 4);
     assert(time_signature_top_number(second) == 3 && time_signature_bottom_number(second) == 4);
     assert(time_signature_top_number(third) == 6 && time_signature_bottom_number(third) == 8);
-    assert_time(meter_map_region_start(meter_map_region(import.meter_map, 1)), 1, 1);
-    assert_time(meter_map_region_start(meter_map_region(import.meter_map, 2)), 7, 4);
+    assert_time_value(meter_map_region_start(meter_map_region(import.meter_map, 1)), 1, 1);
+    assert_time_value(meter_map_region_start(meter_map_region(import.meter_map, 2)), 7, 4);
     assert(measure_at(import.meter_map, 1, 1) == 2 && measure_at(import.meter_map, 7, 4) == 3);
     musicxml_import_destroy(&import);
 }
@@ -498,11 +502,11 @@ static void test_tempo_and_metronome(void) {
     const TempoMapRegion *first = tempo_map_region(import.tempo_map, 0);
     const TempoMapRegion *second = tempo_map_region(import.tempo_map, 1);
     const TempoMapRegion *third = tempo_map_region(import.tempo_map, 2);
-    assert_time(tempo_map_region_start(first), 0, 1);
+    assert_time_value(tempo_map_region_start(first), 0, 1);
     assert(tempo_map_region_microseconds_per_quarter(first) == 625000);
-    assert_time(tempo_map_region_start(second), 1, 1);
+    assert_time_value(tempo_map_region_start(second), 1, 1);
     assert(tempo_map_region_microseconds_per_quarter(second) == 1000000);
-    assert_time(tempo_map_region_start(third), 3, 1);
+    assert_time_value(tempo_map_region_start(third), 3, 1);
     assert(tempo_map_region_microseconds_per_quarter(third) == 648649);
     /* the markings: "Allegro" with its metronome in measure 1, and the dotted-quarter metronome alone in measure 3 */
     assert(import.tempo_marking_count == 2);

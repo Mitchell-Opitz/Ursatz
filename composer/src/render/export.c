@@ -113,8 +113,8 @@ static unsigned choose_division(const RenderedPlan *rendered, const PlanExportOp
     }
     if (rendered->meter_map) {
         for (size_t i = 0; i < meter_map_region_count(rendered->meter_map); i++) {
-            const MusicalTime *start = meter_map_region_start(meter_map_region(rendered->meter_map, i));
-            if (!need_division_for(musical_time_denominator(start), &needed)) {
+            MusicalTime start = meter_map_region_start(meter_map_region(rendered->meter_map, i));
+            if (!need_division_for(musical_time_denominator(&start), &needed)) {
                 return 0;
             }
         }

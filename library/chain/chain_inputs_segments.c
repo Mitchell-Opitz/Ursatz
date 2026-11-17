@@ -83,34 +83,25 @@ static long beat_index(const MeterMap *map, Rational start, Rational end) {
     int measure = 0;
     bool found = at != NULL && meter_map_measure_index_at(map, at, &measure) == METER_MAP_OK;
     musical_time_destroy(at);
-    MusicalTime **starts = NULL;
+    MusicalTime *starts = NULL;
     size_t count = 0;
     if (!found || !standard_meter_segmentation_beat_grid(map, measure, NULL, &starts, &count)) {
         return 0;
     }
-    TimeSpan *span = NULL;
+    TimeSpan span;
     long index = 0;
     if (meter_map_measure_span(map, measure, &span) == METER_MAP_OK) {
-        Rational measure_end;
-        if (chain_rational_of(time_span_end(span), &measure_end)) {
-            for (size_t b = 0; b < count; b++) {
-                Rational beat_start;
-                Rational beat_end = measure_end;
-                if (!chain_rational_of(starts[b], &beat_start) || (b + 1 < count && !chain_rational_of(starts[b + 1], &beat_end))) {
-                    break;
+        Rational measure_end = span.end.value;
+        for (size_t b = 0; b < count; b++) {
+            Rational beat_start = starts[b].value;
+            Rational beat_end = b + 1 < count ? starts[b + 1].value : measure_end;
+            if (rational_cmp(beat_start, start) <= 0 && rational_cmp(start, beat_end) < 0) {
+                if (rational_cmp(end, beat_end) <= 0) {
+                    index = ((long)measure + 1) * 1000 + (long)b + 1;
                 }
-                if (rational_cmp(beat_start, start) <= 0 && rational_cmp(start, beat_end) < 0) {
-                    if (rational_cmp(end, beat_end) <= 0) {
-                        index = ((long)measure + 1) * 1000 + (long)b + 1;
-                    }
-                    break;
-                }
+                break;
             }
         }
-        time_span_destroy(span);
-    }
-    for (size_t b = 0; b < count; b++) {
-        musical_time_destroy(starts[b]);
     }
     free(starts);
     return index;

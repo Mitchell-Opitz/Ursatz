@@ -89,18 +89,16 @@ static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
 /* The span from the start of measure `first` to the end of measure `last`. False if the meter does not place them. */
 static bool measures_span(const MeterMap *map, int first, int last, long *start_numerator,
                           unsigned long *start_denominator, long *end_numerator, unsigned long *end_denominator) {
-    TimeSpan *from = NULL;
-    TimeSpan *to = NULL;
+    TimeSpan from;
+    TimeSpan to;
     bool ok = meter_map_measure_span(map, first, &from) == METER_MAP_OK &&
               meter_map_measure_span(map, last, &to) == METER_MAP_OK;
     if (ok) {
-        *start_numerator = musical_time_numerator(time_span_start(from));
-        *start_denominator = musical_time_denominator(time_span_start(from));
-        *end_numerator = musical_time_numerator(time_span_end(to));
-        *end_denominator = musical_time_denominator(time_span_end(to));
+        *start_numerator = musical_time_numerator(&from.start);
+        *start_denominator = musical_time_denominator(&from.start);
+        *end_numerator = musical_time_numerator(&to.end);
+        *end_denominator = musical_time_denominator(&to.end);
     }
-    time_span_destroy(from);
-    time_span_destroy(to);
     return ok;
 }
 

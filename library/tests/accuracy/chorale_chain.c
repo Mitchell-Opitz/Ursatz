@@ -245,22 +245,18 @@ static int degree_of_pitch(int pitch, int tonic) {
 
 /* The length of a beat, from the first measure's beat grid. */
 static bool beat_duration(const MeterMap *map, Duration **out) {
-    MusicalTime **starts = NULL;
+    MusicalTime *starts = NULL;
     size_t count = 0;
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (!standard_meter_segmentation_beat_grid(map, 1, NULL, &starts, &count) || count == 0) {
         return false;
     }
     bool ok = false;
     if (meter_map_measure_span(map, 1, &span) == METER_MAP_OK) {
-        Rational next = count > 1 ? test_rational_of_time(starts[1]) : test_rational_of_time(time_span_end(span));
+        Rational next = count > 1 ? starts[1].value : span.end.value;
         Rational length = {0, 1};
-        ok = rational_sub(next, test_rational_of_time(starts[0]), &length) == 0 &&
+        ok = rational_sub(next, starts[0].value, &length) == 0 &&
              duration_create((long)length.num, (unsigned long)length.den, out) == DURATION_OK;
-        time_span_destroy(span);
-    }
-    for (size_t b = 0; b < count; b++) {
-        musical_time_destroy(starts[b]);
     }
     free(starts);
     return ok;

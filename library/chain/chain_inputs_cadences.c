@@ -9,25 +9,19 @@
 
 /* The length of a beat, from the first measure's beat grid. */
 static bool beat_duration(const MeterMap *map, Duration **out) {
-    MusicalTime **starts = NULL;
+    MusicalTime *starts = NULL;
     size_t count = 0;
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (!standard_meter_segmentation_beat_grid(map, 1, NULL, &starts, &count) || count == 0) {
         return false;
     }
     bool ok = false;
     if (meter_map_measure_span(map, 1, &span) == METER_MAP_OK) {
-        Rational first;
-        Rational next;
+        Rational first = starts[0].value;
+        Rational next = count > 1 ? starts[1].value : span.end.value;
         Rational length;
-        ok = chain_rational_of(starts[0], &first) &&
-             (count > 1 ? chain_rational_of(starts[1], &next) : chain_rational_of(time_span_end(span), &next)) &&
-             rational_sub(next, first, &length) == RATIONAL_OK &&
+        ok = rational_sub(next, first, &length) == RATIONAL_OK &&
              duration_create((long)length.num, (unsigned long)length.den, out) == DURATION_OK;
-        time_span_destroy(span);
-    }
-    for (size_t b = 0; b < count; b++) {
-        musical_time_destroy(starts[b]);
     }
     free(starts);
     return ok;

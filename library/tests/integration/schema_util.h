@@ -294,13 +294,12 @@ static inline void schema_beat_length(const MeterMap *map, const MusicalTime *ti
         return;
     }
     const TimeSignature *signature = meter_map_region_time_signature(region);
-    Duration *unit = NULL;
+    Duration unit;
     if (signature == NULL || time_signature_unit_duration(signature, &unit) != DURATION_OK) {
         return;
     }
-    long n = duration_numerator(unit);
-    unsigned long d = duration_denominator(unit);
-    duration_destroy(unit);
+    long n = (long)unit.value.num;
+    unsigned long d = (unsigned long)unit.value.den;
     unsigned top = time_signature_top_number(signature);
     if ((top == 6 || top == 9 || top == 12) && time_signature_bottom_number(signature) >= 8) {
         n *= 3;

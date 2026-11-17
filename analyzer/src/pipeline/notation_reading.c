@@ -226,15 +226,13 @@ static TimeSignature *reading_signature(const NotationReading *reading) {
 
 /* A pickup shorter than one measure of signature. */
 static bool pickup_fits(const NotationReading *reading, const TimeSignature *signature) {
-    Duration *measure = NULL;
+    Duration measure;
     if (time_signature_measure_duration(signature, &measure) != DURATION_OK) {
         return false;
     }
     /* pickup < measure, as cross products */
-    bool fits = (unsigned long long)reading->pickup_numerator * duration_denominator(measure) <
-                (unsigned long long)duration_numerator(measure) * reading->pickup_denominator;
-    duration_destroy(measure);
-    return fits;
+    return (unsigned long long)reading->pickup_numerator * (unsigned long long)measure.value.den <
+           (unsigned long long)measure.value.num * reading->pickup_denominator;
 }
 
 typedef struct {
@@ -320,7 +318,8 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
         ok = list && scaled;
         for (size_t i = from; ok && i < region_count; i++) {
             const MeterMapRegion *region = meter_map_region(old, i);
-            scaled[count] = scaled_time(meter_map_region_start(region), reading, overflow);
+            MusicalTime region_start = meter_map_region_start(region);
+            scaled[count] = scaled_time(&region_start, reading, overflow);
             ok = scaled[count] != NULL;
             list[count] = (MeterMapChangePoint){meter_map_region_time_signature(region), time_value_or_zero(scaled[count])};
             count++;

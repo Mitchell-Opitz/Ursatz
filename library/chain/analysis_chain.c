@@ -702,12 +702,11 @@ static bool scope_count(AnalysisChain *chain) {
     if (chain->config.last_measure <= 0) {
         return chain->count > 0;
     }
-    TimeSpan *last = NULL;
+    TimeSpan last;
     if (meter_map_measure_span(chain->notes->map, chain->config.last_measure, &last) != METER_MAP_OK) {
         return false;
     }
-    double end = time_double(time_span_end(last));
-    time_span_destroy(last);
+    double end = time_double(&last.end);
     size_t count = 0;
     while (count < chain->segs.count && chain->segs.starts[count] < end - 1e-12) {
         count++;
@@ -722,12 +721,11 @@ static bool find_chain_repeats(AnalysisChain *chain) {
     double end = 0;
     bool scoped = chain->config.last_measure > 0;
     if (scoped) {
-        TimeSpan *last = NULL;
+        TimeSpan last;
         if (meter_map_measure_span(set->map, chain->config.last_measure, &last) != METER_MAP_OK) {
             return false;
         }
-        end = time_double(time_span_end(last));
-        time_span_destroy(last);
+        end = time_double(&last.end);
     }
     StandardFormRepeatNote *items = calloc(set->count > 0 ? set->count : 1, sizeof(StandardFormRepeatNote));
     if (items == NULL) {

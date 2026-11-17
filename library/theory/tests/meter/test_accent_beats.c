@@ -63,7 +63,7 @@ static void test_irregular(void) {
 static void test_agrees_with_beat_strength(void) {
     for (unsigned beats = 2; beats <= 12; beats++) {
         TimeSignature *ts = make_signature(beats, 3);
-        Duration *beat = NULL;
+        Duration beat;
         unsigned per_measure = 0;
         assert(standard_meter_beat_grid(ts, &beat, &per_measure));
         unsigned got[16];
@@ -83,12 +83,11 @@ static void test_agrees_with_beat_strength(void) {
             }
             metrical_position_destroy(position);
             Duration *advanced = NULL;
-            assert(duration_add(start, beat, &advanced) == DURATION_OK);
+            assert(duration_add(start, &beat, &advanced) == DURATION_OK);
             duration_destroy(start);
             start = advanced;
         }
         duration_destroy(start);
-        duration_destroy(beat);
         assert(next == count);
         time_signature_destroy(ts);
     }

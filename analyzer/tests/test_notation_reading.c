@@ -243,7 +243,8 @@ static void test_meter_with_pickup(void) {
     assert(meter_map_region_is_pickup(meter_map_region(map, 0)));
     const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(map, 1));
     assert(time_signature_top_number(signature) == 3 && time_signature_bottom_number(signature) == 4);
-    assert(time_is(meter_map_region_start(meter_map_region(map, 1)), 1, 4));
+    MusicalTime second_start = meter_map_region_start(meter_map_region(map, 1));
+    assert(time_is(&second_start, 1, 4));
     assert(!meter_map_is_defaulted(map));
     assert(notes.source.reading_applied && notes.source.reading.has_meter && notes.source.reading.has_pickup);
 
@@ -379,10 +380,9 @@ static void test_bach_114_three_four(void) {
         int measure = 0;
         assert(meter_map_measure_index_at(notes.meter.meter_map, start, &measure) == METER_MAP_OK);
         assert(measure == expected_measure[k]);
-        TimeSpan *span = NULL;
+        TimeSpan span;
         assert(meter_map_measure_span(notes.meter.meter_map, measure, &span) == METER_MAP_OK);
-        assert(musical_time_equals(time_span_start(span), start)); /* beat 1 of the measure */
-        time_span_destroy(span);
+        assert(musical_time_equals(&span.start, start)); /* beat 1 of the measure */
     }
 
     imported_notes_destroy(&notes);

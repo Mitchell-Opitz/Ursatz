@@ -121,17 +121,16 @@ static int measure_of_note(const Imported *imported, size_t note) {
 
 static void assert_measure_span(const Imported *imported, int index, long sn, unsigned long sd, long en,
                                 unsigned long ed) {
-    TimeSpan *span = NULL;
+    TimeSpan span;
     assert(meter_map_measure_span(imported->meter.meter_map, index, &span) == METER_MAP_OK);
     MusicalTime *start = NULL;
     MusicalTime *end = NULL;
     musical_time_create(sn, sd, &start);
     musical_time_create(en, ed, &end);
-    assert(musical_time_equals(time_span_start(span), start));
-    assert(musical_time_equals(time_span_end(span), end));
+    assert(musical_time_equals(&span.start, start));
+    assert(musical_time_equals(&span.end, end));
     musical_time_destroy(start);
     musical_time_destroy(end);
-    time_span_destroy(span);
 }
 
 static size_t measure_count_of(const Imported *imported) {

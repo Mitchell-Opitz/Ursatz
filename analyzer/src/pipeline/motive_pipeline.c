@@ -229,15 +229,14 @@ static bool meter_at(const MeterMap *map, Rational start, Rational *bar, Rationa
     } else {
         reference_region = region;
     }
-    Duration *bar_duration = NULL;
+    Duration bar_duration;
     Rational beat_length;
     if (time_signature_measure_duration(meter_map_region_time_signature(reference_region), &bar_duration) !=
             DURATION_OK ||
         meter_map_beat_length(map, reference, &beat_length) != METER_MAP_OK) {
         return false;
     }
-    *bar = msk_make((unsigned long long)duration_numerator(bar_duration), duration_denominator(bar_duration));
-    duration_destroy(bar_duration);
+    *bar = msk_make((unsigned long long)bar_duration.value.num, (unsigned long long)bar_duration.value.den);
     *beat = beat_length;
     if (pickup) {
         Rational remaining = msk_sub(measure_end, start);

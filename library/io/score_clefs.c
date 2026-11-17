@@ -130,18 +130,13 @@ static ScoreClefResult measures_lay(const MeterMap *meter, Rational extent, Meas
     }
     int first = meter_map_first_measure_number(meter);
     for (size_t m = 0; m < count; m++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         if (meter_map_measure_span(meter, first + (int)m, &span) != METER_MAP_OK) {
             measures_free(measures);
             return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
         }
-        bool converted = rational_of_musical_time(time_span_start(span), &measures->start[m]) == RATIONAL_OK &&
-                         rational_of_musical_time(time_span_end(span), &measures->end[m]) == RATIONAL_OK;
-        time_span_destroy(span);
-        if (!converted) {
-            measures_free(measures);
-            return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
-        }
+        measures->start[m] = span.start.value;
+        measures->end[m] = span.end.value;
     }
     measures->count = count;
     return SCORE_CLEFS_OK;

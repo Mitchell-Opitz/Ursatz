@@ -7,7 +7,7 @@
 #include "theory/meter/grouping_rules.h"
 #include "theory/meter/meter_class_rules.h"
 
-bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats) {
+bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration *out_beat, unsigned *out_beats) {
     if (time_signature == NULL || out_beat == NULL || out_beats == NULL) {
         return false;
     }
@@ -23,12 +23,12 @@ bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **ou
 
 /* offset / beat, as a whole number of beats and the exact fraction of a beat left over. The products
    are checked: false on overflow. */
-static bool split_into_beats(const Duration *offset, const Duration *beat, unsigned long long *out_index,
+static bool split_into_beats(Duration offset, Duration beat, unsigned long long *out_index,
                              unsigned long long *out_fraction_numerator, unsigned long long *out_fraction_denominator) {
-    unsigned long long offset_n = (unsigned long long)duration_numerator(offset);
-    unsigned long long offset_d = duration_denominator(offset);
-    unsigned long long beat_n = (unsigned long long)duration_numerator(beat);
-    unsigned long long beat_d = duration_denominator(beat);
+    unsigned long long offset_n = (unsigned long long)offset.value.num;
+    unsigned long long offset_d = (unsigned long long)offset.value.den;
+    unsigned long long beat_n = (unsigned long long)beat.value.num;
+    unsigned long long beat_d = (unsigned long long)beat.value.den;
     if ((offset_n != 0 && beat_d > ULLONG_MAX / offset_n) || offset_d > ULLONG_MAX / beat_n) {
         return false;
     }
@@ -53,19 +53,17 @@ static bool locate(const TimeSignature *time_signature, const MetricalPosition *
     if (time_signature == NULL || position == NULL) {
         return false;
     }
-    Duration *beat = NULL;
+    Duration beat;
     unsigned beats = 0;
     if (!standard_meter_beat_grid(time_signature, &beat, &beats)) {
-        duration_destroy(beat);
         return false;
     }
 
     unsigned long long index = 0;
     unsigned long long fraction_numerator = 0;
     unsigned long long fraction_denominator = 1;
-    bool split = split_into_beats(metrical_position_offset(position), beat, &index, &fraction_numerator,
+    bool split = split_into_beats(*metrical_position_offset(position), beat, &index, &fraction_numerator,
                                   &fraction_denominator);
-    duration_destroy(beat);
     if (!split || index >= beats) {
         return false;
     }
@@ -157,7 +155,7 @@ bool standard_meter_accent_beats(const TimeSignature *time_signature, unsigned *
     if (time_signature == NULL || beats == NULL || count == NULL) {
         return false;
     }
-    Duration *beat = NULL;
+    Duration beat;
     unsigned per_measure = 0;
     if (!standard_meter_beat_grid(time_signature, &beat, &per_measure)) {
         return false;
@@ -166,12 +164,12 @@ bool standard_meter_accent_beats(const TimeSignature *time_signature, unsigned *
     unsigned found_beats[64];
     BeatStrength found_strengths[64];
     size_t found = 0;
-    Duration *start = NULL;
-    bool ok = duration_create(0, 1, &start) == DURATION_OK;
+    Duration start = {rational_ratio(0, 1)};
+    bool ok = true;
     for (unsigned index = 0; ok && index < per_measure && index < 64; index++) {
         MetricalPosition *position = NULL;
         BeatStrength strength;
-        ok = metrical_position_create(1, *start, &position) == METRICAL_POSITION_OK &&
+        ok = metrical_position_create(1, start, &position) == METRICAL_POSITION_OK &&
              standard_meter_beat_strength(time_signature, position, &strength);
         metrical_position_destroy(position);
         if (!ok) {
@@ -182,13 +180,8 @@ bool standard_meter_accent_beats(const TimeSignature *time_signature, unsigned *
             found_strengths[found] = strength;
             found++;
         }
-        Duration *next = NULL;
-        ok = duration_add(start, beat, &next) == DURATION_OK;
-        duration_destroy(start);
-        start = next;
+        ok = duration_plus(start, beat, &start) == DURATION_OK;
     }
-    duration_destroy(start);
-    duration_destroy(beat);
     if (!ok || found > capacity) {
         return false;
     }

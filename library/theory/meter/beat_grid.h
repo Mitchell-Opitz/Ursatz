@@ -20,9 +20,8 @@
 /*
  * The start of beat `index` as an offset from the start of the measure;
  * index equal to the beats per measure is the end of the measure. False,
- * leaving *out untouched, past that or on allocation failure. On success
- * the caller owns *out.
+ * leaving *out untouched, past that or when the product does not fit.
  */
-bool standard_meter_beat_start(const TimeSignature *time_signature, unsigned index, Duration **out);
+bool standard_meter_beat_start(const TimeSignature *time_signature, unsigned index, Duration *out);
 
 #endif

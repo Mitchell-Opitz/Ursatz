@@ -2,17 +2,17 @@
 
 #include <stddef.h>
 
+#include "model/core/rational.h"
 #include "theory/meter/meter_class_rules.h"
 
-bool standard_meter_beat_start(const TimeSignature *time_signature, unsigned index, Duration **out) {
-    Duration *beat = NULL;
+bool standard_meter_beat_start(const TimeSignature *time_signature, unsigned index, Duration *out) {
+    Duration beat;
     unsigned beats;
-    if (time_signature == NULL || !standard_meter_beat_duration(time_signature, &beat)) {
+    if (time_signature == NULL || out == NULL || !standard_meter_beat_duration(time_signature, &beat)) {
         return false;
     }
-    bool ok = standard_meter_beats_per_measure(time_signature, &beats) && index <= beats &&
-              duration_create(duration_numerator(beat) * (long)index, duration_denominator(beat), out) ==
-                  DURATION_OK;
-    duration_destroy(beat);
-    return ok;
+    Rational start;
+    return standard_meter_beats_per_measure(time_signature, &beats) && index <= beats &&
+           rational_mul_int(beat.value, (long long)index, &start) == RATIONAL_OK &&
+           duration_of(start, out) == DURATION_OK;
 }

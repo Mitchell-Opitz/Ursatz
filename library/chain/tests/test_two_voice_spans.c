@@ -61,15 +61,14 @@ static const Fixture FIXTURES[3] = {
 
 static int measure_of(const MeterMap *map, double at) {
     for (int measure = 1; measure < 400; measure++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
             break;
         }
-        const MusicalTime *start = time_span_start(span);
-        const MusicalTime *end = time_span_end(span);
+        const MusicalTime *start = &span.start;
+        const MusicalTime *end = &span.end;
         double from = (double)musical_time_numerator(start) / (double)musical_time_denominator(start);
         double to = (double)musical_time_numerator(end) / (double)musical_time_denominator(end);
-        time_span_destroy(span);
         if (from - 1e-9 <= at && at < to - 1e-9) {
             return measure;
         }

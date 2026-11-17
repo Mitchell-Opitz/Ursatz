@@ -80,55 +80,46 @@ static void assert_duration(const Duration *duration, long numerator, unsigned l
 
 static void test_unit_and_measure_duration(void) {
     TimeSignature *four_four = make(4, 2);
-    Duration *unit_length = NULL;
-    Duration *measure = NULL;
+    Duration unit_length;
+    Duration measure;
     assert(time_signature_unit_duration(four_four, &unit_length) == DURATION_OK);
     assert(time_signature_measure_duration(four_four, &measure) == DURATION_OK);
-    assert_duration(unit_length, 1, 4);
-    assert_duration(measure, 1, 1);
-    duration_destroy(unit_length);
-    duration_destroy(measure);
+    assert_duration(&unit_length, 1, 4);
+    assert_duration(&measure, 1, 1);
     time_signature_destroy(four_four);
 
     TimeSignature *three_four = make(3, 2);
     assert(time_signature_measure_duration(three_four, &measure) == DURATION_OK);
-    assert_duration(measure, 3, 4);
-    duration_destroy(measure);
+    assert_duration(&measure, 3, 4);
     time_signature_destroy(three_four);
 
     TimeSignature *two_two = make(2, 1);
     assert(time_signature_measure_duration(two_two, &measure) == DURATION_OK);
-    assert_duration(measure, 1, 1);
-    duration_destroy(measure);
+    assert_duration(&measure, 1, 1);
     time_signature_destroy(two_two);
 
     TimeSignature *three_eight = make(3, 3);
     assert(time_signature_measure_duration(three_eight, &measure) == DURATION_OK);
-    assert_duration(measure, 3, 8);
-    duration_destroy(measure);
+    assert_duration(&measure, 3, 8);
     time_signature_destroy(three_eight);
 
     /* the same top-times-unit length holds for compound signatures: 6/8 is
        three quarters, 12/8 is one and a half wholes, 9/16 is nine sixteenths */
     TimeSignature *six_eight = make(6, 3);
     assert(time_signature_measure_duration(six_eight, &measure) == DURATION_OK);
-    assert_duration(measure, 3, 4);
-    duration_destroy(measure);
+    assert_duration(&measure, 3, 4);
     assert(time_signature_unit_duration(six_eight, &unit_length) == DURATION_OK);
-    assert_duration(unit_length, 1, 8);
-    duration_destroy(unit_length);
+    assert_duration(&unit_length, 1, 8);
     time_signature_destroy(six_eight);
 
     TimeSignature *twelve_eight = make(12, 3);
     assert(time_signature_measure_duration(twelve_eight, &measure) == DURATION_OK);
-    assert_duration(measure, 3, 2);
-    duration_destroy(measure);
+    assert_duration(&measure, 3, 2);
     time_signature_destroy(twelve_eight);
 
     TimeSignature *nine_sixteen = make(9, 4);
     assert(time_signature_measure_duration(nine_sixteen, &measure) == DURATION_OK);
-    assert_duration(measure, 9, 16);
-    duration_destroy(measure);
+    assert_duration(&measure, 9, 16);
     time_signature_destroy(nine_sixteen);
 }
 
@@ -138,19 +129,17 @@ static void test_equality_is_not_fraction_equality(void) {
     TimeSignature *four_eight = make(4, 3);
     TimeSignature *also_two_four = make(2, 2);
 
-    Duration *a = NULL;
-    Duration *b = NULL;
+    Duration a;
+    Duration b;
     assert(time_signature_measure_duration(two_four, &a) == DURATION_OK);
     assert(time_signature_measure_duration(four_eight, &b) == DURATION_OK);
-    assert(duration_equals(a, b));
+    assert(duration_same(a, b));
 
     assert(!time_signature_equals(two_four, four_eight));
     assert(time_signature_equals(two_four, also_two_four));
     assert(!time_signature_equals(two_four, NULL));
     assert(!time_signature_equals(NULL, two_four));
 
-    duration_destroy(a);
-    duration_destroy(b);
     time_signature_destroy(two_four);
     time_signature_destroy(four_eight);
     time_signature_destroy(also_two_four);

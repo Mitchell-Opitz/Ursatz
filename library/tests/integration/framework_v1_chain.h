@@ -377,10 +377,9 @@ static void fv1_where(const Chain *c, size_t segment, int *measure, double *beat
 
 /* The time in whole notes of measure `m`, beat `b` of the piece. */
 static double fv1_time_of(const Chain *c, int measure, double beat) {
-    TimeSpan *span = NULL;
+    TimeSpan span;
     assert(meter_map_measure_span(c->map, measure, &span) == METER_MAP_OK);
-    double start = fv1_time_double(time_span_start(span));
-    time_span_destroy(span);
+    double start = fv1_time_double(&span.start);
     return start + (beat - 1.0) * c->beat_length;
 }
 

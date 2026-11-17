@@ -88,7 +88,7 @@ bool standard_meter_beats_per_measure(const TimeSignature *time_signature, unsig
     return standard_meter_category(meter.type, meter.grouping, out_beats, &division);
 }
 
-bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration **out) {
+bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration *out) {
     MeterType type = standard_meter_type(time_signature);
     if (type == METER_TYPE_UNCLASSIFIED) {
         return false;
@@ -98,7 +98,7 @@ bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration 
     standard_meter_beat_division(type, &division, &subdivision);
 
     /* a beat is `division` bottom units for compound, one for simple */
-    long units = type == METER_TYPE_COMPOUND ? 3 : 1;
-    return duration_create(units, time_signature_bottom_number(time_signature), out) == DURATION_OK;
+    long long units = type == METER_TYPE_COMPOUND ? 3 : 1;
+    return duration_make(units, (long long)time_signature_bottom_number(time_signature), out) == DURATION_OK;
 }
 

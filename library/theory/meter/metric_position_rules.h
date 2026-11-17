@@ -64,7 +64,7 @@ typedef struct {
  * bottom-unit pulse is a beat. False, leaving the outputs untouched, for a NULL argument or on
  * allocation failure. On success the caller owns *out_beat.
  */
-bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats);
+bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration *out_beat, unsigned *out_beats);
 
 /* BEAT_POSITION. */
 bool standard_meter_beat_position(const TimeSignature *time_signature, const MetricalPosition *position,

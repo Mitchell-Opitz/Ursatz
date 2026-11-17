@@ -4,7 +4,7 @@
 
 #include "theory/meter/meter_class_rules.h"
 
-bool standard_meter_hemiola_window(const TimeSignature *time_signature, Duration **out_pulse, unsigned *out_measures) {
+bool standard_meter_hemiola_window(const TimeSignature *time_signature, Duration *out_pulse, unsigned *out_measures) {
     if (time_signature == NULL || out_pulse == NULL || out_measures == NULL) {
         return false;
     }
@@ -17,11 +17,9 @@ bool standard_meter_hemiola_window(const TimeSignature *time_signature, Duration
     } else {
         return false;
     }
-    Duration *pulse = NULL;
-    if (time_signature_unit_duration(time_signature, &pulse) != DURATION_OK) {
+    if (time_signature_unit_duration(time_signature, out_pulse) != DURATION_OK) {
         return false;
     }
-    *out_pulse = pulse;
     *out_measures = measures;
     return true;
 }

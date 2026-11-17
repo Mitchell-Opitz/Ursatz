@@ -28,17 +28,12 @@ bool standard_meter_measure_grid(const MeterMap *map, int index, StandardMeterMe
     if (metrical_position_reading_signature(map, index, &signature) != METRICAL_POSITION_OK) {
         return false;
     }
-    Duration *beat = NULL;
+    Duration beat;
     unsigned beats = 0;
     if (!standard_meter_beat_grid(signature, &beat, &beats)) {
-        duration_destroy(beat);
         return false;
     }
-    bool beat_ok = rational_of_length(beat, &grid->beat);
-    duration_destroy(beat);
-    if (!beat_ok) {
-        return false;
-    }
+    grid->beat = beat.value;
     grid->beats = beats;
     grid->division = standard_meter_type(signature) == METER_TYPE_COMPOUND ? 3 : 2;
 
@@ -94,17 +89,16 @@ bool standard_meter_beat_of(const MeterMap *map, Rational time, int *measure, do
     if (measure == NULL || beat == NULL || !position_at(map, time, &position, &signature)) {
         return false;
     }
-    Duration *unit = NULL;
+    Duration unit;
     unsigned beats = 0;
     bool ok = standard_meter_beat_grid(signature, &unit, &beats);
     Rational length;
     Rational offset;
-    ok = ok && rational_of_length(unit, &length) && rational_of_length(metrical_position_offset(position), &offset);
+    ok = ok && rational_of_length(&unit, &length) && rational_of_length(metrical_position_offset(position), &offset);
     if (ok) {
         *measure = metrical_position_measure(position);
         *beat = 1.0 + rational_to_double(offset) / rational_to_double(length);
     }
-    duration_destroy(unit);
     metrical_position_destroy(position);
     return ok;
 }

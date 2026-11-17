@@ -49,12 +49,12 @@ unsigned time_signature_bottom_number(const TimeSignature *time_signature) {
     return 1u << time_signature->bottom_unit_exponent;
 }
 
-DurationResult time_signature_unit_duration(const TimeSignature *time_signature, Duration **out) {
-    return duration_create(1, 1UL << time_signature->bottom_unit_exponent, out);
+DurationResult time_signature_unit_duration(const TimeSignature *time_signature, Duration *out) {
+    return duration_make(1, 1LL << time_signature->bottom_unit_exponent, out);
 }
 
-DurationResult time_signature_measure_duration(const TimeSignature *time_signature, Duration **out) {
-    return duration_create((long)time_signature->top_number, 1UL << time_signature->bottom_unit_exponent, out);
+DurationResult time_signature_measure_duration(const TimeSignature *time_signature, Duration *out) {
+    return duration_make((long long)time_signature->top_number, 1LL << time_signature->bottom_unit_exponent, out);
 }
 
 bool time_signature_equals(const TimeSignature *a, const TimeSignature *b) {

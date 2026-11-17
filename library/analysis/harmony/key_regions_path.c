@@ -80,19 +80,13 @@ CommonPracticeKeyRegionsStatus key_regions_build_region(const CommonPracticeKeyR
     out->uncertainty = uncertainty;
     out->source = source;
 
-    TimeSpan *first = NULL;
-    TimeSpan *last = NULL;
-    if (meter_map_measure_span(map, first_measure, &first) != METER_MAP_OK) {
+    TimeSpan first;
+    TimeSpan last;
+    if (meter_map_measure_span(map, first_measure, &first) != METER_MAP_OK ||
+        meter_map_measure_span(map, last_measure, &last) != METER_MAP_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
     }
-    if (meter_map_measure_span(map, last_measure, &last) != METER_MAP_OK) {
-        time_span_destroy(first);
-        return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
-    }
-    TimeSpanResult spanned = time_span_create(time_span_start(first), time_span_end(last),
-                                              TIME_SPAN_BOUNDARY_LEFT_CLOSED, &out->span);
-    time_span_destroy(first);
-    time_span_destroy(last);
+    TimeSpanResult spanned = time_span_create(&first.start, &last.end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &out->span);
     if (spanned != TIME_SPAN_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
     }
@@ -234,18 +228,15 @@ static unsigned signature_keys(int sharps_flats) {
 CommonPracticeKeyRegionsStatus key_regions_nearest_barline(const MeterMap *map, const MusicalTime *position,
                                                        int *out_measure) {
     int measure = 0;
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (meter_map_measure_index_at(map, position, &measure) != METER_MAP_OK ||
         meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
     }
     Rational at;
-    Rational start;
-    Rational end;
-    bool converted = rational_of_musical_time(position, &at) == RATIONAL_OK &&
-                     rational_of_musical_time(time_span_start(span), &start) == RATIONAL_OK &&
-                     rational_of_musical_time(time_span_end(span), &end) == RATIONAL_OK;
-    time_span_destroy(span);
+    Rational start = span.start.value;
+    Rational end = span.end.value;
+    bool converted = rational_of_musical_time(position, &at) == RATIONAL_OK;
     Rational since = {0, 1};
     Rational until = {0, 1};
     if (!converted || rational_sub(at, start, &since) != RATIONAL_OK || rational_sub(end, at, &until) != RATIONAL_OK) {

@@ -264,17 +264,16 @@ bool romantext_beat_offset(unsigned top, unsigned bottom, long beat_thousandths,
    0 of a map with one) counts its offset from where a full measure would have started. False when the measure or the
    offset is not in the map. */
 static bool position_time(const MeterMap *map, int measure, const Duration *offset_duration, MusicalTime **out) {
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
     Rational start = {0, 1};
     Rational end = {0, 1};
     Rational offset = {0, 1};
-    bool read = rational_of_musical_time(time_span_start(span), &start) == RATIONAL_OK &&
-                rational_of_musical_time(time_span_end(span), &end) == RATIONAL_OK &&
+    bool read = rational_of_musical_time(&span.start, &start) == RATIONAL_OK &&
+                rational_of_musical_time(&span.end, &end) == RATIONAL_OK &&
                 rational_of_duration(offset_duration, &offset) == RATIONAL_OK;
-    time_span_destroy(span);
     if (!read) {
         return false;
     }
@@ -286,16 +285,14 @@ static bool position_time(const MeterMap *map, int measure, const Duration *offs
     }
     if (measure == 0 && meter_map_has_pickup(map)) {
         const TimeSignature *reading = NULL;
-        Duration *measure_duration = NULL;
+        Duration measure_duration;
         if (metrical_position_reading_signature(map, 0, &reading) != METRICAL_POSITION_OK ||
             time_signature_measure_duration(reading, &measure_duration) != DURATION_OK) {
             return false;
         }
-        Rational full = {0, 1};
-        bool full_read = rational_of_duration(measure_duration, &full) == RATIONAL_OK;
-        duration_destroy(measure_duration);
+        Rational full = measure_duration.value;
         Rational base = {0, 1};
-        if (!full_read || rational_cmp(length, full) > 0 || rational_sub(full, length, &base) != 0 ||
+        if (rational_cmp(length, full) > 0 || rational_sub(full, length, &base) != 0 ||
             rational_cmp(offset, base) < 0 || rational_cmp(offset, full) >= 0 ||
             rational_sub(offset, base, &into_span) != 0) {
             return false;

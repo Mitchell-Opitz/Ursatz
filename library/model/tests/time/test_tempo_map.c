@@ -56,9 +56,9 @@ static unsigned long tempo_at(const TempoMap *map, long n, unsigned long d) {
     unsigned long tempo = 0;
     for (size_t i = tempo_map_region_count(map); i > 0; i--) {
         const TempoMapRegion *region = tempo_map_region(map, i - 1);
-        const MusicalTime *start = tempo_map_region_start(region);
-        if (musical_time_numerator(start) * (long)musical_time_denominator(t) <=
-            musical_time_numerator(t) * (long)musical_time_denominator(start)) {
+        MusicalTime start = tempo_map_region_start(region);
+        if (musical_time_numerator(&start) * (long)musical_time_denominator(t) <=
+            musical_time_numerator(t) * (long)musical_time_denominator(&start)) {
             tempo = tempo_map_region_microseconds_per_quarter(region);
             break;
         }
@@ -131,7 +131,8 @@ static void test_region_accessors(void) {
     const TempoMapRegion *second = tempo_map_region(map, 1);
     assert(tempo_map_region_microseconds_per_quarter(second) == 1000000);
     MusicalTime *one = at(1, 1);
-    assert(musical_time_equals(tempo_map_region_start(second), one));
+    MusicalTime second_start = tempo_map_region_start(second);
+    assert(musical_time_equals(&second_start, one));
     musical_time_destroy(one);
     assert(tempo_map_region(map, 3) == NULL);
     tempo_map_destroy(map);

@@ -62,7 +62,7 @@ static MeterMap *copy_meter_map(const MeterMap *map) {
         ok = ok && time_signature_create(time_signature_top_number(source), unit, &signatures[i]) == TIME_SIGNATURE_OK;
         note_value_destroy(unit);
         points[i].time_signature = signatures[i];
-        points[i].start = *meter_map_region_start(region);
+        points[i].start = meter_map_region_start(region);
     }
     ok = ok && entity_id_create("fragment-meter", &id) == ENTITY_ID_OK;
     if (ok && meter_map_create(id, points, count, &copy) != METER_MAP_OK) {
@@ -236,20 +236,19 @@ static void place(const MeterMap *map, long numerator, unsigned long denominator
     MusicalTime *time = NULL;
     MetricalPosition *position = NULL;
     const TimeSignature *signature = NULL;
-    Duration *unit = NULL;
+    Duration unit;
     if (musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK) {
         if (metrical_position_from_time(map, time, &position) == METRICAL_POSITION_OK) {
             int m = metrical_position_measure(position);
             const Duration *offset = metrical_position_offset(position);
             if (metrical_position_reading_signature(map, m, &signature) == METRICAL_POSITION_OK &&
-                time_signature_unit_duration(signature, &unit) == DURATION_OK && duration_numerator(unit) > 0) {
+                time_signature_unit_duration(signature, &unit) == DURATION_OK && unit.value.num > 0) {
                 *measure = m;
                 *beat = 1.0 + ((double)duration_numerator(offset) / (double)duration_denominator(offset)) /
-                                  ((double)duration_numerator(unit) / (double)duration_denominator(unit));
+                                  ((double)unit.value.num / (double)unit.value.den);
             }
         }
     }
-    duration_destroy(unit);
     metrical_position_destroy(position);
     musical_time_destroy(time);
 }

@@ -39,12 +39,12 @@ static AnalyzerStatus midi_tempo(const TempoMap *map, AnalyzerTempoRegion **out,
     }
     for (size_t i = 0; i < region_count; i++) {
         const TempoMapRegion *region = tempo_map_region(map, i);
-        const MusicalTime *start = region ? tempo_map_region_start(region) : NULL;
         unsigned long microseconds = region ? tempo_map_region_microseconds_per_quarter(region) : 0;
-        if (!start || microseconds == 0 || rational_of_musical_time(start, &regions[i].at) != RATIONAL_OK) {
+        if (!region || microseconds == 0) {
             free(regions);
             return ANALYZER_ERR_LIBRARY;
         }
+        regions[i].at = tempo_map_region_start(region).value;
         regions[i].quarters_per_minute = round_to_milli(MICROSECONDS_PER_MINUTE / (double)microseconds);
     }
     *defaulted = tempo_map_is_defaulted(map);

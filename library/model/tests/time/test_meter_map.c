@@ -75,16 +75,15 @@ static size_t count_at(const MeterMap *map, long n, unsigned long d) {
 }
 
 static void assert_span(const MeterMap *map, int index, long sn, unsigned long sd, long en, unsigned long ed) {
-    TimeSpan *span = NULL;
+    TimeSpan span;
     assert(meter_map_measure_span(map, index, &span) == METER_MAP_OK);
     MusicalTime *start = at(sn, sd);
     MusicalTime *end = at(en, ed);
-    assert(musical_time_equals(time_span_start(span), start));
-    assert(musical_time_equals(time_span_end(span), end));
-    assert(time_span_boundary(span) == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
+    assert(musical_time_equals(&span.start, start));
+    assert(musical_time_equals(&span.end, end));
+    assert(time_span_boundary(&span) == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
     musical_time_destroy(start);
     musical_time_destroy(end);
-    time_span_destroy(span);
 }
 
 static void test_single_region(void) {
@@ -96,7 +95,8 @@ static void test_single_region(void) {
     assert(!meter_map_has_pickup(map));
     assert(meter_map_first_measure_number(map) == 1);
     const MeterMapRegion *region = meter_map_region(map, 0);
-    assert(meter_map_region_end(region) == NULL);
+    MusicalTime open_end;
+    assert(!meter_map_region_end(region, &open_end));
     assert(meter_map_region_first_measure_number(region) == 1);
     assert(time_signature_top_number(meter_map_region_time_signature(region)) == 4);
 
@@ -196,7 +196,7 @@ static void test_pickup_from_short_leading_signature(void) {
     assert(count_at(map, 1, 8) == 1);
     assert(count_at(map, 13, 8) == 2);
 
-    TimeSpan *span = NULL;
+    TimeSpan span;
     assert(meter_map_measure_span(map, -1, &span) == METER_MAP_ERR_INDEX_OUT_OF_RANGE);
 
     meter_map_destroy(map);
@@ -242,7 +242,8 @@ static void test_defaulted_four_four(void) {
     assert(meter_map_region_is_defaulted(region));
     assert(time_signature_top_number(meter_map_region_time_signature(region)) == 4);
     assert(time_signature_bottom_number(meter_map_region_time_signature(region)) == 4);
-    assert(meter_map_region_end(region) == NULL);
+    MusicalTime open_end;
+    assert(!meter_map_region_end(region, &open_end));
     assert(index_at(map, 1, 1) == 2);
 
     meter_map_destroy(map);

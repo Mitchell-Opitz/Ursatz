@@ -104,22 +104,21 @@ typedef struct {
     unsigned long d;
 } StubBeat;
 
-static bool stub_provider(const MeterMap *map, int measure, void *context, MusicalTime ***out_starts,
+static bool stub_provider(const MeterMap *map, int measure, void *context, MusicalTime **out_starts,
                           size_t *out_count) {
     const StubBeat *beat = (const StubBeat *)context;
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    Rational at = test_rational_of_time(time_span_start(span));
-    Rational end = test_rational_of_time(time_span_end(span));
-    time_span_destroy(span);
+    Rational at = span.start.value;
+    Rational end = span.end.value;
 
     Rational step = rational_ratio((unsigned long long)beat->n, beat->d);
-    MusicalTime **starts = (MusicalTime **)calloc(64, sizeof(MusicalTime *));
+    MusicalTime *starts = (MusicalTime *)calloc(64, sizeof(MusicalTime));
     size_t count = 0;
     while (rational_cmp(at, end) < 0 && count < 64) {
-        starts[count++] = musical_time_from_rational_or_null(at);
+        starts[count++] = musical_time_of(at);
         assert(rational_add(at, step, &at) == 0);
     }
     *out_starts = starts;
@@ -127,7 +126,7 @@ static bool stub_provider(const MeterMap *map, int measure, void *context, Music
     return true;
 }
 
-static bool failing_provider(const MeterMap *map, int measure, void *context, MusicalTime ***out_starts,
+static bool failing_provider(const MeterMap *map, int measure, void *context, MusicalTime **out_starts,
                              size_t *out_count) {
     (void)map;
     (void)measure;
