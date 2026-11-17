@@ -256,15 +256,14 @@ OuterVoiceResult outer_voice_extract(const AdaptiveSonorities *segments, NoteEve
         }
         long numerator = pitch_numeric_value_position_numerator(pitch_values[i]);
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(notes[i]));
-        if (numerator < 0 || musical_time_numerator(position) < 0) {
+        if (numerator < 0 || position->value.num < 0) {
             failure = OUTER_VOICE_ERR_UNSUPPORTED_PITCH;
             break;
         }
         facts[i].id = entity_id_value(note_event_id(notes[i]));
-        Rational length;
-        if (rational_of_musical_time(position, &facts[i].onset) != RATIONAL_OK ||
-            rational_of_duration(note_event_duration(notes[i]), &length) != RATIONAL_OK ||
-            rational_add(facts[i].onset, length, &facts[i].release) != RATIONAL_OK) {
+        Rational length = note_event_duration(notes[i])->value;
+        facts[i].onset = position->value;
+        if (rational_add(facts[i].onset, length, &facts[i].release) != RATIONAL_OK) {
             failure = OUTER_VOICE_ERR_OVERFLOW;
             break;
         }
@@ -286,11 +285,8 @@ OuterVoiceResult outer_voice_extract(const AdaptiveSonorities *segments, NoteEve
     for (size_t s = 0; s < segment_count && failure == OUTER_VOICE_OK; s++) {
         const Sonority *sonority = segments->items[s].sonority;
         const TimeSpan *window = sonority_time_window(sonority);
-        if (rational_of_musical_time(time_span_start(window), &views[s].start) != RATIONAL_OK ||
-            rational_of_musical_time(time_span_end(window), &views[s].end) != RATIONAL_OK) {
-            failure = OUTER_VOICE_ERR_OVERFLOW;
-            break;
-        }
+        views[s].start = window->start.value;
+        views[s].end = window->end.value;
         size_t count = sonority_event_id_count(sonority);
         member_arrays[s] = (size_t *)calloc(count > 0 ? count : 1, sizeof(size_t));
         if (member_arrays[s] == NULL) {

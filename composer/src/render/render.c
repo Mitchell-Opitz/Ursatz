@@ -14,7 +14,6 @@
 #include <model/pitch/tuning_system.h>
 #include <theory/tonality/tonal_key.h>
 #include <model/time/duration.h>
-#include <model/time/time_rational.h>
 #include <model/time/note_value.h>
 #include <model/time/temporal_anchor.h>
 #include <model/time/time_signature.h>

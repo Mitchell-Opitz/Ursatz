@@ -3,7 +3,6 @@
 #include <limits.h>
 #include <stdlib.h>
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 
 struct MetricalPosition {
     int measure;
@@ -43,7 +42,8 @@ const Duration *metrical_position_offset(const MetricalPosition *position) {
 
 /* Exact arithmetic is core/rational.h; every operation is checked and reports overflow. */
 static int rat_of_time(const MusicalTime *time, Rational *out) {
-    return rational_of_musical_time(time, out) == RATIONAL_OK ? 0 : -1;
+    *out = time->value;
+    return 0;
 }
 
 static int fits(Rational r) {
@@ -137,7 +137,7 @@ MetricalPositionResult metrical_position_from_time(const MeterMap *map, const Mu
     if (map == NULL || time == NULL || out == NULL) {
         return METRICAL_POSITION_ERR_NULL_ARGUMENT;
     }
-    if (musical_time_numerator(time) < 0) {
+    if (time->value.num < 0) {
         return METRICAL_POSITION_ERR_TIME_BEFORE_START;
     }
 

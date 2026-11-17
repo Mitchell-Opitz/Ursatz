@@ -28,7 +28,6 @@
 #include "model/time/musical_time.h"
 #include "model/time/score_time.h"
 #include "model/time/temporal_anchor.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_signature.h"
 #include "model/time/time_span.h"
 #include "model/time/tuplet.h"
@@ -242,9 +241,8 @@ static size_t *phrase_notes(const RhythmBuild *build, const ImportedNotes *notes
             continue;
         }
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
-        Rational at;
-        if (rational_of_musical_time(onset, &at) != RATIONAL_OK ||
-            !score_time_snap(at, config.onset_grid_denominator, config.onset_tolerance_denominator, &at, NULL)) {
+        Rational at = onset->value;
+        if (!score_time_snap(at, config.onset_grid_denominator, config.onset_tolerance_denominator, &at, NULL)) {
             free(ids);
             *count = 0;
             return NULL;

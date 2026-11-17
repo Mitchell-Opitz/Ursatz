@@ -10,7 +10,6 @@
 #include <model/identity/entity_id.h>
 #include <io/midi_renderer.h>
 #include <model/time/musical_time.h>
-#include <model/time/time_rational.h>
 #include <model/time/tempo_map.h>
 
 #define PREFERRED_DIVISION 480u

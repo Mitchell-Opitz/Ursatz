@@ -238,7 +238,7 @@ static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *m
             unsigned long microseconds = tempo_map_region_microseconds_per_quarter(region);
             uint32_t tick;
             if (microseconds == 0 || microseconds > MAX_MICROSECONDS_PER_QUARTER ||
-                !to_tick(musical_time_numerator(&start), musical_time_denominator(&start), division, &tick)) {
+                !to_tick((long)start.value.num, (unsigned long)start.value.den, division, &tick)) {
                 return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
             }
             unsigned char meta[6] = {0xFF, 0x51, 0x03, (unsigned char)((microseconds >> 16) & 0xFF),
@@ -257,7 +257,7 @@ static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *m
             int exponent = time_signature_bottom_unit_exponent(signature);
             uint32_t tick;
             if (top == 0 || top > 255 || exponent < 0 || exponent > 7 ||
-                !to_tick(musical_time_numerator(&start), musical_time_denominator(&start), division, &tick)) {
+                !to_tick((long)start.value.num, (unsigned long)start.value.den, division, &tick)) {
                 return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
             }
             unsigned char meta[7] = {0xFF, 0x58, 0x04, (unsigned char)top, (unsigned char)exponent,
@@ -271,8 +271,8 @@ static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *m
         int sharps_flats = key_signatures[i].sharps_flats;
         uint32_t tick;
         if (sharps_flats < -7 || sharps_flats > 7 ||
-            !to_tick(musical_time_numerator(&key_signatures[i].position),
-                     musical_time_denominator(&key_signatures[i].position), division, &tick)) {
+            !to_tick((long)key_signatures[i].position.value.num,
+                     (unsigned long)key_signatures[i].position.value.den, division, &tick)) {
             return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
         }
         unsigned char meta[5] = {0xFF, 0x59, 0x02, (unsigned char)(int8_t)sharps_flats, key_signatures[i].mode_byte};
@@ -284,7 +284,7 @@ static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *m
         for (size_t i = 0; i < options->marker_count; i++) {
             const MusicalTime *position = &options->markers[i].position;
             uint32_t tick;
-            if (!to_tick(musical_time_numerator(position), musical_time_denominator(position), division, &tick)) {
+            if (!to_tick((long)position->value.num, (unsigned long)position->value.den, division, &tick)) {
                 return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
             }
             if (!add_text_event(events, tick, ORDER_MARKER, 0x06, options->markers[i].text)) {
@@ -392,9 +392,9 @@ static MidiRenderResult collect_voice_tracks(NoteEvent *const *events, PitchNume
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
         const Duration *duration = note_event_duration(events[i]);
         uint32_t length;
-        if (!to_tick(musical_time_numerator(position), musical_time_denominator(position), division, &starts[i]) ||
-            duration_numerator(duration) <= 0 ||
-            !to_tick(duration_numerator(duration), duration_denominator(duration), division, &length) || length == 0 ||
+        if (!to_tick((long)position->value.num, (unsigned long)position->value.den, division, &starts[i]) ||
+            duration->value.num <= 0 ||
+            !to_tick((long)duration->value.num, (unsigned long)duration->value.den, division, &length) || length == 0 ||
             (uint64_t)starts[i] + length > MAX_TICK) {
             status = MIDI_RENDER_ERR_NOT_REPRESENTABLE;
             break;

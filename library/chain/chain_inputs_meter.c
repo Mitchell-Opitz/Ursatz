@@ -96,7 +96,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
         if (chord_labels[s] == NULL || chord_labels[s - 1] == NULL || strcmp(chord_labels[s], chord_labels[s - 1]) == 0) {
             continue;
         }
-        const MusicalTime *start = time_span_start(sonority_time_window(segments->sonorities.items[s].sonority));
+        const MusicalTime *start = &sonority_time_window(segments->sonorities.items[s].sonority)->start;
         int measure = chain_measure_of(notes->map, start);
         if (measure < first_measure || measure > last_measure) {
             continue;

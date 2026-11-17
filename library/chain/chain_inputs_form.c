@@ -99,7 +99,7 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
     int current_semitone = 0;
     for (size_t s = 0; s <= line_segments->count && status == CHAIN_INPUT_OK; s++) {
         const TimeSpan *window = s < line_segments->count ? sonority_time_window(line_segments->sonorities.items[s].sonority) : NULL;
-        int measure = window != NULL ? chain_measure_of(notes->map, time_span_start(window)) : -1;
+        int measure = window != NULL ? chain_measure_of(notes->map, &window->start) : -1;
         bool in_range = window != NULL && measure >= first_measure && measure <= last_measure;
         const char *id = in_range && lines->soprano[s].present ? entity_id_value(lines->soprano[s].note_id) : NULL;
         if (current_id != NULL && (id == NULL || strcmp(id, current_id) != 0)) {

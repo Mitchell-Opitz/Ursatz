@@ -10,7 +10,6 @@
 #include "model/time/meter_map.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
-#include "model/time/time_rational.h"
 
 /* The evidence the library scores: the times of the harmony changes, the times the cadences arrive and every note onset,
    on Rational. The scoring, the candidates and the choice of the reading to offer are standard_meter_check_meter's. */
@@ -56,7 +55,7 @@ static bool evidence_collect(const ImportedNotes *notes, const AnalysisReportEnt
     }
     for (size_t i = 0; ok && i < notes->count; i++) {
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
-        ok = rational_of_musical_time(onset, &evidence->onsets[evidence->onset_count++]) == RATIONAL_OK;
+        evidence->onsets[evidence->onset_count++] = onset->value;
     }
     free(is_change);
     if (!ok) {

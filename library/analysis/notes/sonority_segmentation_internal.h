@@ -6,7 +6,6 @@
 
 #include "analysis/notes/sonority_segmentation.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 
 /*
  * Internal to adaptive sonority segmentation: the three algorithm steps as separate functions, so each

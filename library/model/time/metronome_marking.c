@@ -29,7 +29,7 @@ MetronomeMarkingResult metronome_marking_create(const Duration *beat_unit, unsig
     if (beat_unit == NULL) {
         return METRONOME_MARKING_ERR_NULL_BEAT_UNIT;
     }
-    if (duration_numerator(beat_unit) == 0) {
+    if (beat_unit->value.num == 0) {
         return METRONOME_MARKING_ERR_ZERO_BEAT_UNIT;
     }
     if (bpm_numerator == 0 || bpm_denominator == 0) {
@@ -40,8 +40,8 @@ MetronomeMarkingResult metronome_marking_create(const Duration *beat_unit, unsig
        must be zeroed. */
     MetronomeMarkingContent content;
     memset(&content, 0, sizeof(content));
-    content.beat_unit_numerator = (unsigned long)duration_numerator(beat_unit);
-    content.beat_unit_denominator = duration_denominator(beat_unit);
+    content.beat_unit_numerator = (unsigned long)beat_unit->value.num;
+    content.beat_unit_denominator = (unsigned long)beat_unit->value.den;
     content.bpm_numerator = bpm_numerator;
     content.bpm_denominator = bpm_denominator;
     reduce(&content.beat_unit_numerator, &content.beat_unit_denominator);

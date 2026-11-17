@@ -28,7 +28,6 @@
 #include "model/time/metrical_position.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_signature.h"
 #include "util/json_util.h"
 #include "util/misc_util.h"
@@ -90,24 +89,12 @@ static Rational doc_in_beats(DocBuild *build, Rational length, const Duration *b
 
 static bool time_before(Rational a, Rational b) { return rational_cmp(a, b) < 0; }
 
-static Rational time_rational(DocBuild *build, const MusicalTime *time) {
-    Rational value = {0, 1};
-    if (rational_of_musical_time(time, &value) != RATIONAL_OK) {
-        build->overflowed = true;
-    }
-    return value;
-}
-
-static Rational note_onset(DocBuild *build, const NoteEvent *event) {
-    return time_rational(build, temporal_anchor_position(note_event_temporal_anchor(event)));
+static Rational note_onset(const NoteEvent *event) {
+    return temporal_anchor_position(note_event_temporal_anchor(event))->value;
 }
 
 static Rational note_end(DocBuild *build, const NoteEvent *event) {
-    Rational length = {0, 1};
-    if (rational_of_duration(note_event_duration(event), &length) != RATIONAL_OK) {
-        build->overflowed = true;
-    }
-    return doc_add(build, note_onset(build, event), length);
+    return doc_add(build, note_onset(event), note_event_duration(event)->value);
 }
 
 /* Earliest onset to latest note end over the given notes (ids NULL means
@@ -117,7 +104,7 @@ static void notes_span(DocBuild *build, const ImportedNotes *notes, const size_t
     *end = (Rational){0, 1};
     for (size_t i = 0; i < id_count; i++) {
         const NoteEvent *event = notes->events[ids ? ids[i] : i];
-        Rational onset = note_onset(build, event);
+        Rational onset = note_onset(event);
         Rational finish = note_end(build, event);
         if (i == 0 || time_before(onset, *start)) {
             *start = onset;
@@ -278,7 +265,7 @@ static cJSON *pickup_json(DocBuild *build, const MeterMap *map) {
         metrical_position_reading_signature(map, 0, &reading) != METRICAL_POSITION_OK) {
         return NULL;
     }
-    Rational length = time_rational(build, &end);
+    Rational length = end.value;
 
     cJSON *beats = NULL;
     Duration beat;
@@ -311,7 +298,7 @@ static cJSON *meter_changes_json(DocBuild *build, const MeterMap *map, size_t fi
         cJSON *change = cJSON_CreateObject();
         if (!(change &&
               json_add(change, "measure", cJSON_CreateNumber((double)meter_map_region_first_measure_number(region))) &&
-              json_add(change, "start", rational_json(time_rational(build, &region_start))) &&
+              json_add(change, "start", rational_json(region_start.value)) &&
               json_add(change, "time_signature", time_signature_json(meter_map_region_time_signature(region))) &&
               json_add(change, "inferred", cJSON_CreateBool(meter_map_region_is_defaulted(region))))) {
             cJSON_Delete(change);
@@ -414,7 +401,7 @@ static cJSON *key_signatures_json(DocBuild *build, const ImportedNotes *notes) {
         int major = key_signature_major_tonic(event->sharps_flats);
         char *major_label = key_label_create(major, true);
         char *minor_label = key_label_create((major + 9) % 12, false);
-        Rational start = time_rational(build, &event->position);
+        Rational start = event->position.value;
         cJSON *object = cJSON_CreateObject();
         bool ok = major_label && minor_label && object &&
                   json_add(object, "start", rational_json(start)) &&
@@ -539,7 +526,7 @@ static size_t *notes_starting_in(DocBuild *build, const ImportedNotes *notes, Ra
     }
     *count = 0;
     for (size_t i = 0; i < notes->count; i++) {
-        Rational onset = note_onset(build, notes->events[i]);
+        Rational onset = note_onset(notes->events[i]);
         if (!time_before(onset, start) && time_before(onset, end)) {
             ids[(*count)++] = i;
         }
@@ -899,7 +886,7 @@ static cJSON *notes_json(DocBuild *build, const ImportedNotes *notes, const Anal
             continue; /* the same signature repeated is not a new one (the library does not treat it as a boundary) */
         }
         size_t region_index = 0;
-        const AnalysisKeyRegion *region = region_at(build, report, time_rational(build, &event->position), &region_index);
+        const AnalysisKeyRegion *region = region_at(build, report, event->position.value, &region_index);
         if (region && !key_fits_signature(region, event->sharps_flats) &&
             !json_append(list, disagreement_json("region_at_signature", (long)i, event, region_index, region))) {
             cJSON_Delete(list);
@@ -2174,7 +2161,7 @@ static bool add_outer_note_timing(DocBuild *build, cJSON *claim, const ImportedN
         return json_add(claim, "onset", cJSON_CreateNull()) && json_add(claim, "duration", cJSON_CreateNull());
     }
     const NoteEvent *event = notes->events[voice->note_id];
-    Rational onset = note_onset(build, event);
+    Rational onset = note_onset(event);
     Rational end = note_end(build, event);
     cJSON *onset_object = cJSON_CreateObject();
     cJSON *duration = cJSON_CreateObject();

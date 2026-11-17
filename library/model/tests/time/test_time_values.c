@@ -114,7 +114,7 @@ static void test_duration_cmp_and_plus(void) {
 }
 
 static bool span_same(TimeSpan a, TimeSpan b) {
-    return musical_time_same(a.start, b.start) && musical_time_same(a.end, b.end) && a.boundary == b.boundary &&
+    return musical_time_same(a.start, b.start) && musical_time_same(a.end, b.end) &&
            memcmp(&a.start, &b.start, sizeof a.start) == 0 && memcmp(&a.end, &b.end, sizeof a.end) == 0;
 }
 
@@ -122,7 +122,6 @@ static void test_time_span_values(void) {
     TimeSpan span;
     assert(time_span_make(mt(1, 4), mt(3, 4), &span) == TIME_SPAN_OK);
     assert(musical_time_same(span.start, mt(1, 4)) && musical_time_same(span.end, mt(3, 4)));
-    assert(span.boundary == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
     assert(time_span_holds(span));
     Duration len;
     assert(time_span_length(span, &len) == DURATION_OK);
@@ -151,22 +150,10 @@ static void test_time_span_values(void) {
     assert(time_span_length(span, &len) == DURATION_ERR_OVERFLOW);
     assert(duration_same(len, kept));
 
-    /* A span literal equals the made span, and the heap API agrees with the value API. */
-    TimeSpan literal = {{{1, 4}}, {{3, 4}}, TIME_SPAN_BOUNDARY_LEFT_CLOSED};
+    /* A span literal equals the made span. */
+    TimeSpan literal = {{{1, 4}}, {{3, 4}}};
     assert(time_span_make(mt(1, 4), mt(3, 4), &span) == TIME_SPAN_OK);
     assert(span_same(literal, span));
-
-    MusicalTime *hs = NULL;
-    MusicalTime *he = NULL;
-    TimeSpan *heap = NULL;
-    assert(musical_time_create(1, 4, &hs) == MUSICAL_TIME_OK);
-    assert(musical_time_create(3, 4, &he) == MUSICAL_TIME_OK);
-    assert(time_span_create(hs, he, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &heap) == TIME_SPAN_OK);
-    assert(musical_time_same(*time_span_start(heap), span.start) && musical_time_same(*time_span_end(heap), span.end));
-    assert(time_span_is_valid(heap));
-    time_span_destroy(heap);
-    musical_time_destroy(hs);
-    musical_time_destroy(he);
 }
 
 int main(void) {

@@ -5,7 +5,6 @@
 
 #include "model/core/rational.h"
 #include "model/time/meter_map.h"
-#include "model/time/time_span.h"
 
 /*
  * Score time: the one kernel owner of the exact time reads an analysis adapter needs over a MeterMap. A time is a
@@ -13,12 +12,9 @@
  * arguments are invalid, the map has no such measure, or the arithmetic does not fit a Rational; outputs are written
  * only on true. There is no unchecked fallback: an overflow is a refusal the caller handles.
  *
- * The framework time modules (standard-meter, standard-form, standard-texture) are thin wrappers over these four
+ * The framework time modules (standard-meter, standard-form, standard-texture) are thin wrappers over these three
  * functions until they are retired.
  */
-
-/* The [start, end) of a span, read exactly. Either output may be NULL. */
-bool score_time_span(const TimeSpan *span, Rational *start, Rational *end);
 
 /* The [start, end) of measure `index` in `map`. Either output may be NULL. */
 bool score_time_measure_bounds(const MeterMap *map, int index, Rational *start, Rational *end);

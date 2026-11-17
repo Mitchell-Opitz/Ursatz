@@ -14,7 +14,6 @@
 #include <model/time/duration.h>
 #include <model/time/metrical_position.h>
 #include <model/time/musical_time.h>
-#include <model/time/time_rational.h>
 #include <model/time/time_span.h>
 #include <theory/tonality/seventh_in_key_rules.h>
 #include <theory/tonality/triad_in_key_rules.h>

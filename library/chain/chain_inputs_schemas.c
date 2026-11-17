@@ -67,9 +67,9 @@ ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size
         bool minor = chords[s].mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
         GalantSegment segment;
         memset(&segment, 0, sizeof(segment));
-        AnalysisSegment analysis = {segments->ids[s], *window, NULL, chain_attack_strength(map, time_span_start(window))};
+        AnalysisSegment analysis = {segments->ids[s], *window, NULL, chain_attack_strength(map, &window->start)};
         segment.segment = analysis;
-        beat_length_at(map, time_span_start(window), &segment.beat_numerator, &segment.beat_denominator);
+        beat_length_at(map, &window->start, &segment.beat_numerator, &segment.beat_denominator);
         snprintf(segment.key_id, sizeof(segment.key_id), "key-%d%s", tonic_pc, minor ? "m" : "");
         segment.key = galant_degree_of_semitones(tonic_pc - home_pc);
         if (lines->bass[s].present) {

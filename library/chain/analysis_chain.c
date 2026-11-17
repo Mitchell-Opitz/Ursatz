@@ -856,7 +856,7 @@ static bool valid_config(const AnalysisChainConfig *config) {
 static int segment_measure(const AnalysisChain *chain, size_t index) {
     const TimeSpan *window = sonority_time_window(chain->segs.sonorities.items[index].sonority);
     int measure = 0;
-    return window != NULL && meter_map_measure_index_at(chain->notes->map, time_span_start(window), &measure) == METER_MAP_OK ? measure : -1;
+    return window != NULL && meter_map_measure_index_at(chain->notes->map, &window->start, &measure) == METER_MAP_OK ? measure : -1;
 }
 
 /* The keys one claimed reading of a cadence confirms (R-397): authentic for the perfect, imperfect and unspecified authentic types, half for the

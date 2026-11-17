@@ -7,7 +7,6 @@
 #include "model/core/rational.h"
 #include "model/identity/entity_id.h"
 #include "model/time/duration.h"
-#include "model/time/time_rational.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_signature.h"
@@ -280,13 +279,12 @@ static ScoreQuantizeResult fill_items(Item *items, NoteEvent *const *events, siz
         items[i].voice = voice != NULL ? entity_id_value(voice_reference_target_id(voice)) : NULL;
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
         const Duration *duration = note_event_duration(events[i]);
-        if (musical_time_numerator(position) < 0 || duration_numerator(duration) <= 0) {
+        if (position->value.num < 0 || duration->value.num <= 0) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
-        Rational length;
-        if (rational_of_musical_time(position, &items[i].start) != RATIONAL_OK ||
-            rational_of_duration(duration, &length) != RATIONAL_OK ||
-            rational_add(items[i].start, length, &items[i].end) != RATIONAL_OK) {
+        Rational length = duration->value;
+        items[i].start = position->value;
+        if (rational_add(items[i].start, length, &items[i].end) != RATIONAL_OK) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
         ScoreQuantizeResult located = locate_beat(meter, items[i].start, &items[i].beat);

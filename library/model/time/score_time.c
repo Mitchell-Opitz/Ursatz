@@ -3,26 +3,6 @@
 #include <limits.h>
 
 #include "model/time/meter_arithmetic.h"
-#include "model/time/time_rational.h"
-
-bool score_time_span(const TimeSpan *span, Rational *start, Rational *end) {
-    if (span == NULL || time_span_start(span) == NULL || time_span_end(span) == NULL) {
-        return false;
-    }
-    Rational from;
-    Rational to;
-    if (rational_of_musical_time(time_span_start(span), &from) != RATIONAL_OK ||
-        rational_of_musical_time(time_span_end(span), &to) != RATIONAL_OK) {
-        return false;
-    }
-    if (start != NULL) {
-        *start = from;
-    }
-    if (end != NULL) {
-        *end = to;
-    }
-    return true;
-}
 
 bool score_time_measure_bounds(const MeterMap *map, int index, Rational *start, Rational *end) {
     return meter_map_measure_bounds(map, index, start, end) == METER_MAP_OK;

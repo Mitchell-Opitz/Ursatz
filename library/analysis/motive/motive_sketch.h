@@ -6,7 +6,6 @@
 
 #include "model/core/rational.h"
 #include "theory/vocabulary/non_chord_tone.h"
-#include "model/time/time_rational.h"
 
 /*
  * MotiveSketch (L8 analysis value): a motive as plain data, the input of the motive relations

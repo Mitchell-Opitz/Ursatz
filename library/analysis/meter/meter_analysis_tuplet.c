@@ -240,12 +240,10 @@ static bool emit_run(StandardMeterTuplet **items, size_t *count, size_t *capacit
         item->beat = beat;
     }
     const MeterMapRegion *region = NULL;
-    Rational at_q = rational_ratio(0, 1);
-    Rational end_q = rational_ratio(0, 1);
     Tuplet *tuplet = NULL;
-    if (score_time_span(&notes->notes[run->notes[0]].span, &at_q, &end_q)) {
-        MusicalTime at = musical_time_of(at_q);
-        if (at_q.num >= 0 && meter_map_region_at(notes->map, &at, &region) != METER_MAP_OK) {
+    {
+        MusicalTime at = notes->notes[run->notes[0]].span.start;
+        if (at.value.num >= 0 && meter_map_region_at(notes->map, &at, &region) != METER_MAP_OK) {
             region = NULL;
         }
     }
@@ -356,9 +354,9 @@ StandardMeterAnalysisStatus standard_meter_find_tuplets(const AnalysisNoteSet *n
         if (in_line != NULL && !in_line[i]) {
             continue;
         }
-        Rational onset;
-        Rational release;
-        if (!score_time_span(&notes->notes[i].span, &onset, &release) || !standard_meter_snap_time(&config, &onset, false, NULL)) {
+        Rational onset = notes->notes[i].span.start.value;
+        Rational release = notes->notes[i].span.end.value;
+        if (!standard_meter_snap_time(&config, &onset, false, NULL)) {
             continue;
         }
         TupletNote *note = &stream[stream_count];

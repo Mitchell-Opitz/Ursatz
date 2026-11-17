@@ -9,7 +9,6 @@
 #include "theory/meter/segmentation_beat_grid.h"
 #include "analysis/notes/sonority_segmentation.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_span.h"
 #include "ursatz_test.h"
 

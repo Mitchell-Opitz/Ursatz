@@ -9,7 +9,6 @@
 #include <model/time/musical_time.h>
 #include <model/time/note_value.h>
 #include <model/time/time_signature.h>
-#include <model/time/time_rational.h>
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>

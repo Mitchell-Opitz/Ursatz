@@ -3,7 +3,6 @@
 #include "model/events/note_event.h"
 #include "model/pitch/pitch_spelling.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/time/temporal_anchor.h"
 #include "../rational_test_util.h"
 

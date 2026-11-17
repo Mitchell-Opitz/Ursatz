@@ -3,7 +3,6 @@
 #include <math.h>
 
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/pitch/midi_pitch.h"
 #include "theory/tonality/tonal_key.h"
 

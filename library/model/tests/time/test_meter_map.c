@@ -74,7 +74,6 @@ static void assert_span(const MeterMap *map, int index, long sn, unsigned long s
     assert(meter_map_measure_span(map, index, &span) == METER_MAP_OK);
     assert(musical_time_same(span.start, at(sn, sd)));
     assert(musical_time_same(span.end, at(en, ed)));
-    assert(time_span_boundary(&span) == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
 }
 
 static void test_single_region(void) {

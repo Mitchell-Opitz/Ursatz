@@ -7,7 +7,6 @@
 #include "model/core/rational.h"
 #include "model/time/duration.h"
 #include "model/time/note_value.h"
-#include "model/time/time_rational.h"
 
 /* Grid arithmetic is on core/rational.h Rationals, every step checked. A step that does not fit is
    METER_MAP_ERR_OVERFLOW to the caller, never a wrapped value. */
@@ -24,7 +23,8 @@ static MeterMapResult checked(RationalResult result) {
 }
 
 static MeterMapResult rat_of_time(const MusicalTime *time, Rational *out) {
-    return checked(rational_of_musical_time(time, out));
+    *out = time->value;
+    return METER_MAP_OK;
 }
 
 /* a / b rounded down, for b > 0. */
@@ -356,7 +356,7 @@ MeterMapResult meter_map_region_at(const MeterMap *map, const MusicalTime *time,
     if (map == NULL || time == NULL || out == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;
     }
-    if (musical_time_numerator(time) < 0) {
+    if (time->value.num < 0) {
         return METER_MAP_ERR_TIME_BEFORE_START;
     }
     Rational t;
@@ -369,7 +369,7 @@ MeterMapResult meter_map_measure_index_at(const MeterMap *map, const MusicalTime
     if (map == NULL || time == NULL || out_index == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;
     }
-    if (musical_time_numerator(time) < 0) {
+    if (time->value.num < 0) {
         return METER_MAP_ERR_TIME_BEFORE_START;
     }
     Rational t;
@@ -429,7 +429,7 @@ MeterMapResult meter_map_measure_count(const MeterMap *map, const MusicalTime *e
     if (map == NULL || end_time == NULL || out_count == NULL) {
         return METER_MAP_ERR_NULL_ARGUMENT;
     }
-    if (musical_time_numerator(end_time) < 0) {
+    if (end_time->value.num < 0) {
         return METER_MAP_ERR_TIME_BEFORE_START;
     }
     Rational t;

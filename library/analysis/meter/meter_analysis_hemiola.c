@@ -9,7 +9,6 @@
 #include "analysis/meter/meter_analysis_position.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/score_time.h"
-#include "model/time/time_rational.h"
 
 typedef struct {
     Rational start;
@@ -147,7 +146,9 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
     for (size_t i = 0; i < input->note_count; i++) {
         Rational start;
         Rational end;
-        if (!score_time_span(&input->notes[i].span, &start, &end) || !standard_meter_snap_time(config, &start, false, NULL) ||
+        start = input->notes[i].span.start.value;
+        end = input->notes[i].span.end.value;
+        if (!standard_meter_snap_time(config, &start, false, NULL) ||
             !standard_meter_snap_time(config, &end, true, NULL)) {
             continue;
         }

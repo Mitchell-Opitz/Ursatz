@@ -65,8 +65,8 @@ static bool make_span(Rational start, Rational end, TimeSpan *out) {
 static bool arrival_end(const StandardFormInput *input, const StandardFormCadence *cadence, Rational *snapped,
                         int *measure) {
     Rational end;
-    if (!score_time_span(&cadence->arrival, NULL, &end) ||
-        meter_map_last_measure_touched(input->map, end, measure) != METER_MAP_OK ||
+    end = cadence->arrival.end.value;
+    if (meter_map_last_measure_touched(input->map, end, measure) != METER_MAP_OK ||
         meter_map_snap_to_beat(input->map, *measure, end, snapped) != METER_MAP_OK) {
         return false;
     }
@@ -230,8 +230,9 @@ static StandardFormAnalysisStatus segment_phrases(const StandardFormInput *input
     int first_measure = 0;
     int last_measure = 0;
     for (size_t i = 0; i < input->note_count; i++) {
-        if (!score_time_span(&input->notes[i].span, &extents[i].start, &extents[i].end) ||
-            meter_map_measure_of(input->map, extents[i].start, &extents[i].first_measure) != METER_MAP_OK ||
+        extents[i].start = input->notes[i].span.start.value;
+        extents[i].end = input->notes[i].span.end.value;
+        if (meter_map_measure_of(input->map, extents[i].start, &extents[i].first_measure) != METER_MAP_OK ||
             meter_map_last_measure_touched(input->map, extents[i].end, &extents[i].last_measure) != METER_MAP_OK) {
             free(extents);
             return STANDARD_FORM_ANALYSIS_ERR_METER;
@@ -301,7 +302,8 @@ static StandardFormAnalysisStatus segment_phrases(const StandardFormInput *input
         }
         Rational start;
         int measure = 0;
-        if (!score_time_span(&cadence->arrival, &start, NULL) || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
+        start = cadence->arrival.start.value;
+        if (meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
             status = STANDARD_FORM_ANALYSIS_ERR_METER;
             break;
         }
@@ -415,8 +417,8 @@ static StandardFormAnalysisStatus segment_phrases(const StandardFormInput *input
                 const StandardFormCadence *post = &input->cadences[c];
                 Rational start;
                 int measure = 0;
-                if (!post->post_cadential || !score_time_span(&post->arrival, &start, NULL) ||
-                    meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK || measure < points[k].measure ||
+                start = post->arrival.start.value;
+                if (!post->post_cadential || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK || measure < points[k].measure ||
                     measure >= next_boundary) {
                     continue;
                 }

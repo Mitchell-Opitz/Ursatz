@@ -19,7 +19,7 @@ static bool windows_match(const MotifWindow *a, const MotifWindow *b) {
         return false;
     }
     for (size_t i = 0; i < duration_count; i++) {
-        if (!duration_equals(rhythmic_pattern_duration_at(a->rhythm, i), rhythmic_pattern_duration_at(b->rhythm, i))) {
+        if (!duration_same(*rhythmic_pattern_duration_at(a->rhythm, i), *rhythmic_pattern_duration_at(b->rhythm, i))) {
             return false;
         }
     }
@@ -49,8 +49,8 @@ MotifWindowMatchingResult motif_window_matching_compare(const MotifWindow *a, si
     }
     size_t equal_durations = 0;
     for (size_t i = 0; i < length; i++) {
-        if (duration_equals(rhythmic_pattern_duration_at(a->rhythm, a_offset + i),
-                             rhythmic_pattern_duration_at(b->rhythm, b_offset + i))) {
+        if (duration_same(*rhythmic_pattern_duration_at(a->rhythm, a_offset + i),
+                           *rhythmic_pattern_duration_at(b->rhythm, b_offset + i))) {
             equal_durations++;
         }
     }

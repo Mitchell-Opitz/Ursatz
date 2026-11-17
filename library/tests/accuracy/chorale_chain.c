@@ -20,7 +20,6 @@
 #include "theory/meter/segmentation_beat_grid.h"
 #include "model/time/duration.h"
 #include "model/time/metrical_position.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_span.h"
 #include "chain/analysis_chain.h"
 #include "analysis/harmony/weighted_chord_identification.h"

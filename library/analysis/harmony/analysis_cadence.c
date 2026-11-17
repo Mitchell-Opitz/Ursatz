@@ -53,7 +53,7 @@ static bool config_valid(const HarmonyCadenceConfig *config) {
 }
 
 static double whole_notes(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+    return (double)time->value.num / (double)time->value.den;
 }
 
 /* --- the chords the rules read --- */
@@ -97,7 +97,7 @@ static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t 
     const HarmonySegmentInput *start = segments[first].input;
     double beat = config->beat_length;
     if (start->has_beat_length) {
-        beat = (double)duration_numerator(&start->beat_length) / (double)duration_denominator(&start->beat_length);
+        beat = (double)start->beat_length.value.num / (double)start->beat_length.value.den;
     }
     double length = whole_notes(&segments[last].input->segment.span.end) -
                     whole_notes(&segments[first].input->segment.span.start);
@@ -112,10 +112,10 @@ static bool starts_on_beat(const HarmonySegment *segment, const HarmonyCadenceCo
     const HarmonySegmentInput *input = segment->input;
     double beat = config->beat_length;
     if (input->has_beat_length) {
-        beat = (double)duration_numerator(&input->beat_length) / (double)duration_denominator(&input->beat_length);
+        beat = (double)input->beat_length.value.num / (double)input->beat_length.value.den;
     }
     const Duration *offset = metrical_position_offset(input->segment.position);
-    double beats = ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / beat;
+    double beats = ((double)offset->value.num / (double)offset->value.den) / beat;
     return fabs(beats - floor(beats + 0.5)) < 1e-9;
 }
 

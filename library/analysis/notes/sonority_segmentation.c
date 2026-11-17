@@ -48,14 +48,13 @@ AdaptiveSegmentationResult segmentation_prepare_notes(NoteEvent *const *notes, s
             return AD_SEGMENTATION_ERR_NO_PITCH;
         }
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(note));
-        if (musical_time_numerator(position) < 0) {
+        if (position->value.num < 0) {
             free(spans);
             return AD_SEGMENTATION_ERR_METER_MAP;
         }
-        Rational length;
-        if (rational_of_musical_time(position, &spans[i].onset) != RATIONAL_OK ||
-            rational_of_duration(note_event_duration(note), &length) != RATIONAL_OK ||
-            rational_add(spans[i].onset, length, &spans[i].release) != RATIONAL_OK) {
+        Rational length = note_event_duration(note)->value;
+        spans[i].onset = position->value;
+        if (rational_add(spans[i].onset, length, &spans[i].release) != RATIONAL_OK) {
             free(spans);
             return AD_SEGMENTATION_ERR_OVERFLOW;
         }

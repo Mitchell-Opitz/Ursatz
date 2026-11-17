@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "model/pitch/pitch_arithmetic.h"
-#include "model/time/time_rational.h"
 
 CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void) {
     CommonPracticeKeyProfiles profiles = {

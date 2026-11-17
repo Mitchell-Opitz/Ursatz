@@ -3,7 +3,6 @@
 #include <stdlib.h>
 
 #include "model/time/meter_arithmetic.h"
-#include "model/time/time_rational.h"
 
 bool beat_grid_beat_length(void *context, Rational at, Rational *out) {
     const BeatGridContext *grid = (const BeatGridContext *)context;

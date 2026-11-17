@@ -10,7 +10,6 @@
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_span.h"
 #include "model/pitch/pitch_arithmetic.h"
 
@@ -82,12 +81,12 @@ static ScoreClefResult read_time(const ScoreQuantized *notated, size_t i, NoteEv
     }
     const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(event));
     const Duration *duration = note_event_duration(event);
-    if (musical_time_numerator(position) < 0 || duration_numerator(duration) <= 0) {
+    if (position->value.num < 0 || duration->value.num <= 0) {
         return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
     }
-    Rational length;
-    if (rational_of_musical_time(position, start) != RATIONAL_OK || rational_of_duration(duration, &length) != RATIONAL_OK ||
-        rational_add(*start, length, end) != RATIONAL_OK) {
+    Rational length = duration->value;
+    *start = position->value;
+    if (rational_add(*start, length, end) != RATIONAL_OK) {
         return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
     }
     return SCORE_CLEFS_OK;

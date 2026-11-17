@@ -1,114 +1,109 @@
 #include "model/time/duration.h"
 
 #include <assert.h>
+#include <limits.h>
 #include <stddef.h>
 
-static void test_create_rejects_zero_denominator(void) {
-    Duration *d = NULL;
-    DurationResult r = duration_create(1, 0, &d);
+static Duration du(long long n, long long d) {
+    Duration x;
+    assert(duration_make(n, d, &x) == DURATION_OK);
+    return x;
+}
+
+static void test_make_rejects_zero_denominator(void) {
+    Duration keep = du(1, 2);
+    Duration d = keep;
+    DurationResult r = duration_make(1, 0, &d);
     assert(r == DURATION_ERR_NON_POSITIVE_DENOMINATOR);
-    assert(d == NULL);
+    assert(duration_same(d, keep));
 }
 
-static void test_create_rejects_negative_numerator(void) {
-    Duration *d = NULL;
-    DurationResult r = duration_create(-1, 4, &d);
+static void test_make_rejects_negative_numerator(void) {
+    Duration keep = du(1, 2);
+    Duration d = keep;
+    DurationResult r = duration_make(-1, 4, &d);
     assert(r == DURATION_ERR_NEGATIVE);
-    assert(d == NULL);
+    assert(duration_same(d, keep));
 }
 
-static void test_create_accepts_valid(void) {
-    Duration *d = NULL;
-    DurationResult r = duration_create(3, 4, &d);
+static void test_make_accepts_valid(void) {
+    Duration d;
+    DurationResult r = duration_make(3, 4, &d);
     assert(r == DURATION_OK);
-    assert(d != NULL);
-    assert(duration_numerator(d) == 3);
-    assert(duration_denominator(d) == 4);
-    duration_destroy(d);
+    assert(d.value.num == 3);
+    assert(d.value.den == 4);
 }
 
-static void test_create_reduces_to_lowest_terms(void) {
-    Duration *d = NULL;
-    duration_create(6, 8, &d);
-    assert(duration_numerator(d) == 3);
-    assert(duration_denominator(d) == 4);
-    duration_destroy(d);
+static void test_make_reduces_to_lowest_terms(void) {
+    Duration d = du(6, 8);
+    assert(d.value.num == 3);
+    assert(d.value.den == 4);
 }
 
-static void test_create_reduces_zero_numerator(void) {
-    Duration *d = NULL;
-    duration_create(0, 5, &d);
-    assert(duration_numerator(d) == 0);
-    assert(duration_denominator(d) == 1);
-    duration_destroy(d);
+static void test_make_reduces_zero_numerator(void) {
+    Duration d = du(0, 5);
+    assert(d.value.num == 0);
+    assert(d.value.den == 1);
+}
+
+/* A denominator that does not fit is a refusal, not a wrapped value. */
+static void test_make_refuses_what_does_not_fit(void) {
+    Duration keep = du(1, 2);
+    Duration d = keep;
+    assert(duration_make(LLONG_MIN, 1, &d) == DURATION_ERR_OVERFLOW);
+    assert(duration_same(d, keep));
 }
 
 /* Property: Duration(a,b) == Duration(k*a, k*b) for any positive integer k. */
 static void test_equality_scale_invariant(void) {
-    Duration *base = NULL;
-    duration_create(3, 4, &base);
+    Duration base = du(3, 4);
 
-    for (unsigned long k = 1; k <= 20; k++) {
-        Duration *scaled = NULL;
-        duration_create(3L * (long)k, 4UL * k, &scaled);
-        assert(duration_equals(base, scaled));
-        duration_destroy(scaled);
+    for (long long k = 1; k <= 20; k++) {
+        Duration scaled = du(3 * k, 4 * k);
+        assert(duration_same(base, scaled));
+        assert(duration_cmp(base, scaled) == 0);
     }
-
-    duration_destroy(base);
 }
 
 /* Property: no constructor path yields a negative duration. */
 static void test_never_negative(void) {
-    for (long numerator = -5; numerator <= 5; numerator++) {
-        Duration *d = NULL;
-        DurationResult r = duration_create(numerator, 4, &d);
+    for (long long numerator = -5; numerator <= 5; numerator++) {
+        Duration keep = du(1, 8);
+        Duration d = keep;
+        DurationResult r = duration_make(numerator, 4, &d);
         if (numerator < 0) {
             assert(r == DURATION_ERR_NEGATIVE);
-            assert(d == NULL);
+            assert(duration_same(d, keep));
         } else {
             assert(r == DURATION_OK);
-            assert(duration_numerator(d) >= 0);
-            duration_destroy(d);
+            assert(d.value.num >= 0);
         }
     }
 }
 
 static void test_inequality_different_reduced_value(void) {
-    Duration *a = NULL;
-    Duration *b = NULL;
-    duration_create(1, 3, &a);
-    duration_create(1, 4, &b);
+    Duration a = du(1, 3);
+    Duration b = du(1, 4);
 
-    assert(!duration_equals(a, b));
-
-    duration_destroy(a);
-    duration_destroy(b);
+    assert(!duration_same(a, b));
+    assert(duration_cmp(a, b) > 0);
 }
 
 static void test_add(void) {
-    Duration *a = NULL;
-    Duration *b = NULL;
-    Duration *sum = NULL;
-    duration_create(1, 4, &a);
-    duration_create(1, 4, &b);
-
-    DurationResult r = duration_add(a, b, &sum);
+    Duration sum;
+    DurationResult r = duration_plus(du(1, 4), du(1, 4), &sum);
     assert(r == DURATION_OK);
-    assert(duration_numerator(sum) == 1);
-    assert(duration_denominator(sum) == 2);
-
-    duration_destroy(a);
-    duration_destroy(b);
-    duration_destroy(sum);
+    assert(sum.value.num == 1);
+    assert(sum.value.den == 2);
 }
 
 int main(void) {
-    test_create_rejects_zero_denominator();
-    test_create_rejects_negative_numerator();
-    test_create_accepts_valid();
-    test_create_reduces_to_lowest_terms();
-    test_create_reduces_zero_numerator();
+    test_make_rejects_zero_denominator();
+    test_make_rejects_negative_numerator();
+    test_make_accepts_valid();
+    test_make_reduces_to_lowest_terms();
+    test_make_reduces_zero_numerator();
+    test_make_refuses_what_does_not_fit();
     test_equality_scale_invariant();
     test_never_negative();
     test_inequality_different_reduced_value();

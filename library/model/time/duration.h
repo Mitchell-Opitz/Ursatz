@@ -22,7 +22,6 @@ typedef enum {
     DURATION_OK = 0,
     DURATION_ERR_NON_POSITIVE_DENOMINATOR,
     DURATION_ERR_NEGATIVE,
-    DURATION_ERR_ALLOC,
     DURATION_ERR_OVERFLOW /* an arithmetic result does not fit the numerator or denominator */
 } DurationResult;
 
@@ -33,18 +32,5 @@ DurationResult duration_of(Rational value, Duration *out);
 int duration_cmp(Duration a, Duration b);
 bool duration_same(Duration a, Duration b);
 DurationResult duration_plus(Duration a, Duration b, Duration *out);
-
-/* Heap API, kept until the callers are converted (one allocation per object). A denominator above
-   LLONG_MAX is DURATION_ERR_OVERFLOW. Reduces numerator/denominator to lowest terms at construction. */
-DurationResult duration_create(long numerator, unsigned long denominator, Duration **out);
-void duration_destroy(Duration *duration);
-
-/* Value equality on reduced value: Duration(3,4) == Duration(6,8). */
-bool duration_equals(const Duration *a, const Duration *b);
-
-long duration_numerator(const Duration *duration);
-unsigned long duration_denominator(const Duration *duration);
-
-DurationResult duration_add(const Duration *a, const Duration *b, Duration **out);
 
 #endif

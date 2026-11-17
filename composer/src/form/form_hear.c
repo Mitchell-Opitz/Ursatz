@@ -5,7 +5,6 @@
 
 #include <analysis/form/analysis_theme.h>
 #include <theory/form/phrase_level_form.h>
-#include <model/time/time_rational.h>
 #include <model/time/time_span.h>
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/result_chain.h>

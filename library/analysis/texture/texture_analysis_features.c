@@ -928,11 +928,8 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const AnalysisNot
     Rational first = rational_ratio(0, 1);
     Rational last = rational_ratio(0, 1);
     for (size_t i = 0; i < notes->count; i++) {
-        Rational onset;
-        Rational release;
-        if (!score_time_span(&notes->notes[i].span, &onset, &release)) {
-            continue;
-        }
+        Rational onset = notes->notes[i].span.start.value;
+        Rational release = notes->notes[i].span.end.value;
         snap_time(config, &onset, false);
         snap_time(config, &release, true);
         if (rational_cmp(release, onset) <= 0) {

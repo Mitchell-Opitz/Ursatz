@@ -9,7 +9,7 @@
 #define SHARE_MAX 950
 
 static double whole_notes(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+    return (double)time->value.num / (double)time->value.den;
 }
 
 static int clamp_share(int share) {
@@ -19,8 +19,8 @@ static int clamp_share(int share) {
 /* The length of a beat in whole notes at the segment: its own beat_length, or the config's. */
 static double beat_of(const HarmonySegment *segment, const HarmonyCadenceConfig *config) {
     if (segment->input->has_beat_length) {
-        return (double)duration_numerator(&segment->input->beat_length) /
-               (double)duration_denominator(&segment->input->beat_length);
+        return (double)segment->input->beat_length.value.num /
+               (double)segment->input->beat_length.value.den;
     }
     return config->beat_length;
 }

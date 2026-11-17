@@ -12,7 +12,6 @@
 #include "model/time/duration.h"
 #include "model/time/meter_map.h"
 #include "model/time/metrical_position.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_signature.h"
 #include "model/time/time_span.h"
 

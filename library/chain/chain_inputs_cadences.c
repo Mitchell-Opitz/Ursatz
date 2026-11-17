@@ -75,12 +75,12 @@ ChainInputStatus chain_build_harmony_segments(const ChainSegments *segments, siz
     }
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
-        if (metrical_position_from_time(map, time_span_start(window), &built.positions[s]) != METRICAL_POSITION_OK) {
+        if (metrical_position_from_time(map, &window->start, &built.positions[s]) != METRICAL_POSITION_OK) {
             chain_harmony_inputs_destroy(&built);
             return CHAIN_INPUT_ERR_KEYS;
         }
         HarmonySegmentInput *input = &built.inputs[s];
-        AnalysisSegment segment = {segments->ids[s], *window, built.positions[s], chain_attack_strength(map, time_span_start(window))};
+        AnalysisSegment segment = {segments->ids[s], *window, built.positions[s], chain_attack_strength(map, &window->start)};
         input->segment = segment;
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;

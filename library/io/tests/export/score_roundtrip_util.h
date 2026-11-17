@@ -14,7 +14,7 @@ static inline bool rt_metronome_equal(const MetronomeMarking *a, const Metronome
 }
 
 static inline bool rt_span_equal(const TimeSpan *a, const TimeSpan *b) {
-    return a->boundary == b->boundary && musical_time_same(a->start, b->start) && musical_time_same(a->end, b->end);
+    return musical_time_same(a->start, b->start) && musical_time_same(a->end, b->end);
 }
 
 /*

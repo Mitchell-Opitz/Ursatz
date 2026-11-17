@@ -7,7 +7,6 @@
 #include <model/time/duration.h>
 #include <model/time/musical_time.h>
 #include <model/time/temporal_anchor.h>
-#include <model/time/time_rational.h>
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
@@ -89,8 +88,7 @@ HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out) {
     }
     for (size_t i = 0; i < count; i++) {
         const MusicalTime *at = temporal_anchor_position(note_event_temporal_anchor(hearing->rendered.events[i]));
-        hearing->starts[i] = (Rational){0, 1};
-        rational_of_musical_time(at, &hearing->starts[i]);
+        hearing->starts[i] = at->value;
         hearing->midi[i] = (int)pitch_numeric_value_position_numerator(hearing->rendered.pitch_values[i]);
     }
     *out = hearing;

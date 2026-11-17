@@ -23,7 +23,6 @@ add_library(ursatz_model
     time/metrical_position.c
     time/tempo_map.c
     time/tuplet.c
-    time/time_rational.c
     time/meter_arithmetic.c
     time/score_time.c
     pitch/pitch_identity.c
@@ -99,7 +98,6 @@ ursatz_public_headers(ursatz_model
         model/time/score_time.h
         model/time/tempo_map.h
         model/time/temporal_anchor.h
-        model/time/time_rational.h
         model/time/time_signature.h
         model/time/time_span.h
         model/time/tuplet.h

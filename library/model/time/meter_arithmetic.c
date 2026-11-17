@@ -4,7 +4,6 @@
 
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_signature.h"
 
 static MeterMapResult from_rational(RationalResult result) {
@@ -30,14 +29,8 @@ static MeterMapResult measure_index_at(const MeterMap *map, Rational time, int *
     if (rational_is_negative(time)) {
         return METER_MAP_ERR_TIME_BEFORE_START;
     }
-    MusicalTime *at = NULL;
-    TimeRationalResult built = musical_time_from_rational(time, &at);
-    if (built != TIME_RATIONAL_OK) {
-        return built == TIME_RATIONAL_ERR_ALLOC ? METER_MAP_ERR_ALLOC : METER_MAP_ERR_OVERFLOW;
-    }
-    MeterMapResult result = meter_map_measure_index_at(map, at, measure);
-    musical_time_destroy(at);
-    return result;
+    MusicalTime at = musical_time_of(time);
+    return meter_map_measure_index_at(map, &at, measure);
 }
 
 MeterMapResult meter_map_measure_of(const MeterMap *map, Rational time, int *measure) {

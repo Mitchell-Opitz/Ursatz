@@ -58,9 +58,9 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
                   entity_id_value(phrase_occurrence_id(phrase->occurrence))) == 0);
     assert(interpretation_framework_reference(phrase->interpretation) != NULL);
     assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(phrase->interpretation)) == 800000UL);
-    Rational start;
-    Rational end;
-    assert(score_time_span(&phrase->span, &start, &end) && start.num == 0 && rational_cmp(end, rational_ratio(4, 1)) == 0);
+    Rational start = phrase->span.start.value;
+    Rational end = phrase->span.end.value;
+    assert(start.num == 0 && rational_cmp(end, rational_ratio(4, 1)) == 0);
     standard_form_phrases_destroy(&phrases);
     form_destroy(&f);
 }
@@ -224,8 +224,7 @@ static void test_the_phrase_ends_at_the_next_beat_after_the_arrival(void) {
     form_finish(&f);
     StandardFormPhrases phrases = segment(&f, NULL);
     assert(phrases.count >= 1);
-    Rational end;
-    assert(score_time_span(&phrases.items[0].span, NULL, &end));
+    Rational end = phrases.items[0].span.end.value;
     assert(rational_cmp(end, rational_ratio(14, 4)) == 0); /* 12 quarters to measure 4's start, plus 2 */
     assert(phrases.items[0].claim.end_measure == 4);
     standard_form_phrases_destroy(&phrases);

@@ -146,7 +146,6 @@ static void assert_window(const AdaptiveSonority *s, long sn, unsigned long sd, 
     const TimeSpan *window = sonority_time_window(s->sonority);
     assert(musical_time_same(window->start, start));
     assert(musical_time_same(window->end, end));
-    assert(window->boundary == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
 }
 
 static void assert_member(const AdaptiveSonority *s, size_t index, const char *id, bool held) {

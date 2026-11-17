@@ -6,7 +6,6 @@
 
 #include "theory/meter/metric_position_rules.h"
 #include "theory/meter/segmentation_beat_grid.h"
-#include "model/time/time_rational.h"
 
 ChainInputStatus chain_build_segments(const AnalysisNoteSet *notes, const AdaptiveSegmentationConfig *config, ChainSegments *out) {
     if (notes == NULL || out == NULL) {
@@ -225,7 +224,7 @@ ChainInputStatus chain_build_span_cells(const AnalysisNoteSet *notes, const Chai
         return CHAIN_INPUT_ERR_ALLOC;
     }
     for (size_t i = 0; i < segments->count; i++) {
-        const MusicalTime *start = time_span_start(sonority_time_window(segments->sonorities.items[i].sonority));
+        const MusicalTime *start = &sonority_time_window(segments->sonorities.items[i].sonority)->start;
         int measure = 0;
         if (meter_map_measure_index_at(notes->map, start, &measure) != METER_MAP_OK) {
             free(cells);
@@ -291,7 +290,7 @@ static bool merged_sonority(const ChainSegments *segs, size_t first, size_t last
     const TimeSpan *from = sonority_time_window(segs->sonorities.items[first].sonority);
     const TimeSpan *to = sonority_time_window(segs->sonorities.items[last].sonority);
     Sonority *sonority = NULL;
-    ok = ok && n > 0 && time_span_make(*time_span_start(from), *time_span_end(to), &window) == TIME_SPAN_OK &&
+    ok = ok && n > 0 && time_span_make(from->start, to->end, &window) == TIME_SPAN_OK &&
          sonority_create(window, ids, n, NULL, 0, SONORITY_EVENT_DOMAIN_SOUNDING, &sonority) == SONORITY_OK;
     if (!ok) {
         if (ids != NULL) {

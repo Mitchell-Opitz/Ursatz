@@ -12,7 +12,6 @@
 #include "model/core/value.h"
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_spelling.h"
-#include "model/time/time_rational.h"
 #include "model/pitch/pitch_arithmetic.h"
 
 #define NONE ((size_t)-1)

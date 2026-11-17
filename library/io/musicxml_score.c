@@ -420,10 +420,10 @@ static MusicXmlExportResult gather_notes(Prep *prep) {
         }
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(event));
         const Duration *duration = note_event_duration(event);
-        note->start_n = musical_time_numerator(position);
-        note->start_d = musical_time_denominator(position);
-        note->dur_n = duration_numerator(duration);
-        note->dur_d = duration_denominator(duration);
+        note->start_n = (long)position->value.num;
+        note->start_d = (unsigned long)position->value.den;
+        note->dur_n = (long)duration->value.num;
+        note->dur_d = (unsigned long)duration->value.den;
         if (note->start_n < 0 || note->dur_n <= 0) {
             return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
         }
@@ -464,15 +464,15 @@ static MusicXmlExportResult gather_keys(Prep *prep) {
         if (key->part_index >= prep->part_count) {
             return MUSICXML_EXPORT_ERR_UNKNOWN_PART;
         }
-        if (key->sharps_flats < -7 || key->sharps_flats > 7 || musical_time_numerator(&key->position) < 0) {
+        if (key->sharps_flats < -7 || key->sharps_flats > 7 || key->position.value.num < 0) {
             return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
         }
         Dir *dir = &prep->dirs[prep->dir_count++];
         dir->kind = DIR_KEY;
         dir->part = key->part_index;
         dir->staff = 1;
-        dir->raw_n = musical_time_numerator(&key->position);
-        dir->raw_d = musical_time_denominator(&key->position);
+        dir->raw_n = (long)key->position.value.num;
+        dir->raw_d = (unsigned long)key->position.value.den;
         dir->source = i;
     }
     return MUSICXML_EXPORT_OK;
@@ -556,8 +556,8 @@ static MusicXmlExportResult gather_tempo(Prep *prep) {
         dir->part = 0;
         dir->staff = 1;
         MusicalTime region_start = tempo_map_region_start(region);
-        dir->raw_n = musical_time_numerator(&region_start);
-        dir->raw_d = musical_time_denominator(&region_start);
+        dir->raw_n = (long)region_start.value.num;
+        dir->raw_d = (unsigned long)region_start.value.den;
         dir->source = i;
     }
     return MUSICXML_EXPORT_OK;
@@ -589,15 +589,15 @@ static MusicXmlExportResult gather_markings(Prep *prep) {
             }
         }
         const MusicalTime *position = temporal_anchor_position(tempo_marking_temporal_anchor(marking));
-        if (musical_time_numerator(position) < 0) {
+        if (position->value.num < 0) {
             return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
         }
         Dir *dir = &prep->dirs[prep->dir_count++];
         dir->kind = DIR_MARKING;
         dir->part = part;
         dir->staff = 1;
-        dir->raw_n = musical_time_numerator(position);
-        dir->raw_d = musical_time_denominator(position);
+        dir->raw_n = (long)position->value.num;
+        dir->raw_d = (unsigned long)position->value.den;
         dir->source = i;
     }
     return MUSICXML_EXPORT_OK;
@@ -607,7 +607,7 @@ static MusicXmlExportResult gather_markings(Prep *prep) {
 static MusicXmlExportResult dynamics_position(const Prep *prep, const Dynamics *dynamics, long *n, unsigned long *d) {
     const MusicalTime *position = NULL;
     if (dynamics_target_kind(dynamics) == DYNAMICS_TARGET_TIME_SPAN) {
-        position = time_span_start(dynamics_target_time_span(dynamics));
+        position = &dynamics_target_time_span(dynamics)->start;
     } else {
         const char *id = entity_id_value(dynamics_target_event_id(dynamics));
         for (size_t i = 0; i < prep->score->count && position == NULL; i++) {
@@ -619,11 +619,11 @@ static MusicXmlExportResult dynamics_position(const Prep *prep, const Dynamics *
             return MUSICXML_EXPORT_ERR_UNKNOWN_EVENT;
         }
     }
-    if (musical_time_numerator(position) < 0) {
+    if (position->value.num < 0) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }
-    *n = musical_time_numerator(position);
-    *d = musical_time_denominator(position);
+    *n = (long)position->value.num;
+    *d = (unsigned long)position->value.den;
     return MUSICXML_EXPORT_OK;
 }
 
@@ -821,10 +821,10 @@ static MusicXmlExportResult build_measures(Prep *prep) {
             result = from_meter_status(status);
             break;
         }
-        start_n[m] = musical_time_numerator(&span.start);
-        start_d[m] = musical_time_denominator(&span.start);
-        end_n[m] = musical_time_numerator(&span.end);
-        end_d[m] = musical_time_denominator(&span.end);
+        start_n[m] = (long)span.start.value.num;
+        start_d[m] = (unsigned long)span.start.value.den;
+        end_n[m] = (long)span.end.value.num;
+        end_d[m] = (unsigned long)span.end.value.den;
         long long den = 0;
         TimeStatus time_status = time_denominator(start_n[m], start_d[m], &den);
         if (time_status == TIME_OK && !lcm_into(&divisions, den)) {
@@ -1920,7 +1920,7 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
     }
     long long region_start = 0;
     MusicalTime region_time = meter_map_region_start(region);
-    if (time_ticks(musical_time_numerator(&region_time), musical_time_denominator(&region_time), prep->divisions,
+    if (time_ticks((long)region_time.value.num, (unsigned long)region_time.value.den, prep->divisions,
                    &region_start) != TIME_OK) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }

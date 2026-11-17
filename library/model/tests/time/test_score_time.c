@@ -50,12 +50,7 @@ static Rational q(long long n, long long d) {
 static void test_span(void) {
     TimeSpan span;
     assert(time_span_make(at(1, 4), at(3, 4), &span) == TIME_SPAN_OK);
-    Rational start = q(9, 9);
-    Rational end = q(9, 9);
-    assert(score_time_span(&span, &start, &end));
-    assert(rational_equals(start, q(1, 4)) && rational_equals(end, q(3, 4)));
-    assert(score_time_span(&span, NULL, NULL));
-    assert(!score_time_span(NULL, &start, &end));
+    assert(rational_equals(span.start.value, q(1, 4)) && rational_equals(span.end.value, q(3, 4)));
 
     /* A time that does not fit a Rational cannot be built. */
     MusicalTime huge = at(0, 1);

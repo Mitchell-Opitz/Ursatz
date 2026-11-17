@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "model/time/time_rational.h"
 
 /* The score a path earns for key k in a window: correlation plus functional evidence. */
 static double window_score(const CommonPracticeKeyWindow *window, int key) {

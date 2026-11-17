@@ -5,9 +5,7 @@ gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test h
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_reset  # test hook: test_analyzer_route resets the import counter
 gui/backend/src/service/piece_lock.c ursatz_gui_piece_lock_entries  # test hook: test_piece_lock reads the lock table size
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
-library/model/time/duration.c duration_add  # the heap API no application calls since B2 commit 3 returned values from the beat grid; P58 B4 deletes it, tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
-library/model/time/duration.c duration_same  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/model/time/time_span.c time_span_length  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/knowledge_snapshot.c compare_slots  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
@@ -31,13 +29,3 @@ library/theory/knowledge/knowledge_snapshot.c read_steps  # the knowledge snapsh
 library/theory/knowledge/knowledge_snapshot.c text_field  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/knowledge/pitch_material.c pitch_material_contains  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/knowledge/pitch_material.c pitch_material_step  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
-library/model/time/time_span.c time_span_boundary  # no application reads the boundary since P58 B3 commit 1 held spans as values; tests call it, until P58 B4
-library/model/time/time_span.c time_span_is_valid  # no application checks a span through the heap API since P58 B3 commit 1; tests call it, until P58 B4
-library/model/time/duration.c duration_create  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
-library/model/time/duration.c duration_destroy  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
-library/model/time/musical_time.c musical_time_add  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
-library/model/time/musical_time.c musical_time_equals  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
-library/model/time/time_rational.c musical_time_from_rational_or_null  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
-library/model/time/time_span.c boundary_is_valid  # until P58 B4: only time_span_create calls it, and no application calls that now; B4 deletes both
-library/model/time/time_span.c time_span_create  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it
-library/model/time/time_span.c time_span_destroy  # until P58 B4: the heap API has no application caller now; B4 deletes it, tests call it

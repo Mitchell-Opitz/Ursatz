@@ -21,7 +21,6 @@
 #include "model/pitch/tuning_system.h"
 #include "model/time/duration.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/time/meter_map.h"
 #include "model/time/note_value.h"
 #include "model/time/tempo_map.h"

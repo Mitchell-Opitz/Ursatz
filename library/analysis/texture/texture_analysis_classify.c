@@ -7,7 +7,6 @@
 #include "model/identity/entity_id.h"
 #include "analysis/texture/mixed_texture_rules.h"
 #include "model/time/musical_time.h"
-#include "model/time/time_rational.h"
 #include "analysis/texture/texture_analysis_claim.h"
 
 /* The left-closed TimeSpan [start, end); false for a negative start or end, or an end before the start. */
