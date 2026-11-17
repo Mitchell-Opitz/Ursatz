@@ -137,7 +137,7 @@ static void test_notated_metadata_and_pickup(void) {
     const cJSON *regions = test_json_require(test_json_require(document, "keys"), "regions");
     assert(cJSON_GetArraySize(regions) >= 1);
     assert(strcmp(string(cJSON_GetArrayItem(regions, 0), "tonic"), "C") == 0);
-    assert(strcmp(string(cJSON_GetArrayItem(regions, 0), "mode"), "major") == 0);
+    assert(strcmp(string(cJSON_GetArrayItem(regions, 0), "material"), "omt.material.major") == 0);
     cJSON_Delete(document);
 }
 

@@ -7,12 +7,12 @@
 
 /*
  * The analysis document: the structured, versioned output described by
- * schema/analysis-document.v12.schema.json.
+ * schema/analysis-document.v13.schema.json.
  *
  * Value of the document's top-level "schema_version". Breaking changes
  * bump it; additive fields do not.
  */
-#define URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION 12
+#define URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION 13
 
 /* An in-memory analysis document: an export of an AnalyzerResult. The JSON file is rendered from it. */
 typedef struct AnalysisDocument AnalysisDocument;

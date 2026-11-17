@@ -570,7 +570,7 @@ static cJSON *key_region_json(DocBuild *build, const ImportedNotes *notes, const
     cJSON *claim = region_span_claim(build, notes, region, region->label, cJSON_CreateNumber(region->uncertainty));
     if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)index)) &&
           json_add(claim, "tonic", cJSON_CreateString(pitch_class_name(region->tonic_pitch_class, region->prefer_flats))) &&
-          json_add(claim, "mode", cJSON_CreateString(region->material->key_word)) &&
+          json_add(claim, "material", cJSON_CreateString(region->material->id)) &&
           json_add(claim, "measures", measures_json(region->first_measure, region->last_measure)) &&
           json_add(claim, "source", cJSON_CreateString(region_source_name(region->source))))) {
         cJSON_Delete(claim);
@@ -2555,12 +2555,6 @@ static cJSON *motive_occurrence_json(DocBuild *build, const ImportedNotes *notes
    ("1 b2 2 b3 3 4 #4 5 b6 6 b7 7"), the semitone and scale-step intervals between neighbours, the rhythm (the durations),
    the non-chord-tone type of the segment each note starts in ("chord-tone" for a chord tone, null when the segment has
    no chord or the library left the tone unclassified) and the sketch's fingerprint (16 hex digits). */
-/* Whether the features' material has a minor third (schema 12 writes the mode as a flag). */
-static bool features_minor(const AnalysisMotiveFeatures *features) {
-    CommonPracticeKeyMode mode;
-    return common_practice_key_mode_of(features->material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
-}
-
 static cJSON *motive_features_json(const AnalysisMotiveFeatures *features) {
     cJSON *object = cJSON_CreateObject();
     cJSON *notes = cJSON_CreateArray();
@@ -2584,7 +2578,7 @@ static cJSON *motive_features_json(const AnalysisMotiveFeatures *features) {
     /* json_add() takes an item over, and frees it itself when it fails, so each is cleared once handed over */
     ok = ok && add_owned(object, "notes", &notes) &&
          json_add(object, "tonic_pc", cJSON_CreateNumber(features->tonic_pc)) &&
-         json_add(object, "minor", cJSON_CreateBool(features_minor(features))) &&
+         json_add(object, "material", cJSON_CreateString(features->material->id)) &&
          json_add(object, "bar", fraction_string_json(features->bar_numerator, features->bar_denominator)) &&
          json_add(object, "beat", fraction_string_json(features->beat_numerator, features->beat_denominator)) &&
          json_add(object, "pickup", fraction_string_json(features->pickup_numerator, features->pickup_denominator)) &&

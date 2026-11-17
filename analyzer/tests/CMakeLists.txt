@@ -28,7 +28,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
                      -DCLI=$<TARGET_FILE:ursatz-analyzer>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
                      -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/framework-v1-corpus
                      "-DONLY=Bach 114.mid"
                      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema_smoke
@@ -39,7 +39,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
                      -DCLI=$<TARGET_FILE:ursatz-analyzer>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
                      -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/framework-v1-corpus
                      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake
@@ -229,7 +229,7 @@ ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
                  -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v12.schema.json
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_notation_reading
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_notation_reading.cmake)
 

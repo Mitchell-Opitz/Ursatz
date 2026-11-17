@@ -11,7 +11,6 @@
 #include "analysis/motive/motive_link.h"
 #include "links_internal.h"
 #include "pipeline/motive_sketch_map.h"
-#include "theory/tonality/common_practice_materials.h"
 #include "util/json_util.h"
 #include "pipeline/corpus_walk.h"
 #include "util/misc_util.h"
@@ -82,16 +81,14 @@ static MotiveLinksResult features_sketch(const KnowledgeSnapshot *knowledge, con
     }
     int tonic;
     ok = ok && int_member(features, "tonic_pc", &tonic) && tonic >= 0 && tonic < 12 &&
-         cJSON_IsBool(json_member(features, "minor")) &&
+         cJSON_IsString(json_member(features, "material")) &&
          fraction_member(features, "bar", &read.bar_numerator, &read.bar_denominator) &&
          fraction_member(features, "beat", &read.beat_numerator, &read.beat_denominator) &&
          fraction_member(features, "pickup", &read.pickup_numerator, &read.pickup_denominator);
     if (ok) {
         read.tonic_pc = tonic;
-        CommonPracticeMaterials materials;
-        ok = common_practice_materials_resolve(knowledge, &materials, NULL, 0);
-        read.material = common_practice_material(
-            &materials, cJSON_IsTrue(json_member(features, "minor")) ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
+        read.material = knowledge_snapshot_material(knowledge, json_member(features, "material")->valuestring);
+        ok = read.material != NULL;
     }
     ok = ok && motive_features_to_sketch(&read, sketch);
     free(read.notes);

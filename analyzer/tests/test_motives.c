@@ -273,7 +273,7 @@ static void check_mozart_features(const cJSON *motives, const AnalysisReport *re
     CHECK(strcmp(joined(test_json_member(first, "degrees"), false), "1 3 5 7 1 2 1 6") == 0);
     CHECK(strcmp(joined(test_json_member(first, "intervals"), true), "4 3 -8 1 2 -2 9") == 0);
     CHECK(strcmp(cJSON_GetArrayItem(test_json_member(first, "rhythm"), 0)->valuestring, "1/2") == 0);
-    CHECK(test_json_number(first, "tonic_pc", -1e9) == 0 && !cJSON_IsTrue(test_json_member(first, "minor")));
+    CHECK(test_json_number(first, "tonic_pc", -1e9) == 0 && strcmp(test_json_string(first, "material"), "omt.material.major") == 0);
     CHECK(strcmp(test_json_string(first, "bar"), "1/1") == 0 && strcmp(test_json_string(first, "beat"), "1/4") == 0 &&
           strcmp(test_json_string(first, "pickup"), "0/1") == 0);
     bool minor_b6 = false;
@@ -282,7 +282,8 @@ static void check_mozart_features(const cJSON *motives, const AnalysisReport *re
     cJSON_ArrayForEach(family, motives) {
         const cJSON *features = test_json_member(family, "features");
         const cJSON *item;
-        if (cJSON_IsTrue(test_json_member(features, "minor"))) {
+        const cJSON *material = test_json_member(features, "material");
+        if (cJSON_IsString(material) && strcmp(material->valuestring, "omt.material.natural-minor") == 0) {
             cJSON_ArrayForEach(item, test_json_member(features, "degrees")) {
                 minor_b6 = minor_b6 || strcmp(item->valuestring, "b6") == 0;
             }

@@ -110,7 +110,7 @@ int main(void) {
 
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
-    assert(strncmp(json, "{\n  \"schema_version\": 12,\n", 26) == 0);
+    assert(strncmp(json, "{\n  \"schema_version\": 13,\n", 26) == 0);
     assert(json[strlen(json) - 1] == '\n');
 
     char *again = test_render_document(path, &notes, &report);
@@ -125,7 +125,7 @@ int main(void) {
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
     assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
-    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 12);
+    assert(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION == 13);
 
     const cJSON *metadata = test_json_require(document, "metadata");
     assert(cJSON_IsObject(metadata));
@@ -324,7 +324,7 @@ int main(void) {
     assert(check_claim(key) == 11);
     assert(strcmp(string(key, "label"), "C major") == 0);
     assert(strcmp(string(key, "tonic"), "C") == 0);
-    assert(strcmp(string(key, "mode"), "major") == 0);
+    assert(strcmp(string(key, "material"), "omt.material.major") == 0);
     assert(strcmp(string(key, "source"), "profile") == 0);
     assert(number(key, "index") == 0);
     assert(number(test_json_require(key, "measures"), "first") == 1);
