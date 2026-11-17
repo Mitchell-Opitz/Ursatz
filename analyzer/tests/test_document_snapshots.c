@@ -18,7 +18,7 @@
  * pipeline -> analysis document and is compared with
  * tests/snapshots/<slug>.analysis.json after the run-dependent metadata
  * members (analyzer_version, producer_key, input) are removed. With
- * UPDATE_SNAPSHOTS=1 (or URSATZ_UPDATE_SNAPSHOTS=1) in the environment the
+ * URSATZ_UPDATE_GOLDENS=1 in the environment (the run then exits 2) the
  * golden files are rewritten instead.
  */
 
@@ -87,11 +87,7 @@ static void print_first_difference(const char *slug, const char *expected, const
 }
 
 int main(void) {
-    const char *update_env = getenv("UPDATE_SNAPSHOTS");
-    if (!update_env) {
-        update_env = getenv("URSATZ_UPDATE_SNAPSHOTS");
-    }
-    bool update = update_env && strcmp(update_env, "1") == 0;
+    bool update = test_update_goldens();
     int failures = 0;
 
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
@@ -118,7 +114,7 @@ int main(void) {
 
         char *expected = test_read_file(snapshot_path, NULL);
         if (!expected) {
-            fprintf(stderr, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)\n", PIECES[i].slug,
+            fprintf(stderr, "%s: missing %s (run with URSATZ_UPDATE_GOLDENS=1 to create it)\n", PIECES[i].slug,
                     snapshot_path);
             failures++;
         } else if (strcmp(expected, actual) != 0) {
@@ -131,5 +127,8 @@ int main(void) {
         free(actual);
     }
 
-    return failures == 0 ? 0 : 1;
+    if (failures != 0) {
+        return 1;
+    }
+    return update ? test_goldens_updated("test_document_snapshots") : 0;
 }

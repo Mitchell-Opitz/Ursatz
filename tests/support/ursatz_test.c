@@ -42,6 +42,19 @@ int test_finish(const char *name) {
     return 1;
 }
 
+bool test_update_goldens(void) {
+    const char *value = getenv("URSATZ_UPDATE_GOLDENS");
+    return value != NULL && value[0] != '\0' && strcmp(value, "0") != 0;
+}
+
+int test_goldens_updated(const char *name) {
+    if (test_failure_count != 0) {
+        return test_finish(name);
+    }
+    printf("%s: goldens updated (URSATZ_UPDATE_GOLDENS)\n", name);
+    return 2;
+}
+
 char *test_read_file(const char *path, size_t *size) {
     FILE *file = fopen(path, "rb");
     if (!file) {

@@ -45,7 +45,7 @@ endif()
 
 # Over 10 s in the fast set (about 39 s of CPU measured): runs nightly.
 ursatz_test(test_document_snapshots LIBS ursatz_analyzer analyzer_test_support cjson
-    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS slow)
+    DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow)
 
 ursatz_test_executable(test_analysis_result LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
@@ -70,8 +70,8 @@ endif()
 ursatz_test_executable(test_playback LIBS ursatz_analyzer analyzer_test_support cjson
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-ursatz_test(test_playback TARGET test_playback)
-ursatz_test(test_playback_smoke TARGET test_playback ARGS smoke)
+ursatz_test(test_playback TARGET test_playback LABELS golden)
+ursatz_test(test_playback_smoke TARGET test_playback ARGS smoke LABELS golden)
 if(URSATZ_VALGRIND)
     ursatz_test(test_playback_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
         --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_playback> smoke LABELS slow valgrind)
@@ -80,8 +80,9 @@ endif()
 ursatz_test_executable(test_score_export LIBS ursatz_analyzer analyzer_test_support cjson
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml" URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-ursatz_test(test_score_export TARGET test_score_export PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
-ursatz_test(test_score_export_smoke TARGET test_score_export ARGS smoke PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
+ursatz_test(test_score_export TARGET test_score_export LABELS golden PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
+ursatz_test(test_score_export_smoke TARGET test_score_export ARGS smoke LABELS golden
+    PROPERTIES RESOURCE_LOCK analyzer_score_export_files)
 if(URSATZ_VALGRIND)
     ursatz_test(test_score_export_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
         --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_score_export> smoke LABELS slow
@@ -265,7 +266,7 @@ file(COPY "${URSATZ_REFERENCE_FIXTURES}/Bach 114.mid" "${URSATZ_REFERENCE_FIXTUR
 ursatz_test(test_analyzer_corpus SOURCES test_corpus.c LIBS ursatz_analyzer analyzer_test_support cjson
     DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_CORPUS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_work"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS slow PROPERTIES RESOURCE_LOCK corpus_work)
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow PROPERTIES RESOURCE_LOCK corpus_work)
 
 ursatz_test(test_cli_corpus COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
@@ -294,7 +295,7 @@ ursatz_test(test_analyzer_style_labels SOURCES test_style_labels.c LIBS ursatz_t
 ursatz_test(test_style_profile LIBS ursatz_analyzer analyzer_test_support cjson
     DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_STYLE_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/style_work" PROJECT_VERSION_FOR_TESTS="${PROJECT_VERSION}"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS slow PROPERTIES RESOURCE_LOCK style_work)
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow PROPERTIES RESOURCE_LOCK style_work)
 
 # The smoke profiles the corpus "small" (Bach 114 and Clementi 36).
 ursatz_test(test_cli_style_profile_smoke COMMAND ${CMAKE_COMMAND}
@@ -334,7 +335,7 @@ ursatz_test_executable(test_similar_material LIBS ursatz_analyzer analyzer_test_
 # The smoke searches Bach 114 alone.
 ursatz_test(test_similar_material_smoke TARGET test_similar_material ARGS smoke PROPERTIES RESOURCE_LOCK similar_work)
 # Over 10 s in the fast set (about 44 s of CPU measured): runs nightly.
-ursatz_test(test_similar_material TARGET test_similar_material LABELS slow PROPERTIES RESOURCE_LOCK similar_work)
+ursatz_test(test_similar_material TARGET test_similar_material LABELS golden slow PROPERTIES RESOURCE_LOCK similar_work)
 
 # The --similar flag: the motive file comes from the test program, which writes it.
 ursatz_test(test_cli_similar_motive_file TARGET test_similar_material ARGS --write-motive
@@ -442,11 +443,11 @@ ursatz_test(test_text_export LIBS ursatz_test_support ursatz_analyzer
 
 ursatz_test_executable(test_text_export_snapshots LIBS ursatz_analyzer analyzer_test_support
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
-ursatz_test(test_text_export_snapshots_smoke TARGET test_text_export_snapshots ARGS smoke)
+ursatz_test(test_text_export_snapshots_smoke TARGET test_text_export_snapshots ARGS smoke LABELS golden)
 # Over 10 s in the fast set (about 19 s of CPU measured): runs nightly.
-ursatz_test(test_text_export_snapshots TARGET test_text_export_snapshots LABELS slow)
+ursatz_test(test_text_export_snapshots TARGET test_text_export_snapshots LABELS golden slow)
 
 ursatz_test(test_material_export LIBS ursatz_analyzer analyzer_test_support
     DEFINITIONS URSATZ_ANALYZER_EXPORT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/export"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
-    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden)

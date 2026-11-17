@@ -1,8 +1,8 @@
 /* The replies for a piece's detail (note ids), score (MusicXML and its meta) and playback, compared with the
  * snapshot in fixtures/pieces taken before the Analyzer produced them (B7). JSON is compared as values, MusicXML
  * byte for byte. The Bach 114 playback is the Analyzer's own golden (analyzer/tests/snapshots/gui, which the Analyzer's
- * tests own), not a copy here. Set URSATZ_GUI_SNAPSHOT_CAPTURE=1 to rewrite the snapshot from the current replies
- * (it leaves the Analyzer's golden alone). */
+ * tests own), not a copy here. Set URSATZ_UPDATE_GOLDENS=1 to rewrite the snapshot from the current replies
+ * (it leaves the Analyzer's golden alone; the run then exits 2). */
 
 #include <civetweb.h>
 #include <stdbool.h>
@@ -138,8 +138,7 @@ int main(void) {
   system("rm -rf pieces");
 #endif
   MKDIR("pieces");
-  const char *capture_env = getenv("URSATZ_GUI_SNAPSHOT_CAPTURE");
-  capture = capture_env && capture_env[0] == '1';
+  capture = test_update_goldens();
   if (capture) {
     MKDIR(URSATZ_GUI_TEST_PIECE_FIXTURES);
   }
@@ -166,5 +165,5 @@ int main(void) {
                  "chords_backup.musicxml", NULL);
 
   ursatz_gui_server_stop(ctx);
-  return test_finish("piece_snapshot");
+  return capture ? test_goldens_updated("piece_snapshot") : test_finish("piece_snapshot");
 }

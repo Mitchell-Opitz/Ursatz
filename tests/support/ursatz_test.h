@@ -33,6 +33,19 @@ void test_pass(const char *what);
 /* Prints "<name>: ok" or "<name>: <n> failure(s)" and returns 0, or 1 when a check failed. Call it last in main. */
 int test_finish(const char *name);
 
+/* ---- goldens ----------------------------------------------------------------------------------------------- */
+
+/* One switch updates every golden: URSATZ_UPDATE_GOLDENS set to anything but "" or "0" (cmake --build build --target
+ * update-goldens sets it for the tests labelled golden). A golden test in update mode writes its goldens instead of
+ * comparing and ends with test_goldens_updated, so a run with the switch never passes. */
+
+/* True when URSATZ_UPDATE_GOLDENS is set to a non-empty value other than "0". */
+bool test_update_goldens(void);
+
+/* Ends an update run: prints "<name>: goldens updated (URSATZ_UPDATE_GOLDENS)" and returns 2 for main to return. When
+ * a check failed on the way (a golden that could not be written) it returns what test_finish returns instead. */
+int test_goldens_updated(const char *name);
+
 /* ---- files ------------------------------------------------------------------------------------------------ */
 
 /* The whole file as a NUL-terminated buffer the caller frees; NULL when it cannot be read. size may be NULL. */

@@ -12,8 +12,8 @@
 /*
  * The MusicXML export of an import (score_export.h): the score the GUI wrote from the library's import.
  *   - the five reference pieces (MIDI) and tests/musicxml/pickup.musicxml, field-5.musicxml give the text of
- *     tests/snapshots/gui/<stem>.musicxml byte for byte; with UPDATE_SNAPSHOTS=1 (or URSATZ_UPDATE_SNAPSHOTS=1) the
- *     files are rewritten,
+ *     tests/snapshots/gui/<stem>.musicxml byte for byte; with URSATZ_UPDATE_GOLDENS=1 the
+ *     files are rewritten (and the run exits 2),
  *   - the export imports again with the same number of notes,
  *   - each note's base xml:id (analyzer_score_note_xml_ids) appears in the export, as the id or, for a tied note, the id
  *     and a fragment suffix; the count is the note count and the ids differ,
@@ -54,7 +54,7 @@ static void check_snapshot(size_t i, const char *xml, bool update) {
         return;
     }
     char *expected = test_read_file(path, NULL);
-    CHECKF(expected != NULL, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)", FILES[i].stem, path);
+    CHECKF(expected != NULL, "%s: missing %s (run with URSATZ_UPDATE_GOLDENS=1 to create it)", FILES[i].stem, path);
     if (expected) {
         CHECKF(strcmp(expected, xml) == 0, "%s: MusicXML differs from %s", FILES[i].stem, path);
     }
@@ -180,11 +180,7 @@ static void check_arguments(void) {
 
 int main(int argc, char **argv) {
     bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
-    const char *update_env = getenv("UPDATE_SNAPSHOTS");
-    if (!update_env) {
-        update_env = getenv("URSATZ_UPDATE_SNAPSHOTS");
-    }
-    bool update = update_env && strcmp(update_env, "1") == 0;
+    bool update = test_update_goldens();
 
     for (size_t i = 0; i < sizeof(FILES) / sizeof(FILES[0]); i++) {
         if (smoke && !FILES[i].smoke) {
@@ -210,5 +206,6 @@ int main(int argc, char **argv) {
     }
     check_meter_defaulted();
     check_arguments();
-    return test_finish("test_score_export");
+    const char *name = smoke ? "test_score_export_smoke" : "test_score_export";
+    return update ? test_goldens_updated(name) : test_finish(name);
 }

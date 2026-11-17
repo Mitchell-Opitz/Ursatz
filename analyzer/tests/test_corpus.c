@@ -18,7 +18,7 @@
  * (one MIDI, one MusicXML in a subfolder, one .txt, one broken .mid). Checks the index against
  * tests/snapshots/corpus-index.reference.json (with the content hashes compared separately and the input directory
  * masked), that each document is byte for byte what a single-file run renders, and the resume rules. With
- * UPDATE_SNAPSHOTS=1 in the environment, the snapshot is rewritten instead.
+ * URSATZ_UPDATE_GOLDENS=1 in the environment, the snapshot is rewritten instead.
  */
 
 static bool append_text(const char *path, const char *text) {
@@ -156,8 +156,7 @@ static void test_reference(const char *work) {
     char *masked = masked_index(output);
     char snapshot_path[1024];
     snprintf(snapshot_path, sizeof(snapshot_path), "%s/corpus-index.reference.json", URSATZ_SNAPSHOT_DIR);
-    const char *update = getenv("UPDATE_SNAPSHOTS");
-    if (update && strcmp(update, "1") == 0) {
+    if (test_update_goldens()) {
         CHECKF(masked && test_write_file(snapshot_path, masked, strlen(masked)), "cannot write %s", snapshot_path);
     } else {
         char *expected = test_read_file(snapshot_path, NULL);
@@ -391,5 +390,5 @@ int main(void) {
     if (test_failure_count == 0) {
         remove_tree(work);
     }
-    return test_finish("test_corpus");
+    return test_update_goldens() ? test_goldens_updated("test_corpus") : test_finish("test_corpus");
 }

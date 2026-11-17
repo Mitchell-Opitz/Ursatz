@@ -27,9 +27,9 @@
  * (minuet-and-trio, scherzo-and-trio) is not hashed: each of its parts is a form of its own that is.
  *
  *   test_form_plans                 compares every plan with the file
- *   test_form_plans record          writes the file
  *   test_form_plans pieces          the same for the loop plans of the piece requests in tests/fixtures/piece
- *   test_form_plans record-pieces   writes tests/fixtures/forms/piece-plans.txt
+ *
+ * With URSATZ_UPDATE_GOLDENS=1 each mode writes its file (template-plans.txt, piece-plans.txt) and exits 2.
  *
  * The pieces mode reads each request with api_piece_read_request and hashes the loop plan it builds, one line each:
  * the fixture's name and the hash. The ending plan needs a composed loop, so the snapshots (piece-loop-and-ending.*)
@@ -361,10 +361,10 @@ static int every_piece(Each each, void *state) {
 }
 
 /* Records or compares one file of lines made by `every`. */
-static int run_file(const char *file, int (*every)(Each, void *), bool record, const char *what) {
+static int run_file(const char *file, int (*every)(Each, void *), const char *what) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/forms/%s", COMPOSER_FIXTURE_DIR, file);
-    if (record) {
+    if (test_update_goldens()) {
         FILE *out = fopen(path, "w");
         if (!out) {
             fprintf(stderr, "cannot write %s\n", path);
@@ -373,11 +373,11 @@ static int run_file(const char *file, int (*every)(Each, void *), bool record, c
         every(write_line, out);
         fclose(out);
         printf("recorded %s\n", path);
-        return 0;
+        return test_goldens_updated(strcmp(file, "piece-plans.txt") == 0 ? "test_form_plans_pieces" : "test_form_plans_templates");
     }
     Compare compare = {fopen(path, "r"), 0, 0};
     if (!compare.file) {
-        fprintf(stderr, "cannot read %s (record it first)\n", path);
+        fprintf(stderr, "cannot read %s (run with URSATZ_UPDATE_GOLDENS=1 to record it)\n", path);
         return 2;
     }
     every(compare_line, &compare);
@@ -397,8 +397,8 @@ static int run_file(const char *file, int (*every)(Each, void *), bool record, c
 
 int main(int argc, char **argv) {
     const char *mode = argc > 1 ? argv[1] : "";
-    if (strcmp(mode, "pieces") == 0 || strcmp(mode, "record-pieces") == 0) {
-        return run_file("piece-plans.txt", every_piece, mode[0] == 'r', "piece plans");
+    if (strcmp(mode, "pieces") == 0) {
+        return run_file("piece-plans.txt", every_piece, "piece plans");
     }
-    return run_file("template-plans.txt", every_plan, strcmp(mode, "record") == 0, "plans");
+    return run_file("template-plans.txt", every_plan, "plans");
 }

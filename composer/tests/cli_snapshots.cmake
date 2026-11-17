@@ -1,10 +1,16 @@
 # Seeded CLI output compared with the committed snapshots in tests/snapshots (one file per output of a case).
 # Run with: cmake -DCOMPOSER=<ursatz-composer> -DWORK=<empty working directory> -DSNAPSHOTS=<tests/snapshots>
-#                 -DFIXTURES=<tests/fixtures> [-DUPDATE=1] -P cli_snapshots.cmake
+#                 -DFIXTURES=<tests/fixtures> -P cli_snapshots.cmake
 # The values of the analyzer_version, composer_version and ursatz_commit keys are removed and the working and fixture
 # directories are replaced by <WORK> and <FIXTURES> before comparing text; files ending .json are then compared as JSON
 # values (member order and whitespace do not matter), MIDI, MusicXML and other text byte for byte.
-# UPDATE=1 rewrites the snapshot files instead of comparing.
+# With URSATZ_UPDATE_GOLDENS=1 in the environment the snapshot files are rewritten instead of compared, and the script
+# ends with a failure ("goldens updated") so a run with the switch never passes.
+
+set(UPDATE FALSE)
+if(NOT "$ENV{URSATZ_UPDATE_GOLDENS}" STREQUAL "" AND NOT "$ENV{URSATZ_UPDATE_GOLDENS}" STREQUAL "0")
+    set(UPDATE TRUE)
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/snapshot_json.cmake")
 
@@ -43,7 +49,7 @@ function(snapshot name produced)
         return()
     endif()
     if(NOT EXISTS "${SNAPSHOTS}/${name}")
-        message(SEND_ERROR "missing snapshot ${name} (run with -DUPDATE=1 to create it)")
+        message(SEND_ERROR "missing snapshot ${name} (run with URSATZ_UPDATE_GOLDENS=1 to create it)")
         return()
     endif()
     if(name MATCHES "\\.json$")
@@ -251,3 +257,7 @@ run_error_case(error-lock-section 2 lock fill.plan.json --section Q --out lock-r
 run_error_case(error-lock-open 2 lock plan-binary.plan.json --section A --out lock-refused.plan.json)
 
 file(REMOVE_RECURSE "${WORK}/normal")
+
+if(UPDATE)
+    message(FATAL_ERROR "test_cli_snapshots: goldens updated (URSATZ_UPDATE_GOLDENS)")
+endif()

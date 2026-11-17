@@ -18,7 +18,7 @@
  * Style labels and profiles over the corpora CMake builds in the build tree: "reference" (the five framework-v1
  * pieces), "chorales" (ten Bach chorales) and "sonatinas" (Clementi 36 and Mozart 545). Checks the labels on hand
  * cases, the reference profile against tests/snapshots/style-model.reference.json (training corpus masked), the file
- * round trip, the distances, and the refusals. With UPDATE_SNAPSHOTS=1 in the environment, the snapshot is rewritten
+ * round trip, the distances, and the refusals. With URSATZ_UPDATE_GOLDENS=1 in the environment, the snapshot is rewritten
  * instead. The distance between the chorales and the sonatinas is printed; docs/style-profile.md records it.
  */
 
@@ -220,8 +220,7 @@ static void test_reference_snapshot(StyleProfile *reference) {
     char *masked = masked_model(path);
     char snapshot_path[1024];
     snprintf(snapshot_path, sizeof(snapshot_path), "%s/style-model.reference.json", URSATZ_SNAPSHOT_DIR);
-    const char *update = getenv("UPDATE_SNAPSHOTS");
-    if (update && strcmp(update, "1") == 0) {
+    if (test_update_goldens()) {
         CHECKF(masked && test_write_file(snapshot_path, masked, strlen(masked)), "cannot write %s", snapshot_path);
     } else {
         char *expected = test_read_file(snapshot_path, NULL);
@@ -667,5 +666,5 @@ int main(void) {
     test_overflow();
     test_refusals();
 
-    return test_finish("test_style_profile");
+    return test_update_goldens() ? test_goldens_updated("test_style_profile") : test_finish("test_style_profile");
 }

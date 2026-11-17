@@ -16,7 +16,7 @@
  * pieces). The opening four soprano notes of Mozart 545 are the motive: they must come back first, at m. 1 with
  * score 1, and again where the piece returns to them; the same motive a fourth higher must score the same. "I IV V I"
  * must find Bach 114's cadences. The motive and progression results are compared with
- * tests/snapshots/similar.reference.txt (with UPDATE_SNAPSHOTS=1 in the environment, the snapshot is rewritten
+ * tests/snapshots/similar.reference.txt (with URSATZ_UPDATE_GOLDENS=1 in the environment, the snapshot is rewritten
  * instead). Run with --write-motive <file> to write the four-note MIDI motive the CLI test searches for.
  *
  * With the argument "smoke" the corpus is Bach 114 alone (copied from the fixtures into a folder of its own); the
@@ -113,8 +113,7 @@ static bool opening_motive(SimilarQuery *query, int transpose) {
 static void check_snapshot(const char *text) {
     char snapshot_path[1100];
     snprintf(snapshot_path, sizeof snapshot_path, "%s/similar.reference.txt", URSATZ_SNAPSHOT_DIR);
-    const char *update = getenv("UPDATE_SNAPSHOTS");
-    if (update && strcmp(update, "1") == 0) {
+    if (test_update_goldens()) {
         CHECKF(test_write_file(snapshot_path, text, strlen(text)), "cannot write %s", snapshot_path);
         return;
     }
@@ -312,5 +311,8 @@ int main(int argc, char **argv) {
     test_queries();
     test_motive();
 
+    if (!smoke && test_update_goldens()) {
+        return test_goldens_updated("test_similar_material");
+    }
     return test_finish(smoke ? "test_similar_material smoke" : "test_similar_material");
 }

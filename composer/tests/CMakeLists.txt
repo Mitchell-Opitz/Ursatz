@@ -218,9 +218,9 @@ endforeach()
 ursatz_test_executable(test_form_plans LIBS ursatz_composer composer_test_support cjson
     INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Every template at every size: its plan's hash against tests/fixtures/forms/template-plans.txt (R-417).
-ursatz_test(test_form_plans_templates TARGET test_form_plans)
+ursatz_test(test_form_plans_templates TARGET test_form_plans LABELS golden)
 # The loop plan of each piece request in tests/fixtures/piece against tests/fixtures/forms/piece-plans.txt (R-417).
-ursatz_test(test_form_plans_pieces TARGET test_form_plans ARGS pieces)
+ursatz_test(test_form_plans_pieces TARGET test_form_plans ARGS pieces LABELS golden)
 
 ursatz_test_executable(test_form_spec LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -396,12 +396,13 @@ ursatz_test(test_export_cli COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ur
 ursatz_test(test_cli_snapshot_compare COMMAND ${CMAKE_COMMAND} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshot_compare
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshot_compare.cmake)
 
-# Seeded CLI output against tests/snapshots; recapture with -DUPDATE=1 (README.md).
+# Seeded CLI output against tests/snapshots; URSATZ_UPDATE_GOLDENS=1 (cmake --build build --target update-goldens)
+# recaptures them.
 # Measured 20.1 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_cli_snapshots COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots
                  -DSNAPSHOTS=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshots.cmake
-    LABELS slow)
+    LABELS golden slow)
 
 ursatz_test_executable(test_analyzer_check LIBS ursatz_composer composer_test_support)
 # The Analyzer check (docs/analyzer-check.md): the modes are quick except the sweep, which CI leaves out (ctest -LE slow);

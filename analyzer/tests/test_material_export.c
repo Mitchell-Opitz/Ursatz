@@ -14,18 +14,13 @@
  * The material export (text_export.h) and the in-memory import it reads through (input_pipeline.h).
  *   - analyzer_text_export_material: a motif with segments a and a' and two variant sections, a theme with two slot
  *     sections, a piece with loop and ending, a section with no MusicXML, the refusals, the size rule (a 2-bar motif
- *     with 6 variants is under 8 KB) and golden snapshots tests/snapshots/material-<kind>.export.txt (UPDATE_SNAPSHOTS=1
+ *     with 6 variants is under 8 KB) and golden snapshots tests/snapshots/material-<kind>.export.txt (URSATZ_UPDATE_GOLDENS=1
  *     rewrites them; the "analyzer:" line is removed before comparing).
  *   - input_pipeline_import_memory: MusicXML and MIDI bytes read the same notes as the file; INPUT_FORMAT_AUTO tells
  *     them apart by their first bytes; refusals (no bytes, no format, malformed, compressed).
  */
 
 #define MATERIAL_BYTES_MOTIF_WITH_VARIANTS 8192
-
-static const char *update_snapshots_env(void) {
-    const char *value = getenv("UPDATE_SNAPSHOTS");
-    return value ? value : getenv("URSATZ_UPDATE_SNAPSHOTS");
-}
 
 /* Imports path from its bytes in memory and from the file; both must read the same number of notes. */
 static void check_memory_matches_file(const char *path, InputFormat format, const char *what) {
@@ -146,13 +141,12 @@ static void check_snapshot(const char *kind, const char *text) {
     if (!actual) {
         return;
     }
-    const char *update = update_snapshots_env();
-    if (update && strcmp(update, "1") == 0) {
+    if (test_update_goldens()) {
         CHECKF(test_write_file(path, actual, strlen(actual)), "%s: cannot write %s", kind, path);
         printf("%s: snapshot updated (%zu bytes)\n", kind, strlen(text));
     } else {
         char *expected = test_read_file(path, NULL);
-        CHECKF(expected != NULL, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)", kind, path);
+        CHECKF(expected != NULL, "%s: missing %s (run with URSATZ_UPDATE_GOLDENS=1 to create it)", kind, path);
         if (expected) {
             CHECKF(strcmp(expected, actual) == 0, "%s: differs from %s", kind, path);
             free(expected);
@@ -343,5 +337,5 @@ int main(void) {
     test_theme();
     test_piece();
     test_material_refusals();
-    return test_finish("test_material_export");
+    return test_update_goldens() ? test_goldens_updated("test_material_export") : test_finish("test_material_export");
 }

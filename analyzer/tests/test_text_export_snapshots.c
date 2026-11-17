@@ -15,7 +15,7 @@
  * Golden snapshots of the text export of the five reference pieces (Ursatz framework-v1 corpus, MIDI files). Each piece
  * runs import -> analysis -> document -> text export and is compared with tests/snapshots/<slug>.export.txt after the
  * "analyzer:" line (the analyzer version and the Ursatz commit, which change with a release) is removed. With
- * UPDATE_SNAPSHOTS=1 (or URSATZ_UPDATE_SNAPSHOTS=1) in the environment the golden files are rewritten instead.
+ * URSATZ_UPDATE_GOLDENS=1 in the environment the golden files are rewritten instead (and the run exits 2).
  *
  * Size rule: an export is at most EXPORT_BYTES_PER_MEASURE bytes per measure plus EXPORT_BYTES_BASE bytes, checked on
  * the text as written, whatever the snapshot says. The plan was 500 bytes per measure; Field 5 (two staves, 12/8, four
@@ -118,11 +118,7 @@ static void print_first_difference(const char *slug, const char *expected, const
 
 int main(int argc, char **argv) {
     bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
-    const char *update_env = getenv("UPDATE_SNAPSHOTS");
-    if (!update_env) {
-        update_env = getenv("URSATZ_UPDATE_SNAPSHOTS");
-    }
-    bool update = update_env && strcmp(update_env, "1") == 0;
+    bool update = test_update_goldens();
     int failures = 0;
 
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
@@ -160,7 +156,7 @@ int main(int argc, char **argv) {
         } else {
             char *expected = test_read_file(snapshot_path, NULL);
             if (!expected) {
-                fprintf(stderr, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)\n", PIECES[i].slug,
+                fprintf(stderr, "%s: missing %s (run with URSATZ_UPDATE_GOLDENS=1 to create it)\n", PIECES[i].slug,
                         snapshot_path);
                 failures++;
             } else if (strcmp(expected, actual) != 0) {
@@ -175,5 +171,8 @@ int main(int argc, char **argv) {
         free(actual);
     }
 
-    return failures == 0 ? 0 : 1;
+    if (failures != 0) {
+        return 1;
+    }
+    return update ? test_goldens_updated(smoke ? "test_text_export_snapshots_smoke" : "test_text_export_snapshots") : 0;
 }

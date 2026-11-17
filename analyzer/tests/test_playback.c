@@ -14,8 +14,8 @@
 /*
  * The playback timing of an import (playback.h): the tempo regions and notes the GUI asked the library for.
  *   - the five reference pieces (MIDI) and tests/musicxml/pickup.musicxml, field-5.musicxml (score tempo) give the
- *     JSON of tests/snapshots/gui/<stem>.playback.json byte for byte; with UPDATE_SNAPSHOTS=1 (or
- *     URSATZ_UPDATE_SNAPSHOTS=1) the files are rewritten,
+ *     JSON of tests/snapshots/gui/<stem>.playback.json byte for byte; with
+ *     URSATZ_UPDATE_GOLDENS=1 the files are rewritten (and the run exits 2),
  *   - the numbers behind the JSON hold: tempo from 0 in time order, MIDI numbers 0 to 127, the end the latest note end,
  *   - a value scale of 2 multiplies the tempo regions by 2 (and a MIDI file's region positions), as the GUI did,
  *   - the argument errors.
@@ -58,7 +58,7 @@ static void check_snapshot(size_t i, const char *json, bool update) {
         return;
     }
     char *expected = test_read_file(path, NULL);
-    CHECKF(expected != NULL, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)", FILES[i].stem, path);
+    CHECKF(expected != NULL, "%s: missing %s (run with URSATZ_UPDATE_GOLDENS=1 to create it)", FILES[i].stem, path);
     if (expected) {
         CHECKF(strcmp(expected, json) == 0, "%s: playback JSON differs from %s", FILES[i].stem, path);
     }
@@ -156,11 +156,7 @@ static void check_arguments(void) {
 
 int main(int argc, char **argv) {
     bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
-    const char *update_env = getenv("UPDATE_SNAPSHOTS");
-    if (!update_env) {
-        update_env = getenv("URSATZ_UPDATE_SNAPSHOTS");
-    }
-    bool update = update_env && strcmp(update_env, "1") == 0;
+    bool update = test_update_goldens();
 
     for (size_t i = 0; i < sizeof(FILES) / sizeof(FILES[0]); i++) {
         if (smoke && !FILES[i].smoke) {
@@ -191,5 +187,6 @@ int main(int argc, char **argv) {
     }
     check_scale();
     check_arguments();
-    return test_finish("test_playback");
+    const char *name = smoke ? "test_playback_smoke" : "test_playback";
+    return update ? test_goldens_updated(name) : test_finish(name);
 }
