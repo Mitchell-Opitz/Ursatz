@@ -10,6 +10,9 @@ ursatz_test(chain_inputs LIBS ursatz_chain VALGRIND)
 ursatz_test(analysis_chain LIBS ursatz_chain ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus" LABELS slow)
 
+# The smoke: Field 1 only, the smallest fixture (0.3 s), in the fast set.
+ursatz_test(analysis_chain_field1 TARGET test_analysis_chain ENVIRONMENT URSATZ_CHAIN_PIECE=field1)
+
 # The smallest fixture only, to keep the memcheck run short.
 if(URSATZ_VALGRIND)
     ursatz_test(analysis_chain_valgrind
