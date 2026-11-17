@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
@@ -47,8 +47,8 @@ static bool same_pitch_class(const PitchSpelling *a, const PitchSpelling *b) {
 }
 
 /* The interval between notes i and i + 1. */
-static bool interval_at(const StandardCounterpointLine *line, size_t i, StandardCounterpointInterval *out) {
-    return standard_counterpoint_interval_between(line->notes[i], line->notes[i + 1], out);
+static bool interval_at(const StandardCounterpointLine *line, size_t i, StandardTonalityInterval *out) {
+    return standard_tonality_interval_between(line->notes[i], line->notes[i + 1], out);
 }
 
 static int direction_at(const StandardCounterpointLine *line, size_t i) {
@@ -56,13 +56,13 @@ static int direction_at(const StandardCounterpointLine *line, size_t i) {
 }
 
 static bool is_leap_at(const StandardCounterpointLine *line, size_t i) {
-    StandardCounterpointInterval interval;
-    return interval_at(line, i, &interval) && standard_counterpoint_interval_is_leap(&interval);
+    StandardTonalityInterval interval;
+    return interval_at(line, i, &interval) && standard_tonality_interval_is_leap(&interval);
 }
 
 static bool is_step_at(const StandardCounterpointLine *line, size_t i) {
-    StandardCounterpointInterval interval;
-    return interval_at(line, i, &interval) && standard_counterpoint_interval_is_step(&interval);
+    StandardTonalityInterval interval;
+    return interval_at(line, i, &interval) && standard_tonality_interval_is_step(&interval);
 }
 
 static const PitchSpelling *highest_note(const StandardCounterpointLine *line) {
@@ -98,24 +98,24 @@ static bool check_final_step(const StandardCounterpointLine *line) {
         return false;
     }
     size_t last = line->count - 2;
-    StandardCounterpointInterval interval;
-    if (!interval_at(line, last, &interval) || !standard_counterpoint_interval_is_step(&interval)) {
+    StandardTonalityInterval interval;
+    if (!interval_at(line, last, &interval) || !standard_tonality_interval_is_step(&interval)) {
         return false;
     }
-    if (interval.quality != STANDARD_COUNTERPOINT_QUALITY_MAJOR &&
-        interval.quality != STANDARD_COUNTERPOINT_QUALITY_MINOR) {
+    if (interval.quality != STANDARD_TONALITY_INTERVAL_QUALITY_MAJOR &&
+        interval.quality != STANDARD_TONALITY_INTERVAL_QUALITY_MINOR) {
         return false;
     }
     /* From below the approach is the leading tone, a half step. */
     if (direction_at(line, last) > 0) {
-        return interval.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR;
+        return interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MINOR;
     }
     return true;
 }
 
 static bool check_melodic_consonance(const StandardCounterpointLine *line) {
     for (size_t i = 0; i + 1 < line->count; i++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!interval_at(line, i, &interval) || !standard_counterpoint_interval_melodic_consonant(&interval)) {
             return false;
         }
@@ -124,8 +124,8 @@ static bool check_melodic_consonance(const StandardCounterpointLine *line) {
 }
 
 static bool check_range(const StandardCounterpointLine *line) {
-    StandardCounterpointInterval interval;
-    return standard_counterpoint_interval_between(lowest_note(line), highest_note(line), &interval) &&
+    StandardTonalityInterval interval;
+    return standard_tonality_interval_between(lowest_note(line), highest_note(line), &interval) &&
            interval.size <= STANDARD_COUNTERPOINT_CANTUS_MAX_RANGE;
 }
 
@@ -142,7 +142,7 @@ static bool check_single_climax(const StandardCounterpointLine *line) {
 
 static bool check_leap_recovery(const StandardCounterpointLine *line) {
     for (size_t i = 0; i + 2 < line->count; i++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!interval_at(line, i, &interval)) {
             return false;
         }
@@ -158,13 +158,13 @@ static bool check_leap_recovery(const StandardCounterpointLine *line) {
 /* Two same-direction leaps, each a third, that together span a perfect
    fifth: the notes outline a consonant triad. */
 static bool outlines_triad(const StandardCounterpointLine *line, size_t i) {
-    StandardCounterpointInterval first, second, outer;
+    StandardTonalityInterval first, second, outer;
     if (!interval_at(line, i, &first) || !interval_at(line, i + 1, &second) ||
-        !standard_counterpoint_interval_between(line->notes[i], line->notes[i + 2], &outer)) {
+        !standard_tonality_interval_between(line->notes[i], line->notes[i + 2], &outer)) {
         return false;
     }
     return first.size == 3 && second.size == 3 && outer.size == 5 &&
-           outer.quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT;
+           outer.quality == STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT;
 }
 
 static bool check_consecutive_leaps(const StandardCounterpointLine *line) {

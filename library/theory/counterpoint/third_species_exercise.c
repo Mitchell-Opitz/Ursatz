@@ -90,13 +90,13 @@ bool standard_counterpoint_third_species_beat_is_attack(const StandardCounterpoi
 }
 
 bool standard_counterpoint_third_species_beat_interval(const StandardCounterpointThirdSpeciesExercise *exercise,
-                                                       size_t bar, size_t beat, StandardCounterpointInterval *out) {
+                                                       size_t bar, size_t beat, StandardTonalityInterval *out) {
     const PitchSpelling *cantus = standard_counterpoint_third_species_cantus(exercise, bar);
     const PitchSpelling *pitch = standard_counterpoint_third_species_beat(exercise, bar, beat);
     if (cantus == NULL || pitch == NULL) {
         return false;
     }
-    return standard_counterpoint_interval_between(cantus, pitch, out);
+    return standard_tonality_interval_between(cantus, pitch, out);
 }
 
 bool standard_counterpoint_third_species_attacks(const StandardCounterpointThirdSpeciesExercise *exercise,

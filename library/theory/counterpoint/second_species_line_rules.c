@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/cantus_firmus_rules.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "theory/counterpoint/counterpoint_line.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
@@ -97,11 +97,11 @@ static bool check_stepwise(const Attacks *attacks) {
     size_t total = attacks->line.count - 1;
     size_t steps = 0;
     for (size_t j = 1; j < attacks->line.count; j++) {
-        StandardCounterpointInterval interval;
-        if (!standard_counterpoint_interval_between(attacks->notes[j - 1], attacks->notes[j], &interval)) {
+        StandardTonalityInterval interval;
+        if (!standard_tonality_interval_between(attacks->notes[j - 1], attacks->notes[j], &interval)) {
             return false;
         }
-        if (standard_counterpoint_interval_is_step(&interval)) {
+        if (standard_tonality_interval_is_step(&interval)) {
             steps++;
         }
     }
@@ -111,11 +111,11 @@ static bool check_stepwise(const Attacks *attacks) {
 static bool check_leap_direction(const Attacks *attacks) {
     size_t inside = 0, across = 0;
     for (size_t j = 1; j < attacks->line.count; j++) {
-        StandardCounterpointInterval interval;
-        if (!standard_counterpoint_interval_between(attacks->notes[j - 1], attacks->notes[j], &interval)) {
+        StandardTonalityInterval interval;
+        if (!standard_tonality_interval_between(attacks->notes[j - 1], attacks->notes[j], &interval)) {
             return false;
         }
-        if (!standard_counterpoint_interval_is_leap(&interval)) {
+        if (!standard_tonality_interval_is_leap(&interval)) {
             continue;
         }
         if (within_bar(attacks, j)) {

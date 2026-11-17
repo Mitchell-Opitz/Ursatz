@@ -1,7 +1,7 @@
 #include "theory/galant/galant_matching_rules.h"
 
 #include "theory/galant/galant_rule_table.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/midi_pitch.h"
 
 static bool table_is_hard(int which) {
@@ -75,9 +75,9 @@ static bool check_tenths(const GalantMatch *match) {
     for (size_t i = 0; i < match->exemplar->stage_count; i++) {
         const PitchSpelling *melody = match->exemplar->stages[i].melody;
         const PitchSpelling *bass = match->exemplar->stages[i].bass;
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (pitch_spelling_midi(melody) <= pitch_spelling_midi(bass) ||
-            !standard_counterpoint_interval_between(bass, melody, &interval) || interval.simple_size != 3) {
+            !standard_tonality_interval_between(bass, melody, &interval) || interval.simple_size != 3) {
             return false;
         }
     }

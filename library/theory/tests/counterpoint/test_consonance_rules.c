@@ -4,8 +4,8 @@
 #include "theory/counterpoint/consonance_rules.h"
 #include "theory/tests/counterpoint/counterpoint_test_util.h"
 
-static StandardCounterpointIntervalCategory category(const PitchSpelling *a, const PitchSpelling *b) {
-    StandardCounterpointIntervalCategory out;
+static StandardTonalityIntervalCategory category(const PitchSpelling *a, const PitchSpelling *b) {
+    StandardTonalityIntervalCategory out;
     assert(standard_counterpoint_classify_pitches(a, b, &out));
     return out;
 }
@@ -56,7 +56,7 @@ static void test_pitches_consonant(void) {
 }
 
 static void test_null_classification(void) {
-    StandardCounterpointIntervalCategory out = STANDARD_COUNTERPOINT_DISSONANCE;
+    StandardTonalityIntervalCategory out = STANDARD_COUNTERPOINT_DISSONANCE;
     assert(!standard_counterpoint_classify_pitches(NULL, P(C, 0, 4), &out));
     assert(!standard_counterpoint_classify_pitches(P(C, 0, 4), NULL, &out));
     assert(!standard_counterpoint_classify_pitches(P(C, 0, 4), P(G, 0, 4), NULL));
@@ -64,8 +64,8 @@ static void test_null_classification(void) {
 }
 
 static bool melodic(const PitchSpelling *a, const PitchSpelling *b) {
-    StandardCounterpointInterval interval;
-    assert(standard_counterpoint_interval_between(a, b, &interval));
+    StandardTonalityInterval interval;
+    assert(standard_tonality_interval_between(a, b, &interval));
     return standard_counterpoint_interval_melodic_consonant(&interval);
 }
 

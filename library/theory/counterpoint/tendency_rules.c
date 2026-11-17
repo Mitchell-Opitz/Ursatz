@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/rule_table.h"
@@ -30,13 +30,13 @@ const char *standard_counterpoint_tendency_name(StandardCounterpointTendency whi
 static bool check_pitch_proximity(const StandardCounterpointLine *line) {
     size_t steps = 0, leaps = 0, small_leaps = 0, large_leaps = 0;
     for (size_t i = 0; i + 1 < line->count; i++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!standard_counterpoint_line_interval_at(line, i, &interval)) {
             return false;
         }
-        if (standard_counterpoint_interval_is_step(&interval)) {
+        if (standard_tonality_interval_is_step(&interval)) {
             steps++;
-        } else if (standard_counterpoint_interval_is_leap(&interval)) {
+        } else if (standard_tonality_interval_is_leap(&interval)) {
             leaps++;
             if (interval.size <= 4) {
                 small_leaps++;
@@ -51,11 +51,11 @@ static bool check_pitch_proximity(const StandardCounterpointLine *line) {
 static bool check_step_declination(const StandardCounterpointLine *line) {
     size_t descending = 0, ascending = 0;
     for (size_t i = 0; i + 1 < line->count; i++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!standard_counterpoint_line_interval_at(line, i, &interval)) {
             return false;
         }
-        if (standard_counterpoint_interval_is_step(&interval)) {
+        if (standard_tonality_interval_is_step(&interval)) {
             if (standard_counterpoint_line_direction_at(line, i) > 0) {
                 ascending++;
             } else {

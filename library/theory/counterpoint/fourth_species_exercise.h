@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "theory/counterpoint/counterpoint_line.h"
 #include "theory/counterpoint/counterpoint_rules.h"
 #include "theory/counterpoint/counterpoint_slots.h"
@@ -83,9 +83,9 @@ bool standard_counterpoint_fourth_species_bar_is_broken(const StandardCounterpoi
    on its strong beat, or on its weak beat. False (*out untouched) when the
    beat is a rest or the input is invalid. */
 bool standard_counterpoint_fourth_species_downbeat_interval(const StandardCounterpointFourthSpeciesExercise *exercise,
-                                                            size_t bar, StandardCounterpointInterval *out);
+                                                            size_t bar, StandardTonalityInterval *out);
 bool standard_counterpoint_fourth_species_weak_interval(const StandardCounterpointFourthSpeciesExercise *exercise,
-                                                        size_t bar, StandardCounterpointInterval *out);
+                                                        size_t bar, StandardTonalityInterval *out);
 
 /*
  * The counterpoint's attacks in order: its new notes, with the rest and the

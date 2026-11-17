@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "theory/counterpoint/counterpoint_line.h"
 #include "theory/counterpoint/counterpoint_rules.h"
 #include "theory/counterpoint/counterpoint_slots.h"
@@ -67,7 +67,7 @@ bool standard_counterpoint_third_species_beat_is_attack(const StandardCounterpoi
    counterpoint on that beat. False (*out untouched) when the beat is a rest
    or the input is invalid. */
 bool standard_counterpoint_third_species_beat_interval(const StandardCounterpointThirdSpeciesExercise *exercise,
-                                                       size_t bar, size_t beat, StandardCounterpointInterval *out);
+                                                       size_t bar, size_t beat, StandardTonalityInterval *out);
 
 /*
  * The counterpoint's attacks in order: its new notes, with rests and ties

@@ -4,14 +4,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/interpretation/interpretation.h"
 #include "model/pitch/pitch_identity.h"
 #include "model/pitch/pitch_numeric_value.h"
 #include "model/pitch/pitch_spelling.h"
 #include "theory/vocabulary/beat_strength.h"
 #include "analysis/notes/contour.h"
-#include "analysis/notes/interval.h"
 #include "theory/vocabulary/non_chord_tone.h"
 #include "model/structure/structure.h"
 #include "model/time/metrical_position.h"
@@ -43,9 +42,9 @@
  * INTERVALS. For each pair of consecutive entries that are both notes:
  *
  *   semitones    the signed difference of the two PitchNumericValues
- *   direction    ContourDirection UP, DOWN or SAME. The kernel Contour and Interval do not compute direction or size from
+ *   direction    ContourDirection UP, DOWN or SAME. The kernel Contour does not compute direction or size from
  *                PitchIdentity (an opaque token with no tuning), so the adapter, which has the numeric pitches, computes
- *                it and SUPPLIES it to them
+ *                it and SUPPLIES it to it
  *   generic size the size in letter names (a third is 3; compound included), taken from the SPELLINGS when both are given
  *                (the existing interval, counterpoint_interval.h), else from the SCALE DEGREES when both are known (the
  *                letter distance in the direction of motion plus the octaves the semitones imply), else ABSENT (0)
@@ -54,7 +53,7 @@
  *                a step 1 or 2), the interval is marked APPROXIMATE, and its uncertainty is raised by the penalty
  *                (an augmented second is then read as a leap: a known limit)
  *
- * Each interval is a Structure shell (the two note ids), kernel Interval and Contour values, and an Interpretation
+ * Each interval is a Structure shell (the two note ids), a kernel Contour value, and an Interpretation
  * targeting the shell's id: FrameworkReference standard-counterpoint, claim = a StandardCounterpointMelodicIntervalClaim,
  *
  *   uncertainty = 1 - (1 - u)(1 - penalty), u = 1 - the lesser note confidence, penalty = config.approximate_penalty when
@@ -144,12 +143,9 @@ typedef struct {
 
 typedef struct {
     StandardCounterpointMelodicIntervalClaim claim;
-    StandardCounterpointInterval effective; /* the interval the leap/step decision used; quality is meaningful only
+    StandardTonalityInterval effective; /* the interval the leap/step decision used; quality is meaningful only
                                                when claim.generic_source is SPELLING */
     double uncertainty;
-    PitchIdentity *pitch_a;         /* owned: the Interval's references */
-    PitchIdentity *pitch_b;
-    Interval *interval;             /* owned: kernel value, directed and undirected semitones */
     Contour *contour;               /* owned: the two pitches and the direction */
     Structure *shell;               /* owned: the two note ids */
     Interpretation *interpretation; /* owned; targets the shell's id */

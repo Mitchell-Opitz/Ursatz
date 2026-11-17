@@ -43,15 +43,15 @@ const char *standard_counterpoint_melodic_rule_name(StandardCounterpointMelodicR
 }
 
 static bool leap_at(const StandardCounterpointLine *line, size_t i) {
-    StandardCounterpointInterval interval;
+    StandardTonalityInterval interval;
     return standard_counterpoint_line_interval_at(line, i, &interval) &&
-           standard_counterpoint_interval_is_leap(&interval);
+           standard_tonality_interval_is_leap(&interval);
 }
 
 static bool check_clausula_vera(const StandardCounterpointLine *line) {
-    StandardCounterpointInterval interval;
+    StandardTonalityInterval interval;
     return line->count >= 2 && standard_counterpoint_line_interval_at(line, line->count - 2, &interval) &&
-           standard_counterpoint_interval_is_step(&interval);
+           standard_tonality_interval_is_step(&interval);
 }
 
 static bool check_repeated_notes(const StandardCounterpointLine *line, const StandardCounterpointLimits *limits) {
@@ -118,7 +118,7 @@ static bool check_repeated_generic(const StandardCounterpointLine *line, const S
     size_t run = 0;
     int previous_size = 0;
     for (size_t i = 0; i + 1 < line->count; i++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!standard_counterpoint_line_interval_at(line, i, &interval)) {
             return false;
         }
@@ -153,22 +153,22 @@ static bool check_climax_by_leap(const StandardCounterpointLine *line) {
 }
 
 static bool leap_allowed(const StandardCounterpointLine *line, size_t i) {
-    StandardCounterpointInterval interval;
+    StandardTonalityInterval interval;
     if (!standard_counterpoint_line_interval_at(line, i, &interval)) {
         return false;
     }
     if (interval.size > 8) {
         return false;
     }
-    if (interval.quality == STANDARD_COUNTERPOINT_QUALITY_AUGMENTED ||
-        interval.quality == STANDARD_COUNTERPOINT_QUALITY_DIMINISHED) {
+    if (interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_AUGMENTED ||
+        interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_DIMINISHED) {
         return false;
     }
     if (interval.simple_size == 7) {
         return false;
     }
     if (interval.simple_size == 6) {
-        return interval.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR &&
+        return interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MINOR &&
                standard_counterpoint_line_direction_at(line, i) > 0;
     }
     return true;
@@ -195,12 +195,12 @@ static bool check_forbidden_outline(const StandardCounterpointLine *line) {
         while (end + 1 < line->count && standard_counterpoint_line_direction_at(line, end) == direction) {
             end++;
         }
-        StandardCounterpointInterval outline;
-        if (!standard_counterpoint_interval_between(line->notes[i], line->notes[end], &outline)) {
+        StandardTonalityInterval outline;
+        if (!standard_tonality_interval_between(line->notes[i], line->notes[end], &outline)) {
             return false;
         }
-        if (outline.quality == STANDARD_COUNTERPOINT_QUALITY_AUGMENTED ||
-            outline.quality == STANDARD_COUNTERPOINT_QUALITY_DIMINISHED || outline.simple_size == 7) {
+        if (outline.quality == STANDARD_TONALITY_INTERVAL_QUALITY_AUGMENTED ||
+            outline.quality == STANDARD_TONALITY_INTERVAL_QUALITY_DIMINISHED || outline.simple_size == 7) {
             return false;
         }
         i = end;

@@ -15,8 +15,8 @@ bool standard_counterpoint_species_is_sol(const PitchSpelling *note, const Pitch
     return letters == 4 && semitones == 7;
 }
 
-int standard_counterpoint_species_perfect_class(const StandardCounterpointInterval *interval) {
-    StandardCounterpointIntervalCategory category;
+int standard_counterpoint_species_perfect_class(const StandardTonalityInterval *interval) {
+    StandardTonalityIntervalCategory category;
     if (!standard_counterpoint_classify_interval(interval, &category) ||
         category != STANDARD_COUNTERPOINT_PERFECT_CONSONANCE) {
         return 0;
@@ -27,16 +27,16 @@ int standard_counterpoint_species_perfect_class(const StandardCounterpointInterv
 bool standard_counterpoint_species_check_leaps(const PitchSpelling *const *notes, size_t count,
                                                StandardCounterpointSpeciesLeapException exception, const void *context) {
     for (size_t j = 1; j < count; j++) {
-        StandardCounterpointInterval interval;
-        if (!standard_counterpoint_interval_between(notes[j - 1], notes[j], &interval)) {
+        StandardTonalityInterval interval;
+        if (!standard_tonality_interval_between(notes[j - 1], notes[j], &interval)) {
             return false;
         }
-        if (interval.size > 8 || interval.quality == STANDARD_COUNTERPOINT_QUALITY_AUGMENTED ||
-            interval.quality == STANDARD_COUNTERPOINT_QUALITY_DIMINISHED || interval.simple_size == 7) {
+        if (interval.size > 8 || interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_AUGMENTED ||
+            interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_DIMINISHED || interval.simple_size == 7) {
             return false;
         }
         if (interval.simple_size == 6) {
-            bool ascending_minor = interval.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR &&
+            bool ascending_minor = interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MINOR &&
                                    pitch_spelling_direction(notes[j - 1], notes[j]) > 0;
             if (!ascending_minor && (exception == NULL || !exception(context, j))) {
                 return false;

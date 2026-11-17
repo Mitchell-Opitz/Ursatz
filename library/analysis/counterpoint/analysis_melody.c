@@ -135,11 +135,11 @@ static int generic_from_semitones(long semitones) {
     return WITHIN_OCTAVE[size % 12] + 7 * (int)(size / 12);
 }
 
-static StandardCounterpointInterval make_interval(int size) {
-    StandardCounterpointInterval interval;
+static StandardTonalityInterval make_interval(int size) {
+    StandardTonalityInterval interval;
     interval.size = size;
     interval.simple_size = size == 1 ? 1 : ((size - 2) % 7) + 2;
-    interval.quality = STANDARD_COUNTERPOINT_QUALITY_PERFECT;
+    interval.quality = STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT;
     return interval;
 }
 
@@ -149,9 +149,6 @@ static void destroy_interval(StandardCounterpointMelodicInterval *item) {
     interpretation_destroy(item->interpretation);
     structure_destroy(item->shell);
     contour_destroy(item->contour);
-    interval_destroy(item->interval);
-    pitch_identity_destroy(item->pitch_a);
-    pitch_identity_destroy(item->pitch_b);
     memset(item, 0, sizeof(*item));
 }
 
@@ -177,13 +174,8 @@ static bool build_values(const StandardCounterpointMelodyNote *a, const Standard
         return false;
     }
     directions[0] = (ContourDirection)item->claim.direction;
-    unsigned long magnitude = (unsigned long)labs(item->claim.semitones);
-    if (pitch_numeric_value_to_identity(a->pitch, &item->pitch_a) != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK ||
-        pitch_numeric_value_to_identity(b->pitch, &item->pitch_b) != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK ||
-        pitch_numeric_value_to_identity(a->pitch, &contour_ids[0]) != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK ||
-        pitch_numeric_value_to_identity(b->pitch, &contour_ids[1]) != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK ||
-        interval_create(item->pitch_a, item->pitch_b, true, item->claim.semitones, true, magnitude, false, 0,
-                        &item->interval) != INTERVAL_OK) {
+    if (pitch_numeric_value_to_identity(a->pitch, &contour_ids[0]) != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK ||
+        pitch_numeric_value_to_identity(b->pitch, &contour_ids[1]) != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK) {
         pitch_identity_destroy(contour_ids[0]);
         pitch_identity_destroy(contour_ids[1]);
         free(contour_ids);
@@ -235,9 +227,9 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_intervals(const St
         claim->direction = semitones > 0 ? (int)CONTOUR_DIRECTION_UP
                                          : (semitones < 0 ? (int)CONTOUR_DIRECTION_DOWN : (int)CONTOUR_DIRECTION_SAME);
 
-        StandardCounterpointInterval spelled;
+        StandardTonalityInterval spelled;
         if (a->spelling != NULL && b->spelling != NULL &&
-            standard_counterpoint_interval_between(a->spelling, b->spelling, &spelled)) {
+            standard_tonality_interval_between(a->spelling, b->spelling, &spelled)) {
             claim->generic_size = spelled.size;
             claim->generic_source = (int)STANDARD_COUNTERPOINT_GENERIC_SPELLING;
             item->effective = spelled;
@@ -251,8 +243,8 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_intervals(const St
             claim->approximate = 1;
             item->effective = make_interval(generic_from_semitones(semitones));
         }
-        claim->leap = standard_counterpoint_interval_is_leap(&item->effective) ? 1 : 0;
-        claim->step = standard_counterpoint_interval_is_step(&item->effective) ? 1 : 0;
+        claim->leap = standard_tonality_interval_is_leap(&item->effective) ? 1 : 0;
+        claim->step = standard_tonality_interval_is_step(&item->effective) ? 1 : 0;
 
         double lesser = a->confidence < b->confidence ? a->confidence : b->confidence;
         double penalty = claim->approximate ? effective->approximate_penalty : 0.0;

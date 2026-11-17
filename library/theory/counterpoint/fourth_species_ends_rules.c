@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/fourth_species_suspension.h"
 #include "theory/counterpoint/counterpoint_subject.h"

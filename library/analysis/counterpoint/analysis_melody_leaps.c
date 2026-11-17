@@ -141,9 +141,9 @@ static bool outlines_triad(const StandardCounterpointMelodyLine *line, const Sta
     }
     const StandardCounterpointMelodyNote *a = &line->notes[first->claim.from];
     const StandardCounterpointMelodyNote *c = &line->notes[second->claim.to];
-    StandardCounterpointInterval outer;
-    if (a->spelling != NULL && c->spelling != NULL && standard_counterpoint_interval_between(a->spelling, c->spelling, &outer)) {
-        return outer.size == 5 && outer.quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT;
+    StandardTonalityInterval outer;
+    if (a->spelling != NULL && c->spelling != NULL && standard_tonality_interval_between(a->spelling, c->spelling, &outer)) {
+        return outer.size == 5 && outer.quality == STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT;
     }
     return labs(first->claim.semitones + second->claim.semitones) == 7;
 }

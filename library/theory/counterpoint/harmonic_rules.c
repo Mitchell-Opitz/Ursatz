@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/rule_table.h"
@@ -44,32 +44,32 @@ const char *standard_counterpoint_harmonic_rule_name(StandardCounterpointHarmoni
 }
 
 /* The interval between the two parts at position i. */
-static bool interval_at(const StandardCounterpointPair *pair, size_t i, StandardCounterpointInterval *out) {
-    return standard_counterpoint_interval_between(pair->lower->notes[i], pair->upper->notes[i], out);
+static bool interval_at(const StandardCounterpointPair *pair, size_t i, StandardTonalityInterval *out) {
+    return standard_tonality_interval_between(pair->lower->notes[i], pair->upper->notes[i], out);
 }
 
-static bool is_perfect(const StandardCounterpointInterval *interval, int simple_size) {
-    return interval->quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT && interval->simple_size == simple_size;
+static bool is_perfect(const StandardTonalityInterval *interval, int simple_size) {
+    return interval->quality == STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT && interval->simple_size == simple_size;
 }
 
-static bool is_octave_class(const StandardCounterpointInterval *interval) {
+static bool is_octave_class(const StandardTonalityInterval *interval) {
     return is_perfect(interval, 1) || is_perfect(interval, 8);
 }
 
 static bool check_first_interval(const StandardCounterpointPair *pair) {
-    StandardCounterpointIntervalCategory category;
+    StandardTonalityIntervalCategory category;
     return standard_counterpoint_classify_pitches(pair->lower->notes[0], pair->upper->notes[0], &category) &&
            category == STANDARD_COUNTERPOINT_PERFECT_CONSONANCE;
 }
 
 static bool check_last_interval(const StandardCounterpointPair *pair) {
-    StandardCounterpointInterval interval;
+    StandardTonalityInterval interval;
     return interval_at(pair, pair->lower->count - 1, &interval) && is_octave_class(&interval);
 }
 
 static bool check_max_gap(const StandardCounterpointPair *pair) {
     for (size_t i = 0; i < pair->lower->count; i++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!interval_at(pair, i, &interval) || interval.size > STANDARD_COUNTERPOINT_MAX_GAP) {
             return false;
         }
@@ -80,7 +80,7 @@ static bool check_max_gap(const StandardCounterpointPair *pair) {
 static bool check_mostly_within_octave(const StandardCounterpointPair *pair) {
     size_t wide = 0;
     for (size_t i = 0; i < pair->lower->count; i++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!interval_at(pair, i, &interval)) {
             return false;
         }
@@ -103,8 +103,8 @@ static bool check_no_crossing(const StandardCounterpointPair *pair) {
 /* True when positions i and i + 1 are both a perfect interval satisfying
    `same` and are joined by parallel motion. */
 static bool parallel_perfect_at(const StandardCounterpointPair *pair, size_t i,
-                                bool (*same)(const StandardCounterpointInterval *)) {
-    StandardCounterpointInterval from, to;
+                                bool (*same)(const StandardTonalityInterval *)) {
+    StandardTonalityInterval from, to;
     MotionType motion;
     if (!interval_at(pair, i, &from) || !interval_at(pair, i + 1, &to) ||
         !standard_counterpoint_pair_motion(pair, i, &motion)) {
@@ -113,7 +113,7 @@ static bool parallel_perfect_at(const StandardCounterpointPair *pair, size_t i,
     return same(&from) && same(&to) && motion == MOTION_TYPE_PARALLEL;
 }
 
-static bool is_fifth(const StandardCounterpointInterval *interval) {
+static bool is_fifth(const StandardTonalityInterval *interval) {
     return is_perfect(interval, 5);
 }
 
@@ -137,7 +137,7 @@ static bool check_parallel_fifths(const StandardCounterpointPair *pair) {
 
 static bool check_direct_perfects(const StandardCounterpointPair *pair) {
     for (size_t i = 0; i + 1 < pair->lower->count; i++) {
-        StandardCounterpointInterval to;
+        StandardTonalityInterval to;
         MotionType motion;
         if (!interval_at(pair, i + 1, &to) || !standard_counterpoint_pair_motion(pair, i, &motion)) {
             return false;
@@ -151,7 +151,7 @@ static bool check_direct_perfects(const StandardCounterpointPair *pair) {
 
 static bool check_interior_unisons(const StandardCounterpointPair *pair) {
     for (size_t i = 1; i + 1 < pair->lower->count; i++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!interval_at(pair, i, &interval) || is_perfect(&interval, 1)) {
             return false;
         }

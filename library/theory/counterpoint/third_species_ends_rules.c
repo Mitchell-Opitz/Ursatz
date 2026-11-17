@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
@@ -62,18 +62,18 @@ static bool check_clausula_vera(const Exercise *exercise) {
     const PitchSpelling *before = slot_at(exercise, final_slot - 1)->pitch;
     const PitchSpelling *final = slot_at(exercise, final_slot)->pitch;
 
-    StandardCounterpointInterval cantus_move, counterpoint_move, vertical;
-    if (!standard_counterpoint_interval_between(cantus_before, cantus_final, &cantus_move) ||
-        !standard_counterpoint_interval_between(before, final, &counterpoint_move) ||
-        !standard_counterpoint_interval_between(cantus_before, before, &vertical)) {
+    StandardTonalityInterval cantus_move, counterpoint_move, vertical;
+    if (!standard_tonality_interval_between(cantus_before, cantus_final, &cantus_move) ||
+        !standard_tonality_interval_between(before, final, &counterpoint_move) ||
+        !standard_tonality_interval_between(cantus_before, before, &vertical)) {
         return false;
     }
     int cantus_direction = pitch_spelling_direction(cantus_before, cantus_final);
     int counterpoint_direction = pitch_spelling_direction(before, final);
-    bool major_or_minor = vertical.quality == STANDARD_COUNTERPOINT_QUALITY_MAJOR ||
-                          vertical.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR;
-    return standard_counterpoint_interval_is_step(&cantus_move) &&
-           standard_counterpoint_interval_is_step(&counterpoint_move) && cantus_direction != 0 &&
+    bool major_or_minor = vertical.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MAJOR ||
+                          vertical.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MINOR;
+    return standard_tonality_interval_is_step(&cantus_move) &&
+           standard_tonality_interval_is_step(&counterpoint_move) && cantus_direction != 0 &&
            counterpoint_direction != 0 && cantus_direction != counterpoint_direction && major_or_minor &&
            (vertical.simple_size == 3 || vertical.simple_size == 6);
 }

@@ -91,9 +91,9 @@ static void test_accessors(void) {
     assert(!standard_counterpoint_third_species_beat_is_attack(&exercise, 1, 2));
     assert(pitch_spelling_equals(standard_counterpoint_third_species_beat(&exercise, 1, 2), P(A, 0, 4)));
 
-    StandardCounterpointInterval interval;
+    StandardTonalityInterval interval;
     assert(standard_counterpoint_third_species_beat_interval(&exercise, 0, 0, &interval));
-    assert(interval.size == 5 && interval.quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT);
+    assert(interval.size == 5 && interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT);
     assert(standard_counterpoint_third_species_beat_interval(&exercise, 1, 3, &interval));
     assert(interval.size == 10 && interval.simple_size == 3);
     assert(!standard_counterpoint_third_species_beat_interval(&exercise, 2, 0, &interval));
@@ -104,7 +104,7 @@ static void test_rest_has_no_pitch(void) {
     const StandardCounterpointSlot slots[] = {REST(), ATK(P(A, 0, 3)), ATK(P(B, 0, 3)), ATK(P(C, 0, 4)),
                                               WHOLE(P(A, 0, 3))};
     EXERCISE(exercise, cantus, slots, CANTUS_LOWER);
-    StandardCounterpointInterval interval;
+    StandardTonalityInterval interval;
     assert(standard_counterpoint_third_species_beat(&exercise, 0, 0) == NULL);
     assert(!standard_counterpoint_third_species_beat_is_attack(&exercise, 0, 0));
     assert(!standard_counterpoint_third_species_beat_interval(&exercise, 0, 0, &interval));

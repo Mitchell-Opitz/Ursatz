@@ -27,8 +27,6 @@ static void test_a_stepwise_scale_has_no_leaps_and_rises(void) {
         assert(intervals.items[i].claim.semitones > 0 && intervals.items[i].claim.semitones <= 2);
         assert(contour_direction_at(intervals.items[i].contour, 0) == CONTOUR_DIRECTION_UP);
         assert(contour_pitch_id_count(intervals.items[i].contour) == 2);
-        assert(interval_has_directed_semitones(intervals.items[i].interval) &&
-               interval_directed_semitones(intervals.items[i].interval) == intervals.items[i].claim.semitones);
     }
     StandardCounterpointContourSummaries summaries;
     assert(standard_counterpoint_melody_contour_summaries(&m.line, &intervals, NULL, 0, &summaries) ==

@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/rule_table.h"
 #include "theory/counterpoint/third_species_figure.h"
@@ -79,9 +79,9 @@ static bool check_large_leap_recovery(const Exercise *exercise) {
         return false;
     }
     for (size_t j = 1; j + 1 < count; j++) {
-        StandardCounterpointInterval leap, next;
-        if (!standard_counterpoint_interval_between(notes[j - 1], notes[j], &leap) ||
-            !standard_counterpoint_interval_between(notes[j], notes[j + 1], &next)) {
+        StandardTonalityInterval leap, next;
+        if (!standard_tonality_interval_between(notes[j - 1], notes[j], &leap) ||
+            !standard_tonality_interval_between(notes[j], notes[j + 1], &next)) {
             return false;
         }
         if (leap.size < STANDARD_COUNTERPOINT_THIRD_SPECIES_LARGE_LEAP) {
@@ -89,7 +89,7 @@ static bool check_large_leap_recovery(const Exercise *exercise) {
         }
         int out = pitch_spelling_direction(notes[j - 1], notes[j]);
         int back = pitch_spelling_direction(notes[j], notes[j + 1]);
-        if (!standard_counterpoint_interval_is_step(&next) || out == 0 || back == 0 || out == back) {
+        if (!standard_tonality_interval_is_step(&next) || out == 0 || back == 0 || out == back) {
             return false;
         }
     }

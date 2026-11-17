@@ -34,8 +34,8 @@ static bool valid_rule(StandardCounterpointSecondSpeciesStrongRule which) {
 
 typedef StandardCounterpointSecondSpeciesExercise Exercise;
 
-static bool downbeat_category(const Exercise *exercise, size_t bar, StandardCounterpointInterval *interval,
-                              StandardCounterpointIntervalCategory *category) {
+static bool downbeat_category(const Exercise *exercise, size_t bar, StandardTonalityInterval *interval,
+                              StandardTonalityIntervalCategory *category) {
     return standard_counterpoint_second_species_downbeat_interval(exercise, bar, interval) &&
            standard_counterpoint_classify_interval(interval, category);
 }
@@ -45,8 +45,8 @@ static bool check_consonant(const Exercise *exercise) {
         if (standard_counterpoint_second_species_downbeat(exercise, bar) == NULL) {
             continue;
         }
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!downbeat_category(exercise, bar, &interval, &category) ||
             category == STANDARD_COUNTERPOINT_DISSONANCE) {
             return false;
@@ -57,8 +57,8 @@ static bool check_consonant(const Exercise *exercise) {
 
 static bool check_imperfect_preferred(const Exercise *exercise) {
     for (size_t bar = 1; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!downbeat_category(exercise, bar, &interval, &category) ||
             category == STANDARD_COUNTERPOINT_PERFECT_CONSONANCE) {
             return false;
@@ -69,7 +69,7 @@ static bool check_imperfect_preferred(const Exercise *exercise) {
 
 static bool check_no_strong_unison(const Exercise *exercise) {
     for (size_t bar = 1; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!standard_counterpoint_second_species_downbeat_interval(exercise, bar, &interval) || interval.size == 1) {
             return false;
         }
@@ -77,22 +77,22 @@ static bool check_no_strong_unison(const Exercise *exercise) {
     return true;
 }
 
-static bool is_perfect_consonance(const StandardCounterpointInterval *interval) {
-    StandardCounterpointIntervalCategory category;
+static bool is_perfect_consonance(const StandardTonalityInterval *interval) {
+    StandardTonalityIntervalCategory category;
     return standard_counterpoint_classify_interval(interval, &category) &&
            category == STANDARD_COUNTERPOINT_PERFECT_CONSONANCE;
 }
 
 static bool check_no_repeated_perfect(const Exercise *exercise) {
     for (size_t bar = 0; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval next;
+        StandardTonalityInterval next;
         if (!standard_counterpoint_second_species_downbeat_interval(exercise, bar + 1, &next)) {
             return false;
         }
         if (!is_perfect_consonance(&next)) {
             continue;
         }
-        StandardCounterpointInterval downbeat, weak;
+        StandardTonalityInterval downbeat, weak;
         if (standard_counterpoint_second_species_downbeat_interval(exercise, bar, &downbeat) &&
             is_perfect_consonance(&downbeat) && downbeat.simple_size == next.simple_size) {
             return false;
@@ -114,15 +114,15 @@ static bool octave_leap_then_step_back(const Exercise *exercise, size_t bar) {
     if (downbeat == NULL || weak == NULL || next == NULL || !standard_counterpoint_second_species_weak_is_attack(exercise, bar)) {
         return false;
     }
-    StandardCounterpointInterval leap, step;
-    if (!standard_counterpoint_interval_between(downbeat, weak, &leap) ||
-        !standard_counterpoint_interval_between(weak, next, &step)) {
+    StandardTonalityInterval leap, step;
+    if (!standard_tonality_interval_between(downbeat, weak, &leap) ||
+        !standard_tonality_interval_between(weak, next, &step)) {
         return false;
     }
     int out = pitch_spelling_direction(downbeat, weak);
     int back = pitch_spelling_direction(weak, next);
-    return leap.size == 8 && leap.quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT &&
-           standard_counterpoint_interval_is_step(&step) && out != 0 && back != 0 && out != back;
+    return leap.size == 8 && leap.quality == STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT &&
+           standard_tonality_interval_is_step(&step) && out != 0 && back != 0 && out != back;
 }
 
 static bool check_no_dissonant_outline(const Exercise *exercise) {
@@ -132,8 +132,8 @@ static bool check_no_dissonant_outline(const Exercise *exercise) {
         if (from == NULL || to == NULL) {
             continue;
         }
-        StandardCounterpointInterval outline;
-        if (!standard_counterpoint_interval_between(from, to, &outline)) {
+        StandardTonalityInterval outline;
+        if (!standard_tonality_interval_between(from, to, &outline)) {
             return false;
         }
         if (!standard_counterpoint_interval_melodic_consonant(&outline) &&
@@ -148,8 +148,8 @@ static bool check_max_same_imperfect_run(const Exercise *exercise) {
     size_t run = 0;
     int previous_size = 0;
     for (size_t bar = 0; bar < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (standard_counterpoint_second_species_downbeat(exercise, bar) == NULL ||
             !downbeat_category(exercise, bar, &interval, &category) ||
             category != STANDARD_COUNTERPOINT_IMPERFECT_CONSONANCE) {

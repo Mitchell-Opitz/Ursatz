@@ -98,12 +98,12 @@ static void test_accessors(void) {
     assert(!standard_counterpoint_fourth_species_bar_is_broken(&exercise, 0));
     assert(!standard_counterpoint_fourth_species_bar_is_broken(&exercise, 10));
 
-    StandardCounterpointInterval interval;
+    StandardTonalityInterval interval;
     assert(!standard_counterpoint_fourth_species_downbeat_interval(&exercise, 0, &interval));
     assert(standard_counterpoint_fourth_species_downbeat_interval(&exercise, 1, &interval));
-    assert(interval.size == 3 && interval.quality == STANDARD_COUNTERPOINT_QUALITY_MAJOR);
+    assert(interval.size == 3 && interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MAJOR);
     assert(standard_counterpoint_fourth_species_weak_interval(&exercise, 9, &interval));
-    assert(interval.size == 6 && interval.quality == STANDARD_COUNTERPOINT_QUALITY_MAJOR);
+    assert(interval.size == 6 && interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MAJOR);
     assert(!standard_counterpoint_fourth_species_weak_interval(&exercise, 11, &interval));
 }
 

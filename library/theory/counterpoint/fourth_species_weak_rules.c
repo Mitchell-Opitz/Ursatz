@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/rule_table.h"
 #include "theory/counterpoint/species_helpers.h"
@@ -39,8 +39,8 @@ static size_t weak_bars(const Exercise *exercise) {
     return exercise->cantus->count - 1;
 }
 
-static bool weak_category(const Exercise *exercise, size_t bar, StandardCounterpointInterval *interval,
-                          StandardCounterpointIntervalCategory *category) {
+static bool weak_category(const Exercise *exercise, size_t bar, StandardTonalityInterval *interval,
+                          StandardTonalityIntervalCategory *category) {
     return standard_counterpoint_fourth_species_weak_interval(exercise, bar, interval) &&
            standard_counterpoint_classify_interval(interval, category);
 }
@@ -50,8 +50,8 @@ static bool check_consonant(const Exercise *exercise) {
         if (standard_counterpoint_fourth_species_bar_is_broken(exercise, bar)) {
             continue;
         }
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!weak_category(exercise, bar, &interval, &category) || category == STANDARD_COUNTERPOINT_DISSONANCE) {
             return false;
         }
@@ -61,7 +61,7 @@ static bool check_consonant(const Exercise *exercise) {
 
 static bool check_no_repeated_perfect(const Exercise *exercise) {
     for (size_t bar = 0; bar + 1 < weak_bars(exercise); bar++) {
-        StandardCounterpointInterval first, second;
+        StandardTonalityInterval first, second;
         if (!standard_counterpoint_fourth_species_weak_interval(exercise, bar, &first) ||
             !standard_counterpoint_fourth_species_weak_interval(exercise, bar + 1, &second)) {
             return false;
@@ -78,8 +78,8 @@ static bool check_max_same_imperfect_run(const Exercise *exercise) {
     size_t run = 0;
     int previous_size = 0;
     for (size_t bar = 0; bar < weak_bars(exercise); bar++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!weak_category(exercise, bar, &interval, &category)) {
             return false;
         }
@@ -99,7 +99,7 @@ static bool check_max_same_imperfect_run(const Exercise *exercise) {
 static bool check_no_direct_perfect(const Exercise *exercise) {
     bool cantus_lower = exercise->cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER;
     for (size_t bar = 0; bar + 1 < weak_bars(exercise); bar++) {
-        StandardCounterpointInterval next;
+        StandardTonalityInterval next;
         if (!standard_counterpoint_fourth_species_weak_interval(exercise, bar + 1, &next)) {
             return false;
         }
@@ -125,7 +125,7 @@ static bool check_no_direct_perfect(const Exercise *exercise) {
 
 static bool check_no_interior_unison(const Exercise *exercise) {
     for (size_t bar = 1; bar + 1 < weak_bars(exercise); bar++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!standard_counterpoint_fourth_species_weak_interval(exercise, bar, &interval) || interval.size == 1) {
             return false;
         }

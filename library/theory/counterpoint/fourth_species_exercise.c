@@ -96,21 +96,21 @@ bool standard_counterpoint_fourth_species_bar_is_broken(const StandardCounterpoi
 }
 
 static bool interval_against_cantus(const StandardCounterpointFourthSpeciesExercise *exercise, size_t bar,
-                                    const PitchSpelling *pitch, StandardCounterpointInterval *out) {
+                                    const PitchSpelling *pitch, StandardTonalityInterval *out) {
     const PitchSpelling *cantus = standard_counterpoint_fourth_species_cantus(exercise, bar);
     if (cantus == NULL || pitch == NULL) {
         return false;
     }
-    return standard_counterpoint_interval_between(cantus, pitch, out);
+    return standard_tonality_interval_between(cantus, pitch, out);
 }
 
 bool standard_counterpoint_fourth_species_downbeat_interval(const StandardCounterpointFourthSpeciesExercise *exercise,
-                                                            size_t bar, StandardCounterpointInterval *out) {
+                                                            size_t bar, StandardTonalityInterval *out) {
     return interval_against_cantus(exercise, bar, standard_counterpoint_fourth_species_downbeat(exercise, bar), out);
 }
 
 bool standard_counterpoint_fourth_species_weak_interval(const StandardCounterpointFourthSpeciesExercise *exercise,
-                                                        size_t bar, StandardCounterpointInterval *out) {
+                                                        size_t bar, StandardTonalityInterval *out) {
     return interval_against_cantus(exercise, bar, standard_counterpoint_fourth_species_weak(exercise, bar), out);
 }
 

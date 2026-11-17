@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_spelling.h"
 
 /*
@@ -36,16 +36,16 @@ typedef enum {
     STANDARD_COUNTERPOINT_PERFECT_CONSONANCE = 0,
     STANDARD_COUNTERPOINT_IMPERFECT_CONSONANCE,
     STANDARD_COUNTERPOINT_DISSONANCE
-} StandardCounterpointIntervalCategory;
+} StandardTonalityIntervalCategory;
 
 /* The category of a harmonic interval. False (*out untouched) for NULL. */
-bool standard_counterpoint_classify_interval(const StandardCounterpointInterval *interval,
-                                             StandardCounterpointIntervalCategory *out);
+bool standard_counterpoint_classify_interval(const StandardTonalityInterval *interval,
+                                             StandardTonalityIntervalCategory *out);
 
 /* The category of the harmonic interval between two pitches. False (*out
    untouched) for NULL or an unclassifiable pair. */
 bool standard_counterpoint_classify_pitches(const PitchSpelling *a, const PitchSpelling *b,
-                                            StandardCounterpointIntervalCategory *out);
+                                            StandardTonalityIntervalCategory *out);
 
 /* True when the interval between the two pitches is a perfect or an
    imperfect consonance. False for a dissonance, NULL, or an unclassifiable
@@ -54,6 +54,6 @@ bool standard_counterpoint_pitches_consonant(const PitchSpelling *a, const Pitch
 
 /* True when the interval is a consonant melodic interval (see above).
    False for a dissonant one and for NULL. */
-bool standard_counterpoint_interval_melodic_consonant(const StandardCounterpointInterval *interval);
+bool standard_counterpoint_interval_melodic_consonant(const StandardTonalityInterval *interval);
 
 #endif

@@ -6,7 +6,7 @@
 #include "model/pitch/pitch_spelling.h"
 
 /*
- * The interval between two pitches, for standard-counterpoint-v1: its
+ * The interval between two pitches, for standard-tonality-v1: its
  * generic size and its quality. Direction is ignored, so the interval
  * from C4 up to G4 and the one from G4 down to C4 are the same perfect
  * fifth.
@@ -25,31 +25,30 @@
  */
 
 typedef enum {
-    STANDARD_COUNTERPOINT_QUALITY_PERFECT = 0,
-    STANDARD_COUNTERPOINT_QUALITY_MAJOR,
-    STANDARD_COUNTERPOINT_QUALITY_MINOR,
-    STANDARD_COUNTERPOINT_QUALITY_AUGMENTED,
-    STANDARD_COUNTERPOINT_QUALITY_DIMINISHED
-} StandardCounterpointQuality;
+    STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT = 0,
+    STANDARD_TONALITY_INTERVAL_QUALITY_MAJOR,
+    STANDARD_TONALITY_INTERVAL_QUALITY_MINOR,
+    STANDARD_TONALITY_INTERVAL_QUALITY_AUGMENTED,
+    STANDARD_TONALITY_INTERVAL_QUALITY_DIMINISHED
+} StandardTonalityIntervalQuality;
 
 typedef struct {
     int size;
     int simple_size;
-    StandardCounterpointQuality quality;
-} StandardCounterpointInterval;
+    StandardTonalityIntervalQuality quality;
+} StandardTonalityInterval;
 
 /* The interval between the two pitches. False (*out untouched) for NULL,
    or for spellings so unusual that the higher-sounding one has fewer
    letter steps than the lower one. */
-bool standard_counterpoint_interval_between(const PitchSpelling *a, const PitchSpelling *b,
-                                            StandardCounterpointInterval *out);
+bool standard_tonality_interval_between(const PitchSpelling *a, const PitchSpelling *b, StandardTonalityInterval *out);
 
 /* True for a second (generic size 2), false otherwise. A step is a minor
    or major second (or an augmented or diminished one), in either direction. */
-bool standard_counterpoint_interval_is_step(const StandardCounterpointInterval *interval);
+bool standard_tonality_interval_is_step(const StandardTonalityInterval *interval);
 
 /* True for any interval of generic size 3 or more, compound included. A
    unison and a second are not leaps. False for NULL. */
-bool standard_counterpoint_interval_is_leap(const StandardCounterpointInterval *interval);
+bool standard_tonality_interval_is_leap(const StandardTonalityInterval *interval);
 
 #endif

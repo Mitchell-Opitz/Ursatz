@@ -6,7 +6,7 @@
 
 #include "analysis/counterpoint/analysis_claim.h"
 #include "model/core/value.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "theory/counterpoint/counterpoint_line.h"
 #include "theory/counterpoint/harmonic_rules.h"
 #include "model/identity/entity_id.h"
@@ -119,11 +119,11 @@ StandardCounterpointPerfectsStatus standard_counterpoint_check_perfects(const St
                 StandardCounterpointLine upper_line = {upper_notes, 2};
                 StandardCounterpointLine lower_line = {lower_notes, 2};
                 StandardCounterpointPair pair = {&upper_line, &lower_line};
-                StandardCounterpointInterval from_interval;
-                StandardCounterpointInterval to_interval;
+                StandardTonalityInterval from_interval;
+                StandardTonalityInterval to_interval;
                 if (!standard_counterpoint_pair_valid(&pair) ||
-                    !standard_counterpoint_interval_between(lower_notes[0], upper_notes[0], &from_interval) ||
-                    !standard_counterpoint_interval_between(lower_notes[1], upper_notes[1], &to_interval)) {
+                    !standard_tonality_interval_between(lower_notes[0], upper_notes[0], &from_interval) ||
+                    !standard_tonality_interval_between(lower_notes[1], upper_notes[1], &to_interval)) {
                     continue; /* the voices cross: not checked here */
                 }
                 bool parallel = false;
@@ -147,9 +147,9 @@ StandardCounterpointPerfectsStatus standard_counterpoint_check_perfects(const St
                 if (outer && !parallel &&
                     !standard_counterpoint_harmonic_rule_holds(STANDARD_COUNTERPOINT_HARMONIC_RULE_DIRECT_PERFECTS,
                                                                &pair)) {
-                    StandardCounterpointInterval top_move;
-                    if (standard_counterpoint_interval_between(upper_notes[0], upper_notes[1], &top_move) &&
-                        standard_counterpoint_interval_is_leap(&top_move)) {
+                    StandardTonalityInterval top_move;
+                    if (standard_tonality_interval_between(upper_notes[0], upper_notes[1], &top_move) &&
+                        standard_tonality_interval_is_leap(&top_move)) {
                         if (!add_violation(prepared, &found, STANDARD_COUNTERPOINT_VIOLATION_DIRECT_PERFECTS, s, upper,
                                            lower, to_interval.simple_size, cells)) {
                             standard_counterpoint_violations_destroy(&found);

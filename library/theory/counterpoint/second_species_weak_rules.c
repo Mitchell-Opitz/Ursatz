@@ -35,8 +35,8 @@ typedef StandardCounterpointSecondSpeciesExercise Exercise;
 /* True when the bar's weak beat is a new note and a dissonance against the
    cantus firmus. */
 static bool weak_is_dissonant(const Exercise *exercise, size_t bar, bool *dissonant) {
-    StandardCounterpointInterval interval;
-    StandardCounterpointIntervalCategory category;
+    StandardTonalityInterval interval;
+    StandardTonalityIntervalCategory category;
     if (!standard_counterpoint_second_species_weak_interval(exercise, bar, &interval) ||
         !standard_counterpoint_classify_interval(&interval, &category)) {
         return false;

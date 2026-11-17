@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/counterpoint/rule_table.h"
 
@@ -33,15 +33,15 @@ static bool valid_rule(StandardCounterpointSpeciesBreakRule which) {
 
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
 
-static bool consonant_at(const StandardCounterpointInterval *interval) {
-    StandardCounterpointIntervalCategory category;
+static bool consonant_at(const StandardTonalityInterval *interval) {
+    StandardTonalityIntervalCategory category;
     return standard_counterpoint_classify_interval(interval, &category) &&
            category != STANDARD_COUNTERPOINT_DISSONANCE;
 }
 
 static bool check_downbeat_consonant(const Exercise *exercise) {
     for (size_t bar = 1; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!standard_counterpoint_fourth_species_bar_is_broken(exercise, bar)) {
             continue;
         }
@@ -54,14 +54,14 @@ static bool check_downbeat_consonant(const Exercise *exercise) {
 }
 
 static bool step_between(const PitchSpelling *a, const PitchSpelling *b) {
-    StandardCounterpointInterval interval;
-    return standard_counterpoint_interval_between(a, b, &interval) && standard_counterpoint_interval_is_step(&interval) &&
+    StandardTonalityInterval interval;
+    return standard_tonality_interval_between(a, b, &interval) && standard_tonality_interval_is_step(&interval) &&
            standard_counterpoint_interval_melodic_consonant(&interval);
 }
 
 static bool check_weak_passing(const Exercise *exercise) {
     for (size_t bar = 1; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval weak;
+        StandardTonalityInterval weak;
         if (!standard_counterpoint_fourth_species_bar_is_broken(exercise, bar)) {
             continue;
         }
@@ -74,7 +74,7 @@ static bool check_weak_passing(const Exercise *exercise) {
         const PitchSpelling *from = standard_counterpoint_fourth_species_downbeat(exercise, bar);
         const PitchSpelling *through = standard_counterpoint_fourth_species_weak(exercise, bar);
         const PitchSpelling *to = standard_counterpoint_fourth_species_downbeat(exercise, bar + 1);
-        StandardCounterpointInterval next;
+        StandardTonalityInterval next;
         if (!standard_counterpoint_fourth_species_downbeat_interval(exercise, bar + 1, &next) || !consonant_at(&next) ||
             !step_between(from, through) || !step_between(through, to)) {
             return false;

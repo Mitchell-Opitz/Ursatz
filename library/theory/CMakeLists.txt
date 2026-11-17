@@ -22,6 +22,7 @@ add_library(ursatz_theory
     tonality/chord_vocabulary_seventh.c
     tonality/common_practice_framework.c
     tonality/framework.c
+    tonality/interval.c
     tonality/key_vocabulary.c
     tonality/roman_numeral_analysis_rules.c
     tonality/roman_numeral_grammar.c
@@ -66,7 +67,6 @@ add_library(ursatz_theory
     voicing/voicing_rules.c
     counterpoint/cantus_firmus_rules.c
     counterpoint/consonance_rules.c
-    counterpoint/counterpoint_interval.c
     counterpoint/counterpoint_line.c
     counterpoint/counterpoint_rules.c
     counterpoint/first_species_ends_rules.c
@@ -179,6 +179,7 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_framework.h
         theory/tonality/framework.h
+        theory/tonality/interval.h
         theory/tonality/key_vocabulary.h
         theory/tonality/roman_numeral_analysis_rules.h
         theory/tonality/roman_numeral_grammar.h
@@ -218,7 +219,6 @@ ursatz_public_headers(ursatz_theory
         theory/voicing/voicing_rules.h
         theory/counterpoint/cantus_firmus_rules.h
         theory/counterpoint/consonance_rules.h
-        theory/counterpoint/counterpoint_interval.h
         theory/counterpoint/counterpoint_limits.h
         theory/counterpoint/counterpoint_line.h
         theory/counterpoint/counterpoint_rules.h

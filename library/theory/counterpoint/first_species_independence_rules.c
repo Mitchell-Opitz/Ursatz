@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
 #include "theory/counterpoint/counterpoint_subject.h"
@@ -57,8 +57,8 @@ static bool check_no_overlap(const StandardCounterpointPair *pair) {
 static bool check_emergency_gap(const StandardCounterpointPair *pair) {
     size_t wide = 0;
     for (size_t i = 0; i < pair->lower->count; i++) {
-        StandardCounterpointInterval interval;
-        if (!standard_counterpoint_interval_between(pair->lower->notes[i], pair->upper->notes[i], &interval)) {
+        StandardTonalityInterval interval;
+        if (!standard_tonality_interval_between(pair->lower->notes[i], pair->upper->notes[i], &interval)) {
             return false;
         }
         if (interval.size > STANDARD_COUNTERPOINT_FIRST_SPECIES_TENTH) {

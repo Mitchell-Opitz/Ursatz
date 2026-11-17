@@ -563,7 +563,7 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
             unsigned on_strong = 0;
             unsigned imperfect = 0;
             for (size_t i = 0; i < samples; i++) {
-                StandardCounterpointIntervalCategory category;
+                StandardTonalityIntervalCategory category;
                 if (strong[i]) {
                     on_strong++;
                     imperfect += standard_counterpoint_classify_pitches(lower[i], upper[i], &category) &&

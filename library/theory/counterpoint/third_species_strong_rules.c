@@ -41,36 +41,36 @@ static bool valid_rule(StandardCounterpointThirdSpeciesStrongRule which) {
 
 typedef StandardCounterpointThirdSpeciesExercise Exercise;
 
-static bool category_of(const StandardCounterpointInterval *interval, StandardCounterpointIntervalCategory *category) {
+static bool category_of(const StandardTonalityInterval *interval, StandardTonalityIntervalCategory *category) {
     return standard_counterpoint_classify_interval(interval, category);
 }
 
-static bool is_perfect_consonance(const StandardCounterpointInterval *interval) {
-    StandardCounterpointIntervalCategory category;
+static bool is_perfect_consonance(const StandardTonalityInterval *interval) {
+    StandardTonalityIntervalCategory category;
     return category_of(interval, &category) && category == STANDARD_COUNTERPOINT_PERFECT_CONSONANCE;
 }
 
 /* A perfect unison or octave, simple or compound. */
-static bool is_octave_class(const StandardCounterpointInterval *interval) {
-    return interval->quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT &&
+static bool is_octave_class(const StandardTonalityInterval *interval) {
+    return interval->quality == STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT &&
            (interval->simple_size == 1 || interval->simple_size == 8);
 }
 
-static bool is_perfect_fifth(const StandardCounterpointInterval *interval) {
-    return interval->quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT && interval->simple_size == 5;
+static bool is_perfect_fifth(const StandardTonalityInterval *interval) {
+    return interval->quality == STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT && interval->simple_size == 5;
 }
 
-static bool downbeat_interval(const Exercise *exercise, size_t bar, StandardCounterpointInterval *out) {
+static bool downbeat_interval(const Exercise *exercise, size_t bar, StandardTonalityInterval *out) {
     return standard_counterpoint_third_species_beat_interval(exercise, bar, 0, out);
 }
 
 static bool check_consonant(const Exercise *exercise) {
     for (size_t bar = 0; bar < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (standard_counterpoint_third_species_beat(exercise, bar, 0) == NULL) {
             continue;
         }
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityIntervalCategory category;
         if (!downbeat_interval(exercise, bar, &interval) || !category_of(&interval, &category) ||
             category == STANDARD_COUNTERPOINT_DISSONANCE) {
             return false;
@@ -81,8 +81,8 @@ static bool check_consonant(const Exercise *exercise) {
 
 static bool check_imperfect_preferred(const Exercise *exercise) {
     for (size_t bar = 1; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!downbeat_interval(exercise, bar, &interval) || !category_of(&interval, &category) ||
             category == STANDARD_COUNTERPOINT_PERFECT_CONSONANCE) {
             return false;
@@ -93,7 +93,7 @@ static bool check_imperfect_preferred(const Exercise *exercise) {
 
 static bool check_no_strong_unison(const Exercise *exercise) {
     for (size_t bar = 1; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!downbeat_interval(exercise, bar, &interval) || interval.size == 1) {
             return false;
         }
@@ -105,7 +105,7 @@ static bool check_no_three_perfect(const Exercise *exercise) {
     size_t run = 0;
     int previous_size = 0;
     for (size_t bar = 0; bar < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
+        StandardTonalityInterval interval;
         if (!downbeat_interval(exercise, bar, &interval) || !is_perfect_consonance(&interval)) {
             run = 0;
             continue;
@@ -123,8 +123,8 @@ static bool check_max_same_imperfect_run(const Exercise *exercise) {
     size_t run = 0;
     int previous_size = 0;
     for (size_t bar = 0; bar < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!downbeat_interval(exercise, bar, &interval) || !category_of(&interval, &category) ||
             category != STANDARD_COUNTERPOINT_IMPERFECT_CONSONANCE) {
             run = 0;
@@ -143,11 +143,11 @@ static bool check_no_dissonant_outline(const Exercise *exercise) {
     for (size_t bar = 0; bar + 1 < exercise->cantus->count; bar++) {
         const PitchSpelling *from = standard_counterpoint_third_species_beat(exercise, bar, 0);
         const PitchSpelling *to = standard_counterpoint_third_species_beat(exercise, bar + 1, 0);
-        StandardCounterpointInterval outline;
+        StandardTonalityInterval outline;
         if (from == NULL || to == NULL) {
             continue;
         }
-        if (!standard_counterpoint_interval_between(from, to, &outline) ||
+        if (!standard_tonality_interval_between(from, to, &outline) ||
             !standard_counterpoint_interval_melodic_consonant(&outline)) {
             return false;
         }
@@ -157,7 +157,7 @@ static bool check_no_dissonant_outline(const Exercise *exercise) {
 
 static bool check_previous_bar_perfects(const Exercise *exercise) {
     for (size_t bar = 0; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval next;
+        StandardTonalityInterval next;
         if (!downbeat_interval(exercise, bar + 1, &next)) {
             return false;
         }
@@ -169,7 +169,7 @@ static bool check_previous_bar_perfects(const Exercise *exercise) {
         /* Beats 2, 3, and 4 are 1, 2, and 3 from zero. A fifth rules out
            beats 3 and 4; an octave rules out beats 2, 3, and 4. */
         for (size_t beat = next_octave ? 1 : 2; beat < STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR; beat++) {
-            StandardCounterpointInterval earlier;
+            StandardTonalityInterval earlier;
             if (!standard_counterpoint_third_species_beat_interval(exercise, bar, beat, &earlier)) {
                 return false;
             }
@@ -183,7 +183,7 @@ static bool check_previous_bar_perfects(const Exercise *exercise) {
 
 static bool check_bar_line_repeated_perfect(const Exercise *exercise) {
     for (size_t bar = 0; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval last, next;
+        StandardTonalityInterval last, next;
         if (!standard_counterpoint_third_species_beat_interval(exercise, bar, 3, &last) ||
             !downbeat_interval(exercise, bar + 1, &next)) {
             return false;
@@ -198,7 +198,7 @@ static bool check_bar_line_repeated_perfect(const Exercise *exercise) {
 static bool check_bar_line_direct_perfect(const Exercise *exercise) {
     bool cantus_lower = exercise->cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER;
     for (size_t bar = 0; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval next;
+        StandardTonalityInterval next;
         const PitchSpelling *beat_four = standard_counterpoint_third_species_beat(exercise, bar, 3);
         const PitchSpelling *downbeat = standard_counterpoint_third_species_beat(exercise, bar + 1, 0);
         const PitchSpelling *cantus_from = exercise->cantus->notes[bar];

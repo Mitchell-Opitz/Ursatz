@@ -4,7 +4,6 @@ add_library(ursatz_analysis
     notes/analysis_key.c
     notes/analysis_note.c
     notes/contour.c
-    notes/interval.c
     notes/rhythmic_pattern.c
     notes/sonority.c
     notes/sonority_segmentation.c
@@ -98,7 +97,6 @@ ursatz_public_headers(ursatz_analysis
         analysis/notes/analysis_note.h
         analysis/notes/analysis_segment.h
         analysis/notes/contour.h
-        analysis/notes/interval.h
         analysis/notes/motif_window.h
         analysis/notes/rhythmic_pattern.h
         analysis/notes/sonority.h

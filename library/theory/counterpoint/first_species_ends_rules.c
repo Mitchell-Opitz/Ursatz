@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/counterpoint_subject.h"
 #include "theory/counterpoint/rule_table.h"
@@ -51,11 +51,11 @@ static bool check_contrary_stepwise_approach(const StandardCounterpointPair *pai
         return false;
     }
     MotionType motion;
-    StandardCounterpointInterval lower_step, upper_step;
+    StandardTonalityInterval lower_step, upper_step;
     return standard_counterpoint_pair_motion(pair, last - 1, &motion) && motion == MOTION_TYPE_CONTRARY &&
            standard_counterpoint_line_interval_at(pair->lower, last - 1, &lower_step) &&
            standard_counterpoint_line_interval_at(pair->upper, last - 1, &upper_step) &&
-           standard_counterpoint_interval_is_step(&lower_step) && standard_counterpoint_interval_is_step(&upper_step);
+           standard_tonality_interval_is_step(&lower_step) && standard_tonality_interval_is_step(&upper_step);
 }
 
 static bool check_penultimate_third_or_sixth(const StandardCounterpointPair *pair) {
@@ -63,13 +63,13 @@ static bool check_penultimate_third_or_sixth(const StandardCounterpointPair *pai
     if (last == 0) {
         return false;
     }
-    StandardCounterpointInterval interval;
-    if (!standard_counterpoint_interval_between(pair->lower->notes[last - 1], pair->upper->notes[last - 1],
+    StandardTonalityInterval interval;
+    if (!standard_tonality_interval_between(pair->lower->notes[last - 1], pair->upper->notes[last - 1],
                                                 &interval)) {
         return false;
     }
-    bool major_or_minor = interval.quality == STANDARD_COUNTERPOINT_QUALITY_MAJOR ||
-                          interval.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR;
+    bool major_or_minor = interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MAJOR ||
+                          interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_MINOR;
     return major_or_minor && (interval.simple_size == 3 || interval.simple_size == 6);
 }
 

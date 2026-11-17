@@ -10,8 +10,8 @@ bool standard_counterpoint_weak_beat_pattern_is_dissonant(StandardCounterpointWe
     return pattern == STANDARD_COUNTERPOINT_WEAK_BEAT_DISSONANT_PASSING_TONE;
 }
 
-static bool consonant(const StandardCounterpointInterval *interval) {
-    StandardCounterpointIntervalCategory category;
+static bool consonant(const StandardTonalityInterval *interval) {
+    StandardTonalityIntervalCategory category;
     return standard_counterpoint_classify_interval(interval, &category) &&
            category != STANDARD_COUNTERPOINT_DISSONANCE;
 }
@@ -29,14 +29,14 @@ bool standard_counterpoint_second_species_weak_beat_pattern(const StandardCounte
         return false;
     }
 
-    StandardCounterpointInterval vertical_d1, vertical_w, vertical_d2;
-    StandardCounterpointInterval first, second, whole;
+    StandardTonalityInterval vertical_d1, vertical_w, vertical_d2;
+    StandardTonalityInterval first, second, whole;
     if (!standard_counterpoint_second_species_downbeat_interval(exercise, bar, &vertical_d1) ||
         !standard_counterpoint_second_species_weak_interval(exercise, bar, &vertical_w) ||
         !standard_counterpoint_second_species_downbeat_interval(exercise, bar + 1, &vertical_d2) ||
-        !standard_counterpoint_interval_between(d1, w, &first) ||
-        !standard_counterpoint_interval_between(w, d2, &second) ||
-        !standard_counterpoint_interval_between(d1, d2, &whole)) {
+        !standard_tonality_interval_between(d1, w, &first) ||
+        !standard_tonality_interval_between(w, d2, &second) ||
+        !standard_tonality_interval_between(d1, d2, &whole)) {
         return false;
     }
     if (!standard_counterpoint_interval_melodic_consonant(&first) ||

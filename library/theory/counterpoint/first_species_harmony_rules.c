@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "theory/counterpoint/harmonic_rules.h"
 #include "theory/counterpoint/rule_table.h"
 
@@ -35,16 +35,16 @@ static bool valid_rule(StandardCounterpointFirstSpeciesHarmonyRule which) {
 }
 
 /* The interval between the parts at position i, and its category. */
-static bool interval_at(const StandardCounterpointPair *pair, size_t i, StandardCounterpointInterval *interval,
-                        StandardCounterpointIntervalCategory *category) {
-    return standard_counterpoint_interval_between(pair->lower->notes[i], pair->upper->notes[i], interval) &&
+static bool interval_at(const StandardCounterpointPair *pair, size_t i, StandardTonalityInterval *interval,
+                        StandardTonalityIntervalCategory *category) {
+    return standard_tonality_interval_between(pair->lower->notes[i], pair->upper->notes[i], interval) &&
            standard_counterpoint_classify_interval(interval, category);
 }
 
 static bool check_all_consonant(const StandardCounterpointPair *pair) {
     for (size_t i = 0; i < pair->lower->count; i++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!interval_at(pair, i, &interval, &category) || category == STANDARD_COUNTERPOINT_DISSONANCE) {
             return false;
         }
@@ -54,8 +54,8 @@ static bool check_all_consonant(const StandardCounterpointPair *pair) {
 
 static bool check_no_repeated_perfect(const StandardCounterpointPair *pair) {
     for (size_t i = 0; i + 1 < pair->lower->count; i++) {
-        StandardCounterpointInterval from, to;
-        StandardCounterpointIntervalCategory from_category, to_category;
+        StandardTonalityInterval from, to;
+        StandardTonalityIntervalCategory from_category, to_category;
         if (!interval_at(pair, i, &from, &from_category) || !interval_at(pair, i + 1, &to, &to_category)) {
             return false;
         }
@@ -71,8 +71,8 @@ static bool check_max_same_imperfect_run(const StandardCounterpointPair *pair) {
     size_t run = 0;
     int previous_size = 0;
     for (size_t i = 0; i < pair->lower->count; i++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!interval_at(pair, i, &interval, &category)) {
             return false;
         }
@@ -91,8 +91,8 @@ static bool check_max_same_imperfect_run(const StandardCounterpointPair *pair) {
 
 static bool check_imperfect_preferred(const StandardCounterpointPair *pair) {
     for (size_t i = 1; i + 1 < pair->lower->count; i++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!interval_at(pair, i, &interval, &category) || category == STANDARD_COUNTERPOINT_PERFECT_CONSONANCE) {
             return false;
         }
@@ -102,8 +102,8 @@ static bool check_imperfect_preferred(const StandardCounterpointPair *pair) {
 
 static bool check_perfect_then_imperfect(const StandardCounterpointPair *pair) {
     for (size_t i = 0; i + 1 < pair->lower->count; i++) {
-        StandardCounterpointInterval interval, next;
-        StandardCounterpointIntervalCategory category, next_category;
+        StandardTonalityInterval interval, next;
+        StandardTonalityIntervalCategory category, next_category;
         if (!interval_at(pair, i, &interval, &category) || !interval_at(pair, i + 1, &next, &next_category)) {
             return false;
         }
@@ -120,8 +120,8 @@ static bool check_interval_variety(const StandardCounterpointPair *pair) {
     bool seen[9] = {false};
     size_t distinct = 0;
     for (size_t i = 0; i < count; i++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!interval_at(pair, i, &interval, &category)) {
             return false;
         }

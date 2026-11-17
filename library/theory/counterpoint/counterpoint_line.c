@@ -22,11 +22,11 @@ bool standard_counterpoint_pair_valid(const StandardCounterpointPair *pair) {
 }
 
 bool standard_counterpoint_line_interval_at(const StandardCounterpointLine *line, size_t index,
-                                            StandardCounterpointInterval *out) {
+                                            StandardTonalityInterval *out) {
     if (!standard_counterpoint_line_valid(line) || index + 1 >= line->count) {
         return false;
     }
-    return standard_counterpoint_interval_between(line->notes[index], line->notes[index + 1], out);
+    return standard_tonality_interval_between(line->notes[index], line->notes[index + 1], out);
 }
 
 int standard_counterpoint_line_direction_at(const StandardCounterpointLine *line, size_t index) {

@@ -81,11 +81,11 @@ static void test_accessors(void) {
     assert(!standard_counterpoint_second_species_weak_is_attack(&exercise, 1));
     assert(pitch_spelling_equals(standard_counterpoint_second_species_weak(&exercise, 1), P(F, 0, 4)));
 
-    StandardCounterpointInterval interval;
+    StandardTonalityInterval interval;
     assert(standard_counterpoint_second_species_downbeat_interval(&exercise, 0, &interval));
-    assert(interval.size == 5 && interval.quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT);
+    assert(interval.size == 5 && interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT);
     assert(standard_counterpoint_second_species_weak_interval(&exercise, 0, &interval));
-    assert(interval.size == 8 && interval.quality == STANDARD_COUNTERPOINT_QUALITY_PERFECT);
+    assert(interval.size == 8 && interval.quality == STANDARD_TONALITY_INTERVAL_QUALITY_PERFECT);
     assert(!standard_counterpoint_second_species_downbeat_interval(&exercise, 2, &interval));
 }
 
@@ -93,7 +93,7 @@ static void test_rest_has_no_downbeat(void) {
     const PitchSpelling *cantus[] = {P(D, 0, 3), P(F, 0, 3)};
     const StandardCounterpointSlot slots[] = {REST(), ATK(P(A, 0, 3)), ATK(P(F, 0, 4)), TIE(P(F, 0, 4))};
     EXERCISE(exercise, cantus, slots, CANTUS_LOWER);
-    StandardCounterpointInterval interval;
+    StandardTonalityInterval interval;
     assert(standard_counterpoint_second_species_downbeat(&exercise, 0) == NULL);
     assert(!standard_counterpoint_second_species_downbeat_interval(&exercise, 0, &interval));
     assert(pitch_spelling_equals(standard_counterpoint_second_species_weak(&exercise, 0), P(A, 0, 3)));

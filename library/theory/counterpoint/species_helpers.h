@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_spelling.h"
 
 /*
@@ -19,7 +19,7 @@ bool standard_counterpoint_species_is_tonic(const PitchSpelling *note, const Pit
 bool standard_counterpoint_species_is_sol(const PitchSpelling *note, const PitchSpelling *tonic);
 
 /* 5 for a perfect fifth, 8 for a perfect octave or unison, 0 for any other interval. */
-int standard_counterpoint_species_perfect_class(const StandardCounterpointInterval *interval);
+int standard_counterpoint_species_perfect_class(const StandardTonalityInterval *interval);
 
 /* Whether the ascending-or-descending sixth into attack `j` is allowed although it is not an ascending minor sixth. */
 typedef bool (*StandardCounterpointSpeciesLeapException)(const void *context, size_t j);

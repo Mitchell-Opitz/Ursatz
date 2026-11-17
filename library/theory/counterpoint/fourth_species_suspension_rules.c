@@ -34,8 +34,8 @@ typedef StandardCounterpointFourthSpeciesExercise Exercise;
 
 static bool check_proper(const Exercise *exercise) {
     for (size_t bar = 1; bar + 1 < exercise->cantus->count; bar++) {
-        StandardCounterpointInterval interval;
-        StandardCounterpointIntervalCategory category;
+        StandardTonalityInterval interval;
+        StandardTonalityIntervalCategory category;
         if (!standard_counterpoint_fourth_species_downbeat_is_tie(exercise, bar)) {
             continue;
         }

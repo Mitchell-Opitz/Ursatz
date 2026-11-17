@@ -1,6 +1,6 @@
 #include "theory/galant/scale_harmonization.h"
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/midi_pitch.h"
 
 bool scale_harmonization_valid(const ScaleHarmonization *harmonization) {
@@ -30,8 +30,8 @@ bool scale_interval_above_bass(const ScaleHarmonization *harmonization, size_t s
     if (pitch_spelling_midi(upper) < pitch_spelling_midi(bass)) {
         return false;
     }
-    StandardCounterpointInterval interval;
-    if (!standard_counterpoint_interval_between(bass, upper, &interval)) {
+    StandardTonalityInterval interval;
+    if (!standard_tonality_interval_between(bass, upper, &interval)) {
         return false;
     }
     *out = interval.simple_size;

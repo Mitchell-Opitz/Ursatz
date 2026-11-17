@@ -3,7 +3,7 @@
 #include <stddef.h>
 
 #include "theory/counterpoint/consonance_rules.h"
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
 
@@ -28,9 +28,9 @@ static bool is_attack(const Exercise *exercise, size_t slot) {
 
 static bool dissonant_at(const Exercise *exercise, size_t slot, bool *dissonant) {
     const PitchSpelling *pitch = pitch_at(exercise, slot);
-    StandardCounterpointInterval interval;
-    StandardCounterpointIntervalCategory category;
-    if (pitch == NULL || !standard_counterpoint_interval_between(exercise->cantus->notes[slot / SLOTS], pitch, &interval) ||
+    StandardTonalityInterval interval;
+    StandardTonalityIntervalCategory category;
+    if (pitch == NULL || !standard_tonality_interval_between(exercise->cantus->notes[slot / SLOTS], pitch, &interval) ||
         !standard_counterpoint_classify_interval(&interval, &category)) {
         return false;
     }
@@ -51,8 +51,8 @@ static bool sounds_dissonant_at(const Exercise *exercise, size_t slot) {
 /* A step (a major or minor second) or a leap of a third (a major or minor
    third) from one slot's pitch to another's. */
 static bool melodic_size_is(const PitchSpelling *a, const PitchSpelling *b, int size) {
-    StandardCounterpointInterval interval;
-    return a != NULL && b != NULL && standard_counterpoint_interval_between(a, b, &interval) &&
+    StandardTonalityInterval interval;
+    return a != NULL && b != NULL && standard_tonality_interval_between(a, b, &interval) &&
            interval.size == size && standard_counterpoint_interval_melodic_consonant(&interval);
 }
 

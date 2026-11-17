@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "theory/counterpoint/motion_rules.h"
 #include "theory/counterpoint/rule_table.h"
 
@@ -63,7 +63,7 @@ static bool check_contrary_preferred(const StandardCounterpointPair *pair) {
 static bool no_similar_leap(const StandardCounterpointPair *pair, int min_size) {
     for (size_t i = 0; i + 1 < pair->lower->count; i++) {
         MotionType motion;
-        StandardCounterpointInterval lower_move, upper_move;
+        StandardTonalityInterval lower_move, upper_move;
         if (!standard_counterpoint_pair_motion(pair, i, &motion) ||
             !standard_counterpoint_line_interval_at(pair->lower, i, &lower_move) ||
             !standard_counterpoint_line_interval_at(pair->upper, i, &upper_move)) {

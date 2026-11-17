@@ -56,10 +56,10 @@ uses theory-vocabulary   model
 uses theory-tonality     model theory-framework
 uses theory-harmony      model theory-framework theory-rules theory-vocabulary
 uses theory-voicing      model theory-framework theory-vocabulary
-uses theory-counterpoint model theory-framework theory-rules theory-vocabulary
+uses theory-counterpoint model theory-framework theory-rules theory-tonality theory-vocabulary
 uses theory-form         model theory-framework theory-harmony theory-vocabulary
 uses theory-meter        model theory-framework theory-vocabulary
-uses theory-galant       model theory-framework theory-counterpoint theory-vocabulary
+uses theory-galant       model theory-framework theory-counterpoint theory-tonality theory-vocabulary
 uses theory-markings     model theory-framework
 
 # The analysis group (library/analysis, A20261115-507).

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "theory/counterpoint/counterpoint_interval.h"
+#include "theory/tonality/interval.h"
 #include "model/pitch/pitch_spelling.h"
 
 /*
@@ -43,7 +43,7 @@ bool standard_counterpoint_pair_valid(const StandardCounterpointPair *pair);
 /* The interval between notes `index` and `index + 1` of a valid line. False
    (*out untouched) for an invalid line or an index with no next note. */
 bool standard_counterpoint_line_interval_at(const StandardCounterpointLine *line, size_t index,
-                                            StandardCounterpointInterval *out);
+                                            StandardTonalityInterval *out);
 
 /* The direction from note `index` to note `index + 1`: 1 up, -1 down, 0
    for a repeated pitch. 0 for an invalid line or an index with no next

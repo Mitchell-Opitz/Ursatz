@@ -1,4 +1,3 @@
-ursatz_test(interval LIBS ursatz_analysis)
 
 ursatz_test(sonority LIBS ursatz_analysis)
 
