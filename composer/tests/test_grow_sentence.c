@@ -20,7 +20,9 @@
 /*
  * Growing a sentence from a motive in four keys and meters, 8 and 4 bars, seeds 1 to 10. Each run must complete;
  * the plan it leaves is read back here and held to standard-form's rule functions, worked out from the nodes and the
- * lanes and not from the operator; the same seed gives the same plan and the same records.
+ * lanes and not from the operator; the same seed gives the same plan and the same records. The argument `smoke` runs seed 1
+ * alone, in every scenario and size, with every check that holds for one seed and without the checks over the seeds (the
+ * distinct plans, the dominant form drawn at least once); B11 of P56 registers it as test_grow_sentence_smoke.
  */
 
 typedef struct {
@@ -282,10 +284,10 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     }
 }
 
-static void test_sentences(void) {
+static void test_sentences(unsigned long last_seed) {
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         for (size_t bars = 8; bars >= 4; bars -= 4) {
-            for (unsigned long seed = 1; seed <= 10; seed++) {
+            for (unsigned long seed = 1; seed <= last_seed; seed++) {
                 run_scenario(&SCENARIOS[s], bars, seed);
             }
         }
@@ -452,12 +454,12 @@ static bool same_notes(const Motive *a, const Motive *b) {
  * Motive-forms (B8): in a sentence the repetition answers in the dominant form where its chords go to V (bars 3 and 4),
  * the two fragments are the basic idea liquidated in units that halve, and the same seed gives the same theme.
  */
-static void test_motive_forms(void) {
+static void test_motive_forms(bool smoke) {
     Motive motive = make_motive(&SCENARIOS[0]);
     GrowRequest request = make_request(&SCENARIOS[0], &motive, 8);
     size_t dominant = 0;
     /* Seeds 1 to 10, and on to 30 until a dominant form has been drawn (the repetition is drawn by weight, B1 of P34). */
-    for (unsigned long seed = 1; seed <= 30 && (seed <= 10 || dominant == 0); seed++) {
+    for (unsigned long seed = 1; seed <= 30 && (smoke ? seed <= 1 : seed <= 10 || dominant == 0); seed++) {
         PiecePlan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
@@ -523,15 +525,23 @@ static void test_motive_forms(void) {
         plan_destroy(plan);
         plan_destroy(again);
     }
-    assert(dominant > 0);
+    /* A dominant form drawn at least once is a rate over the seeds. */
+    assert(smoke || dominant > 0);
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    const bool smoke = argc == 2 && strcmp(argv[1], "smoke") == 0;
+    if (argc > 2 || (argc == 2 && !smoke)) {
+        fprintf(stderr, "usage: test_grow_sentence [smoke]\n");
+        return 2;
+    }
     test_built_plan();
     test_bad_requests();
-    test_sentences();
-    test_seeds_vary();
-    test_motive_forms();
-    puts("test_grow_sentence: ok");
+    test_sentences(smoke ? 1 : 10);
+    if (!smoke) {
+        test_seeds_vary();
+    }
+    test_motive_forms(smoke);
+    puts(smoke ? "test_grow_sentence smoke: ok" : "test_grow_sentence: ok");
     return 0;
 }

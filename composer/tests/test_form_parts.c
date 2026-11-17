@@ -48,6 +48,10 @@
  * function, has three phrases of 4, 2 and 2 bars, each ends on V or V7 in root position to a root-position tonic, the last
  * melody note is the tonic, and the plan round-trips through plan JSON. `grow_coda_applies` is true on K and false for a coda
  * of 4 bars, for a coda that follows another region (a start change) and for a source of 2 bars.
+ *
+ * With the argument `smoke` each case composes seed 1 in the first row (C major 4/4) alone, which must compose, and every
+ * check of a composed piece runs on it, with no rate over the seeds or rows; the checks of `grow_coda_applies` run as they do
+ * (B11 of P56 registers it as test_form_parts_smoke).
  */
 
 #define SEEDS 10
@@ -657,11 +661,13 @@ static void test_applies(void) {
     form_spec_destroy(form);
 }
 
-static int run_rows(const char *label, const FormSpec *form, void (*check)(const PiecePlan *, const Row *, unsigned long)) {
+static int run_rows(const char *label, const FormSpec *form, void (*check)(const PiecePlan *, const Row *, unsigned long),
+                    bool smoke) {
     int status = 0;
-    for (size_t r = 0; r < ROW_COUNT; r++) {
+    const int seeds = smoke ? 1 : SEEDS;
+    for (size_t r = 0; r < (smoke ? 1 : ROW_COUNT); r++) {
         int composed = 0;
-        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (unsigned long)seeds; seed++) {
             ComposeOutcome outcome;
             PieceResult ran;
             PiecePlan *plan = compose(form, &ROWS[r], seed, &outcome, &ran);
@@ -674,8 +680,14 @@ static int run_rows(const char *label, const FormSpec *form, void (*check)(const
             compose_outcome_destroy(&outcome);
             plan_destroy(plan);
         }
-        printf("%s in %s: %d of %d seeds compose\n", label, ROWS[r].name, composed, SEEDS);
-        if (composed < COMPOSED_LEAST) {
+        printf("%s in %s: %d of %d seeds compose\n", label, ROWS[r].name, composed, seeds);
+        if (smoke) {
+            /* Seed 1 alone has no rate to hold, but it must compose, so that the checks of a composed piece ran. */
+            if (composed < 1) {
+                fprintf(stderr, "%s in %s: seed 1 should compose\n", label, ROWS[r].name);
+                status = 1;
+            }
+        } else if (composed < COMPOSED_LEAST) {
             fprintf(stderr, "%s in %s: %d composed, at least %d expected\n", label, ROWS[r].name, composed, COMPOSED_LEAST);
             status = 1;
         }
@@ -683,17 +695,22 @@ static int run_rows(const char *label, const FormSpec *form, void (*check)(const
     return status;
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+    const bool smoke = argc == 2 && strcmp(argv[1], "smoke") == 0;
+    if (argc > 2 || (argc == 2 && !smoke)) {
+        fprintf(stderr, "usage: test_form_parts [smoke]\n");
+        return 2;
+    }
     FormSpec *form = load_form(TRANSITION);
-    int status = run_rows("transition", form, check_transition);
+    int status = run_rows("transition", form, check_transition, smoke);
     form_spec_destroy(form);
     form = load_form(INDEPENDENT);
-    status |= run_rows("independent", form, check_independent);
+    status |= run_rows("independent", form, check_independent, smoke);
     form_spec_destroy(form);
     char *fixture = fixture_without_coda();
     form = parse_form(fixture);
     free(fixture);
-    status |= run_rows("retransition", form, check_retransition);
+    status |= run_rows("retransition", form, check_retransition, smoke);
     form_spec_destroy(form);
     char *with_coda = NULL;
     {
@@ -704,11 +721,11 @@ int main(void) {
     }
     form = parse_form(with_coda);
     free(with_coda);
-    status |= run_rows("coda", form, check_coda);
+    status |= run_rows("coda", form, check_coda, smoke);
     form_spec_destroy(form);
     test_applies();
     if (status == 0) {
-        printf("test_form_parts: ok\n");
+        printf(smoke ? "test_form_parts smoke: ok\n" : "test_form_parts: ok\n");
     }
     return status;
 }

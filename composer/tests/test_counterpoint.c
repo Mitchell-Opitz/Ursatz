@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,7 +23,7 @@
  * The counterpoint operator on two cantus firmi, Fux's in D minor and one in C major, in species 1 to 4, the counter-melody
  * above (the cantus the bass) and below (the cantus the melody), seeds 1 to 10. Every result is read back from the plan's
  * lanes and held to standard-counterpoint's checks, called here on the spellings this file makes from the pitches, not
- * through the operator's own checker.
+ * through the operator's own checker. A second argument `smoke` runs seed 1 alone (B11 of P56 registers `3 smoke`).
  */
 
 #define SEEDS 10
@@ -257,9 +258,14 @@ static void check_not_applicable(void) {
 }
 
 /* Species 1 to 4 are written by their own ctest entry: the argument is the species, none means all of them, na the
-   check that a line that is not a cantus firmus is refused. */
+   check that a line that is not a cantus firmus is refused. A second argument `smoke` runs seed 1 alone. */
 int main(int argc, char **argv) {
     int only = argc > 1 ? atoi(argv[1]) : 0;
+    const bool smoke = argc == 3 && strcmp(argv[2], "smoke") == 0;
+    if (argc > 3 || (argc == 3 && !smoke)) {
+        fprintf(stderr, "usage: test_counterpoint [<species> [smoke] | na]\n");
+        return 2;
+    }
     if (argc > 1 && strcmp(argv[1], "na") == 0) {
         check_not_applicable();
         puts("ok");
@@ -271,7 +277,7 @@ int main(int argc, char **argv) {
                 if (only && only != species) {
                     continue;
                 }
-                for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+                for (unsigned long seed = 1; seed <= (smoke ? 1 : SEEDS); seed++) {
                     Piece piece = build(&CANTI[c], species, above != 0);
                     FillOutcome outcome = write(piece.plan, seed);
                     assert(outcome.status == FILL_STATUS_COMPLETE);

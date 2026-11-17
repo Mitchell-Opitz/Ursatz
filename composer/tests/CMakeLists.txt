@@ -98,6 +98,8 @@ ursatz_test(test_harmony_prolong LIBS ursatz_composer composer_test_support INCL
 
 # Measured 12.0 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_grow_sentence LIBS ursatz_composer composer_test_support LABELS slow)
+# Seed 1 alone, in every scenario and size, with every check of one seed (B11 of P56).
+ursatz_test(test_grow_sentence_smoke TARGET test_grow_sentence ARGS smoke)
 
 # A sentence ending in a half cadence in a minor key grows (P44 B6, R-418): 12 runs.
 ursatz_test(test_grow_half_cadence LIBS ursatz_composer)
@@ -163,6 +165,8 @@ ursatz_test_executable(test_grow_accompaniment LIBS ursatz_composer composer_tes
     INCLUDES ${PROJECT_SOURCE_DIR}/src)
 # Measured 13.5 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_grow_accompaniment TARGET test_grow_accompaniment LABELS slow)
+# Seed 1 alone, with every check of one theme (B11 of P56).
+ursatz_test(test_grow_accompaniment_smoke TARGET test_grow_accompaniment ARGS smoke)
 # standard-texture does not hear every grown theme as melody and accompaniment in every measure (measured, with the cause,
 # in docs/accompaniment.md): the test asserts that it does, so it fails, and the failure is expected. Not tuned away, not
 # skipped.
@@ -186,6 +190,8 @@ foreach(species 1 2 3 4)
     endif()
     ursatz_test(test_counterpoint_species_${species} TARGET test_counterpoint ARGS ${species} LABELS ${labels})
 endforeach()
+# Species 3 on seed 1 alone (B11 of P56).
+ursatz_test(test_counterpoint_species_3_smoke TARGET test_counterpoint ARGS 3 smoke)
 ursatz_test(test_counterpoint_not_applicable TARGET test_counterpoint ARGS na)
 
 ursatz_test(test_counterpoint_cli LIBS ursatz_composer composer_test_support
@@ -248,6 +254,8 @@ ursatz_test(test_piece_keys_plan TARGET test_piece_keys ARGS plan)
 ursatz_test(test_piece_keys_smoke TARGET test_piece_keys ARGS smoke)
 # The tonic major case composes 20 pieces of 56 bars in 16 s of CPU, over the 10 s fast-set limit.
 ursatz_test(test_piece_keys_tonic_major TARGET test_piece_keys ARGS tonic-major LABELS slow)
+# Seed 1 alone in A minor and C major (B11 of P56).
+ursatz_test(test_piece_keys_tonic_major_smoke TARGET test_piece_keys ARGS tonic-major smoke)
 foreach(template ${FORM_TEMPLATES})
     # The sweeps are slow: CI leaves them out (ctest -LE slow).
     ursatz_test(test_piece_keys_${template} TARGET test_piece_keys ARGS compose ${template} LABELS slow)
@@ -682,18 +690,26 @@ ursatz_test(test_grow_liquidate LIBS ursatz_composer composer_test_support INCLU
 # The parts of larger forms (R-503 to R-509): a 32-bar form composes in eight rows of key and meter, one case per part.
 ursatz_test(test_form_parts LIBS ursatz_composer composer_test_support INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" LABELS slow)
+# Seed 1 in the first row (C major 4/4) of each case (B11 of P56).
+ursatz_test(test_form_parts_smoke TARGET test_form_parts ARGS smoke)
 
 ursatz_test_executable(test_form_families LIBS ursatz_composer)
 # The Andante, small, large and sonata rondo forms (R-520): eight rows of key and meter, seeds 1 to 10 each tried up to 16 times; one test
 # per form, all slow.
 foreach(form andante-aba andante-abab small-rondo-ababa small-rondo-abaca large-rondo sonata-rondo)
     ursatz_test(test_rondo_forms_${form} TARGET test_form_families ARGS ${form} LABELS slow)
+    # The first row (C major 4/4), seed 1 (B11 of P56).
+    ursatz_test(test_rondo_forms_${form}_smoke TARGET test_form_families ARGS ${form} smoke)
 endforeach()
 
 # The sonatina forms (R-523): the same rows and seeds; one test per form, all slow.
 foreach(form sonatina sonatina-tonic-major)
     ursatz_test(test_sonata_forms_${form} TARGET test_form_families ARGS ${form} LABELS slow)
 endforeach()
+# The first row (C major 4/4), seed 1 (B11 of P56); sonatina is stuck at seeds 1 and 2 there, so its smoke starts at seed 3,
+# the first seed that composes (the full test accepts a stuck seed and counts it).
+ursatz_test(test_sonata_forms_sonatina_smoke TARGET test_form_families ARGS sonatina smoke 3)
+ursatz_test(test_sonata_forms_sonatina-tonic-major_smoke TARGET test_form_families ARGS sonatina-tonic-major smoke)
 
 ursatz_test(test_grow_development LIBS ursatz_composer cjson composer_test_support)
 

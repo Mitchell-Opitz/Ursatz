@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +35,7 @@
  *                      seeds 1 to 10: the plan's key lane gives B1 A major in A minor and C major in C major, and the
  *                      sections after it home; at least 9 of 10 compose in each; B1's melody is B's moved by the semitones the
  *                      return operator gives, and the section after B1 is in the home key
+ *   tonic-major smoke  the same on seed 1 alone, which must compose in each, with no rate (B11 of P56)
  *   smoke              the first of seeds 1 to 5 of binary in C major that composes
  */
 
@@ -602,7 +604,7 @@ static int shift_between(AnalysisKey from, AnalysisKey to) {
     return step > 6 ? step - 12 : step;
 }
 
-static int test_tonic_major(void) {
+static int test_tonic_major(bool smoke) {
     FormSpec *form = NULL;
     FormSpecError error;
     int failed = 0;
@@ -615,7 +617,7 @@ static int test_tonic_major(void) {
         const bool minor = SCENARIOS[s].mode == KEY_STRUCTURE_MODE_MINOR;
         const AnalysisKey major = plan_key_of_pitch_class(SCENARIOS[s].tonic, KEY_STRUCTURE_MODE_MAJOR);
         size_t composed = 0;
-        for (unsigned long seed = 1; seed <= MAJOR_SEEDS; seed++) {
+        for (unsigned long seed = 1; seed <= (smoke ? 1 : MAJOR_SEEDS); seed++) {
             PieceRequest request;
             PiecePlan *plan = NULL;
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
@@ -661,9 +663,15 @@ static int test_tonic_major(void) {
             compose_outcome_destroy(&outcome);
             plan_destroy(plan);
         }
-        printf("%s 4/4: %zu of %d seeds compose, B1 in %s\n", SCENARIOS[s].name, composed, MAJOR_SEEDS,
+        printf("%s 4/4: %zu of %d seeds compose, B1 in %s\n", SCENARIOS[s].name, composed, smoke ? 1 : MAJOR_SEEDS,
                minor ? "the tonic major" : "the home key");
-        if (composed < MAJOR_COMPOSED_LEAST) {
+        if (smoke) {
+            /* Seed 1 alone has no rate to hold, but it must compose, so that the checks of a composed piece ran. */
+            if (composed < 1) {
+                fprintf(stderr, "%s: seed 1 should compose\n", SCENARIOS[s].name);
+                failed = 1;
+            }
+        } else if (composed < MAJOR_COMPOSED_LEAST) {
             fprintf(stderr, "%s: at least %d of %d seeds should compose\n", SCENARIOS[s].name, MAJOR_COMPOSED_LEAST, MAJOR_SEEDS);
             failed = 1;
         }
@@ -677,7 +685,10 @@ int main(int argc, char **argv) {
         return test_plans();
     }
     if (argc == 2 && strcmp(argv[1], "tonic-major") == 0) {
-        return test_tonic_major();
+        return test_tonic_major(false);
+    }
+    if (argc == 3 && strcmp(argv[1], "tonic-major") == 0 && strcmp(argv[2], "smoke") == 0) {
+        return test_tonic_major(true);
     }
     if (argc == 2 && strcmp(argv[1], "smoke") == 0) {
         return test_smoke() | test_smoke_always();
@@ -687,6 +698,6 @@ int main(int argc, char **argv) {
             return test_compose(form_spec_builtin_name(form));
         }
     }
-    fprintf(stderr, "usage: test_piece_keys plan|smoke|tonic-major|compose <template>\n");
+    fprintf(stderr, "usage: test_piece_keys plan|smoke|tonic-major [smoke]|compose <template>\n");
     return 2;
 }

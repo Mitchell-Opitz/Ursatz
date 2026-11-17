@@ -15,13 +15,16 @@
 /*
  * The rondo and sonata forms, one table of forms (a FormFamily a row) and one test per form:
  *
- *   test_form_families <form> [smoke]
+ *   test_form_families <form> [smoke [<first seed>]]
  *
  * The rondo forms (P52 B5 and B6, R-520): andante-aba | andante-abab | small-rondo-ababa | small-rondo-abaca | large-rondo |
  * sonata-rondo. The sonatina forms (P53 B2, R-523): sonatina | sonatina-tonic-major. Each form runs in eight rows of key and
  * meter (C major, A minor 4/4 and 3/4, G major and D minor 2/4, C major and D minor 6/8), seeds 1 to 10, each seed tried again
  * from the next seeds, up to 16 times, as the piece entry does (PIECE_SEED_TRIES): at least 9 of 10 seeds compose in each row.
- * `smoke` composes seed 1 alone in each row and runs every check of what composes, with no rate check (B11 registers it).
+ * `smoke [<first seed>]` composes the first row alone (C major 4/4) from seed 1, or from the seed given, and runs every check of
+ * what composes, with no rate check; a stuck seed is tried again from the next seeds, up to 16 times as the full test does, and
+ * the run fails when none composes (B11 registers it). In that row `sonatina` is stuck at seeds 1 and 2 and composes at seed 3,
+ * so its smoke starts at seed 3 and costs one piece, not three.
  *
  * In every composed run of a rondo form (check_rondo):
  *   - B is in the subordinate region's key from its first bar (V major in a major piece, III in a minor one);
@@ -516,23 +519,29 @@ static int test_form(const FormFamily *family) {
     return failed;
 }
 
-/* The smoke run: seed 1 alone in each row, every check of what composes, no rate check. */
-static int smoke_form(const FormFamily *family) {
-    for (size_t r = 0; r < ROW_COUNT; r++) {
-        bool done = compose_try(family, &ROWS[r], 1);
-        printf("%s %s: seed 1 %s\n", family->name, ROWS[r].name, done ? "composes" : "is stuck");
+/* The smoke run: the first row alone, from `first` (seed 1 by default) and, where that seed is stuck, the next seeds up to
+   SEED_TRIES, every check of the piece that composes, no rate check. */
+static int smoke_form(const FormFamily *family, unsigned long first) {
+    for (unsigned long seed = first; seed < first + SEED_TRIES; seed++) {
+        bool done = compose_try(family, &ROWS[0], seed);
+        printf("%s %s: seed %lu %s\n", family->name, ROWS[0].name, seed, done ? "composes" : "is stuck");
+        if (done) {
+            return 0;
+        }
     }
-    return 0;
+    fprintf(stderr, "%s %s: no seed from %lu to %lu composes\n", family->name, ROWS[0].name, first, first + SEED_TRIES - 1);
+    return 1;
 }
 
 int main(int argc, char **argv) {
-    const bool smoke = argc == 3 && strcmp(argv[2], "smoke") == 0;
-    for (size_t i = 0; (argc == 2 || smoke) && i < FAMILY_COUNT; i++) {
+    const bool smoke = (argc == 3 || argc == 4) && strcmp(argv[2], "smoke") == 0;
+    const unsigned long first = smoke && argc == 4 ? strtoul(argv[3], NULL, 10) : 1;
+    for (size_t i = 0; (argc == 2 || smoke) && first >= 1 && i < FAMILY_COUNT; i++) {
         if (strcmp(argv[1], FAMILIES[i].name) == 0) {
-            return smoke ? smoke_form(&FAMILIES[i]) : test_form(&FAMILIES[i]);
+            return smoke ? smoke_form(&FAMILIES[i], first) : test_form(&FAMILIES[i]);
         }
     }
-    fprintf(stderr, "usage: test_form_families <form> [smoke], with <form> one of");
+    fprintf(stderr, "usage: test_form_families <form> [smoke [<first seed>]], with <form> one of");
     for (size_t i = 0; i < FAMILY_COUNT; i++) {
         fprintf(stderr, "%s%s", i == 0 ? " " : " | ", FAMILIES[i].name);
     }
