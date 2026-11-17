@@ -99,7 +99,7 @@ static SeamHeard hear_case(const SeamCase *c) {
     assert(plan_add_lane_span(plan, form, PLAN_LANE_METER, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
            PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    payload.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
            PLAN_OK);
     add_chord(plan, body, 0, c->before);
@@ -235,7 +235,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
 /* The intro 2 bars, the body 8 bars motif sentence plus 6 beats empty, the turnaround 1 bar (all 4/4). */
 static void standard_structure(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    fixture->request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;
     fixture->request.form = "game-loop";

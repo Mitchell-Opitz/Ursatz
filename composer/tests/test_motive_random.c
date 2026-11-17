@@ -39,11 +39,11 @@ static const Scenario SCENARIOS[] = {
 static MotiveRandomOptions options_of(const Scenario *scenario, unsigned long seed) {
     MotiveRandomOptions options;
     memset(&options, 0, sizeof(options));
-    options.mode = scenario->mode;
+    options.material = test_material_mode(scenario->mode);
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
     options.has_key = scenario->has_key;
-    options.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    options.key = test_key_mode(scenario->tonic, scenario->mode);
     options.form = MOTIVE_SKETCH_FORM_FULL;
     options.strategy = MOTIVE_RANDOM_STRATEGY_DRAWN;
     options.count = COUNT;
@@ -272,7 +272,7 @@ static void test_refusals(void) {
     Motive motives[COUNT];
     size_t made = 99;
     MotiveRandomOptions options = options_of(&SCENARIOS[0], 1);
-    options.key = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&options.key), KEY_STRUCTURE_MODE_MINOR);
+    options.key = test_key_mode(analysis_key_tonic_pitch_class(&options.key), KEY_STRUCTURE_MODE_MINOR);
     options.has_key = true;
     assert(motive_random(&options, motives, &made) == MOTIVE_RANDOM_ERR_KEY && made == 0);
     options = options_of(&SCENARIOS[0], 1);

@@ -23,14 +23,14 @@
  * reason of its own to be there. True when the lane could be read, with *violation NULL if nothing is broken and otherwise
  * the rule that is.
  */
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
+bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
                         const char **violation);
 
 /*
  * The same check for a lane that need not end in a cadence nor explain every inverted chord, such as the harmony under a
  * bass: only the phrase model, the applied chords resolving, and that every chord is readable are asked.
  */
-bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode,
+bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode,
                                         const char **violation);
 
 /*
@@ -42,7 +42,7 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Ke
  * or phrase begins. Ursatz reads a V before such a start as a half cadence, with the authentic cadence into the tonic as
  * its competing reading; without one, a V to I6 is an evaded cadence (R-090, R-091).
  */
-bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, const int *soprano,
+bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, const int *soprano,
                                 size_t count, const Rational *section_starts, size_t section_count,
                                 HarmonyCadences *out);
 

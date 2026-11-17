@@ -50,7 +50,7 @@ static unsigned cadence_soft_rules(void) {
  * classifier names, the inside of a prolongation, a strong predominant (IV, ii6, ii), a
  * predominant seventh, or V7.
  */
-static bool chord_is_explained(KeyStructureMode mode, const HarmonyChord *chord, bool classified_six_four,
+static bool chord_is_explained(HarmonyMode mode, const HarmonyChord *chord, bool classified_six_four,
                                bool inside_prolongation) {
     HarmonyStrongPredominant strong;
     HarmonyPredominantSeventhKind seventh;
@@ -58,7 +58,7 @@ static bool chord_is_explained(KeyStructureMode mode, const HarmonyChord *chord,
         return true;
     }
     return classified_six_four || inside_prolongation ||
-           harmony_strong_predominant_of(harmony_mode_of(mode), chord, &strong) ||
+           harmony_strong_predominant_of(mode, chord, &strong) ||
            harmony_predominant_seventh_of(chord, &seventh) ||
            (chord->seventh && chord->degree == 5 && chord->inversion == 0);
 }
@@ -175,7 +175,7 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
     unsigned soft_rules = phrase_soft_rules();
     unsigned soft_broken = 0;
     if (!hard) {
-        HarmonyPhrase model_phrase = {harmony_mode_of(phrase->mode), model, model_count};
+        HarmonyPhrase model_phrase = {phrase->mode, model, model_count};
         unsigned phrase_hard = 0;
         unsigned phrase_soft = 0;
         bool checked = model_count > 0 && harmony_phrase_check(&model_phrase, &phrase_hard, &phrase_soft);
@@ -271,7 +271,7 @@ void harmony_seam_score(const PhraseProgression *progression, FillCheck *out) {
     SeamHeard heard;
     memset(&notes, 0, sizeof(notes));
     notes.key.material = progression->request.key.material;
-    notes.key.mode = progression->request.mode;
+    notes.key.mode = composer_key_mode(&notes.key);
     notes.has_chords = true;
     notes.before_function = last->function;
     notes.before_has_function = last->has_function;

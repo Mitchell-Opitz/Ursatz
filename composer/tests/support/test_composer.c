@@ -174,7 +174,7 @@ char *test_motive_json(const Motive *motive) {
     return motive ? motive_json_text(motive_json_object(motive)) : NULL;
 }
 
-bool test_roman_parse_applied(KeyStructureMode mode, const char *roman, HarmonyAppliedChord *out) {
+bool test_roman_parse_applied(HarmonyMode mode, const char *roman, HarmonyAppliedChord *out) {
     int inversion;
     return harmony_roman_parse_applied_inverted(mode, roman, out, &inversion) && inversion == 0;
 }

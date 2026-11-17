@@ -34,7 +34,7 @@
 typedef struct {
     ComposerRatio tempo;      /* a denominator of 0 for none */
     const char *tempo_from;   /* "option", "style" or "none" */
-    bool minor;               /* the key's mode */
+    const PitchMaterial *material; /* the key's material */
     const char *mode_from;    /* "request" or "style" */
     bool has_density;         /* the style's density (attacks per beat) */
     ComposerRatio density;

@@ -230,7 +230,7 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
         for (size_t c = 0; c < node->constraint_count; c++) {
             if (node->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
                 AnalysisKey *key = &node->constraints[c].params.key;
-                *key = plan_key_of_material(util_pitch_class(analysis_key_tonic_pitch_class(key) + transpose), key->material);
+                *key = plan_key_of_pitch_class(util_pitch_class(analysis_key_tonic_pitch_class(key) + transpose), key->material);
             }
         }
     }
@@ -245,7 +245,7 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
         for (size_t c = 0; c < span->constraint_count; c++) {
             if (span->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
                 AnalysisKey *key = &span->constraints[c].params.key;
-                *key = plan_key_of_material(util_pitch_class(analysis_key_tonic_pitch_class(key) + transpose), key->material);
+                *key = plan_key_of_pitch_class(util_pitch_class(analysis_key_tonic_pitch_class(key) + transpose), key->material);
             }
         }
     }
@@ -253,22 +253,22 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
 }
 
 /* The pitch moved from the other mode of the tonic into `to` (R-499). */
-int return_map_pitch(int tonic, KeyStructureMode to, int pitch) {
+int return_map_pitch(int tonic, const PitchMaterial *to, int pitch) {
     int degree = util_pitch_class(pitch - tonic);
-    if (to == KEY_STRUCTURE_MODE_MINOR) {
+    if (composer_material_is_minor(to)) {
         return degree == 4 || degree == 9 ? pitch - 1 : pitch;
     }
     return degree == 3 || degree == 8 || degree == 10 ? pitch + 1 : pitch;
 }
 
-static void map_key(PlanConstraint *constraint, KeyStructureMode to) {
+static void map_key(PlanConstraint *constraint, const PitchMaterial *to) {
     if (constraint->kind == PLAN_CONSTRAINT_KEY) {
         AnalysisKey *key = &constraint->params.key;
         *key = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(key), to);
     }
 }
 
-bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, KeyStructureMode to) {
+bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, const PitchMaterial *to) {
     int tonic = analysis_key_tonic_pitch_class(&home);
     for (size_t i = 0; i < copy->node_count; i++) {
         for (size_t c = 0; c < copy->nodes[i].constraint_count; c++) {
@@ -280,7 +280,7 @@ bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, KeyStructureMod
         for (size_t c = 0; c < span->constraint_count; c++) {
             map_key(&span->constraints[c], to);
             /* The minor phrase model has one predominant: a half-cadence phrase of four bars deals a chord over two bars. */
-            if (to == KEY_STRUCTURE_MODE_MINOR && span->constraints[c].kind == PLAN_CONSTRAINT_HARMONY_SHAPE) {
+            if (composer_material_is_minor(to) && span->constraints[c].kind == PLAN_CONSTRAINT_HARMONY_SHAPE) {
                 span->constraints[c].params.harmony_shape.split_at_bars = false;
             }
         }
@@ -295,7 +295,7 @@ bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, KeyStructureMod
 }
 
 int return_mode_pitch(const ReturnPayload *payload, int pitch) {
-    return payload->mode_change ? return_map_pitch(analysis_key_tonic_pitch_class(&payload->key), payload->to_mode, pitch) : pitch;
+    return payload->mode_change ? return_map_pitch(analysis_key_tonic_pitch_class(&payload->key), payload->to_material, pitch) : pitch;
 }
 
 PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy) {
@@ -418,7 +418,7 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
     for (size_t i = 0; i < na; i++) {
         int step = util_pitch_class(analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
-            composer_key_mode(&a[i].key) != composer_key_mode(&b[i].key) || (difference >= 0 && difference != step)) {
+            composer_key_is_minor(&a[i].key) != composer_key_is_minor(&b[i].key) || (difference >= 0 && difference != step)) {
             return false;
         }
         difference = step;
@@ -428,7 +428,7 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
 }
 
 bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
-                          int *shift, int *to_mode) {
+                          int *shift, const PitchMaterial **to_material) {
     KeyPiece a[MAX_KEY_PIECES];
     KeyPiece b[MAX_KEY_PIECES];
     size_t na;
@@ -440,21 +440,21 @@ bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const P
     for (size_t i = 0; i < na; i++) {
         int step = util_pitch_class(analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
-            composer_key_mode(&a[i].key) == composer_key_mode(&b[i].key) || composer_key_mode(&b[i].key) != composer_key_mode(&b[0].key) || (difference >= 0 && difference != step)) {
+            composer_key_is_minor(&a[i].key) == composer_key_is_minor(&b[i].key) || composer_key_is_minor(&b[i].key) != composer_key_is_minor(&b[0].key) || (difference >= 0 && difference != step)) {
             return false;
         }
         difference = step;
     }
     *shift = difference > 6 ? difference - 12 : difference;
-    *to_mode = (int)composer_key_mode(&b[0].key);
+    *to_material = b[0].key.material;
     return true;
 }
 
 /* The copy across modes on one tonic (a figurate return, R-499): the shift must be 0. */
 bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
-                       int *to_mode) {
+                       const PitchMaterial **to_material) {
     int shift;
-    return return_mode_shift_by(source_plan, source, target_plan, target, &shift, to_mode) && shift == 0;
+    return return_mode_shift_by(source_plan, source, target_plan, target, &shift, to_material) && shift == 0;
 }
 
 /* The variations the operator makes: all of them (figurate keeps the melody here; compose_run writes its figure, R-497). */
@@ -479,15 +479,15 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *r
     }
     PlanSpan from = plan_node_span(plan, ret->section);
     PlanSpan to = plan_node_span(plan, section);
-    int to_mode;
+    const PitchMaterial *to_material = NULL;
     return rational_cmp(from.length, to.length) == 0 && return_meter_over(plan, from, &source_meter) &&
            return_meter_over(plan, to, &target_meter) && source_meter.beats_per_bar == target_meter.beats_per_bar &&
            source_meter.beat_unit == target_meter.beat_unit &&
            (return_key_shift(plan, from, plan, to, &shift) ||
-            (ret->variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, to, &to_mode)) ||
+            (ret->variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, to, &to_material)) ||
             /* A reharmonized return in the home mode (R-524): moved by the tonic step and mapped into the target's mode. */
             (ret->variation == PLAN_RETURN_REHARMONIZE && ret->across_modes &&
-             return_mode_shift_by(plan, from, plan, to, &shift, &to_mode)));
+             return_mode_shift_by(plan, from, plan, to, &shift, &to_material)));
 }
 
 bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
@@ -499,19 +499,19 @@ bool form_return_copies(const PiecePlan *plan, NodeId section) {
     return return_geometry(plan, section, &ret);
 }
 
-bool form_return_mode_change(const PiecePlan *plan, NodeId section, KeyStructureMode *to) {
+bool form_return_mode_change(const PiecePlan *plan, NodeId section, const PitchMaterial **to) {
     PlanReturn ret;
     int shift;
-    int to_mode;
+    const PitchMaterial *to_material = NULL;
     if (!return_geometry(plan, section, &ret)) {
         return false;
     }
     PlanSpan from = plan_node_span(plan, ret.section);
     PlanSpan target = plan_node_span(plan, section);
-    if (return_key_shift(plan, from, plan, target, &shift) || !return_mode_shift_by(plan, from, plan, target, &shift, &to_mode)) {
+    if (return_key_shift(plan, from, plan, target, &shift) || !return_mode_shift_by(plan, from, plan, target, &shift, &to_material)) {
         return false;
     }
-    *to = (KeyStructureMode)to_mode;
+    *to = to_material;
     return true;
 }
 
@@ -592,7 +592,7 @@ bool form_return_melody_fits(const PiecePlan *plan, NodeId section) {
         return true;
     }
     AnalysisKey key = pieces[0].key;
-    if (!harmony_read_lane(plan, span, composer_key_mode(&key), chords, &chord_count, &metre)) {
+    if (!harmony_read_lane(plan, span, harmony_key_mode(&key), chords, &chord_count, &metre)) {
         return false;
     }
     /* The cell each chord starts on. */
@@ -830,7 +830,7 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     }
     payload->from_start = from.start;
     payload->span = plan_node_span(plan, target);
-    int to_mode;
+    const PitchMaterial *to_material = NULL;
     if (!key_pieces(plan, payload->span, pieces, &count) || !return_meter_over(plan, payload->span, &payload->meter)) {
         free(payload);
         return NULL;
@@ -838,15 +838,15 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     if (!return_key_shift(plan, from, plan, payload->span, &payload->transpose)) {
         /* A figurate return in the other mode of the same tonic (R-499): moved by 0, mapped, always reharmonized. A
          * reharmonized return with across_modes (R-524): moved by the tonic step, then mapped into the target's mode. */
-        if (variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, payload->span, &to_mode)) {
+        if (variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, payload->span, &to_material)) {
             payload->transpose = 0;
         } else if (variation != PLAN_RETURN_REHARMONIZE || !ret.across_modes ||
-                   !return_mode_shift_by(plan, from, plan, payload->span, &payload->transpose, &to_mode)) {
+                   !return_mode_shift_by(plan, from, plan, payload->span, &payload->transpose, &to_material)) {
             free(payload);
             return NULL;
         }
         payload->mode_change = true;
-        payload->to_mode = (KeyStructureMode)to_mode;
+        payload->to_material = to_material;
     }
     payload->key = pieces[0].key;
     if (variation == PLAN_RETURN_FIGURATE) {
@@ -858,7 +858,7 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     }
     if (!return_copy_read(plan, source, &payload->source) || !return_copy_clone(&payload->source, &payload->result) ||
         !return_copy_move(&payload->result, from.start, payload->span.start, payload->transpose) ||
-        (payload->mode_change && !return_copy_change_mode(&payload->result, payload->key, payload->to_mode))) {
+        (payload->mode_change && !return_copy_change_mode(&payload->result, payload->key, payload->to_material))) {
         return_payload_destroy(payload);
         return NULL;
     }

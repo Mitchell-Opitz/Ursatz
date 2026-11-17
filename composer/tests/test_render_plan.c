@@ -15,6 +15,8 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
+#include "support/test_knowledge.h"
+#include "model/pitch/pitch_material.h"
 
 /*
  * A hand-written 8-bar sentence in D minor, 4/4, with melody and bass. It is
@@ -68,7 +70,7 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    key.key = test_key_mode(2, KEY_STRUCTURE_MODE_MINOR);
     LaneSpanId key_span = PLAN_LANE_SPAN_NONE;
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &key_span) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, key_span, PLAN_STATE_GIVEN) == PLAN_OK);
@@ -136,7 +138,7 @@ static void test_render(void) {
     assert(rendered.meter_map != NULL);
     assert(rendered.key_count == 1);
     assert(rendered.keys[0].sharps_flats == -1);
-    assert(rendered.keys[0].mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(pitch_material_third(rendered.keys[0].material) == 3);
 
     /* In time order: the first two events sound together, melody before bass. */
     const MusicalTime *first = temporal_anchor_position(note_event_temporal_anchor(rendered.events[0]));

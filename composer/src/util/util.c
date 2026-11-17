@@ -34,14 +34,29 @@ void util_pitch_name(int midi, bool prefer_flats, char *out, size_t size) {
              midi / PITCH_SEMITONES_PER_OCTAVE - 1);
 }
 
-bool composer_key_is_minor(const AnalysisKey *key) {
+bool composer_material_is_minor(const PitchMaterial *material) {
     CommonPracticeKeyMode mode;
-    return key && common_practice_key_mode_of(key->material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
+    return common_practice_key_mode_of(material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
+}
+
+#define MAJOR_THIRD_SEMITONES 4
+#define MAJOR_SEVENTH_SEMITONES 11
+
+int composer_material_third(const PitchMaterial *material) {
+    return composer_material_valid(material) ? pitch_material_third(material) : MAJOR_THIRD_SEMITONES;
+}
+
+bool composer_material_valid(const PitchMaterial *material) {
+    CommonPracticeKeyMode mode;
+    return common_practice_key_mode_of(material, &mode);
+}
+
+bool composer_key_is_minor(const AnalysisKey *key) {
+    return key && composer_material_is_minor(key->material);
 }
 
 bool composer_key_valid(const AnalysisKey *key) {
-    CommonPracticeKeyMode mode;
-    return key && (key->material == NULL || common_practice_key_mode_of(key->material, &mode));
+    return key && (key->material == NULL || composer_material_valid(key->material));
 }
 
 KeyStructureMode composer_key_mode(const AnalysisKey *key) {
@@ -53,55 +68,65 @@ const PitchMaterial *composer_builtin_material(bool minor) {
                                     minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
 }
 
+void composer_key_set_material(AnalysisKey *key, const PitchMaterial *material) {
+    key->material = material;
+    key->mode = composer_key_mode(key);
+}
+
 void composer_key_set_minor(AnalysisKey *key, const CommonPracticeMaterials *materials, bool minor) {
-    key->material = common_practice_material(materials, minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
-    key->mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+    composer_key_set_material(key, common_practice_material(materials, minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR));
 }
 
-static StandardTonalityMode scale_mode(bool minor) {
-    return minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR;
-}
-
-unsigned util_scale_mask(int tonic_pitch_class, bool minor) {
-    return standard_tonality_mode_pitch_classes(util_pitch_class(tonic_pitch_class), scale_mode(minor));
+unsigned util_scale_mask(int tonic_pitch_class, const PitchMaterial *material) {
+    return standard_tonality_material_pitch_classes(util_pitch_class(tonic_pitch_class), material);
 }
 
 /* The scale with the raised sixth and seventh beside the natural ones, as counterpoint writes a minor key. */
-unsigned util_scale_mask_melodic(int tonic_pitch_class, bool minor) {
-    unsigned mask = util_scale_mask(tonic_pitch_class, minor);
-    if (minor) {
-        mask |= standard_tonality_mode_pitch_classes(util_pitch_class(tonic_pitch_class),
-                                                     STANDARD_TONALITY_MODE_MELODIC_MINOR);
+unsigned util_scale_mask_melodic(int tonic_pitch_class, const PitchMaterial *material) {
+    unsigned mask = util_scale_mask_raised_seventh(tonic_pitch_class, material) | util_scale_mask(tonic_pitch_class, material);
+    int sixth = pitch_material_step(material, 6);
+    if (composer_material_is_minor(material) && sixth >= 0) {
+        mask |= 1u << util_pitch_class(tonic_pitch_class + sixth + 1);
     }
     return mask;
 }
 
-bool util_scale_degree(int tonic_pitch_class, bool minor, int pitch, int *degree, int *alteration) {
-    return standard_tonality_degree_of_semitone(util_pitch_class(pitch - tonic_pitch_class), scale_mode(minor), degree,
-                                                alteration);
+unsigned util_scale_mask_raised_seventh(int tonic_pitch_class, const PitchMaterial *material) {
+    unsigned mask = util_scale_mask(tonic_pitch_class, material);
+    int seventh = pitch_material_step(material, 7);
+    if (seventh >= 0) {
+        mask &= ~(1u << util_pitch_class(tonic_pitch_class + seventh));
+        mask |= 1u << util_pitch_class(tonic_pitch_class + MAJOR_SEVENTH_SEMITONES);
+    }
+    return mask;
 }
 
-int util_scale_semitone(bool minor, int degree) {
-    return standard_tonality_degree_semitone(scale_mode(minor), degree);
+bool util_scale_degree(int tonic_pitch_class, const PitchMaterial *material, int pitch, int *degree, int *alteration) {
+    return standard_tonality_material_degree_of_semitone(util_pitch_class(pitch - tonic_pitch_class), material, degree, alteration);
 }
 
-void util_key_name(int tonic_pitch_class, bool minor, char *out, size_t size) {
+int util_scale_semitone(const PitchMaterial *material, int degree) {
+    return standard_tonality_material_degree_semitone(material, degree);
+}
+
+void util_key_name(int tonic_pitch_class, const PitchMaterial *material, char *out, size_t size) {
     PitchLetter letter;
     int accidental;
     char tonic[8];
-    if (!standard_tonality_key_tonic_of_pitch_class(util_pitch_class(tonic_pitch_class), minor, &letter, &accidental) ||
+    if (!standard_tonality_key_tonic_of_pitch_class_material(util_pitch_class(tonic_pitch_class), material, &letter, &accidental) ||
         !pitch_spelling_name(letter, accidental, tonic, sizeof(tonic))) {
         snprintf(tonic, sizeof(tonic), "?");
     }
-    snprintf(out, size, "%s %s", tonic, minor ? "minor" : "major");
+    const char *word = material == NULL ? NULL : (material->key_word != NULL ? material->key_word : material->name);
+    snprintf(out, size, "%s %s", tonic, word != NULL ? word : "?");
 }
 
-bool util_key_prefers_flats(int tonic_pitch_class, bool minor) {
+bool util_key_prefers_flats(int tonic_pitch_class, const PitchMaterial *material) {
     PitchLetter letter;
     int accidental;
     int fifths = 0;
-    return standard_tonality_key_tonic_of_pitch_class(util_pitch_class(tonic_pitch_class), minor, &letter, &accidental) &&
-           standard_tonality_key_fifths(letter, accidental, minor, &fifths) && fifths < 0;
+    return standard_tonality_key_tonic_of_pitch_class_material(util_pitch_class(tonic_pitch_class), material, &letter, &accidental) &&
+           standard_tonality_key_fifths_of(letter, accidental, material, &fifths) && fifths < 0;
 }
 
 char *util_copy_string(const char *text) {

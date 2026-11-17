@@ -66,7 +66,7 @@ static inline size_t check_accompaniment(const PiecePlan *plan, PlanSpan span, A
     CheckNote voice[CHECK_MAX_NOTES];
     size_t checked = 0;
 
-    assert(harmony_read_lane(plan, span, key.mode, chords, &chord_count, &metre));
+    assert(harmony_read_lane(plan, span, harmony_key_mode(&key), chords, &chord_count, &metre));
     assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, chord_ids, HARMONY_MAX_CHORDS) == chord_count);
     for (size_t i = 0; i < chord_count; i++) {
         unsigned seventh;

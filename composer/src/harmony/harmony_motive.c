@@ -29,7 +29,7 @@ static const PlanMotiveTones *node_tones(const PiecePlan *plan, NodeId node) {
  * the tonic of a minor key too, R-195), so only the degree, the inversion and the seventh are read, not the case. False for
  * an altered chord or one aimed at another (applied), which the harmony operators write as they do.
  */
-static bool tone_chord(KeyStructureMode mode, const char *numeral, PhraseChord *out) {
+static bool tone_chord(HarmonyMode mode, const char *numeral, PhraseChord *out) {
     StandardTonalityNumeralText parsed;
     if (!standard_tonality_numeral_parse(numeral, &parsed) || parsed.alteration != 0 || parsed.has_target) {
         return false;

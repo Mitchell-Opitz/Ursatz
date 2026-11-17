@@ -146,12 +146,12 @@ bool harmony_pivot_chord_valid(AnalysisKey from, AnalysisKey to, const HarmonyCh
     return false;
 }
 
-bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, KeyStructureMode *out) {
+bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, HarmonyMode *out) {
     AnalysisKey key;
     if (!harmony_find_key(plan, id, owner, span, &key)) {
         return false;
     }
-    *out = composer_key_mode(&key);
+    *out = harmony_key_mode(&key);
     return true;
 }
 
@@ -432,7 +432,7 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
     if (!harmony_find_key(plan, target, request.owner, request.span, &request.key)) {
         return false;
     }
-    request.mode = composer_key_mode(&request.key);
+    request.mode = harmony_key_mode(&request.key);
     if (request.has_shape && request.shape.starts_on == PLAN_HARMONY_ANCHOR_PIVOT) {
         /* A pivot opens a phrase model on a key change; a prolongation does not open one. */
         request.pivot = true;

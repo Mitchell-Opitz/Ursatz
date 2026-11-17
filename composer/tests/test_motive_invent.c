@@ -10,6 +10,7 @@
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_knowledge.h"
 
 /*
  * Motive invention: in 3/4, 4/4 and 6/8, seeds 1 to 20, motive-invent fills the open one-bar melody span of m0 with a
@@ -69,7 +70,7 @@ static PiecePlan *build_plan(const Scenario *scenario, LaneSpanId *open) {
     assert(plan_add_lane_span(plan, form, PLAN_LANE_METER, 0, form_span, &payload, &lane) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    payload.key = test_key_mode(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &lane) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN) == PLAN_OK);
 

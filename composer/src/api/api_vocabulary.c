@@ -198,13 +198,13 @@ static bool add_meters(cJSON *root) {
     return list != NULL;
 }
 
-static bool add_keys(cJSON *root) {
+static bool add_keys(cJSON *root, const CommonPracticeMaterials *materials) {
     cJSON *keys = add_list(root, "keys");
     cJSON *names = add_list(root, "pitch_class_names");
     for (int minor = 0; keys && minor < 2; minor++) {
         for (int pitch_class = 0; pitch_class < 12; pitch_class++) {
             char name[32];
-            util_key_name(pitch_class, minor != 0, name, sizeof name);
+            util_key_name(pitch_class, minor ? materials->natural_minor : materials->major, name, sizeof name);
             if (!add_choice(keys, name, name)) {
                 return false;
             }
@@ -213,8 +213,8 @@ static bool add_keys(cJSON *root) {
     for (int pitch_class = 0; names && pitch_class < 12; pitch_class++) {
         char major[32];
         char minor[32];
-        util_key_name(pitch_class, false, major, sizeof major);
-        util_key_name(pitch_class, true, minor, sizeof minor);
+        util_key_name(pitch_class, materials->major, major, sizeof major);
+        util_key_name(pitch_class, materials->natural_minor, minor, sizeof minor);
         *strchr(major, ' ') = '\0';
         *strchr(minor, ' ') = '\0';
         cJSON *entry = cJSON_CreateObject();
@@ -589,9 +589,9 @@ static bool add_limits(cJSON *root) {
            add_preference_limits(limits);
 }
 
-bool api_vocabulary_build(cJSON *root) {
+bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials) {
     return add_meters(root) && add_choices(root, "modes", API_MODES) && add_choices(root, "piece_modes", API_PIECE_MODES) &&
-           add_keys(root) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
+           add_keys(root, materials) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
            add_choices(root, "functions", API_FUNCTIONS) && add_choices(root, "distances", API_DISTANCES) &&
            add_theme_slots(root) && add_theme_lists(root) &&
            add_choices(root, "theme_pools", API_THEME_POOLS) && add_choices(root, "theme_bars", API_THEME_BARS) &&
@@ -605,12 +605,13 @@ bool api_vocabulary_build(cJSON *root) {
 
 ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
     if (context_status != COMPOSER_OK) {
         return context_status;
     }
     cJSON *root = cJSON_CreateObject();
-    if (!root || !api_vocabulary_build(root)) {
+    if (!root || !api_vocabulary_build(root, &materials)) {
         cJSON_Delete(root);
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }

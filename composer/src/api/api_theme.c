@@ -315,7 +315,7 @@ static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, 
             harmony.inversion = chord->inversion;
             harmony.seventh = chord->seventh;
             size_t at = material->chord_count;
-            if (!harmony_roman_format(composer_key_mode(key), &harmony, material->chord_numerals[at])) {
+            if (!harmony_roman_format(harmony_key_mode(key), &harmony, material->chord_numerals[at])) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: that chord does not exist in the key", bar);
             }
             if (c + 1 < count) {

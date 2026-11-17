@@ -17,9 +17,9 @@
 #include "util/util.h"
 
 /* The scale degree of the bass member of the chord, which names the letter of its note. */
-int harmony_member_degree(KeyStructureMode mode, const PhraseChord *chord) {
+int harmony_member_degree(HarmonyMode mode, const PhraseChord *chord) {
     if (chord->applied) {
-        return (harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord) - 1 +
+        return (harmony_applied_root_degree(mode, &chord->applied_chord) - 1 +
                 2 * chord->applied_inversion) % 7 + 1;
     }
     return (chord->chord.degree - 1 + 2 * chord->chord.inversion) % 7 + 1;
@@ -70,7 +70,7 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
         } else if (util_pitch_class(note->pitch) != pc) {
             verdict->hard = "not the chord's bass member";
         } else {
-            spellings[made] = harmony_spell_pitch(&context->key, harmony_member_degree(composer_key_mode(&context->key), &context->chords[note->chord]),
+            spellings[made] = harmony_spell_pitch(&context->key, harmony_member_degree(harmony_key_mode(&context->key), &context->chords[note->chord]),
                                     note->pitch);
             if (!spellings[made]) {
                 ok = false;
@@ -138,7 +138,7 @@ bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, AnalysisKey key, c
     BassContext *context = &line->context;
     context->span = span;
     context->key = key;
-    bool ok = harmony_read_lane(plan, span, composer_key_mode(&key), context->chords, &context->count, &context->metre);
+    bool ok = harmony_read_lane(plan, span, harmony_key_mode(&key), context->chords, &context->count, &context->metre);
 
     /* Each chord has one bass span of its own span, whose notes follow one another to its end. */
     for (size_t i = 0; ok && i < context->count; i++) {

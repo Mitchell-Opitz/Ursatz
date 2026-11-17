@@ -27,8 +27,8 @@
  * triad on each degree, and the seventh chord built on it (the dominant seventh on V, a fully
  * diminished seventh on the leading tone).
  */
-bool harmony_diatonic_intervals(KeyStructureMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
-    bool minor = mode == KEY_STRUCTURE_MODE_MINOR;
+bool harmony_diatonic_intervals(HarmonyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
+    bool minor = mode == HARMONY_MODE_MINOR;
     /* A minor key's chords are the natural scale's, but the dominant is major and the leading-tone chord diminished. */
     bool raised = minor && (chord->degree == 5 || (chord->degree == 7 && chord->leading_tone));
     memset(intervals, 0, 4 * sizeof(int));
@@ -99,9 +99,9 @@ bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals
 }
 
 /* The scale degree of the bass: the chord's root, or its third, fifth or seventh by inversion. */
-static int bass_degree_of(KeyStructureMode mode, const PhraseChord *chord) {
+static int bass_degree_of(HarmonyMode mode, const PhraseChord *chord) {
     if (chord->applied) {
-        return (harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord) - 1 +
+        return (harmony_applied_root_degree(mode, &chord->applied_chord) - 1 +
                 2 * chord->applied_inversion) % 7 + 1;
     }
     return (chord->chord.degree - 1 + 2 * chord->chord.inversion) % 7 + 1;
@@ -192,7 +192,7 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
     for (size_t i = 0; i < phrase->count; i++) {
         const PhraseChord *chord = &phrase->chords[i];
         HarmonySegmentInput *input = &set->inputs[i];
-        KeyStructureMode mode = phrase->chord_modes ? phrase->chord_modes[i] : phrase->mode;
+        HarmonyMode mode = phrase->chord_modes ? phrase->chord_modes[i] : phrase->mode;
         snprintf(set->ids[i], sizeof(set->ids[i]), "c%zu", i);
         snprintf(set->key_refs[i], sizeof(set->key_refs[i]), phrase->chord_keys ? "key%u" : HEARD_KEY_REF,
                  phrase->chord_keys ? phrase->chord_keys[i] : 0u);
@@ -222,7 +222,7 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
         input->bass_degree = bass_degree_of(mode, chord);
         input->soprano_degree = soprano ? soprano[i] : implied_soprano(phrase, i);
         input->key_ref = set->key_refs[i];
-        input->mode = harmony_mode_of(mode);
+        input->mode = mode;
         input->uncertainty = 0.0;
         input->has_beat_length = false;
         /* A part cell of a beat or more is long enough to arrive on, whatever the meter's beat is in whole notes. */
@@ -284,8 +284,8 @@ static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id
     return true;
 }
 
-bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, PhraseChord *chords, size_t *count,
-                            PhraseMetre *metre, KeyStructureMode *modes, unsigned *keys) {
+bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
+                            PhraseMetre *metre, HarmonyMode *modes, unsigned *keys) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     if (!plan || !chords || !count || !metre || !harmony_read_metre(plan, span, metre)) {
         return false;
@@ -298,11 +298,11 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, KeyStructureMo
     for (size_t i = 0; i < found; i++) {
         PlanSpan chord_span = plan_lane_span_span(plan, ids[i]);
         Rational end;
-        KeyStructureMode chord_mode = mode;
+        HarmonyMode chord_mode = mode;
         LaneSpanId key_id = PLAN_LANE_SPAN_NONE;
         AnalysisKey key;
         if (modes && key_under(plan, chord_span, &key_id, &key)) {
-            chord_mode = composer_key_mode(&key);
+            chord_mode = harmony_key_mode(&key);
         }
         /* Chords must start where the last ended, in whole cells. */
         if (rational_cmp(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||
@@ -323,12 +323,12 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, KeyStructureMo
     return true;
 }
 
-bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, PhraseChord *chords, size_t *count,
+bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre) {
     return harmony_read_lane_keys(plan, span, mode, chords, count, metre, NULL, NULL);
 }
 
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
+bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];

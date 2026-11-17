@@ -10,22 +10,16 @@
 #include "util/plan_util.h"
 #include "util/util.h"
 
-AnalysisKey plan_key_of_material(int pitch_class, const PitchMaterial *material) {
+AnalysisKey plan_key_of_pitch_class(int pitch_class, const PitchMaterial *material) {
     AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR, material};
     key.mode = composer_key_mode(&key);
     PitchLetter letter;
     int accidental;
-    if (standard_tonality_key_tonic_of_pitch_class(util_pitch_class(pitch_class), key.mode == KEY_STRUCTURE_MODE_MINOR, &letter,
-                                                   &accidental)) {
+    if (standard_tonality_key_tonic_of_pitch_class_material(util_pitch_class(pitch_class), material, &letter, &accidental)) {
         key.tonic_letter = letter;
         key.tonic_accidental = accidental;
     }
     return key;
-}
-
-/* TRANSITIONAL (P58 B13): the builtin materials stand in for the call's, which a caller with only a mode does not hold. */
-AnalysisKey plan_key_of_pitch_class(int pitch_class, KeyStructureMode mode) {
-    return plan_key_of_material(pitch_class, composer_builtin_material(mode == KEY_STRUCTURE_MODE_MINOR));
 }
 
 void plan_lanes_free(PiecePlan *plan) {

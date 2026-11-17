@@ -243,7 +243,7 @@ static void test_no_residue(void) {
     options.features[1].first = 1;
     options.features[1].last = 1;
     assert(motive_from_notes_text("C5:h G4:h", &options, &motive, NULL) == MOTIVE_OK);
-    AnalysisKey key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     motive_set_key(&motive, &key, MOTIVE_SKETCH_KEY_GIVEN);
     memset(&text, 0, sizeof(text));
     text.cadence = "PAC";

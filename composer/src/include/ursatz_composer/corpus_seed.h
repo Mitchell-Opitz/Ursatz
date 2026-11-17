@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 
+#include <theory/harmony/harmony_chord.h>
 #include <theory/knowledge/knowledge_snapshot.h>
 
 #include <ursatz_composer/motive.h>
@@ -72,6 +73,6 @@ CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const ch
  * There is no seed: the best match is the first the Analyzer ranks. out->motive is not set.
  */
 CorpusSeedResult corpus_seed_progression(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir,
-                                         const char *numerals_text, KeyStructureMode mode, CorpusSeed *out);
+                                         const char *numerals_text, HarmonyMode mode, CorpusSeed *out);
 
 #endif

@@ -136,7 +136,8 @@ AnalysisKey motive_key_from_signature(int sharps_flats, KeyStructureMode mode) {
         return key;
     }
     int major_tonic = util_pitch_class(sharps_flats * 7);
-    return plan_key_of_pitch_class(mode == KEY_STRUCTURE_MODE_MINOR ? (major_tonic + 9) % 12 : major_tonic, mode);
+    return plan_key_of_pitch_class(mode == KEY_STRUCTURE_MODE_MINOR ? (major_tonic + 9) % 12 : major_tonic,
+                                   composer_builtin_material(mode == KEY_STRUCTURE_MODE_MINOR));
 }
 
 /* ------------------------------------------------------------------- time */
@@ -188,8 +189,7 @@ bool motive_key_of(const MotiveSketch *sketch, AnalysisKey *key) {
     if (!sketch || !key || !sketch->has_scale || sketch->tonic_pc < 0 || sketch->tonic_pc > 11) {
         return false;
     }
-    KeyStructureMode mode = motive_sketch_minor(sketch) ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
-    *key = plan_key_of_pitch_class(sketch->tonic_pc, mode);
+    *key = plan_key_of_pitch_class(sketch->tonic_pc, sketch->material);
     if (sketch->has_tonic_spelling) {
         key->tonic_letter = (PitchLetter)sketch->tonic_letter;
         key->tonic_accidental = sketch->tonic_accidental;
@@ -264,7 +264,7 @@ int motive_pitch(const Motive *motive, size_t index) {
 AnalysisKey motive_key(const Motive *motive) {
     AnalysisKey key;
     if (!motive_key_of(motive, &key)) {
-        key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+        key = plan_key_of_pitch_class(0, composer_builtin_material(false));
     }
     return key;
 }
@@ -355,7 +355,7 @@ static bool infer_key(const Motive *motive, AnalysisKey *out) {
         }
         CommonPracticeKeyMode mode;
         if (common_practice_identify_key_mode(relative, count, &mode)) {
-            found[found_count] = plan_key_of_pitch_class(tonic, mode == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
+            found[found_count] = plan_key_of_pitch_class(tonic, composer_builtin_material(mode == COMMON_PRACTICE_KEY_MINOR));
             found_count++;
         }
     }
@@ -455,7 +455,7 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     } else if (infer_key(motive, &key)) {
         source = MOTIVE_SKETCH_KEY_INFERRED;
     } else {
-        key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+        key = plan_key_of_pitch_class(0, composer_builtin_material(false));
         source = MOTIVE_SKETCH_KEY_UNSPECIFIED;
     }
     if (analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
@@ -572,7 +572,7 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
 static void begin(Motive *motive, MotiveDocument *document, MotiveError *error) {
     memset(motive, 0, sizeof(*motive));
     memset(document, 0, sizeof(*document));
-    document->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    document->key = plan_key_of_pitch_class(0, composer_builtin_material(false));
     motive_set_meter(motive, (PlanMeter){4, 4, 0});
     motive->length = motive_time(0, 1);
     motive->pickup = motive_time(0, 1);
@@ -923,7 +923,7 @@ static bool read_key(JsonReader *reader, const cJSON *item, MotiveDocument *docu
         return json_bad_format(reader, "key.mode", "expected \"major\" or \"minor\"");
     }
     document->has_key = true;
-    document->key = plan_key_of_pitch_class((int)tonic, strcmp(mode->valuestring, "minor") == 0 ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
+    document->key = plan_key_of_pitch_class((int)tonic, composer_builtin_material(strcmp(mode->valuestring, "minor") == 0));
     return true;
 }
 

@@ -56,7 +56,7 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     assert(motive_from_notes_text(scenario->motive, &options, &motive, NULL) == MOTIVE_OK);
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter = options.meter;
     request.bars = bars;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;

@@ -636,7 +636,7 @@ static void key_heard_at(const FormHeardKey *keys, size_t key_count, Rational st
     }
     out[0] = '\0';
     if (at) {
-        util_key_name(analysis_key_tonic_pitch_class(&at->key), composer_key_is_minor(&at->key), out, size);
+        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.material, out, size);
     }
 }
 
@@ -665,8 +665,8 @@ static void planned_key_at(const PiecePlan *plan, PlanSpan section, char *out, s
         }
     }
     if (at) {
-        util_key_name(analysis_key_tonic_pitch_class(&at->key), composer_key_is_minor(&at->key), out, size);
-        *flats = util_key_prefers_flats(analysis_key_tonic_pitch_class(&at->key), composer_key_is_minor(&at->key));
+        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.material, out, size);
+        *flats = util_key_prefers_flats(analysis_key_tonic_pitch_class(&at->key), at->key.material);
     }
     free(ids);
 }
@@ -1041,9 +1041,9 @@ static cJSON *changes_json(const Row *row) {
     bool copied = form_return_copies(row->plan, row->node);
     cJSON *entry = cJSON_CreateObject();
     const char *setting = return_setting_name(row);
-    KeyStructureMode to_mode = KEY_STRUCTURE_MODE_MAJOR;
-    bool mapped = form_return_mode_change(row->plan, row->node, &to_mode);
-    const char *mode = mapped ? (to_mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major") : NULL;
+    const PitchMaterial *to_material = NULL;
+    bool mapped = form_return_mode_change(row->plan, row->node, &to_material);
+    const char *mode = mapped ? (composer_material_is_minor(to_material) ? "minor" : "major") : NULL;
     bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
               cJSON_AddStringToObject(entry, "variation", plan_return_variation_name(spec->variation)) &&
               api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "mode", string_or_null(mode));
@@ -1280,7 +1280,7 @@ static GrowBrief make_brief(const PieceSpec *request) {
     memset(&brief, 0, sizeof(brief));
     brief.tempo = request->tempo;
     brief.tempo_from = request->tempo_from;
-    brief.minor = composer_key_is_minor(&request->request.key);
+    brief.material = request->request.key.material;
     brief.mode_from = request->mode_from;
     brief.has_density = composer_style_density(request->style, &brief.density);
     brief.without = request->without;
@@ -1366,7 +1366,7 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
     char lanes[64];
     char meter[24];
     GrowBrief brief = make_brief(request);
-    util_key_name(analysis_key_tonic_pitch_class(&request->request.key), composer_key_is_minor(&request->request.key),
+    util_key_name(analysis_key_tonic_pitch_class(&request->request.key), request->request.key.material,
                   key, sizeof key);
     snprintf(meter, sizeof meter, "%d/%d", request->request.meter.beats_per_bar, request->request.meter.beat_unit);
     cJSON *document = cJSON_CreateObject();

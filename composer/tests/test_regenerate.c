@@ -81,7 +81,7 @@ static PieceRequest request(void) {
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
     request.bars = 24;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     return request;

@@ -521,11 +521,11 @@ ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *
     }
     bool from_style = out->text->mode && request_equals_ignore_case(out->text->mode, "style");
     if (from_style) {
-        bool minor = false;
-        if (!composer_style_mode(out->style, &minor)) {
+        const PitchMaterial *material = NULL;
+        if (!composer_style_mode(out->style, out->materials, &material)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode style needs a style with a mode category");
         }
-        composer_key_set_minor(&out->key, out->materials, minor);
+        composer_key_set_material(&out->key, material);
     }
     out->mode_from = from_style ? "style" : "request";
     return COMPOSER_OK;
@@ -1485,7 +1485,7 @@ cJSON *api_brief_json(const GrowBrief *brief) {
     if (!object || !tempo || !mode || !without ||
         !cJSON_AddItemToObject(tempo, "qpm", brief->tempo.denominator > 0 ? ratio_number(&brief->tempo) : cJSON_CreateNull()) ||
         !cJSON_AddStringToObject(tempo, "from", brief->tempo_from) ||
-        !cJSON_AddStringToObject(mode, "mode", brief->minor ? "minor" : "major") ||
+        !cJSON_AddStringToObject(mode, "mode", composer_material_is_minor(brief->material) ? "minor" : "major") ||
         !cJSON_AddStringToObject(mode, "from", brief->mode_from) || !cJSON_AddItemToObject(object, "tempo", tempo) ||
         !cJSON_AddItemToObject(object, "mode", mode) ||
         !cJSON_AddItemToObject(object, "density", brief->has_density ? ratio_number(&brief->density) : cJSON_CreateNull()) ||
@@ -1521,7 +1521,7 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     memset(out, 0, sizeof(*out));
     out->tempo = setup->tempo;
     out->tempo_from = setup->tempo_from;
-    out->minor = composer_key_is_minor(&setup->key);
+    out->material = setup->key.material;
     out->mode_from = setup->mode_from;
     out->has_density = composer_style_density(setup->style, &out->density);
     out->without = setup->without;
@@ -1657,7 +1657,7 @@ static cJSON *given_construction_json(const PlanConstruction *construction) {
 cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const GrowThemeInfo *info) {
     const GrowBriefText *text = setup->text;
     char key[24];
-    util_key_name(analysis_key_tonic_pitch_class(&setup->key), composer_key_is_minor(&setup->key), key, sizeof key);
+    util_key_name(analysis_key_tonic_pitch_class(&setup->key), setup->key.material, key, sizeof key);
     char pairing[64];
     snprintf(pairing, sizeof(pairing), "%s + %s", BEGINNING_NAMES[setup->pairing.beginning],
              ENDING_NAMES[setup->pairing.ending]);

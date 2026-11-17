@@ -481,12 +481,12 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
     }
     request->mode_from = "request";
     if (request_equals_ignore_case(request->mode_text, "style")) {
-        bool minor = false;
-        if (!composer_style_mode(request->style, &minor)) {
+        const PitchMaterial *material = NULL;
+        if (!composer_style_mode(request->style, request->materials, &material)) {
             snprintf(path, sizeof path, "%s/mode", base);
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"mode\": \"style\" needs a style with a mode category");
         }
-        composer_key_set_minor(&request->request.key, request->materials, minor);
+        composer_key_set_material(&request->request.key, material);
         request->mode_from = "style";
     }
     if (request->style) {

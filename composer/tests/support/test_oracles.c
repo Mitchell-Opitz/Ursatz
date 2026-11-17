@@ -12,7 +12,7 @@
 
 /* The tests' check oracles, moved unchanged from the operators' files (see test_oracles.h). */
 
-bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode,
+bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode,
                                          const char **violation) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -38,7 +38,7 @@ static void mark_schema_chords(const PiecePlan *plan, PlanSpan span, size_t coun
     }
 }
 
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
+bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
                         const char **violation) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -57,12 +57,12 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode m
     return true;
 }
 
-bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, const int *soprano,
+bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, const int *soprano,
                                 size_t count, const Rational *section_starts, size_t section_count,
                                 HarmonyCadences *out) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
-    KeyStructureMode modes[HARMONY_MAX_CHORDS];
+    HarmonyMode modes[HARMONY_MAX_CHORDS];
     unsigned keys[HARMONY_MAX_CHORDS];
     size_t found;
     /* Each chord is read in the key under it, so a cadence is heard in the key of the chord it arrives on. */
@@ -226,14 +226,14 @@ static bool fault(char *reason, size_t size, size_t cell, const char *what) {
 /* Whether a step from one pitch to the next is a step of the figure: 1 or 2 semitones, 3 in minor (the augmented second). */
 static bool is_scale_step(const AnalysisKey *key, int from, int to) {
     int move = util_absolute(to - from);
-    return (move >= 1 && move <= 2) || (move == 3 && key->mode == KEY_STRUCTURE_MODE_MINOR);
+    return (move >= 1 && move <= 2) || (move == 3 && composer_key_is_minor(key));
 }
 
 bool form_figure_check(const PiecePlan *plan, NodeId section, char *reason, size_t size) {
     PlanFigure figure;
     FigureReading *reading = plan && form_figure_find(plan, section, &figure) ? form_figure_read_section(plan, section) : NULL;
     size_t own_count = 0;
-    FigureSourceNote *own = reading ? form_figure_read_melody(plan, section, 0, false, 0, KEY_STRUCTURE_MODE_MAJOR, &own_count) : NULL;
+    FigureSourceNote *own = reading ? form_figure_read_melody(plan, section, 0, false, 0, NULL, &own_count) : NULL;
     if (!reading || !own) {
         free(own);
         form_figure_reading_free(reading);

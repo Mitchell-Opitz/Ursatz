@@ -245,7 +245,7 @@ static int run_row(const FormSpec *form, const Row *row, unsigned long seeds, bo
         ComposeConfig config;
         memset(&request, 0, sizeof(request));
         request.form = form->name;
-        request.key = plan_key_of_pitch_class(row->pitch_class, row->mode);
+        request.key = test_key_mode(row->pitch_class, row->mode);
         request.meter.beats_per_bar = row->beats;
         request.meter.beat_unit = row->unit;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);

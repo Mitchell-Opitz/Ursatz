@@ -169,7 +169,7 @@ typedef struct {
 void motive_random_preferences_default(MotiveRandomPreferences *out);
 
 typedef struct {
-    KeyStructureMode mode;
+    const PitchMaterial *material; /* the mode: the major or the natural minor of the call's materials; required */
     PlanMeter meter;
     bool has_key;
     AnalysisKey key;

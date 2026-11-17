@@ -59,7 +59,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, const Melody
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 6;
     request.meter.beat_unit = 8;
     request.bars = 8;
@@ -173,7 +173,7 @@ static PiecePlan *compose_period(unsigned long seed, const MelodyFillParams *mel
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;

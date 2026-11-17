@@ -117,8 +117,7 @@ bool grow_develop_motive(const Motive *source, const PlanMotiveRef *ref, Motive 
 }
 
 bool grow_motive_in_range(const Motive *motive, int low, int high, bool in_scale) {
-    unsigned scale = standard_tonality_mode_pitch_classes_with_leading_tone(
-        0, motive_sketch_minor(motive) ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
+    unsigned scale = standard_tonality_material_pitch_classes_with_leading_tone(0, motive->material);
     for (size_t i = 0; i < motive->note_count; i++) {
         int pitch = motive_pitch(motive, i);
         if (pitch < low || pitch > high) {

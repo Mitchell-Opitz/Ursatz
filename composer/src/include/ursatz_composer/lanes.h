@@ -37,16 +37,12 @@ typedef struct {
 
 /*
  * A key on the plan's key lane is the library's AnalysisKey (R-242): a spelled tonic, the key's pitch material and its mode
- * (set from the material), id NULL. plan_key_of_material spells the tonic of a pitch class (0 to 11, C = 0, taken mod 12) with the
- * fewest accidentals in its signature, sharps on a tie; analysis_key_tonic_pitch_class gives the pitch class back. The material is
- * the major or the natural minor of the call's materials (the Composer writes keys of no other); a key whose mode is read is read
- * from it (composer_key_is_minor).
- *
- * plan_key_of_pitch_class is the mode-based form: the material is the builtin common-practice one. TRANSITIONAL: it goes with the
- * mode types (P58 B13).
+ * (set from the material), id NULL. plan_key_of_pitch_class spells the tonic of a pitch class (0 to 11, C = 0, taken mod 12) with
+ * the fewest accidentals in the material's signature, sharps on a tie; analysis_key_tonic_pitch_class gives the pitch class back.
+ * The material is the major or the natural minor of the call's materials (the Composer writes keys of no other); a key whose mode
+ * is read is read from it (composer_key_is_minor). A NULL material gives the zero key (C, no material), which reads as C major.
  */
-AnalysisKey plan_key_of_material(int pitch_class, const PitchMaterial *material);
-AnalysisKey plan_key_of_pitch_class(int pitch_class, KeyStructureMode mode);
+AnalysisKey plan_key_of_pitch_class(int pitch_class, const PitchMaterial *material);
 
 #define PLAN_ROMAN_NUMERAL_MAX 16
 

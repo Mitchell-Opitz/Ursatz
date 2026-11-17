@@ -11,6 +11,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * The bass operators, run through the fill loop after the harmony operators. The first group writes a bass
@@ -24,7 +25,7 @@
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int tonic;
     int bars;
     CadenceType cadence;
@@ -96,7 +97,7 @@ static Fixture build(const Scenario *scenario, bool cadence) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    payload.key = test_key_mode(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.form_span, &payload, &id) ==
            PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
@@ -174,10 +175,10 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
 }
 
 /* The pitch class a chord's bass member has, worked out from standard-harmony's scale degrees. */
-static bool bass_matches(KeyStructureMode mode, int tonic, const char *roman, int bass_pc) {
+static bool bass_matches(HarmonyMode mode, int tonic, const char *roman, int bass_pc) {
     HarmonyChord chord;
     HarmonyAppliedChord applied;
-    HarmonyMode harmony_mode = mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+    HarmonyMode harmony_mode = mode == HARMONY_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
     if (test_roman_parse_applied(mode, roman, &applied)) {
         return bass_pc == (tonic + harmony_applied_root_semitone(harmony_mode, &applied)) % 12;
     }
@@ -186,11 +187,11 @@ static bool bass_matches(KeyStructureMode mode, int tonic, const char *roman, in
     int scale = (tonic + harmony_applied_scale_semitone(harmony_mode, degree)) % 12;
     /* The leading tone of a minor key is raised wherever a dominant needs it. */
     int raised = (tonic + 11) % 12;
-    return bass_pc == scale || (mode == KEY_STRUCTURE_MODE_MINOR && degree == 7 && bass_pc == raised);
+    return bass_pc == scale || (mode == HARMONY_MODE_MINOR && degree == 7 && bass_pc == raised);
 }
 
-static int scale_pc(KeyStructureMode mode, int tonic, int degree) {
-    return (tonic + harmony_applied_scale_semitone(mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR,
+static int scale_pc(HarmonyMode mode, int tonic, int degree) {
+    return (tonic + harmony_applied_scale_semitone(mode == HARMONY_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR,
                                                    degree)) % 12;
 }
 
@@ -227,7 +228,7 @@ static void check_bass(const Fixture *fixture, const Scenario *scenario, const H
     }
 
     /* The bass passes standard-counterpoint's melodic rules, checked by the framework from the plan. */
-    AnalysisKey key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(harmony_check_bass(fixture->plan, fixture->span, key, params, &violation));
     assert(violation == NULL);
@@ -326,7 +327,7 @@ static void test_sweep(void) {
                 for (int b = 0; b < 2; b++) {
                     for (int c = 0; c < 5; c++) {
                         for (unsigned long seed = 0; seed < 2; seed++) {
-                            Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR,
+                            Scenario scenario = {meters[m][0], meters[m][1], mode ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR,
                                                  tonics[t], bars[b], cadences[c], seed};
                             total++;
                             written += check_scenario(&scenario, seed ? &split : &plain);
@@ -351,7 +352,7 @@ static void test_subdivision_and_stepwise(void) {
     size_t plain_notes = 0;
     size_t split_notes = 0;
     for (unsigned long seed = 0; seed < 6; seed++) {
-        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
+        Scenario scenario = {4, 4, HARMONY_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         for (int which = 0; which < 2; which++) {
             Fixture fixture = build(&scenario, true);
             FillOutcome outcome = run(&fixture, seed, true, false, false, NULL);
@@ -382,7 +383,7 @@ static void test_subdivision_and_stepwise(void) {
 
 /* A range no octave of some chord's bass member fits leaves the span open: no valid candidate. */
 static void test_unsatisfiable_range(void) {
-    Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
+    Scenario scenario = {4, 4, HARMONY_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     HarmonyBassParams narrow = harmony_bass_params_default();
     narrow.range_low = 40;
     narrow.range_high = 41;
@@ -406,7 +407,7 @@ static void test_random_octaves(void) {
     HarmonyBassParams loose = harmony_bass_params_default();
     loose.stepwise = 0;
     for (unsigned long seed = 0; seed < 10; seed++) {
-        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MINOR, 3, 8, CADENCE_TYPE_HALF, seed};
+        Scenario scenario = {4, 4, HARMONY_MODE_MINOR, 3, 8, CADENCE_TYPE_HALF, seed};
         Fixture fixture = build(&scenario, true);
         FillOutcome outcome = run(&fixture, seed, true, false, false, NULL);
         assert(outcome.status == FILL_STATUS_COMPLETE);
@@ -431,7 +432,7 @@ static void test_random_octaves(void) {
 static void test_first_octave_fallback(void) {
     static const char *const romans[] = {"I", "IV", "ii", "V"};
     for (unsigned long seed = 1; seed <= 10; seed++) {
-        Scenario scenario = {3, 4, KEY_STRUCTURE_MODE_MAJOR, 7, 4, CADENCE_TYPE_HALF, seed};
+        Scenario scenario = {3, 4, HARMONY_MODE_MAJOR, 7, 4, CADENCE_TYPE_HALF, seed};
         Fixture fixture = build(&scenario, false);
         PlanLanePayload payload;
         memset(&payload, 0, sizeof(payload));

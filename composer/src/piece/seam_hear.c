@@ -32,7 +32,7 @@ NodeId seam_section_at(const PiecePlan *plan, Rational time) {
  * The chord of a numeral in the mode. A numeral that does not parse (an applied chord) stands for the representative
  * chord of the function the plan gives it: I, IV or V.
  */
-static bool chord_of(KeyStructureMode mode, bool has_given, HarmonicFunction given, const char *roman,
+static bool chord_of(HarmonyMode mode, bool has_given, HarmonicFunction given, const char *roman,
                      HarmonyChord *out) {
     if (harmony_roman_parse(mode, roman, out)) {
         return true;
@@ -58,9 +58,9 @@ static bool chord_of(KeyStructureMode mode, bool has_given, HarmonicFunction giv
 
 static bool seam_chords(const SeamNotes *notes, HarmonyChord chords[2]) {
     return notes->has_chords &&
-           chord_of(composer_key_mode(&notes->key), notes->before_has_function, notes->before_function, notes->before_roman,
+           chord_of(harmony_key_mode(&notes->key), notes->before_has_function, notes->before_function, notes->before_roman,
                     &chords[0]) &&
-           chord_of(composer_key_mode(&notes->key), notes->after_has_function, notes->after_function, notes->after_roman, &chords[1]);
+           chord_of(harmony_key_mode(&notes->key), notes->after_has_function, notes->after_function, notes->after_roman, &chords[1]);
 }
 
 /* The progression keeps the phrase model's order (standard-harmony): no predominant after a dominant, no tonic after a predominant. */
@@ -69,7 +69,7 @@ static bool progression_holds(const SeamNotes *notes) {
     if (!seam_chords(notes, chords)) {
         return false;
     }
-    HarmonyPhrase phrase = {harmony_mode_of(composer_key_mode(&notes->key)), chords, 2};
+    HarmonyPhrase phrase = {harmony_key_mode(&notes->key), chords, 2};
     return harmony_phrase_rule_holds(HARMONY_PHRASE_NO_BACKWARD_MOTION, &phrase);
 }
 
@@ -81,7 +81,7 @@ static int sign(int value) {
 static PitchSpelling *spell(const AnalysisKey *key, int pitch) {
     int degree;
     int alteration;
-    if (!util_scale_degree(analysis_key_tonic_pitch_class(key), composer_key_is_minor(key), pitch, &degree,
+    if (!util_scale_degree(analysis_key_tonic_pitch_class(key), key->material, pitch, &degree,
                            &alteration)) {
         return NULL;
     }
@@ -150,7 +150,7 @@ static int diatonic_step(const AnalysisKey *key, int pitch) {
     int octave = relative >= 0 ? relative / 12 : -((-relative + 11) / 12);
     int degree = 1;
     int alteration;
-    util_scale_degree(tonic, composer_key_is_minor(key), pitch, &degree, &alteration);
+    util_scale_degree(tonic, key->material, pitch, &degree, &alteration);
     return octave * 7 + degree - 1;
 }
 
@@ -162,7 +162,7 @@ static bool leading_tone_holds(const SeamNotes *notes) {
     }
     HarmonyVoiceResolution resolution;
     memset(&resolution, 0, sizeof(resolution));
-    resolution.mode = harmony_mode_of(composer_key_mode(&notes->key));
+    resolution.mode = harmony_key_mode(&notes->key);
     resolution.from = chords[0];
     resolution.to = chords[1];
     resolution.from_step = diatonic_step(&notes->key, notes->melody_before);

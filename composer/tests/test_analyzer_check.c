@@ -65,7 +65,7 @@ static const size_t BASELINE[3][SCENARIO_COUNT] = {{9, 7}, {10, 0}, {9, 0}};
 static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_out) {
     PiecePlan *plan = NULL;
     PlanMeter meter = {scenario->beats, 4, 0};
-    AnalysisKey key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
     if (shape == ROUNDED_BINARY) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
@@ -348,7 +348,7 @@ static void piece_section(PieceFixture *fixture, const char *id, PiecePart part,
 /* The intro 2 bars, a sentence of 8 bars, a free phrase of 4 and a turnaround of 2, D minor 4/4, and the ending a run adds. */
 static void piece_fixture(PieceFixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->request.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    fixture->request.key = test_key_mode(2, KEY_STRUCTURE_MODE_MINOR);
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;
     fixture->request.form = "game-loop";

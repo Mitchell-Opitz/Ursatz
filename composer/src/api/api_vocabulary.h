@@ -69,6 +69,6 @@ ComposerStatus api_fail_meter(ComposerError *error, const char *path, const char
 bool api_theme_cadence_ok(int cadence_type);
 
 /* Writes the vocabulary document into root (composer_api_vocabulary's json); false on out of memory. */
-bool api_vocabulary_build(cJSON *root);
+bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials);
 
 #endif

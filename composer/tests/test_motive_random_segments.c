@@ -7,6 +7,7 @@
 #include <ursatz_composer/motive_random.h>
 
 #include "motive/motive_internal.h"
+#include "support/test_knowledge.h"
 
 /*
  * Segment-based random motives: 200 seeds over 2/4, 3/4, 4/4 and 6/8 in major and minor give motives with no melodic fault,
@@ -35,7 +36,7 @@ static const int PLANS[][3] = {{1, 5, 0}, {1, 4, 0}, {1, 1, 0}, {1, 5, 1}, {1, 4
 static MotiveRandomOptions options_of(const Scenario *scenario, unsigned long seed) {
     MotiveRandomOptions options;
     memset(&options, 0, sizeof(options));
-    options.mode = scenario->mode;
+    options.material = test_material_mode(scenario->mode);
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
     options.form = MOTIVE_SKETCH_FORM_FULL;

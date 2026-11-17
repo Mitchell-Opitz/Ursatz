@@ -118,7 +118,7 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    key.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 }
@@ -539,7 +539,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
@@ -1126,17 +1126,17 @@ static int test_brief(void) {
     ComposerStyle *style = NULL;
     assert(composer_style_load_without(FAST_MINOR, NULL, 0, &style) == COMPOSER_STYLE_OK);
     ComposerRatio tempo = {0, 0};
-    bool minor = false;
+    const PitchMaterial *mode = NULL;
     ComposerRatio density = {0, 0};
     assert(composer_style_tempo(style, &tempo) && tempo.numerator == 170 && tempo.denominator == 1);
-    assert(composer_style_mode(style, &minor) && minor);
+    assert(composer_style_mode(style, test_materials(), &mode) && mode == test_materials()->natural_minor);
     assert(composer_style_density(style, &density) && density.numerator == 4 && density.denominator == 2);
     composer_style_destroy(style);
     /* A style without the categories gives none of them (the fixture is chorales plus the motive categories, with no tempo or density: the
        chorales model re-recorded at P41 B7 holds both, which a style applies as the brief even at weight 0). */
     assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &style) == COMPOSER_STYLE_OK);
     assert(!composer_style_tempo(style, &tempo) && !composer_style_density(style, &density));
-    assert(composer_style_mode(style, &minor));
+    assert(composer_style_mode(style, test_materials(), &mode));
     composer_style_destroy(style);
 
     /* The limit halves a connection that is remote, between 1/2 and 3/4, only at 1/2. */

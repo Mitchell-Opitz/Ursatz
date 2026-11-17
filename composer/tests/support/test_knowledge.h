@@ -7,6 +7,7 @@
 
 #include <analysis/notes/analysis_key.h>
 #include <ursatz_composer/composer_api.h>
+#include <ursatz_composer/lanes.h>
 
 #include "theory/knowledge/knowledge_snapshot.h"
 #include "theory/tonality/common_practice_materials.h"
@@ -62,6 +63,19 @@ static inline const CommonPracticeMaterials *test_materials(void) {
 static inline AnalysisKey test_key_with_material(AnalysisKey key) {
     key.material = key.mode == KEY_STRUCTURE_MODE_MINOR ? test_materials()->natural_minor : test_materials()->major;
     return key;
+}
+
+/* The major (mode 0) or the natural minor (KEY_STRUCTURE_MODE_MINOR or HARMONY_MODE_MINOR) of test_knowledge(). */
+static inline const PitchMaterial *test_material_mode(int mode) {
+    return mode == KEY_STRUCTURE_MODE_MINOR ? test_materials()->natural_minor : test_materials()->major;
+}
+
+/*
+ * The key on a pitch class (0 to 11) in the major or the natural minor of test_knowledge(), spelled as plan_key_of_pitch_class
+ * spells it. TRANSITIONAL: the mode argument goes with the mode types (P58 B13 commit 6, test keys from words in commit 7).
+ */
+static inline AnalysisKey test_key_mode(int pitch_class, int mode) {
+    return plan_key_of_pitch_class(pitch_class, test_material_mode(mode));
 }
 
 #endif

@@ -157,7 +157,7 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, int beats,
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = size->kind;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = beats;
     request.meter.beat_unit = 4;
     request.bars = size->bars;

@@ -234,7 +234,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;

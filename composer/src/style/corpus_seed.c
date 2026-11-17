@@ -185,12 +185,8 @@ static int transposition(int pitch, const AnalysisKey *source, const AnalysisKey
     int above = util_pitch_class(pitch - analysis_key_tonic_pitch_class(source));
     int degree = 1;
     int beyond = 0;
-    standard_tonality_degree_at_or_below_semitone(above,
-                                                  composer_key_is_minor(source)
-                                                      ? STANDARD_TONALITY_MODE_NATURAL_MINOR
-                                                      : STANDARD_TONALITY_MODE_MAJOR,
-                                                  &degree, &beyond);
-    int landed = (analysis_key_tonic_pitch_class(target) + util_scale_semitone(composer_key_is_minor(target), degree) + beyond) % 12;
+    standard_tonality_material_degree_at_or_below_semitone(above, source->material, &degree, &beyond);
+    int landed = (analysis_key_tonic_pitch_class(target) + util_scale_semitone(target->material, degree) + beyond) % 12;
     int shift = util_pitch_class(landed - (pitch % 12));
     return shift > 6 ? shift - 12 : shift;
 }
@@ -355,7 +351,7 @@ CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const ch
 }
 
 /* Whether the plan can place the numeral under a key of the mode (given.h reads them with these two). */
-static bool numeral_placeable(KeyStructureMode mode, const char *numeral) {
+static bool numeral_placeable(HarmonyMode mode, const char *numeral) {
     HarmonyChord chord;
     HarmonyAppliedChord applied;
     int inversion;
@@ -367,7 +363,7 @@ static bool numeral_placeable(KeyStructureMode mode, const char *numeral) {
  * The numerals of the passage a match is, read from its document: the chords from the one that starts where the match
  * does. false when the document cannot be read, has no chord there, or a numeral cannot be placed under the mode.
  */
-static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *match, size_t wanted, KeyStructureMode mode,
+static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *match, size_t wanted, HarmonyMode mode,
                            CorpusSeed *seeded, size_t *stale) {
     bool ok = false;
     char *text = NULL;
@@ -400,7 +396,7 @@ static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *ma
 }
 
 CorpusSeedResult corpus_seed_progression(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir,
-                                         const char *numerals_text, KeyStructureMode mode, CorpusSeed *out) {
+                                         const char *numerals_text, HarmonyMode mode, CorpusSeed *out) {
     if (!knowledge || !corpus_output_dir || !numerals_text || !out) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }

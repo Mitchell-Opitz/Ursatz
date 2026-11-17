@@ -60,7 +60,7 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = bars;
@@ -429,7 +429,7 @@ static void test_built_plan(void) {
 /* The pitches and the length of the motive written on the motive node `name`. */
 static Motive written_motive(const PiecePlan *plan, const char *name, const Motive *template_motive) {
     Motive motive = *template_motive;
-    AnalysisKey motive_key_value = plan_key_of_pitch_class(SCENARIOS[0].tonic, SCENARIOS[0].mode);
+    AnalysisKey motive_key_value = test_key_mode(SCENARIOS[0].tonic, SCENARIOS[0].mode);
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, test_find_node(plan, name), &span, 1) == 1);

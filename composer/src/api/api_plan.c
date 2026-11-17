@@ -731,7 +731,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
             continue;
         }
         CorpusSeedResult result =
-            corpus_seed_progression(state->knowledge, state->from_corpus, given->numerals, composer_key_mode(&state->key), &given->found);
+            corpus_seed_progression(state->knowledge, state->from_corpus, given->numerals, harmony_key_mode(&state->key), &given->found);
         if (result != CORPUS_SEED_OK) {
             char path[64];
             snprintf(path, sizeof path, "/given/%zu", i);

@@ -76,9 +76,9 @@ static ComposerStatus read_options(const cJSON *request, const CommonPracticeMat
         *drawn_meter = meter_text;
     }
     if (request_equals_ignore_case(mode_text, "major")) {
-        out->mode = KEY_STRUCTURE_MODE_MAJOR;
+        out->material = materials->major;
     } else if (request_equals_ignore_case(mode_text, "minor")) {
-        out->mode = KEY_STRUCTURE_MODE_MINOR;
+        out->material = materials->natural_minor;
     } else {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be major or minor, not '%s'", mode_text);
     }
@@ -93,7 +93,7 @@ static ComposerStatus read_options(const cJSON *request, const CommonPracticeMat
                             "for example \"D minor\"",
                             key_text);
         }
-        if (composer_key_mode(&out->key) != out->mode) {
+        if (composer_key_is_minor(&out->key) != composer_material_is_minor(out->material)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "key '%s' is not %s, the mode asked for", key_text,
                             mode_text);
         }

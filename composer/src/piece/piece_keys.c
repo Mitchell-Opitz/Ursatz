@@ -11,6 +11,7 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_hear.h>
+#include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 #include "check/hearing.h"
 #include "form/form_internal.h"
@@ -25,8 +26,10 @@ typedef struct {
 
 #define MAX_SEGMENTS (2 * FORM_SPEC_MAX_SECTIONS + 1)
 
-static HarmonyMode mode_of(KeyStructureMode mode) {
-    return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+/* The key of the tonic in the major or the natural minor. TRANSITIONAL: the builtin materials stand in until P58 B13 commit 5 resolves
+   the regions through the snapshot's relations. */
+static AnalysisKey key_in_mode(int tonic, HarmonyMode mode) {
+    return plan_key_of_pitch_class(tonic, composer_builtin_material(mode == HARMONY_MODE_MINOR));
 }
 
 /*
@@ -39,12 +42,12 @@ bool piece_region_key(AnalysisKey home, const FormRegion *region, FillRng *rng, 
     bool minor = composer_key_is_minor(&home);
     const int *degrees = minor ? region->minor : region->major;
     size_t count = minor ? region->minor_count : region->major_count;
-    HarmonyMode home_mode = mode_of(composer_key_mode(&home));
+    HarmonyMode home_mode = harmony_key_mode(&home);
     HarmonyRelatedKey related;
     int semitone;
     int degree = degrees[fill_rng_below(rng, count)];
     if (degree == 1) {
-        *out = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home), minor ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR);
+        *out = key_in_mode(analysis_key_tonic_pitch_class(&home), minor ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR);
         return true;
     }
     if (!harmony_related_key_of(home_mode, degree, &related) || !harmony_key_is_closely_related(home_mode, &related)) {
@@ -54,7 +57,7 @@ bool piece_region_key(AnalysisKey home, const FormRegion *region, FillRng *rng, 
     if (semitone < 0) {
         return false;
     }
-    *out = plan_key_of_pitch_class((analysis_key_tonic_pitch_class(&home) + semitone) % 12, related.mode == HARMONY_MODE_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
+    *out = key_in_mode((analysis_key_tonic_pitch_class(&home) + semitone) % 12, related.mode);
     return true;
 }
 
@@ -87,15 +90,14 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
         can = can || size->sections[i].key_start != FORM_SPEC_HOME || size->sections[i].key_end != FORM_SPEC_HOME;
         /* A section in the parallel mode (R-499) is on the home tonic in the other mode: no draw, and modulates stays as it is. */
         if (size->sections[i].parallel) {
-            keys[i].start = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home),
-                                                    composer_key_is_minor(&home) ? KEY_STRUCTURE_MODE_MAJOR
-                                                                                          : KEY_STRUCTURE_MODE_MINOR);
+            keys[i].start = key_in_mode(analysis_key_tonic_pitch_class(&home),
+                                        composer_key_is_minor(&home) ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR);
             keys[i].end = keys[i].start;
         }
         /* A section in the tonic major (R-517) is on the home tonic in its major key: home in a major piece, the parallel major in a
          * minor one. No draw, so the draws after it are unchanged. */
         if (size->sections[i].tonic_major && composer_key_is_minor(&home)) {
-            keys[i].start = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home), KEY_STRUCTURE_MODE_MAJOR);
+            keys[i].start = key_in_mode(analysis_key_tonic_pitch_class(&home), HARMONY_MODE_MAJOR);
             keys[i].end = keys[i].start;
         }
     }
@@ -266,8 +268,8 @@ static bool read_key_lane(const PiecePlan *plan, KeyLane *lane) {
 
 /* Whether the key is the home key's or one of its closely related keys. */
 static bool related_to_home(AnalysisKey home, AnalysisKey key) {
-    HarmonyMode home_mode = mode_of(composer_key_mode(&home));
-    HarmonyMode mode = mode_of(composer_key_mode(&key));
+    HarmonyMode home_mode = harmony_key_mode(&home);
+    HarmonyMode mode = harmony_key_mode(&key);
     if (analysis_key_equals(&home, &key)) {
         return true;
     }

@@ -130,7 +130,7 @@ static void test_deterministic(void) {
 }
 
 int main(void) {
-    C_MAJOR = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    C_MAJOR = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     test_repeated_rhythm();
     test_rest_splits();
     test_long_note_splits();

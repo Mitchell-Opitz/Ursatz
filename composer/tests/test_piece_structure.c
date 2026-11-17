@@ -41,7 +41,7 @@ typedef struct {
 
 static void fixture_init(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    fixture->request.key = test_key_mode(0, HARMONY_MODE_MAJOR);
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;
     fixture->request.form = "game-loop";
@@ -300,7 +300,7 @@ static bool cadence_heard(const PiecePlan *plan, NodeId section) {
     CadenceType heard;
     bool at_end;
     return cadence && key &&
-           harmony_hear_cadence(plan, plan_node_span(plan, section), key->params.key.mode, cadence->params.cadence,
+           harmony_hear_cadence(plan, plan_node_span(plan, section), harmony_key_mode(&key->params.key), cadence->params.cadence,
                                 &heard, &at_end) &&
            at_end && heard == cadence->params.cadence;
 }
@@ -460,7 +460,7 @@ static void test_free(void) {
 static void test_minor_half_free(void) {
     Fixture fixture;
     fixture_init(&fixture);
-    fixture.request.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    fixture.request.key = test_key_mode(2, HARMONY_MODE_MINOR);
     PieceSection *a = add_section(&fixture, "a", "A", PIECE_PART_BODY, 32, PIECE_FILL_MOTIF);
     a->has_into = true;
     a->into = PLAN_ARCHETYPE_SENTENCE;
@@ -500,7 +500,7 @@ static void test_minor_half_free(void) {
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     Motive motive;
 } FunctionRow;
@@ -508,7 +508,7 @@ typedef struct {
 /* Intro 4 bars; body A 8 bars, T 8 bars (transition), B 8 bars with a motive of its own; turnaround 4 bars; ending K 8 bars (coda). */
 static void function_structure(Fixture *fixture, FunctionRow *row) {
     fixture_init(fixture);
-    fixture->request.key = plan_key_of_pitch_class(row->tonic, row->mode);
+    fixture->request.key = test_key_mode(row->tonic, row->mode);
     fixture->request.meter.beats_per_bar = row->beats;
     size_t bar = (size_t)row->beats;
     MotiveOptions options;
@@ -662,8 +662,8 @@ static void function_refusals(const FunctionRow *row, const PiecePlan *loop_plan
 
 static void test_functions(void) {
     static FunctionRow rows[2];
-    rows[0] = (FunctionRow){.name = "C major 4/4", .tonic = 0, .mode = KEY_STRUCTURE_MODE_MAJOR, .beats = 4};
-    rows[1] = (FunctionRow){.name = "A minor 3/4", .tonic = 9, .mode = KEY_STRUCTURE_MODE_MINOR, .beats = 3};
+    rows[0] = (FunctionRow){.name = "C major 4/4", .tonic = 0, .mode = HARMONY_MODE_MAJOR, .beats = 4};
+    rows[1] = (FunctionRow){.name = "A minor 3/4", .tonic = 9, .mode = HARMONY_MODE_MINOR, .beats = 3};
     for (size_t r = 0; r < 2; r++) {
         FunctionRow *row = &rows[r];
         Fixture fixture;

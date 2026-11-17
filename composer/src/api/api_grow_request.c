@@ -212,7 +212,7 @@ static ComposerStatus read_brief(const cJSON *request, GrowRequestText *brief, C
 /* The motive request with the key the brief settled on, and the meter and the role of an accompaniment motive. */
 static ComposerStatus make_lines(State *state, ComposerError *error) {
     char key[24];
-    util_key_name(analysis_key_tonic_pitch_class(&state->setup.key), composer_key_is_minor(&state->setup.key), key,
+    util_key_name(analysis_key_tonic_pitch_class(&state->setup.key), state->setup.key.material, key,
                   sizeof key);
     state->line = cJSON_Duplicate(state->request, true);
     if (!state->line) {

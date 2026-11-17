@@ -63,7 +63,7 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = 8;
@@ -124,7 +124,7 @@ static void test_hard_rules(unsigned long last_seed) {
 
                 NodeId theme = test_find_node(plan, "theme");
                 PlanSpan span = plan_node_span(plan, theme);
-                AnalysisKey key = plan_key_of_pitch_class(SCENARIOS[s].tonic, SCENARIOS[s].mode);
+                AnalysisKey key = test_key_mode(SCENARIOS[s].tonic, SCENARIOS[s].mode);
                 checked += check_accompaniment(plan, span, key, PLAN_ACCOMPANIMENT_DEFAULT_LOW,
                                                PLAN_ACCOMPANIMENT_DEFAULT_HIGH);
                 size_t notes[3];
@@ -253,7 +253,7 @@ static void test_accompaniment_motive(unsigned long last_seed, bool smoke) {
 
             NodeId theme = test_find_node(plan, "theme");
             PlanSpan span = plan_node_span(plan, theme);
-            AnalysisKey key = plan_key_of_pitch_class(SCENARIOS[s].tonic, SCENARIOS[s].mode);
+            AnalysisKey key = test_key_mode(SCENARIOS[s].tonic, SCENARIOS[s].mode);
             assert(check_accompaniment(plan, span, key, PLAN_ACCOMPANIMENT_DEFAULT_LOW, PLAN_ACCOMPANIMENT_DEFAULT_HIGH) > 0);
             size_t notes[3];
             size_t spans[3];

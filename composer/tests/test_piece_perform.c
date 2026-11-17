@@ -61,7 +61,7 @@ static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutco
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.seed = seed;
@@ -270,8 +270,8 @@ static void check_region_keys(void) {
     FillRng rng;
     AnalysisKey key;
     fill_rng_seed(&rng, 1);
-    AnalysisKey c_major = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
-    AnalysisKey a_minor = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+    AnalysisKey c_major = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey a_minor = test_key_mode(9, KEY_STRUCTURE_MODE_MINOR);
     assert(piece_region_key(c_major, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
            key.mode == KEY_STRUCTURE_MODE_MINOR);
     assert(piece_region_key(a_minor, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
@@ -308,7 +308,7 @@ static int test_parts(void) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
         request.form = form->name;
-        request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+        request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
         request.meter.beats_per_bar = 4;
         request.meter.beat_unit = 4;
         request.seed = seed;
@@ -341,7 +341,7 @@ static int test_parts(void) {
     /* A form that is not compound, and a size it does not have, are refused. */
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     ComposeConfig config;
@@ -405,7 +405,7 @@ static int test_part_bars(void) {
             PieceRequest request;
             memset(&request, 0, sizeof(request));
             request.form = form->name;
-            request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+            request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
             request.meter.beats_per_bar = 3;
             request.meter.beat_unit = 4;
             request.bars = SIZES[z];

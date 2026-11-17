@@ -473,7 +473,7 @@ static bool compose_try(const FormFamily *family, const Row *row, unsigned long 
     ComposeConfig config;
     memset(&request, 0, sizeof(request));
     request.form = family->name;
-    request.key = plan_key_of_pitch_class(row->tonic, row->mode);
+    request.key = test_key_mode(row->tonic, row->mode);
     request.meter.beats_per_bar = (unsigned)row->beats;
     request.meter.beat_unit = (unsigned)row->unit;
     request.modulate = true;

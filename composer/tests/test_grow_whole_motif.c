@@ -94,7 +94,7 @@ static void test_compose(void) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+    request.key = test_key_mode(9, KEY_STRUCTURE_MODE_MINOR);
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -158,7 +158,7 @@ static void test_cadence_note(void) {
         memset(&request, 0, sizeof(request));
         request.motive = &basic;
         request.idea_motives[GROW_IDEA_CADENTIAL] = &cadential;
-        request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+        request.key = test_key_mode(9, KEY_STRUCTURE_MODE_MINOR);
         request.meter.beats_per_bar = 3;
         request.meter.beat_unit = 4;
         request.bars = 8;
@@ -216,7 +216,7 @@ static void test_variety(void) {
             GrowRequest request;
             memset(&request, 0, sizeof(request));
             request.motive = &motive;
-            request.key = plan_key_of_pitch_class(CASES[c].tonic, CASES[c].mode);
+            request.key = test_key_mode(CASES[c].tonic, CASES[c].mode);
             request.meter.beats_per_bar = CASES[c].beats;
             request.meter.beat_unit = CASES[c].unit;
             request.bars = 8;
@@ -247,7 +247,7 @@ static void test_four_bar_refused(void) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+    request.key = test_key_mode(9, KEY_STRUCTURE_MODE_MINOR);
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 4;
@@ -273,7 +273,7 @@ static void test_period_slot(void) {
     memset(&request, 0, sizeof(request));
     request.motive = &basic;
     request.slot_motives[GROW_SLOT_CONTRASTING] = &contrasting;
-    request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+    request.key = test_key_mode(9, KEY_STRUCTURE_MODE_MINOR);
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -329,7 +329,7 @@ static GrowRequest part_request(const Motive *motive, PlanThemeBeginning beginni
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;

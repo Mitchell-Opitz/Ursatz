@@ -8,6 +8,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_knowledge.h"
 
 /*
  * plan_give_chords (given.h): one Given harmony span for each chord, exactly its onset and length.
@@ -42,7 +43,7 @@ static PiecePlan *new_plan(NodeId *section) {
     PiecePlan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.seed = 1;

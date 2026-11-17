@@ -451,7 +451,7 @@ static Motive scenario_motive(const Scenario *scenario) {
         exit(2);
     }
     motive_set_meter(&motive, (PlanMeter){scenario->beats, 4, 0});
-    AnalysisKey motive_key_value = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    AnalysisKey motive_key_value = test_key_mode(scenario->tonic, scenario->mode);
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     if (scenario->beats == 3) {
         /* The half note at beat 3 ends on the barline as a quarter. */
@@ -467,7 +467,7 @@ static PieceRequest scenario_request(const Scenario *scenario, const char *kind,
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = kind;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = 4;
     request.bars = size.bars;

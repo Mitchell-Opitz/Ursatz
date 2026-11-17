@@ -83,7 +83,7 @@ typedef struct {
 
 static void fixture_init(Fixture *fixture, int tonic, KeyStructureMode mode) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->request.key = plan_key_of_pitch_class(tonic, mode);
+    fixture->request.key = test_key_mode(tonic, mode);
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;
     fixture->request.form = "game-loop";

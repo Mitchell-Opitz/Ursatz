@@ -31,7 +31,7 @@ static GrowRequest make_request(const Motive *motive, int tonic, KeyStructureMod
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(tonic, mode);
+    request.key = test_key_mode(tonic, mode);
     request.meter.beats_per_bar = beats;
     request.meter.beat_unit = unit;
     request.bars = bars;

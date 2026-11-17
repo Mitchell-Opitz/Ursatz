@@ -110,7 +110,7 @@ bool request_parse_key(const char *text, const CommonPracticeMaterials *material
     if (!material) {
         return false;
     }
-    *key = plan_key_of_material(util_pitch_class(pc), material);
+    *key = plan_key_of_pitch_class(util_pitch_class(pc), material);
     return true;
 }
 

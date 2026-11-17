@@ -117,7 +117,7 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = item->bars;

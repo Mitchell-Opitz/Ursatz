@@ -13,6 +13,7 @@
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 
 /*
  * Motive invention: a Fill operator for the Constrained one-bar melody span of a motive node that carries an
@@ -80,7 +81,7 @@ static bool read_invent_request(const PiecePlan *plan, FillTarget target, const 
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &lane, 1) > 0) {
         out->meter = plan_lane_span_payload(plan, lane)->meter;
     }
-    out->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    out->key = plan_key_of_pitch_class(0, composer_builtin_material(false));
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &lane, 1) > 0) {
         out->key = plan_lane_span_payload(plan, lane)->key;
     } else if (context->has_key) {

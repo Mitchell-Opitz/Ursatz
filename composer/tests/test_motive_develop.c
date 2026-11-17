@@ -761,7 +761,7 @@ static void test_explicit_parameters(void) {
 
 static void test_degenerate_cases(void) {
     PlanMeter meter = {4, 4, 0};
-    AnalysisKey c_major = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey c_major = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     Motive single = load("C4:q", &meter, &c_major);
     Motive four = load("D4:q F4:e A4:e D5:h", &meter, &c_major);
     Motive result;
@@ -907,7 +907,7 @@ static bool score_is(MotiveScore score, unsigned long num, unsigned long den) {
 /* The pickup scales with augmentation and diminution, and a tonal transposition or inversion spells F and B as degrees. */
 static void test_pickups_and_tonal_spelling(void) {
     const PlanMeter three_four = {3, 4, 0};
-    const AnalysisKey c_major = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    const AnalysisKey c_major = test_key_mode(0, KEY_STRUCTURE_MODE_MAJOR);
     Motive source = load("C4:q E4:q G4:q E4:q", &three_four, &c_major);
     Motive result;
     MotiveRelationStep spec;
@@ -949,7 +949,7 @@ static void test_pickups_and_tonal_spelling(void) {
 
 static void test_recognizability(void) {
     PlanMeter meter = {4, 4, 0};
-    AnalysisKey d_minor = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    AnalysisKey d_minor = test_key_mode(2, KEY_STRUCTURE_MODE_MINOR);
     Motive source = load("D4:q F4:e A4:e D5:h", &meter, &d_minor);
     MotiveRecognizability r;
 

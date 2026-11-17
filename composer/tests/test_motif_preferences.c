@@ -34,7 +34,7 @@
 static MotiveRandomOptions options_in(int beats, KeyStructureMode mode, unsigned long seed, const MotiveRandomPreferences *preferences) {
     MotiveRandomOptions options;
     memset(&options, 0, sizeof(options));
-    options.mode = mode;
+    options.material = test_material_mode(mode);
     options.meter.beats_per_bar = beats;
     options.meter.beat_unit = 4;
     options.form = MOTIVE_SKETCH_FORM_FULL;
@@ -982,7 +982,7 @@ static void rhythm_variety(void) {
             for (unsigned long seed = 500; seed < 560; seed++) {
                 MotiveRandomOptions options = options_of(beats[m], seed, &preferences);
                 options.meter.beat_unit = units[m];
-                options.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+                options.material = test_material_mode(minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
                 size_t count = 0;
                 assert(motive_random(&options, &motives[seed - 500], &count) == MOTIVE_RANDOM_OK && count == 1);
             }

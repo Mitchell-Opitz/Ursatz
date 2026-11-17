@@ -46,3 +46,10 @@ library/theory/tonality/region_relation.c resolve_set  # the set branch of regio
 library/theory/tonality/region_relation.c resolve_tonal  # helper of region_resolve, which no app calls until P58 B13; its tests call it
 library/theory/tonality/region_relation.c same_material  # helper of region_resolve, which no app calls until P58 B13; its tests call it
 library/theory/tonality/roman_numeral_grammar.c standard_tonality_numeral_root_semitone  # no app calls the mode form until P58 B13 deletes it; its tests call it
+library/theory/tonality/tonal_key.c mode_material  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
+library/theory/tonality/tonal_key.c mode_valid  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
+library/theory/tonality/tonal_key.c standard_tonality_degree_at_or_below_semitone  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
+library/theory/tonality/tonal_key.c standard_tonality_degree_of_semitone  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
+library/theory/tonality/tonal_key.c standard_tonality_degree_semitone  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
+library/theory/tonality/tonal_key.c standard_tonality_mode_pitch_classes  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
+library/theory/tonality/tonal_key.c standard_tonality_mode_pitch_classes_with_leading_tone  # no app reads a mode now that the Composer reads materials; its tests call it, until P58 B13 commit 6 deletes the mode forms
