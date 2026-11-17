@@ -8,6 +8,7 @@
 #include "melody/melody_internal.h"
 #include "piece/form_figure_internal.h"
 #include "piece/form_return_internal.h"
+#include "util/plan_util.h"
 #include "util/util.h"
 
 #include <theory/tonality/tonal_key.h>
@@ -97,15 +98,22 @@ static bool nearest_chord_tone(unsigned mask, int pitch, int *out) {
  * the figure.
  */
 static bool figure_cell_length(const PlanMeter *meter, Rational *cell, size_t *per_bar) {
-    if (meter->beat_unit == 8 && meter->beats_per_bar == 6) {
-        *per_bar = 2;
-        return rational_make(3, 8, cell) == RATIONAL_OK;
+    TimeSignature *signature = NULL;
+    Duration beat;
+    if (!plan_meter_signature(*meter, &signature)) {
+        return false;
     }
-    if (meter->beat_unit == 4 && meter->beats_per_bar >= 2 && meter->beats_per_bar <= 4) {
-        *per_bar = (size_t)meter->beats_per_bar;
-        return rational_make(1, 4, cell) == RATIONAL_OK;
+    size_t beats = time_signature_group_count(signature);
+    DurationResult beat_made = time_signature_beat_length(signature, &beat);
+    time_signature_destroy(signature);
+    /* two to four beats of a quarter or a dotted quarter: the figures are written in those cells */
+    if (beat_made != DURATION_OK || beats < 2 || beats > 4 ||
+        (rational_cmp(beat.value, (Rational){1, 4}) != 0 && rational_cmp(beat.value, (Rational){3, 8}) != 0)) {
+        return false;
     }
-    return false;
+    *per_bar = beats;
+    *cell = beat.value;
+    return true;
 }
 
 void form_figure_reading_free(FigureReading *reading) {

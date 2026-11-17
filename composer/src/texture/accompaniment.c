@@ -8,6 +8,7 @@
 #include <ursatz_composer/regenerate.h>
 
 #include "texture/texture_internal.h"
+#include "util/plan_util.h"
 
 /* The fewest semitones a voice moves per chord change, on average, for the candidate to score for it. */
 #define SMOOTH_LIMIT 3
@@ -220,7 +221,17 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
         return false;
     }
     out->meter = metre.meter;
-    out->compound = out->meter.beat_unit == 8 && out->meter.beats_per_bar >= 6 && out->meter.beats_per_bar % 3 == 0;
+    TimeSignature *signature = NULL;
+    Duration beat_length;
+    if (!plan_meter_signature(out->meter, &signature)) {
+        return false;
+    }
+    out->compound = time_signature_is_compound(signature);
+    DurationResult beat_made = time_signature_beat_length(signature, &beat_length);
+    time_signature_destroy(signature);
+    if (beat_made != DURATION_OK) {
+        return false;
+    }
     size_t cells = 0;
     out->length = out->span.length;
     origin = out->span.start;
@@ -230,7 +241,7 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
         out->meter.beat_unit <= 0) {
         return false;
     }
-    out->beat = out->compound ? rational_ratio(3, 8) : rational_ratio(1, out->meter.beat_unit);
+    out->beat = beat_length.value;
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, out->span, meters, 2) != 1) {
         return false;
     }

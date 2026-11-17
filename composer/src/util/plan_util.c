@@ -1,10 +1,32 @@
 #include "util/plan_util.h"
 
+#include <model/time/note_value.h>
+
 const CadenceType plan_cadence_types[PLAN_CADENCE_COUNT] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC,
                                                             CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
                                                             CADENCE_TYPE_PLAGAL};
 const char *const plan_cadence_names[PLAN_CADENCE_COUNT] = {"PAC", "IAC", "HC", "DC", "PC"};
 const char *const plan_cadence_file_names[PLAN_CADENCE_COUNT] = {"pac", "iac", "hc", "dc", "pc"};
+
+bool plan_meter_signature(PlanMeter meter, TimeSignature **out) {
+    int exponent = -1;
+    for (int candidate = TIME_SIGNATURE_MIN_BOTTOM_UNIT_EXPONENT; candidate <= TIME_SIGNATURE_MAX_BOTTOM_UNIT_EXPONENT;
+         candidate++) {
+        if (meter.beat_unit == (1 << candidate)) {
+            exponent = candidate;
+        }
+    }
+    if (out == NULL || exponent < 0 || meter.beats_per_bar < 1) {
+        return false;
+    }
+    NoteValue *unit = NULL;
+    if (note_value_create(exponent, &unit) != NOTE_VALUE_OK) {
+        return false;
+    }
+    TimeSignatureResult made = time_signature_create((unsigned)meter.beats_per_bar, unit, out);
+    note_value_destroy(unit);
+    return made == TIME_SIGNATURE_OK;
+}
 
 bool plan_cadence_index(CadenceType type, size_t *index) {
     for (size_t i = 0; i < PLAN_CADENCE_COUNT; i++) {

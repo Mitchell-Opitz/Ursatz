@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include <model/time/time_signature.h>
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
@@ -10,6 +12,11 @@
 #include <ursatz_composer/plan_state.h>
 
 /* Small helpers on the plan the sources share. Private: not installed, not part of the API. */
+
+/* The time signature of a plan meter (beats_per_bar over beat_unit, with the signature's default beat groups), the one
+   owner of the beat (time_signature_beat_length, time_signature_is_compound); false for a meter a signature cannot hold
+   (a beat unit that is not 1, 2, 4, 8 or 16, or beats_per_bar outside 1 to 64). The caller destroys *out. */
+bool plan_meter_signature(PlanMeter meter, TimeSignature **out);
 
 /* Whether two spans share any time (touching ends do not overlap); false when a span's end overflows. */
 bool plan_spans_overlap(PlanSpan a, PlanSpan b);

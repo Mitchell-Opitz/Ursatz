@@ -9,6 +9,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "piece/piece_internal.h"
+#include "util/plan_util.h"
 #include "util/position.h"
 #include "util/util.h"
 
@@ -153,7 +154,17 @@ PieceResult piece_connective_write(PiecePlan *plan, NodeId section) {
     }
     Rational unit = {1, meter.beat_unit};
     Rational bar = position_mul(unit, meter.beats_per_bar);
-    Rational beat = meter.beat_unit == 8 && meter.beats_per_bar % 3 == 0 && meter.beats_per_bar >= 6 ? (Rational){3, 8} : unit;
+    TimeSignature *signature = NULL;
+    Duration beat_length;
+    if (!plan_meter_signature(meter, &signature)) {
+        return PIECE_OK;
+    }
+    DurationResult beat_made = time_signature_beat_length(signature, &beat_length);
+    time_signature_destroy(signature);
+    if (beat_made != DURATION_OK) {
+        return PIECE_OK;
+    }
+    Rational beat = beat_length.value;
     Rational eighth = {1, 8};
     Rational bar_start = position_sub(end, bar);
     Rational rest = position_sub(bar, beat);
