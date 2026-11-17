@@ -2,51 +2,57 @@
 
 #include <limits.h>
 #include <stdlib.h>
-#include "model/core/rational.h"
-#include "model/core/value.h"
 
-struct MusicalTime {
-    Value *value;
-};
+MusicalTimeResult musical_time_make(long long num, long long den, MusicalTime *out) {
+    if (den <= 0) {
+        return MUSICAL_TIME_ERR_NON_POSITIVE_DENOMINATOR;
+    }
+    Rational r;
+    if (rational_make(num, den, &r) != RATIONAL_OK) {
+        return MUSICAL_TIME_ERR_OVERFLOW;
+    }
+    out->value = r;
+    return MUSICAL_TIME_OK;
+}
 
-typedef struct {
-    long numerator;
-    unsigned long denominator;
-} MusicalTimeContent;
+int musical_time_cmp(MusicalTime a, MusicalTime b) {
+    return rational_cmp(a.value, b.value);
+}
+
+bool musical_time_same(MusicalTime a, MusicalTime b) {
+    return rational_equals(a.value, b.value);
+}
+
+MusicalTimeResult musical_time_plus(MusicalTime t, Duration d, MusicalTime *out) {
+    Rational sum;
+    if (rational_add(t.value, d.value, &sum) != RATIONAL_OK) {
+        return MUSICAL_TIME_ERR_OVERFLOW;
+    }
+    out->value = sum;
+    return MUSICAL_TIME_OK;
+}
 
 MusicalTimeResult musical_time_create(long numerator, unsigned long denominator, MusicalTime **out) {
     if (denominator == 0) {
         return MUSICAL_TIME_ERR_NON_POSITIVE_DENOMINATOR;
     }
-
-    unsigned long divisor = (unsigned long)rational_gcd_unsigned(numerator < 0 ? 0UL - (unsigned long)numerator : (unsigned long)numerator, denominator);
-    if (divisor == 0) {
-        divisor = 1;
+    if (denominator > (unsigned long)LLONG_MAX) {
+        return MUSICAL_TIME_ERR_OVERFLOW;
     }
-
-    MusicalTimeContent content;
-    content.numerator = numerator / (long)divisor;
-    content.denominator = denominator / divisor;
-
+    Rational r;
+    if (rational_make(numerator, (long long)denominator, &r) != RATIONAL_OK) {
+        return MUSICAL_TIME_ERR_OVERFLOW;
+    }
     MusicalTime *t = (MusicalTime *)malloc(sizeof(MusicalTime));
     if (t == NULL) {
         return MUSICAL_TIME_ERR_ALLOC;
     }
-
-    if (value_create("MusicalTime", &content, sizeof(content), &t->value) != VALUE_OK) {
-        free(t);
-        return MUSICAL_TIME_ERR_ALLOC;
-    }
-
+    t->value = r;
     *out = t;
     return MUSICAL_TIME_OK;
 }
 
 void musical_time_destroy(MusicalTime *time) {
-    if (time == NULL) {
-        return;
-    }
-    value_destroy(time->value);
     free(time);
 }
 
@@ -54,40 +60,21 @@ bool musical_time_equals(const MusicalTime *a, const MusicalTime *b) {
     if (a == NULL || b == NULL) {
         return false;
     }
-    return value_equals(a->value, b->value);
-}
-
-static const MusicalTimeContent *musical_time_content(const MusicalTime *time) {
-    return (const MusicalTimeContent *)value_content(time->value, NULL);
+    return rational_equals(a->value, b->value);
 }
 
 long musical_time_numerator(const MusicalTime *time) {
-    return musical_time_content(time)->numerator;
+    return (long)time->value.num;
 }
 
 unsigned long musical_time_denominator(const MusicalTime *time) {
-    return musical_time_content(time)->denominator;
-}
-
-static bool rational_of_content(const MusicalTimeContent *content, Rational *out) {
-    return content->denominator <= (unsigned long)LLONG_MAX &&
-           rational_make(content->numerator, (long long)content->denominator, out) == RATIONAL_OK;
-}
-
-static bool rational_of_duration_parts(const Duration *duration, Rational *out) {
-    unsigned long denominator = duration_denominator(duration);
-    return denominator <= (unsigned long)LLONG_MAX &&
-           rational_make(duration_numerator(duration), (long long)denominator, out) == RATIONAL_OK;
+    return (unsigned long)time->value.den;
 }
 
 MusicalTimeResult musical_time_add(const MusicalTime *time, const Duration *duration, MusicalTime **out) {
-    Rational a;
-    Rational b;
-    Rational sum;
-    if (!rational_of_content(musical_time_content(time), &a) || !rational_of_duration_parts(duration, &b) ||
-        rational_add(a, b, &sum) != RATIONAL_OK || sum.num < LONG_MIN || sum.num > LONG_MAX ||
-        (unsigned long long)sum.den > ULONG_MAX) {
+    MusicalTime sum;
+    if (musical_time_plus(*time, *duration, &sum) != MUSICAL_TIME_OK) {
         return MUSICAL_TIME_ERR_OVERFLOW;
     }
-    return musical_time_create((long)sum.num, (unsigned long)sum.den, out);
+    return musical_time_create((long)sum.value.num, (unsigned long)sum.value.den, out);
 }

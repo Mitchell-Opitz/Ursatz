@@ -62,16 +62,10 @@ static void test_span(void) {
     assert(!score_time_span(NULL, &start, &end));
     time_span_destroy(span);
 
-    /* A denominator above LLONG_MAX does not fit a Rational: refused, outputs untouched. */
-    MusicalTime *huge = at(1, ULONG_MAX);
-    TimeSpan *wide = NULL;
-    assert(time_span_create(from, huge, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &wide) == TIME_SPAN_OK);
-    start = q(5, 7);
-    end = q(5, 7);
-    assert(!score_time_span(wide, &start, &end));
-    assert(rational_equals(start, q(5, 7)) && rational_equals(end, q(5, 7)));
-    time_span_destroy(wide);
-    musical_time_destroy(huge);
+    /* A denominator above LLONG_MAX does not fit a Rational: no time can be built from it. */
+    MusicalTime *huge = NULL;
+    assert(musical_time_create(1, ULONG_MAX, &huge) == MUSICAL_TIME_ERR_OVERFLOW);
+    assert(huge == NULL);
     musical_time_destroy(from);
     musical_time_destroy(to);
 }

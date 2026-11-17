@@ -1,46 +1,35 @@
 #include "model/time/time_rational.h"
 
-#include <limits.h>
 #include <stddef.h>
 
-static RationalResult make_from_fields(long numerator, unsigned long denominator, Rational *out) {
-    if (out == NULL) {
-        return RATIONAL_ERR_NULL;
-    }
-    if (denominator > (unsigned long)LLONG_MAX) {
-        return RATIONAL_ERR_OVERFLOW;
-    }
-    return rational_make((long long)numerator, (long long)denominator, out);
-}
-
 RationalResult rational_of_musical_time(const MusicalTime *time, Rational *out) {
-    if (time == NULL) {
+    if (time == NULL || out == NULL) {
         return RATIONAL_ERR_NULL;
     }
-    return make_from_fields(musical_time_numerator(time), musical_time_denominator(time), out);
+    *out = time->value;
+    return RATIONAL_OK;
 }
 
 RationalResult rational_of_duration(const Duration *duration, Rational *out) {
-    if (duration == NULL) {
+    if (duration == NULL || out == NULL) {
         return RATIONAL_ERR_NULL;
     }
-    return make_from_fields(duration_numerator(duration), duration_denominator(duration), out);
-}
-
-static bool fits_fields(Rational value) {
-    return value.num >= LONG_MIN && value.num <= LONG_MAX && (unsigned long long)value.den <= ULONG_MAX;
+    *out = duration->value;
+    return RATIONAL_OK;
 }
 
 TimeRationalResult musical_time_from_rational(Rational value, MusicalTime **out) {
     if (out == NULL) {
         return TIME_RATIONAL_ERR_NULL;
     }
-    if (!fits_fields(value)) {
-        return TIME_RATIONAL_ERR_OVERFLOW;
-    }
     MusicalTime *time = NULL;
-    if (musical_time_create((long)value.num, (unsigned long)value.den, &time) != MUSICAL_TIME_OK) {
+    switch (musical_time_create((long)value.num, (unsigned long)value.den, &time)) {
+    case MUSICAL_TIME_OK:
+        break;
+    case MUSICAL_TIME_ERR_ALLOC:
         return TIME_RATIONAL_ERR_ALLOC;
+    default:
+        return TIME_RATIONAL_ERR_OVERFLOW;
     }
     *out = time;
     return TIME_RATIONAL_OK;

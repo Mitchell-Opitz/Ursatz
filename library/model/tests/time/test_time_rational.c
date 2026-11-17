@@ -39,13 +39,11 @@ static void test_duration_reads(void) {
 }
 
 static void test_does_not_fit(void) {
-    /* A denominator above LLONG_MAX does not fit a Rational. */
+    /* A denominator above LLONG_MAX does not fit a Rational: create refuses it. */
     MusicalTime *wide = NULL;
-    assert(musical_time_create(1, ULONG_MAX, &wide) == MUSICAL_TIME_OK);
+    assert(musical_time_create(1, ULONG_MAX, &wide) == MUSICAL_TIME_ERR_OVERFLOW);
+    assert(wide == NULL);
     Rational r = {7, 9};
-    assert(rational_of_musical_time(wide, &r) == RATIONAL_ERR_OVERFLOW);
-    assert(r.num == 7 && r.den == 9);
-    musical_time_destroy(wide);
 
     /* A denominator above ULONG_MAX does not fit a MusicalTime (only when long is narrower). */
     assert(rational_of_musical_time(NULL, &r) == RATIONAL_ERR_NULL);

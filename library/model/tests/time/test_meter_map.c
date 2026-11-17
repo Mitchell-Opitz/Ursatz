@@ -339,19 +339,11 @@ static void test_grid_overflow_is_refused(void) {
     musical_time_destroy(b);
 }
 
-/* A lookup time past LLONG_MAX in its denominator is refused, not read as a wrapped value. */
+/* A time past LLONG_MAX in its denominator cannot be built, so no lookup can be handed one. */
 static void test_lookup_overflow_is_refused(void) {
-    MeterMap *map = NULL;
-    assert(meter_map_create_defaulted(id("map"), &map) == METER_MAP_OK);
-    MusicalTime *huge = at(1, ULONG_MAX);
-    int index = 0;
-    assert(meter_map_measure_index_at(map, huge, &index) == METER_MAP_ERR_OVERFLOW);
-    size_t count = 0;
-    assert(meter_map_measure_count(map, huge, &count) == METER_MAP_ERR_OVERFLOW);
-    const MeterMapRegion *region = NULL;
-    assert(meter_map_region_at(map, huge, &region) == METER_MAP_ERR_OVERFLOW);
-    musical_time_destroy(huge);
-    meter_map_destroy(map);
+    MusicalTime *huge = NULL;
+    assert(musical_time_create(1, ULONG_MAX, &huge) == MUSICAL_TIME_ERR_OVERFLOW);
+    assert(huge == NULL);
 }
 
 int main(void) {

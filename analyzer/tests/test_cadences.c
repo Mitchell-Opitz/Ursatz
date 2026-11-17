@@ -61,7 +61,7 @@ static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid"},
 static const char *const TYPES[] = {"perfect-authentic", "imperfect-authentic", "half",       "subverted",
                                     "plagal",            "deceptive",           "authentic-unspecified", "unknown"};
 
-static bool rational_equals(const cJSON *rational, long num, long den) {
+static bool json_rational_equals(const cJSON *rational, long num, long den) {
     return (long)test_json_member(rational, "num")->valuedouble * den == num * (long)test_json_member(rational, "den")->valuedouble;
 }
 
@@ -175,7 +175,7 @@ static bool has_cadence_at(const cJSON *cadences, const char *type, long num, lo
     const cJSON *cadence;
     cJSON_ArrayForEach(cadence, cadences) {
         if (strcmp(test_json_member(cadence, "type")->valuestring, type) == 0 &&
-            rational_equals(test_json_member(test_json_member(test_json_member(cadence, "arrival"), "span"), "start"), num, den)) {
+            json_rational_equals(test_json_member(test_json_member(test_json_member(cadence, "arrival"), "span"), "start"), num, den)) {
             return true;
         }
     }

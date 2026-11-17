@@ -19,7 +19,13 @@ typedef enum {
     TIME_SPAN_BOUNDARY_RIGHT_CLOSED
 } TimeSpanBoundary;
 
-typedef struct TimeSpan TimeSpan;
+/* A span is two times and the boundary it was made with. The value API (time_span_make) always builds
+   a half-open span [start, end), boundary TIME_SPAN_BOUNDARY_LEFT_CLOSED. */
+typedef struct {
+    MusicalTime start;
+    MusicalTime end;
+    TimeSpanBoundary boundary;
+} TimeSpan;
 
 typedef enum {
     TIME_SPAN_OK = 0,
@@ -29,8 +35,15 @@ typedef enum {
     TIME_SPAN_ERR_ALLOC
 } TimeSpanResult;
 
+/* Value API: the half-open span [start, end). TIME_SPAN_ERR_END_BEFORE_START when end < start. */
+TimeSpanResult time_span_make(MusicalTime start, MusicalTime end, TimeSpan *out);
+/* True when the end is strictly after the start (a non-empty span). */
+bool time_span_holds(TimeSpan span);
+/* end - start; DURATION_ERR_OVERFLOW when it does not fit. */
+DurationResult time_span_length(TimeSpan span, Duration *out);
+
 /*
- * boundary MUST be one of the TimeSpanBoundary values above — there is no
+ * Heap API, kept until the callers are converted. boundary MUST be one of the TimeSpanBoundary values above — there is no
  * default. A deserializer built on top of this constructor MUST reject a
  * payload that omits boundary rather than silently assuming CLOSED.
  */
