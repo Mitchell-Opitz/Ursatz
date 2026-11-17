@@ -22,7 +22,7 @@ typedef struct {
 } AnalysisKey;
 
 typedef struct {
-    const MusicalTime *time;
+    MusicalTime time;
     AnalysisKey key;
 } AnalysisKeyEvent;
 

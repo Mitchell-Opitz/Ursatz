@@ -96,11 +96,11 @@ static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t 
                            const HarmonyCadenceConfig *config) {
     const HarmonySegmentInput *start = segments[first].input;
     double beat = config->beat_length;
-    if (start->beat_length != NULL) {
-        beat = (double)duration_numerator(start->beat_length) / (double)duration_denominator(start->beat_length);
+    if (start->has_beat_length) {
+        beat = (double)duration_numerator(&start->beat_length) / (double)duration_denominator(&start->beat_length);
     }
-    double length = whole_notes(time_span_end(segments[last].input->segment.span)) -
-                    whole_notes(time_span_start(segments[first].input->segment.span));
+    double length = whole_notes(&segments[last].input->segment.span.end) -
+                    whole_notes(&segments[first].input->segment.span.start);
     if (length + 1e-9 >= config->arrival_min_beats * beat) {
         return true;
     }
@@ -111,8 +111,8 @@ static bool arrival_closes(const HarmonySegment *segments, size_t count, size_t 
 static bool starts_on_beat(const HarmonySegment *segment, const HarmonyCadenceConfig *config) {
     const HarmonySegmentInput *input = segment->input;
     double beat = config->beat_length;
-    if (input->beat_length != NULL) {
-        beat = (double)duration_numerator(input->beat_length) / (double)duration_denominator(input->beat_length);
+    if (input->has_beat_length) {
+        beat = (double)duration_numerator(&input->beat_length) / (double)duration_denominator(&input->beat_length);
     }
     const Duration *offset = metrical_position_offset(input->segment.position);
     double beats = ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / beat;
@@ -378,9 +378,8 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     u = max_uncertainty(segments, point->arrival_first, point->arrival_last, u);
     result->uncertainty = 1.0 - (1.0 - u) * (1.0 - c->penalty);
 
-    if (time_span_create(time_span_start(segments[c->dominant_first].input->segment.span),
-                         time_span_end(segments[point->arrival_last].input->segment.span), TIME_SPAN_BOUNDARY_LEFT_CLOSED,
-                         &result->span) != TIME_SPAN_OK) {
+    if (time_span_make(segments[c->dominant_first].input->segment.span.start,
+                       segments[point->arrival_last].input->segment.span.end, &result->span) != TIME_SPAN_OK) {
         return false;
     }
 
@@ -400,8 +399,6 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
         }
         free(event_ids);
         entity_id_destroy(cadence_id);
-        time_span_destroy(result->span);
-        result->span = NULL;
         return false;
     }
     /* cadence_create took ownership of the ids; the array itself is ours */
@@ -431,8 +428,6 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     if (result->interpretation == NULL) {
         cadence_destroy(result->cadence);
         result->cadence = NULL;
-        time_span_destroy(result->span);
-        result->span = NULL;
         return false;
     }
 
@@ -469,8 +464,6 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
             result->interpretation = NULL;
             cadence_destroy(result->cadence);
             result->cadence = NULL;
-            time_span_destroy(result->span);
-            result->span = NULL;
             memset(alt, 0, sizeof(*alt));
             return false;
         }
@@ -482,7 +475,6 @@ static void destroy_result(HarmonyCadenceResult *result) {
     interpretation_destroy(result->alternative.interpretation);
     interpretation_destroy(result->interpretation);
     cadence_destroy(result->cadence);
-    time_span_destroy(result->span);
     memset(result, 0, sizeof(*result));
 }
 
@@ -681,7 +673,7 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
 /* The index of the segment that starts at `start` whole notes, from 1 on; false when none does. */
 static bool section_start_segment(const HarmonySegment *segments, size_t count, double start, size_t *out) {
     for (size_t i = 1; i < count; i++) {
-        if (fabs(whole_notes(time_span_start(segments[i].input->segment.span)) - start) < 1e-9) {
+        if (fabs(whole_notes(&segments[i].input->segment.span.start) - start) < 1e-9) {
             *out = i;
             return true;
         }

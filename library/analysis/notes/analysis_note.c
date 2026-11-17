@@ -2,21 +2,9 @@
 
 #include <string.h>
 
-#include "model/core/rational.h"
-#include "model/time/time_rational.h"
-
-static bool span_bounds(const TimeSpan *span, Rational *start, Rational *end) {
-    return rational_of_musical_time(time_span_start(span), start) == RATIONAL_OK &&
-           rational_of_musical_time(time_span_end(span), end) == RATIONAL_OK;
-}
 
 bool analysis_note_valid(const AnalysisNote *note) {
-    if (note == NULL || note->note_id == NULL || note->span == NULL) {
-        return false;
-    }
-    Rational start;
-    Rational end;
-    if (!span_bounds(note->span, &start, &end) || rational_cmp(end, start) <= 0) {
+    if (note == NULL || note->note_id == NULL || !time_span_holds(note->span)) {
         return false;
     }
     if (note->midi != ANALYSIS_PITCH_UNKNOWN && (note->midi < 0 || note->midi > 127)) {
@@ -28,15 +16,9 @@ bool analysis_note_valid(const AnalysisNote *note) {
 int analysis_note_compare(const void *a, const void *b) {
     const AnalysisNote *x = a;
     const AnalysisNote *y = b;
-    Rational xs;
-    Rational xe;
-    Rational ys;
-    Rational ye;
-    if (span_bounds(x->span, &xs, &xe) && span_bounds(y->span, &ys, &ye)) {
-        int c = rational_cmp(xs, ys);
-        if (c != 0) {
-            return c;
-        }
+    int c = musical_time_cmp(x->span.start, y->span.start);
+    if (c != 0) {
+        return c;
     }
     if (x->midi != y->midi) {
         return x->midi < y->midi ? -1 : 1;

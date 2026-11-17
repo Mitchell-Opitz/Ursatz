@@ -11,20 +11,18 @@
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_span.h"
 
-static bool build_span(const NoteEvent *event, TimeSpan **out) {
-    const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(event));
-    MusicalTime *end = NULL;
-    if (musical_time_add(start, note_event_duration(event), &end) != MUSICAL_TIME_OK) {
+static bool build_span(const NoteEvent *event, TimeSpan *out) {
+    MusicalTime start = *temporal_anchor_position(note_event_temporal_anchor(event));
+    MusicalTime end;
+    if (musical_time_plus(start, *note_event_duration(event), &end) != MUSICAL_TIME_OK) {
         return false;
     }
-    TimeSpanResult result = time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, out);
-    musical_time_destroy(end);
-    return result == TIME_SPAN_OK;
+    return time_span_make(start, end, out) == TIME_SPAN_OK;
 }
 
 static bool fill_note(AnalysisNote *note, const ImportedNotes *notes, size_t i) {
     const NoteEvent *event = notes->events[i];
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (!build_span(event, &span)) {
         return false;
     }
@@ -38,11 +36,7 @@ static bool fill_note(AnalysisNote *note, const ImportedNotes *notes, size_t i) 
     note->track = notes->streams ? notes->streams[i] : ANALYSIS_INDEX_NONE;
     note->voice = ANALYSIS_INDEX_NONE;
     note->voice_confidence = voice ? 1.0 : 0.0;
-    if (!analysis_note_valid(note)) {
-        time_span_destroy(span);
-        return false;
-    }
-    return true;
+    return analysis_note_valid(note);
 }
 
 /* An AnalysisNote with its ImportedNotes index; the note comes first so analysis_note_compare reads it directly. */
@@ -71,7 +65,10 @@ static bool build_key_events(const ImportedNotes *notes, ChainInput *out) {
     }
     for (size_t i = 0; i < count; i++) {
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
-        out->key_events[i].time = event->position;
+        if (event->position == NULL) {
+            return false;
+        }
+        out->key_events[i].time = *event->position;
         if (!analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &out->key_events[i].key)) {
             return false;
         }
@@ -96,9 +93,6 @@ bool chain_input_build(const ImportedNotes *notes, ChainInput *out) {
         for (size_t i = 0; i < notes->count; i++) {
             indexed[i].index = i;
             if (!fill_note(&indexed[i].note, notes, i)) {
-                for (size_t j = 0; j < i; j++) {
-                    time_span_destroy((TimeSpan *)indexed[j].note.span);
-                }
                 free(indexed);
                 chain_input_destroy(out);
                 return false;
@@ -124,9 +118,6 @@ bool chain_input_build(const ImportedNotes *notes, ChainInput *out) {
 }
 
 void chain_input_destroy(ChainInput *input) {
-    for (size_t i = 0; input->notes && i < input->count; i++) {
-        time_span_destroy((TimeSpan *)input->notes[i].span);
-    }
     free(input->notes);
     free(input->order);
     free(input->by_id);

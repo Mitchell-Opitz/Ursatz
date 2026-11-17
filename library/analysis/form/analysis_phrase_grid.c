@@ -162,7 +162,7 @@ static StandardFormAnalysisStatus evidence_build(const StandardFormInput *input,
     for (size_t i = 0; i < count; i++) {
         Rational start;
         Rational end;
-        if (!score_time_span(input->notes[i].span, &start, &end) ||
+        if (!score_time_span(&input->notes[i].span, &start, &end) ||
             meter_map_measure_of(input->map, start, &note_measure[i]) != METER_MAP_OK) {
             free(note_measure);
             evidence_free(ev);
@@ -225,7 +225,7 @@ static StandardFormAnalysisStatus evidence_build(const StandardFormInput *input,
         Rational end;
         int from = 0;
         int to = 0;
-        if (!score_time_span(cadence->arrival, &start, &end) || meter_map_measure_of(input->map, start, &from) != METER_MAP_OK ||
+        if (!score_time_span(&cadence->arrival, &start, &end) || meter_map_measure_of(input->map, start, &from) != METER_MAP_OK ||
             meter_map_last_measure_touched(input->map, end, &to) != METER_MAP_OK) {
             evidence_free(ev);
             return STANDARD_FORM_ANALYSIS_ERR_METER;

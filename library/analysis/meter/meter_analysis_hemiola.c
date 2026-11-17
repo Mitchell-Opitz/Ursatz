@@ -147,7 +147,7 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
     for (size_t i = 0; i < input->note_count; i++) {
         Rational start;
         Rational end;
-        if (!score_time_span(input->notes[i].span, &start, &end) || !standard_meter_snap_time(config, &start, false, NULL) ||
+        if (!score_time_span(&input->notes[i].span, &start, &end) || !standard_meter_snap_time(config, &start, false, NULL) ||
             !standard_meter_snap_time(config, &end, true, NULL)) {
             continue;
         }
@@ -164,9 +164,8 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
     }
     size_t change_count = 0;
     for (size_t i = 0; i < input->chord_change_count; i++) {
-        Rational at;
-        if (rational_of_musical_time(input->chord_changes[i].time, &at) != RATIONAL_OK ||
-            !standard_meter_snap_time(config, &at, false, NULL)) {
+        Rational at = input->chord_changes[i].time.value;
+        if (!standard_meter_snap_time(config, &at, false, NULL)) {
             continue;
         }
         changes[change_count++] = at;

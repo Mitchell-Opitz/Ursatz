@@ -32,3 +32,5 @@ library/theory/knowledge/knowledge_snapshot.c read_steps  # the knowledge snapsh
 library/theory/knowledge/knowledge_snapshot.c text_field  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/knowledge/pitch_material.c pitch_material_contains  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
 library/theory/knowledge/pitch_material.c pitch_material_step  # the knowledge snapshot has no caller until P58 passes it to where a key is made (R-579); its tests call it
+library/model/time/time_span.c time_span_boundary  # no application reads the boundary since P58 B3 commit 1 held spans as values; tests call it, until P58 B4
+library/model/time/time_span.c time_span_is_valid  # no application checks a span through the heap API since P58 B3 commit 1; tests call it, until P58 B4

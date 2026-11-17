@@ -49,8 +49,8 @@ typedef struct {
 /* key_regions_windows.c */
 double key_regions_correlate(const double x[12], const double y[12]);
 void key_regions_rotated_profile(const CommonPracticeKeyProfiles *profiles, int key_index, double out[12]);
-bool key_regions_time_ok(const MusicalTime *time);
-bool key_regions_before(const MusicalTime *a, const MusicalTime *b);
+bool key_regions_time_ok(MusicalTime time);
+bool key_regions_before(MusicalTime a, MusicalTime b);
 CommonPracticeKeyRegionsStatus key_regions_gather_measures(const CommonPracticeKeySegment *segments, size_t segment_count,
                                                        const MeterMap *map, MeasureWeights *out);
 void key_regions_measures_release(MeasureWeights *measures);
@@ -71,7 +71,7 @@ double key_regions_region_uncertainty(const MeasureWeights *measures, size_t fro
                                  const CommonPracticeKeyProfiles *profiles);
 CommonPracticeKeyRegionsStatus key_regions_choose_path_restricted(const CommonPracticeKeyWindows *windows, double penalty,
                                                               unsigned allowed, int *path);
-CommonPracticeKeyRegionsStatus key_regions_nearest_barline(const MeterMap *map, const MusicalTime *position,
+CommonPracticeKeyRegionsStatus key_regions_nearest_barline(const MeterMap *map, MusicalTime position,
                                                        int *out_measure);
 CommonPracticeKeyRegionsStatus key_regions_plan_spans(const CommonPracticeKeySignatureEvent *events, size_t event_count,
                                                   const MeterMap *map, const MeasureWeights *measures,
@@ -84,7 +84,7 @@ CommonPracticeKeyRegionsStatus key_regions_snap_edges(int *measure_key, const bo
                                                   const size_t *boundaries, size_t boundary_count, size_t reach);
 CommonPracticeKeyRegionsStatus key_regions_find_pivot(const CommonPracticeKeySegment *segments, size_t segment_count,
                                                   const MeasureWeights *measures, int boundary_measure,
-                                                  const MusicalTime *boundary_start, int old_key, int new_key,
+                                                  MusicalTime boundary_start, int old_key, int new_key,
                                                   size_t search_measures, bool strictly_before, bool *found,
                                                   size_t *pivot);
 

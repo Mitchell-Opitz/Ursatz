@@ -98,7 +98,7 @@ typedef struct {
 typedef struct {
     StandardTexturePassageClaim claim;
     double uncertainty;
-    TimeSpan *span;   /* owned: the passage's time span, [start of its first measure, end of its last) */
+    TimeSpan span;    /* the passage's time span, [start of its first measure, end of its last) */
     Texture *texture; /* owned */
 } StandardTexturePassage;
 

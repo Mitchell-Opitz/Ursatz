@@ -81,11 +81,12 @@ ChainInputStatus chain_build_harmony_segments(const ChainSegments *segments, siz
             return CHAIN_INPUT_ERR_KEYS;
         }
         HarmonySegmentInput *input = &built.inputs[s];
-        AnalysisSegment segment = {segments->ids[s], window, built.positions[s], chain_attack_strength(map, time_span_start(window))};
+        AnalysisSegment segment = {segments->ids[s], *window, built.positions[s], chain_attack_strength(map, time_span_start(window))};
         input->segment = segment;
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
-        input->beat_length = built.beat_length;
+        input->has_beat_length = true;
+        input->beat_length = *built.beat_length;
         if (!romans[s].has_numeral) {
             input->degree = 0;
             input->interval_count = 3;
@@ -141,7 +142,7 @@ ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, siz
     size_t n = 0;
     for (size_t i = 1; i < regions->region_count; i++) {
         if (regions->regions[i].key_index == home_key_index && regions->regions[i - 1].key_index != home_key_index) {
-            starts[n++] = time_double(time_span_start(regions->regions[i].span));
+            starts[n++] = time_double(&regions->regions[i].span.start);
         }
     }
     HarmonyCadenceAnalysisStatus status = harmony_analysis_add_boundary_cadences(prepared, count, NULL, starts, n, cadences);
@@ -168,8 +169,8 @@ ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, co
         }
         const CommonPracticeKeyRegion *into = &regions->regions[change->to_region];
         KeyChangeExtent confirmed = change->extent;
-        if (!harmony_key_change_confirm(change->extent, time_double(time_span_start(into->span)),
-                                        time_double(time_span_end(into->span)), arrivals, cadences->count, &confirmed)) {
+        if (!harmony_key_change_confirm(change->extent, time_double(&into->span.start),
+                                        time_double(&into->span.end), arrivals, cadences->count, &confirmed)) {
             status = CHAIN_INPUT_ERR_KEYS;
             break;
         }

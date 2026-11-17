@@ -91,7 +91,6 @@ void common_practice_key_regions_destroy(CommonPracticeKeyRegions *regions) {
     }
     for (size_t i = 0; i < regions->region_count; i++) {
         key_destroy(regions->regions[i].key);
-        time_span_destroy(regions->regions[i].span);
     }
     free(regions->regions);
     free(regions->changes);
@@ -131,7 +130,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         }
     }
     for (size_t b = 0; b < effective.phrase_boundary_count; b++) {
-        if (!key_regions_time_ok(effective.phrase_boundaries[b])) {
+        if (effective.phrase_boundaries[b] == NULL || !key_regions_time_ok(*effective.phrase_boundaries[b])) {
             return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT;
         }
     }
@@ -207,7 +206,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         size_t slot_count = 0;
         for (size_t b = 0; b < effective.phrase_boundary_count && status == COMMON_PRACTICE_KEY_REGIONS_OK; b++) {
             int measure = 0;
-            status = key_regions_nearest_barline(map, effective.phrase_boundaries[b], &measure);
+            status = key_regions_nearest_barline(map, *effective.phrase_boundaries[b], &measure);
             long slot = (long)measure - (long)measures.first_measure;
             if (status == COMMON_PRACTICE_KEY_REGIONS_OK && slot > 0 && (size_t)slot < measures.measure_count) {
                 slots[slot_count++] = (size_t)slot;
@@ -291,7 +290,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
             }
             const CommonPracticeKeyRegion *into = &result.regions[change->to_region];
             status = key_regions_find_pivot(segments, segment_count, &measures, into->first_measure,
-                                time_span_start(into->span), result.regions[change->from_region].key_index,
+                                into->span.start, result.regions[change->from_region].key_index,
                                 into->key_index, effective.pivot_search_measures, phrase_mode, &change->has_pivot,
                                 &change->pivot_segment);
         }
@@ -332,7 +331,7 @@ bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *regi
 }
 
 bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *event, CommonPracticeKeySignatureEvent *out) {
-    if (event == NULL || out == NULL || event->time == NULL) {
+    if (event == NULL || out == NULL) {
         return false;
     }
     int fifths = pitch_spelling_fifths(event->key.tonic_letter, event->key.tonic_accidental);
@@ -348,14 +347,10 @@ bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *e
 }
 
 static bool region_duration(const CommonPracticeKeyRegion *region, Rational *out) {
-    Rational start;
-    Rational end;
-    if (region->span == NULL || region->key_index < 0 || region->key_index >= COMMON_PRACTICE_KEY_COUNT ||
-        rational_of_musical_time(time_span_start(region->span), &start) != RATIONAL_OK ||
-        rational_of_musical_time(time_span_end(region->span), &end) != RATIONAL_OK) {
+    if (region->key_index < 0 || region->key_index >= COMMON_PRACTICE_KEY_COUNT) {
         return false;
     }
-    return rational_sub(end, start, out) == RATIONAL_OK;
+    return rational_sub(region->span.end.value, region->span.start.value, out) == RATIONAL_OK;
 }
 
 bool common_practice_home_key_region(const CommonPracticeKeyRegion *regions, size_t count, size_t *home,

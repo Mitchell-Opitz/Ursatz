@@ -131,9 +131,9 @@ static void test_bad_calls(void) {
     bad.release_tolerance_denominator = 16; /* wider than half a grid step */
     assert(standard_meter_find_syncopations(&piece.input, &bad, &found) == STANDARD_METER_ANALYSIS_ERR_INVALID);
     /* a note the input cannot hold is refused when the input is made */
-    const TimeSpan *readable = piece_span(&piece, 0, 1, 1, 4);
+    TimeSpan readable = *piece_span(&piece, 0, 1, 1, 4);
     AnalysisNote bad_id = {"", NULL, readable, 60, NULL, NULL, 0, 0, 1.0};
-    AnalysisNote no_span = {"x", NULL, NULL, 60, NULL, NULL, 0, 0, 1.0};
+    AnalysisNote no_span = {"x", NULL, (TimeSpan){0}, 60, NULL, NULL, 0, 0, 1.0};
     StandardMeterInput refused;
     assert(standard_meter_input_init(&refused, piece.map, &bad_id, 1) == STANDARD_METER_ANALYSIS_ERR_INVALID);
     assert(standard_meter_input_init(&refused, piece.map, &no_span, 1) == STANDARD_METER_ANALYSIS_ERR_INVALID);

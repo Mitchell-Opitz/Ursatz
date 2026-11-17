@@ -10,21 +10,9 @@
 #include "model/time/time_rational.h"
 #include "analysis/texture/texture_analysis_claim.h"
 
-/* A new left-closed TimeSpan [start, end) the caller destroys, or NULL. */
-static TimeSpan *make_span(Rational start, Rational end) {
-    MusicalTime *from = NULL;
-    MusicalTime *to = NULL;
-    TimeSpan *span = NULL;
-    if (start.num >= 0 && end.num >= 0) {
-        from = musical_time_from_rational_or_null(start);
-        to = musical_time_from_rational_or_null(end);
-        if (from != NULL && to != NULL && time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
-            span = NULL;
-        }
-    }
-    musical_time_destroy(from);
-    musical_time_destroy(to);
-    return span;
+/* The left-closed TimeSpan [start, end); false for a negative start or end, or an end before the start. */
+static bool make_span(Rational start, Rational end, TimeSpan *out) {
+    return start.num >= 0 && end.num >= 0 && time_span_make(musical_time_of(start), musical_time_of(end), out) == TIME_SPAN_OK;
 }
 
 static double clip(double x) {
@@ -188,7 +176,7 @@ static StandardTextureAnalysisStatus build_passage(const StandardTextureAnalysis
         claim->pattern /= n;
     }
     out->uncertainty = 1.0 - clip(claim->confidence);
-    out->span = make_span(windows[first].start, windows[last].end);
+    bool spanned = make_span(windows[first].start, windows[last].end, &out->span);
 
     char id[96];
     char interpretation_id[128];
@@ -196,7 +184,7 @@ static StandardTextureAnalysisStatus build_passage(const StandardTextureAnalysis
     snprintf(interpretation_id, sizeof(interpretation_id), "standard-texture-passage-claim-%d", index);
     Interpretation *interpretation = standard_texture_analysis_interpretation(
         interpretation_id, id, STANDARD_TEXTURE_PASSAGE_CLAIM_TYPE, claim, sizeof(*claim), out->uncertainty, "texture-classification");
-    if (out->span == NULL || interpretation == NULL) {
+    if (!spanned || interpretation == NULL) {
         interpretation_destroy(interpretation);
         return STANDARD_TEXTURE_ANALYSIS_ERR_ALLOC;
     }
@@ -363,7 +351,6 @@ void standard_texture_analysis_destroy(StandardTextureAnalysis *analysis) {
         return;
     }
     for (size_t i = 0; i < analysis->passage_count; i++) {
-        time_span_destroy(analysis->passages[i].span);
         texture_destroy(analysis->passages[i].texture);
     }
     for (size_t i = 0; i < analysis->change_count; i++) {

@@ -95,7 +95,7 @@ static unsigned techniques_of(const StandardFormInput *input, const StandardForm
         Rational start;
         int measure = 0;
         if ((cadence->type != CADENCE_TYPE_SUBVERTED && cadence->type != CADENCE_TYPE_DECEPTIVE) ||
-            !score_time_span(cadence->arrival, &start, NULL) || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
+            !score_time_span(&cadence->arrival, &start, NULL) || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
             continue;
         }
         if (measure >= ending_first_measure && measure < cadence_measure && standard_form_is_one_more_time(true, true, true)) {
@@ -226,7 +226,7 @@ StandardFormAnalysisStatus standard_form_detect_expansions(const StandardFormInp
         for (int i = pc->note_first; i < pc->note_end; i++) {
             Rational start;
             int measure = 0;
-            if (score_time_span(input->notes[i].span, &start, NULL) && meter_map_measure_of(input->map, start, &measure) == METER_MAP_OK &&
+            if (score_time_span(&input->notes[i].span, &start, NULL) && meter_map_measure_of(input->map, start, &measure) == METER_MAP_OK &&
                 measure > pc->end_measure) {
                 from = i;
                 break;

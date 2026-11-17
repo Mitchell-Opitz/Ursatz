@@ -60,7 +60,7 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
     assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(phrase->interpretation)) == 800000UL);
     Rational start;
     Rational end;
-    assert(score_time_span(phrase->span, &start, &end) && start.num == 0 && rational_cmp(end, rational_ratio(4, 1)) == 0);
+    assert(score_time_span(&phrase->span, &start, &end) && start.num == 0 && rational_cmp(end, rational_ratio(4, 1)) == 0);
     standard_form_phrases_destroy(&phrases);
     form_destroy(&f);
 }
@@ -225,7 +225,7 @@ static void test_the_phrase_ends_at_the_next_beat_after_the_arrival(void) {
     StandardFormPhrases phrases = segment(&f, NULL);
     assert(phrases.count >= 1);
     Rational end;
-    assert(score_time_span(phrases.items[0].span, NULL, &end));
+    assert(score_time_span(&phrases.items[0].span, NULL, &end));
     assert(rational_cmp(end, rational_ratio(14, 4)) == 0); /* 12 quarters to measure 4's start, plus 2 */
     assert(phrases.items[0].claim.end_measure == 4);
     standard_form_phrases_destroy(&phrases);
@@ -265,7 +265,7 @@ static void test_bad_calls_are_refused(void) {
     assert(standard_form_segment_phrases(NULL, NULL, chain_form_boundary_detect, NULL, &phrases) ==
            STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
     assert(standard_form_input_add_cadence(&f.input, "x", NULL, PAC, 3, false, 0.1) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
-    assert(standard_form_input_add_cadence(&f.input, "x", f.note_spans[0], PAC, 3, false, 1.5) ==
+    assert(standard_form_input_add_cadence(&f.input, "x", &f.note_spans[0], PAC, 3, false, 1.5) ==
            STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
     form_destroy(&f);
 

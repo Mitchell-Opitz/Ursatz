@@ -18,17 +18,17 @@ static int clamp_share(int share) {
 
 /* The length of a beat in whole notes at the segment: its own beat_length, or the config's. */
 static double beat_of(const HarmonySegment *segment, const HarmonyCadenceConfig *config) {
-    const Duration *length = segment->input->beat_length;
-    if (length != NULL) {
-        return (double)duration_numerator(length) / (double)duration_denominator(length);
+    if (segment->input->has_beat_length) {
+        return (double)duration_numerator(&segment->input->beat_length) /
+               (double)duration_denominator(&segment->input->beat_length);
     }
     return config->beat_length;
 }
 
 /* The length of the run [first, last] in beats. */
 static double run_beats(const HarmonySegment *segments, size_t first, size_t last, const HarmonyCadenceConfig *config) {
-    double length = whole_notes(time_span_end(segments[last].input->segment.span)) -
-                    whole_notes(time_span_start(segments[first].input->segment.span));
+    double length = whole_notes(&segments[last].input->segment.span.end) -
+                    whole_notes(&segments[first].input->segment.span.start);
     return length / beat_of(&segments[first], config);
 }
 
@@ -47,10 +47,10 @@ static bool is_tonic_six(const HarmonySegment *segment) {
    run after a root-position V run that is a cadence point by the usual rule. */
 static bool authentic_follows(const HarmonySegment *segments, size_t count, const HarmonyRun *runs, size_t run_count,
                               size_t from_run, const HarmonyCadenceConfig *config) {
-    double start = whole_notes(time_span_start(segments[runs[from_run].first].input->segment.span));
+    double start = whole_notes(&segments[runs[from_run].first].input->segment.span.start);
     double window = config->reading_followup_beats * beat_of(&segments[runs[from_run].first], config);
     for (size_t r = from_run + 1; r < run_count; r++) {
-        double at = whole_notes(time_span_start(segments[runs[r].first].input->segment.span));
+        double at = whole_notes(&segments[runs[r].first].input->segment.span.start);
         if (at - start > window + 1e-9) {
             break;
         }

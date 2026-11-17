@@ -77,8 +77,8 @@ static void describe(const MeterMap *map, const GalantSegmentList *list, int fir
     int m2 = 0;
     double b1 = 0.0;
     double b2 = 0.0;
-    schema_where(map, time_span_start(list->items[first].segment.span), &m1, &b1);
-    schema_where(map, time_span_start(list->items[last].segment.span), &m2, &b2);
+    schema_where(map, &list->items[first].segment.span.start, &m1, &b1);
+    schema_where(map, &list->items[last].segment.span.start, &m2, &b2);
     snprintf(out, size, "measure %d beat %.2f to measure %d beat %.2f", m1, b1, m2, b2);
 }
 
@@ -102,15 +102,15 @@ static Outcome score(const char *label, const MeterMap *map, const GalantSegment
             for (size_t k = 0; k < schemas->count; k++) {
                 const GalantSchemaClaim *c = &schemas->items[k].claim;
                 found = found || (strcmp(c->name, p->name) == 0 &&
-                                  near_planted(p, beats_of(time_span_start(list->items[c->first_segment].segment.span)),
-                                               beats_of(time_span_end(list->items[c->last_segment].segment.span))));
+                                  near_planted(p, beats_of(&list->items[c->first_segment].segment.span.start),
+                                               beats_of(&list->items[c->last_segment].segment.span.end)));
             }
         } else {
             for (size_t k = 0; k < sequences->count; k++) {
                 const ScaleSequenceClaim *c = &sequences->items[k].claim;
                 found = found || (strcmp(c->kind_name, p->name) == 0 &&
-                                  near_planted(p, beats_of(time_span_start(list->items[c->first_segment].segment.span)),
-                                               beats_of(time_span_end(list->items[c->last_segment].segment.span))));
+                                  near_planted(p, beats_of(&list->items[c->first_segment].segment.span.start),
+                                               beats_of(&list->items[c->last_segment].segment.span.end)));
             }
         }
         outcome.found += found ? 1 : 0;
@@ -123,8 +123,8 @@ static Outcome score(const char *label, const MeterMap *map, const GalantSegment
         bool planted_one = false;
         for (size_t i = 0; i < planted->count; i++) {
             planted_one = planted_one || (planted->items[i].schema && strcmp(c->name, planted->items[i].name) == 0 &&
-                                          near_planted(&planted->items[i], beats_of(time_span_start(list->items[c->first_segment].segment.span)),
-                                                       beats_of(time_span_end(list->items[c->last_segment].segment.span))));
+                                          near_planted(&planted->items[i], beats_of(&list->items[c->first_segment].segment.span.start),
+                                                       beats_of(&list->items[c->last_segment].segment.span.end)));
         }
         if (!planted_one) {
             outcome.extras++;
@@ -140,8 +140,8 @@ static Outcome score(const char *label, const MeterMap *map, const GalantSegment
         bool planted_one = false;
         for (size_t i = 0; i < planted->count; i++) {
             planted_one = planted_one || (!planted->items[i].schema && strcmp(c->kind_name, planted->items[i].name) == 0 &&
-                                          near_planted(&planted->items[i], beats_of(time_span_start(list->items[c->first_segment].segment.span)),
-                                                       beats_of(time_span_end(list->items[c->last_segment].segment.span))));
+                                          near_planted(&planted->items[i], beats_of(&list->items[c->first_segment].segment.span.start),
+                                                       beats_of(&list->items[c->last_segment].segment.span.end)));
         }
         if (!planted_one) {
             outcome.extras++;
@@ -184,8 +184,8 @@ static void chain_run(Chain *chain, const WeightedPipeline *p, const MeterMap *m
     assert(chain->key_segments != NULL);
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(p->sonorities.items[s].sonority);
-        chain->key_segments[s].start = time_span_start(window);
-        chain->key_segments[s].end = time_span_end(window);
+        chain->key_segments[s].start = window->start;
+        chain->key_segments[s].end = window->end;
         chain->key_segments[s].source = &p->segments[s];
         assert(common_practice_weight_segment(p->segments[s].members, p->segments[s].member_count, &weighting,
                                               &chain->key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
@@ -196,7 +196,7 @@ static void chain_run(Chain *chain, const WeightedPipeline *p, const MeterMap *m
     assert(chain->region_inputs != NULL && chain->segment_inputs != NULL);
     for (size_t i = 0; i < chain->regions.region_count; i++) {
         chain->region_inputs[i].key = chain->regions.regions[i].key;
-        chain->region_inputs[i].start = time_span_start(chain->regions.regions[i].span);
+        chain->region_inputs[i].start = chain->regions.regions[i].span.start;
         chain->region_inputs[i].uncertainty = chain->regions.regions[i].uncertainty;
     }
     for (size_t s = 0; s < count; s++) {

@@ -78,7 +78,7 @@ static inline void piece_note(Piece *piece, int line, long sn, unsigned long sd,
     piece->ids[at] = (char *)malloc(strlen(id) + 1);
     assert(piece->ids[at] != NULL);
     strcpy(piece->ids[at], id);
-    AnalysisNote note = {piece->ids[at], NULL, piece_span(piece, sn, sd, en, ed), 60, NULL, NULL, ANALYSIS_INDEX_NONE,
+    AnalysisNote note = {piece->ids[at], NULL, *piece_span(piece, sn, sd, en, ed), 60, NULL, NULL, ANALYSIS_INDEX_NONE,
                          (size_t)line, 1.0};
     piece->notes[at] = note;
     piece->input.notes = piece->notes;

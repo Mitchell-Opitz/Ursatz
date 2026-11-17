@@ -22,7 +22,6 @@ typedef struct {
     HarmonySegmentInput inputs[FIXTURE_MAX];
     char ids[FIXTURE_MAX][16];
     char key_ref[8];
-    TimeSpan *spans[FIXTURE_MAX];
     MetricalPosition *positions[FIXTURE_MAX];
     size_t count;
 } Fixture;
@@ -49,20 +48,19 @@ static inline HarmonySegmentInput *fixture_add(Fixture *f, int degree, const int
     assert(n < FIXTURE_MAX);
     HarmonySegmentInput *in = &f->inputs[n];
     snprintf(f->ids[n], sizeof(f->ids[n]), "seg-%zu", n);
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    assert(musical_time_create((long)n, 4, &start) == MUSICAL_TIME_OK);
-    assert(musical_time_create((long)n + 1, 4, &end) == MUSICAL_TIME_OK);
-    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &f->spans[n]) == TIME_SPAN_OK);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+    MusicalTime start;
+    MusicalTime end;
+    assert(musical_time_make((long)n, 4, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make((long)n + 1, 4, &end) == MUSICAL_TIME_OK);
+    TimeSpan span;
+    assert(time_span_make(start, end, &span) == TIME_SPAN_OK);
     Duration offset;
     assert(duration_make((long)(n % 4), 4, &offset) == DURATION_OK);
     assert(metrical_position_create((int)(n / 4) + 1, offset, &f->positions[n]) == METRICAL_POSITION_OK);
 
     memset(in, 0, sizeof(*in));
     in->segment.id = f->ids[n];
-    in->segment.span = f->spans[n];
+    in->segment.span = span;
     in->segment.position = f->positions[n];
     in->segment.strength = fixture_strength((int)(n % 4) + 1);
     in->degree = degree;
@@ -81,7 +79,6 @@ static inline HarmonySegmentInput *fixture_add(Fixture *f, int degree, const int
 
 static inline void fixture_destroy(Fixture *f) {
     for (size_t i = 0; i < f->count; i++) {
-        time_span_destroy(f->spans[i]);
         metrical_position_destroy(f->positions[i]);
     }
 }

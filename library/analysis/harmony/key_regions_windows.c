@@ -56,14 +56,12 @@ void key_regions_rotated_profile(const CommonPracticeKeyProfiles *profiles, int 
     }
 }
 
-bool key_regions_time_ok(const MusicalTime *time) {
-    return time != NULL && musical_time_numerator(time) >= 0;
+bool key_regions_time_ok(MusicalTime time) {
+    return time.value.num >= 0;
 }
 
-bool key_regions_before(const MusicalTime *a, const MusicalTime *b) {
-    /* a < b for non-negative times: a.n * b.d < b.n * a.d */
-    return (long double)musical_time_numerator(a) * (long double)musical_time_denominator(b) <
-           (long double)musical_time_numerator(b) * (long double)musical_time_denominator(a);
+bool key_regions_before(MusicalTime a, MusicalTime b) {
+    return musical_time_cmp(a, b) < 0;
 }
 
 #define DOMINANT_THIRD_BIT(root) (1u << (((root) + 4) % 12))
@@ -117,7 +115,7 @@ CommonPracticeKeyRegionsStatus key_regions_gather_measures(const CommonPracticeK
             free(measure_of);
             return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT;
         }
-        if (meter_map_measure_index_at(map, segment->start, &measure_of[i]) != METER_MAP_OK) {
+        if (meter_map_measure_index_at(map, &segment->start, &measure_of[i]) != METER_MAP_OK) {
             free(measure_of);
             return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
         }

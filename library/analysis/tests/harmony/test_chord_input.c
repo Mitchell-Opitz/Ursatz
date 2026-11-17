@@ -5,10 +5,10 @@
 static void test_reads_chord_and_local_key(void) {
     Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
     Key *g_major = adapter_test_key("G major", 7, KEY_STRUCTURE_MODE_MAJOR);
-    MusicalTime *zero = adapter_test_time(0, 1);
-    MusicalTime *two = adapter_test_time(2, 1);
-    MusicalTime *one = adapter_test_time(1, 1);
-    MusicalTime *three = adapter_test_time(3, 1);
+    MusicalTime zero = adapter_test_time(0, 1);
+    MusicalTime two = adapter_test_time(2, 1);
+    MusicalTime one = adapter_test_time(1, 1);
+    MusicalTime three = adapter_test_time(3, 1);
     StandardTonalityKeyRegionInput regions[2] = {{c_major, zero, 0.25}, {g_major, two, 0.5}};
 
     Chord *first = adapter_test_chord("s1", 7, 11, ADAPTER_MAJOR_TRIAD, 3, 800000UL);
@@ -40,17 +40,13 @@ static void test_reads_chord_and_local_key(void) {
     chord_destroy(second);
     key_destroy(c_major);
     key_destroy(g_major);
-    musical_time_destroy(zero);
-    musical_time_destroy(one);
-    musical_time_destroy(two);
-    musical_time_destroy(three);
 }
 
 static void test_segment_without_match_or_key_passes_through(void) {
     Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
-    MusicalTime *four = adapter_test_time(4, 1);
-    MusicalTime *five = adapter_test_time(5, 1);
-    MusicalTime *one = adapter_test_time(1, 1);
+    MusicalTime four = adapter_test_time(4, 1);
+    MusicalTime five = adapter_test_time(5, 1);
+    MusicalTime one = adapter_test_time(1, 1);
     StandardTonalityKeyRegionInput regions[1] = {{c_major, four, 0.0}};
     Chord *chord = adapter_test_chord("s", 0, 0, ADAPTER_MAJOR_TRIAD, 3, 1000000UL);
     StandardTonalitySegmentInput segments[3] = {
@@ -74,18 +70,15 @@ static void test_segment_without_match_or_key_passes_through(void) {
 
     chord_destroy(chord);
     key_destroy(c_major);
-    musical_time_destroy(one);
-    musical_time_destroy(four);
-    musical_time_destroy(five);
 }
 
 static void test_bass_is_the_lowest_chord_tone(void) {
     Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
-    MusicalTime *zero = adapter_test_time(0, 1);
-    MusicalTime *one = adapter_test_time(1, 1);
-    MusicalTime *two = adapter_test_time(2, 1);
-    MusicalTime *three = adapter_test_time(3, 1);
-    MusicalTime *four = adapter_test_time(4, 1);
+    MusicalTime zero = adapter_test_time(0, 1);
+    MusicalTime one = adapter_test_time(1, 1);
+    MusicalTime two = adapter_test_time(2, 1);
+    MusicalTime three = adapter_test_time(3, 1);
+    MusicalTime four = adapter_test_time(4, 1);
     StandardTonalityKeyRegionInput regions[1] = {{c_major, zero, 0.0}};
 
     /* The Chords carry the lowest sounding note as their bass (here a non-chord tone, F). */
@@ -125,11 +118,6 @@ static void test_bass_is_the_lowest_chord_tone(void) {
     chord_destroy(c_third);
     chord_destroy(g_fourth);
     key_destroy(c_major);
-    musical_time_destroy(zero);
-    musical_time_destroy(one);
-    musical_time_destroy(two);
-    musical_time_destroy(three);
-    musical_time_destroy(four);
 }
 
 static void test_rejects_bad_input(void) {
@@ -137,23 +125,23 @@ static void test_rejects_bad_input(void) {
     size_t count = 0;
     assert(standard_tonality_build_chord_inputs(NULL, 0, NULL, 0, NULL, &count) ==
            STANDARD_TONALITY_CHORD_INPUT_ERR_NULL_ARGUMENT);
-    StandardTonalitySegmentInput no_start[1] = {{"s", NULL, NULL, NULL}};
+    MusicalTime start = adapter_test_time(0, 1);
+    StandardTonalitySegmentInput no_start[1] = {{NULL, start, NULL, NULL}};
     assert(standard_tonality_build_chord_inputs(no_start, 1, NULL, 0, &inputs, &count) ==
            STANDARD_TONALITY_CHORD_INPUT_ERR_BAD_SEGMENT);
     Key *key = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
-    MusicalTime *zero = adapter_test_time(0, 1);
+    MusicalTime zero = adapter_test_time(0, 1);
     StandardTonalityKeyRegionInput twice[2] = {{key, zero, 0.0}, {key, zero, 0.0}};
     assert(standard_tonality_build_chord_inputs(NULL, 0, twice, 2, &inputs, &count) ==
            STANDARD_TONALITY_CHORD_INPUT_ERR_BAD_REGION);
     key_destroy(key);
-    musical_time_destroy(zero);
 }
 
 static void test_a_given_bass_gives_root_position_over_a_lower_note(void) {
     Key *c_major = adapter_test_key("C major", 0, KEY_STRUCTURE_MODE_MAJOR);
-    MusicalTime *zero = adapter_test_time(0, 1);
-    MusicalTime *one = adapter_test_time(1, 1);
-    MusicalTime *two = adapter_test_time(2, 1);
+    MusicalTime zero = adapter_test_time(0, 1);
+    MusicalTime one = adapter_test_time(1, 1);
+    MusicalTime two = adapter_test_time(2, 1);
     StandardTonalityKeyRegionInput regions[1] = {{c_major, zero, 0.0}};
     Chord *c_chord = adapter_test_chord("a", 0, 7, ADAPTER_MAJOR_TRIAD, 3, 1000000UL);
     Chord *c_again = adapter_test_chord("b", 0, 7, ADAPTER_MAJOR_TRIAD, 3, 1000000UL);
@@ -183,9 +171,6 @@ static void test_a_given_bass_gives_root_position_over_a_lower_note(void) {
     chord_destroy(c_chord);
     chord_destroy(c_again);
     key_destroy(c_major);
-    musical_time_destroy(zero);
-    musical_time_destroy(one);
-    musical_time_destroy(two);
 }
 
 int main(void) {

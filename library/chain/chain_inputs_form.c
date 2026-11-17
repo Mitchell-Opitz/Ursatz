@@ -95,8 +95,8 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
     memset(&build, 0, sizeof(build));
     ChainInputStatus status = CHAIN_INPUT_OK;
     const char *current_id = NULL;
-    const MusicalTime *current_start = NULL;
-    const MusicalTime *current_end = NULL;
+    MusicalTime current_start = {{0, 1}};
+    MusicalTime current_end = {{0, 1}};
     int current_semitone = 0;
     for (size_t s = 0; s <= line_segments->count && status == CHAIN_INPUT_OK; s++) {
         const TimeSpan *window = s < line_segments->count ? sonority_time_window(line_segments->sonorities.items[s].sonority) : NULL;
@@ -105,8 +105,8 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
         const char *id = in_range && lines->soprano[s].present ? entity_id_value(lines->soprano[s].note_id) : NULL;
         if (current_id != NULL && (id == NULL || strcmp(id, current_id) != 0)) {
             const AnalysisNote *source = find_note(notes, keys, current_id);
-            const TimeSpan *span = source != NULL ? chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, current_start, current_end) : NULL;
-            if (source == NULL || span == NULL) {
+            TimeSpan span;
+            if (source == NULL || time_span_make(current_start, current_end, &span) != TIME_SPAN_OK) {
                 status = source == NULL ? CHAIN_INPUT_ERR_UNKNOWN_NOTE : CHAIN_INPUT_ERR_ALLOC;
                 break;
             }
@@ -123,10 +123,10 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
         }
         if (current_id == NULL) {
             current_id = id;
-            current_start = time_span_start(window);
+            current_start = window->start;
             current_semitone = (int)pitch_numeric_value_position_numerator(lines->soprano[s].pitch);
         }
-        current_end = time_span_end(window);
+        current_end = window->end;
     }
     free(keys);
     /* The input borrows the notes, which are all kept now. */
@@ -168,7 +168,7 @@ static bool motive_soprano(const AnalysisNoteSet *notes, int first_measure, int 
     }
     size_t count = 0;
     for (size_t i = 0; i < notes->count; i++) {
-        int measure = chain_measure_of(notes->map, time_span_start(notes->notes[i].span));
+        int measure = chain_measure_of(notes->map, &notes->notes[i].span.start);
         if (measure < first_measure || measure > last_measure) {
             continue;
         }
@@ -188,8 +188,8 @@ static bool motive_soprano(const AnalysisNoteSet *notes, int first_measure, int 
     for (size_t k = 0; ok && k < kept; k++) {
         const AnalysisNote *source = &window[picked[k]];
         line[k].index = origin[picked[k]];
-        line[k].start = q_of_time(time_span_start(source->span));
-        line[k].end = q_of_time(time_span_end(source->span));
+        line[k].start = q_of_time(&source->span.start);
+        line[k].end = q_of_time(&source->span.end);
         line[k].semitone = source->midi;
     }
     free(window);

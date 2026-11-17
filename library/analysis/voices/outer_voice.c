@@ -22,7 +22,6 @@ OuterVoiceConfig outer_voice_config_default(void) {
 static void entry_release(OuterVoiceEntry *entry) {
     entity_id_destroy(entry->note_id);
     pitch_numeric_value_destroy(entry->pitch);
-    time_span_destroy(entry->span);
 }
 
 void outer_voice_lines_destroy(OuterVoiceLines *lines) {
@@ -195,24 +194,12 @@ static OuterVoiceResult build_entry(const OuterNode *node, size_t segment_index,
     out->bridged = node->bridged;
     out->guarded = node->guarded;
 
-    MusicalTime *start = musical_time_from_rational_or_null(segment->start);
-    MusicalTime *end = musical_time_from_rational_or_null(segment->end);
-    if (start == NULL || end == NULL) {
-        musical_time_destroy(start);
-        musical_time_destroy(end);
+    if (time_span_make(musical_time_of(segment->start), musical_time_of(segment->end), &out->span) != TIME_SPAN_OK) {
         return OUTER_VOICE_ERR_OVERFLOW;
-    }
-    TimeSpanResult made = time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &out->span);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
-    if (made != TIME_SPAN_OK) {
-        return OUTER_VOICE_ERR_ALLOC;
     }
 
     if (node->present) {
         if (entity_id_create(entity_id_value(note_event_id(notes[node->note])), &out->note_id) != ENTITY_ID_OK) {
-            time_span_destroy(out->span);
-            out->span = NULL;
             return OUTER_VOICE_ERR_ALLOC;
         }
         const PitchNumericValue *pitch = pitch_values[node->note];
@@ -221,9 +208,7 @@ static OuterVoiceResult build_entry(const OuterNode *node, size_t segment_index,
                                        pitch_numeric_value_position_denominator(pitch),
                                        &out->pitch) != PITCH_NUMERIC_VALUE_OK) {
             entity_id_destroy(out->note_id);
-            time_span_destroy(out->span);
             out->note_id = NULL;
-            out->span = NULL;
             return OUTER_VOICE_ERR_ALLOC;
         }
     }
@@ -402,10 +387,6 @@ typedef struct {
     int midi;
 } AttackNote;
 
-static bool attack_time(const MusicalTime *time, Rational *out) {
-    return rational_make(musical_time_numerator(time), (long long)musical_time_denominator(time), out) == RATIONAL_OK;
-}
-
 OuterVoiceResult outer_voice_attack_soprano(const AnalysisNoteSet *notes, size_t **out, size_t *count) {
     if (notes == NULL || out == NULL || count == NULL) {
         return OUTER_VOICE_ERR_NULL_ARGUMENT;
@@ -431,10 +412,8 @@ OuterVoiceResult outer_voice_attack_soprano(const AnalysisNoteSet *notes, size_t
         AttackNote *note = &all[total];
         note->index = i;
         note->midi = notes->notes[i].midi;
-        if (!attack_time(time_span_start(notes->notes[i].span), &note->start) ||
-            !attack_time(time_span_end(notes->notes[i].span), &note->end)) {
-            result = OUTER_VOICE_ERR_OVERFLOW;
-        }
+        note->start = notes->notes[i].span.start.value;
+        note->end = notes->notes[i].span.end.value;
         total++;
     }
     size_t active_count = 0;

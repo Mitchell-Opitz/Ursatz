@@ -37,7 +37,7 @@
 
 typedef struct {
     char id[64];
-    const TimeSpan *arrival;
+    TimeSpan arrival;
     CadenceType type;
     int strength_rank;
     bool post_cadential;
@@ -61,7 +61,7 @@ typedef struct {
 typedef enum {
     STANDARD_FORM_ANALYSIS_OK = 0,
     STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT,
-    STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT,   /* a missing id, span or event; an invalid type; uncertainty outside [0, 1]; notes out of order */
+    STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT,   /* a missing id or event; an invalid type; uncertainty outside [0, 1]; notes out of order */
     STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG,
     STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR, /* no boundary detector, window matcher or relation matcher was injected */
     STANDARD_FORM_ANALYSIS_ERR_DETECTOR,    /* the injected detector failed */

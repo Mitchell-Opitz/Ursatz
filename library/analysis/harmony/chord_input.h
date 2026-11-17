@@ -43,13 +43,13 @@
 
 typedef struct {
     const Key *key;            /* borrowed; the region's kernel Key */
-    const MusicalTime *start;  /* borrowed; the region starts here (inclusive) */
+    MusicalTime start;         /* the region starts here (inclusive) */
     double uncertainty;        /* [0, 1] */
 } StandardTonalityKeyRegionInput;
 
 typedef struct {
     const char *segment_id;    /* borrowed; the id of the segment's Sonority, the target of its Interpretations */
-    const MusicalTime *start;  /* borrowed */
+    MusicalTime start;
     const Chord *chord;        /* borrowed; NULL when no chord was identified */
     const double *weights;     /* borrowed; the 12 pitch-class weights, or NULL when not available */
     const int *pitches;        /* borrowed; the sounding pitches (semitone numbers, any order), or NULL */
@@ -66,7 +66,7 @@ typedef struct {
 
 typedef struct {
     const char *segment_id;
-    const MusicalTime *start;
+    MusicalTime start;
     bool has_numeral;          /* false: pass through as no-numeral; nothing below is meaningful */
     const Chord *chord;        /* borrowed */
     int root_pitch_class;      /* 0..11 */

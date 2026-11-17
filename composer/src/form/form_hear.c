@@ -183,8 +183,8 @@ static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out
     }
     for (size_t i = 0; i < regions->region_count; i++) {
         const CommonPracticeKeyRegion *region = &regions->regions[i];
-        if (!region->span || rational_of_musical_time(time_span_start(region->span), &keys[i].start) != RATIONAL_OK ||
-            !common_practice_key_region_analysis_key(region, &keys[i].key)) {
+        keys[i].start = region->span.start.value;
+        if (!common_practice_key_region_analysis_key(region, &keys[i].key)) {
             free(keys);
             return FORM_HEAR_ERR_ANALYSIS;
         }

@@ -97,7 +97,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
     }
     for (size_t i = 0; i < notes->count && status == CHAIN_INPUT_OK; i++) {
         AnalysisNote note = notes->notes[i];
-        int measure = chain_measure_of(notes->map, time_span_start(note.span));
+        int measure = chain_measure_of(notes->map, &note.span.start);
         if (measure < first_measure || measure > last_measure) {
             continue;
         }
@@ -133,14 +133,14 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
     }
     for (size_t i = 0; phrases != NULL && form != NULL && i < phrases->count && status == CHAIN_INPUT_OK; i++) {
         const StandardFormPhrase *phrase = &phrases->items[i];
-        const TimeSpan *span = chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, time_span_start(phrase->span), time_span_end(phrase->span));
+        const TimeSpan *span = chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, &phrase->span.start, &phrase->span.end);
         const TimeSpan *arrival = NULL;
         if (span == NULL) {
             status = CHAIN_INPUT_ERR_ALLOC;
             break;
         }
         if (phrase->claim.cadence_index >= 0) {
-            const TimeSpan *chord = form->cadences[phrase->claim.cadence_index].arrival;
+            const TimeSpan *chord = &form->cadences[phrase->claim.cadence_index].arrival;
             arrival = chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, time_span_start(chord), time_span_end(chord));
             if (arrival == NULL) {
                 status = CHAIN_INPUT_ERR_ALLOC;

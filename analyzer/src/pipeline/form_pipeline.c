@@ -228,7 +228,7 @@ static size_t *note_ids_between(const FormStage *stage, long start_numerator, un
         return NULL;
     }
     for (size_t n = 0; n < stage->note_index_count && n < stage->built.input.note_count; n++) {
-        const MusicalTime *start = time_span_start(stage->built.input.notes[n].span);
+        const MusicalTime *start = &stage->built.input.notes[n].span.start;
         long numerator = musical_time_numerator(start);
         unsigned long denominator = musical_time_denominator(start);
         if (!rational_less(numerator, denominator, start_numerator, start_denominator) &&
@@ -422,8 +422,8 @@ bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
         const StandardFormPhrase *found = &stage->phrases.items[i];
         const StandardFormPhraseClaim *claim = &found->claim;
         AnalysisPhrase *phrase = &report->phrases[i];
-        const MusicalTime *start = time_span_start(found->span);
-        const MusicalTime *end = time_span_end(found->span);
+        const MusicalTime *start = &found->span.start;
+        const MusicalTime *end = &found->span.end;
         phrase->start_numerator = musical_time_numerator(start);
         phrase->start_denominator = musical_time_denominator(start);
         phrase->end_numerator = musical_time_numerator(end);

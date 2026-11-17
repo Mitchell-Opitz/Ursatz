@@ -12,15 +12,13 @@
  * sixteenths of a whole note; notes are listed sorted by start, then pitch, then id.
  */
 
-static TimeSpan *span_of(long start, long end) {
-    MusicalTime *s = NULL;
-    MusicalTime *e = NULL;
-    assert(musical_time_create(start, 16, &s) == MUSICAL_TIME_OK);
-    assert(musical_time_create(end, 16, &e) == MUSICAL_TIME_OK);
-    TimeSpan *span = NULL;
-    assert(time_span_create(s, e, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
-    musical_time_destroy(s);
-    musical_time_destroy(e);
+static TimeSpan span_of(long start, long end) {
+    MusicalTime s;
+    MusicalTime e;
+    assert(musical_time_make(start, 16, &s) == MUSICAL_TIME_OK);
+    assert(musical_time_make(end, 16, &e) == MUSICAL_TIME_OK);
+    TimeSpan span;
+    assert(time_span_make(s, e, &span) == TIME_SPAN_OK);
     return span;
 }
 
@@ -33,7 +31,6 @@ typedef struct {
 
 typedef struct {
     MeterMap *map;
-    TimeSpan **spans;
     AnalysisNote *notes;
     AnalysisNoteSet set;
 } Fixture;
@@ -43,11 +40,9 @@ static Fixture fixture_make(const Spec *specs, size_t count) {
     EntityID *id = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK);
     assert(meter_map_create_defaulted(id, &f.map) == METER_MAP_OK);
-    f.spans = calloc(count > 0 ? count : 1, sizeof(TimeSpan *));
     f.notes = calloc(count > 0 ? count : 1, sizeof(AnalysisNote));
     for (size_t i = 0; i < count; i++) {
-        f.spans[i] = span_of(specs[i].start, specs[i].end);
-        AnalysisNote note = {specs[i].id, NULL, f.spans[i], specs[i].midi, NULL, NULL, ANALYSIS_INDEX_NONE,
+        AnalysisNote note = {specs[i].id, NULL, span_of(specs[i].start, specs[i].end), specs[i].midi, NULL, NULL, ANALYSIS_INDEX_NONE,
                              ANALYSIS_INDEX_NONE, 1.0};
         f.notes[i] = note;
     }
@@ -58,10 +53,7 @@ static Fixture fixture_make(const Spec *specs, size_t count) {
 }
 
 static void fixture_destroy(Fixture *f, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        time_span_destroy(f->spans[i]);
-    }
-    free(f->spans);
+    (void)count;
     free(f->notes);
     meter_map_destroy(f->map);
 }

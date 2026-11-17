@@ -330,8 +330,8 @@ static void test_whole_chain_against_the_hand_analysis(void) {
     assert(key_segments != NULL);
     for (size_t s = 0; s < p.segment_count; s++) {
         const TimeSpan *window = sonority_time_window(p.sonorities.items[s].sonority);
-        key_segments[s].start = time_span_start(window);
-        key_segments[s].end = time_span_end(window);
+        key_segments[s].start = window->start;
+        key_segments[s].end = window->end;
         key_segments[s].source = &p.segments[s];
         assert(common_practice_weight_segment(p.segments[s].members, p.segments[s].member_count, &weighting,
                                               &key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
@@ -354,7 +354,7 @@ static void test_whole_chain_against_the_hand_analysis(void) {
     assert(region_inputs != NULL && segment_inputs != NULL);
     for (size_t i = 0; i < regions.region_count; i++) {
         region_inputs[i].key = regions.regions[i].key;
-        region_inputs[i].start = time_span_start(regions.regions[i].span);
+        region_inputs[i].start = regions.regions[i].span.start;
         region_inputs[i].uncertainty = regions.regions[i].uncertainty;
     }
     for (size_t s = 0; s < p.segment_count; s++) {

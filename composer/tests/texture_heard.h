@@ -56,7 +56,7 @@ static inline void heard_add(AnalysisNote **notes, size_t *note_count, TimeSpan 
     (*spans)[(*span_count)++] = span;
     *notes = realloc(*notes, (*note_count + 1) * sizeof(**notes));
     assert(*notes);
-    AnalysisNote note = {NULL, NULL, span, pitch, NULL, NULL, track, voice, 1.0};
+    AnalysisNote note = {NULL, NULL, *span, pitch, NULL, NULL, track, voice, 1.0};
     (*notes)[(*note_count)++] = note;
 }
 

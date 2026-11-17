@@ -58,7 +58,7 @@ ChainInputStatus chain_build_voice_grid(const AnalysisNoteSet *notes, const Chai
             const AnalysisNote *note = &notes->notes[i];
             Rational on;
             Rational off;
-            if (!chain_rational_of(time_span_start(note->span), &on) || !chain_rational_of(time_span_end(note->span), &off)) {
+            if (!chain_rational_of(&note->span.start, &on) || !chain_rational_of(&note->span.end, &off)) {
                 chain_voice_grid_destroy(&built);
                 return CHAIN_INPUT_ERR_SEGMENTATION;
             }

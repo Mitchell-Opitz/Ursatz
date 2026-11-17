@@ -68,7 +68,7 @@ ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size
         bool minor = chords[s].mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
         GalantSegment segment;
         memset(&segment, 0, sizeof(segment));
-        AnalysisSegment analysis = {segments->ids[s], window, NULL, chain_attack_strength(map, time_span_start(window))};
+        AnalysisSegment analysis = {segments->ids[s], *window, NULL, chain_attack_strength(map, time_span_start(window))};
         segment.segment = analysis;
         beat_length_at(map, time_span_start(window), &segment.beat_numerator, &segment.beat_denominator);
         snprintf(segment.key_id, sizeof(segment.key_id), "key-%d%s", tonic_pc, minor ? "m" : "");
@@ -108,8 +108,8 @@ ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size
         if (build.list.count > 0) {
             GalantSegment *last = &build.list.items[build.list.count - 1];
             if (same_harmony(last, &segment)) {
-                const TimeSpan *merged = chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, time_span_start(last->segment.span), time_span_end(window));
-                if (merged == NULL) {
+                TimeSpan merged;
+                if (time_span_make(last->segment.span.start, window->end, &merged) != TIME_SPAN_OK) {
                     status = CHAIN_INPUT_ERR_ALLOC;
                     break;
                 }

@@ -145,7 +145,7 @@ static void chain_input_init(ChainInput *in, const Reference *ref) {
     assert(in->events != NULL);
     for (size_t i = 0; i < in->event_count; i++) {
         const MidiKeySignatureEvent *event = &in->import.key_signatures.events[i];
-        in->events[i].time = event->position;
+        in->events[i].time = *event->position;
         assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &in->events[i].key));
     }
     in->own = ref->three_four ? three_four_map() : NULL;
@@ -226,7 +226,7 @@ static void digest_keys(Digest *d, const AnalysisChain *c) {
         digest_int(d, r->last_measure);
         digest_double(d, r->uncertainty);
         digest_int(d, r->source);
-        digest_span(d, r->span);
+        digest_span(d, &r->span);
     }
     for (size_t i = 0; i < keys->change_count; i++) {
         const CommonPracticeKeyChange *k = &keys->changes[i];
@@ -303,7 +303,7 @@ static void digest_entries(Digest *d, const OuterVoiceEntry *entries, size_t cou
             digest_string(d, entity_id_value(entries[s].note_id));
             digest_int(d, (long long)pitch_numeric_value_position_numerator(entries[s].pitch));
         }
-        digest_span(d, entries[s].span);
+        digest_span(d, &entries[s].span);
     }
 }
 
@@ -330,7 +330,7 @@ static void digest_cadences(Digest *d, const AnalysisChain *c) {
         digest_int(d, a->arrival_beat_strength);
         digest_double(d, a->uncertainty);
         digest_int(d, a->share);
-        digest_span(d, a->span);
+        digest_span(d, &a->span);
         digest_int(d, a->alternative.share);
         digest_int(d, a->alternative.interpretation != NULL);
     }
@@ -345,7 +345,7 @@ static void digest_form(Digest *d, const AnalysisChain *c) {
     for (size_t i = 0; i < phrases->count; i++) {
         digest_bytes(d, &phrases->items[i].claim, sizeof(StandardFormPhraseClaim));
         digest_double(d, phrases->items[i].uncertainty);
-        digest_span(d, phrases->items[i].span);
+        digest_span(d, &phrases->items[i].span);
     }
     digest_int(d, (long long)ideas->idea_count);
     digest_int(d, (long long)ideas->subphrase_count);

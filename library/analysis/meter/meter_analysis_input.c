@@ -56,7 +56,7 @@ StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input,
         return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
     }
     for (size_t i = 0; i < note_count; i++) {
-        if (!valid_id(notes[i].note_id) || !time_span_is_valid(notes[i].span)) {
+        if (!valid_id(notes[i].note_id) || !time_span_holds(notes[i].span)) {
             return STANDARD_METER_ANALYSIS_ERR_INVALID;
         }
     }
@@ -74,7 +74,8 @@ StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *
     if (input == NULL) {
         return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (!valid_id(id) || !time_span_is_valid(span) || (cadence_arrival != NULL && !time_span_is_valid(cadence_arrival)) ||
+    if (!valid_id(id) || span == NULL || !time_span_holds(*span) ||
+        (cadence_arrival != NULL && !time_span_holds(*cadence_arrival)) ||
         expansion < STANDARD_METER_EXPANSION_NONE || expansion > STANDARD_METER_EXPANSION_CONTRACTION ||
         expansion_measures < 0 || (expansion == STANDARD_METER_EXPANSION_NONE && expansion_measures != 0)) {
         return STANDARD_METER_ANALYSIS_ERR_INVALID;
@@ -85,8 +86,11 @@ StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *
     StandardMeterPhrase *phrase = &input->phrases[input->phrase_count++];
     memset(phrase, 0, sizeof(*phrase));
     strcpy(phrase->id, id);
-    phrase->span = span;
-    phrase->cadence_arrival = cadence_arrival;
+    phrase->span = *span;
+    phrase->has_cadence_arrival = cadence_arrival != NULL;
+    if (cadence_arrival != NULL) {
+        phrase->cadence_arrival = *cadence_arrival;
+    }
     phrase->expansion = expansion;
     phrase->expansion_measures = expansion_measures;
     phrase->elided_with_next = elided_with_next;
@@ -108,7 +112,7 @@ StandardMeterAnalysisStatus standard_meter_input_add_chord_change(StandardMeterI
     StandardMeterChordChange *change = &input->chord_changes[input->chord_change_count++];
     memset(change, 0, sizeof(*change));
     strcpy(change->id, id);
-    change->time = time;
+    change->time = *time;
     return STANDARD_METER_ANALYSIS_OK;
 }
 

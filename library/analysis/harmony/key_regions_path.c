@@ -86,8 +86,7 @@ CommonPracticeKeyRegionsStatus key_regions_build_region(const CommonPracticeKeyR
         meter_map_measure_span(map, last_measure, &last) != METER_MAP_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
     }
-    TimeSpanResult spanned = time_span_create(&first.start, &last.end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &out->span);
-    if (spanned != TIME_SPAN_OK) {
+    if (time_span_make(first.start, last.end, &out->span) != TIME_SPAN_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
     }
 
@@ -95,16 +94,12 @@ CommonPracticeKeyRegionsStatus key_regions_build_region(const CommonPracticeKeyR
     snprintf(context, sizeof(context), "%s-%zu", config->context_id_prefix, number);
     EntityID *context_id = NULL;
     if (entity_id_create(context, &context_id) != ENTITY_ID_OK) {
-        time_span_destroy(out->span);
-        out->span = NULL;
         return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
     }
     KeyResult built = common_practice_build_key(common_practice_key_index_mode(key_index),
                                                 common_practice_key_index_tonic_name(key_index), context_id, &out->key);
     if (built != KEY_OK) {
         entity_id_destroy(context_id);
-        time_span_destroy(out->span);
-        out->span = NULL;
         return built == KEY_ERR_ALLOC ? COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC : COMMON_PRACTICE_KEY_REGIONS_ERR_KEY;
     }
     return COMMON_PRACTICE_KEY_REGIONS_OK;
@@ -225,21 +220,20 @@ static unsigned signature_keys(int sharps_flats) {
 }
 
 /* The measure whose start is nearest `position`. */
-CommonPracticeKeyRegionsStatus key_regions_nearest_barline(const MeterMap *map, const MusicalTime *position,
+CommonPracticeKeyRegionsStatus key_regions_nearest_barline(const MeterMap *map, MusicalTime position,
                                                        int *out_measure) {
     int measure = 0;
     TimeSpan span;
-    if (meter_map_measure_index_at(map, position, &measure) != METER_MAP_OK ||
+    if (meter_map_measure_index_at(map, &position, &measure) != METER_MAP_OK ||
         meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
     }
-    Rational at;
+    Rational at = position.value;
     Rational start = span.start.value;
     Rational end = span.end.value;
-    bool converted = rational_of_musical_time(position, &at) == RATIONAL_OK;
     Rational since = {0, 1};
     Rational until = {0, 1};
-    if (!converted || rational_sub(at, start, &since) != RATIONAL_OK || rational_sub(end, at, &until) != RATIONAL_OK) {
+    if (rational_sub(at, start, &since) != RATIONAL_OK || rational_sub(end, at, &until) != RATIONAL_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
     }
     *out_measure = rational_cmp(since, until) > 0 ? measure + 1 : measure;

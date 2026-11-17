@@ -95,8 +95,8 @@ typedef struct {
 } CommonPracticeKeyChord;
 
 typedef struct {
-    const MusicalTime *start;                  /* the segment's window, in whole notes; borrowed */
-    const MusicalTime *end;
+    MusicalTime start;                         /* the segment's window, in whole notes */
+    MusicalTime end;
     CommonPracticeWeights weights;
     const CommonPracticeSegment *source;       /* the segment's members, or NULL */
     CommonPracticeKeyChord chord;              /* optional: the segment's chord; .present false when not given */
@@ -336,7 +336,7 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  */
 
 typedef struct {
-    const MusicalTime *position;   /* whole notes; borrowed */
+    MusicalTime position;          /* whole notes */
     int sharps_flats;              /* -7..7 */
 } CommonPracticeKeySignatureEvent;
 
@@ -353,7 +353,7 @@ typedef enum {
 typedef struct {
     Key *key;                      /* owned */
     int key_index;                 /* 0..23 */
-    TimeSpan *span;                /* owned */
+    TimeSpan span;
     int first_measure;             /* MeterMap measure numbers (the first measure is 1), inclusive */
     int last_measure;
     double uncertainty;            /* [0, 1] */

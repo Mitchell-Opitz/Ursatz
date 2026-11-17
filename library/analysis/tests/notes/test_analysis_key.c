@@ -82,11 +82,10 @@ static void test_equals(void) {
 }
 
 static void test_key_event(void) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(3, 2, &time) == MUSICAL_TIME_OK);
+    MusicalTime time;
+    assert(musical_time_make(3, 2, &time) == MUSICAL_TIME_OK);
     AnalysisKeyEvent event = {time, {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR}};
-    assert(event.time == time && analysis_key_tonic_pitch_class(&event.key) == 7);
-    musical_time_destroy(time);
+    assert(musical_time_same(event.time, time) && analysis_key_tonic_pitch_class(&event.key) == 7);
 }
 
 int main(void) {

@@ -12,7 +12,7 @@
  */
 typedef struct {
     const char *id;
-    const TimeSpan *span;
+    TimeSpan span;
     const MetricalPosition *position;
     BeatStrength strength;
 } AnalysisSegment;

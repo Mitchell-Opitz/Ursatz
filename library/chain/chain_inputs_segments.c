@@ -166,7 +166,7 @@ ChainInputStatus chain_build_members(const AnalysisNoteSet *notes, ChainSegments
                 break;
             }
             member->held = segment->held[j];
-            member->strength = member->held ? BEAT_STRENGTH_STRONG : chain_attack_strength(notes->map, time_span_start(note->span));
+            member->strength = member->held ? BEAT_STRENGTH_STRONG : chain_attack_strength(notes->map, &note->span.start);
             next++;
         }
     }

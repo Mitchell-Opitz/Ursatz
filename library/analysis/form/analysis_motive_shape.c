@@ -66,7 +66,7 @@ bool standard_form_motive_line_build(StandardFormMotiveLine *line, const Standar
         return false;
     }
     for (size_t i = 0; i < n; i++) {
-        if (!score_time_span(line->notes[i].span, &line->start[i], &line->end[i]) ||
+        if (!score_time_span(&line->notes[i].span, &line->start[i], &line->end[i]) ||
             meter_map_measure_of(input->map, line->start[i], &line->first_measure[i]) != METER_MAP_OK) {
             standard_form_motive_line_destroy(line);
             return false;

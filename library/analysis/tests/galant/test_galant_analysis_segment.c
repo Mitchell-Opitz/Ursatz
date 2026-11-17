@@ -10,11 +10,11 @@
 
 /* The adapter reads the neutral AnalysisSegment it embeds: the list takes its id, span, position and strength, and refuses what it cannot read. */
 static void test_segment(void) {
-    MusicalTime *from = NULL;
-    MusicalTime *to = NULL;
-    TimeSpan *span = NULL;
-    assert(musical_time_create(0, 1, &from) == MUSICAL_TIME_OK && musical_time_create(1, 2, &to) == MUSICAL_TIME_OK);
-    assert(time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
+    MusicalTime from;
+    MusicalTime to;
+    TimeSpan span;
+    assert(musical_time_make(0, 1, &from) == MUSICAL_TIME_OK && musical_time_make(1, 2, &to) == MUSICAL_TIME_OK);
+    assert(time_span_make(from, to, &span) == TIME_SPAN_OK);
 
     GalantSegment galant;
     memset(&galant, 0, sizeof(galant));
@@ -26,7 +26,7 @@ static void test_segment(void) {
     GalantSegmentList list;
     galant_segments_init(&list);
     assert(galant_segments_add(&list, &galant) == GALANT_ANALYSIS_OK && list.count == 1);
-    assert(strcmp(list.items[0].segment.id, "seg-3") == 0 && list.items[0].segment.span == span);
+    assert(strcmp(list.items[0].segment.id, "seg-3") == 0 && musical_time_same(list.items[0].segment.span.start, span.start) && musical_time_same(list.items[0].segment.span.end, span.end));
     assert(list.items[0].segment.position == NULL && list.items[0].segment.strength == BEAT_STRENGTH_STRONG);
     assert(list.items[0].beat_numerator == 1 && list.items[0].beat_denominator == 4 && list.items[0].uncertainty == 0.5);
 
@@ -37,7 +37,7 @@ static void test_segment(void) {
     bad.segment.id = "";
     assert(galant_segments_add(&list, &bad) == GALANT_ANALYSIS_ERR_INVALID);
     bad = galant;
-    bad.segment.span = NULL;
+    memset(&bad.segment.span, 0, sizeof(bad.segment.span)); /* an empty span */
     assert(galant_segments_add(&list, &bad) == GALANT_ANALYSIS_ERR_INVALID);
     char long_id[GALANT_ANALYSIS_ID_MAX + 8];
     memset(long_id, 'a', sizeof(long_id));
@@ -49,9 +49,6 @@ static void test_segment(void) {
     assert(list.count == 1);
     galant_segments_destroy(&list);
 
-    time_span_destroy(span);
-    musical_time_destroy(from);
-    musical_time_destroy(to);
 }
 
 int main(void) {

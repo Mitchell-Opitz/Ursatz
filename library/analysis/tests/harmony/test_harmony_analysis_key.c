@@ -13,16 +13,16 @@
 
 /* The adapter reads the neutral AnalysisSegment it embeds: its id, span, position and strength reach the prepared segment. */
 static void test_segment(void) {
-    MusicalTime *from = NULL;
-    MusicalTime *to = NULL;
-    TimeSpan *span = NULL;
+    MusicalTime from;
+    MusicalTime to;
+    TimeSpan span;
     MetricalPosition *position = NULL;
-    assert(musical_time_create(0, 1, &from) == MUSICAL_TIME_OK && musical_time_create(1, 2, &to) == MUSICAL_TIME_OK);
-    assert(time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
+    assert(musical_time_make(0, 1, &from) == MUSICAL_TIME_OK && musical_time_make(1, 2, &to) == MUSICAL_TIME_OK);
+    assert(time_span_make(from, to, &span) == TIME_SPAN_OK);
     MeterMap *map = NULL;
     EntityID *map_id = NULL;
     assert(entity_id_create("map", &map_id) == ENTITY_ID_OK && meter_map_create_defaulted(map_id, &map) == METER_MAP_OK);
-    assert(metrical_position_from_time(map, from, &position) == METRICAL_POSITION_OK);
+    assert(metrical_position_from_time(map, &from, &position) == METRICAL_POSITION_OK);
 
     HarmonySegmentInput input;
     memset(&input, 0, sizeof(input));
@@ -38,16 +38,13 @@ static void test_segment(void) {
     HarmonySegment *prepared = NULL;
     assert(harmony_analysis_prepare(&input, 1, &prepared) == HARMONY_ANALYSIS_OK);
     assert(prepared[0].input == &input && strcmp(prepared[0].input->segment.id, "seg-7") == 0);
-    assert(prepared[0].input->segment.span == span && prepared[0].input->segment.position == position);
+    assert(musical_time_same(prepared[0].input->segment.span.end, span.end) && prepared[0].input->segment.position == position);
     assert(prepared[0].input->segment.strength == BEAT_STRENGTH_MEDIUM);
     harmony_analysis_destroy(prepared);
 
-    /* a segment with no id, span or position is bad input */
+    /* a segment with no id or position is bad input */
     HarmonySegmentInput bad = input;
     bad.segment.id = "";
-    assert(harmony_analysis_prepare(&bad, 1, &prepared) == HARMONY_ANALYSIS_ERR_BAD_INPUT);
-    bad = input;
-    bad.segment.span = NULL;
     assert(harmony_analysis_prepare(&bad, 1, &prepared) == HARMONY_ANALYSIS_ERR_BAD_INPUT);
     bad = input;
     bad.segment.position = NULL;
@@ -55,9 +52,6 @@ static void test_segment(void) {
 
     metrical_position_destroy(position);
     meter_map_destroy(map);
-    time_span_destroy(span);
-    musical_time_destroy(from);
-    musical_time_destroy(to);
 }
 
 int main(void) {

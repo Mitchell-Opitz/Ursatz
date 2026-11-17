@@ -125,7 +125,7 @@ static void fail(char *message, size_t size, const char *text) {
 static size_t region_at(const CommonPracticeKeyRegions *regions, double t) {
     size_t found = 0;
     for (size_t i = 0; i < regions->region_count; i++) {
-        Rational start = test_rational_of_time(time_span_start(regions->regions[i].span));
+        Rational start = test_rational_of_time(&regions->regions[i].span.start);
         if (rational_to_double(start) <= t + 1e-12) {
             found = i;
         }
@@ -184,7 +184,7 @@ static bool read_numerals(Run *r) {
         }
         r->annotation_key_count++;
         r->annotation_region_inputs[region_total].key = r->annotation_keys[region_total];
-        r->annotation_region_inputs[region_total].start = r->annotation.keys[i].time;
+        r->annotation_region_inputs[region_total].start = *r->annotation.keys[i].time;
         r->annotation_region_inputs[region_total].uncertainty = 0.0;
         region_total++;
     }
@@ -284,12 +284,13 @@ static bool find_phrase_ends(Run *r) {
         }
         HarmonySegmentInput *input = &inputs[i];
         input->segment.id = segs->ids[i];
-        input->segment.span = window;
+        input->segment.span = *window;
         input->segment.position = positions[i];
         input->segment.strength = chain_attack_strength(r->map, time_span_start(window));
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
-        input->beat_length = beat_length;
+        input->has_beat_length = true;
+        input->beat_length = *beat_length;
         if (!first_romans[i].has_numeral) {
             input->degree = 0;
             input->interval_count = 3;
@@ -324,7 +325,7 @@ static bool find_phrase_ends(Run *r) {
         r->boundaries = (MusicalTime **)calloc(cadences.count, sizeof(MusicalTime *));
         ok = r->boundaries != NULL;
         for (size_t k = 0; k < cadences.count && ok; k++) {
-            const MusicalTime *end = r->key_segments[cadences.items[k].arrival_last].end;
+            const MusicalTime *end = &r->key_segments[cadences.items[k].arrival_last].end;
             ok = musical_time_create(musical_time_numerator(end), musical_time_denominator(end),
                                      &r->boundaries[r->boundary_count]) == MUSICAL_TIME_OK;
             r->boundary_count += ok ? 1 : 0;
@@ -511,7 +512,7 @@ ChoraleChainStatus chorale_chain_run(const char *piece_dir, ChoraleScore *out, c
         goto done;
     }
     for (size_t i = 0; i < r.key_event_count; i++) {
-        r.key_events[i].time = r.imported.key_signatures[i].position;
+        r.key_events[i].time = *r.imported.key_signatures[i].position;
         if (!analysis_key_from_fifths(r.imported.key_signatures[i].sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &r.key_events[i].key)) {
             goto done;
         }

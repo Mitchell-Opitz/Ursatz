@@ -16,14 +16,12 @@
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_span.h"
 
-static TimeSpan *make_span(long start, long end) {
-    MusicalTime *from = NULL;
-    MusicalTime *to = NULL;
-    TimeSpan *span = NULL;
-    assert(musical_time_create(start, 4, &from) == MUSICAL_TIME_OK && musical_time_create(end, 4, &to) == MUSICAL_TIME_OK);
-    assert(time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
-    musical_time_destroy(from);
-    musical_time_destroy(to);
+static TimeSpan make_span(long start, long end) {
+    MusicalTime from;
+    MusicalTime to;
+    TimeSpan span;
+    assert(musical_time_make(start, 4, &from) == MUSICAL_TIME_OK && musical_time_make(end, 4, &to) == MUSICAL_TIME_OK);
+    assert(time_span_make(from, to, &span) == TIME_SPAN_OK);
     return span;
 }
 
@@ -47,9 +45,9 @@ int main(void) {
     EntityID *id = NULL;
     MeterMap *map = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK && meter_map_create_defaulted(id, &map) == METER_MAP_OK);
-    TimeSpan *first_span = make_span(0, 1);
-    TimeSpan *second_span = make_span(1, 2);
-    TimeSpan *later_span = make_span(5, 6);
+    TimeSpan first_span = make_span(0, 1);
+    TimeSpan second_span = make_span(1, 2);
+    TimeSpan later_span = make_span(5, 6);
     NoteEvent *first_event = make_event("e1", 0);
     NoteEvent *second_event = make_event("e2", 1);
     NoteEvent *bass_event = make_event("e3", 0);
@@ -66,7 +64,8 @@ int main(void) {
     input.degrees = degrees;
     assert(input.map == map && input.note_count == 2 && input.notes == soprano && input.bass_count == 1);
     assert(standard_form_input_finish(&input) == STANDARD_FORM_ANALYSIS_OK && input.finished);
-    assert(strcmp(input.notes[0].note_id, "s1") == 0 && input.notes[0].event == first_event && input.notes[0].span == first_span);
+    assert(strcmp(input.notes[0].note_id, "s1") == 0 && input.notes[0].event == first_event);
+    assert(musical_time_same(input.notes[0].span.start, first_span.start) && musical_time_same(input.notes[0].span.end, first_span.end));
     assert(input.notes[0].midi == 72 && input.bass_notes[0].midi == 48);
     /* the pitch change to the next note, where no rest lies between them */
     long step = 0;
@@ -78,9 +77,8 @@ int main(void) {
     AnalysisNote unknown = {"s3", second_event, second_span, ANALYSIS_PITCH_UNKNOWN, NULL, NULL, 0, 0, 1.0};
     AnalysisNote no_event = {"s4", NULL, second_span, 60, NULL, NULL, 0, 0, 1.0};
     AnalysisNote empty_id = {"", second_event, second_span, 60, NULL, NULL, 0, 0, 1.0};
-    AnalysisNote no_span = {"s5", second_event, NULL, 60, NULL, NULL, 0, 0, 1.0};
-    AnalysisNote *refused[4] = {&unknown, &no_event, &empty_id, &no_span};
-    for (size_t i = 0; i < 4; i++) {
+    AnalysisNote *refused[3] = {&unknown, &no_event, &empty_id};
+    for (size_t i = 0; i < 3; i++) {
         standard_form_input_init(&input, map, refused[i], 1);
         assert(standard_form_input_finish(&input) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
         standard_form_input_destroy(&input);
@@ -107,9 +105,6 @@ int main(void) {
     note_event_destroy(first_event);
     note_event_destroy(second_event);
     note_event_destroy(bass_event);
-    time_span_destroy(first_span);
-    time_span_destroy(second_span);
-    time_span_destroy(later_span);
     meter_map_destroy(map);
     printf("test_form_analysis_note: ok\n");
     return 0;

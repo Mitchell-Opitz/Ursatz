@@ -107,9 +107,9 @@ static bool collect_occurrence(const MotiveStage *stage, const AnalysisReport *r
     }
     size_t first = (size_t)claim->note_first;
     size_t last = first + (size_t)claim->note_count - 1;
-    const MusicalTime *start = time_span_start(form->built.input.notes[first].span);
-    const MusicalTime *last_start = time_span_start(form->built.input.notes[last].span);
-    const MusicalTime *end = time_span_end(form->built.input.notes[last].span);
+    const MusicalTime *start = &form->built.input.notes[first].span.start;
+    const MusicalTime *last_start = &form->built.input.notes[last].span.start;
+    const MusicalTime *end = &form->built.input.notes[last].span.end;
     occurrence->index = index;
     occurrence->start_numerator = musical_time_numerator(start);
     occurrence->start_denominator = musical_time_denominator(start);

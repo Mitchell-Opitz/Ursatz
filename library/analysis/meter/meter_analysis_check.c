@@ -79,13 +79,13 @@ static Rational time_rat(MusicalTime time) {
     return time.value;
 }
 
-/* The MusicalTime of x, or NULL when x is negative or does not fit. */
-static MusicalTime *time_of(Rational x) {
-    MusicalTime *time = NULL;
-    if (x.num < 0 || x.num > LONG_MAX || musical_time_create((long)x.num, (unsigned long)x.den, &time) != MUSICAL_TIME_OK) {
-        return NULL;
+/* The MusicalTime of x; false when x is negative. */
+static bool time_of(Rational x, MusicalTime *out) {
+    if (x.num < 0) {
+        return false;
     }
-    return time;
+    *out = musical_time_of(x);
+    return true;
 }
 
 /* Whether the grid has a barline (a downbeat) at x, and whether it has a beat. */
@@ -102,13 +102,12 @@ static void grid_place(Calc *calc, const Grid *grid, Rational x, bool *downbeat,
         *secondary = grid->four_beats && is_integer(calc_sub(calc, measures, half));
         return;
     }
-    MusicalTime *time = time_of(x);
-    if (!time) {
+    MusicalTime time;
+    if (!time_of(x, &time)) {
         return;
     }
     const MeterMapRegion *region = NULL;
-    MeterMapResult found = meter_map_region_at(grid->map, time, &region);
-    musical_time_destroy(time);
+    MeterMapResult found = meter_map_region_at(grid->map, &time, &region);
     if (found != METER_MAP_OK) {
         return;
     }
@@ -146,14 +145,12 @@ static long long downbeats_between(Calc *calc, const Grid *grid, Rational from, 
     } else {
         int measure_from = 0;
         int measure_to = 0;
-        MusicalTime *a = time_of(from);
-        MusicalTime *b = time_of(to);
-        if (a && b && meter_map_measure_index_at(grid->map, a, &measure_from) == METER_MAP_OK &&
-            meter_map_measure_index_at(grid->map, b, &measure_to) == METER_MAP_OK) {
+        MusicalTime a;
+        MusicalTime b;
+        if (time_of(from, &a) && time_of(to, &b) && meter_map_measure_index_at(grid->map, &a, &measure_from) == METER_MAP_OK &&
+            meter_map_measure_index_at(grid->map, &b, &measure_to) == METER_MAP_OK) {
             count = (long long)measure_to - (long long)measure_from + 1;
         }
-        musical_time_destroy(a);
-        musical_time_destroy(b);
     }
     return count < 1 ? 1 : count;
 }

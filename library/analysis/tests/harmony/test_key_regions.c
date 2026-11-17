@@ -56,8 +56,8 @@ static MusicalTime *time_at(Piece *piece, long numerator, unsigned long denomina
 static void add_measure(Piece *piece, long measure, const double weights[12]) {
     CommonPracticeKeySegment *segment = &piece->items[piece->count++];
     memset(segment, 0, sizeof(*segment));
-    segment->start = time_at(piece, measure, 1);
-    segment->end = time_at(piece, measure + 1, 1);
+    segment->start = *time_at(piece, measure, 1);
+    segment->end = *time_at(piece, measure + 1, 1);
     for (int pc = 0; pc < 12; pc++) {
         segment->weights.pitch_class[pc] = weights[pc];
         segment->weights.total += weights[pc];
@@ -250,7 +250,7 @@ static void test_bad_input(void) {
     negative.weights.pitch_class[2] = -1.0;
     assert(key_window_scores(&negative, 1, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT);
     CommonPracticeKeySegment missing = piece.items[0];
-    missing.start = NULL;
+    assert(musical_time_make(-1, 1, &missing.start) == MUSICAL_TIME_OK); /* a negative start is refused */
     assert(key_window_scores(&missing, 1, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT);
     assert(windows.items == NULL);
     destroy_piece(&piece);
@@ -293,14 +293,14 @@ static void assert_gap_free(const CommonPracticeKeyRegions *regions, int first, 
         assert(region->uncertainty >= 0.0 && region->uncertainty <= 1.0);
         assert(region->source == COMMON_PRACTICE_REGION_SOURCE_PROFILE ||
                region->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
-        assert(region->key != NULL && region->span != NULL);
+        assert(region->key != NULL);
         if (i > 0) {
             assert(region->first_measure == regions->regions[i - 1].last_measure + 1);
             assert(regions->changes[i - 1].from_region == i - 1 && regions->changes[i - 1].to_region == i);
             assert(!regions->changes[i - 1].cadence_confirmed);
             assert(regions->regions[i].key_index != regions->regions[i - 1].key_index);
             /* the spans meet at a barline */
-            assert(musical_time_equals(time_span_end(regions->regions[i - 1].span), time_span_start(region->span)));
+            assert(musical_time_equals(&regions->regions[i - 1].span.end, &region->span.start));
         }
     }
 }
@@ -316,7 +316,7 @@ static void test_a_single_key_piece_is_one_region(void) {
     assert(regions.region_count == 1 && regions.change_count == 0);
     assert(regions.regions[0].key_index == 0);
     assert(strcmp(key_label(regions.regions[0].key), "C major") == 0);
-    assert(time_is(time_span_start(regions.regions[0].span), 0, 1) && time_is(time_span_end(regions.regions[0].span), 8, 1));
+    assert(time_is(&regions.regions[0].span.start, 0, 1) && time_is(&regions.regions[0].span.end, 8, 1));
     assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[0].key))),
                   "key-region-1") == 0);
     common_practice_key_regions_destroy(&regions);
@@ -590,7 +590,7 @@ static void test_a_tonicization_has_no_pivot_but_a_weak_modulation_does(void) {
 /* --- key signature events --- */
 
 static CommonPracticeKeySignatureEvent make_event(Piece *piece, long numerator, unsigned long denominator, int sharps) {
-    CommonPracticeKeySignatureEvent event = {time_at(piece, numerator, denominator), sharps};
+    CommonPracticeKeySignatureEvent event = {*time_at(piece, numerator, denominator), sharps};
     return event;
 }
 
@@ -705,7 +705,7 @@ static void test_bad_events(void) {
     bad = make_event(&piece, 4, 1, -8);
     assert(key_regions_estimate(piece.items, piece.count, map, &bad, 1, NULL, &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT);
-    CommonPracticeKeySignatureEvent no_position = {NULL, 0};
+    CommonPracticeKeySignatureEvent no_position = {*time_at(&piece, -1, 1), 0}; /* a negative position */
     assert(key_regions_estimate(piece.items, piece.count, map, &no_position, 1, NULL, &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT);
     CommonPracticeKeySignatureEvent swapped[2] = {make_event(&piece, 6, 1, 1), make_event(&piece, 2, 1, 2)};

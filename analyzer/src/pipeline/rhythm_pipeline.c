@@ -138,22 +138,18 @@ static bool build_notes(RhythmBuild *build, const ImportedNotes *notes, const Ou
     for (size_t i = 0; ok && i < notes->count; i++) {
         build->lines[i] = -1;
         const NoteEvent *event = notes->events[i];
-        const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(event));
-        MusicalTime *release = NULL;
-        if (musical_time_add(onset, note_event_duration(event), &release) != MUSICAL_TIME_OK) {
-            ok = false;
-            break;
-        }
-        const TimeSpan *span = keep_span(build, onset, release);
-        musical_time_destroy(release);
-        if (!span) {
+        MusicalTime onset = *temporal_anchor_position(note_event_temporal_anchor(event));
+        MusicalTime release;
+        TimeSpan span;
+        if (musical_time_plus(onset, *note_event_duration(event), &release) != MUSICAL_TIME_OK ||
+            time_span_make(onset, release, &span) != TIME_SPAN_OK) {
             ok = false;
             break;
         }
         const char *id = entity_id_value(note_event_id(event));
         int line = in_ids(soprano, soprano_count, id) ? LINE_SOPRANO : (in_ids(bass, bass_count, id) ? LINE_BASS : LINE_OTHER);
         /* A note the library would refuse (an empty or too long id, a span that is not ahead) is left out. */
-        if (id[0] == '\0' || strlen(id) >= STANDARD_METER_ID_MAX || !time_span_is_valid(span)) {
+        if (id[0] == '\0' || strlen(id) >= STANDARD_METER_ID_MAX || !time_span_holds(span)) {
             continue;
         }
         long pitch = pitch_numeric_value_position_numerator(notes->pitch_values[i]);
@@ -244,10 +240,10 @@ static bool build_phrases(RhythmBuild *build, const FormStage *form) {
     const StandardFormPhrases *phrases = &form->phrases;
     for (size_t i = 0; i < phrases->count; i++) {
         const StandardFormPhrase *phrase = &phrases->items[i];
-        const TimeSpan *span = keep_span(build, time_span_start(phrase->span), time_span_end(phrase->span));
+        const TimeSpan *span = keep_span(build, &phrase->span.start, &phrase->span.end);
         const TimeSpan *arrival = NULL;
         if (phrase->claim.cadence_index >= 0) {
-            const TimeSpan *chord = form->built.input.cadences[phrase->claim.cadence_index].arrival;
+            const TimeSpan *chord = &form->built.input.cadences[phrase->claim.cadence_index].arrival;
             arrival = keep_span(build, time_span_start(chord), time_span_end(chord));
             if (!arrival) {
                 return false;
@@ -294,7 +290,7 @@ static size_t *phrase_notes(const RhythmBuild *build, const ImportedNotes *notes
     Rational end;
     *count = 0;
     size_t *ids = malloc((build->input.note_count + 1) * sizeof(size_t));
-    if (!ids || !score_time_span(build->input.phrases[phrase].span, &start, &end)) {
+    if (!ids || !score_time_span(&build->input.phrases[phrase].span, &start, &end)) {
         free(ids);
         return NULL;
     }

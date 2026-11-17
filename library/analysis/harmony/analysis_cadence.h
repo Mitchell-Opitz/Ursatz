@@ -190,7 +190,7 @@ typedef struct {
     BeatStrength arrival_beat_strength; /* at the arrival's first segment */
     const char *key_ref;          /* borrowed from the arrival's input */
     double uncertainty;           /* [0, 1] */
-    TimeSpan *span;               /* owned: the dominant's start to the arrival's end */
+    TimeSpan span;                /* the dominant's start to the arrival's end */
     Cadence *cadence;             /* owned */
     Interpretation *interpretation; /* owned; targets the Cadence's id */
     int share;                    /* thousandths of the primary reading; 1000 when there is no alternative */

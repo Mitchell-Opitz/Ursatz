@@ -142,18 +142,21 @@ static void test_keys(TestPiece *piece) {
     key_segments = NULL;
     assert(chain_build_key_segments(&segments, segments.count, NULL, &key_segments) == CHAIN_INPUT_OK);
     assert(key_segments[0].weights.total > 0.0 && key_segments[0].source == &segments.segments[0]);
-    assert(key_segments[0].start == time_span_start(sonority_time_window(segments.sonorities.items[0].sonority)));
+    assert(musical_time_same(key_segments[0].start, sonority_time_window(segments.sonorities.items[0].sonority)->start));
 
     CommonPracticeKeyRegions regions;
     memset(&regions, 0, sizeof(regions));
     const MeterMap *map = piece->import.meter_map;
     assert(chain_estimate_key_regions(NULL, segments.count, map, NULL, 0, NULL, &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
     assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 1, NULL, &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    AnalysisKeyEvent no_time = {NULL, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}};
+    MusicalTime before;
+    assert(musical_time_make(-1, 1, &before) == MUSICAL_TIME_OK);
+    AnalysisKeyEvent no_time = {before, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}}; /* before the piece starts */
     assert(chain_estimate_key_regions(key_segments, segments.count, map, &no_time, 1, NULL, &regions) == CHAIN_INPUT_ERR_KEYS);
     assert(regions.regions == NULL);
 
-    MusicalTime *zero = time_at(0, 1);
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
     AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}};
     assert(chain_estimate_key_regions(key_segments, segments.count, map, &signature, 1, NULL, &regions) == CHAIN_INPUT_OK);
     assert(regions.region_count >= 1 && regions.regions[0].key_index == 0); /* C major */
@@ -161,7 +164,6 @@ static void test_keys(TestPiece *piece) {
     assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 0, NULL, &regions) == CHAIN_INPUT_OK);
     assert(regions.region_count >= 1 && regions.regions[0].key_index == 0);
     common_practice_key_regions_destroy(&regions);
-    musical_time_destroy(zero);
     chain_key_segments_destroy(key_segments);
     chain_key_segments_destroy(NULL);
     chain_segments_destroy(&segments);
@@ -199,7 +201,8 @@ static void test_stage_inputs(TestPiece *piece) {
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = ANALYSIS_CHAIN_STAGE_CADENCES | ANALYSIS_CHAIN_STAGE_MELODY | ANALYSIS_CHAIN_STAGE_SCHEMAS;
     config.refine_keys = false;
-    MusicalTime *zero = time_at(0, 1);
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
     AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}};
     AnalysisChain *chain = NULL;
     AnalysisChainStatus status = analysis_chain_run(&piece->set, &signature, 1, &config, &chain);
@@ -242,7 +245,7 @@ static void test_stage_inputs(TestPiece *piece) {
     for (size_t s = 0; s < count; s++) {
         const HarmonySegmentInput *input = &harmony.inputs[s];
         assert(strcmp(input->segment.id, segments->ids[s]) == 0 && input->segment.position == harmony.positions[s]);
-        assert(input->beat_length == harmony.beat_length && strcmp(input->key_ref, "key") == 0);
+        assert(input->has_beat_length && duration_same(input->beat_length, *harmony.beat_length) && strcmp(input->key_ref, "key") == 0);
         if (romans[s].has_numeral) {
             assert(input->degree == romans[s].claim.degree && input->inversion == romans[s].claim.inversion);
             assert(input->interval_count == 3 || input->interval_count == 4);
@@ -433,7 +436,6 @@ static void test_stage_inputs(TestPiece *piece) {
     chain_harmony_inputs_destroy(&harmony);
     chain_harmony_inputs_destroy(NULL);
     analysis_chain_destroy(chain);
-    musical_time_destroy(zero);
 }
 
 static void test_segment_lines(TestPiece *piece) {
@@ -486,7 +488,7 @@ static void test_segment_lines(TestPiece *piece) {
     ChainSegments shifted = chord_segments;
     shifted.starts = starts;
     assert(chain_build_segment_lines(&voice_segments, &lines, &shifted, 4, &out) == CHAIN_INPUT_OK);
-    assert(!out.soprano[0].present && !out.bass[0].present && out.soprano[0].note_id == NULL && out.soprano[0].span != NULL);
+    assert(!out.soprano[0].present && !out.bass[0].present && out.soprano[0].note_id == NULL);
     assert(out.soprano[1].present && out.soprano[2].present);
     assert(strcmp(entity_id_value(out.soprano[1].note_id), entity_id_value(out.soprano[2].note_id)) == 0);
     assert(strcmp(entity_id_value(out.soprano[1].note_id), entity_id_value(lines.soprano[0].note_id)) == 0);

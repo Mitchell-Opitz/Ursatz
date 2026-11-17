@@ -170,8 +170,8 @@ static void report_piece(const char *label, const char *file, const char *annota
     CommonPracticeWeightedConfig weighting = common_practice_weighted_config_default();
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(p.sonorities.items[s].sonority);
-        segments[s].start = time_span_start(window);
-        segments[s].end = time_span_end(window);
+        segments[s].start = window->start;
+        segments[s].end = window->end;
         segments[s].source = &p.segments[s];
         assert(common_practice_weight_segment(p.segments[s].members, p.segments[s].member_count, &weighting,
                                               &segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
@@ -189,7 +189,7 @@ static void report_piece(const char *label, const char *file, const char *annota
         (CommonPracticeKeySignatureEvent *)calloc(scanned.count + 1, sizeof(CommonPracticeKeySignatureEvent));
     assert(events != NULL);
     for (size_t i = 0; i < scanned.count; i++) {
-        events[i].position = scanned.events[i].position;
+        events[i].position = *scanned.events[i].position;
         events[i].sharps_flats = scanned.events[i].sharps_flats;
     }
 
@@ -299,8 +299,8 @@ static void report_piece(const char *label, const char *file, const char *annota
         while (s < count) {
             size_t region = 0;
             for (size_t i = 0; i < first.region_count; i++) {
-                if (musical_time_numerator(time_span_start(first.regions[i].span)) * (long)musical_time_denominator(segments[s].start) <=
-                    musical_time_numerator(segments[s].start) * (long)musical_time_denominator(time_span_start(first.regions[i].span))) {
+                if (musical_time_numerator(&first.regions[i].span.start) * (long)musical_time_denominator(&segments[s].start) <=
+                    musical_time_numerator(&segments[s].start) * (long)musical_time_denominator(&first.regions[i].span.start)) {
                     region = i;
                 }
             }
@@ -308,8 +308,8 @@ static void report_piece(const char *label, const char *file, const char *annota
             while (end < count) {
                 size_t other = 0;
                 for (size_t i = 0; i < first.region_count; i++) {
-                    if (musical_time_numerator(time_span_start(first.regions[i].span)) * (long)musical_time_denominator(segments[end].start) <=
-                        musical_time_numerator(segments[end].start) * (long)musical_time_denominator(time_span_start(first.regions[i].span))) {
+                    if (musical_time_numerator(&first.regions[i].span.start) * (long)musical_time_denominator(&segments[end].start) <=
+                        musical_time_numerator(&segments[end].start) * (long)musical_time_denominator(&first.regions[i].span.start)) {
                         other = i;
                     }
                 }

@@ -231,7 +231,7 @@ static bool point_of(const HarmonySegment *segments, size_t count, const Harmony
 }
 
 static double start_in_whole_notes(const HarmonySegment *segment) {
-    const MusicalTime *time = time_span_start(segment->input->segment.span);
+    const MusicalTime *time = &segment->input->segment.span.start;
     return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
 }
 

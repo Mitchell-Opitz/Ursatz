@@ -52,8 +52,9 @@ typedef enum {
 
 typedef struct {
     char id[STANDARD_METER_ID_MAX];
-    const TimeSpan *span;
-    const TimeSpan *cadence_arrival; /* NULL: no cadence */
+    TimeSpan span;
+    bool has_cadence_arrival;
+    TimeSpan cadence_arrival;        /* meaningful when has_cadence_arrival */
     StandardMeterExpansionKind expansion;
     int expansion_measures; /* measures added (internal, external) or removed (contraction); 0 with no expansion */
     bool elided_with_next;
@@ -61,7 +62,7 @@ typedef struct {
 
 typedef struct {
     char id[STANDARD_METER_ID_MAX];
-    const MusicalTime *time;
+    MusicalTime time;
 } StandardMeterChordChange;
 
 /*
@@ -107,12 +108,12 @@ static inline int standard_meter_note_line(const AnalysisNote *note) {
 }
 
 /* An input over the notes, which are borrowed (and with their ids, spans and the map must outlive the input and every result);
-   phrases and chord changes are added after and owned. ERR_INVALID for a note with an empty or too long id or a NULL span or one
+   phrases and chord changes are added after and owned. ERR_INVALID for a note with an empty or too long id or a span
    that is not ahead (end after start); ERR_NULL_ARGUMENT for a NULL input or map, or notes NULL with a count. */
 StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input, const MeterMap *map,
                                                       const AnalysisNote *notes, size_t note_count);
 
-/* Adds a phrase. ERR_INVALID for a bad id or span, a negative measure count, or a measure count with no expansion. */
+/* Adds a phrase; the spans are copied. ERR_INVALID for a bad id or span, a negative measure count, or a measure count with no expansion. */
 StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *input, const char *id, const TimeSpan *span,
                                                             const TimeSpan *cadence_arrival,
                                                             StandardMeterExpansionKind expansion, int expansion_measures,

@@ -61,9 +61,9 @@ static Key *adapter_test_key(const char *name, int tonic, KeyStructureMode mode)
     return key;
 }
 
-static MusicalTime *adapter_test_time(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+static MusicalTime adapter_test_time(long numerator, unsigned long denominator) {
+    MusicalTime time;
+    assert(musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK);
     return time;
 }
 

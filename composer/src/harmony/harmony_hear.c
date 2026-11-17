@@ -123,11 +123,10 @@ static int implied_soprano(const HeardPhrase *phrase, size_t i) {
 }
 
 typedef struct {
-    MusicalTime *start;
-    MusicalTime *end;
-    TimeSpan *span;
+    TimeSpan span;
     MetricalPosition *position;
-    Duration *beat_length; /* a part cell's beat, when the recognizer should not read it as shorter than one */
+    bool has_beat_length;
+    Duration beat_length; /* a part cell's beat, when the recognizer should not read it as shorter than one */
 } SegmentTimes;
 
 struct SegmentSet {
@@ -144,11 +143,7 @@ void harmony_segments_destroy(SegmentSet *set) {
         return;
     }
     for (size_t i = 0; i < HARMONY_MAX_CHORDS; i++) {
-        duration_destroy(set->times[i].beat_length);
-        time_span_destroy(set->times[i].span);
         metrical_position_destroy(set->times[i].position);
-        musical_time_destroy(set->times[i].end);
-        musical_time_destroy(set->times[i].start);
     }
     harmony_analysis_destroy(set->segments);
     free(set);
@@ -178,10 +173,7 @@ static bool times_create(const HeardPhrase *phrase, size_t first_cell, size_t ce
         return false;
     }
     Duration offset_duration;
-    return musical_time_from_rational(start, &times->start) == TIME_RATIONAL_OK &&
-           musical_time_from_rational(end, &times->end) == TIME_RATIONAL_OK &&
-           time_span_create(times->start, times->end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &times->span) ==
-               TIME_SPAN_OK &&
+    return time_span_make(musical_time_of(start), musical_time_of(end), &times->span) == TIME_SPAN_OK &&
            duration_of(offset, &offset_duration) == DURATION_OK &&
            metrical_position_create((int)bar + 1, offset_duration, &times->position) == METRICAL_POSITION_OK;
 }
@@ -232,11 +224,11 @@ SegmentSet *harmony_segments_create_heard(const HeardPhrase *phrase, const int *
         input->key_ref = set->key_refs[i];
         input->mode = harmony_mode_of(mode);
         input->uncertainty = 0.0;
-        input->beat_length = NULL;
+        input->has_beat_length = false;
         /* A part cell of a beat or more is long enough to arrive on, whatever the meter's beat is in whole notes. */
         if (phrase->metre && harmony_metre_cell_is_part(phrase->metre, first_cell) &&
-            duration_create(1, (unsigned long)phrase->metre->meter.beat_unit, &set->times[i].beat_length) ==
-                DURATION_OK) {
+            duration_make(1, (long long)phrase->metre->meter.beat_unit, &set->times[i].beat_length) == DURATION_OK) {
+            input->has_beat_length = true;
             input->beat_length = set->times[i].beat_length;
         }
         first_cell += chord->cells;

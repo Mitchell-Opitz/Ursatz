@@ -3,18 +3,11 @@
 #include <stdlib.h>
 #include "model/pitch/midi_pitch.h"
 
-/* a < b for two MusicalTimes (positive denominators): cross-multiplied, so no division. */
-static bool time_before(const MusicalTime *a, const MusicalTime *b) {
-    long long left = (long long)musical_time_numerator(a) * (long long)musical_time_denominator(b);
-    long long right = (long long)musical_time_numerator(b) * (long long)musical_time_denominator(a);
-    return left < right;
-}
-
 /* The region containing `start`: the last region that starts at or before it. -1 if none. */
-static long region_at(const StandardTonalityKeyRegionInput *regions, size_t region_count, const MusicalTime *start) {
+static long region_at(const StandardTonalityKeyRegionInput *regions, size_t region_count, MusicalTime start) {
     long found = -1;
     for (size_t i = 0; i < region_count; i++) {
-        if (time_before(start, regions[i].start)) {
+        if (musical_time_cmp(start, regions[i].start) < 0) {
             break;
         }
         found = (long)i;
@@ -117,13 +110,13 @@ StandardTonalityChordInputStatus standard_tonality_build_chord_inputs(
         return STANDARD_TONALITY_CHORD_INPUT_ERR_NULL_ARGUMENT;
     }
     for (size_t i = 0; i < region_count; i++) {
-        if (regions[i].key == NULL || regions[i].start == NULL ||
-            (i > 0 && !time_before(regions[i - 1].start, regions[i].start))) {
+        if (regions[i].key == NULL ||
+            (i > 0 && musical_time_cmp(regions[i - 1].start, regions[i].start) >= 0)) {
             return STANDARD_TONALITY_CHORD_INPUT_ERR_BAD_REGION;
         }
     }
     for (size_t i = 0; i < segment_count; i++) {
-        if (segments[i].segment_id == NULL || segments[i].start == NULL) {
+        if (segments[i].segment_id == NULL) {
             return STANDARD_TONALITY_CHORD_INPUT_ERR_BAD_SEGMENT;
         }
     }

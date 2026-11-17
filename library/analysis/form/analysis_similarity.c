@@ -23,8 +23,8 @@ bool standard_form_idea_similarity(const AnalysisNote *a, size_t a_count, const 
             Rational a_to;
             Rational b_from;
             Rational b_to;
-            if (!score_time_span(a[i].span, &a_from, NULL) || !score_time_span(a[i + 1].span, &a_to, NULL) ||
-                !score_time_span(b[i].span, &b_from, NULL) || !score_time_span(b[i + 1].span, &b_to, NULL)) {
+            if (!score_time_span(&a[i].span, &a_from, NULL) || !score_time_span(&a[i + 1].span, &a_to, NULL) ||
+                !score_time_span(&b[i].span, &b_from, NULL) || !score_time_span(&b[i + 1].span, &b_to, NULL)) {
                 return false;
             }
             bool same_interval = a[i + 1].midi - a[i].midi == b[i + 1].midi - b[i].midi;

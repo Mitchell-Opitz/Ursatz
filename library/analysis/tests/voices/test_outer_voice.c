@@ -144,8 +144,8 @@ static void assert_span(const OuterVoiceEntry *entry, long sn, unsigned long sd,
     MusicalTime *end = NULL;
     assert(musical_time_create(sn, sd, &start) == MUSICAL_TIME_OK);
     assert(musical_time_create(en, ed, &end) == MUSICAL_TIME_OK);
-    assert(musical_time_equals(time_span_start(entry->span), start));
-    assert(musical_time_equals(time_span_end(entry->span), end));
+    assert(musical_time_equals(&entry->span.start, start));
+    assert(musical_time_equals(&entry->span.end, end));
     musical_time_destroy(start);
     musical_time_destroy(end);
 }

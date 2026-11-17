@@ -154,7 +154,7 @@ CommonPracticeKeyRegionsStatus key_regions_snap_edges(int *measure_key, const bo
    distance, whose best chord in the old key lies inside the new key's collection. */
 CommonPracticeKeyRegionsStatus key_regions_find_pivot(const CommonPracticeKeySegment *segments, size_t segment_count,
                                                   const MeasureWeights *measures, int boundary_measure,
-                                                  const MusicalTime *boundary_start, int old_key, int new_key,
+                                                  MusicalTime boundary_start, int old_key, int new_key,
                                                   size_t search_measures, bool strictly_before, bool *found,
                                                   size_t *pivot) {
     *found = false;

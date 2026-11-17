@@ -202,7 +202,7 @@ StandardMeterAnalysisStatus standard_meter_find_densities(const StandardMeterInp
         Rational end;
         int first = 0;
         int last = 0;
-        if (!score_time_span(input->phrases[p].span, &start, &end) || meter_map_measure_of(input->map, start, &first) != METER_MAP_OK ||
+        if (!score_time_span(&input->phrases[p].span, &start, &end) || meter_map_measure_of(input->map, start, &first) != METER_MAP_OK ||
             meter_map_last_measure_touched(input->map, end, &last) != METER_MAP_OK) {
             continue;
         }
@@ -211,7 +211,7 @@ StandardMeterAnalysisStatus standard_meter_find_densities(const StandardMeterInp
         for (size_t i = 0; i < input->note_count; i++) {
             Rational note_start;
             Rational note_end;
-            if (!score_time_span(input->notes[i].span, &note_start, &note_end) ||
+            if (!score_time_span(&input->notes[i].span, &note_start, &note_end) ||
                 !standard_meter_snap_time(config, &note_start, false, NULL) ||
                 !standard_meter_snap_time(config, &note_end, true, NULL)) {
                 continue;

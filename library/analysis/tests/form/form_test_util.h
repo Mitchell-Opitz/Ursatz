@@ -37,9 +37,9 @@ typedef struct {
     AnalysisNote notes[FORM_MAX_NOTES]; /* the input borrows them */
     char ids[FORM_MAX_NOTES][32];
     int degrees[FORM_MAX_NOTES];
-    TimeSpan *note_spans[FORM_MAX_NOTES];
+    TimeSpan note_spans[FORM_MAX_NOTES];
     size_t note_count;
-    TimeSpan *cadence_spans[FORM_MAX_CADENCES];
+    TimeSpan cadence_spans[FORM_MAX_CADENCES];
     size_t cadence_count;
 } FormFixture;
 
@@ -49,15 +49,13 @@ static inline EntityID *form_id(const char *text) {
     return id;
 }
 
-static inline TimeSpan *form_span(long start_sixteenths, long end_sixteenths) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    TimeSpan *span = NULL;
-    assert(musical_time_create(start_sixteenths, 16, &start) == MUSICAL_TIME_OK);
-    assert(musical_time_create(end_sixteenths, 16, &end) == MUSICAL_TIME_OK);
-    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+static inline TimeSpan form_span(long start_sixteenths, long end_sixteenths) {
+    MusicalTime start;
+    MusicalTime end;
+    TimeSpan span;
+    assert(musical_time_make(start_sixteenths, 16, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make(end_sixteenths, 16, &end) == MUSICAL_TIME_OK);
+    assert(time_span_make(start, end, &span) == TIME_SPAN_OK);
     return span;
 }
 
@@ -70,15 +68,13 @@ static inline void form_init(FormFixture *f, int top, int pickup_quarters) {
     TimeSignature *signature = NULL;
     assert(time_signature_create((unsigned)top, quarter, &signature) == TIME_SIGNATURE_OK);
     note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    MusicalTime *after_pickup = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    assert(musical_time_create(pickup_quarters, 4, &after_pickup) == MUSICAL_TIME_OK);
-    MeterMapChangePoint points[2] = {{signature, *zero}, {signature, *after_pickup}};
+    MusicalTime zero;
+    MusicalTime after_pickup;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
+    assert(musical_time_make(pickup_quarters, 4, &after_pickup) == MUSICAL_TIME_OK);
+    MeterMapChangePoint points[2] = {{signature, zero}, {signature, after_pickup}};
     assert(meter_map_create(form_id("form-test-meter"), points, pickup_quarters > 0 ? 2 : 1, &f->map) == METER_MAP_OK);
     time_signature_destroy(signature);
-    musical_time_destroy(zero);
-    musical_time_destroy(after_pickup);
     assert(meter_map_has_pickup(f->map) == (pickup_quarters > 0));
     standard_form_input_init(&f->input, f->map, f->notes, 0);
 }
@@ -145,7 +141,7 @@ static inline void form_cadence(FormFixture *f, const char *id, int m, double be
     long start = (long)((form_measure_start(f, m) + beat) * 4.0 + 0.5);
     long length = (long)(quarters * 4.0 + 0.5);
     f->cadence_spans[f->cadence_count] = form_span(start, start + length);
-    assert(standard_form_input_add_cadence(&f->input, id, f->cadence_spans[f->cadence_count], type, rank, post_cadential,
+    assert(standard_form_input_add_cadence(&f->input, id, &f->cadence_spans[f->cadence_count], type, rank, post_cadential,
                                            uncertainty) == STANDARD_FORM_ANALYSIS_OK);
     f->cadence_count++;
 }
@@ -158,10 +154,6 @@ static inline void form_destroy(FormFixture *f) {
     standard_form_input_destroy(&f->input);
     for (size_t i = 0; i < f->note_count; i++) {
         note_event_destroy(f->events[i]);
-        time_span_destroy(f->note_spans[i]);
-    }
-    for (size_t i = 0; i < f->cadence_count; i++) {
-        time_span_destroy(f->cadence_spans[i]);
     }
     meter_map_destroy(f->map);
 }

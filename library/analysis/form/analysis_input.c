@@ -89,7 +89,7 @@ StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *in
     if (!copy_id(cadence->id, sizeof(cadence->id), id)) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
-    cadence->arrival = arrival;
+    cadence->arrival = *arrival;
     cadence->type = type;
     cadence->strength_rank = strength_rank;
     cadence->post_cadential = post_cadential;
@@ -102,8 +102,8 @@ StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *in
 static int compare_cadences(const void *a, const void *b) {
     Rational left;
     Rational right;
-    score_time_span(((const StandardFormCadence *)a)->arrival, &left, NULL);
-    score_time_span(((const StandardFormCadence *)b)->arrival, &right, NULL);
+    score_time_span(&((const StandardFormCadence *)a)->arrival, &left, NULL);
+    score_time_span(&((const StandardFormCadence *)b)->arrival, &right, NULL);
     return rational_cmp(left, right);
 }
 
@@ -115,12 +115,12 @@ static bool line_valid(const AnalysisNote *notes, size_t count) {
     for (size_t i = 0; i < count; i++) {
         Rational start;
         if (!copy_id_valid(notes[i].note_id) || notes[i].midi == ANALYSIS_PITCH_UNKNOWN || notes[i].event == NULL ||
-            notes[i].span == NULL || !score_time_span(notes[i].span, &start, NULL)) {
+            !score_time_span(&notes[i].span, &start, NULL)) {
             return false;
         }
         if (i > 0) {
             Rational previous;
-            score_time_span(notes[i - 1].span, &previous, NULL);
+            score_time_span(&notes[i - 1].span, &previous, NULL);
             if (rational_cmp(start, previous) < 0) {
                 return false;
             }
@@ -135,8 +135,8 @@ bool standard_form_next_note_step(const AnalysisNote *notes, size_t count, size_
     }
     Rational end;
     Rational next_start;
-    score_time_span(notes[index].span, NULL, &end);
-    score_time_span(notes[index + 1].span, &next_start, NULL);
+    score_time_span(&notes[index].span, NULL, &end);
+    score_time_span(&notes[index + 1].span, &next_start, NULL);
     if (rational_cmp(end, next_start) < 0) {
         return false;
     }

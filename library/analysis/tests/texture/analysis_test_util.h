@@ -76,7 +76,7 @@ static inline void piece_note(Piece *piece, size_t track, size_t voice, long pit
     piece->ids[at] = (char *)malloc(strlen(id) + 1);
     assert(piece->ids[at] != NULL);
     strcpy(piece->ids[at], id);
-    AnalysisNote note = {piece->ids[at], NULL, piece_span(piece, sn, sd, en, ed), (int)pitch, NULL, NULL, track, voice, confidence};
+    AnalysisNote note = {piece->ids[at], NULL, *piece_span(piece, sn, sd, en, ed), (int)pitch, NULL, NULL, track, voice, confidence};
     piece->notes[at] = note;
     piece->input.notes = piece->notes;
     piece->input.count = at + 1;

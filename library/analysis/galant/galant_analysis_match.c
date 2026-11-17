@@ -25,13 +25,15 @@ GalantMatchConfig galant_match_config_default(void) {
 
 /* --- exact times --- */
 
-/* The time of a segment edge, read exactly. False when it does not fit a Rational. */
+/* The time of a segment edge, read exactly. */
 static bool seg_start(const GalantSegmentList *s, size_t i, Rational *out) {
-    return rational_of_musical_time(time_span_start(s->items[i].segment.span), out) == RATIONAL_OK;
+    *out = s->items[i].segment.span.start.value;
+    return true;
 }
 
 static bool seg_end(const GalantSegmentList *s, size_t i, Rational *out) {
-    return rational_of_musical_time(time_span_end(s->items[i].segment.span), out) == RATIONAL_OK;
+    *out = s->items[i].segment.span.end.value;
+    return true;
 }
 
 /* The start of segment `i` less `from`, as whole notes. False when a step does not fit a Rational. */

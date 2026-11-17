@@ -221,7 +221,7 @@ static double time_double(const MusicalTime *time) {
 static size_t region_at(const CommonPracticeKeyRegions *regions, double start) {
     size_t found = 0;
     for (size_t i = 0; i < regions->region_count; i++) {
-        if (time_double(time_span_start(regions->regions[i].span)) <= start + 1e-12) {
+        if (time_double(&regions->regions[i].span.start) <= start + 1e-12) {
             found = i;
         }
     }
@@ -283,7 +283,7 @@ static bool read_numerals(AnalysisChain *chain) {
     pitch_total = 0;
     for (size_t i = 0; i < p->regions.region_count; i++) {
         p->region_inputs[i].key = p->regions.regions[i].key;
-        p->region_inputs[i].start = time_span_start(p->regions.regions[i].span);
+        p->region_inputs[i].start = p->regions.regions[i].span.start;
         p->region_inputs[i].uncertainty = p->regions.regions[i].uncertainty;
     }
     /* Keys from phrases (R-399): after the pivot of an arrival change the chords are read in the key they cadence into, so the new region's
@@ -293,8 +293,8 @@ static bool read_numerals(AnalysisChain *chain) {
         if (!change->at_arrival || !change->has_pivot || change->pivot_segment + 1 >= count) {
             continue;
         }
-        const MusicalTime *after_pivot = chain->key_segments[change->pivot_segment + 1].start;
-        if (time_double(after_pivot) < time_double(p->region_inputs[change->to_region].start) - 1e-12) {
+        MusicalTime after_pivot = chain->key_segments[change->pivot_segment + 1].start;
+        if (time_double(&after_pivot) < time_double(&p->region_inputs[change->to_region].start) - 1e-12) {
             p->region_inputs[change->to_region].start = after_pivot;
         }
     }
@@ -734,7 +734,7 @@ static bool find_chain_repeats(AnalysisChain *chain) {
     size_t count = 0;
     for (size_t i = 0; i < set->count; i++) {
         const AnalysisNote *note = &set->notes[i];
-        if (note->midi == ANALYSIS_PITCH_UNKNOWN || (scoped && time_double(time_span_start(note->span)) >= end - 1e-12)) {
+        if (note->midi == ANALYSIS_PITCH_UNKNOWN || (scoped && time_double(&note->span.start) >= end - 1e-12)) {
             continue;
         }
         items[count].span = note->span;
@@ -965,7 +965,7 @@ static bool phrase_boundaries(AnalysisChain *chain) {
         return false;
     }
     for (size_t k = 0; k + 1 < phrases->count; k++) {
-        const MusicalTime *end = time_span_end(phrases->items[k].span);
+        const MusicalTime *end = &phrases->items[k].span.end;
         if (musical_time_create(musical_time_numerator(end), musical_time_denominator(end), &chain->boundaries[chain->boundary_count]) !=
             MUSICAL_TIME_OK) {
             return false;

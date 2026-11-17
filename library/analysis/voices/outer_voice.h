@@ -66,7 +66,7 @@ typedef struct {
     bool guarded;               /* absent because a register guard dropped it (rules 2 and 3) */
     EntityID *note_id;          /* owned; NULL when absent */
     PitchNumericValue *pitch;   /* owned; NULL when absent */
-    TimeSpan *span;             /* owned: the segment's window */
+    TimeSpan span;              /* the segment's window */
 } OuterVoiceEntry;
 
 typedef struct {

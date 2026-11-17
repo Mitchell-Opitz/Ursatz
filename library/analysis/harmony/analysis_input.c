@@ -90,7 +90,7 @@ HarmonyAnalysisStatus harmony_analysis_prepare(const HarmonySegmentInput *inputs
     for (size_t i = 0; i < count; i++) {
         const HarmonySegmentInput *input = &inputs[i];
         if (input->segment.id == NULL || input->segment.id[0] == '\0' || input->key_ref == NULL ||
-            input->key_ref[0] == '\0' || input->segment.span == NULL || input->segment.position == NULL ||
+            input->key_ref[0] == '\0' || input->segment.position == NULL ||
             !(input->uncertainty >= 0.0 && input->uncertainty <= 1.0)) {
             return HARMONY_ANALYSIS_ERR_BAD_INPUT;
         }

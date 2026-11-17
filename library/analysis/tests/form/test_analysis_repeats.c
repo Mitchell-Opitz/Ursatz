@@ -8,7 +8,6 @@
 
 typedef struct {
     MeterMap *map;
-    TimeSpan *spans[MAX_NOTES];
     StandardFormRepeatNote notes[MAX_NOTES];
     size_t count;
 } Piece;
@@ -19,17 +18,13 @@ static void piece_init(Piece *p) {
 }
 
 static void piece_destroy(Piece *p) {
-    for (size_t i = 0; i < p->count; i++) {
-        time_span_destroy(p->spans[i]);
-    }
     meter_map_destroy(p->map);
 }
 
 static void note(Piece *p, int measure, int start16, int length16, int pitch) {
     assert(p->count < MAX_NOTES);
     long start = (long)(measure - 1) * 16 + start16;
-    p->spans[p->count] = form_span(start, start + length16);
-    p->notes[p->count].span = p->spans[p->count];
+    p->notes[p->count].span = form_span(start, start + length16);
     p->notes[p->count].semitone = pitch;
     p->count++;
 }
@@ -215,10 +210,6 @@ static void test_bad_calls_are_refused(void) {
     assert(standard_form_find_repeats(p.notes, p.count, NULL, NULL, &out) == STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
     assert(standard_form_find_repeats(p.notes, p.count, p.map, NULL, NULL) == STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
     assert(standard_form_find_repeats(p.notes, p.count, p.map, &zero, &out) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
-    const TimeSpan *kept = p.notes[3].span;
-    p.notes[3].span = NULL;
-    assert(standard_form_find_repeats(p.notes, p.count, p.map, NULL, &out) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
-    p.notes[3].span = kept;
     assert(out.items == NULL && out.count == 0);
     assert(standard_form_find_repeats(NULL, 0, p.map, NULL, &out) == STANDARD_FORM_ANALYSIS_OK && out.count == 0);
     standard_form_repeats_destroy(&out);

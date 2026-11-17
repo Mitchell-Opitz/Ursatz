@@ -150,7 +150,7 @@ static inline void schema_build_from_fixture(SchemaBuild *build, const Fixture *
         strcpy(build->ids[build->id_count], id);
         segment.segment.id = build->ids[build->id_count++];
         snprintf(segment.key_id, sizeof(segment.key_id), "key-%d", f->key_pc);
-        segment.segment.span = span;
+        segment.segment.span = *span;
         segment.segment.strength = f->beat == 1.0 ? BEAT_STRENGTH_STRONG : (f->beat == 3.0 ? BEAT_STRENGTH_MEDIUM : BEAT_STRENGTH_WEAK);
         segment.beat_numerator = 1;
         segment.beat_denominator = 4;

@@ -234,12 +234,13 @@ static Inputs make_inputs(const WeightedPipeline *p, const MeterMap *map, const 
         assert(metrical_position_from_time(map, time_span_start(window), &in.positions[s]) == METRICAL_POSITION_OK);
         HarmonySegmentInput *input = &in.inputs[s];
         input->segment.id = p->segment_ids[s];
-        input->segment.span = window;
+        input->segment.span = *window;
         input->segment.position = in.positions[s];
         input->segment.strength = chain_attack_strength(map, time_span_start(window));
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
-        input->beat_length = in.beat_length;
+        input->has_beat_length = true;
+        input->beat_length = *in.beat_length;
     }
     return in;
 }
@@ -442,7 +443,7 @@ static AnalysisChain *run_analysis_chain(const WeightedPipeline *p, const MeterM
     assert(key_events != NULL);
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p->import.key_signatures.events[i];
-        key_events[i].time = event->position;
+        key_events[i].time = *event->position;
         assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
     }
     AnalysisNoteSet set = {p->notes, p->note_count, map};

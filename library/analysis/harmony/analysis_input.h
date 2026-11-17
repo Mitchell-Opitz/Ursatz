@@ -43,10 +43,10 @@
  *   mode             the key's mode
  *   uncertainty      [0, 1], carried into every Interpretation made from the segment
  *   beat_length      OPTIONAL: the length of one beat at the segment's start, a Duration in whole notes (a quarter
- *                    in 4/4, a dotted quarter in 12/8), or NULL when not known (the cadence step then uses its
- *                    configured default). The caller reads it from the meter
+ *                    in 4/4, a dotted quarter in 12/8), read when has_beat_length is set; with it false the cadence
+ *                    step uses its configured default. The caller reads it from the meter
  *
- * Every pointer is borrowed: the caller keeps the TimeSpan, MetricalPosition and strings alive for as long as the
+ * Every pointer is borrowed: the caller keeps the MetricalPosition and strings alive for as long as the
  * prepared segments are used. The module reads no other framework and never finds a chord itself.
  *
  * A segment whose fields do not make a chord this framework reads (a degree outside 1..7, an inversion beyond the
@@ -68,7 +68,8 @@ typedef struct {
     const char *key_ref;
     HarmonyMode mode;
     double uncertainty;
-    const Duration *beat_length;
+    bool has_beat_length;
+    Duration beat_length;
 } HarmonySegmentInput;
 
 
