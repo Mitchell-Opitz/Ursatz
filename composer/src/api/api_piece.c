@@ -113,6 +113,7 @@ static void make_config(const PieceSpec *request, bool check, unsigned long seed
     config->pool = request->pool;
     config->pool_count = request->pool_count;
     config->job = request->job;
+    config->knowledge = request->knowledge;
 }
 
 static PieceResult compose_version(const PieceSpec *request, bool check, unsigned long seed, PieceVersion *version) {
@@ -678,7 +679,8 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
     size_t count = 0;
     FormHeardKey *keys = NULL;
     size_t key_count = 0;
-    if (version->plan && form_hear_keys(plan, plan_node_span(plan, plan_root(plan)), &keys, &key_count) != FORM_HEAR_OK) {
+    if (version->plan && form_hear_keys(plan, request->knowledge, plan_node_span(plan, plan_root(plan)), &keys,
+                                       &key_count) != FORM_HEAR_OK) {
         keys = NULL;
         key_count = 0;
     }
@@ -1616,8 +1618,13 @@ ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult resu
     return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", piece_result_name(result));
 }
 
-ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_piece(const ComposerContext *context, const char *request_json,
+                                  const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = NULL;
     PieceSpec *request = calloc(1, sizeof(*request));
     PieceMade piece;
@@ -1660,8 +1667,8 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
         status = read_edit(root, &plan_text, &edit, &section, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_piece_read_request(request, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request", style, plain_midi,
-                                        job, &out->error);
+        status = api_piece_read_request(request, context->knowledge, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request",
+                                        style, plain_midi, job, &out->error);
     }
     if (status == COMPOSER_OK && edit.text) {
         status = api_piece_refuse_performed(request, &out->error);

@@ -14,7 +14,7 @@
 #define SMOOTH_LIMIT 3
 
 AccompanimentParams accompaniment_params_default(void) {
-    AccompanimentParams params = {ACCOMPANIMENT_DEFAULT_CANDIDATES};
+    AccompanimentParams params = {ACCOMPANIMENT_DEFAULT_CANDIDATES, NULL};
     return params;
 }
 
@@ -285,7 +285,8 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
 
 /* ------------------------------------------------------------ judging */
 
-void accomp_judge(const AccompContext *context, const AccompCandidate *candidate, AccompVerdict *verdict) {
+void accomp_judge(const AccompContext *context, const KnowledgeSnapshot *knowledge, const AccompCandidate *candidate,
+                  AccompVerdict *verdict) {
     memset(verdict, 0, sizeof(*verdict));
     for (size_t voice = 0; voice < ACCOMP_VOICES && !verdict->hard; voice++) {
         for (size_t n = 0; n < candidate->note_count[voice] && !verdict->hard; n++) {
@@ -344,7 +345,7 @@ void accomp_judge(const AccompContext *context, const AccompCandidate *candidate
     if (context->texture >= 0) {
         bool heard = false;
         verdict->total++;
-        verdict->held += accomp_hear(context, candidate, &heard) && heard ? 1 : 0;
+        verdict->held += accomp_hear(context, knowledge, candidate, &heard) && heard ? 1 : 0;
     }
 }
 
@@ -426,7 +427,7 @@ static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng 
         if (!accomp_build(read, allowed[(first + attempt) % allowed_count], rng, scratch)) {
             continue;
         }
-        accomp_judge(read, scratch, &verdict);
+        accomp_judge(read, params ? params->knowledge : NULL, scratch, &verdict);
         if (verdict.hard) {
             continue;
         }
@@ -527,7 +528,8 @@ bool accompaniment_checker(const PiecePlan *plan, FillTarget target, const FillO
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;
     if (ok) {
-        accomp_judge(read, accompaniment, &verdict);
+        const AccompanimentParams *params = operator_->context;
+        accomp_judge(read, params ? params->knowledge : NULL, accompaniment, &verdict);
         out->hard_violation = verdict.hard != NULL;
         if (verdict.hard) {
             snprintf(out->reason, sizeof(out->reason), "%s", verdict.hard);

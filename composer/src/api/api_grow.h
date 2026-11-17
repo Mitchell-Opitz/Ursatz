@@ -126,6 +126,7 @@ typedef struct {
     const GrowFidelityTable *fidelity;       /* NULL for the defaults; not owned */
     const MelodyFillParams *melody;          /* NULL for the defaults; not owned */
     const ComposerJob *job;
+    const KnowledgeSnapshot *knowledge;      /* the call context's; required, must outlive the run */
 } GrowSetup;
 
 /* A theme made, with what the output of it needs. */
@@ -223,8 +224,9 @@ ComposerStatus api_style_without_add(const char **names, size_t *count, size_t c
 /* --- seeding from a corpus ---------------------------------------------------------------------------- */
 
 /* The motive of a corpus passage like the passage file like_path, in the meter and key. */
-ComposerStatus api_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
-                               unsigned long seed, CorpusSeed *out, ComposerError *error);
+ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const char *corpus_dir, const char *like_path,
+                               const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out,
+                               ComposerError *error);
 /* The seed as the plan records it. */
 ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error);
 /* "3 stale documents in '<dir>' (analyzed by another version; run the corpus again)", or "" when none is stale. */

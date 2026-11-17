@@ -5,6 +5,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * The three repetitions of a presentation (B1 of P34): over seeds 1 to 30 of an 8-bar sentence in C major 4/4 with a 1-bar
@@ -105,6 +106,7 @@ static void test_three_kinds(void) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.basic = &motive;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
@@ -151,6 +153,7 @@ static void test_one_cell(void) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.basic = &motive;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);

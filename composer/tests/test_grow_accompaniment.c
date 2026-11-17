@@ -13,6 +13,7 @@
 #include "accompaniment_check.h"
 #include "texture_heard.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Themes grown with an accompaniment, seeds 1 to 10, in C major 4/4 and D minor 3/4, for each pattern. Run with no
@@ -77,6 +78,7 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
 static GrowResult grow(const GrowRequest *request, unsigned long seed, PiecePlan **plan, GrowOutcome *outcome) {
     GrowConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     memset(outcome, 0, sizeof(*outcome));
     config.seed = seed;
     assert(grow_build_plan_checked(request, plan, NULL) == GROW_OK);

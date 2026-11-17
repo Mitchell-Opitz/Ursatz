@@ -98,9 +98,10 @@ ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, Composer
     return COMPOSER_OK;
 }
 
-ComposerStatus api_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
-                               unsigned long seed, CorpusSeed *out, ComposerError *error) {
-    CorpusSeedResult result = corpus_seed_motive(corpus_dir, like_path, meter, key, seed, out);
+ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const char *corpus_dir, const char *like_path,
+                               const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out,
+                               ComposerError *error) {
+    CorpusSeedResult result = corpus_seed_motive(knowledge, corpus_dir, like_path, meter, key, seed, out);
     return result == CORPUS_SEED_OK ? COMPOSER_OK : seed_failure(result, corpus_dir, like_path, error);
 }
 
@@ -342,7 +343,7 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
                             "harmony, features and role describe a motive input, not one seeded from a corpus");
         }
         /* The passage is chosen once, by the first seed; the seeds tried after it grow from the same motive. */
-        status = api_seed_motive(corpus, like, &setup->meter, &setup->key, setup->seed, &setup->seed_found, error);
+        status = api_seed_motive(setup->knowledge, corpus, like, &setup->meter, &setup->key, setup->seed, &setup->seed_found, error);
         if (status == COMPOSER_OK) {
             status = api_seed_source(&setup->seed_found, &setup->source, error);
         }
@@ -453,12 +454,18 @@ static ComposerStatus add_notices(cJSON *document, const State *state, const Api
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
 
-ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_grow(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     State state;
     ApiOutputOptions outputs;
     memset(&state, 0, sizeof(state));
     memset(&outputs, 0, sizeof(outputs));
+    state.setup.knowledge = context->knowledge;
     ComposerStatus status = api_parse_request(request_json, &state.request, &out->error);
     if (status == COMPOSER_OK) {
         status = grow_prepare(&state, job, &outputs, &out->error);

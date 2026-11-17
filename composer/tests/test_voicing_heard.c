@@ -7,6 +7,7 @@
 #include <ursatz_composer/plan_state.h>
 #include "support/voice_hear.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Themes grown in four parts, seeds 1 to 10, in C major 4/4, G major 3/4 and D minor 4/4. With the argument "chorale"
@@ -88,6 +89,7 @@ int main(int argc, char **argv) {
             GrowConfig config;
             VoiceHeard heard;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             memset(&outcome, 0, sizeof(outcome));
             config.seed = seed;
             assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);

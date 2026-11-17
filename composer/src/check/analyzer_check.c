@@ -257,7 +257,8 @@ static bool add_violations(ComposerHearing *hearing, const AnalyzerResult *resul
     return true;
 }
 
-AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section, AnalyzerCheck *out) {
+AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, NodeId section,
+                                           AnalyzerCheck *out) {
     if (!out) {
         return ANALYZER_CHECK_ERR_NULL;
     }
@@ -266,7 +267,7 @@ AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section
     if (!plan) {
         return ANALYZER_CHECK_ERR_NULL;
     }
-    AnalyzerCheckResult made = result_of(hearing_create(plan, &hearing));
+    AnalyzerCheckResult made = result_of(hearing_create(plan, knowledge, &hearing));
     if (made == ANALYZER_CHECK_OK) {
         made = analyzer_check_section_in(hearing, section, out);
     }

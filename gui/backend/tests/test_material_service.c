@@ -8,6 +8,7 @@
 
 #include "service/material_service.h"
 #include "gui_check.h"
+#include "test_knowledge.h"
 
 #define OK URSATZ_GUI_MATERIAL_OK
 
@@ -1103,6 +1104,7 @@ static void remove_store(void) {
 }
 
 int main(void) {
+    test_knowledge();
     snprintf(g_dir, sizeof(g_dir), "%s/materials_%d", URSATZ_GUI_TEST_STORE_DIR, (int)getpid());
     check_quiet(ursatz_gui_material_service_init(g_dir), "init");
 

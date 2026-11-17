@@ -11,6 +11,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -134,7 +135,7 @@ static void test_snapshots(void) {
     for (size_t i = 0; i < CASE_COUNT; i++) {
         char *request = case_request(&CASES[i]);
         ComposerResponse response;
-        ComposerStatus status = composer_api_theme(request, NULL, &response);
+        ComposerStatus status = composer_api_theme(test_context(), request, NULL, &response);
         if (status != COMPOSER_OK) {
             fprintf(stderr, "theme-%s: %s: %s\n", CASES[i].name, test_status_name(status), response.error.message);
         }
@@ -187,7 +188,7 @@ static ComposerStatus compose_uneven(const char *fixture, unsigned seed, cJSON *
     *request = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
     assert(*request);
-    return composer_api_theme(*request, NULL, response);
+    return composer_api_theme(test_context(), *request, NULL, response);
 }
 
 /* A 4+6 period, a 4+5 sentence and a 10-bar sentence with an evaded cadence, from a motif of one bar: each composes at the first of
@@ -279,7 +280,7 @@ static void test_given_construction(void) {
 static void test_plain_has_no_construction(void) {
     char *request = case_request(&CASES[0]);
     ComposerResponse response;
-    assert(composer_api_theme(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &response) == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document && cJSON_IsNull(member(cJSON_GetArrayItem(member(document, "themes"), 0), "construction")));
     cJSON_Delete(document);
@@ -321,14 +322,14 @@ static const cJSON *first_theme(const cJSON *document) {
 static void test_preferences(void) {
     ComposerResponse plain;
     char *request = preferences_request(2, NULL);
-    assert(composer_api_theme(request, NULL, &plain) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &plain) == COMPOSER_OK);
     free(request);
     cJSON *plain_document = cJSON_Parse(plain.json);
     assert(plain_document && !cJSON_GetObjectItemCaseSensitive(plain_document, "preferences"));
 
     ComposerResponse empty;
     request = preferences_request(2, "{}");
-    assert(composer_api_theme(request, NULL, &empty) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &empty) == COMPOSER_OK);
     free(request);
     cJSON *empty_document = cJSON_Parse(empty.json);
     assert(empty_document && cJSON_GetObjectItemCaseSensitive(empty_document, "preferences"));
@@ -344,7 +345,7 @@ static void test_preferences(void) {
         "\"development\": {\"fidelity_minimum\": {\"balanced\": {\"presentation\": \"1/1\"}}}}";
     ComposerResponse set;
     request = preferences_request(2, given);
-    assert(composer_api_theme(request, NULL, &set) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &set) == COMPOSER_OK);
     write_pair("preferences", request, &set);
     free(request);
     cJSON *document = cJSON_Parse(set.json);
@@ -408,14 +409,14 @@ static bool has_source(const cJSON *document, const char *source) {
 static void test_l4_preferences(void) {
     ComposerResponse plain;
     char *request = period_request(2, NULL);
-    assert(composer_api_theme(request, NULL, &plain) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &plain) == COMPOSER_OK);
     free(request);
     cJSON *plain_document = cJSON_Parse(plain.json);
     assert(plain_document && !has_source(plain_document, "new"));
 
     ComposerResponse set;
     request = period_request(2, "{\"development\": {\"contrast\": {\"new_material\": 20}}}");
-    assert(composer_api_theme(request, NULL, &set) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &set) == COMPOSER_OK);
     free(request);
     cJSON *document = cJSON_Parse(set.json);
     assert(document && has_source(document, "new"));
@@ -429,7 +430,7 @@ static void test_l4_preferences(void) {
         "{\"melody\": {\"closure\": {\"final\": 0, \"first\": 0}, \"rhythm_repeat_bars\": 0, \"leaps\": 0, \"register\": 0}, "
         "\"development\": {\"contrast\": {\"distance\": {\"similar\": 1, \"distant\": 0}, \"new_material\": 0}}}";
     request = period_request(2, defaults);
-    assert(composer_api_theme(request, NULL, &set) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &set) == COMPOSER_OK);
     free(request);
     document = cJSON_Parse(set.json);
     assert(document && cJSON_GetObjectItemCaseSensitive(document, "preferences"));
@@ -454,7 +455,7 @@ static void test_suggest_plans_explain(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
     const cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
@@ -490,7 +491,7 @@ static void test_developments(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
     const cJSON *theme = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
@@ -560,7 +561,7 @@ static void test_cancel_first(void) {
     memset(&watch, 0, sizeof(watch));
     ComposerJob job = {on_progress, cancel_at_first, &watch};
     ComposerResponse response;
-    assert(composer_api_theme(request, &job, &response) == COMPOSER_ERR_CANCELLED);
+    assert(composer_api_theme(test_context(), request, &job, &response) == COMPOSER_ERR_CANCELLED);
     assert(watch.steps >= 1 && watch.grow_reported);
     assert(!response.json && !response.plan_json && !response.midi && !response.musicxml);
     composer_response_destroy(&response);
@@ -574,7 +575,7 @@ static void test_progress(void) {
     /* A job that never cancels reports the stages and gives the snapshot. */
     memset(&watch, 0, sizeof(watch));
     ComposerJob quiet = {on_progress, never_cancel, &watch};
-    assert(composer_api_theme(request, &quiet, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, &quiet, &response) == COMPOSER_OK);
     assert(watch.grow_reported && watch.compose_reported);
     expect_case(&CASES[0], &response);
     composer_response_destroy(&response);
@@ -596,7 +597,7 @@ static void *run_worker(void *argument) {
     for (int i = 0; i < 2; i++) {
         char *request = case_request(worker->cases[i]);
         ComposerResponse response;
-        assert(composer_api_theme(request, NULL, &response) == COMPOSER_OK);
+        assert(composer_api_theme(test_context(), request, NULL, &response) == COMPOSER_OK);
         worker->json[i] = strdup(response.json);
         worker->plan[i] = strdup(response.plan_json);
         worker->midi_size[i] = response.midi_size;
@@ -664,7 +665,7 @@ static ComposerStatus refuse_with(const char *const edits[][2], size_t count, Co
     assert(cJSON_AddNumberToObject(request, "seed", 1));
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
-    ComposerStatus status = composer_api_theme(printed, NULL, response);
+    ComposerStatus status = composer_api_theme(test_context(), printed, NULL, response);
     free(printed);
     return status;
 }
@@ -842,10 +843,10 @@ static void test_refused(void) {
                    "/chords/1", "chords bar 7: i6 cannot end a PAC; the cadence needs a tonic chord in root position");
 
     ComposerResponse response;
-    assert(composer_api_theme("{\"api_version\": 7}", NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_theme(test_context(), "{\"api_version\": 7}", NULL, &response) == COMPOSER_ERR_REQUEST);
     assert(strcmp(response.error.path, "/api_version") == 0);
     composer_response_destroy(&response);
-    assert(composer_api_theme("not json", NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_theme(test_context(), "not json", NULL, &response) == COMPOSER_ERR_REQUEST);
     composer_response_destroy(&response);
 }
 

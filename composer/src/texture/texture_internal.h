@@ -131,7 +131,8 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
  * target asks for or its category in every measure of the span. *heard is meaningful on true; false when the analysis
  * could not be run.
  */
-bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate, bool *heard);
+bool accomp_hear(const AccompContext *context, const KnowledgeSnapshot *knowledge, const AccompCandidate *candidate,
+                 bool *heard);
 
 /* Judges a candidate against the plan: hard rules, and the soft ones held of those that apply. */
 typedef struct {
@@ -140,6 +141,8 @@ typedef struct {
     unsigned total;
 } AccompVerdict;
 
-void accomp_judge(const AccompContext *context, const AccompCandidate *candidate, AccompVerdict *verdict);
+/* knowledge: what the Analyzer hears the candidate with; NULL: a candidate with a texture asked for does not hold it. */
+void accomp_judge(const AccompContext *context, const KnowledgeSnapshot *knowledge, const AccompCandidate *candidate,
+                  AccompVerdict *verdict);
 
 #endif

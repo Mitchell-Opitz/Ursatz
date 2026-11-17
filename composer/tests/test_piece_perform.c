@@ -14,6 +14,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/render.h>
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * A composed piece performed in order (R-485, docs/form-performance.md): tests/fixtures/forms/repeat-form.json (A, B, A',
@@ -68,6 +69,7 @@ static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutco
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.form = form;
     *ran = compose_run(plan, &config, outcome);
@@ -312,6 +314,7 @@ static int test_parts(void) {
         request.seed = seed;
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         PieceParts parts;
         PieceResult ran = piece_compose_parts(form, &request, &config, &parts);
@@ -343,6 +346,7 @@ static int test_parts(void) {
     request.meter.beat_unit = 4;
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     PieceParts parts;
     request.bars = 20;
     assert(piece_compose_parts(form, &request, &config, &parts) == PIECE_ERR_BAD_SIZE);
@@ -408,6 +412,7 @@ static int test_part_bars(void) {
             request.seed = seed;
             ComposeConfig config;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             config.seed = seed;
             PieceParts parts;
             PieceResult ran = piece_compose_parts(form, &request, &config, &parts);

@@ -328,6 +328,8 @@ typedef struct {
     /* NULL for none. Reported once at the start of the run ("grow", 0, 1: one candidate), then as ComposeConfig.job. A cancel
        ends the run with GROW_ERR_STUCK and outcome->cancelled. */
     const ComposerJob *job;
+    /* The knowledge the run's hearings read (the call context's snapshot); required, must outlive grow_run. */
+    const KnowledgeSnapshot *knowledge;
 } GrowConfig;
 
 typedef struct {

@@ -5,6 +5,7 @@
 #include <cJSON.h>
 
 #include "counterpoint.h"
+#include "cli_context.h"
 #include "develop.h"
 #include "fill.h"
 #include "grow.h"
@@ -196,7 +197,7 @@ static int run_export(int argc, char **argv) {
     }
 
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_export(request_text, NULL, &response);
+    ComposerStatus api_status = composer_api_export(cli_context(), request_text, NULL, &response);
     free(request_text);
     if (api_status != COMPOSER_OK) {
         return report_export_error(&response.error, plan_path, tempo_text);

@@ -10,6 +10,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -63,10 +64,10 @@ static void write_pair(const char *kind, const char *tag, const char *request, c
     test_write_text(path, response->json);
 }
 
-static ComposerStatus call(ComposerStatus (*entry)(const char *, const ComposerJob *, ComposerResponse *), cJSON *request,
+static ComposerStatus call(ComposerStatus (*entry)(const ComposerContext *, const char *, const ComposerJob *, ComposerResponse *), cJSON *request,
                            const ComposerJob *job, ComposerResponse *response, char **printed) {
     *printed = print(request);
-    ComposerStatus status = entry(*printed, job, response);
+    ComposerStatus status = entry(test_context(), *printed, job, response);
     if (status != COMPOSER_OK && !job && !response->json) {
         fprintf(stderr, "%s: %s\n", test_status_name(status), response->error.message);
     }
@@ -237,11 +238,11 @@ static void test_plan(void) {
     free(printed);
 }
 
-static void expect_refused(ComposerStatus (*entry)(const char *, const ComposerJob *, ComposerResponse *), cJSON *request,
+static void expect_refused(ComposerStatus (*entry)(const ComposerContext *, const char *, const ComposerJob *, ComposerResponse *), cJSON *request,
                            ComposerStatus status, const char *path, const char *message) {
     ComposerResponse response;
     char *printed = print(request);
-    ComposerStatus got = entry(printed, NULL, &response);
+    ComposerStatus got = entry(test_context(), printed, NULL, &response);
     if (got != status || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
         fprintf(stderr, "expected %s at '%s' with '%s', got %s at '%s': %s\n", test_status_name(status), path, message,
                 test_status_name(got), response.error.path, response.error.message);
@@ -437,7 +438,7 @@ static void expect_versions(const char *name, const ComposerResponse *response) 
         assert(cJSON_AddBoolToObject(export_request, "midi", true));
         char *export_text = print(export_request);
         ComposerResponse exported;
-        assert(composer_api_export(export_text, NULL, &exported) == COMPOSER_OK);
+        assert(composer_api_export(test_context(), export_text, NULL, &exported) == COMPOSER_OK);
         snprintf(path, sizeof path, SNAPSHOT("%s.variation-%d.mid"), name, index);
         expect_file(exported.midi, exported.midi_size, path);
         composer_response_destroy(&exported);
@@ -606,7 +607,7 @@ static bool cancelled(void *user) {
 
 /* A job that says cancel at the first report: fill, regenerate and variations stop with COMPOSER_ERR_CANCELLED and no plan. */
 static void test_cancel(void) {
-    ComposerStatus (*const entries[])(const char *, const ComposerJob *, ComposerResponse *) = {
+    ComposerStatus (*const entries[])(const ComposerContext *, const char *, const ComposerJob *, ComposerResponse *) = {
         composer_api_fill, composer_api_regenerate, composer_api_variations};
     const char *const names[] = {"fill", "regenerate", "variations"};
     for (int i = 0; i < 3; i++) {

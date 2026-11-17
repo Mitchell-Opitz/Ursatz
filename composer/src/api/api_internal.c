@@ -21,6 +21,13 @@ ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char 
     return status;
 }
 
+ComposerStatus api_require_knowledge(const ComposerContext *context, ComposerError *error) {
+    if (!context || !context->knowledge) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "", "a knowledge snapshot is required");
+    }
+    return COMPOSER_OK;
+}
+
 ComposerStatus api_fail_alloc(ComposerError *error) {
     return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }

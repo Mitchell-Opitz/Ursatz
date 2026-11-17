@@ -510,8 +510,13 @@ static ComposerStatus render_best(Scene *scene, const FillSuggestions *suggestio
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
 
-ComposerStatus composer_api_develop(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_develop(const ComposerContext *context, const char *request_json,
+                                    const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *request = NULL;
     Flags flags;
     char buffers[13][32];
@@ -565,23 +570,23 @@ ComposerStatus composer_api_develop(const char *request_json, const ComposerJob 
     if (status == COMPOSER_OK) {
         status = api_read_motive(request, "", &source, NULL, &out->error);
     }
-    MotiveDevelopContext context;
+    MotiveDevelopContext develop_context;
     PlanMotiveRef ref;
     if (status == COMPOSER_OK) {
         char problem_text[160];
         const char *problem = NULL;
-        motive_develop_context_default(&context);
-        context.meter = motive_meter(&source);
-        context.has_key = source.key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED;
-        context.key = motive_key(&source);
-        context.candidates = (size_t)suggest * 3 > 12 ? (size_t)suggest * 3 : 12;
-        if (!build_ref(&flags, op, &source, &context.min_length, &ref, &problem, problem_text, sizeof(problem_text))) {
+        motive_develop_context_default(&develop_context);
+        develop_context.meter = motive_meter(&source);
+        develop_context.has_key = source.key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED;
+        develop_context.key = motive_key(&source);
+        develop_context.candidates = (size_t)suggest * 3 > 12 ? (size_t)suggest * 3 : 12;
+        if (!build_ref(&flags, op, &source, &develop_context.min_length, &ref, &problem, problem_text, sizeof(problem_text))) {
             status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "%s", problem);
         }
     }
     if (status == COMPOSER_OK) {
         registry = fill_registry_create();
-        if (!registry || motive_develop_register(registry, &context) != FILL_OK) {
+        if (!registry || motive_develop_register(registry, &develop_context) != FILL_OK) {
             status = api_fail_alloc(&out->error);
         } else if (!build_scene(&source, &ref, &scene)) {
             status = api_fail_alloc(&out->error);
@@ -594,7 +599,7 @@ ComposerStatus composer_api_develop(const char *request_json, const ComposerJob 
         memset(&config, 0, sizeof(config));
         config.seed = seed;
         config.checker = motive_develop_checker;
-        config.checker_context = &context;
+        config.checker_context = &develop_context;
         config.job = job;
         FillTarget target = {FILL_TARGET_NODE, scene.target};
         if (job_step(job, "develop", 0, 1)) {

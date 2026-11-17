@@ -19,6 +19,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Growing a theme from each of the nine pairings of a beginning and an ending, in four keys and meters, 8 and 4 bars,
@@ -542,6 +543,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     /* The same seed is run twice for two of the seeds, to be sure it gives the same plan and records. */
     int rounds = seed == 1 || seed == 10 ? 2 : 1;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     for (int round = 0; round < rounds; round++) {
         PiecePlan *plan = NULL;
@@ -599,6 +601,7 @@ static void test_first_cadence(void) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);

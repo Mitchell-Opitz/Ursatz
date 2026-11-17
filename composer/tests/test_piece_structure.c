@@ -12,6 +12,7 @@
 
 #include "util/plan_util.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Piece structures (R-169, R-170): the checks, the default cadences, and the plans and composed runs of structures
@@ -319,6 +320,7 @@ static Sweep compose_seeds(Fixture *fixture) {
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(piece_build_plan(&fixture->request, &plan) == PIECE_OK);
         PieceResult ran = compose_run(plan, &config, &outcome);
@@ -419,6 +421,7 @@ static void free_phrase(size_t beats, size_t expected_ideas, const size_t *idea_
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -479,6 +482,7 @@ static void test_minor_half_free(void) {
     ComposeConfig config;
     ComposeOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     PieceResult ran = compose_run(plan, &config, &outcome);
     assert(ran == PIECE_OK);
@@ -674,6 +678,7 @@ static void test_functions(void) {
             ComposeConfig config;
             ComposeOutcome outcome;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             config.seed = seed;
             assert(piece_build_plan(&fixture.request, &loop_plan) == PIECE_OK);
             PieceResult ran = compose_run(loop_plan, &config, &outcome);

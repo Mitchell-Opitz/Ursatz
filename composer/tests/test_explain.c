@@ -15,6 +15,7 @@
 #include <ursatz_composer/style.h>
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_CLI_PATH
 #error "COMPOSER_CLI_PATH is not defined"
@@ -120,6 +121,7 @@ static int test_choices(void) {
     ComposerStyle *style = chorales();
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 3;
     config.analyzer_check = true;
     config.style = style;
@@ -257,6 +259,7 @@ static int test_rejections(void) {
         PiecePlan *plan = period_a_minor(&motive);
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.analyzer_check = true;
         ComposeOutcome outcome;
@@ -309,6 +312,7 @@ static void explained(unsigned long seed, char **text, char **json) {
     ComposerStyle *style = chorales();
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.analyzer_check = true;
     config.style = style;

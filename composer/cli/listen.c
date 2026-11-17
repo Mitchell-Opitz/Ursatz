@@ -1,4 +1,5 @@
 #include "listen.h"
+#include "cli_context.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -293,7 +294,7 @@ static int write_sample_file(const Options *options, unsigned long index, const 
 static int print_default_settings(void) {
     ComposerResponse response;
     memset(&response, 0, sizeof response);
-    if (composer_api_vocabulary(&response) != COMPOSER_OK) {
+    if (composer_api_vocabulary(cli_context(), &response) != COMPOSER_OK) {
         composer_response_destroy(&response);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read the vocabulary");
     }
@@ -402,8 +403,8 @@ static cJSON *render_request(const Options *options, const cJSON *motive) {
 }
 
 /* Calls an API entry with the request object (consumed). */
-static ComposerStatus call(ComposerStatus (*entry)(const char *, const ComposerJob *, ComposerResponse *), cJSON *request,
-                           ComposerResponse *response) {
+static ComposerStatus call(ComposerStatus (*entry)(const ComposerContext *, const char *, const ComposerJob *, ComposerResponse *),
+                           cJSON *request, ComposerResponse *response) {
     memset(response, 0, sizeof *response);
     char *text = request ? cJSON_PrintUnformatted(request) : NULL;
     cJSON_Delete(request);
@@ -412,7 +413,7 @@ static ComposerStatus call(ComposerStatus (*entry)(const char *, const ComposerJ
         snprintf(response->error.message, sizeof response->error.message, "out of memory");
         return COMPOSER_ERR_ALLOC;
     }
-    ComposerStatus status = entry(text, NULL, response);
+    ComposerStatus status = entry(cli_context(), text, NULL, response);
     cJSON_free(text);
     return status;
 }
@@ -656,7 +657,7 @@ static int validate_options(const Options *options, const cJSON *preferences) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     memset(&response, 0, sizeof response);
-    ComposerStatus status = composer_api_validate("random_motive", text, &response);
+    ComposerStatus status = composer_api_validate(cli_context(), "random_motive", text, &response);
     cJSON_free(text);
     int result = 0;
     if (status != COMPOSER_OK) {

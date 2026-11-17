@@ -155,8 +155,13 @@ static cJSON *candidates_json(const ComposeCandidates *candidates, unsigned long
     return list;
 }
 
-ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_fill(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = NULL;
     char *text = NULL;
     ApiOutputs outputs;
@@ -223,6 +228,7 @@ ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *jo
         config.style = style;
         config.style_weight = style_weight;
         config.job = job;
+        config.knowledge = context->knowledge;
         if (candidates_wanted > 0) {
             /* The candidates run from the seed and the next ones; the best is written. */
             PieceResult ran = compose_candidates(fresh, &config, candidates_wanted, &candidates);

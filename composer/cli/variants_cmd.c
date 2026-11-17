@@ -1,4 +1,5 @@
 #include "variants_cmd.h"
+#include "cli_context.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -308,7 +309,7 @@ static int make_variants(const Options *options) {
         return status != 0 ? status : cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_variants(text, NULL, &response);
+    ComposerStatus api_status = composer_api_variants(cli_context(), text, NULL, &response);
     free(text);
     if (api_status != COMPOSER_OK) {
         if (strncmp(response.error.path, "/chain", 6) == 0 && options->chain_path) {

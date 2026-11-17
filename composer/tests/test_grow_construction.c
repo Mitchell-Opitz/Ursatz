@@ -9,6 +9,7 @@
 
 #include "grow/grow_internal.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * The construction chosen for a theme that is given none (R-469, B4 of P47): grow_construction_choose gives each row of
@@ -226,6 +227,7 @@ static void test_build(void) {
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     GrowResult result = grow_run(plan, &config, &outcome);
     assert(result == GROW_OK && !outcome.stuck);

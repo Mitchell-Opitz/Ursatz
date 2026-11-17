@@ -564,6 +564,7 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
     PiecePlan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.style = style;
     config.style_weight = weight;
@@ -748,6 +749,7 @@ static void repetition_degrees(unsigned long seed, const ComposerStyle *style, c
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.style = style;
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
@@ -860,6 +862,7 @@ static int test_measure_without_motives(void) {
     PiecePlan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     ComposeOutcome outcome;
     assert(compose_run(plan, &config, &outcome) == PIECE_OK);

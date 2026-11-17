@@ -17,6 +17,7 @@
 #include "api/api_piece.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The plans every form template makes (R-417): each template at each size in C major 4/4 and A minor 3/4, with an
@@ -288,7 +289,7 @@ static char *theme_plan(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
     free(printed);
     char *plan = strdup(response.plan_json);
     composer_response_destroy(&response);
@@ -318,7 +319,7 @@ static uint64_t piece_hash(const char *name, const char *theme) {
     assert(spec);
     ComposerError error;
     memset(&error, 0, sizeof(error));
-    if (api_piece_read_request(spec, root, "", NULL, false, NULL, &error) != COMPOSER_OK) {
+    if (api_piece_read_request(spec, test_knowledge(), root, "", NULL, false, NULL, &error) != COMPOSER_OK) {
         fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);
         exit(1);
     }

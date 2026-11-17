@@ -1,4 +1,5 @@
 #include "random_motive.h"
+#include "cli_context.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -171,7 +172,7 @@ int run_random_motive(int argc, char **argv) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_random_motive(text, NULL, &response);
+    ComposerStatus api_status = composer_api_random_motive(cli_context(), text, NULL, &response);
     free(text);
     if (api_status != COMPOSER_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);

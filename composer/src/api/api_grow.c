@@ -749,6 +749,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     config.style_weight = setup->style_weight;
     config.tempo = setup->tempo;
     config.job = setup->job;
+    config.knowledge = setup->knowledge;
     if (material) {
         config.pool = material->pool;
         config.pool_count = material->pool_count;
@@ -775,7 +776,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     }
     /* A theme the Analyzer cannot read is not held against it. */
     if (ran == GROW_OK && setup->check && theme_node != PLAN_NODE_NONE) {
-        theme->checked = analyzer_check_section(theme->plan, theme_node, &theme->check) == ANALYZER_CHECK_OK;
+        theme->checked = analyzer_check_section(theme->plan, setup->knowledge, theme_node, &theme->check) == ANALYZER_CHECK_OK;
         if (theme->checked && theme->check.contradicts) {
             ComposeRejection rejection;
             if (setup->explain &&

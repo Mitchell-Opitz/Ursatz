@@ -9,6 +9,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The rows of the rondo and sonata forms in the piece document, one table and one test per family:
@@ -129,7 +130,7 @@ static void check(const ApiFamily *family, const ApiCase *row) {
              "\"key\": \"%s\", \"mode\": \"%s\", \"meter\": \"4/4\", \"bars\": %d, \"motive\": null}, \"seed\": 1}",
              family->form, row->key, row->mode, family->bars);
     ComposerResponse response;
-    ComposerStatus status = composer_api_piece(request, NULL, &response);
+    ComposerStatus status = composer_api_piece(test_context(), request, NULL, &response);
     if (status != COMPOSER_OK) {
         fprintf(stderr, "test_api_%s: %s: %s\n", family->name, test_status_name(status), response.error.message);
     }

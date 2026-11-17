@@ -9,6 +9,7 @@
 
 #include "grow/grow_internal.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * A motif as long as the idea it fills is that idea (B1 of P33): grow_motive_fit for motives of 1, 1.5, 2 and 3 bars with
@@ -107,6 +108,7 @@ static void test_compose(void) {
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
@@ -167,6 +169,7 @@ static void test_cadence_note(void) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         GrowResult result = grow_run(plan, &config, &outcome);
@@ -224,6 +227,7 @@ static void test_variety(void) {
             GrowOutcome outcome;
             GrowConfig config;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             config.seed = seed;
             assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
             GrowResult result = grow_run(plan, &config, &outcome);
@@ -280,6 +284,7 @@ static void test_period_slot(void) {
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
@@ -351,6 +356,7 @@ static void test_part_length(void) {
                 GrowOutcome outcome;
                 GrowConfig config;
                 memset(&config, 0, sizeof(config));
+                config.knowledge = test_knowledge();
                 config.seed = seed;
                 assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
                 GrowResult result = grow_run(plan, &config, &outcome);

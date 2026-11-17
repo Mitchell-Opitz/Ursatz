@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/theme_shape.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Uneven themes (R-468, R-471, B2 of P47): a theme of 3 to 16 bars whose ideas are any whole bars, given by a
@@ -176,6 +177,7 @@ static bool run_case(const Scenario *scenario, const Case *item, unsigned long s
     PiecePlan *plan = NULL;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     check_constraint(plan, &construction);

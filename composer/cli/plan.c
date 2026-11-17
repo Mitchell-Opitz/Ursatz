@@ -1,4 +1,5 @@
 #include "plan.h"
+#include "cli_context.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -272,7 +273,7 @@ static cJSON *motive_request(const Options *options, const char *path, Held *hel
         char *printed = ok ? cJSON_PrintUnformatted(midi_request) : NULL;
         cJSON_Delete(midi_request);
         ComposerResponse response;
-        ComposerStatus status = printed ? composer_api_motive_from_midi((const uint8_t *)bytes, size, printed, NULL, &response)
+        ComposerStatus status = printed ? composer_api_motive_from_midi(cli_context(), (const uint8_t *)bytes, size, printed, NULL, &response)
                                         : COMPOSER_ERR_ALLOC;
         cJSON_free(printed);
         if (status != COMPOSER_OK) {

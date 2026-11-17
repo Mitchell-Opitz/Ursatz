@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
+
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/form_hear.h>
@@ -117,6 +119,8 @@ typedef struct {
      * check it has the parts for. Must outlive compose_run.
      */
     const FormSpec *form;
+    /* The knowledge the run's hearings and texture checks read (the call context's snapshot); required, must outlive compose_run. */
+    const KnowledgeSnapshot *knowledge;
 } ComposeConfig;
 
 /* What one theme section was heard as. The members are GrowOutcome's. */

@@ -172,9 +172,13 @@ static ComposerStatus analyze_request(const cJSON *request, const unsigned char 
     return out->json ? COMPOSER_OK : api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-static ComposerStatus run_request(const char *request_json, const unsigned char *bytes, size_t size, bool render,
-                                  const ComposerJob *job, ComposerResponse *out) {
+static ComposerStatus run_request(const ComposerContext *context, const char *request_json, const unsigned char *bytes,
+                                  size_t size, bool render, const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *request = NULL;
     ComposerStatus status = api_parse_request(request_json, &request, &out->error);
     if (status != COMPOSER_OK) {
@@ -190,19 +194,24 @@ static ComposerStatus run_request(const char *request_json, const unsigned char 
     return status;
 }
 
-ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
-    return run_request(request_json, NULL, 0, false, job, out);
+ComposerStatus composer_api_motive(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                   ComposerResponse *out) {
+    return run_request(context, request_json, NULL, 0, false, job, out);
 }
 
-ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, const char *request_json,
-                                             const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_motive_from_midi(const ComposerContext *context, const uint8_t *bytes, size_t size,
+                                             const char *request_json, const ComposerJob *job, ComposerResponse *out) {
     if (!bytes) {
         memset(out, 0, sizeof *out);
-        return api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "the MIDI bytes are missing");
+        ComposerStatus context_status = api_require_knowledge(context, &out->error);
+        return context_status != COMPOSER_OK
+                   ? context_status
+                   : api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "the MIDI bytes are missing");
     }
-    return run_request(request_json, bytes, size, false, job, out);
+    return run_request(context, request_json, bytes, size, false, job, out);
 }
 
-ComposerStatus composer_api_motive_render(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
-    return run_request(request_json, NULL, 0, true, job, out);
+ComposerStatus composer_api_motive_render(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                          ComposerResponse *out) {
+    return run_request(context, request_json, NULL, 0, true, job, out);
 }

@@ -603,8 +603,12 @@ bool api_vocabulary_build(cJSON *root) {
            add_preferences(root) && add_limits(root);
 }
 
-ComposerStatus composer_api_vocabulary(ComposerResponse *out) {
+ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = cJSON_CreateObject();
     if (!root || !api_vocabulary_build(root)) {
         cJSON_Delete(root);

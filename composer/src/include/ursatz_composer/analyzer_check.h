@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
+
 #include <ursatz_composer/piece_plan.h>
 
 /*
@@ -54,8 +56,12 @@ typedef enum {
     ANALYZER_CHECK_ERR_ANALYSIS     /* the Analyzer could not analyze the fragment */
 } AnalyzerCheckResult;
 
-/* Checks the section into *out, which the caller destroys. On failure *out is empty and safe to destroy. */
-AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section, AnalyzerCheck *out);
+/*
+ * Checks the section into *out, which the caller destroys. On failure *out is empty and safe to destroy. knowledge is the snapshot
+ * the Analyzer hears the section with (the call context's); ANALYZER_CHECK_ERR_NULL for NULL.
+ */
+AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, NodeId section,
+                                           AnalyzerCheck *out);
 
 /*
  * The whole piece, checked by analyzer_check_piece_in (check/hearing.h) over a hearing (R-172, R-173): every section of a piece structure plan (a section with a piece part; not the seam or

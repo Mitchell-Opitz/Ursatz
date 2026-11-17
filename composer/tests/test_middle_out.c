@@ -16,6 +16,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
+#include "support/test_knowledge.h"
 
 /*
  * Given material placed anywhere in a plan (R-071, given.h): the stages grow the form around it and fill the rest, and
@@ -423,6 +424,7 @@ static Share run_scenario(ScenarioKind kind, unsigned long first, unsigned long 
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         PieceResult result = compose_run(plan, &config, &outcome);
         share.runs++;
@@ -480,6 +482,7 @@ static void test_partial(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
             composed = true;

@@ -14,6 +14,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The form documents (R-416, docs/forms.md).
@@ -1113,6 +1114,7 @@ static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, Compo
     assert(built == PIECE_OK && plan);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.form = form;
     *ran = compose_run(plan, &config, outcome);
@@ -2456,6 +2458,7 @@ static PiecePlan *compose_lead(const FormSpec *form, unsigned long seed, int pit
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.form = form;
     *ran = compose_run(plan, &config, outcome);

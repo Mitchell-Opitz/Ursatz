@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/seam_hear.h>
+#include "support/test_knowledge.h"
 
 /*
  * The loop seam (R-171).
@@ -388,6 +389,7 @@ static void test_sweep(void) {
         ComposeOutcome outcome;
         standard_structure(&fixture);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         if (compose_run(plan, &config, &outcome) != PIECE_OK) {

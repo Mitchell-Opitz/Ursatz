@@ -11,6 +11,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_knowledge.h"
 
 /*
  * The rondo and sonata forms, one table of forms (a FormFamily a row) and one test per form:
@@ -479,6 +480,7 @@ static bool compose_try(const FormFamily *family, const Row *row, unsigned long 
     request.seed = seed;
     assert(piece_build_plan(&request, &plan) == PIECE_OK && plan);
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     PieceResult ran = compose_run(plan, &config, &outcome);
     if (ran == PIECE_OK) {

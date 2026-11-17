@@ -11,6 +11,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Form templates, every template and size, in C major 4/4 and A minor 3/4, with a motive invented and with the given
@@ -738,6 +739,7 @@ static void compose_all(const char *kind, Tally *total) {
                 ComposeConfig config;
                 ComposeOutcome outcome;
                 memset(&config, 0, sizeof(config));
+                config.knowledge = test_knowledge();
                 config.seed = seed;
                 PieceResult ran = compose_run(plan, &config, &outcome);
                 tally.runs++;
@@ -890,6 +892,7 @@ static int test_smoke(const char *kind) {
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         PieceResult ran = compose_run(plan, &config, &outcome);
         size_t heard = 0;

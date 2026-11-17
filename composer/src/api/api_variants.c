@@ -806,8 +806,13 @@ static ComposerStatus recognize_request(const cJSON *request, const ComposerJob 
 
 typedef ComposerStatus (*RequestRunner)(const cJSON *request, const ComposerJob *job, ComposerResponse *out);
 
-static ComposerStatus run_entry(RequestRunner run, const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+static ComposerStatus run_entry(const ComposerContext *context, RequestRunner run, const char *request_json,
+                                const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *request = NULL;
     ComposerStatus status = api_parse_request(request_json, &request, &out->error);
     if (status != COMPOSER_OK) {
@@ -823,10 +828,12 @@ static ComposerStatus run_entry(RequestRunner run, const char *request_json, con
     return status;
 }
 
-ComposerStatus composer_api_variants(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
-    return run_entry(make_variants, request_json, job, out);
+ComposerStatus composer_api_variants(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                     ComposerResponse *out) {
+    return run_entry(context, make_variants, request_json, job, out);
 }
 
-ComposerStatus composer_api_recognize(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
-    return run_entry(recognize_request, request_json, job, out);
+ComposerStatus composer_api_recognize(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                      ComposerResponse *out) {
+    return run_entry(context, recognize_request, request_json, job, out);
 }

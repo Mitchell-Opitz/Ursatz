@@ -16,6 +16,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Piece plans that change key follow standard-harmony's key-change rules (R-069). Every template, in C major and A
@@ -458,6 +459,7 @@ static bool compose_one(const Scenario *scenario, const char *kind, unsigned lon
     ComposeConfig config;
     ComposeOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     PieceResult ran = compose_run(plan, &config, &outcome);
     tally->runs++;
@@ -524,6 +526,7 @@ static int test_smoke_always(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         PieceResult ran = compose_run(plan, &config, &outcome);
         bool changes = false;
@@ -642,6 +645,7 @@ static int test_tonic_major(bool smoke) {
             ComposeConfig config;
             ComposeOutcome outcome;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             config.seed = seed;
             config.form = form;
             if (compose_run(plan, &config, &outcome) == PIECE_OK) {

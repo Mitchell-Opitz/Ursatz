@@ -14,6 +14,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/variations.h>
+#include "support/test_knowledge.h"
 
 /*
  * Variations and harmonizations (variations.h, R-088). Each mode is one ctest entry:
@@ -52,6 +53,7 @@ static PieceRequest request(const char * form) {
 static ComposeConfig config_of(unsigned long seed) {
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     return config;
 }

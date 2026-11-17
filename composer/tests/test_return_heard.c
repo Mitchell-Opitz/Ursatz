@@ -10,6 +10,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/return_hear.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Hearing the returns of a composed piece (return_hear.h): rounded binary, ternary and variations (3), C major 4/4 with
@@ -64,6 +65,7 @@ static bool run(const Scenario *scenario, unsigned long seed, size_t *planned, s
     ComposeConfig config;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     bool completed = compose_run(plan, &config, &outcome) == PIECE_OK;
     if (completed) {

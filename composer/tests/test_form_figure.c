@@ -18,6 +18,7 @@
 #include "support/test_oracles.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The figurate return (form_figure.h, R-497, R-498): tests/fixtures/forms/figure-form.json (a theme and three
@@ -249,6 +250,7 @@ static int run_row(const FormSpec *form, const Row *row, unsigned long seeds, bo
         request.meter.beat_unit = row->unit;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.form = form;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {

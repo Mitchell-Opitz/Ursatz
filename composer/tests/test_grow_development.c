@@ -7,6 +7,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * The development setting (B3 of P34, ch. XI): the 2-bar two-segment motif of test_grow_segment_fragments in an 8-bar
@@ -53,6 +54,7 @@ static PiecePlan *grow(const Motive *motive, GrowDevelopment development, unsign
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.basic = motive;
     config.context.development = development;

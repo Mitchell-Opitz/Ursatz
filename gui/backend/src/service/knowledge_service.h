@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include <theory/knowledge/knowledge_snapshot.h>
+#include <ursatz_composer/composer_api.h>
 
 /*
  * Knowledge service: the one knowledge snapshot of the backend (the embedded entries, no user files), built when the server starts and
@@ -20,5 +21,9 @@ void ursatz_gui_knowledge_shutdown(void);
 
 /* The snapshot, or NULL before ursatz_gui_knowledge_init and after the shutdown. */
 const KnowledgeSnapshot *ursatz_gui_knowledge(void);
+
+/* The call context every Composer entry takes (composer_api.h): over the same snapshot, valid as long as it. Before the init and after
+   the shutdown it holds no snapshot, so an entry refuses. */
+const ComposerContext *ursatz_gui_composer_context(void);
 
 #endif

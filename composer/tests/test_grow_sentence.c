@@ -16,6 +16,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Growing a sentence from a motive in four keys and meters, 8 and 4 bars, seeds 1 to 10. Each run must complete;
@@ -253,6 +254,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     char *plans[2];
     char *records[2];
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     for (int round = 0; round < 2; round++) {
         PiecePlan *plan = NULL;
@@ -305,6 +307,7 @@ static void test_seeds_vary(void) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);
@@ -373,6 +376,7 @@ static void test_bad_requests(void) {
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
     grow_outcome_destroy(&outcome);
@@ -464,6 +468,7 @@ static void test_motive_forms(bool smoke) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.basic = &motive;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);

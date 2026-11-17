@@ -10,6 +10,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -67,7 +68,7 @@ static void test_export(void) {
 
     char *request = export_request(plan_text, "\"midi\":true,\"musicxml\":true,\"api_version\":1");
     ComposerResponse response;
-    assert(composer_api_export(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
     free(request);
     assert(response.midi && response.midi_size == midi_size && memcmp(response.midi, midi, midi_size) == 0);
     assert(response.musicxml && strstr(response.musicxml, "<score-partwise"));
@@ -78,33 +79,33 @@ static void test_export(void) {
 
     /* A format not asked for is not made; a tempo is written into the file. */
     request = export_request(plan_text, "\"midi\":true,\"tempo\":\"195/2\"");
-    assert(composer_api_export(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
     free(request);
     assert(response.midi && !response.musicxml && response.midi_size > 0);
     assert(response.midi_size != midi_size);
     composer_response_destroy(&response);
 
     request = export_request(plan_text, "\"midi\":true,\"plain_midi\":true,\"tempo\":null");
-    assert(composer_api_export(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
     free(request);
     assert(response.midi && response.midi_size < midi_size);
     composer_response_destroy(&response);
 
     /* The plan file text is the plan as the library writes plan files; with no format asked for, nothing is rendered. */
     request = export_request(plan_text, "\"plan_file\":true");
-    assert(composer_api_export(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
     free(request);
     assert(response.plan_json && strstr(response.plan_json, "\"format\": \"ursatz-composer-plan\""));
     assert(!response.midi && !response.musicxml);
     /* The text is a plan file: it exports to the same MIDI. */
     request = export_request(response.plan_json, "\"midi\":true");
     composer_response_destroy(&response);
-    assert(composer_api_export(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
     free(request);
     assert(response.midi && response.midi_size == midi_size && memcmp(response.midi, midi, midi_size) == 0);
     composer_response_destroy(&response);
     request = export_request(plan_text, "\"plan_file\":true,\"midi\":true");
-    assert(composer_api_export(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
     free(request);
     assert(response.plan_json && response.midi && response.midi_size == midi_size);
     composer_response_destroy(&response);
@@ -115,7 +116,7 @@ static void test_export(void) {
 
 static void expect_refused(const char *request, ComposerStatus status, const char *path) {
     ComposerResponse response;
-    ComposerStatus result = composer_api_export(request, NULL, &response);
+    ComposerStatus result = composer_api_export(test_context(), request, NULL, &response);
     assert(result == status);
     assert(strcmp(response.error.path, path) == 0);
     assert(response.error.message[0] != '\0');
@@ -159,7 +160,7 @@ static void test_destroy(void) {
     composer_response_destroy(NULL);
 
     /* A failed entry leaves a response that is safe to destroy. */
-    assert(composer_api_export("{}", NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_export(test_context(), "{}", NULL, &response) == COMPOSER_ERR_REQUEST);
     composer_response_destroy(&response);
     composer_response_destroy(&response);
 }

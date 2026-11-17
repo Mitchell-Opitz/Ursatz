@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 700
 
 #include "theme_service.h"
+#include "knowledge_service.h"
 
 #include <dirent.h>
 #include <limits.h>
@@ -581,7 +582,7 @@ static UrsatzGuiThemeResult run_theme(const UrsatzGuiComposeRun *run, cJSON **ou
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = composer_api_theme(text, run->job, &response);
+    ComposerStatus status = composer_api_theme(ursatz_gui_composer_context(), text, run->job, &response);
     free(text);
     UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
     cJSON *document = NULL;

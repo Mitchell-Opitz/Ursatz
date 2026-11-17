@@ -13,6 +13,7 @@
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -253,6 +254,7 @@ int main(void) {
             text.cadence = "PAC";
             GrowSetup setup;
             memset(&setup, 0, sizeof(setup));
+            setup.knowledge = test_knowledge();
             setup.text = &text;
             setup.into = CASES[c].into;
             setup.pairing.beginning = CASES[c].beginning;

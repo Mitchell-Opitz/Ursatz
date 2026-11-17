@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cli_context.h"
 #include "cli_options.h"
 
 /* --- reading --------------------------------------------------------------------------------------- */
@@ -51,7 +52,7 @@ ComposerStatus cli_call(CliEntry entry, cJSON *request, ComposerResponse *out) {
         snprintf(out->error.message, sizeof out->error.message, "out of memory");
         return COMPOSER_ERR_ALLOC;
     }
-    ComposerStatus status = entry(text, NULL, out);
+    ComposerStatus status = entry(cli_context(), text, NULL, out);
     cJSON_free(text);
     return status;
 }

@@ -12,6 +12,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -75,6 +76,7 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, bool perio
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     request.first_cadence = CADENCE_TYPE_HALF;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.basic = motive;
     if (contrast) {
@@ -248,6 +250,7 @@ static void composes_under(const GrowContrast *settings, size_t count) {
                     text.cadence = "PAC";
                     text.into = period ? "period" : "sentence";
                     memset(&setup, 0, sizeof(setup));
+                    setup.knowledge = test_knowledge();
                     setup.text = &text;
                     setup.into = period ? GROW_INTO_PERIOD : GROW_INTO_SENTENCE;
                     setup.pairing.beginning = period ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;

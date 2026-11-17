@@ -13,6 +13,7 @@
 #include "support/test_support.h"
 #include "util/plan_util.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -71,6 +72,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, const Melody
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.basic = motive;
     config.melody = melody;
@@ -182,6 +184,7 @@ static PiecePlan *compose_period(unsigned long seed, const MelodyFillParams *mel
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.melody = melody;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);

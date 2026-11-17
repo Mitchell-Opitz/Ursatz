@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 static KnowledgeSnapshot *g_snapshot = NULL;
+static ComposerContext g_composer_context = {NULL};
 
 bool ursatz_gui_knowledge_init(void) {
   if (g_snapshot) {
@@ -14,14 +15,20 @@ bool ursatz_gui_knowledge_init(void) {
     g_snapshot = NULL;
     return false;
   }
+  g_composer_context.knowledge = g_snapshot;
   return true;
 }
 
 void ursatz_gui_knowledge_shutdown(void) {
+  g_composer_context.knowledge = NULL;
   knowledge_snapshot_destroy(g_snapshot);
   g_snapshot = NULL;
 }
 
 const KnowledgeSnapshot *ursatz_gui_knowledge(void) {
   return g_snapshot;
+}
+
+const ComposerContext *ursatz_gui_composer_context(void) {
+  return &g_composer_context;
 }

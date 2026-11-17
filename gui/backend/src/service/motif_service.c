@@ -1,4 +1,5 @@
 #include "motif_service.h"
+#include "knowledge_service.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,8 @@ static const char *optional_string(const cJSON *body, const char *key, bool *bad
 
 /* ---- the Composer calls of a motif (R-219) ----------------------------- */
 
-typedef ComposerStatus (*MotifEntry)(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+typedef ComposerStatus (*MotifEntry)(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                     ComposerResponse *out);
 
 /* Prints request, calls entry and moves the answer into reply. False when the request could not be printed. */
 static bool motif_call(MotifEntry entry, const cJSON *request, UrsatzGuiComposerReply *reply) {
@@ -33,7 +35,7 @@ static bool motif_call(MotifEntry entry, const cJSON *request, UrsatzGuiComposer
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = entry(text, NULL, &response);
+  ComposerStatus status = entry(ursatz_gui_composer_context(), text, NULL, &response);
   free(text);
   ursatz_gui_composer_reply_take(status, &response, reply);
   return true;
@@ -64,7 +66,7 @@ bool ursatz_gui_motif_motive_from_midi(const unsigned char *bytes, size_t size, 
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_motive_from_midi(bytes, size, text, NULL, &response);
+  ComposerStatus status = composer_api_motive_from_midi(ursatz_gui_composer_context(), bytes, size, text, NULL, &response);
   free(text);
   ursatz_gui_composer_reply_take(status, &response, reply);
   return true;
@@ -86,7 +88,7 @@ bool ursatz_gui_motif_validate(const char *kind, const cJSON *request, UrsatzGui
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_validate(kind, text, &response);
+  ComposerStatus status = composer_api_validate(ursatz_gui_composer_context(), kind, text, &response);
   free(text);
   ursatz_gui_composer_reply_take(status, &response, reply);
   return true;
@@ -295,7 +297,7 @@ cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus composer_status = composer_api_variants(text, job, &response);
+  ComposerStatus composer_status = composer_api_variants(ursatz_gui_composer_context(), text, job, &response);
   free(text);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(composer_status, &response, &reply);

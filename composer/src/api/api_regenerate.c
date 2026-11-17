@@ -62,8 +62,13 @@ static cJSON *reopened_json(const Reopened *reopened) {
     return extra;
 }
 
-ComposerStatus composer_api_regenerate(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_regenerate(const ComposerContext *context, const char *request_json,
+                                       const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = NULL;
     char *text = NULL;
     ApiTarget target;
@@ -145,6 +150,7 @@ ComposerStatus composer_api_regenerate(const char *request_json, const ComposerJ
         memset(&config, 0, sizeof(config));
         config.seed = (seed + attempt) & API_SEED_MAX;
         config.job = job;
+        config.knowledge = context->knowledge;
         RegenerateResult ran = plan_regenerate_all(fresh, again, again_count, &config, &result);
         free(again);
         if (plan) {

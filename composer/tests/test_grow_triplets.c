@@ -10,6 +10,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -107,7 +108,7 @@ static bool same_notes(const Idea *a, const Idea *b) {
 static void grow(const char *degrees, const char *meter, const char *into, unsigned seed, Idea *basic, Idea *cadential) {
     char *request = request_of(degrees, meter, into, seed);
     ComposerResponse response;
-    ComposerStatus status = composer_api_theme(request, NULL, &response);
+    ComposerStatus status = composer_api_theme(test_context(), request, NULL, &response);
     if (status != COMPOSER_OK) {
         fprintf(stderr, "%s %s seed %u: %s: %s\n", into, meter, seed, test_status_name(status), response.error.message);
     }

@@ -12,6 +12,7 @@
 #include "support/test_support.h"
 #include "util/plan_util.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -133,6 +134,7 @@ int main(void) {
                 text.cadence = "PAC";
                 GrowSetup setup;
                 memset(&setup, 0, sizeof(setup));
+                setup.knowledge = test_knowledge();
                 setup.text = &text;
                 setup.into = period ? GROW_INTO_PERIOD : GROW_INTO_HYBRID;
                 setup.pairing.beginning = period ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;

@@ -1,4 +1,5 @@
 #include "theme.h"
+#include "cli_context.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -261,7 +262,7 @@ int run_theme(int argc, char **argv) {
         return status;
     }
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_theme(request, NULL, &response);
+    ComposerStatus api_status = composer_api_theme(cli_context(), request, NULL, &response);
     cJSON_free(request);
     if (api_status != COMPOSER_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);

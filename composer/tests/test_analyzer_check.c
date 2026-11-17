@@ -15,6 +15,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * The Analyzer check (analyzer_check.h, docs/analyzer-check.md): a realized section is analyzed in memory by the
@@ -96,6 +97,7 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
 static PieceResult compose(PiecePlan *plan, unsigned long seed, bool check, ComposeOutcome *outcome) {
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.analyzer_check = check;
     return compose_run(plan, &config, outcome);
@@ -124,7 +126,7 @@ static int test_contradiction(void) {
         }
         NodeId theme = test_find_node(plan, "theme");
         AnalyzerCheck check;
-        assert(analyzer_check_section(plan, theme, &check) == ANALYZER_CHECK_OK);
+        assert(analyzer_check_section(plan, test_knowledge(), theme, &check) == ANALYZER_CHECK_OK);
         const AnalyzerCheckItem *item = cadence_item(&check);
         assert(item && item->bar == 7 && strcmp(item->planned, "perfect-authentic") == 0);
         bool heard_as_planned = item->agreed;
@@ -147,7 +149,7 @@ static int test_contradiction(void) {
         half.kind = PLAN_CONSTRAINT_CADENCE;
         half.params.cadence = CADENCE_TYPE_HALF;
         assert(plan_node_add_constraint(plan, theme, &half) == PLAN_OK);
-        assert(analyzer_check_section(plan, theme, &check) == ANALYZER_CHECK_OK);
+        assert(analyzer_check_section(plan, test_knowledge(), theme, &check) == ANALYZER_CHECK_OK);
         item = cadence_item(&check);
         assert(item && strcmp(item->planned, "half") == 0 && !item->agreed);
         assert(strcmp(item->heard, "half") != 0);
@@ -189,7 +191,7 @@ static void expect_heard_as_planned(const PiecePlan *plan, const ComposeOutcome 
         const AnalyzerCheck *kept = &outcome->analyzer_checks[i];
         assert(!kept->contradicts);
         AnalyzerCheck again;
-        assert(analyzer_check_section(plan, outcome->sections[i].section, &again) == ANALYZER_CHECK_OK);
+        assert(analyzer_check_section(plan, test_knowledge(), outcome->sections[i].section, &again) == ANALYZER_CHECK_OK);
         assert(!again.contradicts && again.planned == kept->planned && again.agreed == kept->agreed);
         for (size_t k = 0; k < again.item_count; k++) {
             assert(again.items[k].kind != ANALYZER_CHECK_VIOLATION);
@@ -292,6 +294,7 @@ static int test_candidates(void) {
         char *before = plan_to_json(plan, NULL);
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = 1;
         config.analyzer_check = check != 0;
         ComposeCandidates first;
@@ -372,6 +375,7 @@ static int test_piece(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         if (compose_run(plan, &config, &outcome) != PIECE_OK) {
@@ -401,6 +405,7 @@ static int test_piece(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.analyzer_check = true;
         assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);

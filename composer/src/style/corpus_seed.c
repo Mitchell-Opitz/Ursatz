@@ -280,32 +280,23 @@ static CorpusSeedResult search(const char *corpus_output_dir, const KnowledgeSna
     return results->count == 0 ? CORPUS_SEED_ERR_NO_MATCH : CORPUS_SEED_OK;
 }
 
-CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *passage_path, const PlanMeter *meter,
-                                    const AnalysisKey *key, unsigned long seed, CorpusSeed *out) {
-    if (!corpus_output_dir || !passage_path || !meter || !key || !out || meter->beats_per_bar < 1 ||
+CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir, const char *passage_path,
+                                    const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out) {
+    if (!knowledge || !corpus_output_dir || !passage_path || !meter || !key || !out || meter->beats_per_bar < 1 ||
         meter->beat_unit < 1) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }
     SimilarQuery query;
-    /* A snapshot for reading the passage (P58 B10 until B13 gives the Composer its own); the query holds nothing from it. */
-    KnowledgeSnapshot *knowledge = NULL;
-    char message[256];
-    if (knowledge_snapshot_build(NULL, 0, &knowledge, message, sizeof(message)) != KNOWLEDGE_OK) {
-        return CORPUS_SEED_ERR_QUERY;
-    }
     SimilarResult read = similar_query_from_file(passage_path, knowledge, &query);
     if (read == SIMILAR_ERR_ALLOC) {
-        knowledge_snapshot_destroy(knowledge);
         return CORPUS_SEED_ERR_ALLOC;
     }
     if (read != SIMILAR_OK) {
-        knowledge_snapshot_destroy(knowledge);
         return CORPUS_SEED_ERR_QUERY;
     }
     SimilarResults results;
     memset(&results, 0, sizeof(results));
     CorpusSeedResult status = search(corpus_output_dir, knowledge, &query, &results);
-    knowledge_snapshot_destroy(knowledge);
     similar_query_destroy(&query);
     if (status != CORPUS_SEED_OK) {
         similar_results_destroy(&results);
@@ -402,9 +393,9 @@ static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *ma
     return ok;
 }
 
-CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const char *numerals_text, KeyStructureMode mode,
-                                         CorpusSeed *out) {
-    if (!corpus_output_dir || !numerals_text || !out) {
+CorpusSeedResult corpus_seed_progression(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir,
+                                         const char *numerals_text, KeyStructureMode mode, CorpusSeed *out) {
+    if (!knowledge || !corpus_output_dir || !numerals_text || !out) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }
     SimilarQuery query;
@@ -426,15 +417,7 @@ CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const ch
     options.max_results = PROGRESSION_CANDIDATES;
     SimilarResults results;
     memset(&results, 0, sizeof(results));
-    /* A snapshot for reading the documents' key words (P58 B10 until B13 gives the Composer its own). */
-    KnowledgeSnapshot *knowledge = NULL;
-    char message[256];
-    if (knowledge_snapshot_build(NULL, 0, &knowledge, message, sizeof(message)) != KNOWLEDGE_OK) {
-        similar_query_destroy(&query);
-        return CORPUS_SEED_ERR_QUERY;
-    }
     SimilarResult found = similar_material_find(corpus_output_dir, knowledge, &query, &options, &results);
-    knowledge_snapshot_destroy(knowledge);
     similar_query_destroy(&query);
     CorpusSeedResult status = found == SIMILAR_ERR_ALLOC ? CORPUS_SEED_ERR_ALLOC
                               : found != SIMILAR_OK      ? CORPUS_SEED_ERR_CORPUS

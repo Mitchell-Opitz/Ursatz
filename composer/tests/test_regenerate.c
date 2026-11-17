@@ -18,6 +18,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /* A single target regenerated: plan_regenerate_all with a list of one. */
 static RegenerateResult regenerate_one(PiecePlan *plan, FillTarget target, const ComposeConfig *config,
@@ -89,6 +90,7 @@ static PieceRequest request(void) {
 static ComposeConfig config_of(unsigned long seed) {
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     return config;
 }

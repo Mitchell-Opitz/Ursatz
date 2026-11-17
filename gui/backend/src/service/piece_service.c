@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 700
 
 #include "piece_service.h"
+#include "knowledge_service.h"
 #include "util/fs_util.h"
 #include "util/json_util.h"
 
@@ -382,7 +383,7 @@ static UrsatzGuiThemeResult run_piece(const char *stage, const char *named, cons
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = composer_api_piece(text, job, &response);
+    ComposerStatus status = composer_api_piece(ursatz_gui_composer_context(), text, job, &response);
     free(text);
     cJSON *document = NULL;
     ComposerResponse extra;
@@ -1078,7 +1079,7 @@ static UrsatzGuiThemeResult run_variations(const Source *source, const char *nam
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = composer_api_piece_variations(text, job, &response);
+    ComposerStatus status = composer_api_piece_variations(ursatz_gui_composer_context(), text, job, &response);
     free(text);
     cJSON *document = NULL;
     if (status != COMPOSER_OK) {

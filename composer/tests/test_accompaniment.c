@@ -14,6 +14,7 @@
 
 #include "accompaniment_check.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * The accompaniment operator on realized plans: the fixed 8-bar sentence in C major 4/4, and plans built here in 3/4
@@ -213,7 +214,9 @@ static FillOutcome accompany(PiecePlan *plan, unsigned long seed) {
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = accompaniment_checker;
-    assert(registry && accompaniment_register(registry, NULL) == FILL_OK);
+    AccompanimentParams params = accompaniment_params_default();
+    params.knowledge = test_knowledge();
+    assert(registry && accompaniment_register(registry, &params) == FILL_OK);
     assert(fill_run(plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;

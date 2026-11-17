@@ -1,4 +1,5 @@
 #include "composer_client.h"
+#include "knowledge_service.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -48,7 +49,7 @@ static cJSON *g_vocabulary_tree = NULL;
 static void vocabulary_build(void) {
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_vocabulary(&response);
+  ComposerStatus status = composer_api_vocabulary(ursatz_gui_composer_context(), &response);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(status, &response, &reply);
   if (reply.status == COMPOSER_OK && reply.json) {

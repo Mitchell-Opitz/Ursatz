@@ -1028,6 +1028,7 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
         run.motives.remoteness_limit.denominator = 2;
     }
     run.accompaniment = accompaniment_params_default();
+    run.accompaniment.knowledge = config->knowledge;
     run.voicing = voicing_params_default();
     PieceResult result = PIECE_OK;
 
@@ -1047,7 +1048,7 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     }
     if (result == PIECE_OK) {
         /* The plan is written: it is rendered once, and the form, the returns and every later check hear that render. */
-        HearingResult made = hearing_create(plan, hearing);
+        HearingResult made = hearing_create(plan, config->knowledge, hearing);
         result = made == HEARING_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_OK;
         if (result == PIECE_OK) {
             hear(*hearing, plan, themes, theme_count, checks, outcome);
@@ -1222,7 +1223,7 @@ static void add_rejection(ComposeRejection **list, size_t *count, const PiecePla
 }
 
 PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOutcome *outcome) {
-    if (!plan || !config || !outcome) {
+    if (!plan || !config || !config->knowledge || !outcome) {
         return PIECE_ERR_NULL;
     }
     memset(outcome, 0, sizeof(*outcome));

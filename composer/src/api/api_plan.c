@@ -100,6 +100,7 @@ typedef struct {
     PlanSource source;
     char *notices[MAX_NOTICES];
     size_t notice_count;
+    const KnowledgeSnapshot *knowledge; /* the call context's */
 } PlanBuild;
 
 /* --- reading the request --------------------------------------------------------------------------- */
@@ -708,7 +709,8 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
     ComposerStatus status = motive ? COMPOSER_OK : api_fail_alloc(error);
     if (status == COMPOSER_OK && state->like_path) {
         CorpusSeedResult result =
-            corpus_seed_motive(state->from_corpus, state->like_path, &state->meter, &state->key, state->seed, &state->seed_found);
+            corpus_seed_motive(state->knowledge, state->from_corpus, state->like_path, &state->meter, &state->key, state->seed,
+                               &state->seed_found);
         if (result == CORPUS_SEED_OK) {
             add_notice(state, &state->seed_found, state->from_corpus);
             status = seed_source(&state->seed_found, &state->source, error);
@@ -726,7 +728,8 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
         if (!given->from_corpus) {
             continue;
         }
-        CorpusSeedResult result = corpus_seed_progression(state->from_corpus, given->numerals, state->key.mode, &given->found);
+        CorpusSeedResult result =
+            corpus_seed_progression(state->knowledge, state->from_corpus, given->numerals, state->key.mode, &given->found);
         if (result != CORPUS_SEED_OK) {
             char path[64];
             snprintf(path, sizeof path, "/given/%zu", i);
@@ -828,11 +831,19 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
     return COMPOSER_OK;
 }
 
-ComposerStatus composer_api_plan(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_plan(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out) {
     (void)job;
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     PlanBuild *state = calloc(1, sizeof(*state));
     PiecePlan *plan = NULL;
+    if (state) {
+        state->knowledge = context->knowledge;
+    }
     ComposerStatus status = state ? api_parse_request(request_json, (cJSON **)&state->root, &out->error) : api_fail_alloc(&out->error);
     if (status == COMPOSER_OK) {
         status = read_request(state, &out->error);

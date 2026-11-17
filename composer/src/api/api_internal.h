@@ -20,6 +20,12 @@ ComposerStatus api_parse_request(const char *text, cJSON **out, ComposerError *e
 /* Sets error and returns status. path may be NULL or "". */
 ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char *path, const char *format, ...);
 
+/*
+ * Checks the call context an entry takes first: COMPOSER_OK when context and its knowledge are present, else
+ * COMPOSER_ERR_REQUEST with error set to "a knowledge snapshot is required" (no path). The entry zeroes its response first.
+ */
+ComposerStatus api_require_knowledge(const ComposerContext *context, ComposerError *error);
+
 /* Sets error to "out of memory" (COMPOSER_ERR_ALLOC, no path) and returns the status. */
 ComposerStatus api_fail_alloc(ComposerError *error);
 
@@ -139,8 +145,9 @@ ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *o
 /* --- reading a request without running it (composer_api_validate) --------------------------------------- */
 
 /* Reads the request as its entry does and stops before composing: COMPOSER_OK, or the status the entry would give. */
-ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error);
+ComposerStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, ComposerError *error);
 /* As api_theme_validate for a random motive request; filled (a copy of request) gets the seed and the drawn mode and meter. */
-ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, ComposerError *error);
+ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, cJSON *filled,
+                                   ComposerError *error);
 
 #endif

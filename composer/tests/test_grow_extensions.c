@@ -9,6 +9,7 @@
 
 #include "grow/grow_internal.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * The four extensions of a theme (R-468, B3 of P47): internal repetition, a stretched cadence, an addition after the
@@ -325,6 +326,7 @@ static bool run_case(const Scenario *scenario, const Case *item, unsigned long s
     PiecePlan *plan = NULL;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     check_constraint(plan, &construction);

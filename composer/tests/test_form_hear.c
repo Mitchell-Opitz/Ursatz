@@ -13,6 +13,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Hearing the phrase form of a written plan. Two hand-written Realized themes are heard as what they
@@ -157,14 +158,14 @@ static void test_keys(void) {
     PiecePlan *plan = load("sentence_c_major.json");
     FormHeardKey *keys = NULL;
     size_t count = 0;
-    assert(form_hear_keys(plan, bars(0, 8), &keys, &count) == FORM_HEAR_OK);
+    assert(form_hear_keys(plan, test_knowledge(), bars(0, 8), &keys, &count) == FORM_HEAR_OK);
     assert(count == 1);
     expect_key(&keys[0], 0, 1, 0, KEY_STRUCTURE_MODE_MAJOR);
     free(keys);
     plan_destroy(plan);
 
     plan = load("sentence_c_to_g.json");
-    assert(form_hear_keys(plan, bars(0, 8), &keys, &count) == FORM_HEAR_OK);
+    assert(form_hear_keys(plan, test_knowledge(), bars(0, 8), &keys, &count) == FORM_HEAR_OK);
     /* Recorded: C major from 0, G major from bar 4 (the continuation). */
     assert(count == 2);
     expect_key(&keys[0], 0, 1, 0, KEY_STRUCTURE_MODE_MAJOR);
@@ -176,13 +177,13 @@ static void test_keys(void) {
 static void test_keys_refused(void) {
     FormHeardKey *keys = NULL;
     size_t count = 7;
-    assert(form_hear_keys(NULL, bars(0, 8), &keys, &count) == FORM_HEAR_ERR_NULL);
+    assert(form_hear_keys(NULL, test_knowledge(), bars(0, 8), &keys, &count) == FORM_HEAR_ERR_NULL);
     assert(keys == NULL && count == 0);
     PiecePlan *plan = load("sentence_c_major.json");
     LaneSpanId melody;
     assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, bars(0, 8), &melody, 1) == 1);
     assert(plan_lane_span_set_state(plan, melody, PLAN_STATE_CONSTRAINED) == PLAN_OK);
-    assert(form_hear_keys(plan, bars(0, 8), &keys, &count) == FORM_HEAR_ERR_NOT_WRITTEN);
+    assert(form_hear_keys(plan, test_knowledge(), bars(0, 8), &keys, &count) == FORM_HEAR_ERR_NOT_WRITTEN);
     assert(keys == NULL && count == 0);
     plan_destroy(plan);
 }

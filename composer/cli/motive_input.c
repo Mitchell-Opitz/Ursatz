@@ -1,4 +1,5 @@
 #include "motive_input.h"
+#include "cli_context.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -154,7 +155,7 @@ int motive_input_text_request(const MotiveInput *input, cJSON **out, MotiveFile 
         char *text = cJSON_PrintUnformatted(request);
         ComposerResponse response;
         memset(&response, 0, sizeof response);
-        ComposerStatus status = text ? composer_api_motive_from_midi(bytes, size, text, NULL, &response) : COMPOSER_ERR_ALLOC;
+        ComposerStatus status = text ? composer_api_motive_from_midi(cli_context(), bytes, size, text, NULL, &response) : COMPOSER_ERR_ALLOC;
         free(text);
         free(bytes);
         cJSON_Delete(request);

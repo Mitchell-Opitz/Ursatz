@@ -245,7 +245,9 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     return api_respond_json(out, document);
 }
 
-ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, ComposerError *error) {
+ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, cJSON *filled,
+                                   ComposerError *error) {
+    (void)knowledge;
     MotiveRandomOptions options;
     bool accompaniment = false;
     bool has_role = false;
@@ -277,8 +279,13 @@ ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, Composer
     return ok ? COMPOSER_OK : api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-ComposerStatus composer_api_random_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_random_motive(const ComposerContext *context, const char *request_json,
+                                          const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *request = NULL;
     ComposerStatus status = api_parse_request(request_json, &request, &out->error);
     if (status != COMPOSER_OK) {

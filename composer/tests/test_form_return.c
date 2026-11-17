@@ -13,6 +13,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_state.h>
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * Returning sections (form-return, form_return.h): rounded binary, ternary, layered and variations, C major 4/4 with an
@@ -190,6 +191,7 @@ static PieceResult compose(const PieceRequest *request, unsigned long seed, cons
         edit(*plan);
     }
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.melody = melody;
     return compose_run(*plan, &config, outcome);
@@ -453,6 +455,7 @@ static int test_varied(void) {
         ComposeConfig config;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.form = form;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -570,6 +573,7 @@ static size_t embellish_row(const FormSpec *form, const EmbellishRow *row, bool 
         request.modulate = true;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.form = form;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -694,6 +698,7 @@ static size_t setting_row(const FormSpec *form, const SettingRow *row) {
         ComposeConfig config;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.form = form;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -767,6 +772,7 @@ static int test_setting(void) {
         request.accompaniment.texture = -1;
         assert(form_build_plan(accompanied, &request, &plan) == PIECE_OK && plan);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.form = accompanied;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -977,6 +983,7 @@ static int test_home(void) {
                 request.modulate = true;
                 assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
                 memset(&config, 0, sizeof(config));
+                config.knowledge = test_knowledge();
                 config.seed = seed + extra;
                 config.form = form;
                 done = compose_run(plan, &config, &outcome) == PIECE_OK;

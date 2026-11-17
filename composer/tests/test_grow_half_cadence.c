@@ -5,6 +5,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_knowledge.h"
 
 /*
  * A sentence of 8 bars that ends in a half cadence, in three minor keys and meters, seeds 1 to 4. A minor half cadence has
@@ -51,6 +52,7 @@ static void run(const Scenario *scenario, unsigned long seed) {
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);

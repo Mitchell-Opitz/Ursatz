@@ -12,9 +12,11 @@
 #include <cJSON.h>
 
 #include "service/job_queue.h"
+#include "service/knowledge_service.h"
 #include "ursatz_composer/composer_api.h"
 #include "gui_check.h"
 #include "test_http.h"
+#include "test_knowledge.h"
 
 #ifndef URSATZ_GUI_TEST_THEME_REQUEST
 #error "URSATZ_GUI_TEST_THEME_REQUEST must name the theme request fixture"
@@ -109,7 +111,7 @@ static void theme_job(void *input, const ComposerJob *job, UrsatzGuiJobResult *o
   const char *request = input;
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_theme(request, job, &response);
+  ComposerStatus status = composer_api_theme(ursatz_gui_composer_context(), request, job, &response);
   out->http_status = status == COMPOSER_OK ? 200 : status == COMPOSER_ERR_CANCELLED ? 499 : 500;
   out->json = strdup("{}");
   composer_response_destroy(&response);
@@ -234,6 +236,7 @@ static void test_stop(void) {
 }
 
 int main(void) {
+  test_knowledge();
   check(ursatz_gui_jobs_start(2), "the queue starts with two workers");
   test_answer();
   test_progress();

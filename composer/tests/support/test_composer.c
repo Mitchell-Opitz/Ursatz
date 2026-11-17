@@ -6,6 +6,7 @@
 #include "check/hearing.h"
 #include "form/form_internal.h"
 #include "motive/motive_internal.h"
+#include "support/test_knowledge.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
 
@@ -58,7 +59,7 @@ FormHearResult test_form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *o
         return FORM_HEAR_ERR_NULL;
     }
     ComposerHearing *hearing = NULL;
-    HearingResult made = hearing_create(plan, &hearing);
+    HearingResult made = hearing_create(plan, test_knowledge(), &hearing);
     FormHearResult status = FORM_HEAR_OK;
     switch (made) {
     case HEARING_OK:
@@ -89,7 +90,7 @@ ReturnHearResult test_return_hear(const PiecePlan *plan, ReturnHeard *out) {
     if (!plan || !out) {
         return RETURN_HEAR_ERR_NULL;
     }
-    HearingResult made = hearing_create(plan, &hearing);
+    HearingResult made = hearing_create(plan, test_knowledge(), &hearing);
     if (made != HEARING_OK) {
         memset(out, 0, sizeof(*out));
         return made == HEARING_ERR_ALLOC ? RETURN_HEAR_ERR_ALLOC : RETURN_HEAR_ERR_ANALYSIS;
@@ -101,7 +102,7 @@ ReturnHearResult test_return_hear(const PiecePlan *plan, ReturnHeard *out) {
 
 bool test_piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
     ComposerHearing *hearing = NULL;
-    if (!plan || !out || hearing_create(plan, &hearing) != HEARING_OK) {
+    if (!plan || !out || hearing_create(plan, test_knowledge(), &hearing) != HEARING_OK) {
         return false;
     }
     bool read = piece_check_keys_in(hearing, plan, out);
@@ -118,7 +119,7 @@ AnalyzerCheckResult test_analyzer_check_piece(const PiecePlan *plan, AnalyzerChe
     if (!plan) {
         return ANALYZER_CHECK_ERR_NULL;
     }
-    HearingResult made = hearing_create(plan, &hearing);
+    HearingResult made = hearing_create(plan, test_knowledge(), &hearing);
     AnalyzerCheckResult result = ANALYZER_CHECK_OK;
     switch (made) {
     case HEARING_OK:
@@ -153,7 +154,7 @@ ComposerMeasureResult test_style_measure(const PiecePlan *plan, const ComposerSt
         return COMPOSER_MEASURE_ERR_ARGUMENT;
     }
     ComposerHearing *hearing = NULL;
-    HearingResult made = hearing_create(plan, &hearing);
+    HearingResult made = hearing_create(plan, test_knowledge(), &hearing);
     ComposerMeasureResult result = COMPOSER_MEASURE_OK;
     if (made != HEARING_OK) {
         result = made == HEARING_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_PLAN;

@@ -81,7 +81,8 @@ for app in ursatz-analyzer ursatz-composer ursatz-gui-backend; do
       *third_party*) cmd="$cmd $w" ;;
       *.a)
         a=$(cd "$bdir" && realpath "$w")
-        for o in $(objects_of "$a"); do objs="$objs $o"; done ;;
+        # an archive the link line names twice (a target the application links and one a library needs after it) counts once
+        for o in $(objects_of "$a"); do case " $objs " in *" $o "*) ;; *) objs="$objs $o" ;; esac; done ;;
       *.c.o) objs="$objs $(cd "$bdir" && realpath "$w")" ;;
       *) cmd="$cmd $w" ;;
     esac

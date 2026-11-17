@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <ursatz_composer/composer_api.h>
+
 #include "theory/knowledge/knowledge_snapshot.h"
 #include "theory/tonality/common_practice_materials.h"
 
@@ -37,6 +39,13 @@ static inline const KnowledgeSnapshot *test_knowledge(void) {
         atexit(test_knowledge_release);
     }
     return test_knowledge_snapshot_value;
+}
+
+/* The call context of test_knowledge(): what every composing and reading entry of composer_api.h takes first. */
+static inline const ComposerContext *test_context(void) {
+    static ComposerContext context;
+    context.knowledge = test_knowledge();
+    return &context;
 }
 
 /* The four common-practice materials of test_knowledge(). */

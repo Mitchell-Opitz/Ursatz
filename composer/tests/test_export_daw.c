@@ -15,6 +15,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/render.h>
+#include "support/test_knowledge.h"
 
 /*
  * The DAW-friendly export (export.h, R-087): a filled rounded binary (24 bars, C major 4/4, seed 3) exported with
@@ -108,6 +109,7 @@ static PiecePlan *filled_rounded_binary(void) {
     request.meter.beat_unit = 4;
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 3;
     PiecePlan *plan = NULL;
     ComposeOutcome outcome;

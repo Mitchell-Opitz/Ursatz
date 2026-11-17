@@ -1,4 +1,5 @@
 #include "motive.h"
+#include "cli_context.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -189,16 +190,17 @@ static ComposerStatus call_api(const Options *options, const MotiveInput *input,
     }
     ComposerStatus status;
     if (!midi) {
-        status = render ? composer_api_motive_render(text, NULL, response) : composer_api_motive(text, NULL, response);
+        status = render ? composer_api_motive_render(cli_context(), text, NULL, response)
+                        : composer_api_motive(cli_context(), text, NULL, response);
     } else if (!render) {
-        status = composer_api_motive_from_midi(bytes, size, text, NULL, response);
+        status = composer_api_motive_from_midi(cli_context(), bytes, size, text, NULL, response);
     } else {
         /* Read once with the input's options; render the motive that came out. */
         cJSON *plain = motive_input_request(input, bytes, size, &(bool){false});
         bool ok = plain && add_command_members(plain, options, false);
         char *plain_text = ok ? cJSON_PrintUnformatted(plain) : NULL;
         cJSON_Delete(plain);
-        status = plain_text ? composer_api_motive_from_midi(bytes, size, plain_text, NULL, response) : COMPOSER_ERR_ALLOC;
+        status = plain_text ? composer_api_motive_from_midi(cli_context(), bytes, size, plain_text, NULL, response) : COMPOSER_ERR_ALLOC;
         free(plain_text);
         if (status == COMPOSER_OK) {
             cJSON *document = cJSON_Parse(response->json);
@@ -210,7 +212,7 @@ static ComposerStatus call_api(const Options *options, const MotiveInput *input,
                  cJSON_AddStringToObject(source, "text", motive_text) && add_command_members(second, options, true);
             composer_response_destroy(response);
             char *second_text = ok ? cJSON_PrintUnformatted(second) : NULL;
-            status = second_text ? composer_api_motive_render(second_text, NULL, response) : COMPOSER_ERR_ALLOC;
+            status = second_text ? composer_api_motive_render(cli_context(), second_text, NULL, response) : COMPOSER_ERR_ALLOC;
             free(second_text);
             free(motive_text);
             cJSON_Delete(second);

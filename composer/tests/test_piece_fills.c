@@ -9,6 +9,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/piece.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Theme and progression fills (R-170): a piece structure whose sections are given a composed theme or a progression.
@@ -224,6 +225,7 @@ static void test_theme(void) {
                has_run(snapshot, plan, PLAN_LANE_BASS));
 
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(compose_run(plan, &config, &outcome) == PIECE_OK);
         compose_outcome_destroy(&outcome);
@@ -360,6 +362,7 @@ static void test_progression(void) {
         assert(has_run(snapshot, plan, PLAN_LANE_HARMONY));
 
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         /* The melody of a phrase that ends on V is hard to write (B4): the loop's end is filled in a stage of its own
            now, with other draws, so one seed in ten may still be stuck after the twelve rounds. */
@@ -430,6 +433,7 @@ static void test_partial(void) {
         GivenSnapshot *snapshot = given_snapshot(plan);
         assert(snapshot);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         /* A seed may leave the melody stage stuck on a theme whose fragments are segments of an invented motif (P34 B2). */
         if (compose_run(plan, &config, &outcome) != PIECE_OK) {

@@ -37,9 +37,8 @@ struct ComposerHearing {
     HeardSpan *spans;
     size_t span_count;
     size_t span_capacity;
-    /* The snapshot the Analyzer reads its materials from, built per hearing until the Composer holds its own (P58 B13). It outlives
-       every span's result, which is released first. */
-    KnowledgeSnapshot *knowledge;
+    /* The snapshot the Analyzer reads its materials from (the call context's); borrowed, it outlives the hearing. */
+    const KnowledgeSnapshot *knowledge;
 };
 
 static void heard_span_release(HeardSpan *heard) {
@@ -62,16 +61,15 @@ void hearing_destroy(ComposerHearing *hearing) {
     free(hearing->starts);
     free(hearing->midi);
     rendered_plan_destroy(&hearing->rendered);
-    knowledge_snapshot_destroy(hearing->knowledge);
     free(hearing);
 }
 
-HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out) {
+HearingResult hearing_create(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, ComposerHearing **out) {
     if (!out) {
         return HEARING_ERR_NULL;
     }
     *out = NULL;
-    if (!plan) {
+    if (!plan || !knowledge) {
         return HEARING_ERR_NULL;
     }
     ComposerHearing *hearing = calloc(1, sizeof(*hearing));
@@ -79,11 +77,7 @@ HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out) {
         return HEARING_ERR_ALLOC;
     }
     hearing->plan = plan;
-    char message[256];
-    if (knowledge_snapshot_build(NULL, 0, &hearing->knowledge, message, sizeof(message)) != KNOWLEDGE_OK) {
-        free(hearing);
-        return HEARING_ERR_ANALYSIS;
-    }
+    hearing->knowledge = knowledge;
     PlanRenderResult drawn = plan_render(plan, &hearing->rendered);
     if (drawn != PLAN_RENDER_OK) {
         hearing_destroy(hearing);

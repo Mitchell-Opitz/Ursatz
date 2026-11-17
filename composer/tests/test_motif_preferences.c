@@ -14,6 +14,7 @@
 #include "motive/motive_internal.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -240,6 +241,7 @@ static void sentence_setup(GrowSetup *setup, GrowBriefText *text, const Motive *
     text->cadence = "PAC";
     text->into = "hybrid";
     memset(setup, 0, sizeof(*setup));
+    setup->knowledge = test_knowledge();
     setup->text = text;
     setup->into = GROW_INTO_HYBRID;
     setup->pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;

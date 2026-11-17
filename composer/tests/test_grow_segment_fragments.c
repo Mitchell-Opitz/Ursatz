@@ -9,6 +9,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Continuations from segments (B2 of P34): a 2-bar 4/4 motif with the segments `a` (bar 1) and `b` (bar 2) in an 8-bar
@@ -63,6 +64,7 @@ static PiecePlan *grow(const Motive *motive, unsigned long seed) {
     GrowOutcome outcome;
     PiecePlan *plan = NULL;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.basic = motive;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
@@ -215,7 +217,7 @@ static void test_summaries(void) {
         "\"cadential\": null}, \"accompaniment\": null, \"voicing\": null, \"style\": null, \"style_weight\": \"1/2\", "
         "\"without\": [], \"tempo\": null, \"seed\": 1}";
     ComposerResponse response;
-    assert(composer_api_theme(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &response) == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
     const cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");

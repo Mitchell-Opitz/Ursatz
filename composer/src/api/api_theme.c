@@ -753,10 +753,16 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
     return COMPOSER_OK;
 }
 
-ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_theme(const ComposerContext *context, const char *request_json,
+                                  const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     ThemeState state;
     memset(&state, 0, sizeof(state));
+    state.setup.knowledge = context->knowledge;
     ApiOutputOptions outputs;
     ComposerStatus status = api_parse_request(request_json, &state.request, &out->error);
     if (status == COMPOSER_OK) {
@@ -806,9 +812,10 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
     return status;
 }
 
-ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error) {
+ComposerStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, ComposerError *error) {
     ThemeState state;
     memset(&state, 0, sizeof(state));
+    state.setup.knowledge = knowledge;
     ApiOutputOptions outputs;
     memset(&outputs, 0, sizeof(outputs));
     state.request = cJSON_Duplicate(request, true);

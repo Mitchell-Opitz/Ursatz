@@ -4,6 +4,8 @@
 #include <stdatomic.h>
 #include <stddef.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
+
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/piece_plan_keys.h>
@@ -34,8 +36,11 @@ typedef enum {
     HEARING_ERR_ANALYSIS  /* the Analyzer refused or failed */
 } HearingResult;
 
-/* Renders plan once. *out is released with hearing_destroy; NULL on failure. The plan must outlive the hearing. */
-HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out);
+/*
+ * Renders plan once. *out is released with hearing_destroy; NULL on failure. The plan and the knowledge snapshot (the call
+ * context's, which the Analyzer hears the spans with) must outlive the hearing; HEARING_ERR_NULL for a NULL knowledge.
+ */
+HearingResult hearing_create(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, ComposerHearing **out);
 
 /* The render the hearing keeps: every written lane of the whole plan. Borrowed; do not destroy. */
 const RenderedPlan *hearing_rendered(const ComposerHearing *hearing);

@@ -120,8 +120,13 @@ static ComposerStatus read_variations(const cJSON *root, PieceEdit *edit, unsign
     return api_piece_read_lanes(cJSON_GetObjectItemCaseSensitive(variations, "lanes"), "/variations/lanes", edit, error);
 }
 
-ComposerStatus composer_api_piece_variations(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_piece_variations(const ComposerContext *context, const char *request_json,
+                                             const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = NULL;
     PieceSpec *request = calloc(1, sizeof(*request));
     PieceEdit edit;
@@ -176,8 +181,8 @@ ComposerStatus composer_api_piece_variations(const char *request_json, const Com
         }
     }
     if (status == COMPOSER_OK) {
-        status = api_piece_read_request(request, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request", style, plain_midi,
-                                        job, &out->error);
+        status = api_piece_read_request(request, context->knowledge, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request",
+                                        style, plain_midi, job, &out->error);
     }
     if (status == COMPOSER_OK) {
         status = api_piece_refuse_performed(request, &out->error);

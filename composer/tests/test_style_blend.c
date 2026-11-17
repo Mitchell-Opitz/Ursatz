@@ -17,6 +17,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * Style blending (style.h, docs/style.md): two style models blended with a weight per dimension.
@@ -262,6 +263,7 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, cons
     PiecePlan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.style = style;
     config.style_weight = (ComposerRatio){1, 1};

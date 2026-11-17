@@ -195,7 +195,8 @@ static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out
     return FORM_HEAR_OK;
 }
 
-FormHearResult form_hear_keys(const PiecePlan *plan, PlanSpan span, FormHeardKey **out, size_t *count) {
+FormHearResult form_hear_keys(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, PlanSpan span, FormHeardKey **out,
+                              size_t *count) {
     if (!out || !count) {
         return FORM_HEAR_ERR_NULL;
     }
@@ -205,7 +206,7 @@ FormHearResult form_hear_keys(const PiecePlan *plan, PlanSpan span, FormHeardKey
         return FORM_HEAR_ERR_NULL;
     }
     ComposerHearing *hearing = NULL;
-    FormHearResult status = result_of(hearing_create(plan, &hearing));
+    FormHearResult status = result_of(hearing_create(plan, knowledge, &hearing));
     if (status != FORM_HEAR_OK) {
         return status;
     }

@@ -1,4 +1,5 @@
 #include "cli_options.h"
+#include "cli_context.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -67,7 +68,7 @@ bool cli_equals_ignore_case(const char *a, const char *b) {
 long cli_limit(const char *name) {
     ComposerResponse response;
     long value = 0;
-    if (composer_api_vocabulary(&response) == COMPOSER_OK) {
+    if (composer_api_vocabulary(cli_context(), &response) == COMPOSER_OK) {
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *item = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "limits"), name);
         value = cJSON_IsNumber(item) ? (long)item->valuedouble : 0;
@@ -251,7 +252,7 @@ int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *
     cJSON_Delete(request);
     ComposerResponse response;
     memset(&response, 0, sizeof response);
-    ComposerStatus status = printed ? composer_api_export(printed, NULL, &response) : COMPOSER_ERR_ALLOC;
+    ComposerStatus status = printed ? composer_api_export(cli_context(), printed, NULL, &response) : COMPOSER_ERR_ALLOC;
     cJSON_free(printed);
     ok = status == COMPOSER_OK && response.plan_json &&
          cli_write_bytes(temporary, response.plan_json, strlen(response.plan_json));
@@ -286,7 +287,7 @@ int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, b
     if (!printed) {
         return cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
     }
-    ComposerStatus status = composer_api_export(printed, NULL, out);
+    ComposerStatus status = composer_api_export(cli_context(), printed, NULL, out);
     cJSON_free(printed);
     return status == COMPOSER_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
 }

@@ -16,6 +16,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The `grow` command, run as a process: each form and a hybrid from the D minor motive fixture, the files it writes
@@ -511,6 +512,7 @@ static void test_library_slots_and_pool(void) {
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     config.basic = &basic;
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
@@ -549,6 +551,7 @@ static void test_library_slots_and_pool(void) {
     request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     config.basic = &basic;
     config.pool = &pool;

@@ -345,8 +345,13 @@ static ComposerStatus result_json(const Options *options, const Result *result, 
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
 
-ComposerStatus composer_api_counterpoint(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_counterpoint(const ComposerContext *context, const char *request_json,
+                                         const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *request = NULL;
     cJSON *line = NULL;
     cJSON *document = NULL;
