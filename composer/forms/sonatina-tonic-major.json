@@ -1,12 +1,12 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "sonatina-tonic-major",
   "label": "Sonatina (tonic major recapitulation)",
   "closing": true,
   "modulates": true,
   "tempo": 132,
-  "regions": [{"name": "subordinate", "major": [5], "minor": [3]}, {"name": "elaboration", "major": [4], "minor": [6]}, {"name": "development", "major": [6], "minor": [4]}, {"name": "sequence", "major": [2], "minor": [5]}],
+  "regions": [{"name": "subordinate", "major": ["omt.relation.dominant"], "minor": ["omt.relation.mediant"]}, {"name": "elaboration", "major": ["omt.relation.subdominant"], "minor": ["omt.relation.submediant"]}, {"name": "development", "major": ["omt.relation.submediant"], "minor": ["omt.relation.subdominant"]}, {"name": "sequence", "major": ["omt.relation.supertonic"], "minor": ["omt.relation.dominant"]}],
   "sizes": [
     {"bars": 92, "default": true, "sections": [
       {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},

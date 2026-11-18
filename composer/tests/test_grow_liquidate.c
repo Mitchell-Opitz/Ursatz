@@ -346,7 +346,7 @@ static void test_applies(const FormSpec *form) {
     assert(at && in);
     char edited[4096];
     snprintf(edited, sizeof(edited),
-             "%.*s \"regions\": [{\"name\": \"away\", \"major\": [5], \"minor\": [5]}],%.*s%s, \"keys\": {\"end\": \"away\"}%s",
+             "%.*s \"regions\": [{\"name\": \"away\", \"major\": [\"omt.relation.dominant\"], \"minor\": [\"omt.relation.dominant\"]}],%.*s%s, \"keys\": {\"end\": \"away\"}%s",
              (int)(at + strlen(label) - text), text, (int)(in - (at + strlen(label))), at + strlen(label), section,
              in + strlen(section));
     FormSpec *keyed = NULL;

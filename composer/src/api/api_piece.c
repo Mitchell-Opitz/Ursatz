@@ -516,7 +516,7 @@ cJSON *api_piece_plan_object(const PiecePlan *plan) {
 
 typedef struct {
     const PieceSection *section;     /* the section the request gave, for a form whose sections it gives */
-    const FormSectionSpec *spec;     /* the section of the form's size, for a form with sizes */
+    const SectionDescription *spec;     /* the section of the form's size, for a form with sizes */
     const FormSpecSize *size;
     const char *source;
     Rational start;
@@ -1031,13 +1031,13 @@ static const char *return_setting_name(const Row *row) {
 
 /* How a section that returns another differs from it: null for a section that returns none. */
 static cJSON *changes_json(const Row *row) {
-    const FormSectionSpec *spec = row->spec;
-    bool returns = spec->returns != FORM_SPEC_NO_RETURN && spec->returns < row->size->section_count;
-    NodeId source = returns ? sized_section_find(row->plan, row->size->sections[spec->returns].name) : PLAN_NODE_NONE;
+    const SectionDescription *spec = row->spec;
+    bool returns = form_spec_section_index(row->size, spec->returns) != FORM_SPEC_NO_RETURN;
+    NodeId source = returns ? sized_section_find(row->plan, spec->returns) : PLAN_NODE_NONE;
     if (!returns || source == PLAN_NODE_NONE) {
         return cJSON_CreateNull();
     }
-    const char *name = row->size->sections[spec->returns].name;
+    const char *name = spec->returns;
     bool copied = form_return_copies(row->plan, row->node);
     cJSON *entry = cJSON_CreateObject();
     const char *setting = return_setting_name(row);
@@ -1131,7 +1131,7 @@ static bool melody_note_at(const PiecePlan *plan, NodeId section, Rational onset
 }
 
 /* The sentence of a figure: "neighbor tones in sixteenths over the skeleton E5 D5 C5 ..." with what changes the harmony, the mode and the octave. */
-static void figure_text(const FormSectionSpec *spec, bool raised, const char *skeleton, bool more, char *text, size_t size) {
+static void figure_text(const SectionDescription *spec, bool raised, const char *skeleton, bool more, char *text, size_t size) {
     const SectionFigure *figure = &spec->figure;
     const char *kind = figure->kind == SECTION_FIGURE_NEIGHBOR ? "neighbor tones" : (figure->kind == SECTION_FIGURE_SCALE ? "a scale line" : "a broken chord");
     size_t used = (size_t)snprintf(text, size, "%s in %s", kind, section_figure_rhythm_name(figure->rhythm));
@@ -1141,7 +1141,7 @@ static void figure_text(const FormSectionSpec *spec, bool raised, const char *sk
     if (figure->change_at > 0 && used < size) {
         used += (size_t)snprintf(text + used, size - used, ", root changed at bar %u", figure->change_at);
     }
-    if (spec->parallel && used < size) {
+    if (spec->mode == SECTION_MODE_PARALLEL && used < size) {
         used += (size_t)snprintf(text + used, size - used, ", in the parallel mode");
     }
     if (raised && used < size) {
@@ -1161,7 +1161,7 @@ static void figure_text(const FormSectionSpec *spec, bool raised, const char *sk
  * names a pitch (C4 = middle C), spelled with flats in a flat key; raised is whether the climax octave was applied.
  */
 static cJSON *figure_json(const Row *row) {
-    const FormSectionSpec *spec = row->spec;
+    const SectionDescription *spec = row->spec;
     FormSkeleton *skeleton = (spec->has_figure && form_return_copies(row->plan, row->node)) ? calloc(1, sizeof(*skeleton)) : NULL;
     if (!skeleton || !form_figure_skeleton(row->plan, row->node, skeleton)) {
         free(skeleton);
@@ -1195,7 +1195,7 @@ static cJSON *figure_json(const Row *row) {
          cJSON_AddStringToObject(entry, "harmony", figure->reharmonize ? "reharmonized" : "kept") &&
          api_add(entry, "change_at", figure->change_at > 0 ? cJSON_CreateNumber((double)figure->change_at) : cJSON_CreateNull()) &&
          cJSON_AddBoolToObject(entry, "climax", figure->climax) && cJSON_AddBoolToObject(entry, "raised", raised) &&
-         api_add(entry, "mode", string_or_null(spec->parallel ? "parallel" : NULL)) && api_add(entry, "skeleton", tones) &&
+         api_add(entry, "mode", string_or_null(spec->mode == SECTION_MODE_PARALLEL ? "parallel" : NULL)) && api_add(entry, "skeleton", tones) &&
          cJSON_AddStringToObject(entry, "text", text);
     if (!ok) {
         cJSON_Delete(entry);
@@ -1222,10 +1222,11 @@ static cJSON *upbeat_json(const Row *row) {
 
 /* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, key, pedal, changes, figure, function, part, repeat_of, upbeat, connective, [construction_text]}. */
 static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
-    const FormSectionSpec *spec = row->spec;
+    const SectionDescription *spec = row->spec;
     char motive[96];
-    bool has_motive = spec->has_motive && motive_relation_step_text(&spec->motive, motive, sizeof motive);
-    bool returns = spec->returns != FORM_SPEC_NO_RETURN && spec->returns < row->size->section_count;
+    MotiveRelationStep step;
+    bool has_motive = form_spec_section_motive(spec, &step) && motive_relation_step_text(&step, motive, sizeof motive);
+    bool returns = form_spec_section_index(row->size, spec->returns) != FORM_SPEC_NO_RETURN;
     cJSON *entry = cJSON_CreateObject();
     bool ok = entry && cJSON_AddStringToObject(entry, "id", spec->name) &&
               cJSON_AddStringToObject(entry, "role", section_role_name(spec->role)) &&
@@ -1233,7 +1234,7 @@ static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
               cJSON_AddNumberToObject(entry, "beats", span_beats(request, row->length)) &&
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
               api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
-              api_add(entry, "returns", string_or_null(returns ? row->size->sections[spec->returns].name : NULL)) &&
+              api_add(entry, "returns", string_or_null(returns ? spec->returns : NULL)) &&
               api_add(entry, "motive", string_or_null(has_motive ? motive : NULL)) &&
               api_add(entry, "key_heard", string_or_null(row->key_heard[0] ? row->key_heard : NULL)) &&
               api_add(entry, "key", string_or_null(row->key[0] ? row->key : NULL)) &&

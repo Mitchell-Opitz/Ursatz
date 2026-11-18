@@ -232,7 +232,7 @@ static size_t parallel_sections(const char *name) {
     const FormSpecSize *size = form_spec_default_size(form);
     size_t parallel = 0;
     for (size_t i = 0; size && i < size->section_count; i++) {
-        parallel += size->sections[i].parallel;
+        parallel += size->sections[i].mode == SECTION_MODE_PARALLEL;
     }
     form_spec_destroy(form);
     return parallel;
@@ -552,8 +552,8 @@ static int test_smoke_always(void) {
 
 /* The stand-in form of R-517: A, T, B, R, A1, T1, B1 and K, 56 bars, B1 returning B exact in the tonic major. */
 static const char TONIC_MAJOR_FORM[] =
-    "{\"schema\":\"ursatz-form\",\"version\":1,\"name\":\"tonic-major-form\",\"label\":\"Tonic major form\",\"modulates\":true,"
-    "\"regions\":[{\"name\":\"subordinate\",\"major\":[5],\"minor\":[3]}],"
+    "{\"schema\":\"ursatz-form\",\"version\":2,\"name\":\"tonic-major-form\",\"label\":\"Tonic major form\",\"modulates\":true,"
+    "\"regions\":[{\"name\":\"subordinate\",\"major\":[\"omt.relation.dominant\"],\"minor\":[\"omt.relation.mediant\"]}],"
     "\"sizes\":[{\"bars\":56,\"default\":true,\"sections\":["
     "{\"name\":\"A\",\"letter\":\"A\",\"role\":\"theme\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
     "\"cadence\":\"perfect-authentic\",\"closed\":true},"

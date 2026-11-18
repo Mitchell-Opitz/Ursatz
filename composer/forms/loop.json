@@ -1,6 +1,6 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "loop",
   "label": "Loop",
   "sizes": [

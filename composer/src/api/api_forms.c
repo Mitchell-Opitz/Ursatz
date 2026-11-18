@@ -103,10 +103,10 @@ static bool add_layers(cJSON *section, unsigned mask) {
     return list != NULL;
 }
 
-static bool add_keys(cJSON *section, const FormSpec *form, const FormSectionSpec *spec) {
+static bool add_keys(cJSON *section, const FormSpec *form, const SectionDescription *spec) {
     cJSON *keys = cJSON_CreateObject();
-    if (!keys || !cJSON_AddStringToObject(keys, "start", key_name(form, spec->key_start)) ||
-        !cJSON_AddStringToObject(keys, "end", key_name(form, spec->key_end))) {
+    if (!keys || !cJSON_AddStringToObject(keys, "start", key_name(form, form_spec_region_of(form, &spec->key_start))) ||
+        !cJSON_AddStringToObject(keys, "end", key_name(form, form_spec_region_of(form, &spec->key_end)))) {
         cJSON_Delete(keys);
         return false;
     }
@@ -117,7 +117,7 @@ static bool add_keys(cJSON *section, const FormSpec *form, const FormSectionSpec
  * The construction of a section that has one (R-468), served as a theme's response gives it (api_grow_construction_json),
  * or "auto" when the Composer chooses it with the piece's motive. A section without one has no member.
  */
-static bool add_construction(cJSON *section, const FormSectionSpec *spec) {
+static bool add_construction(cJSON *section, const SectionDescription *spec) {
     if (!spec->has_construction) {
         return true;
     }
@@ -131,17 +131,17 @@ static bool add_construction(cJSON *section, const FormSectionSpec *spec) {
 
 /* How a section that leads into the next ends (R-486): null for no connective, else {"value", "label"}. */
 static bool add_connective(cJSON *section, int connective) {
-    if (connective == FORM_CONNECTIVE_SOMETIMES) {
+    if (connective == SECTION_CONNECTIVE_SOMETIMES) {
         return add_choice_member(section, "connective", "sometimes", "Sometimes");
     }
-    if (connective == FORM_CONNECTIVE_ALWAYS) {
+    if (connective == SECTION_CONNECTIVE_ALWAYS) {
         return add_choice_member(section, "connective", "always", "Always");
     }
     return api_add(section, "connective", cJSON_CreateNull());
 }
 
 /* The motive of variation of a figurate return (R-497): null for no figure, else {"kind", "rhythm", "harmony", "change_at", "climax"}. */
-static bool add_figure(cJSON *section, const FormSectionSpec *spec) {
+static bool add_figure(cJSON *section, const SectionDescription *spec) {
     if (!spec->has_figure) {
         return api_add(section, "figure", cJSON_CreateNull());
     }
@@ -157,7 +157,7 @@ static bool add_figure(cJSON *section, const FormSectionSpec *spec) {
     return api_add(section, "figure", figure);
 }
 
-static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *size, const FormSectionSpec *spec) {
+static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *size, const SectionDescription *spec) {
     cJSON *section = cJSON_CreateObject();
     if (!section || !cJSON_AddItemToArray(list, section)) {
         cJSON_Delete(section);
@@ -174,8 +174,9 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
         return false;
     }
     char motive[96];
-    bool has_motive = spec->has_motive && motive_relation_step_text(&spec->motive, motive, sizeof motive);
-    bool returns = spec->returns != FORM_SPEC_NO_RETURN && spec->returns < size->section_count;
+    MotiveRelationStep step;
+    bool has_motive = form_spec_section_motive(spec, &step) && motive_relation_step_text(&step, motive, sizeof motive);
+    bool returns = form_spec_section_index(size, spec->returns) != FORM_SPEC_NO_RETURN;
     return cJSON_AddStringToObject(section, "name", spec->name) && cJSON_AddStringToObject(section, "letter", spec->letter) &&
            add_choice_member(section, "role", section_role_name(spec->role), section_role_label(spec->role)) &&
            add_number_or_null(section, "bars", spec->bars) && add_number_or_null(section, "beats", spec->beats) &&
@@ -184,17 +185,16 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
            add_choice_member(section, "ending", theme_shape_ending(spec->pairing.ending)->plan_name, ending->label) &&
            api_add(section, "cadence", cadence) && cJSON_AddBoolToObject(section, "closed", spec->closed) &&
            add_keys(section, form, spec) && add_string_or_null(section, "motive", has_motive ? motive : NULL) &&
-           add_string_or_null(section, "returns", returns ? size->sections[spec->returns].name : NULL) &&
+           add_string_or_null(section, "returns", returns ? spec->returns : NULL) &&
            add_string_or_null(section, "variation", returns ? section_return_variation_name(spec->variation) : NULL) &&
            add_string_or_null(section, "setting",
-                              returns && spec->variation == SECTION_RETURN_SETTING ? api_accompaniment_name(spec->setting) : NULL) &&
+                              returns && spec->variation == SECTION_RETURN_SETTING ? api_accompaniment_name((PlanAccompanimentPattern)spec->setting) : NULL) &&
            add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing) &&
            add_construction(section, spec) && cJSON_AddBoolToObject(section, "leads_in", spec->leads_in) &&
            add_connective(section, spec->connective) && add_figure(section, spec) &&
-           add_string_or_null(section, "mode",
-                              spec->parallel ? "parallel"
-                                             : (spec->tonic_major ? "major" : (spec->home_mode ? "home" : NULL))) &&
-           cJSON_AddBoolToObject(section, "independent", spec->independent) && cJSON_AddBoolToObject(section, "lyric", spec->lyric);
+           add_string_or_null(section, "mode", section_mode_name(spec->mode)) &&
+           cJSON_AddBoolToObject(section, "independent", spec->function.independent) &&
+           cJSON_AddBoolToObject(section, "lyric", spec->function.lyric);
 }
 
 static bool add_sizes(cJSON *form_json, const FormSpec *form) {

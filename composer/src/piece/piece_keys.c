@@ -29,22 +29,16 @@ typedef struct {
 
 #define MAX_SEGMENTS (2 * FORM_SPEC_MAX_SECTIONS + 1)
 
-/* The relation entry each degree of a region names (R-596); index 0 is unused. */
-static const char *const DEGREE_RELATIONS[8] = {NULL,
-                                                "omt.relation.parallel",
-                                                "omt.relation.supertonic",
-                                                "omt.relation.mediant",
-                                                "omt.relation.subdominant",
-                                                "omt.relation.dominant",
-                                                "omt.relation.submediant",
-                                                "omt.relation.subtonic"};
+/* The relation that reaches the home key's parallel key: the other mode on the same tonic (R-596). */
+#define PARALLEL_RELATION "omt.relation.parallel"
 
-/* The key the relation of a degree (1 to 7) reaches from the home key, resolved by the snapshot against the home key's region. */
-static bool resolve_degree(const KnowledgeSnapshot *knowledge, AnalysisKey home, int degree, AnalysisKey *out, const char **relation_id) {
-    if (!knowledge || degree < 1 || degree > 7 || home.material == NULL) {
+/* The key a relation of the snapshot reaches from the home key, resolved against the home key's region. */
+static bool resolve_relation(const KnowledgeSnapshot *knowledge, AnalysisKey home, const char *relation_id, AnalysisKey *out,
+                             const char **resolved_id) {
+    if (!knowledge || !relation_id || home.material == NULL) {
         return false;
     }
-    const Relation *relation = knowledge_snapshot_relation(knowledge, DEGREE_RELATIONS[degree]);
+    const Relation *relation = knowledge_snapshot_relation(knowledge, relation_id);
     Region anchor = region_tonal(analysis_key_tonic_pitch_class(&home), home.material);
     Region found;
     if (!relation || region_resolve(knowledge, relation, &anchor, &found, NULL, 0) != REGION_RELATION_OK ||
@@ -52,23 +46,22 @@ static bool resolve_degree(const KnowledgeSnapshot *knowledge, AnalysisKey home,
         return false;
     }
     *out = plan_key_of_pitch_class(found.center, found.material);
-    *relation_id = DEGREE_RELATIONS[degree];
+    *resolved_id = relation->id;
     return true;
 }
 
 /*
- * The key of a region of the home key (R-485): one of the region's degrees for the home key's mode, drawn from the list
- * (one draw of rng whatever the degree is), resolved through the degree's relation entry (R-596). Degree 1 is the home key's
- * parallel key, the other mode on the same tonic; any other is the key the triad on that degree makes, closely related for the
- * degrees the forms list. False when the relation refuses the degree.
+ * The key of a region of the home key (R-485): one of the region's relations for the home key's mode, drawn from the list
+ * (one draw of rng whatever the relation is), resolved through its entry in the snapshot (R-596). The parallel relation is
+ * the home key's parallel key, the other mode on the same tonic; any other is the key the relation reaches, closely related
+ * for the relations the forms list. False when the relation refuses.
  */
 static bool region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out,
                        const char **relation_id) {
     bool is_minor = composer_key_is_minor(&home);
-    const int *degrees = is_minor ? region->minor : region->major;
+    const char(*relations)[SECTION_WORD_MAX] = is_minor ? region->minor : region->major;
     size_t count = is_minor ? region->minor_count : region->major_count;
-    int degree = degrees[fill_rng_below(rng, count)];
-    return resolve_degree(knowledge, home, degree, out, relation_id);
+    return resolve_relation(knowledge, home, relations[fill_rng_below(rng, count)], out, relation_id);
 }
 
 bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
@@ -76,12 +69,12 @@ bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, cons
     return region_key(knowledge, home, region, rng, out, &relation_id);
 }
 
-/* A region a section's keys name has no degree 1: the parallel key is for the parts of a compound form. */
-static bool region_has_degree_one(const FormRegion *region, bool is_minor) {
-    const int *degrees = is_minor ? region->minor : region->major;
+/* A region a section's keys name has no parallel relation: the parallel key is for the parts of a compound form. */
+static bool region_has_parallel(const FormRegion *region, bool is_minor) {
+    const char(*relations)[SECTION_WORD_MAX] = is_minor ? region->minor : region->major;
     size_t count = is_minor ? region->minor_count : region->major_count;
     for (size_t i = 0; i < count; i++) {
-        if (degrees[i] == 1) {
+        if (strcmp(relations[i], PARALLEL_RELATION) == 0) {
             return true;
         }
     }
@@ -106,10 +99,11 @@ static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, 
         keys[i].end = home;
         keys[i].start_relation = NULL;
         keys[i].end_relation = NULL;
-        can = can || size->sections[i].key_start != FORM_SPEC_HOME || size->sections[i].key_end != FORM_SPEC_HOME;
+        can = can || form_spec_region_of(form, &size->sections[i].key_start) != FORM_SPEC_HOME ||
+              form_spec_region_of(form, &size->sections[i].key_end) != FORM_SPEC_HOME;
         /* A section in the parallel mode (R-499) is on the home tonic in the other mode: no draw, and modulates stays as it is. */
-        if (size->sections[i].parallel) {
-            if (!resolve_degree(knowledge, home, 1, &keys[i].start, &keys[i].start_relation)) {
+        if (size->sections[i].mode == SECTION_MODE_PARALLEL) {
+            if (!resolve_relation(knowledge, home, PARALLEL_RELATION, &keys[i].start, &keys[i].start_relation)) {
                 return false;
             }
             keys[i].end = keys[i].start;
@@ -117,8 +111,8 @@ static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, 
         }
         /* A section in the tonic major (R-517) is on the home tonic in its major key: home in a major piece, the parallel major in a
          * minor one. No draw, so the draws after it are unchanged. */
-        if (size->sections[i].tonic_major && composer_key_is_minor(&home)) {
-            if (!resolve_degree(knowledge, home, 1, &keys[i].start, &keys[i].start_relation)) {
+        if (size->sections[i].mode == SECTION_MODE_TONIC_MAJOR && composer_key_is_minor(&home)) {
+            if (!resolve_relation(knowledge, home, PARALLEL_RELATION, &keys[i].start, &keys[i].start_relation)) {
                 return false;
             }
             keys[i].end = keys[i].start;
@@ -135,18 +129,20 @@ static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, 
     }
     for (size_t r = 0; r < form->region_count; r++) {
         const FormRegion *region = &form->regions[r];
-        if (region_has_degree_one(region, composer_key_is_minor(&home)) || !region_key(knowledge, home, region, rng, &away[r], &away_relation[r])) {
+        if (region_has_parallel(region, composer_key_is_minor(&home)) || !region_key(knowledge, home, region, rng, &away[r], &away_relation[r])) {
             return false;
         }
     }
     for (size_t i = 0; i < size->section_count; i++) {
-        if (size->sections[i].key_start != FORM_SPEC_HOME) {
-            keys[i].start = away[size->sections[i].key_start];
-            keys[i].start_relation = away_relation[size->sections[i].key_start];
+        int start = form_spec_region_of(form, &size->sections[i].key_start);
+        int end = form_spec_region_of(form, &size->sections[i].key_end);
+        if (start != FORM_SPEC_HOME) {
+            keys[i].start = away[start];
+            keys[i].start_relation = away_relation[start];
         }
-        if (size->sections[i].key_end != FORM_SPEC_HOME) {
-            keys[i].end = away[size->sections[i].key_end];
-            keys[i].end_relation = away_relation[size->sections[i].key_end];
+        if (end != FORM_SPEC_HOME) {
+            keys[i].end = away[end];
+            keys[i].end_relation = away_relation[end];
         }
     }
     *modulates = true;

@@ -80,9 +80,9 @@ const FormSpecSize *form_spec_size(const FormSpec *form, size_t bars, size_t cou
  * The pattern a setting return is written in (R-518): the form's, unless it is the piece's own accompaniment or alberti in a
  * compound meter; then the next of block, arpeggiated, alberti and oom-pah after it, wrapping, skipping those two.
  */
-static PlanAccompanimentPattern setting_pattern(const FormSectionSpec *section, const PieceRequest *request,
+static PlanAccompanimentPattern setting_pattern(const SectionDescription *section, const PieceRequest *request,
                                                 const PlanAccompaniment *accompaniment) {
-    PlanAccompanimentPattern pattern = section->setting;
+    PlanAccompanimentPattern pattern = (PlanAccompanimentPattern)section->setting;
     for (int tried = 0; tried < 4; tried++) {
         PlanAccompaniment candidate;
         memset(&candidate, 0, sizeof(candidate));
@@ -93,7 +93,7 @@ static PlanAccompanimentPattern setting_pattern(const FormSectionSpec *section, 
         }
         pattern = pattern == PLAN_ACCOMPANIMENT_OOM_PAH ? PLAN_ACCOMPANIMENT_BLOCK : (PlanAccompanimentPattern)(pattern + 1);
     }
-    return section->setting;
+    return (PlanAccompanimentPattern)section->setting;
 }
 
 /* The accompaniment the sections ask for: the request's, or for a form that requires one, any pattern when it has none. */
@@ -118,8 +118,8 @@ static bool piece_accompaniment(const FormSpec *form, const PieceRequest *reques
  * One section as grow-theme builds it, with its letter, its return and its layers; its motive comes after m0. A section
  * that leads in is held (R-486), and a connective is asked for when `connective` (a "sometimes" is drawn by the caller).
  */
-static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, const FormSectionSpec *section,
-                               const SectionConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
+static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, const FormSpecSize *size,
+                               const SectionDescription *section, const SectionConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
                                const PlanAccompaniment *accompaniment, bool connective, NodeId *out) {
     PlanConstraint constraint;
     /*
@@ -184,16 +184,16 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_SECTION_FUNCTION;
         constraint.params.section_function.function = FUNCTIONS[section->role - SECTION_ROLE_TRANSITION];
-        constraint.params.section_function.independent = section->independent;
-        constraint.params.section_function.lyric = section->lyric;
+        constraint.params.section_function.independent = section->function.independent;
+        constraint.params.section_function.lyric = section->function.lyric;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && section->returns != FORM_SPEC_NO_RETURN) {
+    if (result == PIECE_OK && section->returns[0] != '\0') {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_RETURN;
-        constraint.params.section_return.section = sections[section->returns];
+        constraint.params.section_return.section = sections[form_spec_section_index(size, section->returns)];
         constraint.params.section_return.variation = section->variation;
-        constraint.params.section_return.across_modes = section->home_mode;
+        constraint.params.section_return.across_modes = section->mode == SECTION_MODE_HOME;
         if (section->variation == SECTION_RETURN_SETTING) {
             constraint.params.section_return.setting = setting_pattern(section, request, accompaniment);
         }
@@ -238,12 +238,12 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
 
 /* The motive a section is made with: its own, or a returning section's source's (the source's, in turn). */
 static bool section_motive(const FormSpecSize *size, size_t index, MotiveRelationStep *step) {
-    const FormSectionSpec *section = &size->sections[index];
-    if (section->has_motive) {
-        *step = section->motive;
+    const SectionDescription *section = &size->sections[index];
+    if (form_spec_section_motive(section, step)) {
         return true;
     }
-    return section->returns != FORM_SPEC_NO_RETURN && section_motive(size, section->returns, step);
+    size_t source = form_spec_section_index(size, section->returns);
+    return source != FORM_SPEC_NO_RETURN && section_motive(size, source, step);
 }
 
 /* A section whose motive is not m0 itself asks for it as a MOTIVE_REF to m0. */
@@ -293,7 +293,7 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
  * from the material's start, named for the section, with the invent stage's melody span as m0's has.
  */
 static PieceResult add_independent_motive(PiecePlan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index,
-                                          const FormSectionSpec *section, NodeId *out) {
+                                          const SectionDescription *section, NodeId *out) {
     char name[64];
     PlanSpan span = {{0, 1}, bar};
     NodeId node = PLAN_NODE_NONE;
@@ -384,7 +384,7 @@ PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const Plan
 static bool size_buildable(const FormSpecSize *size, const PlanMeter *meter, const Motive *motive,
                            SectionConstruction *constructions, bool *has) {
     for (size_t i = 0; i < size->section_count; i++) {
-        const FormSectionSpec *section = &size->sections[i];
+        const SectionDescription *section = &size->sections[i];
         memset(&constructions[i], 0, sizeof(constructions[i]));
         has[i] = section->has_construction;
         if (section->beats != 0 || !section_role_is_theme(section->role)) {
@@ -420,7 +420,7 @@ static bool size_buildable(const FormSpecSize *size, const PlanMeter *meter, con
 }
 
 /* The bars of a section's basic idea: its construction's, else 2 of an 8-bar theme and 1 of any other. */
-static size_t section_basic_bars(const FormSectionSpec *section, const SectionConstruction *construction, bool has) {
+static size_t section_basic_bars(const SectionDescription *section, const SectionConstruction *construction, bool has) {
     return has ? construction->idea_bars[GROW_IDEA_BASIC] : (section->bars == 8 ? 2 : 1);
 }
 
@@ -434,7 +434,7 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
     size_t basic = 2;
     bool found = size != NULL;
     for (size_t i = 0; size && i < size->section_count; i++) {
-        const FormSectionSpec *section = &size->sections[i];
+        const SectionDescription *section = &size->sections[i];
         /* A section with a construction is its own bars long and its construction gives its basic idea; "auto" is
            judged by its length, as grow_construction_choose does when the motif is short (R-469). */
         size_t bars = section->has_construction ? section->bars : (section->bars == 8 ? 8 : 4);
@@ -512,7 +512,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     /* An independent transition has a motive of its own, one bar, in the material (R-504). */
     size_t independent_count = 0;
     for (size_t i = 0; i < size->section_count; i++) {
-        independent_count += size->sections[i].independent ? 1 : 0;
+        independent_count += size->sections[i].function.independent ? 1 : 0;
     }
 
     PiecePlan *plan = plan_create();
@@ -545,10 +545,10 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     fill_rng_seed(&connective_rng, request->seed + FORM_CONNECTIVE_SEED_OFFSET);
     for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
         PlanSpan span = {start, bars_of(bar, size->sections[i].bars)};
-        int wants = size->sections[i].leads_in ? size->sections[i].connective : FORM_CONNECTIVE_NONE;
-        bool connective = wants == FORM_CONNECTIVE_ALWAYS ||
-                          (wants == FORM_CONNECTIVE_SOMETIMES && fill_rng_below(&connective_rng, 2) == 0);
-        result = add_section(plan, request, &size->sections[i], has_construction[i] ? &constructions[i] : NULL, span, form_id,
+        int wants = size->sections[i].leads_in ? (int)size->sections[i].connective : SECTION_CONNECTIVE_NONE;
+        bool connective = wants == SECTION_CONNECTIVE_ALWAYS ||
+                          (wants == SECTION_CONNECTIVE_SOMETIMES && fill_rng_below(&connective_rng, 2) == 0);
+        result = add_section(plan, request, size, &size->sections[i], has_construction[i] ? &constructions[i] : NULL, span, form_id,
                              sections, accompanied ? &accompaniment : NULL, connective, &sections[i]);
         if (result == PIECE_OK) {
             result = piece_result_of_plan(plan_result_of_rational(rational_add(start, span.length, &start)));
@@ -562,7 +562,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     size_t independent_at = motive_bars + extension_bars;
     for (size_t i = 0; i < size->section_count; i++) {
         independent[i] = PLAN_NODE_NONE;
-        if (result == PIECE_OK && size->sections[i].independent) {
+        if (result == PIECE_OK && size->sections[i].function.independent) {
             result = add_independent_motive(plan, plan_node_parent(plan, source), material, bar, independent_at++,
                                             &size->sections[i], &independent[i]);
         }

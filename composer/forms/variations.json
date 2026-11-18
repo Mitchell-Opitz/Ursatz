@@ -1,10 +1,10 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "variations",
   "label": "Theme and variations",
   "closing": true,
-  "regions": [{"name": "away", "major": [6], "minor": [3]}],
+  "regions": [{"name": "away", "major": ["omt.relation.submediant"], "minor": ["omt.relation.mediant"]}],
   "sizes": [
     {"bars": 16, "count": 1, "sections": [
       {"name": "theme", "letter": "T", "role": "theme", "bars": 8, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true},

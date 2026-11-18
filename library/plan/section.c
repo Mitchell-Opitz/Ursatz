@@ -346,7 +346,8 @@ static bool check_use(const SectionDescription *d, SectionUse use, SectionError 
         if (d->role >= SECTION_ROLE_FORM_COUNT) {
             return fail(error, "/role", "\"%s\" is not a role of a form", section_role_name(d->role));
         }
-        if ((d->bars != 0) == (d->beats != 0)) {
+        /* an operator role refuses beats by name below, so a section that gives both is refused there */
+        if ((d->bars != 0) == (d->beats != 0) && !(d->bars != 0 && section_role_is_operator(d->role))) {
             return fail(error, "", d->bars ? "give bars or beats, not both" : "give bars or beats");
         }
         if (!d->has_cadence) {

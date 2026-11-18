@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cJSON.h"
 #include "theory/harmony/harmony_cadence_kinds.h"
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
@@ -1204,14 +1205,23 @@ bool section_from_json(const cJSON *object, SectionUse use, const char *const *s
             return false;
         }
     }
-    if (reader.seen_beginning != reader.seen_ending) {
-        return fail(&reader, reader.seen_beginning ? "/ending" : "/beginning", "required member is missing");
+    /* a pairing is both halves; one alone is refused after the rules that would refuse the section anyway (a liquidation has none) */
+    const bool half = reader.seen_beginning != reader.seen_ending;
+    if (use == USE_F && out->has_role && section_role_is_operator(out->role) && (reader.seen_beginning || reader.seen_ending)) {
+        return fail(&reader, reader.seen_beginning ? "/beginning" : "/ending", "a %s has no beginning or ending",
+                    section_role_name(out->role));
     }
-    out->has_pairing = reader.seen_beginning;
+    out->has_pairing = reader.seen_beginning || reader.seen_ending;
     if (use == USE_F) {
         set_implied_function(out);
     }
-    return section_description_check(out, use, error);
+    if (!section_description_check(out, use, error)) {
+        return false;
+    }
+    if (half) {
+        return fail(&reader, reader.seen_beginning ? "/ending" : "/beginning", "required member is missing");
+    }
+    return true;
 }
 
 cJSON *section_to_json(const SectionDescription *description, SectionUse use) {

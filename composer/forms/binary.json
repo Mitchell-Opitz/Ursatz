@@ -1,10 +1,10 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "binary",
   "label": "Binary",
   "closing": true,
-  "regions": [{"name": "away", "major": [5], "minor": [3]}],
+  "regions": [{"name": "away", "major": ["omt.relation.dominant"], "minor": ["omt.relation.mediant"]}],
   "sizes": [
     {"bars": 8, "sections": [
       {"name": "A", "letter": "A", "role": "theme", "bars": 4, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "keys": {"end": "away"}},

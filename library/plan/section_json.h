@@ -4,8 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "cJSON.h"
 #include "plan/section.h"
+
+/* cJSON.h declares it; a header of this group needs only the name. */
+typedef struct cJSON cJSON;
 
 /*
  * The JSON of a section description, read and written through one table with one row per member: its name, the uses that

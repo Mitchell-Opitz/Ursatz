@@ -1,9 +1,9 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "part-bars-form",
   "label": "Part bars form",
-  "regions": [{"name": "other", "major": [6], "minor": [3]}],
+  "regions": [{"name": "other", "major": ["omt.relation.submediant"], "minor": ["omt.relation.mediant"]}],
   "parts": [
     {"name": "First", "form": "minuet"},
     {"name": "Trio", "form": "trio", "key": "other", "motive": "new", "bars": 12},

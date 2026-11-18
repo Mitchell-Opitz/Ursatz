@@ -1,12 +1,12 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "andante-abab",
   "label": "Andante form (ABAB)",
   "closing": true,
   "modulates": true,
   "tempo": 72,
-  "regions": [{"name": "subordinate", "major": [5], "minor": [3]}],
+  "regions": [{"name": "subordinate", "major": ["omt.relation.dominant"], "minor": ["omt.relation.mediant"]}],
   "sizes": [
     {"bars": 56, "default": true, "sections": [
       {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},

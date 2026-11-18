@@ -280,7 +280,7 @@ static PieceResult perform(const PiecePerformPart *parts, size_t part_count, con
     for (size_t i = 0; result == PIECE_OK && i < step_count; i++) {
         const PiecePerformPart *part = &parts[steps[i].part];
         NodeId source = sources[steps[i].part][steps[i].index];
-        const FormSectionSpec *spec = &part->size->sections[steps[i].index];
+        const SectionDescription *spec = &part->size->sections[steps[i].index];
         PiecePerformedSection *section = &out->sections[i];
         PlanSpan source_span = plan_node_span(part->plan, source);
         PlanSpan span = {start, source_span.length};

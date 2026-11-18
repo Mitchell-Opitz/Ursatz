@@ -74,8 +74,8 @@ static const Row ROWS[] = {{"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4}, {"A min
 
 /* The 32-bar form; the transition's line is the member that differs between cases. */
 static const char *const FORM_HEAD =
-    "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"form-parts\", \"label\": \"Form parts\", \"modulates\": true,"
-    " \"regions\": [{\"name\": \"subordinate\", \"major\": [5], \"minor\": [3]}],"
+    "{\"schema\": \"ursatz-form\", \"version\": 2, \"name\": \"form-parts\", \"label\": \"Form parts\", \"modulates\": true,"
+    " \"regions\": [{\"name\": \"subordinate\", \"major\": [\"omt.relation.dominant\"], \"minor\": [\"omt.relation.mediant\"]}],"
     " \"sizes\": [{\"bars\": 32, \"default\": true, \"sections\": ["
     "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"presentation\","
     " \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"closed\": true},";
@@ -559,8 +559,8 @@ static PiecePlan *plan_only(const FormSpec *form, const Motive *motive, PieceRes
 }
 
 static const char *const CODA_AFTER_REGION =
-    "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"coda-after-region\", \"label\": \"Coda after a region\","
-    " \"modulates\": true, \"regions\": [{\"name\": \"subordinate\", \"major\": [5], \"minor\": [3]}],"
+    "{\"schema\": \"ursatz-form\", \"version\": 2, \"name\": \"coda-after-region\", \"label\": \"Coda after a region\","
+    " \"modulates\": true, \"regions\": [{\"name\": \"subordinate\", \"major\": [\"omt.relation.dominant\"], \"minor\": [\"omt.relation.mediant\"]}],"
     " \"sizes\": [{\"bars\": 32, \"default\": true, \"sections\": ["
     "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"presentation\","
     " \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"closed\": true},"
@@ -573,7 +573,7 @@ static const char *const CODA_AFTER_REGION =
 
 /* A theme and a coda, every section 8 bars: a motive of 2 bars fits it. */
 static const char *const THEME_AND_CODA =
-    "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"theme-and-coda\", \"label\": \"Theme and coda\","
+    "{\"schema\": \"ursatz-form\", \"version\": 2, \"name\": \"theme-and-coda\", \"label\": \"Theme and coda\","
     " \"sizes\": [{\"bars\": 16, \"default\": true, \"sections\": ["
     "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"presentation\","
     " \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"closed\": true},"

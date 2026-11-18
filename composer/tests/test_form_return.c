@@ -520,8 +520,8 @@ static int test_varied(void) {
 
 /* The stand-in form of R-516: A, T, B, R, A1 and K, 44 bars, with A1 returning A with the variation %s and the members %s. */
 static const char EMBELLISH_FORM[] =
-    "{\"schema\":\"ursatz-form\",\"version\":1,\"name\":\"embellish-form\",\"label\":\"Embellish form\",\"modulates\":true,"
-    "\"regions\":[{\"name\":\"subordinate\",\"major\":[5],\"minor\":[3]}],"
+    "{\"schema\":\"ursatz-form\",\"version\":2,\"name\":\"embellish-form\",\"label\":\"Embellish form\",\"modulates\":true,"
+    "\"regions\":[{\"name\":\"subordinate\",\"major\":[\"omt.relation.dominant\"],\"minor\":[\"omt.relation.mediant\"]}],"
     "\"sizes\":[{\"bars\":44,\"default\":true,\"sections\":["
     "{\"name\":\"A\",\"letter\":\"A\",\"role\":\"theme\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
     "\"cadence\":\"perfect-authentic\",\"closed\":true},"
@@ -887,8 +887,8 @@ static int test_reregister(void) {
 
 /* The stand-in form of R-524: andante-abab (56 bars, modulating) with B1 returning B reharmonized in the home mode. */
 static const char HOME_FORM[] =
-    "{\"schema\":\"ursatz-form\",\"version\":1,\"name\":\"home-form\",\"label\":\"Home form\",\"closing\":true,"
-    "\"modulates\":true,\"regions\":[{\"name\":\"subordinate\",\"major\":[5],\"minor\":[3]}],"
+    "{\"schema\":\"ursatz-form\",\"version\":2,\"name\":\"home-form\",\"label\":\"Home form\",\"closing\":true,"
+    "\"modulates\":true,\"regions\":[{\"name\":\"subordinate\",\"major\":[\"omt.relation.dominant\"],\"minor\":[\"omt.relation.mediant\"]}],"
     "\"sizes\":[{\"bars\":56,\"default\":true,\"sections\":["
     "{\"name\":\"A\",\"letter\":\"A\",\"role\":\"theme\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
     "\"cadence\":\"perfect-authentic\",\"closed\":true},"
