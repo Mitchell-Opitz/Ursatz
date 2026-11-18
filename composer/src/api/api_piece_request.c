@@ -29,7 +29,6 @@
 void api_piece_request_destroy(PieceSpec *request) {
     for (size_t i = 0; i <= PIECE_STRUCTURE_MAX_SECTIONS; i++) {
         free(request->section_motive[i]);
-        free(request->numeral_text[i]);
         plan_destroy(request->theme_plan[i]);
     }
     free(request->piece_motive);
@@ -64,30 +63,6 @@ static bool parse_hybrid(const char *text, SectionPairing *pairing) {
     return beginning_found && ending_found;
 }
 
-/* A fill's numerals, "I vi IV V", split into the section's own copy. */
-static ComposerStatus read_numerals(PieceSpec *request, size_t index, const char *id, const char *path, const char *text,
-                                    ComposerError *error) {
-    request->numeral_text[index] = strdup(text);
-    if (!request->numeral_text[index]) {
-        return api_fail_alloc(error);
-    }
-    size_t count = 0;
-    char *save = NULL;
-    for (char *word = strtok_r(request->numeral_text[index], " \t,", &save); word; word = strtok_r(NULL, " \t,", &save)) {
-        if (count == PIECE_NUMERALS_MAX) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': a progression has at most %d chords", id,
-                            PIECE_NUMERALS_MAX);
-        }
-        request->numerals[index][count++] = word;
-    }
-    if (count == 0) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': the progression has no numerals", id);
-    }
-    request->sections[index].numerals = request->numerals[index];
-    request->sections[index].numeral_count = count;
-    return COMPOSER_OK;
-}
-
 static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *fill, const char *base, ComposerError *error) {
     PieceSection *section = &request->sections[index];
     const char *id = section->description.id;
@@ -103,7 +78,11 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
     } else {
         fill = NULL;
     }
-    if (!piece_fill_from_name(kind, &section->fill)) {
+    /* The old progression fill is the section's harmony, read as `harmony.progression` with an empty fill (R-610). */
+    const bool legacy_progression = strcmp(kind, "progression") == 0;
+    if (legacy_progression) {
+        section->fill = PIECE_FILL_EMPTY;
+    } else if (!piece_fill_from_name(kind, &section->fill)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, base,
                         "section '%s': the fill kind must be empty, motif, theme or progression, not '%s'", id, kind);
     }
@@ -214,23 +193,30 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
         }
         section->theme_plan = request->theme_plan[index];
         snprintf(request->source[index], sizeof(request->source[index]), "%s", label ? label : "theme plan");
-    } else if (section->fill == PIECE_FILL_PROGRESSION) {
+    } else if (legacy_progression) {
         const char *numerals = NULL;
         const cJSON *cells = cJSON_GetObjectItemCaseSensitive(fill, "cells");
+        SectionHarmony *harmony = &section->description.harmony;
+        if (harmony->kind != SECTION_HARMONY_NONE) {
+            snprintf(path, sizeof path, "%s/harmony", base);
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': give harmony or a progression fill, not both", id);
+        }
         if (!api_request_string(fill, base, "numerals", true, &numerals, error)) {
             return COMPOSER_ERR_REQUEST;
         }
         snprintf(path, sizeof path, "%s/numerals", base);
-        ComposerStatus status = read_numerals(request, index, id, path, numerals, error);
-        if (status != COMPOSER_OK) {
-            return status;
+        if (strlen(numerals) == 0 || strlen(numerals) >= sizeof(harmony->numerals)) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': a progression is 1 to %zu characters of numerals", id,
+                            sizeof(harmony->numerals) - 1);
         }
+        harmony->kind = SECTION_HARMONY_PROGRESSION;
+        snprintf(harmony->numerals, sizeof(harmony->numerals), "%s", numerals);
         if (cells && !cJSON_IsNull(cells)) {
             if (!cJSON_IsNumber(cells) || cells->valuedouble < 1 || cells->valuedouble != (double)(size_t)cells->valuedouble) {
                 snprintf(path, sizeof path, "%s/cells", base);
                 return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': \"cells\" must be a whole number from 1", id);
             }
-            section->cells_per_chord = (size_t)cells->valuedouble;
+            harmony->cells = (unsigned)cells->valuedouble;
         }
         snprintf(request->source[index], sizeof(request->source[index]), "%s", numerals);
     }
@@ -305,6 +291,10 @@ static ComposerStatus read_section(PieceSpec *request, size_t index, const cJSON
     }
     snprintf(path, sizeof path, "%s/fill", base);
     ComposerStatus filled = read_fill(request, index, cJSON_GetObjectItemCaseSensitive(item, "fill"), path, error);
+    if (filled == COMPOSER_OK && section->fill == PIECE_FILL_THEME && section->description.harmony.kind != SECTION_HARMONY_NONE) {
+        snprintf(path, sizeof path, "%s/harmony", base);
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': a theme brings its harmony", id);
+    }
     if (filled == COMPOSER_OK && section->has_construction) {
         size_t per_bar = (size_t)meter->beats_per_bar;
         if (section->description.pickup.num != 0 || per_bar == 0 || section->description.beats % per_bar != 0 || section->description.beats / per_bar < 3 ||
@@ -748,17 +738,19 @@ static ComposerStatus read_overlays(PieceSpec *request, const cJSON *root, const
         const SectionDescription *spec = &size->sections[found];
         bool fills = section->fill != PIECE_FILL_EMPTY;
         snprintf(path, sizeof path, "%s/fill", at);
-        if (section->fill == PIECE_FILL_PROGRESSION) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': a sized form's section takes a motif or a theme fill", name);
-        }
         if (section->has_into || section->has_construction || request->forms_json[index]) {
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': the %s form gives it its shape; give a motive or a theme", name,
                             form->name);
         }
-        if (fills && spec->returns[0] != '\0') {
+        bool harmony = section->description.harmony.kind != SECTION_HARMONY_NONE;
+        if (harmony && section->fill == PIECE_FILL_THEME) {
+            snprintf(path, sizeof path, "%s/harmony", at);
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': a theme brings its harmony", name);
+        }
+        if ((fills || harmony) && spec->returns[0] != '\0') {
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "'%s' returns '%s': give it to '%s'", name, spec->returns, spec->returns);
         }
-        if (fills && (spec->role == SECTION_ROLE_LIQUIDATION || spec->role == SECTION_ROLE_RETRANSITION || spec->role == SECTION_ROLE_CODA)) {
+        if ((fills || harmony) && (spec->role == SECTION_ROLE_LIQUIDATION || spec->role == SECTION_ROLE_RETRANSITION || spec->role == SECTION_ROLE_CODA)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': a %s is grown by its operator", name, section_role_name(spec->role));
         }
         index++;
@@ -792,6 +784,59 @@ static ComposerStatus check_overlay_regions(PieceSpec *request, const char *base
     char path[200];
     snprintf(path, sizeof path, "%.150s/sections/%zu/region", base, overlay);
     return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", why);
+}
+
+/* The harmony each section gives can be given to it (R-610), tried on a scratch plan of its length, key and meter. */
+static ComposerStatus check_harmony(PieceSpec *request, const char *base, ComposerError *error) {
+    PieceRequest *piece = &request->request;
+    const FormSpecSize *size = request->form->request_sections ? NULL : form_spec_size(request->form, piece->bars, piece->count);
+    const PieceSection *items = request->form->request_sections ? piece->sections : piece->overlays;
+    size_t count = request->form->request_sections ? piece->section_count : piece->overlay_count;
+    PieceRegion regions[PIECE_STRUCTURE_MAX_SECTIONS];
+    memset(regions, 0, sizeof(regions));
+    size_t refused;
+    char why[256];
+    bool regional = false;
+    if (request->form->request_sections) {
+        (void)piece_resolve_regions(piece, request->knowledge, regions, &refused, why, sizeof why);
+    } else if (size) {
+        (void)piece_resolve_overlay_regions(piece, size, request->knowledge, regions, &regional, &refused, why, sizeof why);
+    }
+    Rational bar = {0, 1};
+    if (rational_make(piece->meter.beats_per_bar, piece->meter.beat_unit, &bar) != RATIONAL_OK) {
+        return COMPOSER_OK;
+    }
+    for (size_t i = 0; i < count; i++) {
+        const SectionHarmony *harmony = &items[i].description.harmony;
+        if (harmony->kind == SECTION_HARMONY_NONE) {
+            continue;
+        }
+        Rational length = {0, 1};
+        AnalysisKey key = piece->key;
+        char path[200];
+        if (request->form->request_sections) {
+            if (rational_make((long long)items[i].description.beats, piece->meter.beat_unit, &length) != RATIONAL_OK) {
+                continue;
+            }
+            key = regions[i].key.material ? regions[i].key : piece->key;
+        } else {
+            size_t found = size ? size->section_count : 0;
+            for (size_t j = 0; size && j < size->section_count; j++) {
+                if (strcmp(size->sections[j].name, items[i].description.name) == 0) {
+                    found = j;
+                }
+            }
+            if (found == size->section_count || rational_mul_int(bar, (long long)size->sections[found].bars, &length) != RATIONAL_OK) {
+                continue;
+            }
+            key = regional && regions[found].has_region ? regions[found].key : piece->key;
+        }
+        if (!piece_check_harmony(&piece->meter, &key, length, harmony, why, sizeof why)) {
+            snprintf(path, sizeof path, "%.150s/sections/%zu/harmony", base, i);
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': %s", items[i].description.id, why);
+        }
+    }
+    return COMPOSER_OK;
 }
 
 /*
@@ -924,7 +969,8 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapsho
         request->basic = request->sections[i].motive;
     }
     if (!given_sections) {
-        return check_overlay_regions(request, base, error);
+        status = check_overlay_regions(request, base, error);
+        return status == COMPOSER_OK ? check_harmony(request, base, error) : status;
     }
     /* The request checks before the default ending joins it: a request without a body is a bad one. */
     if (piece_request_check(piece) != PIECE_OK) {
@@ -946,6 +992,10 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapsho
             snprintf(at, sizeof(at), "%s/sections/%zu/region", base, refused);
             return api_fail(error, COMPOSER_ERR_REQUEST, at, "%s", why);
         }
+    }
+    status = check_harmony(request, base, error);
+    if (status != COMPOSER_OK) {
+        return status;
     }
     size_t given = piece->section_count;
     if (piece_default_ending(request->form, piece, PIECE_STRUCTURE_MAX_SECTIONS + 1) && piece->section_count > given) {

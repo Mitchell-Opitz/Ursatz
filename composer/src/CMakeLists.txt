@@ -130,6 +130,7 @@ add_library(ursatz_composer STATIC
     piece/piece_reopen.c
     piece/seam_hear.c
     piece/connective.c
+    piece/section_harmony.c
     piece/piece_perform.c
     piece/form_vary.c
     piece/form_figure.c

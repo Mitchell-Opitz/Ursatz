@@ -38,10 +38,17 @@
     "variant_operations",
     "preferences",
     "relations",
+    "schemas",
     "limits"
   ],
   "additionalProperties": false,
   "properties": {
+    "schemas": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The galant schemas a section's harmony may name: those that make a chord of each stage in the major and the natural minor (R-610).",
+      "items": { "$ref": "#/$defs/choice" }
+    },
     "relations": {
       "type": "array",
       "minItems": 1,

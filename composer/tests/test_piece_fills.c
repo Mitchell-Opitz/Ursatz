@@ -339,10 +339,10 @@ static void test_progression(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         fixture_init(&fixture, 0, HARMONY_MODE_MAJOR);
-        PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 16, PIECE_FILL_PROGRESSION);
-        body->numerals = NUMERALS;
-        body->numeral_count = 4;
-        body->cells_per_chord = 2;
+        PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
+        body->description.harmony.kind = SECTION_HARMONY_PROGRESSION;
+        snprintf(body->description.harmony.numerals, sizeof(body->description.harmony.numerals), "I vi IV V");
+        body->description.harmony.cells = 2;
         /* The progression ends on V, so the section ends in a half cadence: the default for a section that is not the
            loop's last would be an imperfect authentic cadence, which no melody can make over a final V. */
         body->description.has_cadence = true;
@@ -409,7 +409,6 @@ static void test_progression(void) {
 
 /* A progression that ends before the section does: `I IV V I` in 8 bars; the harmony stage writes the other 4. */
 static void test_partial(void) {
-    static const char *const CHORDS[4] = {"I", "IV", "V", "I"};
     size_t stuck = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         Fixture fixture;
@@ -417,10 +416,10 @@ static void test_partial(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         fixture_init(&fixture, 0, HARMONY_MODE_MAJOR);
-        PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 32, PIECE_FILL_PROGRESSION);
-        body->numerals = CHORDS;
-        body->numeral_count = 4;
-        body->cells_per_chord = 2;
+        PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 32, PIECE_FILL_EMPTY);
+        body->description.harmony.kind = SECTION_HARMONY_PROGRESSION;
+        snprintf(body->description.harmony.numerals, sizeof(body->description.harmony.numerals), "I IV V I");
+        body->description.harmony.cells = 2;
         assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         NodeId section;
         assert(piece_sections(plan, &section, 1) == 1);

@@ -56,11 +56,11 @@ const char *piece_function_name(PieceFunction function);
 
 /*
  * What fills a section (R-170): nothing of its own (empty, made from the piece's basic motive), a motive (a theme
- * section at 4 or 8 bars or with a construction, else a free phrase), a composed theme's realized lanes (Given), or a progression.
+ * section at 4 or 8 bars or with a construction, else a free phrase), or a composed theme's realized lanes (Given). A section's harmony is its description's.
  */
-typedef enum { PIECE_FILL_EMPTY, PIECE_FILL_MOTIF, PIECE_FILL_THEME, PIECE_FILL_PROGRESSION } PieceFillKind;
+typedef enum { PIECE_FILL_EMPTY, PIECE_FILL_MOTIF, PIECE_FILL_THEME } PieceFillKind;
 
-/* "empty", "motif", "theme", "progression"; "unknown" for a value that is none of them. */
+/* "empty", "motif", "theme"; "unknown" for a value that is none of them. */
 const char *piece_fill_name(PieceFillKind fill);
 /* False for a name that is none of these. */
 bool piece_fill_from_name(const char *name, PieceFillKind *out);
@@ -88,9 +88,6 @@ typedef struct {
     const struct GrowPoolForm *pool; /* the motive forms the section's motives stage offers (B6) */
     size_t pool_count;
     const PiecePlan *theme_plan; /* theme: the composed theme to take the realized lanes from; must outlive the build */
-    const char *const *numerals; /* progression: the numerals, one per chord; must outlive the build */
-    size_t numeral_count;
-    size_t cells_per_chord;      /* progression: harmony cells each chord lasts; 0 for a bar */
 } PieceSection;
 
 /* A section with nothing set: an empty fill, no pickup. */
@@ -223,8 +220,8 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
  *     (plan_give_section): its realized lanes are Given, moved and transposed to the section, and its archetype,
  *     pairing and cadences replace the request's. The section ends Realized and no stage targets it; the theme must be
  *     as long as the section, in the same meter and mode (PIECE_ERR_BAD_REQUEST otherwise);
- *   - a progression fill has its numerals Given from the section's start (plan_give_progression), cells_per_chord
- *     cells each (a bar when 0); the harmony stage fills the rest of the section.
+ *   - a section's harmony (its description's `harmony`: a progression, a schema or chords) is Given before it is composed
+ *     (piece_give_harmony); the harmony stage fills what is left of the section.
  * piece_request_check's refusals are PIECE_ERR_BAD_REQUEST.
  */
 PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, PiecePlan **out);
@@ -280,6 +277,19 @@ PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSn
 /* The regions of a form that takes its sections from its size, from the request's overlays: an entry for each section of the size. */
 PieceResult piece_resolve_overlay_regions(const PieceRequest *request, const FormSpecSize *size, const KnowledgeSnapshot *knowledge,
                                           PieceRegion *regions, bool *regional, size_t *refused, char *message, size_t message_size);
+
+/*
+ * Gives a section its harmony before it is composed (R-610): a progression (plan_give_progression, `cells` each or a bar), a schema
+ * (one stage a cell from the section's start, derived in the key) or chords at bars (plan_give_chords), in the section's key and
+ * the plan's meter. PIECE_ERR_BAD_REQUEST with the reason in message when the plan or the schema refuses it. The key must be the one the section
+ * is in; a section that modulates takes no schema.
+ */
+PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
+                               const AnalysisKey *key, char *message, size_t message_size);
+
+/* Whether the harmony can be given to a section of this length in this key and meter, tried on a scratch plan; message says why not. */
+bool piece_check_harmony(const PlanMeter *meter, const AnalysisKey *key, Rational length, const SectionHarmony *harmony, char *message,
+                         size_t message_size);
 
 /*
  * The cadences the form document gives, on every section of the request without has_cadence (the document's `cadences`:

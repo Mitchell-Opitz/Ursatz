@@ -632,7 +632,8 @@ static void function_refusals(const FunctionRow *row, const PiecePlan *loop_plan
     fixture.sections[T].into = PLAN_ARCHETYPE_PERIOD;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
     function_structure(&fixture, &copy);
-    fixture.sections[T].fill = PIECE_FILL_PROGRESSION;
+    fixture.sections[T].description.harmony.kind = SECTION_HARMONY_PROGRESSION;
+    snprintf(fixture.sections[T].description.harmony.numerals, sizeof(fixture.sections[T].description.harmony.numerals), "I V");
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
     function_structure(&fixture, &copy);
     fixture.sections[T].has_construction = true;
@@ -655,7 +656,8 @@ static void function_refusals(const FunctionRow *row, const PiecePlan *loop_plan
     fixture.sections[K].description.cadence = CADENCE_TYPE_HALF;
     assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_ERR_BAD_REQUEST && !ending);
     function_structure(&fixture, &copy);
-    fixture.sections[K].fill = PIECE_FILL_PROGRESSION;
+    fixture.sections[K].description.harmony.kind = SECTION_HARMONY_PROGRESSION;
+    snprintf(fixture.sections[K].description.harmony.numerals, sizeof(fixture.sections[K].description.harmony.numerals), "I V");
     assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_ERR_BAD_REQUEST && !ending);
 }
 

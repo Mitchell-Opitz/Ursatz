@@ -622,6 +622,22 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         result = piece_plan_keys(plan, request->knowledge, form, size, modulate ? &rng : NULL, regional ? regions : NULL, &keys);
         result = result == PIECE_OK && (modulate || regional) ? piece_plan_cadences(plan, form, size, &keys) : result;
     }
+    /* The harmony an overlay gives (R-610), in the key the section is in; a schema is refused for a section that changes key. */
+    for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
+        const PieceSection *overlay = overlay_of[i];
+        if (!overlay || overlay->description.harmony.kind == SECTION_HARMONY_NONE || overlay->fill == PIECE_FILL_THEME) {
+            continue;
+        }
+        PlanSpan span = plan_node_span(plan, sections[i]);
+        LaneSpanId keys_over[3];
+        size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, keys_over, 3);
+        if (found == 0 || (found > 1 && overlay->description.harmony.kind == SECTION_HARMONY_SCHEMA)) {
+            result = PIECE_ERR_BAD_REQUEST;
+            break;
+        }
+        const AnalysisKey *section_key = &plan_lane_span_payload(plan, keys_over[0])->key;
+        result = piece_give_harmony(plan, sections[i], &overlay->description.harmony, &request->meter, section_key, NULL, 0);
+    }
     /* A composed theme given to a section (R-610): its pairing and cadences, then its realized lanes moved and transposed to the section. */
     for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
         const PieceSection *overlay = overlay_of[i];

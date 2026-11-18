@@ -5,6 +5,7 @@
 
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/given.h>
+#include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 
@@ -26,7 +27,7 @@ _Static_assert(SECTION_ROLE_BODY - SECTION_ROLE_INTRO == PIECE_PART_BODY && SECT
                "a part is its role counted from the intro");
 
 static const char *const PART_NAMES[PIECE_PART_COUNT] = {"intro", "body", "turnaround", "ending"};
-static const char *const FILL_NAMES[] = {"empty", "motif", "theme", "progression"};
+static const char *const FILL_NAMES[] = {"empty", "motif", "theme"};
 
 const char *piece_part_name(PiecePart part) {
     return part >= 0 && part < PIECE_PART_COUNT ? PART_NAMES[part] : "unknown";
@@ -45,11 +46,11 @@ const char *piece_function_name(PieceFunction function) {
 }
 
 const char *piece_fill_name(PieceFillKind fill) {
-    return fill >= PIECE_FILL_EMPTY && fill <= PIECE_FILL_PROGRESSION ? FILL_NAMES[fill] : "unknown";
+    return fill >= PIECE_FILL_EMPTY && fill <= PIECE_FILL_THEME ? FILL_NAMES[fill] : "unknown";
 }
 
 bool piece_fill_from_name(const char *name, PieceFillKind *out) {
-    for (int fill = PIECE_FILL_EMPTY; name && fill <= PIECE_FILL_PROGRESSION; fill++) {
+    for (int fill = PIECE_FILL_EMPTY; name && fill <= PIECE_FILL_THEME; fill++) {
         if (strcmp(name, FILL_NAMES[fill]) == 0) {
             if (out) {
                 *out = (PieceFillKind)fill;
@@ -127,7 +128,7 @@ static PieceResult check(const FormSpec *form, const PieceRequest *request) {
         if (section->description.id[0] == '\0' || strnlen(section->description.id, PIECE_SECTION_ID_MAX) == PIECE_SECTION_ID_MAX ||
             piece_section_part(section) < PIECE_PART_INTRO || piece_section_part(section) > PIECE_PART_ENDING || (int)piece_section_part(section) < last_part ||
             !form_spec_has_role(form, role_of(piece_section_part(section))) || section->description.beats < 1 || !pickup_valid(request->meter, section->description.pickup, bar) ||
-            section->fill < PIECE_FILL_EMPTY || section->fill > PIECE_FILL_PROGRESSION ||
+            section->fill < PIECE_FILL_EMPTY || section->fill > PIECE_FILL_THEME ||
             piece_section_function(section) < PIECE_FUNCTION_NONE || piece_section_function(section) > PIECE_FUNCTION_CODA ||
             /* A transition leads on to the next section: not the turnaround (it leads back) or the ending. A coda closes. */
             (piece_section_function(section) == PIECE_FUNCTION_TRANSITION &&
@@ -402,9 +403,27 @@ static bool is_held(const FormSpec *form, const PieceRequest *request, size_t in
     if (index != loop_end || index == first_body || section->fill == PIECE_FILL_THEME) {
         return false;
     }
-    if (section->fill == PIECE_FILL_PROGRESSION) {
-        size_t per_chord = section->cells_per_chord ? section->cells_per_chord : cells;
-        return section->numeral_count * per_chord * (size_t)request->meter.beats_per_bar < section->description.beats * cells;
+    /* A progression or a schema that covers the section leaves nothing for the seam stage; chords given at bars never cover it. */
+    const SectionHarmony *harmony = &section->description.harmony;
+    if (harmony->kind == SECTION_HARMONY_PROGRESSION || harmony->kind == SECTION_HARMONY_SCHEMA) {
+        size_t chords = 0;
+        size_t per_chord = harmony->cells ? harmony->cells : cells;
+        if (harmony->kind == SECTION_HARMONY_PROGRESSION) {
+            bool in_word = false;
+            for (const char *c = harmony->numerals; *c; c++) {
+                bool word = *c != ' ' && *c != '\t' && *c != ',';
+                chords += word && !in_word ? 1 : 0;
+                in_word = word;
+            }
+        } else {
+            GalantSchemaId schema;
+            char numerals[GALANT_MAX_STAGES][PLAN_ROMAN_NUMERAL_MAX];
+            per_chord = 1;
+            if (harmony_schema_find(harmony->schema, &schema)) {
+                (void)harmony_schema_chords(&request->key, schema, numerals, &chords);
+            }
+        }
+        return chords * per_chord * (size_t)request->meter.beats_per_bar < section->description.beats * cells;
     }
     return true;
 }
@@ -430,7 +449,7 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
     if (transition || coda) {
         /* A function is the section's own growing (R-508): empty or motif fill, and no given theme. */
         if (given != PLAN_NODE_NONE || (section->fill != PIECE_FILL_EMPTY && section->fill != PIECE_FILL_MOTIF) ||
-            section->has_construction) {
+            section->has_construction || section->description.harmony.kind != SECTION_HARMONY_NONE) {
             return PIECE_ERR_BAD_REQUEST;
         }
     }
@@ -775,14 +794,9 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
                                      grow_find_theme(copy.sections[i].theme_plan, false)) != GIVEN_OK) {
             result = PIECE_ERR_BAD_REQUEST;
         }
-        /* A progression fill: the chords Given from the section's start, a bar each unless it says; the harmony stage
-           fills what is left of the section. */
-        if (result == PIECE_OK && !from_loop && copy.sections[i].fill == PIECE_FILL_PROGRESSION) {
-            const PieceSection *given = &copy.sections[i];
-            size_t per_chord = given->cells_per_chord ? given->cells_per_chord : cells;
-            if (plan_give_progression(plan, id, 0, given->numerals, given->numeral_count, per_chord) != GIVEN_OK) {
-                result = PIECE_ERR_BAD_REQUEST;
-            }
+        /* The section's harmony (R-610): Given from its start; the harmony stage fills what is left of the section. */
+        if (result == PIECE_OK && !from_loop && copy.sections[i].description.harmony.kind != SECTION_HARMONY_NONE) {
+            result = piece_give_harmony(plan, id, &copy.sections[i].description.harmony, &request->meter, &regions[i].key, NULL, 0);
         }
         if (result == PIECE_OK && !loop_plan && is_held(form, &copy, i, cells)) {
             SectionDescription held = *plan_node_section(plan, id);

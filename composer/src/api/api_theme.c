@@ -313,7 +313,7 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
     if (status != COMPOSER_OK) {
         return status;
     }
-    return request_read_chords(cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", &setup->meter, &setup->key,
+    return request_read_chords(cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", 0, &setup->meter, &setup->key,
                                (long)setup->bars, material->chords, material->chord_numerals, GROW_EXT_CHORDS, &material->chord_count,
                                error);
 }

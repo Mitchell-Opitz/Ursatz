@@ -6,6 +6,7 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
+#include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_random.h>
 #include <ursatz_composer/motive_tones.h>
@@ -114,7 +115,7 @@ static const char *const MOTIVE_FORM_LABELS[] = {"Full", "Rhythm only", "Contour
 static const char *const ROLE_LABELS[] = {"Melodic", "Accompaniment"};
 static const char *const RANDOM_STRATEGY_LABELS[] = {"Segments", "Drawn"};
 static const char *const PART_LABELS[PIECE_PART_COUNT] = {"Intro", "Loop body", "Turnaround", "Ending"};
-static const char *const FILL_LABELS[] = {"Empty", "Motif", "Theme", "Progression"};
+static const char *const FILL_LABELS[] = {"Empty", "Motif", "Theme"};
 
 typedef struct {
     NonChordTone type;
@@ -352,7 +353,7 @@ static bool add_library_lists(cJSON *root) {
             return false;
         }
     }
-    for (int fill = PIECE_FILL_EMPTY; fill <= PIECE_FILL_PROGRESSION; fill++) {
+    for (int fill = PIECE_FILL_EMPTY; fill <= PIECE_FILL_THEME; fill++) {
         if (!add_choice(fills, piece_fill_name((PieceFillKind)fill), FILL_LABELS[fill])) {
             return false;
         }
@@ -608,6 +609,21 @@ bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials)
            add_preferences(root) && add_limits(root);
 }
 
+/* The schemas a section's harmony may be (R-610): the galant prototypes that make a chord of each stage in the major and in the natural minor. */
+static bool add_schemas(cJSON *root, const CommonPracticeMaterials *materials) {
+    cJSON *list = add_list(root, "schemas");
+    for (int id = 0; list && id < GALANT_SCHEMA_COUNT; id++) {
+        if (!harmony_schema_available((GalantSchemaId)id, materials->major) && !harmony_schema_available((GalantSchemaId)id, materials->natural_minor)) {
+            continue;
+        }
+        const char *name = galant_schema_name((GalantSchemaId)id);
+        if (!add_choice(list, name, name)) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 /* The relations of the snapshot (K6), by id: a section's region may be one, taken from an anchor (R-610). */
 static bool add_relations(cJSON *root, const KnowledgeSnapshot *knowledge) {
     static const char *const FAMILIES[] = {"tonal", "modal", "neo-riemannian", "set", "serial"};
@@ -636,7 +652,7 @@ ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerR
         return context_status;
     }
     cJSON *root = cJSON_CreateObject();
-    if (!root || !api_vocabulary_build(root, &materials) || !add_relations(root, context->knowledge)) {
+    if (!root || !api_vocabulary_build(root, &materials) || !add_relations(root, context->knowledge) || !add_schemas(root, &materials)) {
         cJSON_Delete(root);
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }

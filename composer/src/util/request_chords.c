@@ -22,8 +22,8 @@ static ComposerStatus fail(ComposerError *error, const char *path, const char *f
 }
 
 /* The chords a request gives, and what a list of them is read as: see request_chords.h. */
-ComposerStatus request_read_chords(const cJSON *list, const char *base, const char *what, const PlanMeter *meter, const AnalysisKey *key,
-                                   long bars, GivenChord *chords, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t capacity,
+ComposerStatus request_read_chords(const cJSON *list, const char *base, const char *what, long first_bar, const PlanMeter *meter,
+                                   const AnalysisKey *key, long bars, GivenChord *chords, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t capacity,
                                    size_t *chord_count, ComposerError *error) {
     if (!list || cJSON_IsNull(list)) {
         return COMPOSER_OK;
@@ -55,14 +55,14 @@ ComposerStatus request_read_chords(const cJSON *list, const char *base, const ch
                             "each of \"chords\" must be {\"bar\": <number from 0>, \"text\": \"I V@3/2\"}");
         }
         long bar = (long)bar_item->valuedouble;
-        if ((double)bar != bar_item->valuedouble || bar < 0 || bar >= bars || bar >= REQUEST_CHORDS_BARS_MAX) {
-            return fail(error, path, "chords bar %g: %s has bars 0 to %ld",
-                        bar_item->valuedouble, what, bars - 1);
+        if ((double)bar != bar_item->valuedouble || bar < first_bar || bar >= first_bar + bars || bar - first_bar >= REQUEST_CHORDS_BARS_MAX) {
+            return fail(error, path, "chords bar %g: %s has bars %ld to %ld",
+                        bar_item->valuedouble, what, first_bar, first_bar + bars - 1);
         }
-        if (seen[bar]) {
+        if (seen[bar - first_bar]) {
             return fail(error, path, "chords bar %ld: given twice", bar);
         }
-        seen[bar] = true;
+        seen[bar - first_bar] = true;
         MotiveSketchChord parsed[MOTIVE_MAX_CHORDS];
         size_t count = 0;
         MotiveError motive_error;
@@ -77,7 +77,7 @@ ComposerStatus request_read_chords(const cJSON *list, const char *base, const ch
             return fail(error, base, "chords: too many chords");
         }
         Rational bar_start;
-        if (rational_mul_int(bar_length, (long long)bar, &bar_start) != RATIONAL_OK) {
+        if (rational_mul_int(bar_length, (long long)(bar - first_bar), &bar_start) != RATIONAL_OK) {
             return fail(error, path, "chords bar %ld: the bar is out of range", bar);
         }
         for (size_t c = 0; c < count; c++) {

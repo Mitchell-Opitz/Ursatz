@@ -386,6 +386,10 @@
         "region": {
           "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json#/$defs/region",
           "description": "The key the section is in (R-610): home, {tonic, material} or {relation, anchor}."
+        },
+        "harmony": {
+          "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json#/$defs/harmony",
+          "description": "The section's harmony, given before it is composed (R-610): a progression, a galant schema or chords at bars."
         }
       },
       "anyOf": [
@@ -468,6 +472,10 @@
               }
             }
           ]
+        },
+        "harmony": {
+          "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json#/$defs/harmony",
+          "description": "The section's harmony, given before it is composed (R-610): a progression, a galant schema or chords at bars."
         }
       }
     }

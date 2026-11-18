@@ -58,8 +58,6 @@ typedef struct {
     const cJSON *forms_json[PIECE_STRUCTURE_MAX_SECTIONS + 1];  /* a motif fill's saved forms */
     Motive *section_motive[PIECE_STRUCTURE_MAX_SECTIONS + 1];   /* owned */
     PiecePlan *theme_plan[PIECE_STRUCTURE_MAX_SECTIONS + 1];    /* owned */
-    char *numeral_text[PIECE_STRUCTURE_MAX_SECTIONS + 1];       /* owned; the numerals point into it */
-    const char *numerals[PIECE_STRUCTURE_MAX_SECTIONS + 1][PIECE_NUMERALS_MAX];
     char source[PIECE_STRUCTURE_MAX_SECTIONS + 1][PLAN_STYLE_PATH_MAX]; /* where a section's material came from */
     const cJSON *piece_motive_json;
     Motive *piece_motive; /* owned */
