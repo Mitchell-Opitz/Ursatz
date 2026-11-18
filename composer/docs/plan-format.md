@@ -2,10 +2,10 @@
 
 A piece plan is written as JSON text by `plan_to_json` and read from text by `plan_from_json`
 (`<ursatz_composer/plan_json.h>`): text in, text out, and the caller reads and writes the file. The format is the Composer's own: it has a
-name, a version and a JSON Schema ([`schema/plan.v4.schema.json`](../schema/plan.v4.schema.json), JSON Schema 2020-12),
+name, a version and a JSON Schema ([`schema/plan.v5.schema.json`](../schema/plan.v5.schema.json), JSON Schema 2020-12),
 and it is written on library values: a key's tonic is a spelled note name, a chord's function is the library's function
-name, a note may carry its spelling and always has an id. Writing always gives format version 4 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
-Reading takes versions 3, 2 and 1, the formats of every plan saved before it, and maps them to materials and note ids ([Format versions](#format-versions)). Back to the [docs index](README.md).
+name, a note may carry its spelling and always has an id. Writing always gives format version 5 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
+Reading takes versions 4, 3, 2 and 1, the formats of every plan saved before it, and maps them to materials, note ids and section descriptions ([Format versions](#format-versions)). Back to the [docs index](README.md).
 
 The output is pretty-printed with a 2-space indent, in the key order shown below, and ends with a
 newline. The same plan always gives the same bytes.
@@ -73,6 +73,11 @@ lies inside its parent's.
 | `id` | integer | The node's id. Ids run from 1 to the node count, with no gaps or repeats, and a parent's id is lower than its children's. A constraint refers to a motive by this id. |
 | `state` | string | `given`, `constrained` or `realized`. |
 | `constraints` | array | See Constraints. |
+| `section` | object | On a section node only: the section's description ([Section descriptions](#section-descriptions)); `{}` when nothing is set. |
+
+### Section descriptions
+
+A section node holds one description of the section (R-607): the same object a form document and a piece request hold, with the members the plan use of the section description allows (`plan_section` in [`library/plan/schema/section.schema.json`](../../library/plan/schema/section.schema.json), which the plan schema references; [plan module](../../library/docs/modules/plan.md)). The members are written in table order and only when set: `id`, `letter`, `role`, `beginning` and `ending` (the theme pairing), `cadence` and `first_cadence`, `closed`, `keys`, `returns` (the name of the section it returns), `variation`, `setting`, `mode`, `layers`, `pedal`, `leads_in`, `connective` (and `connective_written`), `construction`, `figure`, `function` (with `independent` and `lyric`) and `free_phrase`. A game loop part is the `role` `intro`, `body`, `turnaround` or `ending` and the request's `id`; source material, the seam and a liquidation are the roles `material`, `seam` and `liquidation`; a held section has `leads_in`. In memory it is `SectionDescription` (`plan_node_section`, `plan_node_set_section`); a section node refuses a `cadence` constraint, and `plan_node_cadence` reads either.
 
 ### Motive refs: the segment and the steps
 
@@ -80,9 +85,9 @@ A `motive_ref` constraint may carry two members that record how a developed idea
 
 ### Pedal
 
-A `construction` constraint (on a section node, R-468) gives the bars of each idea of a theme: `{"kind": "construction", "ideas": {"basic idea": 3, "contrasting idea": 2, ...}, "extensions": [], "reason": "given"}`. `ideas` names the ideas the theme's pairing has, in `GrowIdea` order, each with 1 to 16 bars and only those with bars (the names are those of the plan's idea nodes). `extensions` holds up to 3 `{"kind": "repeat"|"stretch"|"addition"|"evaded", "idea": "<idea name>", "bars": 0 to 4, "varied": bool}`: `repeat` a new idea after `idea` (internal repetition), `stretch` that idea longer, `addition` a tonic phrase after the cadence and `evaded` a deceptive cadence before the last idea is restated (the last two ignore `idea`); `bars` 0 is the idea's own bars (1 for a stretch and an addition), and the theme's `bars` count them. `reason` is `given`, `motive` or `length`. A plan without it reads as before and writing it again gives the same bytes; the schema version is the same. See [grow-construction.md](grow-construction.md).
+A theme's construction (R-468) is the `construction` member of its section's description: `{"ideas": {"basic idea": 3, "contrasting idea": 2, ...}, "extensions": [], "reason": "given"}`, with the ideas, extensions and reason it always had.
 
-A `pedal` constraint (`{"kind": "pedal", "degree": 5}`, on a section node) and the `pedal` member of a `harmony_shape` (written `"pedal": true` after `split_at_bars`, only when set) ask for a dominant pedal under a presentation (R-446). The degree is required and only 5 is valid. A plan without either reads as before and writing it again gives the same bytes; the schema version is the same.
+The `pedal` member of a section's description (`"pedal": "dominant"`) and the `pedal` member of a `harmony_shape` (written `"pedal": true` after `split_at_bars`, only when set) ask for a dominant pedal under a presentation (R-446). The degree is required and only 5 is valid. A plan without either reads as before and writing it again gives the same bytes; the schema version is the same.
 
 ## Lane claims
 
@@ -112,6 +117,7 @@ Claim fields the Composer has no data for are fixed: `framework` is `"ursatz-com
 | `voice` | integer | 0, except for inner voices, where it numbers the voice. |
 | `state` | string | `given`, `constrained` or `realized`. |
 | `constraints` | array | See Constraints. |
+| `section` | object | On a section node only: the section's description ([Section descriptions](#section-descriptions)); `{}` when nothing is set. |
 | `payload` | object | By lane, below. |
 
 Spans in the same lane and voice do not overlap; a span may start where another ends.
@@ -175,23 +181,23 @@ section's `key` constraint is always a key: `tonic` and `material`.
 
 ## Format versions
 
-`format_version` 4 is the format this document describes. Version 3 had no note ids and no `next_note_id`: a version 3 file reads with the notes' ids from 1 in file order (the
+`format_version` 5 is the format this document describes. Version 4 wrote a section's attributes as the constraint kinds `archetype`, `material`, `theme_pairing`, `return`, `layers`, `section_letter`, `piece_part`, `free_phrase`, `hold`, `seam`, `pedal`, `construction`, `connective`, `liquidation`, `figure` and `section_function` and `cadence` (two on a section whose first half has its own). A version 1 to 4 file reads each into the section's description (an `archetype` is the pairing's and is dropped, the second `cadence` is `first_cadence`, `piece_part` is the role and `id`, `hold` is `leads_in`, a `return` names its section by name) and writes version 5; version 5 refuses one of those kinds. Version 3 had no note ids and no `next_note_id`: a version 3 file reads with the notes' ids from 1 in file order (the
 sections in the order of their lane span ids), no source and no operation, and `next_note_id` one above the last. Version 2 named a key's material by `mode` (`major` or `minor`) in a key span and in the
 `key` constraint; the reader maps `major` to `omt.material.major` and `minor` to `omt.material.natural-minor`. `schema_version` 1 is the format the Composer wrote
 before version 2, in the shape of an Ursatz-Analyzer analysis document; `plan_from_json` still reads it (a file with `format` and `format_version` is
-version 2, 3 or 4, a file with `schema_version` is version 1) and nothing writes it. A plan of any version reads to the same plan, writes as version 4
-and renders the same MIDI. The schema's lane enum named the inner voice `inner-voice` while the writer wrote `inner_voice`; the schema now says what the writer writes. What version 1 had that version 4 does not:
+version 2 to 5, a file with `schema_version` is version 1) and nothing writes it. A plan of any version reads to the same plan, writes as version 5
+and renders the same MIDI. The schema's lane enum named the inner voice `inner-voice` while the writer wrote `inner_voice`; the schema now says what the writer writes. What version 1 had that version 5 does not:
 
 | Version 1 | Read as |
 | --- | --- |
-| `schema_version` 1 | `format_version` 4 once written. |
+| `schema_version` 1 | `format_version` 5 once written. |
 | `metadata`: `source_file`, `analyzer_version`, `ursatz_commit` `"unknown"`, `note_count`, `ticks_per_quarter`, `key_found` | Ignored. `analyzer_version` was the Composer's own version, not an Analyzer's (B-A-10), so the plan has no Analyzer version after reading it. |
 | `cadences`, `phrases`, `motives`, `rhythm`, `voice_leading`, `schemas`, always `[]` | Ignored; version 2 does not write them. |
 | A key's `tonic_pitch_class` (0 to 11) and `mode` | The tonic the library spells for that pitch class and mode (`standard_tonality_key_tonic_of_pitch_class`: fewest accidentals in the signature, sharps on a tie): 3 minor is `D#`, 6 major is `F#`; the mode is read as in version 2. |
 | A chord's `function` of `unknown` | No function (the member is left out in version 2). |
 | A motive ref's `transform` and its members | The relation step ([Motive relation steps](plan-constraints.md#motive-relation-steps)). |
 
-Writing the plan again gives version 4: `plan_from_json` then `plan_to_json` turns any version 1, 2 or 3 plan into its version 4
+Writing the plan again gives version 5: `plan_from_json` then `plan_to_json` turns any version 1 to 4 plan into its version 5
 file, and the two render the same MIDI.
 
 ## Analyzer version
