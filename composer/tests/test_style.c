@@ -11,6 +11,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/version.h>
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
@@ -430,7 +431,7 @@ static void write_style(const char *path) {
     Heard analysis;
     analyze(plan, &analysis);
     StyleProfile *profile = heard_profile(&analysis);
-    assert(style_model_file_write(profile, "block", path) == STYLE_MODEL_FILE_OK);
+    assert(style_model_file_write(profile, "block", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK);
     style_profile_destroy(profile);
     heard_destroy(&analysis);
     plan_destroy(plan);

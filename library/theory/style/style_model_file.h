@@ -5,11 +5,12 @@
 
 #include "theory/style/style_features.h"
 #include "theory/style/style_model.h"
+#include "theory/style/style_profile.h"
 
 /*
  * The StyleModel file (schema/style-model.v1.schema.json): a style's statistics with its name, the training corpus, the
- * version of what produced it and the piece count. Reading is the library's (R-617); the Analyzer writes the file from a
- * profile (style_model_file_write in the Analyzer API) and the Composer reads it through style_model_file_read_without.
+ * version of what produced it and the piece count. Reading and writing are the library's (R-617); the Analyzer writes the
+ * file from a profile it filled and the Composer reads it through style_model_file_read_without.
  */
 
 #define STYLE_MODEL_FILE_SCHEMA "ursatz-style-model"
@@ -40,5 +41,12 @@ StyleModelFileResult style_model_file_read_without(const char *path, const char 
 
 /* The statistics a model holds (style_features_decode); free with style_statistics_free. */
 StyleModelFileResult style_model_statistics(const StyleModel *model, StyleStatistic **out, size_t *count);
+
+/*
+ * Writes the profile as a style model file named name, produced by model_version (what the Analyzer, or any other producer,
+ * calls its version). The same profile always gives the same bytes.
+ */
+StyleModelFileResult style_model_file_write(const StyleProfile *profile, const char *name, const char *model_version,
+                                            const char *path);
 
 #endif

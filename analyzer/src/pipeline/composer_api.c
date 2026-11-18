@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "chain/chain_style.h"
 #include "model/core/provenance_reference.h"
 #include "model/core/voice_reference.h"
 #include "model/identity/entity_id.h"
@@ -28,7 +29,6 @@
 #include <ursatz_analyzer/version.h>
 
 #include "pipeline/analysis_result_internal.h"
-#include "style/style_profile_internal.h"
 #include "util/misc_util.h"
 
 #define MIDI_NOTE_COUNT 128
@@ -276,27 +276,11 @@ AnalyzerStatus analyzer_result_style_distance(const AnalyzerResult *result, cons
         return ANALYZER_ERR_ARGUMENT;
     }
     memset(out, 0, sizeof *out);
-    AnalyzerStatus status = ANALYZER_ERR_ALLOC;
-    StyleProfile *profile = style_profile_create();
-    StyleStatistic *fragment_stats = NULL;
-    size_t fragment_count = 0;
-    if (!profile) {
-        goto done;
+    if (!analyzer_result_report_complete(result)) {
+        return ANALYZER_ERR_ARGUMENT;
     }
-    StyleProfileResult added = style_profile_add_result(profile, result);
-    if (added != STYLE_PROFILE_OK) {
-        status = added == STYLE_PROFILE_ERR_ALLOC ? ANALYZER_ERR_ALLOC : ANALYZER_ERR_ARGUMENT;
-        goto done;
-    }
-    if (style_profile_statistics(profile, &fragment_stats, &fragment_count) != STYLE_PROFILE_OK) {
-        goto done;
-    }
-    StyleReferenceResult measured = style_reference_distance(reference->reference, fragment_stats, fragment_count, out);
-    status = measured == STYLE_REFERENCE_OK ? ANALYZER_OK
-             : measured == STYLE_REFERENCE_ERR_COMPARE ? ANALYZER_ERR_LIBRARY
-             : measured == STYLE_REFERENCE_ERR_ARGUMENT ? ANALYZER_ERR_ARGUMENT : ANALYZER_ERR_ALLOC;
-done:
-    free(fragment_stats);
-    style_profile_destroy(profile);
-    return status;
+    StyleReferenceResult measured = chain_style_distance(analyzer_result_run_chain(result), reference->reference, out);
+    return measured == STYLE_REFERENCE_OK ? ANALYZER_OK
+           : measured == STYLE_REFERENCE_ERR_COMPARE ? ANALYZER_ERR_LIBRARY
+           : measured == STYLE_REFERENCE_ERR_ARGUMENT ? ANALYZER_ERR_ARGUMENT : ANALYZER_ERR_ALLOC;
 }

@@ -1,14 +1,16 @@
 #ifndef URSATZ_ANALYZER_STYLE_PROFILE_INTERNAL_H
 #define URSATZ_ANALYZER_STYLE_PROFILE_INTERNAL_H
 
-#include <ursatz_analyzer/analysis_result.h>
+#include <cJSON.h>
+
 #include <ursatz_analyzer/style_profile.h>
 
 /*
- * Counts one piece into the profile from an analysis result, without rendering or parsing document text. The statistics
- * are those style_profile_add_document_json gives on the rendered document of the same result. STYLE_PROFILE_ERR_ARGUMENT
- * for a NULL argument or a result that did not run every chain stage.
+ * Fills *piece from one analysis document tree (schema version 9): the members a style profile counts, read as
+ * the profile has always read them (R-617). *piece must be empty (`StylePiece piece = {0}`); the caller releases it with
+ * style_piece_destroy. STYLE_PROFILE_ERR_FORMAT for a tree that is not an analysis document of that version,
+ * STYLE_PROFILE_ERR_ALLOC on allocation failure (*piece is then empty).
  */
-StyleProfileResult style_profile_add_result(StyleProfile *profile, const AnalyzerResult *result);
+StyleProfileResult style_piece_from_document(const cJSON *document, StylePiece *piece);
 
 #endif

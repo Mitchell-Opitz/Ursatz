@@ -13,6 +13,7 @@
 #include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/version.h>
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
@@ -272,7 +273,7 @@ static int run_style_profile(const char *corpus_output_dir, const char *name, co
         out_file = default_path;
     }
     int exit_code = 0;
-    if (style_model_file_write(profile, name, out_file) != STYLE_MODEL_FILE_OK) {
+    if (style_model_file_write(profile, name, URSATZ_ANALYZER_VERSION, out_file) != STYLE_MODEL_FILE_OK) {
         fprintf(stderr, "Error: cannot write '%s'\n", out_file);
         exit_code = 2;
     } else {

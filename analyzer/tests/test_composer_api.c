@@ -18,6 +18,7 @@
 #include <ursatz_analyzer/corpus.h>
 #include <io/imported_score.h>
 #include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/version.h>
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
@@ -214,7 +215,7 @@ static StyleModel *corpus_model_without(const char *name, size_t pieces, const c
     CHECKF(profile && style_profile_add_corpus(profile, output) == STYLE_PROFILE_OK, "%s profile", name);
     snprintf(file, sizeof(file), "%s/%s.style.json", work_dir, name);
     StyleModel *model = NULL;
-    CHECKF(profile && style_model_file_write(profile, name, file) == STYLE_MODEL_FILE_OK &&
+    CHECKF(profile && style_model_file_write(profile, name, URSATZ_ANALYZER_VERSION, file) == STYLE_MODEL_FILE_OK &&
                style_model_file_read_without(file, without, count, &model, NULL) == STYLE_MODEL_FILE_OK,
            "%s model", name);
     style_profile_destroy(profile);

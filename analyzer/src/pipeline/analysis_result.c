@@ -65,6 +65,10 @@ const AnalysisChain *analyzer_result_chain(const AnalyzerResult *result) {
     return result && result->notes->count > 0 ? result->chain : NULL;
 }
 
+const AnalysisChain *analyzer_result_run_chain(const AnalyzerResult *result) {
+    return result ? result->chain : NULL;
+}
+
 const ChainResult *analyzer_result_report(const AnalyzerResult *result) {
     return result ? analysis_chain_result(result->chain) : NULL;
 }

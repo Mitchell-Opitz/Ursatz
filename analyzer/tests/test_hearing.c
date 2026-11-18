@@ -12,9 +12,11 @@
 #include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/version.h>
 
 #include "pipeline/analysis_result_internal.h"
-#include "style/style_profile_internal.h"
+#include <chain/chain_style.h>
+#include <ursatz_analyzer/result_chain.h>
 #include "ursatz_test.h"
 #include "test_knowledge.h"
 
@@ -23,7 +25,7 @@
  *   - the events are not copied: the result's notes point at the caller's events,
  *   - the report equals that of analyzer_analyze over the same notes,
  *   - bad arguments are refused,
- *   - style_profile_add_result gives the statistics of style_profile_add_document_json on the rendered document,
+ *   - chain_style_piece counted into a profile gives the statistics of style_profile_add_document_json on the rendered document,
  *   - the distance against a style reference equals that of a second hearing of the same events,
  *   - the violations of a result equal those of the result of analyzer_analyze on the same notes.
  *
@@ -100,7 +102,7 @@ static StyleModel *model_of_document(const char *json, const char *file) {
     StyleProfile *profile = style_profile_create();
     StyleModel *model = NULL;
     CHECKF(profile && style_profile_add_document_json(profile, json) == STYLE_PROFILE_OK, "reference profile");
-    CHECKF(profile && style_model_file_write(profile, "reference", file) == STYLE_MODEL_FILE_OK &&
+    CHECKF(profile && style_model_file_write(profile, "reference", URSATZ_ANALYZER_VERSION, file) == STYLE_MODEL_FILE_OK &&
                style_model_file_read_without(file, NULL, 0, &model, NULL) == STYLE_MODEL_FILE_OK,
            "reference model");
     style_profile_destroy(profile);
@@ -240,11 +242,14 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     /* The result's profile equals the profile of its document. */
     StyleProfile *from_result = style_profile_create();
     StyleProfile *from_json = style_profile_create();
-    CHECKF(from_result && from_json && style_profile_add_result(from_result, heard) == STYLE_PROFILE_OK &&
+    StylePiece heard_piece = {0};
+    CHECKF(from_result && from_json && chain_style_piece(analyzer_result_chain(heard), &heard_piece) &&
+               style_profile_add_piece(from_result, &heard_piece) == STYLE_PROFILE_OK &&
                style_profile_add_document_json(from_json, json) == STYLE_PROFILE_OK,
            "%s: profiles", fixture);
     CHECKF(from_result && from_json && same_statistics(from_result, from_json),
            "%s: profile of the result differs from the profile of its document", fixture);
+    style_piece_destroy(&heard_piece);
     style_profile_destroy(from_result);
     style_profile_destroy(from_json);
 

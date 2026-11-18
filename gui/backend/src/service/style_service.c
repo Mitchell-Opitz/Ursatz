@@ -23,6 +23,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/version.h>
 
 #include "analysis_service.h"
 #include "collection_service.h"
@@ -787,7 +788,7 @@ static bool write_style_files(const char *dir, const char *id, const char *name,
     if (!text) {
         return false;
     }
-    bool ok = style_model_file_write(collected->profile, name, tmp_path) == STYLE_MODEL_FILE_OK &&
+    bool ok = style_model_file_write(collected->profile, name, URSATZ_ANALYZER_VERSION, tmp_path) == STYLE_MODEL_FILE_OK &&
               replace_file(tmp_path, model_path) && ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
     free(text);
     if (!ok) {
@@ -955,7 +956,7 @@ UrsatzGuiStyleResult ursatz_gui_style_build_file(const UrsatzGuiStyleSource *sou
         return result;
     }
 
-    if (style_model_file_write(collected.profile, final_name, tmp_path) != STYLE_MODEL_FILE_OK ||
+    if (style_model_file_write(collected.profile, final_name, URSATZ_ANALYZER_VERSION, tmp_path) != STYLE_MODEL_FILE_OK ||
         !replace_file(tmp_path, path)) {
         remove(tmp_path);
         result = URSATZ_GUI_STYLE_ERR_FAILED;

@@ -10,6 +10,7 @@
 #include <ursatz_analyzer/corpus.h>
 #include "theory/style/style_labels.h"
 #include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/version.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -133,7 +134,7 @@ static StyleProfile *profile_of(const char *name, size_t expected_pieces) {
 static StyleModel *model_of(StyleProfile *profile, const char *name) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s.style.json", work_dir, name);
-    CHECKF(style_model_file_write(profile, name, path) == STYLE_MODEL_FILE_OK, "cannot write %s", path);
+    CHECKF(style_model_file_write(profile, name, URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "cannot write %s", path);
     StyleModel *model = NULL;
     CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK, "cannot read %s", path);
     return model;
@@ -216,7 +217,7 @@ static char *masked_model(const char *path) {
 static void test_reference_snapshot(StyleProfile *reference) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/reference.style.json", work_dir);
-    CHECKF(style_model_file_write(reference, "reference", path) == STYLE_MODEL_FILE_OK, "cannot write the reference model");
+    CHECKF(style_model_file_write(reference, "reference", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "cannot write the reference model");
 
     char *masked = masked_model(path);
     char snapshot_path[1024];
@@ -262,7 +263,7 @@ static void test_round_trip(StyleProfile *reference) {
     style_statistics_free(from_model, model_count);
 
     /* The same profile written again gives the same bytes, and reading a file twice gives the same name. */
-    CHECKF(style_model_file_write(reference, "reference", second) == STYLE_MODEL_FILE_OK, "cannot write again");
+    CHECKF(style_model_file_write(reference, "reference", URSATZ_ANALYZER_VERSION, second) == STYLE_MODEL_FILE_OK, "cannot write again");
     char *a = test_read_file(first, NULL), *b = test_read_file(second, NULL);
     CHECKF(a && b && strcmp(a, b) == 0, "writing twice gives different bytes");
     free(a);
@@ -625,10 +626,10 @@ static void test_refusals(void) {
 
     /* A profile with nothing in it still writes and reads. */
     StyleProfile *empty = style_profile_create();
-    CHECKF(style_model_file_write(empty, "empty", path) == STYLE_MODEL_FILE_OK, "empty write");
+    CHECKF(style_model_file_write(empty, "empty", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "empty write");
     CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK && model, "empty read");
     style_model_destroy(model);
-    CHECKF(style_model_file_write(empty, "", path) == STYLE_MODEL_FILE_ERR_ARGUMENT, "an unnamed style is refused");
+    CHECKF(style_model_file_write(empty, "", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_ERR_ARGUMENT, "an unnamed style is refused");
     style_profile_destroy(empty);
 }
 

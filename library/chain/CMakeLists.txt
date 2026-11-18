@@ -39,6 +39,7 @@ add_library(ursatz_chain
     chain_result_voice_leading.c
     chain_result_voicing_check.c
     chain_score_input.c
+    chain_style.c
 )
 # Public headers (R-223), staged under chain/ in the build tree; the chain directory is private.
 ursatz_public_headers(ursatz_chain
@@ -49,6 +50,7 @@ ursatz_public_headers(ursatz_chain
         chain/chain_inputs.h
         chain/chain_result.h
         chain/chain_motive_sketch.h
+        chain/chain_style.h
 )
 target_link_libraries(ursatz_chain PUBLIC ursatz_analysis ursatz_io)
 
