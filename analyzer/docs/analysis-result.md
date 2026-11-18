@@ -31,9 +31,13 @@ The result borrows `notes`, which must outlive it. `analyzer_result_destroy(NULL
 
 On any status but `ANALYZER_OK`, `*out` is NULL and nothing is kept.
 
-`AnalyzerOptions.stages` holds the `ANALYSIS_CHAIN_STAGE_*` bits of `chain/analysis_chain.h` (bits 0 to 11) and
-the `ANALYZER_STAGE_*` bits for the Analyzer-only stages: progressions, harmonic rhythm, meter check, rhythm, markings
-and form plan. `analyzer_options_default()` selects all of them. A chain stage pulls in the stages
+`AnalyzerOptions.stages` holds the `ANALYSIS_CHAIN_STAGE_*` bits of `chain/analysis_chain.h`: bits 0 to 11 are the chain
+stages, bits 12 to 17 the stages of the collected result only (progressions, harmonic rhythm, meter check, rhythm,
+markings and form plan). `analyzer_options_default()` selects all of them (`ANALYSIS_CHAIN_STAGE_ALL`).
+
+The result is the library's: `analyzer_analyze` runs `analysis_chain_run_score` and holds the `AnalysisChain`;
+`analyzer_result_report` returns its `ChainResult` (`chain/chain_result.h`, R-615), the collected view the document is
+exported from. The collectors and the result-only stages live in `library/chain` ([chain README](../../library/chain/README.md)). A chain stage pulls in the stages
 it needs (see the chain header).
 
 Voicing stays on its own entry (`voicing_check.h`); counterpoint is checked with standard-counterpoint, not by the

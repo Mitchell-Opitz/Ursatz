@@ -64,9 +64,8 @@ file helpers and a document analyzer.
 
 ## Pipeline
 
-`main.c` runs `input_pipeline` (MIDI or MusicXML import through Ursatz, both into `ImportedScore`), then `analysis_pipeline`,
-which runs the analysis as one `AnalyzerPass` (`chain.h`) inside `analyzer_analyze` (`analysis_result.h`). The Analyzer orchestrates the library's analysis chain
-(`analysis_chain_run` of `ursatz_chain`, R-217, R-241) and collects its results; it adds no analysis of its own to them.
+`main.c` runs `input_pipeline` (MIDI or MusicXML import through Ursatz, both into `ImportedScore`), then `analyzer_analyze` (`analysis_result.h`),
+which runs the library's analysis chain on the score (`analysis_chain_run_score` of `ursatz_chain`, R-217, R-241, R-615) and holds its collected `ChainResult`; the Analyzer adds no analysis of its own to it.
 
 1. `chain_input`: builds the chain's neutral input from the imported notes: one `AnalysisNote` per event, sorted, and the
    file's key signature events.
