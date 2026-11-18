@@ -1,9 +1,9 @@
 # Hearing the phrase form
 
-`form_hear_in` (`src/form/form_internal.h`, over the run's hearing) hears the phrase-level form of a written plan through the Ursatz Analyzer.
-There is one analysis path in the Composer (R-257): the plan is rendered once, `analyzer_hear` (`<ursatz_analyzer/composer_api.h>`)
-analyzes the notes that start inside the span, and `form_hear_in` reads the themes, phrases and cadences of the Analyzer's
-result (`analysis_chain_themes`, `analysis_chain_phrases`, `analysis_chain_cadences` of `analyzer_result_chain`). It is how
+`form_hear_in` (`src/form/form_internal.h`, over the run's hearing) hears the phrase-level form of a written plan through the library chain.
+There is one analysis path in the Composer (R-257, R-618): the plan is rendered once, `analysis_chain_run_score` (`<chain/analysis_chain.h>`)
+runs on the notes that start inside the span (an `ImportedScore` view), and `form_hear_in` reads the themes, phrases and cadences of the
+chain (`analysis_chain_themes`, `analysis_chain_phrases`, `analysis_chain_cadences`) and its entries from `analysis_chain_result`. It is how
 the Composer checks the form of what it wrote with the framework's rules, never with rules of its own. Back to the [docs index](README.md).
 
 ```c
@@ -22,20 +22,19 @@ hearing_destroy(hearing);
 ## One hearing a run
 
 `src/check/hearing.h` (private) `ComposerHearing` renders the plan once (`plan_render`, every written lane) and keeps the
-render with the MIDI number of each note. `hearing_section(hearing, span, &result)` runs `analyzer_hear` over the events
+render with the MIDI number of each note. `hearing_section(hearing, span, &chain)` runs `analysis_chain_run_score` over the events
 that start inside the span (borrowed, not copied), with the meter map of the render, the key lane's key under the span's
-start, and a stream for each lane, and keeps the result for the life of the hearing, so a second check of the same span
+start, and a stream for each lane, and keeps the chain for the life of the hearing, so a second check of the same span
 reads the same result. `compose_run` makes one hearing after the texture stage, and `form_hear_in`, `return_hear_in`,
 `piece_check_keys_in`, `analyzer_check_section_in`, `analyzer_check_piece_in` and `composer_style_measure_in` read it;
 `analyzer_check_section` and `form_hear_keys` made on their own make a hearing of their own, and the tests make one for
 the others (`tests/support/test_composer.c`). `tools/ci/check-hearing.sh` (run in CI) fails when `src/` or `cli/` calls the
 library's form or texture detectors, an `analyzer_analyze_fragment` entry, or `plan_render` anywhere but `hearing.c`,
-`export.c` and `variations.c`.
+`export.c` and `variations.c`, or runs `analysis_chain_run_score` or `analysis_chain_run` anywhere but `hearing.c` and `accompaniment_hear.c`.
 
-The Composer hears one chord per segment: `hearing_analyzer_options` (`src/check/hearing_result.h`) sets `harmonic_spans` false
-for every `analyzer_hear` call, while the Analyzer's own output reads harmonic spans. Compose rates and baselines were recorded
-on the one-chord-per-segment reading, and on spans the Analyzer misreads the two-voice texture the Composer renders (melody and
-bass, no inner voices) at cadences (R-378, R-379). P41 keeps the hearing off spans (R-394; `testing/span-hearing.md`). Cadences are heard only at phrase points (Ursatz P41).
+The Composer hears with the Analyzer's settings (R-618): the chain's default configuration and every stage, so the chords are read on
+harmonic spans as the Analyzer's own output reads them. Until P61 B6 the hearing read one chord per segment (R-378, R-379, R-394);
+the baselines moved with it (`testing/span-hearing.md`). Cadences are heard only at phrase points (Ursatz P41).
 Keys change only at phrases with a cadence in the new key (Ursatz P42), so a key change inside a phrase is heard as a tonicization, not a modulation.
 
 ## What the Analyzer hears

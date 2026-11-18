@@ -1,6 +1,6 @@
 # Span hearing: the baselines heard on harmonic spans
 
-Measured 2026-11-09 for P41, which turns the hearing onto spans (R-378, R-379). Nothing here is a test: the hearing still reads one chord per segment (`hearing_analyzer_options` has `harmonic_spans = false`).
+Measured 2026-11-09 for P41, which turns the hearing onto spans (R-378, R-379). Nothing here is a test: the hearing still reads one chord per segment (`hearing_analyzer_options` has `harmonic_spans = false`). P61 B6 turned it onto spans: see the last section.
 
 Pins: Ursatz `c06f802` (P40 B6a merge), Ursatz-Analyzer `7525814` (P40 B6b merge). Debug build, full suite, slow tests included.
 
@@ -69,3 +69,18 @@ Failing on spans: `test_api_piece`, `test_api_theme` (response JSON differs), `t
 ### Why the hearing stays off spans
 
 The melody's cadences fall (22 to 18 of 30) and the grow-period-heard test fails. A bar-long arrival span's soprano is the highest note of its first beat, while the composed melody reaches the tonic later in the bar; the grid claims the cadence at the span, so the hearing misses it (R-394, R-395). The hearing moves onto spans when the arrival melody is measured (later phase).
+
+## P61 B6: the Composer hears on spans (R-618)
+
+Measured 2026-11-18 at P61 B6. The hearing is the library chain run by `analysis_chain_run_score` with its default configuration (harmonic spans on) and every stage, the settings the Analyzer uses; `hearing_analyzer_options` and `AnalyzerOptions.harmonic_spans` are gone. The refusal of R-394 is lifted: the Analyzer's own settings are the Composer's, so the two hear the same music the same way.
+
+| Measure | Before | After |
+| --- | --- | --- |
+| `test_middle_out` melody, sections heard / cadences (of 20) | 19 / 18 | 17 / 16 |
+| progression, sections heard / cadences (of 30) | 5 / 19 | 6 / 21 |
+| bass, sections heard / cadences (of 20) | 19 / 17 | 19 / 17 |
+| `test_grow_period_heard_compound_basic_idea_continuation`, 8 bars heard as requested | 40 of 40 | 32 of 40 (8 no theme); now WILL_FAIL |
+| `test_grow_period_heard_antecedent_consequent`, 8 bars | 38 of 40 | 32 of 40 |
+| `test_grow_sentence_heard`, all runs heard as a sentence | 19 of 80 | 16 of 80 |
+
+`test_explain_rejections` found no run the analysis contradicts in 300 seeds of A minor 3/4; it now composes a period in G major 6/8 (seeds 1 to 10 give 7 runs with a contradiction). The snapshots `theme-fast-minor`, `piece-loop-and-ending` and `fill-given` moved in their `style_distance` (harmony and overall) and `heard`/`cadences` members only. The listen outputs keep their notes (`mid` and `xml`), and `json` moves once (`themes/01.json` heard as a sentence, `themes/02.json` no theme heard). The piece sweep moves four pieces' notes (`large-rondo-2`, `sonatina-1`, `sonatina-2`, `sonatina-tonic-major-1`): listen to them before and after (`notes.md`, For Michelle).

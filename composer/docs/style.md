@@ -98,8 +98,8 @@ The scores the fill loop compares have to stay below 2^32, so a sum that would n
 
 ## Distance
 
-After a complete run with a style the whole plan is heard through the Analyzer (the run's one hearing, `analyzer_hear`) and the
-result is compared with the style by `analyzer_result_style_distance` against an `AnalyzerStyleReference` that
+After a complete run with a style the whole plan is heard through the library chain (the run's one hearing, `analysis_chain_run_score`) and the
+result is compared with the style by `chain_style_distance` against a `StyleReference` (`theory/style/style_reference.h`) that
 `composer_style_load_without` prepares once with the style (the without list applied when it is created, and again when
 `composer_style_add_without` changes it; `composer_style_measure_in`). That measure is independent of the closeness the Composer
 scores with. It is `ComposeOutcome.style_distance` (0 is the style, 1 is nothing alike), per dimension and overall, and is
