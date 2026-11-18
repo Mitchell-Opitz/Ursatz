@@ -11,7 +11,7 @@ documents). Code that needs the whole stack lives in the analysis chain (`chain/
 | Area | Holds | Former framework |
 |---|---|---|
 | `framework/` | The `Framework` type and `framework_singleton_get` | kernel `theory` |
-| `style/` | Style models from corpus statistics | kernel `theory` |
+| `style/` | Style models from corpus statistics, the labels and the profile counting (see Style below) | kernel `theory` |
 | `rules/` | `Rule`, `Constraint`, `Preference`, `Context` | kernel `rules`, `context` |
 | `knowledge/` | The knowledge snapshot: the entries of `knowledge/` embedded in the build, and the pitch material read from them | none (new, R-536) |
 | `vocabulary/` | Shared theory enums (`CadenceType`, `VoicePart`, ...) | kernel `semantics` |
@@ -28,6 +28,25 @@ Each area's `README.md` (`galant/sequences.md` for scale-harmonization) is the f
 
 Each framework's own `README.md` holds its full scope and exclusions. This page is the
 catalog and the shared conventions.
+
+## Style
+
+`theory/style/` holds everything about a style that does not read a document or a score (R-617). The Analyzer's job is to
+turn a document into a piece; counting, comparing and the model file are here.
+
+| File | Holds |
+|---|---|
+| `style_labels.h` | The labels a profile counts (numerals, progressions, intervals, durations, tempo and density bands, motive figures) and the category and dimension names. The Composer labels its own material with the same functions. |
+| `style_piece.h` | `StylePiece`: the facts about one piece a profile counts (chords, cadences, harmonic rhythm, meter, tempo, densities, phrases, soprano notes, non-chord tones, motive families, melody ranges, theme and section labels, the home key), with the `style_piece_add_*` functions that fill it. Two sources fill it: the Analyzer's document reader (`style_piece_from_document`) and `chain_style_piece` (`chain/chain_style.h`). |
+| `style_profile.h` | `StyleProfile` and `style_profile_add_piece`: the counts, sorted by category and label, with `style_profile_statistics`, the piece count and the training corpus label. |
+| `style_compare.h` | `style_profile_compare`: the total variation distance per category as an exact `Rational`, the dimension and overall means as `double`. A distance that does not fit in a `Rational` is `STYLE_COMPARE_ERR_OVERFLOW`. |
+| `style_model_file.h` | The style model file (`schema/style-model.v1.schema.json`): `style_model_file_write` (the producer's version is an argument), `style_model_file_read`, `style_model_file_read_without` and `style_model_statistics`. |
+| `style_reference.h` | `StyleReference`: a model prepared once to measure any number of fragments (`style_reference_distance`). |
+| `style_model.h`, `style_model_build.h`, `style_model_blend.h`, `style_features.h` | The `StyleModel`, its construction from statistics, blending and the statistics format. |
+
+`chain_style_distance` (`chain/chain_style.h`) measures the piece a chain heard against a reference: the chain's result becomes a
+piece, the piece a profile, the profile a distance. Documents, text exports and composed outputs do not depend on which source
+filled the piece: `test_style_piece` checks that both give one set of statistics on the five reference pieces.
 
 ## Catalog
 

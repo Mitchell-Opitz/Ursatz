@@ -17,8 +17,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `chain/chain_result.h` (the library chain's) | `ChainResult` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
 | `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalyzerResult` (or an `ChainResult`), serializes it as JSON, and derives `<stem>.analysis.json`. |
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
-| `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
-| `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
+| `style_profile.h` | `style_profile_add_document_json` and `style_profile_add_corpus`: count analysis documents into a `StyleProfile`. It includes the library's style headers (`theory/style/`: the labels, `StyleProfile` and its counting, `style_profile_compare`, the style model file reader and writer, see the [theory README](../../library/theory/README.md#style)). |
 | `staleness.h` | `analyzer_document_status` tells whether a stored analysis document is current (schema version, analyzer version and producer key all match this build) or stale; `analyzer_document_status_of` compares keys already read. See [corpus.md](corpus.md). |
 | `chord_sequence.h` | `analyzer_chord_sequence_from_document` gives the joined chord sequence (consecutive entries with one numeral, key region and root are one chord) of a stored document; `analyzer_chord_sequence_free` releases it. |
 | `playback.h` | Playback timing for an import as the GUI player needs it. See [gui-api.md](gui-api.md). |

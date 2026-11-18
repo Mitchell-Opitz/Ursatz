@@ -75,7 +75,7 @@ Counterpoint is checked with standard-counterpoint, not here.
 
 ## Style labels
 
-A caller that labels its own material to meet a style's counts uses the label builders of `style_labels.h`, the ones the
+A caller that labels its own material to meet a style's counts uses the label builders of `theory/style/style_labels.h`, the ones the
 profile uses ([style-profile.md](style-profile.md#label-builders)): `style_label_degree`, `style_label_join`, `style_label_motive_intervals` and `style_label_nct_figure`. A caller frees
 what `style_label_join` and `style_label_motive_intervals` return.
 
@@ -89,7 +89,7 @@ unchanged. The `test_composer_api_valgrind` run uses `tests/valgrind.supp`, whic
 melody and motive code leaks on every analysis.
 
 `tests/test_hearing.c`: on the five reference pieces, the result's notes point at the caller's events; the report's entry, key region and progression counts equal those of `analyzer_analyze`; the profile
-of a result equals the profile of its rendered document (`style_profile_add_result`); the distance against a reference
+of a result (`chain_style_piece` counted into a profile) equals the profile of its rendered document; the distance against a reference
 equals that of a second hearing of the same events; the violations equal those of `analyzer_analyze` on the same notes;
 bad arguments are refused. `test_hearing_smoke` runs Bach 114 only;
 `test_hearing_valgrind` runs the smoke test under valgrind.

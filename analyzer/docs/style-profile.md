@@ -7,7 +7,10 @@ ursatz-analyzer --style-profile <corpus output dir> --name <style name> [--out <
 ursatz-analyzer --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]
 ```
 
-Library: `include/ursatz_analyzer/style_profile.h` (profile, model file, comparison) and `style_labels.h` (the labels).
+Library: the profile, its counting, the comparison, the model file and the labels are the library's (`theory/style/`, see
+[the theory README](../../library/theory/README.md#style)); the Analyzer's `include/ursatz_analyzer/style_profile.h` keeps the two
+entries that read documents: `style_profile_add_document_json` and `style_profile_add_corpus`. A document is read into a
+`StylePiece` (`src/style/style_piece_document.c`) and the library counts it.
 
 A style profile counts harmony, rhythm, melody and form labels over the analysis documents of a corpus run (see
 [corpus.md](corpus.md)). It reads only the documents, never the scores. A profile says how often something was seen;
@@ -15,7 +18,7 @@ it is not a rule.
 
 ## Categories
 
-Every category is a `StyleStatistic` category string. Labels come from `style_labels.c`, so the Composer labels its own
+Every category is a `StyleStatistic` category string. Labels come from `theory/style/style_labels.c`, so the Composer labels its own
 material the same way. Only analysis documents of schema version 9 are read.
 
 | Dimension | Category | One label per | Label | Source in the document |
@@ -66,8 +69,8 @@ The Composer labels its own material with the same functions the profile uses, i
 `style_label_degree` (`1 b2 2 b3 3 4 #4 5 b6 6 b7 7`
 by the semitones above the tonic), `style_label_join` (the `motive-degrees` and `motive-rhythm` labels),
 `style_label_motive_intervals` (the `motive-intervals` label; no octave cap) and `style_label_nct_figure` (the
-`motive-nct-figure` label). `style_label_tempo` and `style_label_density` (the bands above) are internal to the
-Analyzer (`src/style/style_profile_internal.h`): the profile uses them and no other caller does.
+`motive-nct-figure` label). `style_label_tempo` and `style_label_density` (the bands above) are the library's too
+(`theory/style/style_labels.h`).
 
 ## The style model file
 
@@ -88,7 +91,8 @@ Analyzer (`src/style/style_profile_internal.h`): the profile uses them and no ot
 ```
 
 Statistics are sorted by category, then label, and the same profile always writes the same bytes. `--out` defaults to
-`<corpus output dir>/style-model.json`. The reader (`style_model_file_read`) rejects another schema or version, an
+`<corpus output dir>/style-model.json`. The writer (`style_model_file_write(profile, name, model_version, path)`) takes the version of the producer as an argument;
+the Analyzer passes its own. The reader (`style_model_file_read`) rejects another schema or version, an
 unknown dimension or category, a category under the wrong dimension, and a total that is not the sum of the counts.
 It builds a Ursatz `StyleModel` through `style_model_from_statistics`. The library has no id generator, so the id is
 `style-model-` and the 16 hex digits of the FNV-1a 64 hash of the file's bytes: the same file always gives the same id.
@@ -107,16 +111,14 @@ counts each category the model lacks as distance 1.
 
 `--compare-styles` (and `style_profile_compare`) gives, per category, the total variation distance between the two
 models' label frequencies: half the sum over labels of |count_a/total_a - count_b/total_b|. It is an exact fraction in
-lowest terms, held in 128 bits. A category only one model has is distance 1. A dimension's distance is the mean of its
-categories' distances, and the overall distance is the mean of the dimensions that have a category in either model. A
-category distance that does not fit in 128 bits is `STYLE_COMPARE_ERR_OVERFLOW`, never a wrapped value. A mean over
-categories (a dimension's or the overall distance) is exact while it fits in 128 bits; with the motive categories, whose
-labels are many, the exact mean of a real corpus needs more, and it is then the nearest fraction over 2^64
-(`dimension_exact` and `overall_exact` in `StyleComparison` say which). Each category also lists each model's three most
-frequent labels.
+lowest terms, held in a `Rational`. A category only one model has is distance 1. A dimension's distance is the mean of its
+categories' distances, and the overall distance is the mean of the dimensions that have a category in either model, both
+as `double` computed from the exact category distances. A category distance that does not fit in a `Rational` is
+`STYLE_COMPARE_ERR_OVERFLOW`, never a wrapped value. Each category also lists each model's three most frequent labels.
 
-The text output is `overall`, then each dimension with its categories indented, each as `0.4703 (n/d)`. The JSON output
-has `overall`, `dimensions` and `categories`, each distance as `{"fraction": "n/d", "value": 0.470300}`. Exit codes: 0,
+The text output is `overall`, then each dimension with its categories indented; a category reads `0.4703 (n/d)` and a mean
+`0.4703`. The JSON output has `overall`, `dimensions` and `categories`: a mean is a plain number (`"overall": 0.470300`), a
+category distance is `{"fraction": "n/d", "value": 0.470300}`. Exit codes: 0,
 1 usage, 2 an unreadable model or an overflow.
 
 ## Measured distances
