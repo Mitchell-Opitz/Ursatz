@@ -22,6 +22,26 @@
 #include "chain/chain_result_numerals.h"
 #include "chain/chain_result_spelling.h"
 
+bool chain_collect_map_notes(const ChainScoreInput *input, const ChainFormInput *built, size_t **indices, size_t *count) {
+    size_t note_count = built->input.note_count;
+    *indices = malloc(sizeof(size_t) * (note_count > 0 ? note_count : 1));
+    *count = 0;
+    if (!*indices) {
+        return false;
+    }
+    for (size_t n = 0; n < note_count; n++) {
+        size_t index = chain_score_input_import_index(input, built->input.notes[n].note_id);
+        if (index == (size_t)-1) {
+            free(*indices);
+            *indices = NULL;
+            *count = 0;
+            return false;
+        }
+        (*indices)[(*count)++] = index;
+    }
+    return true;
+}
+
 static const AnalysisChordReading NO_READING = {NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
 
 /* A Segmentation that views the chain's segments: the exact windows from the library's sonorities and the members' notes

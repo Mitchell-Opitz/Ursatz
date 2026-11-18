@@ -1,4 +1,5 @@
 #include "chain/chain_result_motive.h"
+#include "chain/chain_collect.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,17 +45,8 @@ bool motive_stage_read(MotiveStage *stage, const ChainScoreInput *input, const A
     /* The chain's note-level input, borrowed, for the notes the occurrences index and the meter. */
     stage->built = *built;
     stage->have_input = true;
-    size_t count = stage->built.input.note_count;
-    stage->note_indices = malloc(sizeof(size_t) * (count > 0 ? count : 1));
-    if (!stage->note_indices) {
+    if (!chain_collect_map_notes(input, &stage->built, &stage->note_indices, &stage->note_index_count)) {
         return false;
-    }
-    for (size_t n = 0; n < count; n++) {
-        size_t index = chain_score_input_import_index(input, stage->built.input.notes[n].note_id);
-        if (index == (size_t)-1) {
-            return false;
-        }
-        stage->note_indices[stage->note_index_count++] = index;
     }
     stage->motives = *motives;
     return true;

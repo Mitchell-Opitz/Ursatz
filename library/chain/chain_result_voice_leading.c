@@ -1,4 +1,5 @@
 #include "chain/chain_result_voice_leading.h"
+#include "chain/analysis_chain_internal.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -36,14 +37,10 @@ typedef struct {
     size_t row_count;
     ChainVoiceGrid grid;
     size_t *note_of_cell; /* ImportedScore index of each cell's note, NO_NOTE where the voice rests */
-    StandardCounterpointPreparedGrid prepared;
-    bool prepared_ok;
+    const StandardCounterpointPreparedGrid *prepared; /* the chain's own (R-615), borrowed */
 } VoiceGrid;
 
 static void grid_destroy(VoiceGrid *build) {
-    if (build->prepared_ok) {
-        standard_counterpoint_grid_destroy(&build->prepared);
-    }
     free(build->note_of_cell);
     memset(build, 0, sizeof(*build));
 }
@@ -82,12 +79,10 @@ static bool grid_build(const ImportedScore *notes, const ChainScoreInput *input,
         }
     }
     (void)notes;
-    StandardCounterpointGridStatus prepared = standard_counterpoint_grid_prepare(&build->grid.grid, &build->prepared);
-    if (prepared == STANDARD_COUNTERPOINT_GRID_ERR_ALLOC) {
-        return false;
-    }
-    build->prepared_ok = prepared == STANDARD_COUNTERPOINT_GRID_OK;
-    *declined = !build->prepared_ok;
+    /* The chain prepared the grid for its own motions and perfects (analysis_chain.c): the stage reads it, it does not
+       prepare it again. A run that had it declined would have failed there. */
+    *declined = !library->have_prepared_grid;
+    build->prepared = &library->prepared_grid;
     return true;
 }
 
@@ -224,7 +219,7 @@ static bool fill_chord(const VoiceGrid *build, const HarmonyStage *harmony, size
     if (build->voice_count == 4 && count == 4) {
         const PitchSpelling *spellings[4];
         for (size_t voice = 0; voice < 4; voice++) {
-            spellings[voice] = standard_counterpoint_grid_spelling(&build->prepared, row, voice);
+            spellings[voice] = standard_counterpoint_grid_spelling(build->prepared, row, voice);
         }
         int wide = chain_voicing_first_wide_spacing(spellings);
         chord->spacing_judged = wide != VOICING_SPACING_UNJUDGED;

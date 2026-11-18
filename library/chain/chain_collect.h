@@ -48,6 +48,11 @@ typedef struct ChainCollect {
     MotiveStage motives;     /* the note-level soprano input, its phrases, ideas and themes, and the motive families */
 } ChainCollect;
 
+/* The ImportedScore index of each note of a stage input (built->input.note_count entries, in the input's order), in a new array
+   *indices with its length *count: one map for the stages that index the score by the chain's notes (form, motive). False on
+   allocation failure or a note id the score does not hold; *indices is then NULL. */
+bool chain_collect_map_notes(const ChainScoreInput *input, const ChainFormInput *built, size_t **indices, size_t *count);
+
 /* Releases the collect's views, stage states and the result it filled; the chain calls it first when it is destroyed. */
 void chain_collect_destroy_results(AnalysisChain *chain);
 
