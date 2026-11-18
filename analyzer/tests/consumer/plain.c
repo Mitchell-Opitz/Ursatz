@@ -12,7 +12,7 @@
 #include <ursatz_analyzer/score_export.h>
 #include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/staleness.h>
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 #include <ursatz_analyzer/style_profile.h>
 
 int analyzer_consumer_plain(void) { return 0; }

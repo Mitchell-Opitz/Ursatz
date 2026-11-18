@@ -13,7 +13,7 @@
 #include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/staleness.h>
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/harmony_phrase.h>

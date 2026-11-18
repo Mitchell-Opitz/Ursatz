@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <theory/tonality/common_practice_materials.h>
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 #include <ursatz_analyzer/style_profile.h>
 
 #include <ursatz_composer/motive.h>

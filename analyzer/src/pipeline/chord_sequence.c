@@ -7,7 +7,7 @@
 #include <cJSON.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 
 #include "pipeline/chord_sequence_internal.h"
 #include "model/pitch/pitch_arithmetic.h"

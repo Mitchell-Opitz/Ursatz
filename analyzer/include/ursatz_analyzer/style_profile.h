@@ -7,7 +7,7 @@
 #include "theory/style/style_features.h"
 #include "theory/style/style_model.h"
 
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 
 /*
  * A style profile: counts of harmony, rhythm, melody and form labels (style_labels.h) over the analysis documents

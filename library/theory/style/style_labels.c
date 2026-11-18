@@ -1,4 +1,4 @@
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "model/core/rational.h"
-#include "style/style_profile_internal.h"
 #include "theory/tonality/roman_numeral_grammar.h"
 #include "theory/tonality/tonal_key.h"
 

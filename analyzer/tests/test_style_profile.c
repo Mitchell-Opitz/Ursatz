@@ -8,7 +8,7 @@
 #include "model/identity/entity_id.h"
 #include "theory/style/style_model_build.h"
 #include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 #include <ursatz_analyzer/style_profile.h>
 
 #include "test_support.h"

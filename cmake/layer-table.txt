@@ -51,7 +51,7 @@ uses relationship    model
 uses interpretation  model
 uses io              model realization ezxml
 uses theory-framework    model
-uses theory-style        model
+uses theory-style        model theory-tonality
 uses theory-rules        model theory-framework
 uses theory-vocabulary   model
 uses theory-knowledge    model cjson

@@ -1,5 +1,5 @@
-#ifndef URSATZ_ANALYZER_STYLE_LABELS_H
-#define URSATZ_ANALYZER_STYLE_LABELS_H
+#ifndef URSATZ_THEORY_STYLE_LABELS_H
+#define URSATZ_THEORY_STYLE_LABELS_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -92,5 +92,17 @@ char *style_label_motive_intervals(const int *semitones, size_t count);
  */
 bool style_label_nct_figure(const char *previous, const char *degree, const char *type, const char *next,
                             char *buffer, size_t size);
+
+/*
+ * A tempo in quarter notes per minute as a band of 20 from 40: "<40", "40-59", "60-79", ..., "200-219", "220+". A
+ * value on a boundary goes to the upper band, so 140 reads "140-159". Writes at most size bytes, always terminated.
+ */
+void style_label_tempo(double quarters_per_minute, char *buffer, size_t size);
+
+/*
+ * Attacks per beat rounded to the nearest 1/2 (halves up) and written as a reduced fraction: "1/2", "1", "3/2",
+ * "2"; 0 reads "0" and a rounded value of 4 or more reads "4+". Writes at most size bytes, always terminated.
+ */
+void style_label_density(double attacks_per_beat, char *buffer, size_t size);
 
 #endif

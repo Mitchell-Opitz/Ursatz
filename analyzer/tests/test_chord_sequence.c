@@ -9,7 +9,7 @@
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 
 #include <chain/analysis_chain.h>
 

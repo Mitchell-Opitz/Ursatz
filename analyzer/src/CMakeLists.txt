@@ -12,7 +12,6 @@ add_library(ursatz_analyzer STATIC
     pipeline/corpus.c
     pipeline/corpus_walk.c
     pipeline/run_file.c
-    style/style_labels.c
     style/style_profile.c
     style/style_model_file.c
     style/style_compare.c

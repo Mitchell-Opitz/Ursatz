@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 
 #include "style/style_profile_internal.h"
 #include "ursatz_test.h"
