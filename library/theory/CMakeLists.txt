@@ -4,7 +4,6 @@ add_library(ursatz_theory
     framework/framework.c
     framework/framework_singleton.c
     style/style_features.c
-    style/style_fraction.c
     style/style_labels.c
     style/style_model.c
     style/style_model_blend.c

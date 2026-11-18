@@ -291,8 +291,8 @@ static void print_json_fraction(unsigned long numerator, unsigned long denominat
 
 static void print_json_score(SimilarityScore score) {
     printf("{\"fraction\": ");
-    print_json_fraction(score.numerator, score.denominator);
-    printf(", \"value\": %.6f}", (double)score.numerator / (double)score.denominator);
+    print_json_fraction((unsigned long)score.num, (unsigned long)score.den);
+    printf(", \"value\": %.6f}", rational_to_double(score));
 }
 
 static void print_similar_json(const SimilarQuery *query, unsigned long min_numerator, unsigned long min_denominator,
@@ -353,12 +353,12 @@ static void print_similar_text(const SimilarQuery *query, const SimilarResults *
     }
     for (size_t i = 0; i < results->count; i++) {
         const SimilarMatch *m = &results->matches[i];
-        printf("%.4f (%lu/%lu) %s m.%d b.%g - m.%d b.%g", (double)m->score.similarity.numerator / (double)m->score.similarity.denominator,
-               m->score.similarity.numerator, m->score.similarity.denominator, m->piece, m->start_measure, m->start_beat,
+        printf("%.4f (%lu/%lu) %s m.%d b.%g - m.%d b.%g", rational_to_double(m->score.similarity),
+               (unsigned long)m->score.similarity.num, (unsigned long)m->score.similarity.den, m->piece, m->start_measure, m->start_beat,
                m->end_measure, m->end_beat);
         for (size_t d = 0; d < m->score.dimension_score_count; d++) {
             printf(" %s %lu/%lu", similarity_dimension_name(m->score.dimension_scores[d].dimension),
-                   m->score.dimension_scores[d].score.numerator, m->score.dimension_scores[d].score.denominator);
+                   (unsigned long)m->score.dimension_scores[d].score.num, (unsigned long)m->score.dimension_scores[d].score.den);
         }
         if (query->kind == SIMILAR_QUERY_PROGRESSION) {
             printf(" numerals %zu/%zu", m->numeral_matches, query->numeral_count);

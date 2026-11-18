@@ -91,7 +91,6 @@ add_library(ursatz_analysis
     galant/galant_analysis_match.c
     galant/scale_analysis_claim.c
     galant/scale_analysis_detect.c
-    similarity/query_fraction.c
     similarity/similarity_model.c
     similarity/similarity_scoring.c
 )

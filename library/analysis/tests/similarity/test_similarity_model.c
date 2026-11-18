@@ -117,12 +117,12 @@ static void test_invalid_models(void) {
 
 static void test_weights_that_cannot_be_summed(void) {
     /* Two LONG_MAX weights sum to 2 * LONG_MAX, which fits; three do not. */
-    const SimilarityDimensionWeight two_big[] = {{SIMILARITY_DIMENSION_INTERVAL, LONG_MAX, 1},
-                                                 {SIMILARITY_DIMENSION_RHYTHM, LONG_MAX, 1}};
+    const SimilarityDimensionWeight two_big[] = {{SIMILARITY_DIMENSION_INTERVAL, LONG_MAX / 2, 1},
+                                                 {SIMILARITY_DIMENSION_RHYTHM, LONG_MAX / 2, 1}};
     assert(create(two_big, 2) == SIMILARITY_MODEL_OK);
-    const SimilarityDimensionWeight three_big[] = {{SIMILARITY_DIMENSION_INTERVAL, LONG_MAX, 1},
-                                                   {SIMILARITY_DIMENSION_RHYTHM, LONG_MAX, 1},
-                                                   {SIMILARITY_DIMENSION_CONTOUR, LONG_MAX, 1}};
+    const SimilarityDimensionWeight three_big[] = {{SIMILARITY_DIMENSION_INTERVAL, LONG_MAX / 2, 1},
+                                                   {SIMILARITY_DIMENSION_RHYTHM, LONG_MAX / 2, 1},
+                                                   {SIMILARITY_DIMENSION_CONTOUR, LONG_MAX / 2, 1}};
     assert(create(three_big, 3) == SIMILARITY_MODEL_ERR_WEIGHT_OVERFLOW);
 
     /* Two thin fractions whose common denominator does not fit. */

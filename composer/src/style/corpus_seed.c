@@ -247,8 +247,8 @@ static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *mete
 
 /* Whether a score is within 1/10 of the best: 10 * score >= 10 * best - 1, in fractions. */
 static bool near_best(const SimilarityScore *score, const SimilarityScore *best) {
-    long double s = (long double)score->numerator / (long double)score->denominator;
-    long double b = (long double)best->numerator / (long double)best->denominator;
+    long double s = (long double)score->num / (long double)score->den;
+    long double b = (long double)best->num / (long double)best->den;
     return s >= b - 0.1L - 1e-12L;
 }
 
@@ -258,8 +258,8 @@ static void fill_match(const SimilarMatch *match, CorpusSeed *out) {
     out->start_beat = match->start_beat;
     out->end_measure = match->end_measure;
     out->end_beat = match->end_beat;
-    out->score_numerator = match->score.similarity.numerator;
-    out->score_denominator = match->score.similarity.denominator;
+    out->score_numerator = (unsigned long)match->score.similarity.num;
+    out->score_denominator = (unsigned long)match->score.similarity.den;
 }
 
 static CorpusSeedResult search(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,

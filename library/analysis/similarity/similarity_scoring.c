@@ -1,20 +1,12 @@
 #include "analysis/similarity/similarity_scoring.h"
 
+#include <limits.h>
 #include <stdlib.h>
 
-#include "analysis/similarity/query_fraction.h"
-
-static SimilarityScore from_fraction(QueryFraction fraction) {
-    SimilarityScore score = {fraction.numerator, fraction.denominator};
-    return score;
-}
 
 /* matches / total, in lowest terms. total is positive. */
 static SimilarityScore ratio_of(size_t matches, size_t total) {
-    QueryFraction fraction = {(unsigned long)matches, (unsigned long)total};
-    QueryFraction lowest;
-    query_fraction_reduce(fraction, &lowest);
-    return from_fraction(lowest);
+    return rational_ratio((long long)matches, (long long)total);
 }
 
 SimilarityScoreResult similarity_interval_score(const long *a, size_t a_count, const long *b, size_t b_count,
@@ -62,10 +54,8 @@ SimilarityScoreResult similarity_contour_score(const ContourDirection *a, size_t
 }
 
 /* d[i+1] / d[i] as an exact fraction. */
-static QueryFractionResult consecutive_ratio(const SimilarityDuration *durations, size_t i, QueryFraction *out) {
-    QueryFraction next = {durations[i + 1].numerator, durations[i + 1].denominator};
-    QueryFraction previous_inverse = {durations[i].denominator, durations[i].numerator};
-    return query_fraction_multiply(next, previous_inverse, out);
+static RationalResult consecutive_ratio(const SimilarityDuration *durations, size_t i, Rational *out) {
+    return rational_div(durations[i + 1], durations[i], out);
 }
 
 SimilarityScoreResult similarity_rhythm_score(const SimilarityDuration *a, size_t a_count,
@@ -77,12 +67,12 @@ SimilarityScoreResult similarity_rhythm_score(const SimilarityDuration *a, size_
         return SIMILARITY_SCORE_ERR_INVALID_INPUT;
     }
     for (size_t i = 0; i < a_count; i++) {
-        if (a[i].numerator == 0 || a[i].denominator == 0) {
+        if (a[i].num <= 0 || a[i].den <= 0) {
             return SIMILARITY_SCORE_ERR_INVALID_INPUT;
         }
     }
     for (size_t i = 0; i < b_count; i++) {
-        if (b[i].numerator == 0 || b[i].denominator == 0) {
+        if (b[i].num <= 0 || b[i].den <= 0) {
             return SIMILARITY_SCORE_ERR_INVALID_INPUT;
         }
     }
@@ -96,14 +86,11 @@ SimilarityScoreResult similarity_rhythm_score(const SimilarityDuration *a, size_
     }
     size_t matches = 0;
     for (size_t i = 0; i + 1 < a_count; i++) {
-        QueryFraction ratio_a, ratio_b;
-        int comparison = 0;
-        if (consecutive_ratio(a, i, &ratio_a) != QUERY_FRACTION_OK ||
-            consecutive_ratio(b, i, &ratio_b) != QUERY_FRACTION_OK ||
-            query_fraction_compare(ratio_a, ratio_b, &comparison) != QUERY_FRACTION_OK) {
+        Rational ratio_a, ratio_b;
+        if (consecutive_ratio(a, i, &ratio_a) != RATIONAL_OK || consecutive_ratio(b, i, &ratio_b) != RATIONAL_OK) {
             return SIMILARITY_SCORE_ERR_OVERFLOW;
         }
-        if (comparison == 0) {
+        if (rational_cmp(ratio_a, ratio_b) == 0) {
             matches++;
         }
     }
@@ -145,7 +132,7 @@ SimilarityScoreResult similarity_score(const SimilarityModel *model, const Simil
 
     SimilarityBreakdown breakdown;
     breakdown.dimension_score_count = 0;
-    QueryFraction sum = {0, 1};
+    Rational sum = {0, 1};
     SimilarityScoreResult status = SIMILARITY_SCORE_OK;
 
     for (size_t i = 0; i < similarity_model_dimension_count(model) && status == SIMILARITY_SCORE_OK; i++) {
@@ -179,11 +166,11 @@ SimilarityScoreResult similarity_score(const SimilarityModel *model, const Simil
             break;
         }
 
-        QueryFraction weight = {weight_numerator, weight_denominator};
-        QueryFraction term;
-        QueryFraction score_fraction = {score.numerator, score.denominator};
-        if (query_fraction_multiply(weight, score_fraction, &term) != QUERY_FRACTION_OK ||
-            query_fraction_add(sum, term, &sum) != QUERY_FRACTION_OK) {
+        Rational weight;
+        Rational term;
+        if (weight_numerator > LLONG_MAX || weight_denominator > LLONG_MAX ||
+            rational_make((long long)weight_numerator, (long long)weight_denominator, &weight) != RATIONAL_OK ||
+            rational_mul(weight, score, &term) != RATIONAL_OK || rational_add(sum, term, &sum) != RATIONAL_OK) {
             status = SIMILARITY_SCORE_ERR_OVERFLOW;
             break;
         }
@@ -198,12 +185,14 @@ SimilarityScoreResult similarity_score(const SimilarityModel *model, const Simil
     /* Dividing by the total weight is multiplying by its reciprocal. The total counts zero-weight dimensions as 0. */
     unsigned long total_numerator, total_denominator;
     similarity_model_total_weight(model, &total_numerator, &total_denominator);
-    QueryFraction reciprocal = {total_denominator, total_numerator};
-    QueryFraction combined;
-    if (query_fraction_multiply(sum, reciprocal, &combined) != QUERY_FRACTION_OK) {
+    Rational reciprocal;
+    Rational combined;
+    if (total_numerator > LLONG_MAX || total_denominator > LLONG_MAX ||
+        rational_make((long long)total_denominator, (long long)total_numerator, &reciprocal) != RATIONAL_OK ||
+        rational_mul(sum, reciprocal, &combined) != RATIONAL_OK) {
         return SIMILARITY_SCORE_ERR_OVERFLOW;
     }
-    breakdown.similarity = from_fraction(combined);
+    breakdown.similarity = combined;
     *out = breakdown;
     return SIMILARITY_SCORE_OK;
 }

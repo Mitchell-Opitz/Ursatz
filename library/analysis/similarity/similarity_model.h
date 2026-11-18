@@ -47,7 +47,7 @@ typedef enum {
     SIMILARITY_MODEL_ERR_ZERO_DENOMINATOR,
     SIMILARITY_MODEL_ERR_NEGATIVE_WEIGHT, /* a negative numerator or denominator */
     SIMILARITY_MODEL_ERR_ZERO_TOTAL_WEIGHT,
-    SIMILARITY_MODEL_ERR_WEIGHT_OVERFLOW, /* the weights' exact sum does not fit in unsigned long */
+    SIMILARITY_MODEL_ERR_WEIGHT_OVERFLOW, /* the weights' exact sum does not fit in a Rational */
     SIMILARITY_MODEL_ERR_ALLOC
 } SimilarityModelResult;
 

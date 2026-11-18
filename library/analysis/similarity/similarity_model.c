@@ -2,13 +2,13 @@
 
 #include <stdlib.h>
 
-#include "analysis/similarity/query_fraction.h"
+#include "model/core/rational.h"
 
 struct SimilarityModel {
     size_t count;
     SimilarityDimension dimensions[SIMILARITY_DIMENSION_COUNT];
-    QueryFraction weights[SIMILARITY_DIMENSION_COUNT];
-    QueryFraction total;
+    Rational weights[SIMILARITY_DIMENSION_COUNT];
+    Rational total;
 };
 
 const char *similarity_dimension_name(SimilarityDimension dimension) {
@@ -36,8 +36,8 @@ SimilarityModelResult similarity_model_create(const SimilarityDimensionWeight *w
         return SIMILARITY_MODEL_ERR_DUPLICATE_DIMENSION; /* more entries than dimensions exist */
     }
 
-    QueryFraction parsed[SIMILARITY_DIMENSION_COUNT];
-    QueryFraction total = {0, 1};
+    Rational parsed[SIMILARITY_DIMENSION_COUNT];
+    Rational total = {0, 1};
     int declared[SIMILARITY_DIMENSION_COUNT] = {0};
     for (size_t i = 0; i < count; i++) {
         SimilarityDimension dimension = weights[i].dimension;
@@ -54,13 +54,12 @@ SimilarityModelResult similarity_model_create(const SimilarityDimensionWeight *w
         if (weights[i].weight_numerator < 0 || weights[i].weight_denominator < 0) {
             return SIMILARITY_MODEL_ERR_NEGATIVE_WEIGHT;
         }
-        QueryFraction weight = {(unsigned long)weights[i].weight_numerator, (unsigned long)weights[i].weight_denominator};
-        if (query_fraction_reduce(weight, &parsed[i]) != QUERY_FRACTION_OK ||
-            query_fraction_add(total, parsed[i], &total) != QUERY_FRACTION_OK) {
+        if (rational_make(weights[i].weight_numerator, weights[i].weight_denominator, &parsed[i]) != RATIONAL_OK ||
+            rational_add(total, parsed[i], &total) != RATIONAL_OK) {
             return SIMILARITY_MODEL_ERR_WEIGHT_OVERFLOW;
         }
     }
-    if (total.numerator == 0) {
+    if (rational_is_zero(total)) {
         return SIMILARITY_MODEL_ERR_ZERO_TOTAL_WEIGHT;
     }
 
@@ -95,18 +94,18 @@ int similarity_model_dimension_at(const SimilarityModel *model, size_t index, Si
         *out_dimension = model->dimensions[index];
     }
     if (out_weight_numerator != NULL) {
-        *out_weight_numerator = model->weights[index].numerator;
+        *out_weight_numerator = (unsigned long)model->weights[index].num;
     }
     if (out_weight_denominator != NULL) {
-        *out_weight_denominator = model->weights[index].denominator;
+        *out_weight_denominator = (unsigned long)model->weights[index].den;
     }
     return 1;
 }
 
 void similarity_model_total_weight(const SimilarityModel *model, unsigned long *out_numerator,
                                    unsigned long *out_denominator) {
-    unsigned long numerator = model == NULL ? 0 : model->total.numerator;
-    unsigned long denominator = model == NULL ? 1 : model->total.denominator;
+    unsigned long numerator = model == NULL ? 0 : (unsigned long)model->total.num;
+    unsigned long denominator = model == NULL ? 1 : (unsigned long)model->total.den;
     if (out_numerator != NULL) {
         *out_numerator = numerator;
     }

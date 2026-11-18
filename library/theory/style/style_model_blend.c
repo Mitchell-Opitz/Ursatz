@@ -1,10 +1,11 @@
 #include "theory/style/style_model_blend.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "theory/style/style_features.h"
-#include "theory/style/style_fraction.h"
+#include "model/core/rational.h"
 #include "theory/style/style_model_build.h"
 
 static int compare_keys(const StyleStatistic *a, const StyleStatistic *b) {
@@ -12,30 +13,45 @@ static int compare_keys(const StyleStatistic *a, const StyleStatistic *b) {
     return by_category != 0 ? by_category : strcmp(a->label, b->label);
 }
 
-static StyleBlendResult from_fraction_result(StyleFractionResult status) {
+static StyleBlendResult from_rational_result(RationalResult status) {
     switch (status) {
-        case STYLE_FRACTION_OK:
+        case RATIONAL_OK:
             return STYLE_BLEND_OK;
-        case STYLE_FRACTION_ERR_OVERFLOW:
+        case RATIONAL_ERR_OVERFLOW:
             return STYLE_BLEND_ERR_OVERFLOW;
         default:
             return STYLE_BLEND_ERR_MALFORMED;
     }
 }
 
+/* count / total of a statistic, or 0 for a missing one. */
+static RationalResult frequency_of(const StyleStatistic *statistic, Rational *out) {
+    if (statistic == NULL) {
+        *out = rational_ratio(0, 1);
+        return RATIONAL_OK;
+    }
+    if (statistic->count > (unsigned long)LLONG_MAX || statistic->total > (unsigned long)LLONG_MAX) {
+        return RATIONAL_ERR_OVERFLOW;
+    }
+    return rational_make((long long)statistic->count, (long long)statistic->total, out);
+}
+
 /* weight_a * frequency_a + weight_b * frequency_b; a missing statistic (NULL) has frequency 0. */
-static StyleBlendResult blend_frequency(const StyleStatistic *a, const StyleStatistic *b, const StyleFraction *weight_a,
-                                        const StyleFraction *weight_b, StyleFraction *out) {
-    StyleFraction zero = {0, 1};
-    StyleFraction frequency_a = a == NULL ? zero : (StyleFraction){a->count, a->total};
-    StyleFraction frequency_b = b == NULL ? zero : (StyleFraction){b->count, b->total};
-    StyleFraction left, right;
-    StyleBlendResult status = from_fraction_result(style_fraction_multiply(weight_a, &frequency_a, &left));
+static StyleBlendResult blend_frequency(const StyleStatistic *a, const StyleStatistic *b, Rational weight_a,
+                                        Rational weight_b, Rational *out) {
+    Rational frequency_a, frequency_b, left, right;
+    StyleBlendResult status = from_rational_result(frequency_of(a, &frequency_a));
     if (status == STYLE_BLEND_OK) {
-        status = from_fraction_result(style_fraction_multiply(weight_b, &frequency_b, &right));
+        status = from_rational_result(frequency_of(b, &frequency_b));
     }
     if (status == STYLE_BLEND_OK) {
-        status = from_fraction_result(style_fraction_add(&left, &right, out));
+        status = from_rational_result(rational_mul(weight_a, frequency_a, &left));
+    }
+    if (status == STYLE_BLEND_OK) {
+        status = from_rational_result(rational_mul(weight_b, frequency_b, &right));
+    }
+    if (status == STYLE_BLEND_OK) {
+        status = from_rational_result(rational_add(left, right, out));
     }
     return status;
 }
@@ -67,8 +83,13 @@ StyleBlendResult style_model_blend(EntityID *id, const char *style_name, const c
     }
 
     /* w and 1 - w, as exact fractions. */
-    StyleFraction weight_b = {weight_numerator, weight_denominator};
-    StyleFraction weight_a = {weight_denominator - weight_numerator, weight_denominator};
+    if (weight_denominator > (unsigned long)LLONG_MAX) {
+        style_statistics_free(statistics_a, count_a);
+        style_statistics_free(statistics_b, count_b);
+        return STYLE_BLEND_ERR_OVERFLOW;
+    }
+    Rational weight_b = rational_ratio((long long)weight_numerator, (long long)weight_denominator);
+    Rational weight_a = rational_ratio((long long)(weight_denominator - weight_numerator), (long long)weight_denominator);
 
     StyleStatistic *blended = (StyleStatistic *)malloc((count_a + count_b + 1) * sizeof(*blended));
     StyleBlendResult result = blended == NULL ? STYLE_BLEND_ERR_ALLOC : STYLE_BLEND_OK;
@@ -89,13 +110,13 @@ StyleBlendResult style_model_blend(EntityID *id, const char *style_name, const c
             key = from_a;
         }
 
-        StyleFraction frequency;
-        result = blend_frequency(from_a, from_b, &weight_a, &weight_b, &frequency);
-        if (result == STYLE_BLEND_OK && frequency.numerator > 0) {
+        Rational frequency;
+        result = blend_frequency(from_a, from_b, weight_a, weight_b, &frequency);
+        if (result == STYLE_BLEND_OK && frequency.num > 0) {
             blended[blended_count].category = key->category;
             blended[blended_count].label = key->label;
-            blended[blended_count].count = frequency.numerator;
-            blended[blended_count].total = frequency.denominator;
+            blended[blended_count].count = (unsigned long)frequency.num;
+            blended[blended_count].total = (unsigned long)frequency.den;
             blended_count++;
         }
     }

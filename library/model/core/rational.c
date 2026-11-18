@@ -247,14 +247,6 @@ bool rational_checked_mul_unsigned(unsigned long long a, unsigned long long b, u
     return true;
 }
 
-bool rational_checked_add_unsigned(unsigned long long a, unsigned long long b, unsigned long long *out) {
-    if (b > ULLONG_MAX - a) {
-        return false;
-    }
-    *out = a + b;
-    return true;
-}
-
 double rational_to_double(Rational a) {
     return (double)a.num / (double)a.den;
 }

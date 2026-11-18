@@ -7,7 +7,7 @@
 #include "model/core/value.h"
 #include "model/identity/entity_id.h"
 #include "theory/style/style_features.h"
-#include "theory/style/style_fraction.h"
+#include "model/core/rational.h"
 #include "theory/style/style_model_blend.h"
 #include "theory/style/style_model_build.h"
 
@@ -163,7 +163,7 @@ static void test_bad_weights_and_arguments(void) {
     assert(style_model_blend(id, "n", "c", "v", a, b, 0, 0, &result) == STYLE_BLEND_ERR_WEIGHT_ZERO_DENOMINATOR);
     assert(style_model_blend(id, "n", "c", "v", a, b, 2, 1, &result) == STYLE_BLEND_ERR_WEIGHT_OUT_OF_RANGE);
     assert(style_model_blend(id, "n", "c", "v", a, b, 5, 4, &result) == STYLE_BLEND_ERR_WEIGHT_OUT_OF_RANGE);
-    assert(style_model_blend(id, "n", "c", "v", a, b, ULONG_MAX, ULONG_MAX - 1, &result) ==
+    assert(style_model_blend(id, "n", "c", "v", a, b, LLONG_MAX, LLONG_MAX - 1, &result) ==
            STYLE_BLEND_ERR_WEIGHT_OUT_OF_RANGE);
     assert(style_model_blend(NULL, "n", "c", "v", a, b, 1, 2, &result) == STYLE_BLEND_ERR_NULL_ARGUMENT);
     assert(style_model_blend(id, "n", "c", "v", NULL, b, 1, 2, &result) == STYLE_BLEND_ERR_NULL_ARGUMENT);
@@ -183,17 +183,17 @@ static void test_bad_weights_and_arguments(void) {
     assert(style_model_blend(id, "n", "c", "v", a, other, 1, 2, &result) == STYLE_BLEND_ERR_MALFORMED);
     style_model_destroy(other);
 
-    /* An exact result that does not fit in unsigned long is an error, not a wrapped value: half of 1/ULONG_MAX is
-       1/(2 * ULONG_MAX). */
-    const StyleStatistic tiny_a[] = {{"c", "x", 1, ULONG_MAX}};
-    const StyleStatistic tiny_b[] = {{"c", "x", 1, ULONG_MAX - 1}};
+    /* An exact result that does not fit in a Rational is an error, not a wrapped value: half of 1/LLONG_MAX is
+       1/(2 * LLONG_MAX). */
+    const StyleStatistic tiny_a[] = {{"c", "x", 1, LLONG_MAX}};
+    const StyleStatistic tiny_b[] = {{"c", "x", 1, LLONG_MAX - 1}};
     StyleModel *big_a = make_model("big-a", tiny_a, 1);
     StyleModel *big_b = make_model("big-b", tiny_b, 1);
     assert(style_model_blend(id, "n", "c", "v", big_a, big_b, 1, 2, &result) == STYLE_BLEND_ERR_OVERFLOW);
     assert(result == NULL);
     /* The same models at weight 0 and 1 stay exact (the weights cancel). */
-    const Expected only_a[] = {{"c", "x", 1, ULONG_MAX}};
-    const Expected only_b[] = {{"c", "x", 1, ULONG_MAX - 1}};
+    const Expected only_a[] = {{"c", "x", 1, LLONG_MAX}};
+    const Expected only_b[] = {{"c", "x", 1, LLONG_MAX - 1}};
     StyleModel *at_zero = blend(big_a, big_b, 0, 1);
     assert_frequencies(at_zero, only_a, 1);
     StyleModel *at_one = blend(big_a, big_b, 1, 1);
@@ -209,31 +209,28 @@ static void test_bad_weights_and_arguments(void) {
 }
 
 static void test_fractions(void) {
-    StyleFraction a = {1, 2}, b = {1, 3}, out = {9, 9};
-    assert(style_fraction_add(&a, &b, &out) == STYLE_FRACTION_OK && out.numerator == 5 && out.denominator == 6);
-    assert(style_fraction_multiply(&a, &b, &out) == STYLE_FRACTION_OK && out.numerator == 1 && out.denominator == 6);
-    StyleFraction unreduced = {6, 8};
-    assert(style_fraction_add(&unreduced, &unreduced, &out) == STYLE_FRACTION_OK && out.numerator == 3 &&
-           out.denominator == 2);
-    StyleFraction zero = {0, 5};
-    assert(style_fraction_add(&zero, &zero, &out) == STYLE_FRACTION_OK && out.numerator == 0 && out.denominator == 1);
+    /* The blend's arithmetic is Rational's: exact, reduced, and an overflow is an error, never a wrapped value. */
+    Rational a = rational_ratio(1, 2), b = rational_ratio(1, 3), out = {9, 9};
+    assert(rational_add(a, b, &out) == RATIONAL_OK && out.num == 5 && out.den == 6);
+    assert(rational_mul(a, b, &out) == RATIONAL_OK && out.num == 1 && out.den == 6);
+    Rational unreduced;
+    assert(rational_make(6, 8, &unreduced) == RATIONAL_OK);
+    assert(rational_add(unreduced, unreduced, &out) == RATIONAL_OK && out.num == 3 && out.den == 2);
+    Rational zero;
+    assert(rational_make(0, 5, &zero) == RATIONAL_OK);
+    assert(rational_add(zero, zero, &out) == RATIONAL_OK && out.num == 0 && out.den == 1);
 
-    out.numerator = 9;
-    out.denominator = 9;
-    StyleFraction bad = {1, 0}, big = {ULONG_MAX, 1}, one = {1, 1}, thin = {1, ULONG_MAX}, thin2 = {1, ULONG_MAX - 1};
-    assert(style_fraction_add(&bad, &a, &out) == STYLE_FRACTION_ERR_ZERO_DENOMINATOR);
-    assert(style_fraction_multiply(&a, &bad, &out) == STYLE_FRACTION_ERR_ZERO_DENOMINATOR);
-    assert(style_fraction_add(&big, &one, &out) == STYLE_FRACTION_ERR_OVERFLOW);
-    assert(style_fraction_add(&thin, &thin2, &out) == STYLE_FRACTION_ERR_OVERFLOW);
-    assert(style_fraction_multiply(&big, &big, &out) == STYLE_FRACTION_ERR_OVERFLOW);
-    assert(style_fraction_multiply(&thin, &thin, &out) == STYLE_FRACTION_ERR_OVERFLOW);
-    assert(out.numerator == 9 && out.denominator == 9);
-    assert(style_fraction_add(NULL, &a, &out) == STYLE_FRACTION_ERR_NULL_ARGUMENT);
-    assert(style_fraction_multiply(&a, &a, NULL) == STYLE_FRACTION_ERR_NULL_ARGUMENT);
+    out = rational_ratio(9, 1);
+    Rational big = {LLONG_MAX, 1}, one = {1, 1}, thin = {1, LLONG_MAX}, thin2 = {1, LLONG_MAX - 1};
+    assert(rational_make(1, 0, &out) == RATIONAL_ERR_ZERO_DENOMINATOR);
+    assert(rational_add(big, one, &out) == RATIONAL_ERR_OVERFLOW);
+    assert(rational_add(thin, thin2, &out) == RATIONAL_ERR_OVERFLOW);
+    assert(rational_mul(big, big, &out) == RATIONAL_ERR_OVERFLOW);
+    assert(rational_mul(thin, thin, &out) == RATIONAL_ERR_OVERFLOW);
+    assert(out.num == 9 && out.den == 1);
     /* Cancelling across keeps a large product exact. */
-    StyleFraction left = {ULONG_MAX, 3}, right = {3, ULONG_MAX};
-    assert(style_fraction_multiply(&left, &right, &out) == STYLE_FRACTION_OK && out.numerator == 1 &&
-           out.denominator == 1);
+    Rational left = {LLONG_MAX, 3}, right = {3, LLONG_MAX};
+    assert(rational_mul(left, right, &out) == RATIONAL_OK && out.num == 1 && out.den == 1);
 }
 
 int main(void) {

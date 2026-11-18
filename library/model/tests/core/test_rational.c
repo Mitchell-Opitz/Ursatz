@@ -113,8 +113,6 @@ static void test_unsigned_helpers(void) {
     unsigned long long v = 5;
     assert(!rational_checked_mul_unsigned(ULLONG_MAX, 2, &v) && v == 5);
     assert(rational_checked_mul_unsigned(1ULL << 32, 1ULL << 31, &v) && v == 1ULL << 63);
-    assert(!rational_checked_add_unsigned(ULLONG_MAX, 1, &v) && v == 1ULL << 63);
-    assert(rational_checked_add_unsigned(1, 2, &v) && v == 3);
     assert(rational_cmp_unsigned(1, ULLONG_MAX, 1, ULLONG_MAX - 1) < 0);
     Rational r = rational_ratio(6, 8);
     assert(r.num == 3 && r.den == 4);

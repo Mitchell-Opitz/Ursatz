@@ -66,13 +66,13 @@ static char *render(const SimilarResults *results) {
     size_t length = (size_t)snprintf(text, capacity, "%zu pieces searched, %zu matches\n", results->pieces_searched, results->count);
     for (size_t i = 0; i < results->count; i++) {
         const SimilarMatch *m = &results->matches[i];
-        length += (size_t)snprintf(text + length, capacity - length, "%lu/%lu %s m.%d b.%g - m.%d b.%g", m->score.similarity.numerator,
-                                   m->score.similarity.denominator, m->piece, m->start_measure, m->start_beat, m->end_measure,
+        length += (size_t)snprintf(text + length, capacity - length, "%lu/%lu %s m.%d b.%g - m.%d b.%g", m->score.similarity.num,
+                                   m->score.similarity.den, m->piece, m->start_measure, m->start_beat, m->end_measure,
                                    m->end_beat);
         for (size_t d = 0; d < m->score.dimension_score_count; d++) {
             length += (size_t)snprintf(text + length, capacity - length, " %s %lu/%lu",
                                        similarity_dimension_name(m->score.dimension_scores[d].dimension),
-                                       m->score.dimension_scores[d].score.numerator, m->score.dimension_scores[d].score.denominator);
+                                       m->score.dimension_scores[d].score.num, m->score.dimension_scores[d].score.den);
         }
         length += (size_t)snprintf(text + length, capacity - length, ", numerals %zu, notes %zu\n", m->numeral_matches, m->note_count);
     }
@@ -135,21 +135,21 @@ static void test_motive(void) {
         const SimilarMatch *first = &results.matches[0];
         CHECKF(strcmp(first->piece, motive_piece) == 0 && first->start_measure == 1 && first->start_beat == 1.0,
                "first match is %s m.%d b.%g", first->piece, first->start_measure, first->start_beat);
-        CHECKF(first->score.similarity.numerator == first->score.similarity.denominator, "first score %lu/%lu",
-               first->score.similarity.numerator, first->score.similarity.denominator);
+        CHECKF(first->score.similarity.num == first->score.similarity.den, "first score %lu/%lu",
+               first->score.similarity.num, first->score.similarity.den);
         CHECKF(first->note_count == 4 && first->notes[0].onset_numerator == 0 && first->notes[0].pitch == query.notes[0].pitch,
                "first match notes");
         bool returns = smoke; /* Bach 114 does not return to its opening notes; the full test checks Mozart 545 */
         for (size_t i = 1; i < results.count; i++) {
             const SimilarMatch *m = &results.matches[i];
             returns = returns || (strcmp(m->piece, "Mozart 545.mid") == 0 && m->start_measure > 1 &&
-                                  m->score.similarity.numerator == m->score.similarity.denominator);
+                                  m->score.similarity.num == m->score.similarity.den);
         }
         CHECKF(returns, "no full-score return of the motive in Mozart 545");
         for (size_t i = 1; i < results.count; i++) {
             const SimilarMatch *a = &results.matches[i - 1], *b = &results.matches[i];
-            CHECKF((unsigned __int128)a->score.similarity.numerator * b->score.similarity.denominator >=
-                       (unsigned __int128)b->score.similarity.numerator * a->score.similarity.denominator,
+            CHECKF((unsigned __int128)a->score.similarity.num * b->score.similarity.den >=
+                       (unsigned __int128)b->score.similarity.num * a->score.similarity.den,
                    "match %zu scores higher than the one before", i);
         }
     }
@@ -245,7 +245,7 @@ static void test_queries(void) {
     options.minimum_numerator = options.minimum_denominator = 1;
     CHECKF(similar_material_find(work_dir, test_knowledge(), &query, &options, &results) == SIMILAR_OK, "minimum 1");
     for (size_t i = 0; i < results.count; i++) {
-        CHECKF(results.matches[i].score.similarity.numerator == results.matches[i].score.similarity.denominator, "minimum 1 kept %zu", i);
+        CHECKF(results.matches[i].score.similarity.num == results.matches[i].score.similarity.den, "minimum 1 kept %zu", i);
     }
     options.max_results = 2;
     options.minimum_numerator = 0;

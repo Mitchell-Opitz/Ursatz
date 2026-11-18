@@ -1,6 +1,7 @@
 #include <ursatz_analyzer/similar_material.h>
 
 #include <stdbool.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,35 +50,18 @@ static bool location_member(const cJSON *entry, const char *edge, int *measure, 
     return true;
 }
 
-__extension__ typedef unsigned __int128 WideInt;
-
-static WideInt wide_gcd(WideInt a, WideInt b) {
-    while (b) {
-        WideInt t = a % b;
-        a = b;
-        b = t;
-    }
-    return a;
-}
-
-/* a - b as a fraction in lowest terms, for a >= b. false when the result does not fit. */
+/* a - b as a fraction in lowest terms, for a >= b. false when an operand or the result does not fit a Rational. */
 static bool rational_difference(unsigned long an, unsigned long ad, unsigned long bn, unsigned long bd, unsigned long *n,
                                 unsigned long *d) {
-    WideInt left = (WideInt)an * bd, right = (WideInt)bn * ad;
-    if (left < right) {
+    Rational a, b, difference;
+    if (an > (unsigned long)LLONG_MAX || ad > (unsigned long)LLONG_MAX || bn > (unsigned long)LLONG_MAX ||
+        bd > (unsigned long)LLONG_MAX || rational_make((long long)an, (long long)ad, &a) != RATIONAL_OK ||
+        rational_make((long long)bn, (long long)bd, &b) != RATIONAL_OK || rational_cmp(a, b) < 0 ||
+        rational_sub(a, b, &difference) != RATIONAL_OK) {
         return false;
     }
-    WideInt numerator = left - right, denominator = (WideInt)ad * bd;
-    WideInt divisor = wide_gcd(numerator, denominator);
-    if (divisor > 1) {
-        numerator /= divisor;
-        denominator /= divisor;
-    }
-    if (numerator > (unsigned long)-1 || denominator > (unsigned long)-1) {
-        return false;
-    }
-    *n = (unsigned long)numerator;
-    *d = (unsigned long)denominator;
+    *n = (unsigned long)difference.num;
+    *d = (unsigned long)difference.den;
     return true;
 }
 
@@ -421,8 +405,7 @@ typedef struct {
 
 static int compare_candidates(const void *x, const void *y) {
     const Candidate *a = x, *b = y;
-    int order = rational_cmp_unsigned(b->score.similarity.numerator, b->score.similarity.denominator,
-                                      a->score.similarity.numerator, a->score.similarity.denominator);
+    int order = rational_cmp(b->score.similarity, a->score.similarity);
     if (order != 0) {
         return order;
     }
@@ -543,8 +526,9 @@ static bool consider_window(const Search *search, const long *query_intervals, s
     if (scored != SIMILARITY_SCORE_OK) {
         return false;
     }
-    if (rational_cmp_unsigned(breakdown.similarity.numerator, breakdown.similarity.denominator,
-                              search->options->minimum_numerator, search->options->minimum_denominator) < 0) {
+    if (search->options->minimum_numerator > (unsigned long)LLONG_MAX || search->options->minimum_denominator > (unsigned long)LLONG_MAX ||
+        rational_cmp(breakdown.similarity, rational_ratio((long long)search->options->minimum_numerator,
+                                                          (long long)search->options->minimum_denominator)) < 0) {
         return true;
     }
     if (candidates->count == candidates->capacity) {
@@ -658,8 +642,7 @@ static bool matches_add(Matches *matches, SimilarMatch match) {
 
 static int compare_matches(const void *x, const void *y) {
     const SimilarMatch *a = x, *b = y;
-    int order = rational_cmp_unsigned(b->score.similarity.numerator, b->score.similarity.denominator,
-                                      a->score.similarity.numerator, a->score.similarity.denominator);
+    int order = rational_cmp(b->score.similarity, a->score.similarity);
     if (order == 0) {
         order = strcmp(a->piece, b->piece);
     }
