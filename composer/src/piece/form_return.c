@@ -369,7 +369,7 @@ void return_payload_destroy(void *payload) {
 
 /* ------------------------------------------------------------- the target */
 
-static bool find_return(const PiecePlan *plan, NodeId section, PlanReturn *out) {
+static bool find_return(const PiecePlan *plan, NodeId section, ReturnRef *out) {
     const SectionDescription *description = plan_section_or_empty(plan, section);
     NodeId source = description->returns[0] != '\0' ? plan_section_named(plan, description->returns) : PLAN_NODE_NONE;
     if (source == PLAN_NODE_NONE) {
@@ -487,7 +487,7 @@ static bool variation_offered(SectionReturnVariation variation) {
 }
 
 /* Whether the section's RETURN names another section of the piece that is as long, in the same meter and in keys of the same shape. */
-static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
+static bool return_geometry(const PiecePlan *plan, NodeId section, ReturnRef *ret) {
     PlanMeter source_meter;
     PlanMeter target_meter;
     int shift;
@@ -512,17 +512,17 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *r
              return_mode_shift_by(plan, from, plan, to, &shift, &to_material)));
 }
 
-bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
+bool return_target(const PiecePlan *plan, NodeId section, ReturnRef *ret) {
     return return_geometry(plan, section, ret);
 }
 
 bool form_return_copies(const PiecePlan *plan, NodeId section) {
-    PlanReturn ret;
+    ReturnRef ret;
     return return_geometry(plan, section, &ret);
 }
 
 bool form_return_mode_change(const PiecePlan *plan, NodeId section, const PitchMaterial **to) {
-    PlanReturn ret;
+    ReturnRef ret;
     int shift;
     const PitchMaterial *to_material = NULL;
     if (!return_geometry(plan, section, &ret)) {
@@ -538,7 +538,7 @@ bool form_return_mode_change(const PiecePlan *plan, NodeId section, const PitchM
 }
 
 bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, SectionReturnVariation *variation) {
-    PlanReturn ret;
+    ReturnRef ret;
     if (!plan_has_node(plan, section) || plan_node_kind(plan, section) != PLAN_NODE_SECTION ||
         plan_node_state(plan, section) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, section) != 0 ||
         !plan_section_or_empty(plan, section)->has_pairing || !return_geometry(plan, section, &ret) ||
@@ -702,7 +702,7 @@ static bool chord_in_source(const ChordAt *chord, const ChordAt *source, size_t 
 }
 
 bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *changed, size_t *total) {
-    PlanReturn ret;
+    ReturnRef ret;
     size_t count;
     size_t source_count;
     if (!plan_has_node(plan, section) || !find_return(plan, section, &ret) || !plan_has_node(plan, ret.section)) {
@@ -725,7 +725,7 @@ bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *c
 }
 
 bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *changed) {
-    PlanReturn ret;
+    ReturnRef ret;
     size_t count;
     size_t source_count;
     if (!plan_has_node(plan, section) || !find_return(plan, section, &ret) || !plan_has_node(plan, ret.section)) {
@@ -753,7 +753,7 @@ bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *ch
 }
 
 bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar, bool *changed) {
-    PlanReturn ret;
+    ReturnRef ret;
     PlanMeter meter;
     size_t count;
     size_t source_count;
@@ -807,7 +807,7 @@ static bool cadence_numerals(const PiecePlan *plan, NodeId section, char *out, s
 }
 
 bool form_return_cadence_numerals(const PiecePlan *plan, NodeId section, char *from, char *to, size_t size) {
-    PlanReturn ret;
+    ReturnRef ret;
     return plan_has_node(plan, section) && find_return(plan, section, &ret) && plan_has_node(plan, ret.section) &&
            cadence_numerals(plan, ret.section, from, size) && cadence_numerals(plan, section, to, size);
 }
@@ -845,7 +845,7 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     PlanSpan from = plan_node_span(plan, source);
     payload->magic = RETURN_PAYLOAD_MAGIC;
     payload->variation = variation;
-    PlanReturn ret = {0};
+    ReturnRef ret = {0};
     if (find_return(plan, target, &ret)) {
         payload->setting = ret.setting;
     }
@@ -1069,7 +1069,7 @@ bool form_return_checker(const PiecePlan *plan, FillTarget target, const FillOpe
         return fill_default_checker(plan, target, operator_, candidate, context, out);
     }
     const ReturnPayload *payload = candidate->payload;
-    PlanReturn ret;
+    ReturnRef ret;
     if (!payload || payload->magic != RETURN_PAYLOAD_MAGIC || target.kind != FILL_TARGET_NODE) {
         return false;
     }

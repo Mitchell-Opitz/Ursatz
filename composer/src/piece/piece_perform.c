@@ -88,17 +88,21 @@ static PieceResult copy_keys(PiecePlan *performed, NodeId form, const PiecePlan 
 
 /* The constraints a performed section holds: the source's letter, cadences and key. */
 static PieceResult copy_constraints(PiecePlan *performed, NodeId node, const PiecePlan *plan, NodeId source) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, source); i++) {
+    const SectionDescription *from = plan_section_or_empty(plan, source);
+    SectionDescription description = *plan_node_section(performed, node);
+    snprintf(description.letter, sizeof(description.letter), "%s", from->letter);
+    description.has_cadence = from->has_cadence;
+    description.cadence = from->cadence;
+    description.has_first_cadence = from->has_first_cadence;
+    description.first_cadence = from->first_cadence;
+    PieceResult result = piece_result_of_plan(plan_node_set_section(performed, node, &description));
+    for (size_t i = 0; result == PIECE_OK && i < plan_node_constraint_count(plan, source); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, source, i);
-        if (constraint->kind == PLAN_CONSTRAINT_SECTION_LETTER || constraint->kind == PLAN_CONSTRAINT_CADENCE ||
-            constraint->kind == PLAN_CONSTRAINT_KEY) {
-            PieceResult result = piece_add_constraint(performed, node, constraint);
-            if (result != PIECE_OK) {
-                return result;
-            }
+        if (constraint->kind == PLAN_CONSTRAINT_KEY) {
+            result = piece_add_constraint(performed, node, constraint);
         }
     }
-    return PIECE_OK;
+    return result;
 }
 
 /* Whether the section at `index` of a part's size is the first or the last of a repeated group, and whether it is in one. */

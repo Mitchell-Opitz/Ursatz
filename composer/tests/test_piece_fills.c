@@ -52,10 +52,7 @@ static NodeId theme_section(const PiecePlan *plan) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        bool material = false;
-        for (size_t c = 0; c < plan_node_constraint_count(plan, child); c++) {
-            material = material || plan_node_constraint_at(plan, child, c)->kind == PLAN_CONSTRAINT_MATERIAL;
-        }
+        bool material = plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL);
         if (plan_node_kind(plan, child) == PLAN_NODE_SECTION && !material) {
             return child;
         }
@@ -110,11 +107,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *out, size_t max) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form) && count < max; i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        bool material = false;
-        for (size_t c = 0; c < plan_node_constraint_count(plan, child); c++) {
-            PlanConstraintKind kind = plan_node_constraint_at(plan, child, c)->kind;
-            material = material || kind == PLAN_CONSTRAINT_MATERIAL || kind == PLAN_CONSTRAINT_SEAM;
-        }
+        bool material = plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL) || plan_section_has_role(plan, child, SECTION_ROLE_SEAM);
         if (!material) {
             out[count++] = child;
         }

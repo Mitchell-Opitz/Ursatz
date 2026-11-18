@@ -81,27 +81,14 @@ static bool is_transition(const PiecePlan *plan, NodeId section) {
     return plan_section_function_of(plan, section, &function) && function.function == SECTION_FUNCTION_TRANSITION;
 }
 
-/* The CADENCE constraints of the section, replaced by these. */
+/* The cadences of the section, replaced by these: the one it ends in, then an antecedent's weak one. */
 static PieceResult set_section_cadences(PiecePlan *plan, NodeId section, const CadenceType *cadences, size_t count) {
-    for (size_t i = plan_node_constraint_count(plan, section); i > 0; i--) {
-        if (plan_node_constraint_at(plan, section, i - 1)->kind == PLAN_CONSTRAINT_CADENCE) {
-            PieceResult result = piece_result_of_plan(plan_node_remove_constraint(plan, section, i - 1));
-            if (result != PIECE_OK) {
-                return result;
-            }
-        }
-    }
-    for (size_t i = 0; i < count; i++) {
-        PlanConstraint constraint;
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = cadences[i];
-        PieceResult result = piece_result_of_plan(plan_node_add_constraint(plan, section, &constraint));
-        if (result != PIECE_OK) {
-            return result;
-        }
-    }
-    return PIECE_OK;
+    SectionDescription description = *plan_section_or_empty(plan, section);
+    description.has_cadence = count > 0;
+    description.cadence = count > 0 ? cadences[0] : CADENCE_TYPE_PERFECT_AUTHENTIC;
+    description.has_first_cadence = count > 1;
+    description.first_cadence = count > 1 ? cadences[1] : CADENCE_TYPE_PERFECT_AUTHENTIC;
+    return piece_result_of_plan(plan_node_set_section(plan, section, &description));
 }
 
 PieceResult piece_plan_cadences(PiecePlan *plan, const FormSpec *form, const FormSpecSize *size, const PieceKeyPlan *keys) {

@@ -24,33 +24,17 @@ typedef enum {
     PLAN_CONSTRAINT_CADENCE,
     PLAN_CONSTRAINT_MOTIVE_REF,
     PLAN_CONSTRAINT_KEY,
-    PLAN_CONSTRAINT_ARCHETYPE,
     PLAN_CONSTRAINT_EMBELLISH, /* no parameters: a harmony span reopened for the embellishment pass */
     PLAN_CONSTRAINT_SCHEMA,    /* the galant schema a span was made from, and which stage of it */
-    PLAN_CONSTRAINT_MATERIAL,  /* no parameters: on a section node, its subtree is source material, not part of the piece */
     PLAN_CONSTRAINT_HARMONY_SHAPE, /* the shape a harmony span is to take (R-050) */
-    PLAN_CONSTRAINT_THEME_PAIRING, /* how a theme begins and how it ends */
     PLAN_CONSTRAINT_ACCOMPANIMENT, /* the accompaniment an inner voice span is to be written as */
     PLAN_CONSTRAINT_VOICING,       /* the four-part voicing an inner voice span is to be written as */
     PLAN_CONSTRAINT_COUNTERPOINT,  /* the counter-melody an inner voice span is to be written as */
-    PLAN_CONSTRAINT_RETURN,        /* on a section node: the earlier section it returns, and how it varies it */
-    PLAN_CONSTRAINT_LAYERS,        /* on a section node: which lanes sound in it */
-    PLAN_CONSTRAINT_SECTION_LETTER, /* on a section node: its form letter ("A", "B", "A'") */
     PLAN_CONSTRAINT_INVENT_MOTIVE,  /* no parameters: a motive's melody span to be invented (motive-invent) */
     PLAN_CONSTRAINT_STYLE,          /* on the form node: the style model file the fill prefers, and how strongly (R-080) */
     PLAN_CONSTRAINT_SOURCE,         /* on a motive node, or a section holding a given progression: the corpus passage it was taken from */
     PLAN_CONSTRAINT_PICKUP,         /* on a melody span: its first `length` is an anacrusis before the first downbeat note (R-168) */
-    PLAN_CONSTRAINT_PIECE_PART,     /* on a section node: the part of a piece structure it is and its id (R-169) */
-    PLAN_CONSTRAINT_FREE_PHRASE,    /* no parameters: on a section node, a phrase of any length in beats (R-170), not a theme */
-    PLAN_CONSTRAINT_HOLD,           /* no parameters: on a section node, the stages from structure to texture leave it alone; the seam stage fills it (R-171) */
-    PLAN_CONSTRAINT_SEAM,           /* no parameters: on a section node, the bar after the loop's end, a Given copy of the body's first bar (R-171) */
-    PLAN_CONSTRAINT_MOTIVE_TONES,   /* on a motive node: its base harmony and the tone role of each note (R-215) */
-    PLAN_CONSTRAINT_PEDAL,          /* on a section node: its presentation is written over a pedal on `degree` (R-446) */
-    PLAN_CONSTRAINT_CONSTRUCTION,   /* on a section node: the bars of each idea of its theme, its extensions, and why (R-468) */
-    PLAN_CONSTRAINT_CONNECTIVE,     /* on a held section: its last bar ends with a connective into the next section (R-486) */
-    PLAN_CONSTRAINT_LIQUIDATION,    /* no parameters: on a section node, the pattern liquidated over a dominant pedal (R-494) */
-    PLAN_CONSTRAINT_FIGURE,         /* on a section node with a RETURN of variation FIGURATE: its motive of variation (R-497) */
-    PLAN_CONSTRAINT_SECTION_FUNCTION /* on a section node: the part of a larger form it is (R-503) */
+    PLAN_CONSTRAINT_MOTIVE_TONES    /* on a motive node: its base harmony and the tone role of each note (R-215) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -178,27 +162,12 @@ typedef struct {
 } PlanCounterpoint;
 
 /*
- * A returning section (R-068, R-070): section is the section node it returns, variation how the return differs
- * from it. The constraint must name a section node.
- */
-typedef struct {
-    NodeId section;
-    SectionReturnVariation variation;
-    PlanAccompanimentPattern setting; /* SETTING: the pattern of the new accompaniment: block, arpeggiated, alberti or oom-pah */
-    bool across_modes; /* REHARMONIZE: a source in the other mode is moved by the tonic step and mapped into the target's mode (R-524) */
-} PlanReturn;
-
-/*
  * The lanes that sound in a layer section: bit (1u << lane) for each PlanLaneKind. A layer section is grown in
  * full; the mask decides only what is rendered. At least one bit, none past PLAN_LANE_INNER_VOICE.
  */
 #define PLAN_LAYER_BIT(lane) (1u << (unsigned)(lane))
 #define PLAN_LAYERS_ALL (PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE + 1) - 1u)
 _Static_assert(PLAN_LAYERS_ALL == SECTION_LAYERS_ALL, "PlanLayers follows SECTION_LAYERS_ALL");
-
-typedef struct {
-    unsigned lanes;
-} PlanLayers;
 
 /* A section's form letter: one to three characters, NUL-terminated ("A", "B", "A'", "V1"). */
 #define PLAN_SECTION_LETTER_MAX 4
@@ -250,17 +219,9 @@ typedef struct {
     unsigned long score_denominator;
 } PlanSource;
 
-/*
- * The part of a game loop section (piece.h) a section is, and the id the request gave it. part is a PiecePart:
- * 0 intro, 1 body, 2 turnaround, 3 ending.
- */
+/* The size of the id the request gave a game loop section, and the number of its parts (piece.h PiecePart). */
 #define PLAN_PIECE_ID_MAX 16
 #define PLAN_PIECE_PART_COUNT 4
-
-typedef struct {
-    int part;
-    char id[PLAN_PIECE_ID_MAX];
-} PlanPiecePart;
 
 /*
  * The tones of a motive (R-215), on its motive node beside the melody span's notes: the base harmony the notes were
@@ -289,20 +250,6 @@ typedef struct {
     size_t label_count;
 } PlanMotiveTones;
 
-/* The scale degree a pedal sounds in the bass. Only 5 (the dominant) is valid. */
-typedef struct {
-    int degree;
-} PlanPedal;
-
-/*
- * A connective (R-486): the last bar of a held section ends with a short stepwise line into the first note of the next
- * section. written is false until the seam stage has written it, and stays false when the line could not be written
- * within the melodic rules.
- */
-typedef struct {
-    bool written;
-} PlanConnective;
-
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -311,37 +258,45 @@ typedef struct {
         CadenceType cadence;
         PlanMotiveRef motive;
         AnalysisKey key;
-        PlanArchetype archetype;
         PlanSchemaRef schema;
         PlanHarmonyShape harmony_shape;
-        SectionPairing theme_pairing;
         PlanAccompaniment accompaniment;
         PlanVoicing voicing;
         PlanCounterpoint counterpoint;
-        PlanReturn section_return;
-        PlanLayers layers;
-        char letter[PLAN_SECTION_LETTER_MAX];
         PlanStyle style;
         PlanSource source;
         Rational pickup; /* the anacrusis: on the meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division), shorter than two wholes */
-        PlanPiecePart piece_part;
         PlanMotiveTones motive_tones;
-        PlanPedal pedal;
-        SectionConstruction construction;
-        PlanConnective connective;
-        SectionFigure figure;
-        SectionFunction section_function;
     } params;
 } PlanConstraint;
 
 /* The description of a section node (plan/section.h): NULL for a node that is not a section. The pointer is valid until the plan changes. */
 const SectionDescription *plan_node_section(const PiecePlan *plan, NodeId id);
+/*
+ * Replaces a section node's description. PLAN_ERR_BAD_PAYLOAD when it fails section_description_check for a plan or
+ * names a return that is not a section node of the plan; PLAN_ERR_GIVEN_LOCKED on a Given node; PLAN_ERR_BAD_KIND on a node
+ * that is not a section.
+ */
+PlanResult plan_node_set_section(PiecePlan *plan, NodeId id, const SectionDescription *description);
 
-/* Fails with PLAN_ERR_BAD_PAYLOAD for a constraint that is malformed or names a missing motive node. */
+/* The description of a section node; an empty one for a node that is not a section or not in the plan, so a reader needs no NULL test. */
+const SectionDescription *plan_section_or_empty(const PiecePlan *plan, NodeId node);
+
+/* Whether the node is a section whose description has the role (material, seam, liquidation, a piece part). */
+bool plan_section_has_role(const PiecePlan *plan, NodeId node, SectionRole role);
+
+/* Whether the node is a part of a game loop piece (intro, body, turnaround or ending, R-169): *part is its PiecePart, 0 to 3. */
+bool plan_section_part_of(const PiecePlan *plan, NodeId node, int *part);
+
+/* The first section node with this name, or PLAN_NODE_NONE. */
+NodeId plan_section_named(const PiecePlan *plan, const char *name);
+
+/* The cadence a node ends in: a section's description gives it, any other node its first CADENCE constraint; false when none. */
+bool plan_node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out);
+
+/* Fails with PLAN_ERR_BAD_PAYLOAD for a constraint that is malformed or names a missing motive node, and for a cadence on a section node (its description holds them). */
 PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint);
 size_t plan_node_constraint_count(const PiecePlan *plan, NodeId id);
-/* Whether the node has a constraint of the kind. */
-bool plan_node_has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind);
 /* The first constraint of the kind on the node, or NULL. The pointer is valid until the list changes. */
 const PlanConstraint *plan_node_find_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind);
 /* NULL for an unknown id or an index past the end. The pointer is valid until the list changes. */

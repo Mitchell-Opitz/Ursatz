@@ -17,6 +17,7 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
+#include <plan/section_json.h>
 #include <ursatz_composer/theme_shape.h>
 
 #include "plan/plan_internal.h"
@@ -39,9 +40,11 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const KEY_ANCHOR_NAMES[] = {"home", "previous"};
 /* A version 1 file wrote a chord with no function as "unknown". */
 #define LEGACY_FUNCTION_NONE "unknown"
-static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
-                                                  "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction", "connective", "liquidation", "figure", "section_function"};
+/* The constraint kinds a plan holds, in PlanConstraintKind order. Plan formats 1 to 4 also wrote the kinds of LEGACY_KINDS, which are
+   now the members of a section's description. */
+static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "embellish", "schema", "harmony_shape",
+                                                  "accompaniment", "voicing", "counterpoint", "invent_motive", "style", "source", "pickup",
+                                                  "motive_tones"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
 /* The parts of a game loop, in PiecePart order (piece.h). */
 static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "ending"};
@@ -157,17 +160,12 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     case PLAN_CONSTRAINT_KEY:
         ok = ok && key_members_json(object, &constraint->params.key);
         break;
-    case PLAN_CONSTRAINT_ARCHETYPE:
-        ok = ok && plan_json_add(object, "type", cJSON_CreateString(ARCHETYPE_NAMES[constraint->params.archetype]));
-        break;
     case PLAN_CONSTRAINT_EMBELLISH:
         break;
     case PLAN_CONSTRAINT_SCHEMA:
         ok = ok && plan_json_add(object, "schema", cJSON_CreateString(galant_schema_name(
                                                     (GalantSchemaId)constraint->params.schema.schema))) &&
              plan_json_add(object, "stage", json_number(constraint->params.schema.stage));
-        break;
-    case PLAN_CONSTRAINT_MATERIAL:
         break;
     case PLAN_CONSTRAINT_HARMONY_SHAPE: {
         const PlanHarmonyShape *shape = &constraint->params.harmony_shape;
@@ -181,12 +179,6 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         }
         break;
     }
-    case PLAN_CONSTRAINT_THEME_PAIRING:
-        ok = ok && plan_json_add(object, "beginning",
-                            cJSON_CreateString(theme_shape_beginning(constraint->params.theme_pairing.beginning)->plan_name)) &&
-             plan_json_add(object, "ending",
-                           cJSON_CreateString(theme_shape_ending(constraint->params.theme_pairing.ending)->plan_name));
-        break;
     case PLAN_CONSTRAINT_ACCOMPANIMENT: {
         const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
         ok = ok && plan_json_add(object, "pattern", cJSON_CreateString(ACCOMPANIMENT_NAMES[accompaniment->pattern]));
@@ -212,34 +204,6 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && plan_json_add(object, "species", json_number(constraint->params.counterpoint.species)) &&
              plan_json_add(object, "above", cJSON_CreateBool(constraint->params.counterpoint.above));
         break;
-    case PLAN_CONSTRAINT_RETURN:
-        ok = ok && plan_json_add(object, "section", json_number((long)plan_node_rank(plan, constraint->params.section_return.section))) &&
-             plan_json_add(object, "variation",
-                      cJSON_CreateString(section_return_variation_name(constraint->params.section_return.variation)));
-        if (ok && constraint->params.section_return.variation == SECTION_RETURN_SETTING) {
-            ok = plan_json_add(object, "setting",
-                               cJSON_CreateString(ACCOMPANIMENT_NAMES[constraint->params.section_return.setting]));
-        }
-        if (ok && constraint->params.section_return.across_modes) {
-            ok = plan_json_add(object, "across_modes", cJSON_CreateBool(true));
-        }
-        break;
-    case PLAN_CONSTRAINT_LAYERS: {
-        cJSON *lanes = cJSON_CreateArray();
-        ok = ok && plan_json_add(object, "lanes", lanes);
-        for (size_t lane = 0; ok && lane < PLAN_LANE_NAME_COUNT; lane++) {
-            if (constraint->params.layers.lanes & PLAN_LAYER_BIT(lane)) {
-                ok = plan_json_append(lanes, cJSON_CreateString(plan_lane_names[lane]));
-            }
-        }
-        break;
-    }
-    case PLAN_CONSTRAINT_SECTION_LETTER: {
-        char letter[PLAN_SECTION_LETTER_MAX];
-        snprintf(letter, sizeof(letter), "%s", constraint->params.letter);
-        ok = ok && plan_json_add(object, "letter", cJSON_CreateString(letter));
-        break;
-    }
     case PLAN_CONSTRAINT_INVENT_MOTIVE:
         break;
     case PLAN_CONSTRAINT_STYLE: {
@@ -301,36 +265,6 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && plan_json_add(object, "length", cJSON_CreateString(length));
         break;
     }
-    case PLAN_CONSTRAINT_PEDAL:
-        ok = ok && plan_json_add(object, "degree", json_number(constraint->params.pedal.degree));
-        break;
-    case PLAN_CONSTRAINT_CONSTRUCTION: {
-        const SectionConstruction *construction = &constraint->params.construction;
-        cJSON *ideas = cJSON_CreateObject();
-        cJSON *extensions = cJSON_CreateArray();
-        ok = ok && plan_json_add(object, "ideas", ideas) && plan_json_add(object, "extensions", extensions);
-        for (int idea = 0; ok && idea < SECTION_CONSTRUCTION_IDEAS; idea++) {
-            if (construction->idea_bars[idea] != 0) {
-                ok = plan_json_add(ideas, theme_shape_idea_name((GrowIdea)idea),
-                                   json_number(construction->idea_bars[idea]));
-            }
-        }
-        for (size_t i = 0; ok && i < construction->extension_count; i++) {
-            const SectionExtension *extension = &construction->extensions[i];
-            cJSON *item = cJSON_CreateObject();
-            ok = plan_json_append(extensions, item) &&
-                 plan_json_add(item, "kind", cJSON_CreateString(section_extension_kind_name(extension->kind))) &&
-                 plan_json_add(item, "idea", cJSON_CreateString(theme_shape_idea_name((GrowIdea)extension->idea))) &&
-                 plan_json_add(item, "bars", json_number(extension->bars)) &&
-                 plan_json_add(item, "varied", cJSON_CreateBool(extension->varied));
-        }
-        ok = ok && plan_json_add(object, "reason", cJSON_CreateString(section_construction_reason_name(construction->reason)));
-        break;
-    }
-    case PLAN_CONSTRAINT_PIECE_PART:
-        ok = ok && plan_json_add(object, "part", cJSON_CreateString(PIECE_PART_NAMES[constraint->params.piece_part.part])) &&
-             plan_json_add(object, "id", cJSON_CreateString(constraint->params.piece_part.id));
-        break;
     case PLAN_CONSTRAINT_MOTIVE_TONES: {
         const PlanMotiveTones *tones = &constraint->params.motive_tones;
         cJSON *harmony = cJSON_CreateArray();
@@ -352,30 +286,6 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         }
         break;
     }
-    case PLAN_CONSTRAINT_CONNECTIVE:
-        ok = ok && plan_json_add(object, "written", cJSON_CreateBool(constraint->params.connective.written));
-        break;
-    case PLAN_CONSTRAINT_FIGURE: {
-        const SectionFigure *figure = &constraint->params.figure;
-        ok = ok && plan_json_add(object, "figure", cJSON_CreateString(section_figure_kind_name(figure->kind))) &&
-             plan_json_add(object, "rhythm", cJSON_CreateString(section_figure_rhythm_name(figure->rhythm))) &&
-             plan_json_add(object, "harmony", cJSON_CreateString(figure->reharmonize ? "reharmonized" : "kept")) &&
-             plan_json_add(object, "change_at", figure->change_at ? json_number((long)figure->change_at) : cJSON_CreateNull()) &&
-             plan_json_add(object, "climax", cJSON_CreateBool(figure->climax));
-        break;
-    }
-    case PLAN_CONSTRAINT_SECTION_FUNCTION: {
-        const SectionFunction *function = &constraint->params.section_function;
-        ok = ok && plan_json_add(object, "function", cJSON_CreateString(section_function_kind_name(function->function))) &&
-             plan_json_add(object, "independent", cJSON_CreateBool(function->independent)) &&
-             plan_json_add(object, "lyric", cJSON_CreateBool(function->lyric));
-        break;
-    }
-    case PLAN_CONSTRAINT_FREE_PHRASE:
-    case PLAN_CONSTRAINT_HOLD:
-    case PLAN_CONSTRAINT_SEAM:
-    case PLAN_CONSTRAINT_LIQUIDATION:
-        break;
     }
     if (!ok) {
         cJSON_Delete(object);
@@ -415,6 +325,9 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
     ok = ok && plan_json_add(composer, "id", json_number((long)plan_node_rank(plan, id))) &&
          plan_json_add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_node_state(plan, id)])) &&
          plan_json_add(composer, "constraints", node_constraints_json(plan, id));
+    if (ok && plan_node_kind(plan, id) == PLAN_NODE_SECTION) {
+        ok = plan_json_add(composer, "section", section_to_json(plan_node_section(plan, id), SECTION_USE_PLAN));
+    }
     ok = ok && plan_json_add(object, "kind", cJSON_CreateString(NODE_KINDS[plan_node_kind(plan, id)])) &&
          plan_json_add(object, "label", name ? cJSON_CreateString(name) : cJSON_CreateNull()) &&
          plan_json_add(object, "span", span_json(plan_node_span(plan, id)));
@@ -822,7 +735,15 @@ static bool read_return_variation(JsonReader *reader, const cJSON *object, const
 }
 
 /* A return's setting (R-518): required for a setting return, refused for any other. */
-static bool read_return_setting(JsonReader *reader, const cJSON *object, const char *path, PlanReturn *out) {
+/* A return as plan formats 1 to 4 wrote it: the section it returns by id, how it varies it, the setting and whether it crosses modes. */
+typedef struct {
+    NodeId section;
+    SectionReturnVariation variation;
+    PlanAccompanimentPattern setting;
+    bool across_modes;
+} LegacyReturn;
+
+static bool read_return_setting(JsonReader *reader, const cJSON *object, const char *path, LegacyReturn *out) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, "setting");
     char at[PLAN_JSON_PATH_MAX];
     json_child_path(at, path, "setting");
@@ -1030,7 +951,7 @@ static bool read_optional_bool(JsonReader *reader, const cJSON *object, const ch
 }
 
 /* The optional across_modes of a reharmonized return (R-524); true on any other variation is refused. */
-static bool read_return_across_modes(JsonReader *reader, const cJSON *object, const char *path, PlanReturn *out) {
+static bool read_return_across_modes(JsonReader *reader, const cJSON *object, const char *path, LegacyReturn *out) {
     if (!read_optional_bool(reader, object, path, "across_modes", &out->across_modes)) {
         return false;
     }
@@ -1579,6 +1500,173 @@ static bool read_section_function(JsonReader *reader, const cJSON *item, const c
     return true;
 }
 
+/*
+ * The constraints plan formats 1 to 4 wrote on a section node, which are the members of its description from format 5 on (R-607):
+ * archetype (derived from the pairing), material, theme_pairing, return, layers, section_letter, piece_part, free_phrase, hold,
+ * seam, pedal, construction, connective, liquidation, figure and section_function; a section's cadence constraints are its cadence
+ * and, second, its first cadence. section_from_old_constraints is the one place that reads them: apply_old_constraint takes
+ * one into the description, and the reader sets the description once the node's constraints are read.
+ */
+static const char *const LEGACY_KINDS[] = {"archetype", "material", "theme_pairing", "return", "layers", "section_letter",
+                                              "piece_part", "free_phrase", "hold", "seam", "pedal", "construction", "connective",
+                                              "liquidation", "figure", "section_function"};
+#define LEGACY_COUNT COUNT_OF(LEGACY_KINDS)
+
+/* The index of the kind a constraint object names in LEGACY_KINDS, or -1 for any other kind. */
+static int old_constraint_kind(const cJSON *item) {
+    const cJSON *kind = cJSON_IsObject(item) ? cJSON_GetObjectItemCaseSensitive(item, "kind") : NULL;
+    for (size_t i = 0; cJSON_IsString(kind) && i < LEGACY_COUNT; i++) {
+        if (strcmp(kind->valuestring, LEGACY_KINDS[i]) == 0) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+static const char *result_name(PlanResult result);
+
+static bool apply_old_constraint(JsonReader *reader, const PiecePlan *plan, const cJSON *item, const char *path, int legacy,
+                                 SectionDescription *d) {
+    int value;
+    long number;
+    char at[PLAN_JSON_PATH_MAX];
+    switch (legacy) {
+    case 0: /* archetype: the pairing says it */
+        return read_enum_member(reader, item, path, "type", ARCHETYPE_NAMES, COUNT_OF(ARCHETYPE_NAMES), &value);
+    case 1: /* material */
+        d->has_role = true;
+        d->role = SECTION_ROLE_MATERIAL;
+        return true;
+    case 2: { /* theme_pairing */
+        int ending;
+        if (!read_theme_half(reader, item, path, "beginning", true, &value) ||
+            !read_theme_half(reader, item, path, "ending", false, &ending)) {
+            return false;
+        }
+        d->has_pairing = true;
+        d->pairing.beginning = (SectionBeginning)value;
+        d->pairing.ending = (SectionEnding)ending;
+        return true;
+    }
+    case 3: { /* return */
+        LegacyReturn ret;
+        memset(&ret, 0, sizeof(ret));
+        if (!json_read_int_member(reader, item, path, "section", 1, TIME_LIMIT, &number) ||
+            !read_return_variation(reader, item, path, &ret.variation)) {
+            return false;
+        }
+        ret.section = (NodeId)number;
+        if (!read_return_setting(reader, item, path, &ret) || !read_return_across_modes(reader, item, path, &ret)) {
+            return false;
+        }
+        if (!plan_has_node(plan, ret.section) || plan_node_kind(plan, ret.section) != PLAN_NODE_SECTION) {
+            return json_fail(reader, PLAN_ERR_FORMAT, path, "constraint %s", result_name(PLAN_ERR_BAD_PAYLOAD));
+        }
+        const char *name = plan_node_name(plan, ret.section);
+        snprintf(d->returns, sizeof(d->returns), "%s", name ? name : "");
+        d->variation = ret.variation;
+        d->setting = (SectionSetting)ret.setting;
+        d->mode = ret.across_modes ? SECTION_MODE_HOME : SECTION_MODE_NONE;
+        return true;
+    }
+    case 4: { /* layers */
+        const cJSON *lanes = plan_json_member(reader, item, path, "lanes", true);
+        if (!lanes) {
+            return false;
+        }
+        char lanes_path[PLAN_JSON_PATH_MAX];
+        json_child_path(lanes_path, path, "lanes");
+        if (!cJSON_IsArray(lanes)) {
+            return json_bad_format(reader, lanes_path, "expected an array of lane names");
+        }
+        size_t index = 0;
+        const cJSON *lane;
+        d->layers = 0;
+        cJSON_ArrayForEach(lane, lanes) {
+            json_index_path(at, lanes_path, index++);
+            if (!read_enum(reader, lane, at, plan_lane_names, PLAN_LANE_NAME_COUNT, &value)) {
+                return false;
+            }
+            d->layers |= PLAN_LAYER_BIT(value);
+        }
+        return d->layers != 0 ? true : json_bad_format(reader, lanes_path, "a layer sounds at least one lane");
+    }
+    case 5: { /* section_letter */
+        const cJSON *letter = plan_json_member(reader, item, path, "letter", true);
+        if (!letter) {
+            return false;
+        }
+        json_child_path(at, path, "letter");
+        if (!cJSON_IsString(letter) || letter->valuestring[0] == '\0' || strlen(letter->valuestring) >= SECTION_LETTER_MAX) {
+            return json_bad_format(reader, at, "expected one to three characters");
+        }
+        snprintf(d->letter, sizeof(d->letter), "%s", letter->valuestring);
+        return true;
+    }
+    case 6: { /* piece_part */
+        const cJSON *id = NULL;
+        if (!read_enum_member(reader, item, path, "part", PIECE_PART_NAMES, COUNT_OF(PIECE_PART_NAMES), &value) ||
+            !(id = plan_json_member(reader, item, path, "id", true))) {
+            return false;
+        }
+        json_child_path(at, path, "id");
+        if (!cJSON_IsString(id) || id->valuestring[0] == '\0' || strlen(id->valuestring) >= SECTION_ID_MAX) {
+            return json_bad_format(reader, at, "expected one to fifteen characters");
+        }
+        d->has_role = true;
+        d->role = (SectionRole)(SECTION_ROLE_INTRO + value);
+        snprintf(d->id, sizeof(d->id), "%s", id->valuestring);
+        return true;
+    }
+    case 7: /* free_phrase */
+        d->free_phrase = true;
+        return true;
+    case 8: /* hold */
+        d->leads_in = true;
+        return true;
+    case 9: /* seam */
+        d->has_role = true;
+        d->role = SECTION_ROLE_SEAM;
+        return true;
+    case 10: /* pedal */
+        if (!json_read_int_member(reader, item, path, "degree", 1, 7, &number)) {
+            return false;
+        }
+        if (number != 5) {
+            return json_fail(reader, PLAN_ERR_FORMAT, path, "constraint %s", result_name(PLAN_ERR_BAD_PAYLOAD));
+        }
+        d->pedal = 5;
+        return true;
+    case 11: /* construction */
+        d->has_construction = true;
+        return read_construction(reader, item, path, &d->construction);
+    case 12: { /* connective */
+        const cJSON *written = plan_json_member(reader, item, path, "written", true);
+        if (!written) {
+            return false;
+        }
+        if (!cJSON_IsBool(written)) {
+            json_child_path(at, path, "written");
+            return json_bad_format(reader, at, "expected true or false");
+        }
+        d->connective = SECTION_CONNECTIVE_ALWAYS; /* the plan holds that it was asked for; sometimes was drawn at build */
+        d->connective_written = cJSON_IsTrue(written);
+        return true;
+    }
+    case 13: /* liquidation */
+        d->has_role = true;
+        d->role = SECTION_ROLE_LIQUIDATION;
+        return true;
+    case 14: /* figure */
+        d->has_figure = true;
+        return read_figure(reader, item, path, &d->figure);
+    case 15: /* section_function */
+        d->has_function = true;
+        return read_section_function(reader, item, path, &d->function);
+    }
+    return false;
+}
+
 static bool read_constraint(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object");
@@ -1608,12 +1696,6 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         return read_motive_ref(reader, item, path, &out->params.motive);
     case PLAN_CONSTRAINT_KEY:
         return read_key_members(reader, item, path, &out->params.key);
-    case PLAN_CONSTRAINT_ARCHETYPE:
-        if (!read_enum_member(reader, item, path, "type", ARCHETYPE_NAMES, COUNT_OF(ARCHETYPE_NAMES), &value)) {
-            return false;
-        }
-        out->params.archetype = (PlanArchetype)value;
-        return true;
     case PLAN_CONSTRAINT_EMBELLISH:
         return true;
     case PLAN_CONSTRAINT_SCHEMA: {
@@ -1644,8 +1726,6 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         out->params.schema.stage = (int)number_value;
         return true;
     }
-    case PLAN_CONSTRAINT_MATERIAL:
-        return true;
     case PLAN_CONSTRAINT_HARMONY_SHAPE: {
         PlanHarmonyShape *shape = &out->params.harmony_shape;
         int anchor;
@@ -1673,16 +1753,6 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         return read_optional_int(reader, item, path, "max_cells_per_chord", 0, 64, &shape->max_cells_per_chord) &&
                read_optional_bool(reader, item, path, "split_at_bars", &shape->split_at_bars) &&
                read_optional_bool(reader, item, path, "pedal", &shape->pedal);
-    }
-    case PLAN_CONSTRAINT_THEME_PAIRING: {
-        int ending;
-        if (!read_theme_half(reader, item, path, "beginning", true, &value) ||
-            !read_theme_half(reader, item, path, "ending", false, &ending)) {
-            return false;
-        }
-        out->params.theme_pairing.beginning = (SectionBeginning)value;
-        out->params.theme_pairing.ending = (SectionEnding)ending;
-        return true;
     }
     case PLAN_CONSTRAINT_ACCOMPANIMENT: {
         PlanAccompaniment *accompaniment = &out->params.accompaniment;
@@ -1727,53 +1797,6 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         }
         return read_optional_int(reader, item, path, "species", 1, 4, &out->params.counterpoint.species) &&
                read_optional_bool(reader, item, path, "above", &out->params.counterpoint.above);
-    case PLAN_CONSTRAINT_RETURN:
-        if (!json_read_int_member(reader, item, path, "section", 1, TIME_LIMIT, &number_value) ||
-            !read_return_variation(reader, item, path, &out->params.section_return.variation)) {
-            return false;
-        }
-        out->params.section_return.section = (NodeId)number_value;
-        return read_return_setting(reader, item, path, &out->params.section_return) &&
-               read_return_across_modes(reader, item, path, &out->params.section_return);
-    case PLAN_CONSTRAINT_LAYERS: {
-        const cJSON *lanes = plan_json_member(reader, item, path, "lanes", true);
-        if (!lanes) {
-            return false;
-        }
-        char lanes_path[PLAN_JSON_PATH_MAX];
-        json_child_path(lanes_path, path, "lanes");
-        if (!cJSON_IsArray(lanes)) {
-            return json_bad_format(reader, lanes_path, "expected an array of lane names");
-        }
-        size_t index = 0;
-        const cJSON *lane;
-        cJSON_ArrayForEach(lane, lanes) {
-            char at[PLAN_JSON_PATH_MAX];
-            json_index_path(at, lanes_path, index++);
-            if (!read_enum(reader, lane, at, plan_lane_names, PLAN_LANE_NAME_COUNT, &value)) {
-                return false;
-            }
-            out->params.layers.lanes |= PLAN_LAYER_BIT(value);
-        }
-        if (out->params.layers.lanes == 0) {
-            return json_bad_format(reader, lanes_path, "a layer sounds at least one lane");
-        }
-        return true;
-    }
-    case PLAN_CONSTRAINT_SECTION_LETTER: {
-        const cJSON *letter = plan_json_member(reader, item, path, "letter", true);
-        if (!letter) {
-            return false;
-        }
-        char at[PLAN_JSON_PATH_MAX];
-        json_child_path(at, path, "letter");
-        if (!cJSON_IsString(letter) || letter->valuestring[0] == '\0' ||
-            strlen(letter->valuestring) >= PLAN_SECTION_LETTER_MAX) {
-            return json_bad_format(reader, at, "expected one to three characters");
-        }
-        snprintf(out->params.letter, PLAN_SECTION_LETTER_MAX, "%s", letter->valuestring);
-        return true;
-    }
     case PLAN_CONSTRAINT_INVENT_MOTIVE:
         return true;
     case PLAN_CONSTRAINT_STYLE: {
@@ -1908,53 +1931,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         }
         return true;
     }
-    case PLAN_CONSTRAINT_PIECE_PART: {
-        const cJSON *id = NULL;
-        char at[PLAN_JSON_PATH_MAX];
-        if (!read_enum_member(reader, item, path, "part", PIECE_PART_NAMES, COUNT_OF(PIECE_PART_NAMES), &value) ||
-            !(id = plan_json_member(reader, item, path, "id", true))) {
-            return false;
-        }
-        json_child_path(at, path, "id");
-        if (!cJSON_IsString(id) || id->valuestring[0] == '\0' || strlen(id->valuestring) >= PLAN_PIECE_ID_MAX) {
-            return json_bad_format(reader, at, "expected one to fifteen characters");
-        }
-        out->params.piece_part.part = value;
-        snprintf(out->params.piece_part.id, PLAN_PIECE_ID_MAX, "%s", id->valuestring);
-        return true;
-    }
     case PLAN_CONSTRAINT_MOTIVE_TONES:
         return read_motive_tones(reader, item, path, &out->params.motive_tones);
-    case PLAN_CONSTRAINT_PEDAL:
-        if (!json_read_int_member(reader, item, path, "degree", 1, 7, &number_value)) {
-            return false;
-        }
-        out->params.pedal.degree = (int)number_value;
-        return true;
-    case PLAN_CONSTRAINT_CONSTRUCTION:
-        return read_construction(reader, item, path, &out->params.construction);
-    case PLAN_CONSTRAINT_CONNECTIVE: {
-        const cJSON *written = plan_json_member(reader, item, path, "written", true);
-        if (!written) {
-            return false;
-        }
-        if (!cJSON_IsBool(written)) {
-            char at[PLAN_JSON_PATH_MAX];
-            json_child_path(at, path, "written");
-            return json_bad_format(reader, at, "expected true or false");
-        }
-        out->params.connective.written = cJSON_IsTrue(written);
-        return true;
-    }
-    case PLAN_CONSTRAINT_FIGURE:
-        return read_figure(reader, item, path, &out->params.figure);
-    case PLAN_CONSTRAINT_SECTION_FUNCTION:
-        return read_section_function(reader, item, path, &out->params.section_function);
-    case PLAN_CONSTRAINT_FREE_PHRASE:
-    case PLAN_CONSTRAINT_HOLD:
-    case PLAN_CONSTRAINT_SEAM:
-    case PLAN_CONSTRAINT_LIQUIDATION:
-        return true;
     }
     return false;
 }
@@ -2004,11 +1982,43 @@ static bool read_constraints(JsonReader *reader, PiecePlan *plan, const cJSON *c
     if (!cJSON_IsArray(list)) {
         return json_bad_format(reader, list_path, "expected an array");
     }
+    /* Formats 1 to 4 wrote a section's attributes as constraints: they are read into its description. */
+    const bool old_section = add_constraint == add_node_constraint && reader->version < 5 &&
+                             plan_node_kind(plan, (NodeId)id) == PLAN_NODE_SECTION;
+    SectionDescription description;
+    section_description_init(&description);
+    size_t cadences = 0;
     size_t index = 0;
     const cJSON *item;
     cJSON_ArrayForEach(item, list) {
         char at[PLAN_JSON_PATH_MAX];
         json_index_path(at, list_path, index++);
+        if (old_section) {
+            const cJSON *kind = cJSON_IsObject(item) ? cJSON_GetObjectItemCaseSensitive(item, "kind") : NULL;
+            int legacy = old_constraint_kind(item);
+            if (legacy >= 0) {
+                if (!apply_old_constraint(reader, plan, item, at, legacy, &description)) {
+                    return false;
+                }
+                continue;
+            }
+            if (cJSON_IsString(kind) && strcmp(kind->valuestring, "cadence") == 0) {
+                PlanConstraint cadence;
+                if (!read_constraint(reader, item, at, &cadence)) {
+                    return false;
+                }
+                /* The first is the section's, a second the weak one an antecedent ends in. */
+                if (cadences == 0) {
+                    description.has_cadence = true;
+                    description.cadence = cadence.params.cadence;
+                } else if (cadences == 1) {
+                    description.has_first_cadence = true;
+                    description.first_cadence = cadence.params.cadence;
+                }
+                cadences++;
+                continue;
+            }
+        }
         PlanConstraint constraint;
         if (!read_constraint(reader, item, at, &constraint)) {
             return false;
@@ -2032,6 +2042,35 @@ static bool read_constraints(JsonReader *reader, PiecePlan *plan, const cJSON *c
         if (result != PLAN_OK) {
             return json_fail(reader, PLAN_ERR_FORMAT, at, "constraint %s", result_name(result));
         }
+    }
+    if (old_section) {
+        PlanResult result = plan_node_set_section(plan, (NodeId)id, &description);
+        if (result != PLAN_OK) {
+            return json_fail(reader, result == PLAN_ERR_ALLOC ? PLAN_ERR_ALLOC : PLAN_ERR_FORMAT, list_path, "section %s",
+                             result_name(result));
+        }
+    }
+    return true;
+}
+
+/* Format 5: a section node's "section" member is its description. */
+static bool read_section_member(JsonReader *reader, PiecePlan *plan, const cJSON *composer, const char *composer_path, size_t id) {
+    const cJSON *item = plan_json_member(reader, composer, composer_path, "section", true);
+    if (!item) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, composer_path, "section");
+    SectionDescription description;
+    SectionError error;
+    if (!section_from_json(item, SECTION_USE_PLAN, NULL, 0, &description, &error)) {
+        char member[PLAN_JSON_PATH_MAX + 128];
+        snprintf(member, sizeof(member), "%s%s", at, error.path);
+        return json_fail(reader, PLAN_ERR_FORMAT, member, "%s", error.message);
+    }
+    PlanResult result = plan_node_set_section(plan, (NodeId)id, &description);
+    if (result != PLAN_OK) {
+        return json_fail(reader, result == PLAN_ERR_ALLOC ? PLAN_ERR_ALLOC : PLAN_ERR_FORMAT, at, "section %s", result_name(result));
     }
     return true;
 }
@@ -2507,6 +2546,8 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
         json_child_path(composer_path, table[i].path, "composer");
         int state;
         ok = read_constraints(reader, plan, composer, composer_path, i + 1, add_node_constraint) &&
+             (reader->version < 5 || plan_node_kind(plan, (NodeId)(i + 1)) != PLAN_NODE_SECTION ||
+              read_section_member(reader, plan, composer, composer_path, i + 1)) &&
              read_enum_member(reader, composer, composer_path, "state", STATE_NAMES, COUNT_OF(STATE_NAMES), &state);
         if (ok) {
             plan_node_set_state(plan, (NodeId)(i + 1), (PlanState)state);

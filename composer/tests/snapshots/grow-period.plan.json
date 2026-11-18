@@ -1,6 +1,6 @@
 {
   "format": "ursatz-composer-plan",
-  "format_version": 4,
+  "format_version": 5,
   "next_note_id": 65,
   "metadata": {
     "composer_version": "",
@@ -434,23 +434,16 @@
           "id": 2,
           "state": "realized",
           "constraints": [{
-              "kind": "archetype",
-              "type": "period"
-            }, {
-              "kind": "theme_pairing",
-              "beginning": "antecedent",
-              "ending": "consequent"
-            }, {
-              "kind": "cadence",
-              "type": "pac"
-            }, {
-              "kind": "cadence",
-              "type": "hc"
-            }, {
               "kind": "key",
               "tonic": "D",
               "material": "omt.material.natural-minor"
-            }]
+            }],
+          "section": {
+            "beginning": "antecedent",
+            "ending": "consequent",
+            "cadence": "perfect-authentic",
+            "first_cadence": "half"
+          }
         }
       }, {
         "kind": "section",
@@ -627,9 +620,10 @@
         "composer": {
           "id": 3,
           "state": "realized",
-          "constraints": [{
-              "kind": "material"
-            }]
+          "constraints": [],
+          "section": {
+            "role": "material"
+          }
         }
       }],
     "composer": {

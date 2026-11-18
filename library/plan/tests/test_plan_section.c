@@ -523,7 +523,7 @@ static const Refusal REFUSALS[] = {
     {P, "{\"beginning\":\"presentation\"}", "/ending", "required member is missing"},
     {P, "{\"role\":\"theme\",\"pedal\":\"dominant\"}", "/pedal", "a pedal needs a presentation beginning"},
     {P, "{\"construction\":{\"ideas\":{},\"reason\":\"nonsense\"}}", "/construction/reason", "unknown reason \"nonsense\""},
-    {P, "{\"role\":\"intro\",\"construction\":{\"ideas\":{}}}", "/construction", "only a theme-like section has a construction"},
+    {F, "{\"name\":\"i\",\"letter\":\"I\",\"role\":\"intro\",\"bars\":4," PAIR ",\"cadence\":\"half\",\"construction\":{\"ideas\":{}}}", "/construction", "only a theme-like section has a construction"},
     {P, "{\"function\":\"nonsense\"}", "/function", "unknown function \"nonsense\""},
     {P, "{\"independent\":true}", "/independent", "only a transition is independent"},
     {P, "{\"role\":\"theme\",\"function\":\"transition\",\"independent\":true,\"motive\":\"x\"}", "/motive",
@@ -744,6 +744,28 @@ static void test_table_matches_schema(void) {
     cJSON_Delete(schema);
 }
 
+/* The weight is the number of constraints the members used to be (B3 of P60). */
+static void test_weight(void) {
+    SectionDescription d;
+    section_description_init(&d);
+    CHECK(section_description_weight(&d) == 0);
+    d.has_pairing = true; /* an archetype and a pairing */
+    d.has_cadence = true;
+    d.has_first_cadence = true;
+    snprintf(d.letter, sizeof(d.letter), "A");
+    CHECK(section_description_weight(&d) == 5);
+    d.has_role = true;
+    d.role = SECTION_ROLE_BODY; /* a game loop part */
+    CHECK(section_description_weight(&d) == 6);
+    d.role = SECTION_ROLE_THEME; /* a role that was no constraint */
+    CHECK(section_description_weight(&d) == 5);
+    d.leads_in = true;
+    d.pedal = 5;
+    d.connective = SECTION_CONNECTIVE_ALWAYS;
+    snprintf(d.returns, sizeof(d.returns), "a");
+    CHECK(section_description_weight(&d) == 9);
+}
+
 int main(void) {
     test_vocabulary();
     test_round_trips();
@@ -754,5 +776,6 @@ int main(void) {
     test_refusals();
     test_checks_in_code();
     test_table_matches_schema();
+    test_weight();
     return test_finish("plan_section");
 }

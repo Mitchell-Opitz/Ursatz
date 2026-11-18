@@ -66,11 +66,6 @@ void constraint_list_free(ConstraintList *list);
 /* dst takes everything src holds and src is destroyed; ids and pointers into dst's old contents are void. */
 void plan_replace_contents(PiecePlan *dst, PiecePlan *src);
 
-/* The description the constraints of a section node make: the letter, the piece part, the role kinds (material, seam, liquidation), the
-   free phrase, the hold, the pairing, the cadences, the return, the layers, the pedal, the construction, the connective, the figure and
-   the section function. Read from the constraints until they leave the plan (P60 B3), and the reading of formats 1 to 4 after. */
-void plan_section_from_constraints(const PiecePlan *plan, const ConstraintList *list, SectionDescription *out);
-
 /* Frees every lane span and the note arrays they own. */
 void plan_lanes_free(PiecePlan *plan);
 

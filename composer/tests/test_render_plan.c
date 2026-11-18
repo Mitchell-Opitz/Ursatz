@@ -489,8 +489,11 @@ static void test_material_is_left_out(void) {
     NodeId material_phrase = add(plan, material, PLAN_NODE_PHRASE, bars(4, 4), "phrase");
     NodeId material_idea = add(plan, material_phrase, PLAN_NODE_IDEA, bars(4, 4), "idea");
     NodeId motive = add(plan, material_idea, PLAN_NODE_MOTIVE, bars(4, 1), "m0");
-    PlanConstraint mark = {PLAN_CONSTRAINT_MATERIAL, {0}};
-    assert(plan_node_add_constraint(plan, material, &mark) == PLAN_OK);
+    SectionDescription mark;
+    section_description_init(&mark);
+    mark.has_role = true;
+    mark.role = SECTION_ROLE_MATERIAL;
+    assert(plan_node_set_section(plan, material, &mark) == PLAN_OK);
     add_meter_and_key(plan, form, bars(0, 8));
 
     PlanNote theme_notes[] = {note(69, time_of(0, 1), time_of(4, 1))};
@@ -526,7 +529,8 @@ static void test_material_is_left_out(void) {
     rendered_plan_destroy(&rendered);
 
     /* Without the mark the same lanes sound. */
-    assert(plan_node_remove_constraint(plan, material, 0) == PLAN_OK);
+    section_description_init(&mark);
+    assert(plan_node_set_section(plan, material, &mark) == PLAN_OK);
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     assert(rendered.count == 3);
     assert(rational_cmp(rendered.piece_end, time_of(8, 1)) == 0);
@@ -556,11 +560,12 @@ static void test_layers_are_masked(void) {
             assert(plan_lane_span_set_state(plan, spans[s][l], PLAN_STATE_REALIZED) == PLAN_OK);
         }
     }
-    PlanConstraint layer = {PLAN_CONSTRAINT_LAYERS, {0}};
-    layer.params.layers.lanes = PLAN_LAYER_BIT(PLAN_LANE_BASS);
-    assert(plan_node_add_constraint(plan, sections[0], &layer) == PLAN_OK);
-    layer.params.layers.lanes = PLAN_LAYERS_ALL;
-    assert(plan_node_add_constraint(plan, sections[1], &layer) == PLAN_OK);
+    SectionDescription layer;
+    section_description_init(&layer);
+    layer.layers = PLAN_LAYER_BIT(PLAN_LANE_BASS);
+    assert(plan_node_set_section(plan, sections[0], &layer) == PLAN_OK);
+    layer.layers = PLAN_LAYERS_ALL;
+    assert(plan_node_set_section(plan, sections[1], &layer) == PLAN_OK);
 
     RenderedPlan rendered;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);

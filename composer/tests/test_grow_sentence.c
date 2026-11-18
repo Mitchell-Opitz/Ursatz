@@ -118,11 +118,8 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
 
     /* standard-form's hard rules, asked of what is in the plan. */
     SectionPairing pairing = {SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT};
-    for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
-        if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
-            pairing = constraint->params.theme_pairing;
-        }
+    if (plan_node_section(plan, theme)->has_pairing) {
+        pairing = plan_node_section(plan, theme)->pairing;
     }
     assert(pairing.beginning == SECTION_BEGINNING_PRESENTATION && pairing.ending == SECTION_ENDING_CONTINUATION);
     PhraseLevelForm form;
@@ -397,20 +394,12 @@ static void test_built_plan(void) {
     NodeId material = test_find_node(plan, "material");
     assert(theme != PLAN_NODE_NONE && material != PLAN_NODE_NONE);
     assert(plan_node_state(plan, theme) == PLAN_STATE_CONSTRAINED && plan_node_child_count(plan, theme) == 0);
-    bool archetype = false;
-    bool pairing = false;
-    bool cadence = false;
     bool key = false;
     for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
-        PlanConstraintKind kind = plan_node_constraint_at(plan, theme, i)->kind;
-        archetype = archetype || kind == PLAN_CONSTRAINT_ARCHETYPE;
-        pairing = pairing || kind == PLAN_CONSTRAINT_THEME_PAIRING;
-        cadence = cadence || kind == PLAN_CONSTRAINT_CADENCE;
-        key = key || kind == PLAN_CONSTRAINT_KEY;
+        key = key || plan_node_constraint_at(plan, theme, i)->kind == PLAN_CONSTRAINT_KEY;
     }
-    assert(archetype && pairing && cadence && key);
-    assert(plan_node_constraint_count(plan, material) == 1 &&
-           plan_node_constraint_at(plan, material, 0)->kind == PLAN_CONSTRAINT_MATERIAL);
+    assert(plan_node_section(plan, theme)->has_pairing && plan_node_section(plan, theme)->has_cadence && key);
+    assert(plan_node_constraint_count(plan, material) == 0 && plan_section_has_role(plan, material, SECTION_ROLE_MATERIAL));
     NodeId m0 = test_find_node(plan, "m0");
     assert(m0 != PLAN_NODE_NONE && plan_node_state(plan, m0) == PLAN_STATE_GIVEN);
     LaneSpanId span = PLAN_LANE_SPAN_NONE;

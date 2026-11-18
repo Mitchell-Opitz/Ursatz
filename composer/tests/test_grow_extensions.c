@@ -311,11 +311,11 @@ static void check_extension(const PiecePlan *plan, const Scenario *scenario, con
 
 /* The plan carries the construction as given, extension included. */
 static void check_constraint(const PiecePlan *plan, const SectionConstruction *wanted) {
-    const PlanConstraint *constraint = plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
+    const SectionDescription *constraint = plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction ? plan_node_section(plan, test_find_node(plan, "theme")) : NULL;
     assert(constraint);
-    assert(memcmp(constraint->params.construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
-    assert(constraint->params.construction.extension_count == wanted->extension_count);
-    assert(constraint->params.construction.extensions[0].kind == wanted->extensions[0].kind);
+    assert(memcmp(constraint->construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
+    assert(constraint->construction.extension_count == wanted->extension_count);
+    assert(constraint->construction.extensions[0].kind == wanted->extensions[0].kind);
 }
 
 /* Grows one case from one seed; whether it composed. With `check`, the plan is held to the case. */

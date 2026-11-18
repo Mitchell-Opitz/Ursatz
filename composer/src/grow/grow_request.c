@@ -642,7 +642,6 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     /* An antecedent ends in a weak cadence, HC unless the request says IAC, and the theme in a stronger one. */
     bool antecedent = request->pairing.beginning == SECTION_BEGINNING_ANTECEDENT;
     CadenceType first = request->first_cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? CADENCE_TYPE_HALF : request->first_cadence;
-    int archetype = grow_pairing_archetype(&request->pairing);
     /* An accompaniment motive makes the accompaniment: pattern MOTIVE, naming the node "acc". */
     const Motive *accompaniment_motive = request->accompaniment_motive;
     PlanAccompaniment accompaniment = request->accompaniment;
@@ -819,41 +818,28 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     if (result == GROW_OK) {
         result = from_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, theme, GROW_THEME_NAME, &theme_id));
     }
-    memset(&constraint, 0, sizeof(constraint));
     if (result == GROW_OK) {
-        constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
-        constraint.params.archetype = (PlanArchetype)archetype;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
-    }
-    if (result == GROW_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_THEME_PAIRING;
-        constraint.params.theme_pairing = request->pairing;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
-    }
-    if (result == GROW_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = request->cadence;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
-    }
-    if (result == GROW_OK && antecedent) {
-        /* The second cadence of the theme is the antecedent's. */
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = first;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
+        SectionDescription description;
+        section_description_init(&description);
+        description.has_pairing = true;
+        description.pairing = request->pairing;
+        description.has_cadence = true;
+        description.cadence = request->cadence;
+        if (antecedent) {
+            /* The second cadence of the theme is the antecedent's. */
+            description.has_first_cadence = true;
+            description.first_cadence = first;
+        }
+        if (request->construction) {
+            description.has_construction = true;
+            description.construction = *request->construction;
+        }
+        result = from_plan(plan_node_set_section(plan, theme_id, &description));
     }
     if (result == GROW_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_KEY;
         constraint.params.key = request->key;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
-    }
-    if (result == GROW_OK && request->construction) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CONSTRUCTION;
-        constraint.params.construction = *request->construction;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
 
@@ -876,9 +862,11 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         result = from_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, material, GROW_MATERIAL_NAME, &section));
     }
     if (result == GROW_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_MATERIAL;
-        result = from_plan(plan_node_add_constraint(plan, section, &constraint));
+        SectionDescription description;
+        section_description_init(&description);
+        description.has_role = true;
+        description.role = SECTION_ROLE_MATERIAL;
+        result = from_plan(plan_node_set_section(plan, section, &description));
     }
     if (result == GROW_OK) {
         result = from_plan(plan_add_node(plan, section, PLAN_NODE_PHRASE, material, GROW_MATERIAL_NAME, &phrase));

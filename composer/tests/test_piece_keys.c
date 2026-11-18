@@ -168,7 +168,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (!find(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             out[count++] = child;
         }
     }
@@ -371,8 +371,8 @@ static bool authentic_inside(const PiecePlan *plan, const KeyLane *lane, const N
    pivot chord (R-505); V is one in the main and subordinate themes' V region and none in the small rondo's IV or vi. */
 static bool opens_retransition(const PiecePlan *plan, const NodeId *sections, size_t count, Rational at) {
     for (size_t s = 0; s < count; s++) {
-        const PlanConstraint *function = find(plan, sections[s], PLAN_CONSTRAINT_SECTION_FUNCTION);
-        if (function && function->params.section_function.function == SECTION_FUNCTION_RETRANSITION &&
+        const SectionDescription *function = plan_section_or_empty(plan, sections[s]);
+        if (function->has_function && function->function.function == SECTION_FUNCTION_RETRANSITION &&
             rational_cmp(plan_node_span(plan, sections[s]).start, at) == 0) {
             return true;
         }
@@ -384,10 +384,10 @@ static bool opens_retransition(const PiecePlan *plan, const NodeId *sections, si
    with its pattern's own first chord and no pivot (the sonata rondo's S after P, vi to ii, R-520). */
 static bool opens_sequence(const PiecePlan *plan, const NodeId *sections, size_t count, Rational at) {
     for (size_t s = 0; s < count; s++) {
-        const PlanConstraint *back = find(plan, sections[s], PLAN_CONSTRAINT_RETURN);
+        NodeId back = plan_section_named(plan, plan_section_or_empty(plan, sections[s])->returns);
         Rational source_end;
-        if (back && rational_cmp(plan_node_span(plan, sections[s]).start, at) == 0 &&
-            plan_span_end(plan_node_span(plan, back->params.section_return.section), &source_end) == PLAN_OK &&
+        if (back != PLAN_NODE_NONE && rational_cmp(plan_node_span(plan, sections[s]).start, at) == 0 &&
+            plan_span_end(plan_node_span(plan, back), &source_end) == PLAN_OK &&
             rational_cmp(source_end, at) == 0) {
             return true;
         }
@@ -432,8 +432,9 @@ static void check_piece(const PiecePlan *plan, const char *kind) {
         int last = -1;
         int strongest = -1;
         for (size_t s = 0; s < count; s++) {
-            const PlanConstraint *cadence = find(plan, sections[s], PLAN_CONSTRAINT_CADENCE);
-            int strength = harmony_cadence_strength(cadence->params.cadence);
+            const SectionDescription *cadence = plan_node_section(plan, sections[s]);
+            assert(cadence->has_cadence);
+            int strength = harmony_cadence_strength(cadence->cadence);
             strongest = strength > strongest ? strength : strongest;
             last = strength;
         }

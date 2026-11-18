@@ -41,9 +41,6 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     case PLAN_CONSTRAINT_KEY:
         return analysis_key_tonic_pitch_class(&constraint->params.key) >= 0 && analysis_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
                composer_key_valid(&constraint->params.key);
-    case PLAN_CONSTRAINT_ARCHETYPE:
-        return constraint->params.archetype >= PLAN_ARCHETYPE_SENTENCE &&
-               constraint->params.archetype <= PLAN_ARCHETYPE_HYBRID;
     case PLAN_CONSTRAINT_EMBELLISH:
         return true;
     case PLAN_CONSTRAINT_SCHEMA: {
@@ -51,8 +48,6 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return prototype && constraint->params.schema.stage >= 0 &&
                (size_t)constraint->params.schema.stage < prototype->stage_count;
     }
-    case PLAN_CONSTRAINT_MATERIAL:
-        return true;
     case PLAN_CONSTRAINT_HARMONY_SHAPE: {
         const PlanHarmonyShape *shape = &constraint->params.harmony_shape;
         return shape->kind >= PLAN_HARMONY_SHAPE_PROLONGATION && shape->kind <= PLAN_HARMONY_SHAPE_CADENTIAL &&
@@ -62,12 +57,6 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                (!shape->pedal || (shape->kind == PLAN_HARMONY_SHAPE_PROLONGATION &&
                                   shape->starts_on == PLAN_HARMONY_ANCHOR_DOMINANT &&
                                   shape->ends_on == PLAN_HARMONY_ANCHOR_DOMINANT));
-    }
-    case PLAN_CONSTRAINT_THEME_PAIRING: {
-        const SectionPairing *pairing = &constraint->params.theme_pairing;
-        return pairing->beginning >= SECTION_BEGINNING_PRESENTATION &&
-               pairing->beginning <= SECTION_BEGINNING_COMPOUND_BASIC_IDEA &&
-               pairing->ending >= SECTION_ENDING_CONTINUATION && pairing->ending <= SECTION_ENDING_CADENTIAL;
     }
     case PLAN_CONSTRAINT_ACCOMPANIMENT: {
         const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
@@ -84,21 +73,6 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return true;
     case PLAN_CONSTRAINT_COUNTERPOINT:
         return constraint->params.counterpoint.species >= 1 && constraint->params.counterpoint.species <= 4;
-    case PLAN_CONSTRAINT_RETURN: {
-        const PlanReturn *section_return = &constraint->params.section_return;
-        return plan_has_node(plan, section_return->section) &&
-               plan_node_kind(plan, section_return->section) == PLAN_NODE_SECTION &&
-               section_return->variation >= SECTION_RETURN_EXACT && section_return->variation <= SECTION_RETURN_SETTING &&
-               (section_return->variation != SECTION_RETURN_SETTING ||
-                (section_return->setting >= PLAN_ACCOMPANIMENT_BLOCK && section_return->setting <= PLAN_ACCOMPANIMENT_OOM_PAH)) &&
-               (!section_return->across_modes || section_return->variation == SECTION_RETURN_REHARMONIZE);
-    }
-    case PLAN_CONSTRAINT_LAYERS:
-        return constraint->params.layers.lanes != 0 && (constraint->params.layers.lanes & ~PLAN_LAYERS_ALL) == 0;
-    case PLAN_CONSTRAINT_SECTION_LETTER: {
-        size_t length = strnlen(constraint->params.letter, PLAN_SECTION_LETTER_MAX);
-        return length > 0 && length < PLAN_SECTION_LETTER_MAX;
-    }
     case PLAN_CONSTRAINT_INVENT_MOTIVE:
         return true;
     case PLAN_CONSTRAINT_STYLE: {
@@ -138,12 +112,6 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return pickup.den > 0 && pickup.num > 0 && pickup.num < 2 * pickup.den &&
                plan_meter_pickup_on_grid(first_meter(plan), pickup);
     }
-    case PLAN_CONSTRAINT_FREE_PHRASE:
-    case PLAN_CONSTRAINT_HOLD:
-    case PLAN_CONSTRAINT_SEAM:
-    case PLAN_CONSTRAINT_CONNECTIVE:
-    case PLAN_CONSTRAINT_LIQUIDATION:
-        return true;
     case PLAN_CONSTRAINT_MOTIVE_TONES: {
         const PlanMotiveTones *tones = &constraint->params.motive_tones;
         if (tones->chord_count == 0 || tones->chord_count > PLAN_TONES_MAX_CHORDS || tones->label_count == 0 ||
@@ -165,44 +133,6 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
             }
         }
         return true;
-    }
-    case PLAN_CONSTRAINT_FIGURE: {
-        const SectionFigure *figure = &constraint->params.figure;
-        return figure->kind >= SECTION_FIGURE_NEIGHBOR && figure->kind <= SECTION_FIGURE_BROKEN_CHORD &&
-               figure->rhythm >= SECTION_FIGURE_EIGHTHS && figure->rhythm <= SECTION_FIGURE_SIXTEENTHS &&
-               (figure->change_at == 0 || figure->reharmonize);
-    }
-    case PLAN_CONSTRAINT_SECTION_FUNCTION: {
-        const SectionFunction *function = &constraint->params.section_function;
-        return function->function >= SECTION_FUNCTION_TRANSITION && function->function <= SECTION_FUNCTION_CODA &&
-               (!function->independent || function->function == SECTION_FUNCTION_TRANSITION) &&
-               (!function->lyric || function->function == SECTION_FUNCTION_SUBORDINATE);
-    }
-    case PLAN_CONSTRAINT_PEDAL:
-        return constraint->params.pedal.degree == 5;
-    case PLAN_CONSTRAINT_CONSTRUCTION: {
-        const SectionConstruction *construction = &constraint->params.construction;
-        for (size_t i = 0; i < SECTION_CONSTRUCTION_IDEAS; i++) {
-            if (construction->idea_bars[i] > 16) {
-                return false;
-            }
-        }
-        if (construction->extension_count > SECTION_CONSTRUCTION_EXTENSIONS) {
-            return false;
-        }
-        for (size_t i = 0; i < construction->extension_count; i++) {
-            const SectionExtension *extension = &construction->extensions[i];
-            if (extension->kind < SECTION_EXTENSION_REPEAT || extension->kind > SECTION_EXTENSION_EVADED ||
-                extension->idea >= SECTION_CONSTRUCTION_IDEAS || extension->bars > 4) {
-                return false;
-            }
-        }
-        return construction->reason >= SECTION_CONSTRUCTION_GIVEN && construction->reason <= SECTION_CONSTRUCTION_FROM_LENGTH;
-    }
-    case PLAN_CONSTRAINT_PIECE_PART: {
-        const PlanPiecePart *part = &constraint->params.piece_part;
-        size_t length = strnlen(part->id, PLAN_PIECE_ID_MAX);
-        return part->part >= 0 && part->part < PLAN_PIECE_PART_COUNT && length > 0 && length < PLAN_PIECE_ID_MAX;
     }
     }
     return false;
@@ -237,103 +167,82 @@ static const PlanConstraint *list_at(const ConstraintList *list, size_t index) {
 
 /* ------------------------------------------------------------- the description of a section node */
 
-/* The description a section's constraints make. A constraint that is none of these kinds stays a constraint. */
-void plan_section_from_constraints(const PiecePlan *plan, const ConstraintList *list, SectionDescription *out) {
-    size_t cadences = 0;
-    section_description_init(out);
-    for (size_t i = 0; i < list->count; i++) {
-        const PlanConstraint *constraint = &list->items[i];
-        switch (constraint->kind) {
-        case PLAN_CONSTRAINT_SECTION_LETTER:
-            snprintf(out->letter, sizeof(out->letter), "%s", constraint->params.letter);
-            break;
-        case PLAN_CONSTRAINT_PIECE_PART:
-            out->has_role = true;
-            out->role = (SectionRole)(SECTION_ROLE_INTRO + constraint->params.piece_part.part);
-            snprintf(out->id, sizeof(out->id), "%s", constraint->params.piece_part.id);
-            break;
-        case PLAN_CONSTRAINT_MATERIAL:
-            out->has_role = true;
-            out->role = SECTION_ROLE_MATERIAL;
-            break;
-        case PLAN_CONSTRAINT_SEAM:
-            out->has_role = true;
-            out->role = SECTION_ROLE_SEAM;
-            break;
-        case PLAN_CONSTRAINT_LIQUIDATION:
-            out->has_role = true;
-            out->role = SECTION_ROLE_LIQUIDATION;
-            break;
-        case PLAN_CONSTRAINT_FREE_PHRASE:
-            out->free_phrase = true;
-            break;
-        case PLAN_CONSTRAINT_HOLD:
-            out->leads_in = true;
-            break;
-        case PLAN_CONSTRAINT_THEME_PAIRING:
-            out->has_pairing = true;
-            out->pairing = constraint->params.theme_pairing;
-            break;
-        case PLAN_CONSTRAINT_CADENCE:
-            /* The first is the section's, a second the weak one an antecedent ends in. */
-            if (cadences == 0) {
-                out->has_cadence = true;
-                out->cadence = constraint->params.cadence;
-            } else if (cadences == 1) {
-                out->has_first_cadence = true;
-                out->first_cadence = constraint->params.cadence;
-            }
-            cadences++;
-            break;
-        case PLAN_CONSTRAINT_RETURN: {
-            const PlanReturn *section_return = &constraint->params.section_return;
-            const char *name = plan_node_name(plan, section_return->section);
-            snprintf(out->returns, sizeof(out->returns), "%s", name ? name : "");
-            out->variation = section_return->variation;
-            out->setting = section_return->setting >= PLAN_ACCOMPANIMENT_BLOCK && section_return->setting <= PLAN_ACCOMPANIMENT_OOM_PAH
-                               ? (SectionSetting)section_return->setting
-                               : SECTION_SETTING_NONE;
-            out->mode = section_return->across_modes ? SECTION_MODE_HOME : SECTION_MODE_NONE;
-            break;
-        }
-        case PLAN_CONSTRAINT_LAYERS:
-            out->layers = constraint->params.layers.lanes;
-            break;
-        case PLAN_CONSTRAINT_PEDAL:
-            out->pedal = constraint->params.pedal.degree;
-            break;
-        case PLAN_CONSTRAINT_CONSTRUCTION:
-            out->has_construction = true;
-            out->construction = constraint->params.construction;
-            break;
-        case PLAN_CONSTRAINT_CONNECTIVE:
-            out->connective = SECTION_CONNECTIVE_ALWAYS; /* the plan holds that it was asked for; sometimes was drawn at build */
-            out->connective_written = constraint->params.connective.written;
-            break;
-        case PLAN_CONSTRAINT_FIGURE:
-            out->has_figure = true;
-            out->figure = constraint->params.figure;
-            break;
-        case PLAN_CONSTRAINT_SECTION_FUNCTION:
-            out->has_function = true;
-            out->function = constraint->params.section_function;
-            break;
-        default:
-            break;
-        }
-    }
-}
-
 const SectionDescription *plan_node_section(const PiecePlan *plan, NodeId id) {
     const PlanNode *node = plan_node_at(plan, id);
     return node && node->kind == PLAN_NODE_SECTION ? &node->section : NULL;
 }
 
-/* A section node's description follows its constraints. */
-static void section_refresh(const PiecePlan *plan, PlanNode *node) {
-    if (node->kind == PLAN_NODE_SECTION) {
-        plan_section_from_constraints(plan, &node->constraints, &node->section);
+PlanResult plan_node_set_section(PiecePlan *plan, NodeId id, const SectionDescription *description) {
+    if (!plan || !description) {
+        return PLAN_ERR_NULL;
     }
+    PlanNode *node = plan_node_at(plan, id);
+    if (!node) {
+        return PLAN_ERR_NOT_FOUND;
+    }
+    if (node->kind != PLAN_NODE_SECTION) {
+        return PLAN_ERR_BAD_KIND;
+    }
+    if (node->state == PLAN_STATE_GIVEN) {
+        return PLAN_ERR_GIVEN_LOCKED;
+    }
+    /* a return names a section node of the plan; the description's own rules are the library's */
+    if (!section_description_check(description, SECTION_USE_PLAN, NULL) ||
+        (description->returns[0] != '\0' && plan_section_named(plan, description->returns) == PLAN_NODE_NONE)) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
+    node->section = *description;
+    return PLAN_OK;
+}
+
+const SectionDescription *plan_section_or_empty(const PiecePlan *plan, NodeId node) {
+    static const SectionDescription EMPTY;
+    const SectionDescription *section = plan_node_section(plan, node);
+    return section ? section : &EMPTY;
+}
+
+bool plan_section_has_role(const PiecePlan *plan, NodeId node, SectionRole role) {
+    const SectionDescription *section = plan_node_section(plan, node);
+    return section && section->has_role && section->role == role;
+}
+
+bool plan_section_part_of(const PiecePlan *plan, NodeId node, int *part) {
+    const SectionDescription *section = plan_node_section(plan, node);
+    if (!section || !section->has_role || section->role < SECTION_ROLE_INTRO || section->role > SECTION_ROLE_ENDING) {
+        return false;
+    }
+    if (part) {
+        *part = (int)(section->role - SECTION_ROLE_INTRO);
+    }
+    return true;
+}
+
+NodeId plan_section_named(const PiecePlan *plan, const char *name) {
+    for (NodeId id = 1; name && id <= plan_node_count(plan); id++) {
+        const char *node_name = plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION ? plan_node_name(plan, id) : NULL;
+        if (node_name && strcmp(node_name, name) == 0) {
+            return id;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+bool plan_node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out) {
+    const SectionDescription *section = plan_node_section(plan, node);
+    if (section) {
+        if (section->has_cadence) {
+            *out = section->cadence;
+        }
+        return section->has_cadence;
+    }
+    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
+        if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
+            *out = constraint->params.cadence;
+            return true;
+        }
+    }
+    return false;
 }
 
 PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {
@@ -347,16 +256,11 @@ PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstr
     if (node->state == PLAN_STATE_GIVEN) {
         return PLAN_ERR_GIVEN_LOCKED;
     }
-    if (!constraint_is_valid(plan, constraint) ||
-        ((constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION || constraint->kind == PLAN_CONSTRAINT_CONNECTIVE) &&
-         node->kind != PLAN_NODE_SECTION)) {
+    /* a section's cadences are in its description */
+    if (!constraint_is_valid(plan, constraint) || (constraint->kind == PLAN_CONSTRAINT_CADENCE && node->kind == PLAN_NODE_SECTION)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
-    PlanResult added = list_add(&node->constraints, constraint);
-    if (added == PLAN_OK) {
-        section_refresh(plan, node);
-    }
-    return added;
+    return list_add(&node->constraints, constraint);
 }
 
 size_t plan_node_constraint_count(const PiecePlan *plan, NodeId id) {
@@ -377,11 +281,7 @@ PlanResult plan_node_remove_constraint(PiecePlan *plan, NodeId id, size_t index)
     if (node->state == PLAN_STATE_GIVEN) {
         return PLAN_ERR_GIVEN_LOCKED;
     }
-    PlanResult removed = list_remove(&node->constraints, index);
-    if (removed == PLAN_OK) {
-        section_refresh(plan, node);
-    }
-    return removed;
+    return list_remove(&node->constraints, index);
 }
 
 PlanResult plan_lane_span_add_constraint(PiecePlan *plan, LaneSpanId id, const PlanConstraint *constraint) {
@@ -395,8 +295,7 @@ PlanResult plan_lane_span_add_constraint(PiecePlan *plan, LaneSpanId id, const P
     if (entry->state == PLAN_STATE_GIVEN) {
         return PLAN_ERR_GIVEN_LOCKED;
     }
-    if (!constraint_is_valid(plan, constraint) || constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION ||
-        constraint->kind == PLAN_CONSTRAINT_CONNECTIVE) {
+    if (!constraint_is_valid(plan, constraint)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     return list_add(&entry->constraints, constraint);
@@ -443,6 +342,3 @@ const PlanConstraint *plan_lane_span_find_constraint(const PiecePlan *plan, Lane
     return NULL;
 }
 
-bool plan_node_has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
-    return plan_node_find_constraint(plan, id, kind) != NULL;
-}

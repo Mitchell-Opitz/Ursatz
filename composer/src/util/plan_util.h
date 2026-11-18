@@ -46,21 +46,6 @@ bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out);
 /* The part of a larger form a section node is (its description's function, R-503); false when it has none. */
 bool plan_section_function_of(const PiecePlan *plan, NodeId node, SectionFunction *out);
 
-/* The description of a section node; an empty one for a node that is not a section or not in the plan, so a reader needs no NULL test. */
-const SectionDescription *plan_section_or_empty(const PiecePlan *plan, NodeId node);
-
-/* Whether the node is a section whose description has the role (material, seam, liquidation, a piece part). */
-bool plan_section_has_role(const PiecePlan *plan, NodeId node, SectionRole role);
-
-/* Whether the node is a part of a game loop piece (intro, body, turnaround or ending, R-169): *part is its PiecePart, 0 to 3. */
-bool plan_section_part_of(const PiecePlan *plan, NodeId node, int *part);
-
-/* The first section node with this name, or PLAN_NODE_NONE. */
-NodeId plan_section_named(const PiecePlan *plan, const char *name);
-
-/* The cadence a node ends in: a section's description gives it, any other node its first CADENCE constraint; false when none. */
-bool plan_node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out);
-
 /* The piece result of a plan result: OK, an allocation failure, else a bad request. */
 PieceResult piece_result_of_plan(PlanResult result);
 

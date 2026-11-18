@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/plan.v4.schema.json",
-  "title": "Ursatz Composer plan, format version 4",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/plan.v5.schema.json",
+  "title": "Ursatz Composer plan, format version 5",
   "type": "object",
   "required": ["format", "format_version", "next_note_id", "metadata", "form"],
   "properties": {
     "format": { "const": "ursatz-composer-plan" },
-    "format_version": { "const": 4 },
+    "format_version": { "const": 5 },
     "next_note_id": { "type": "integer", "minimum": 1, "description": "The id the next new note gets: above every note id of the plan." },
     "metadata": {
       "type": "object",
@@ -71,7 +71,8 @@
           "properties": {
             "id": { "type": "integer", "minimum": 1 },
             "state": { "$ref": "#/$defs/state" },
-            "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } }
+            "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+            "section": { "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json#/$defs/plan_section" }
           }
         }
       }
@@ -178,10 +179,8 @@
       "required": ["kind"],
       "properties": {
         "kind": {
-          "enum": ["length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema", "material",
-                   "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint", "return", "layers",
-                   "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold",
-                   "seam", "motive_tones", "pedal", "construction", "connective", "liquidation", "figure", "section_function"]
+          "enum": ["length_bars", "cadence", "motive_ref", "key", "embellish", "schema", "harmony_shape", "accompaniment", "voicing",
+                   "counterpoint", "invent_motive", "style", "source", "pickup", "motive_tones"]
         }
       },
       "allOf": [
@@ -213,89 +212,8 @@
           "then": { "required": ["bars"], "properties": { "bars": { "type": "integer", "minimum": 1 } } }
         },
         {
-          "if": { "properties": { "kind": { "const": "archetype" } } },
-          "then": { "required": ["type"], "properties": { "type": { "enum": ["sentence", "period", "hybrid"] } } }
-        },
-        {
           "if": { "properties": { "kind": { "const": "pickup" } } },
           "then": { "required": ["length"], "properties": { "length": { "$ref": "#/$defs/time" } } }
-        },
-        {
-          "if": { "properties": { "kind": { "const": "return" } } },
-          "then": {
-            "properties": {
-              "setting": { "enum": ["block", "arpeggiated", "alberti", "oom-pah"], "description": "The pattern of the new accompaniment (R-518); required by, and only for, a setting return." },
-              "across_modes": { "type": "boolean", "description": "Only for a reharmonize return: a source in the other mode is moved by the tonic step and mapped into the target's mode (R-524). Written only when true." }
-            }
-          }
-        },
-        {
-          "if": { "properties": { "kind": { "const": "pedal" } } },
-          "then": { "required": ["degree"], "properties": { "degree": { "const": 5 } } }
-        },
-        {
-          "if": { "properties": { "kind": { "const": "construction" } } },
-          "then": {
-            "required": ["ideas", "extensions", "reason"],
-            "properties": {
-              "ideas": {
-                "type": "object",
-                "propertyNames": {
-                  "enum": ["basic idea", "repetition", "contrasting idea", "consequent basic idea",
-                           "consequent contrasting idea", "fragment 1", "fragment 2", "cadential", "cadential 1",
-                           "cadential 2"]
-                },
-                "additionalProperties": { "type": "integer", "minimum": 0, "maximum": 16 }
-              },
-              "extensions": {
-                "type": "array",
-                "maxItems": 3,
-                "items": {
-                  "type": "object",
-                  "required": ["kind", "idea", "bars", "varied"],
-                  "properties": {
-                    "kind": { "enum": ["repeat", "stretch", "addition", "evaded"] },
-                    "idea": { "type": "string" },
-                    "bars": { "type": "integer", "minimum": 0, "maximum": 4 },
-                    "varied": { "type": "boolean" }
-                  }
-                }
-              },
-              "reason": { "enum": ["given", "motive", "length"] }
-            }
-          }
-        },
-        {
-          "if": { "properties": { "kind": { "const": "connective" } } },
-          "then": { "required": ["written"], "properties": { "written": { "type": "boolean" } } }
-        },
-        {
-          "if": { "properties": { "kind": { "const": "figure" } } },
-          "then": {
-            "required": ["figure", "rhythm", "harmony", "change_at", "climax"],
-            "properties": {
-              "figure": { "enum": ["neighbor", "scale", "broken-chord"] },
-              "rhythm": { "enum": ["eighths", "sixteenths"] },
-              "harmony": { "enum": ["kept", "reharmonized"] },
-              "change_at": { "type": ["integer", "null"], "minimum": 1 },
-              "climax": { "type": "boolean" }
-            }
-          }
-        },
-        {
-          "if": { "properties": { "kind": { "const": "section_function" } } },
-          "then": {
-            "required": ["function", "independent", "lyric"],
-            "properties": {
-              "function": { "enum": ["transition", "retransition", "subordinate", "coda"] },
-              "independent": { "type": "boolean" },
-              "lyric": { "type": "boolean" }
-            }
-          }
-        },
-        {
-          "if": { "properties": { "kind": { "const": "section_letter" } } },
-          "then": { "required": ["letter"], "properties": { "letter": { "type": "string" } } }
         }
       ]
     }

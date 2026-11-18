@@ -162,11 +162,11 @@ static void check_spans(const PiecePlan *plan, const Scenario *scenario, const C
 
 /* The plan carries the construction as given. */
 static void check_constraint(const PiecePlan *plan, const SectionConstruction *wanted) {
-    const PlanConstraint *constraint = plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
+    const SectionDescription *constraint = plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction ? plan_node_section(plan, test_find_node(plan, "theme")) : NULL;
     assert(constraint);
-    assert(memcmp(constraint->params.construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
-    assert(constraint->params.construction.extension_count == 0);
-    assert(constraint->params.construction.reason == SECTION_CONSTRUCTION_GIVEN);
+    assert(memcmp(constraint->construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
+    assert(constraint->construction.extension_count == 0);
+    assert(constraint->construction.reason == SECTION_CONSTRUCTION_GIVEN);
 }
 
 /* Grows one case from one seed; whether it composed. With `check`, the plan's spans are held to the construction. */
@@ -304,9 +304,9 @@ static void test_round_trip(void) {
         assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
         char *text_again = plan_to_json(again, &error);
         assert(text_again && strcmp(text, text_again) == 0);
-        const PlanConstraint *read = plan_node_find_constraint(again, test_find_node(again, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
-        assert(read && memcmp(read->params.construction.idea_bars, construction.idea_bars, sizeof(construction.idea_bars)) == 0);
-        assert(read->params.construction.reason == construction.reason);
+        const SectionDescription *read = plan_section_or_empty(again, test_find_node(again, "theme"))->has_construction ? plan_node_section(again, test_find_node(again, "theme")) : NULL;
+        assert(read && memcmp(read->construction.idea_bars, construction.idea_bars, sizeof(construction.idea_bars)) == 0);
+        assert(read->construction.reason == construction.reason);
         free(text);
         free(text_again);
         plan_destroy(plan);
@@ -320,17 +320,17 @@ static void test_round_trip(void) {
     GrowRequest request = make_request(scenario, &motive, &CASES[3], &construction);
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId theme = test_find_node(plan, "theme");
-    PlanConstraint extended = {PLAN_CONSTRAINT_CONSTRUCTION, {0}};
-    extended.params.construction = construction;
-    extended.params.construction.extension_count = 2;
-    extended.params.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false};
-    extended.params.construction.extensions[1] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 2, true};
-    extended.params.construction.reason = SECTION_CONSTRUCTION_FROM_LENGTH;
+    SectionDescription extended = *plan_node_section(plan, theme);
+    extended.has_construction = true;
+    extended.construction = construction;
+    extended.construction.extension_count = 2;
+    extended.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false};
+    extended.construction.extensions[1] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 2, true};
+    extended.construction.reason = SECTION_CONSTRUCTION_FROM_LENGTH;
     PiecePlan *scratch = NULL;
     assert(grow_build_plan_checked(&request, &scratch, NULL) == GROW_OK);
     NodeId scratch_theme = test_find_node(scratch, "theme");
-    assert(plan_node_remove_constraint(scratch, scratch_theme, plan_node_constraint_count(scratch, scratch_theme) - 1) == PLAN_OK);
-    assert(plan_node_add_constraint(scratch, scratch_theme, &extended) == PLAN_OK);
+    assert(plan_node_set_section(scratch, scratch_theme, &extended) == PLAN_OK);
     PlanJsonError error;
     char *text = plan_to_json(scratch, &error);
     assert(text && strstr(text, "\"stretch\"") && strstr(text, "\"cadential\""));
@@ -343,28 +343,21 @@ static void test_round_trip(void) {
     plan_destroy(again);
     plan_destroy(scratch);
 
-    /* The constraint is only for a section node, with ideas to 16 bars and at most 3 extensions of 4 bars. */
-    NodeId motive_node = PLAN_NODE_NONE;
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        if (plan_node_kind(plan, id) == PLAN_NODE_PHRASE && plan_node_state(plan, id) != PLAN_STATE_GIVEN) {
-            motive_node = id;
-        }
-    }
-    assert(motive_node != PLAN_NODE_NONE);
-    PlanConstraint bad = {PLAN_CONSTRAINT_CONSTRUCTION, {0}};
-    bad.params.construction = construction;
-    assert(plan_node_add_constraint(plan, motive_node, &bad) == PLAN_ERR_BAD_PAYLOAD);
-    bad.params.construction.idea_bars[0] = 17;
-    assert(plan_node_add_constraint(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
-    bad.params.construction = construction;
-    bad.params.construction.extension_count = 4;
-    assert(plan_node_add_constraint(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
-    bad.params.construction.extension_count = 1;
-    bad.params.construction.extensions[0].bars = 5;
-    assert(plan_node_add_constraint(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
-    bad.params.construction.extensions[0].bars = 1;
-    bad.params.construction.extensions[0].idea = GROW_IDEA_COUNT;
-    assert(plan_node_add_constraint(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    /* The construction is only for a section node, with ideas to 16 bars and at most 3 extensions of 4 bars. */
+    SectionDescription bad = *plan_node_section(plan, theme);
+    bad.has_construction = true;
+    bad.construction = construction;
+    bad.construction.idea_bars[0] = 17;
+    assert(plan_node_set_section(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    bad.construction = construction;
+    bad.construction.extension_count = 4;
+    assert(plan_node_set_section(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    bad.construction.extension_count = 1;
+    bad.construction.extensions[0].bars = 5;
+    assert(plan_node_set_section(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    bad.construction.extensions[0].bars = 1;
+    bad.construction.extensions[0].idea = GROW_IDEA_COUNT;
+    assert(plan_node_set_section(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
     plan_destroy(plan);
 
     /* A plan with an unknown idea in a construction is refused with its path. */

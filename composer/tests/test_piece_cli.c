@@ -521,10 +521,10 @@ static void test_regenerate(void) {
     size_t toned_before = 0;
     size_t toned_after = 0;
     for (NodeId node = 1; node <= plan_node_count(before); node++) {
-        toned_before += plan_node_has_constraint(before, node, PLAN_CONSTRAINT_MOTIVE_TONES);
+        toned_before += (plan_node_find_constraint(before, node, PLAN_CONSTRAINT_MOTIVE_TONES) != NULL);
     }
     for (NodeId node = 1; node <= plan_node_count(after); node++) {
-        toned_after += plan_node_has_constraint(after, node, PLAN_CONSTRAINT_MOTIVE_TONES);
+        toned_after += (plan_node_find_constraint(after, node, PLAN_CONSTRAINT_MOTIVE_TONES) != NULL);
     }
     assert(toned_before > 0 && toned_after == toned_before);
     char *old_melody = dump_lane(before, PLAN_LANE_MELODY, 0, 2, 10);

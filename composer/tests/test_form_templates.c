@@ -513,39 +513,31 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         assert(bars_of(span.length, scenario->beats) == (long)expected[i].bars);
         at += (long)expected[i].bars;
 
-        const PlanConstraint *letter = find(plan, section, PLAN_CONSTRAINT_SECTION_LETTER, 0);
-        const PlanConstraint *pairing = find(plan, section, PLAN_CONSTRAINT_THEME_PAIRING, 0);
-        const PlanConstraint *cadence = find(plan, section, PLAN_CONSTRAINT_CADENCE, 0);
+        const SectionDescription *described = plan_node_section(plan, section);
         const PlanConstraint *key = find(plan, section, PLAN_CONSTRAINT_KEY, 0);
-        const PlanConstraint *liquidation = find(plan, section, PLAN_CONSTRAINT_LIQUIDATION, 0);
-        const PlanConstraint *function = find(plan, section, PLAN_CONSTRAINT_SECTION_FUNCTION, 0);
-        const PlanConstraint *back = find(plan, section, PLAN_CONSTRAINT_RETURN, 0);
-        const PlanConstraint *layers = find(plan, section, PLAN_CONSTRAINT_LAYERS, 0);
-        assert(letter && strcmp(letter->params.letter, expected[i].letter) == 0);
+        const bool liquidation = described->has_role && described->role == SECTION_ROLE_LIQUIDATION;
+        assert(described->letter[0] != '\0' && strcmp(described->letter, expected[i].letter) == 0);
         /* The part of a larger form a section is, and only that (R-503). */
-        assert((function != NULL) == (expected[i].function >= 0));
-        if (function) {
-            assert((int)function->params.section_function.function == expected[i].function &&
-                   function->params.section_function.lyric == expected[i].lyric &&
-                   !function->params.section_function.independent);
+        assert(described->has_function == (expected[i].function >= 0));
+        if (described->has_function) {
+            assert((int)described->function.function == expected[i].function &&
+                   described->function.lyric == expected[i].lyric && !described->function.independent);
         }
         if (is_operator(&expected[i])) {
-            assert((liquidation != NULL) == expected[i].liquidation);
-            assert(!pairing && find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) == NULL);
+            assert(liquidation == expected[i].liquidation);
+            assert(!described->has_pairing);
         } else {
-            assert(!liquidation && pairing && pairing->params.theme_pairing.beginning == expected[i].beginning &&
-                   pairing->params.theme_pairing.ending == expected[i].ending);
-            assert(find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) != NULL);
+            assert(!liquidation && described->has_pairing && described->pairing.beginning == expected[i].beginning &&
+                   described->pairing.ending == expected[i].ending);
         }
         /* B1 is not closed: in a major piece the tonic major is the home key, and a closing form plans a PAC there that is not
            closed as a half cadence; in a minor piece it is the parallel major and keeps its PAC (R-517, piece_cadences.c). */
         const CadenceType want = expected[i].tonic_major && scenario->mode == HARMONY_MODE_MAJOR ? CADENCE_TYPE_HALF
                                                                                                        : expected[i].cadence;
-        assert(cadence && cadence->params.cadence == want);
+        assert(described->has_cadence && described->cadence == want);
         /* An antecedent's weak cadence comes second. */
-        const PlanConstraint *weak = find(plan, section, PLAN_CONSTRAINT_CADENCE, 1);
-        assert((expected[i].beginning == AN) == (weak != NULL));
-        assert(!weak || weak->params.cadence == CADENCE_TYPE_HALF);
+        assert((expected[i].beginning == AN) == described->has_first_cadence);
+        assert(!described->has_first_cadence || described->first_cadence == CADENCE_TYPE_HALF);
         /* A section in the parallel mode is on the home tonic in the other mode. */
         /* The region of the main and subordinate themes is V in major and III in minor, which is a major key. */
         const HarmonyMode mode = expected[i].parallel || (expected[i].region && scenario->mode == HARMONY_MODE_MINOR) ? (scenario->mode == HARMONY_MODE_MAJOR ? HARMONY_MODE_MINOR
@@ -576,21 +568,20 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
                    harmony_key_mode(&key->params.key) == mode);
         }
         /* A figure rides on a figurate return and only there (R-497). */
-        const PlanConstraint *figure = find(plan, section, PLAN_CONSTRAINT_FIGURE, 0);
+        const SectionFigure *figure = described->has_figure ? &described->figure : NULL;
         assert((figure != NULL) == expected[i].has_figure);
         if (figure) {
-            assert(back && back->params.section_return.variation == SECTION_RETURN_FIGURATE);
-            assert(figure->params.figure.kind == expected[i].figure.kind && figure->params.figure.rhythm == expected[i].figure.rhythm &&
-                   figure->params.figure.reharmonize == expected[i].figure.reharmonize &&
-                   figure->params.figure.change_at == expected[i].figure.change_at &&
-                   figure->params.figure.climax == expected[i].figure.climax);
+            assert(described->returns[0] != '\0' && described->variation == SECTION_RETURN_FIGURATE);
+            assert(figure->kind == expected[i].figure.kind && figure->rhythm == expected[i].figure.rhythm &&
+                   figure->reharmonize == expected[i].figure.reharmonize && figure->change_at == expected[i].figure.change_at &&
+                   figure->climax == expected[i].figure.climax);
         }
         if (expected[i].returns == NONE) {
-            assert(back == NULL);
+            assert(described->returns[0] == '\0');
         } else {
-            assert(back && back->params.section_return.section == sections[expected[i].returns]);
+            assert(plan_section_named(plan, described->returns) == sections[expected[i].returns]);
         }
-        assert(expected[i].layers == 0 ? layers == NULL : (layers && layers->params.layers.lanes == expected[i].layers));
+        assert(described->layers == expected[i].layers);
         /* A layered form carries an accompaniment in every layer. */
         assert(IS("layered") == (find(plan, section, PLAN_CONSTRAINT_ACCOMPANIMENT, 0) != NULL));
         /* A section made from m0 other than as m0 itself names m0; a returning one takes its source's motive. */
@@ -619,7 +610,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
     }
     /* The material, after the sections: m0 Given, or open with a motive to invent. */
     NodeId material = plan_node_child_at(plan, form, count);
-    assert(find(plan, material, PLAN_CONSTRAINT_MATERIAL, 0) != NULL);
+    assert(plan_section_has_role(plan, material, SECTION_ROLE_MATERIAL));
     assert(bars_of(plan_node_span(plan, material).start, scenario->beats) == at);
     NodeId m0 = PLAN_NODE_NONE;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {

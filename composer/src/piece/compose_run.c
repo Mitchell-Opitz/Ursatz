@@ -864,14 +864,14 @@ static PieceResult run_returns(Run *run) {
     return result;
 }
 
-/* Takes the HOLD constraint off a section, so the stages can target it; false when it has none or the plan refuses. */
+/* Takes the hold off a section (its leads_in), so the stages can target it; false when it has none or the plan refuses. */
 static bool release_hold(PiecePlan *plan, NodeId section) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_HOLD) {
-            return plan_node_remove_constraint(plan, section, i) == PLAN_OK;
-        }
+    if (!plan_section_or_empty(plan, section)->leads_in) {
+        return false;
     }
-    return false;
+    SectionDescription description = *plan_node_section(plan, section);
+    description.leads_in = false;
+    return plan_node_set_section(plan, section, &description) == PLAN_OK;
 }
 
 /*
@@ -932,11 +932,10 @@ static PieceResult run_seam(Run *run) {
         run->outcome->stuck_stage = COMPOSE_STAGE_SEAM;
     }
     run->seam = false;
-    PlanConstraint hold;
-    memset(&hold, 0, sizeof(hold));
-    hold.kind = PLAN_CONSTRAINT_HOLD;
     for (size_t i = 0; i < released; i++) {
-        if (plan_node_add_constraint(plan, held[i], &hold) != PLAN_OK && result == PIECE_OK) {
+        SectionDescription description = *plan_node_section(plan, held[i]);
+        description.leads_in = true;
+        if (plan_node_set_section(plan, held[i], &description) != PLAN_OK && result == PIECE_OK) {
             result = PIECE_ERR_ALLOC;
         }
     }

@@ -8,7 +8,7 @@ Path `library/plan/`, target `ursatz_plan`, on `model`, `theory` and cJSON (the 
 
 | Header | Provides |
 |---|---|
-| `section.h` | `SectionDescription`, the vocabulary (`SectionRole`, `SectionBeginning`, `SectionEnding`, `SectionIdea`, `SectionConstruction`, `SectionReturnVariation`, `SectionSetting`, `SectionModeShift`, `SectionConnective`, `SectionFigure`, `SectionFunction`, `SectionLane`, `SectionRegion`, `SectionHarmony`), a `*_name` and `*_find` pair for each, `section_description_init`, `section_description_check` |
+| `section.h` | `SectionDescription`, the vocabulary (`SectionRole`, `SectionBeginning`, `SectionEnding`, `SectionIdea`, `SectionConstruction`, `SectionReturnVariation`, `SectionSetting`, `SectionModeShift`, `SectionConnective`, `SectionFigure`, `SectionFunction`, `SectionLane`, `SectionRegion`, `SectionHarmony`), a `*_name` and `*_find` pair for each, `section_description_init`, `section_description_check`, `section_description_weight` |
 | `section_json.h` | `section_from_json`, `section_to_json`, `section_json_member_count`, `section_json_member_name`, `section_json_member_uses` |
 
 ## Uses
@@ -25,6 +25,8 @@ A description is used for one of four things, and the use decides which members 
 ## The rules
 
 `section_description_check` holds the rules about a section itself, with the messages the Composer's form reader used: a variation or a setting needs `returns`; a setting return names its setting; a figurate variation needs a figure and the reverse; mode `home`, `parallel` and `major` need what each says and no keys; a connective needs `leads_in`; a pedal needs a presentation beginning; a liquidation, retransition and coda refuse the members an operator makes itself; a transition refuses returns, variation, figure, mode and pedal; independent only with a transition, lyric only with a subordinate theme. A rule that looks at other sections (a return naming an earlier one), at a form's regions or at the meter stays with the code that holds those. A refusal names the member as a path relative to the section object, `/variation`.
+
+`section_description_weight` is the number of constraints the members used to be (a pairing was two, a game loop part, the seam, source material and a liquidation one each): the Composer's fill picks the open node with the most constraints first, and a section node counts its weight with them so the order stays as it was.
 
 ## The codec
 

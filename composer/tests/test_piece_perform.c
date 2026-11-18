@@ -118,7 +118,7 @@ static size_t composed_sections(const PiecePlan *plan, NodeId *out) {
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (!plan_node_has_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             out[count++] = child;
         }
     }
@@ -158,12 +158,9 @@ static void check_performance(const FormSpec *form, const PiecePlan *plan) {
             same_lane(plan, section->source, performance.plan, section->node, PLAN_LANE_INNER_VOICE, voice);
         }
         /* The letter, the cadences and the key are the source's. */
-        for (size_t c = 0; c < plan_node_constraint_count(plan, section->source); c++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, section->source, c);
-            if (constraint->kind == PLAN_CONSTRAINT_SECTION_LETTER) {
-                const PlanConstraint *copied = plan_node_find_constraint(performance.plan, section->node, PLAN_CONSTRAINT_SECTION_LETTER);
-                assert(copied && strcmp(copied->params.letter, constraint->params.letter) == 0);
-            }
+        if (plan_section_or_empty(plan, section->source)->letter[0] != '\0') {
+            assert(strcmp(plan_section_or_empty(performance.plan, section->node)->letter,
+                          plan_section_or_empty(plan, section->source)->letter) == 0);
         }
     }
     /* The performed plan renders 24 bars and twice the notes of the composed one (each section is played twice). */

@@ -1189,7 +1189,7 @@ static int test_custom(void) {
             NodeId root = plan_root(plan);
             for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
                 NodeId child = plan_node_child_at(plan, root, i);
-                if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
                     sections[count++] = child;
                 }
             }
@@ -1268,14 +1268,14 @@ static int test_uneven_form(void) {
             NodeId root = plan_root(plan);
             for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
                 NodeId child = plan_node_child_at(plan, root, i);
-                if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
                     sections[count++] = child;
                 }
             }
             assert(count == 2 && outcome.section_count == 2);
             for (size_t i = 0; i < 2; i++) {
-                const PlanConstraint *construction = plan_node_find_constraint(plan, sections[i], PLAN_CONSTRAINT_CONSTRUCTION);
-                assert(construction && construction->params.construction.reason == SECTION_CONSTRUCTION_GIVEN);
+                const SectionDescription *construction = plan_node_section(plan, sections[i]);
+                assert(construction->has_construction && construction->construction.reason == SECTION_CONSTRUCTION_GIVEN);
                 assert(section_written(plan, sections[i]) && outcome.sections[i].construction_text[0] != '\0');
             }
             composed++;
@@ -1506,12 +1506,12 @@ static int test_pedal_form(void) {
             NodeId root = plan_root(plan);
             for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
                 NodeId child = plan_node_child_at(plan, root, i);
-                if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
                     sections[count++] = child;
                 }
             }
-            assert(count == 3 && plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_PEDAL));
-            assert(!plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_PEDAL));
+            assert(count == 3 && plan_node_section(plan, sections[1])->pedal == 5);
+            assert(plan_node_section(plan, sections[0])->pedal == 0);
             check_pedal_half(plan, sections[1]);
             composed++;
         } else {
@@ -2111,18 +2111,18 @@ static void test_parts_reader(void) {
     for (size_t i = 0; i < plan_node_child_count(plan, plan_root(plan)); i++) {
         NodeId child = plan_node_child_at(plan, plan_root(plan), i);
         const char *name = plan_node_name(plan, child);
-        const PlanConstraint *function = plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SECTION_FUNCTION);
+        const SectionDescription *function = plan_node_kind(plan, child) == PLAN_NODE_SECTION && plan_node_section(plan, child)->has_function
+                                                 ? plan_node_section(plan, child)
+                                                 : NULL;
         with_function += function != NULL;
         for (size_t p = 0; p < sizeof(PARTS) / sizeof(PARTS[0]); p++) {
             if (plan_node_kind(plan, child) != PLAN_NODE_SECTION || !name || strcmp(name, PARTS[p].name) != 0) {
                 continue;
             }
             found++;
-            assert(function && function->params.section_function.function == PARTS[p].function &&
-                   function->params.section_function.independent == PARTS[p].independent &&
-                   function->params.section_function.lyric == PARTS[p].lyric);
-            assert((plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_ARCHETYPE) != NULL) == PARTS[p].archetype);
-            assert((plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_THEME_PAIRING) != NULL) == PARTS[p].archetype);
+            assert(function && function->function.function == PARTS[p].function &&
+                   function->function.independent == PARTS[p].independent && function->function.lyric == PARTS[p].lyric);
+            assert(plan_node_section(plan, child)->has_pairing == PARTS[p].archetype);
             const PlanConstraint *motive = plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MOTIVE_REF);
             if (PARTS[p].lyric) {
                 assert(motive && motive->params.motive.has_step && motive->params.motive.step.kind == MOTIVE_RELATION_AUGMENT &&
@@ -2407,7 +2407,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             sections[count++] = child;
         }
     }
@@ -2529,12 +2529,12 @@ static void lead_sweep(const char *text, int pitch_class, HarmonyMode mode, int 
             const char *first = chord_at(plan, b_end);
             assert(strcmp(first, "I") == 0 || strcmp(first, "i") == 0);
             /* B is held and asks for the connective; the flag says whether it was written. */
-            assert(plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_HOLD));
-            const PlanConstraint *constraint = plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_CONNECTIVE);
-            assert(constraint);
-            assert(!plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_CONNECTIVE) &&
-                   !plan_node_find_constraint(plan, sections[2], PLAN_CONSTRAINT_CONNECTIVE));
-            if (constraint->params.connective.written) {
+            assert(plan_node_section(plan, sections[1])->leads_in);
+            const SectionDescription *constraint = plan_node_section(plan, sections[1]);
+            assert(constraint->connective != SECTION_CONNECTIVE_NONE);
+            assert(plan_node_section(plan, sections[0])->connective == SECTION_CONNECTIVE_NONE &&
+                   plan_node_section(plan, sections[2])->connective == SECTION_CONNECTIVE_NONE);
+            if (constraint->connective_written) {
                 Rational bar = {3, 4};
                 Rational beat = {1, 4};
                 Rational eighth = {1, 8};
@@ -2604,10 +2604,10 @@ static void lead_sometimes(const char *text) {
             assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             assert(piece_sections(plan, sections) == 3);
-            assert(plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_HOLD));
-            const PlanConstraint *constraint = plan_node_find_constraint(plan, sections[1], PLAN_CONSTRAINT_CONNECTIVE);
-            assert(!constraint || !constraint->params.connective.written);
-            has[pass] = constraint != NULL;
+            assert(plan_node_section(plan, sections[1])->leads_in);
+            const SectionDescription *constraint = plan_node_section(plan, sections[1]);
+            assert(constraint->connective == SECTION_CONNECTIVE_NONE || !constraint->connective_written);
+            has[pass] = constraint->connective != SECTION_CONNECTIVE_NONE;
             plan_destroy(plan);
         }
         assert(has[0] == has[1]);

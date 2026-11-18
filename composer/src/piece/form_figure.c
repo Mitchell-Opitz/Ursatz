@@ -129,7 +129,7 @@ bool form_figure_cell_bounds(const FigureReading *reading, size_t cell, Rational
 }
 
 FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section) {
-    PlanReturn ret;
+    ReturnRef ret;
     int shift;
     if (!plan || !return_target(plan, section, &ret) || ret.variation != SECTION_RETURN_FIGURATE) {
         return NULL;

@@ -9,8 +9,8 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
-
 #include "util/plan_util.h"
+
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 
@@ -105,7 +105,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *out, size_t max) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form) && count < max; i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (!node_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL) && !node_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL) && !plan_section_has_role(plan, child, SECTION_ROLE_SEAM)) {
             out[count++] = child;
         }
     }
@@ -233,28 +233,27 @@ static void test_plan(void) {
         assert(rational_make((long)BEATS[i], 4, &want_length) == RATIONAL_OK);
         assert(rational_cmp(span.start, want_start) == 0);
         assert(rational_cmp(span.length, want_length) == 0);
-        const PlanConstraint *part = node_constraint(plan, sections[i], PLAN_CONSTRAINT_PIECE_PART);
-        assert(part && part->params.piece_part.part == PARTS[i] && strcmp(part->params.piece_part.id, IDS[i]) == 0);
-        const PlanConstraint *cadence = node_constraint(plan, sections[i], PLAN_CONSTRAINT_CADENCE);
-        assert(cadence && cadence->params.cadence == CADENCES[i]);
+        const SectionDescription *described = plan_node_section(plan, sections[i]);
+        assert(described->has_role && described->role == (SectionRole)(SECTION_ROLE_INTRO + PARTS[i]) && strcmp(described->id, IDS[i]) == 0);
+        assert(described->has_cadence && described->cadence == CADENCES[i]);
         assert(node_constraint(plan, sections[i], PLAN_CONSTRAINT_KEY));
-        assert(node_constraint(plan, sections[i], PLAN_CONSTRAINT_SECTION_LETTER));
+        assert(described->letter[0] != '\0');
         /* Only the second body section has a pickup. */
         const PlanConstraint *constraint = node_constraint(plan, sections[i], PLAN_CONSTRAINT_PICKUP);
         assert((constraint != NULL) == (i == 2));
         /* Only a motif section of 8 whole bars on a barline is a theme. */
-        assert((node_constraint(plan, sections[i], PLAN_CONSTRAINT_ARCHETYPE) != NULL) == (i == 1));
+        assert(described->has_pairing == (i == 1));
         start += BEATS[i];
     }
     /* Only the turnaround, the loop's end, is held for the seam stage. */
     for (size_t i = 0; i < count; i++) {
-        assert((node_constraint(plan, sections[i], PLAN_CONSTRAINT_HOLD) != NULL) == (i == 3));
+        assert(plan_node_section(plan, sections[i])->leads_in == (i == 3));
     }
     /* The seam is the bar after the loop's end (50 beats), open and empty. */
     NodeId form = plan_root(plan);
     NodeId seam = plan_node_child_at(plan, form, count);
-    assert(node_constraint(plan, seam, PLAN_CONSTRAINT_SEAM));
-    assert(!node_constraint(plan, seam, PLAN_CONSTRAINT_MATERIAL) && !node_constraint(plan, seam, PLAN_CONSTRAINT_HOLD));
+    assert(plan_section_has_role(plan, seam, SECTION_ROLE_SEAM));
+    assert(!plan_section_has_role(plan, seam, SECTION_ROLE_MATERIAL) && !plan_node_section(plan, seam)->leads_in);
     assert(plan_node_child_count(plan, seam) == 0 && plan_node_state(plan, seam) == PLAN_STATE_CONSTRAINED);
     Rational end;
     assert(plan_span_end(plan_node_span(plan, sections[3]), &end) == PLAN_OK);
@@ -262,7 +261,7 @@ static void test_plan(void) {
     assert(rational_cmp(plan_node_span(plan, seam).length, (Rational){1, 1}) == 0);
     /* The material starts on the first barline at or after the seam's end (54 beats: bar 14, beat 56). */
     NodeId material = plan_node_child_at(plan, form, count + 1);
-    assert(node_constraint(plan, material, PLAN_CONSTRAINT_MATERIAL));
+    assert(plan_section_has_role(plan, material, SECTION_ROLE_MATERIAL));
     Rational barline;
     assert(rational_make(56, 4, &barline) == RATIONAL_OK);
     assert(rational_cmp(plan_node_span(plan, material).start, barline) == 0);
@@ -296,14 +295,14 @@ static bool section_written(const PiecePlan *plan, NodeId section) {
 
 /* Whether the cadence the section was planned to end in is the one heard at the end of its chords. */
 static bool cadence_heard(const PiecePlan *plan, NodeId section) {
-    const PlanConstraint *cadence = node_constraint(plan, section, PLAN_CONSTRAINT_CADENCE);
+    const SectionDescription *cadence = plan_node_section(plan, section)->has_cadence ? plan_node_section(plan, section) : NULL;
     const PlanConstraint *key = node_constraint(plan, section, PLAN_CONSTRAINT_KEY);
     CadenceType heard;
     bool at_end;
     return cadence && key &&
-           harmony_hear_cadence(plan, plan_node_span(plan, section), harmony_key_mode(&key->params.key), cadence->params.cadence,
+           harmony_hear_cadence(plan, plan_node_span(plan, section), harmony_key_mode(&key->params.key), cadence->cadence,
                                 &heard, &at_end) &&
-           at_end && heard == cadence->params.cadence;
+           at_end && heard == cadence->cadence;
 }
 
 typedef struct {
@@ -332,10 +331,10 @@ static Sweep compose_seeds(Fixture *fixture) {
             bool heard = true;
             assert(outcome.section_count == count);
             for (size_t i = 0; i < count; i++) {
-                const PlanConstraint *part = node_constraint(plan, sections[i], PLAN_CONSTRAINT_PIECE_PART);
+                const SectionDescription *part = plan_node_section(plan, sections[i]);
                 assert(outcome.sections[i].section == sections[i]);
-                assert(outcome.sections[i].has_part && outcome.sections[i].part == part->params.piece_part.part);
-                assert(strcmp(outcome.sections[i].id, part->params.piece_part.id) == 0);
+                assert(outcome.sections[i].has_part && outcome.sections[i].part == (int)(part->role - SECTION_ROLE_INTRO));
+                assert(strcmp(outcome.sections[i].id, part->id) == 0);
                 written = written && section_written(plan, sections[i]);
                 heard = heard && cadence_heard(plan, sections[i]);
             }
@@ -413,8 +412,8 @@ static void free_phrase(size_t beats, size_t expected_ideas, const size_t *idea_
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
     NodeId sections[2];
     assert(piece_sections(plan, sections, 2) == 2);
-    assert(node_constraint(plan, sections[1], PLAN_CONSTRAINT_FREE_PHRASE));
-    assert(!node_constraint(plan, sections[1], PLAN_CONSTRAINT_ARCHETYPE));
+    assert(plan_node_section(plan, sections[1])->free_phrase);
+    assert(!plan_node_section(plan, sections[1])->has_pairing);
     plan_destroy(plan);
 
     size_t completed = 0;
@@ -477,9 +476,8 @@ static void test_minor_half_free(void) {
     NodeId sections[PIECE_STRUCTURE_MAX_SECTIONS];
     size_t count = piece_sections(plan, sections, PIECE_STRUCTURE_MAX_SECTIONS);
     assert(count == 2);
-    assert(node_constraint(plan, sections[1], PLAN_CONSTRAINT_FREE_PHRASE));
-    const PlanConstraint *cadence = node_constraint(plan, sections[1], PLAN_CONSTRAINT_CADENCE);
-    assert(cadence && cadence->params.cadence == CADENCE_TYPE_HALF);
+    assert(plan_node_section(plan, sections[1])->free_phrase);
+    assert(plan_node_section(plan, sections[1])->has_cadence && plan_node_section(plan, sections[1])->cadence == CADENCE_TYPE_HALF);
 
     ComposeConfig config;
     ComposeOutcome outcome;
@@ -564,8 +562,8 @@ static LaneSpanId last_chord(const PiecePlan *plan, NodeId section) {
 
 /* T of the loop version: a transition ending on V or V7, its continuation liquidated (fragment 2 by 1 step or more on a segment). */
 static bool transition_ok(const PiecePlan *plan, NodeId t) {
-    const PlanConstraint *function = node_constraint(plan, t, PLAN_CONSTRAINT_SECTION_FUNCTION);
-    if (!function || function->params.section_function.function != SECTION_FUNCTION_TRANSITION) {
+    const SectionDescription *function = plan_node_section(plan, t);
+    if (!function->has_function || function->function.function != SECTION_FUNCTION_TRANSITION) {
         return false;
     }
     const char *numeral = plan_lane_span_payload(plan, last_chord(plan, t))->harmony.roman_numeral;
@@ -576,9 +574,9 @@ static bool transition_ok(const PiecePlan *plan, NodeId t) {
 
 /* K of the ending version: the coda function, three phrases of 4, 2 and 2 bars, no archetype. */
 static bool coda_ok(const PiecePlan *plan, NodeId k) {
-    const PlanConstraint *function = node_constraint(plan, k, PLAN_CONSTRAINT_SECTION_FUNCTION);
-    if (!function || function->params.section_function.function != SECTION_FUNCTION_CODA ||
-        node_constraint(plan, k, PLAN_CONSTRAINT_ARCHETYPE) || plan_node_child_count(plan, k) != 3) {
+    const SectionDescription *function = plan_node_section(plan, k);
+    if (!function->has_function || function->function.function != SECTION_FUNCTION_CODA || function->has_pairing ||
+        plan_node_child_count(plan, k) != 3) {
         return false;
     }
     PlanSpan whole = plan_node_span(plan, k);
@@ -696,7 +694,7 @@ static void test_functions(void) {
             size_t count = piece_sections(loop_plan, sections, PIECE_STRUCTURE_MAX_SECTIONS);
             assert(count == 5);
             assert(transition_ok(loop_plan, sections[2]));
-            assert(!node_constraint(loop_plan, sections[1], PLAN_CONSTRAINT_SECTION_FUNCTION));
+            assert(!plan_node_section(loop_plan, sections[1])->has_function);
             loops++;
             assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_OK);
             config.seed = seed + 20;

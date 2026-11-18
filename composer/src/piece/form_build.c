@@ -123,42 +123,59 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
                                const PlanAccompaniment *accompaniment, bool connective, NodeId *out) {
     PlanConstraint constraint;
     /*
-     * A liquidation (R-494), a retransition (R-505) and a coda (R-509) are no theme: an operator section has no archetype,
-     * pairing or antecedent cadence. A liquidation has the liquidation constraint in their place; a transition, retransition,
-     * subordinate theme and coda have the section function constraint (R-503).
+     * A liquidation (R-494), a retransition (R-505) and a coda (R-509) are no theme: an operator section has no pairing or
+     * antecedent cadence. A liquidation has the role liquidation in their place; a transition, retransition, subordinate theme
+     * and coda have a section function (R-503). The node's description holds all of it (R-607).
      */
     const bool liquidation = section->role == SECTION_ROLE_LIQUIDATION;
     const bool operator_section =
         liquidation || section->role == SECTION_ROLE_RETRANSITION || section->role == SECTION_ROLE_CODA;
+    SectionDescription description;
+    section_description_init(&description);
+    if (liquidation) {
+        description.has_role = true;
+        description.role = SECTION_ROLE_LIQUIDATION;
+    }
+    if (!operator_section) {
+        description.has_pairing = true;
+        description.pairing = section->pairing;
+    }
+    description.has_cadence = true;
+    description.cadence = section->cadence;
+    if (!operator_section && section->pairing.beginning == SECTION_BEGINNING_ANTECEDENT) {
+        description.has_first_cadence = true;
+        description.first_cadence = ANTECEDENT_CADENCE;
+    }
+    snprintf(description.letter, sizeof(description.letter), "%s", section->letter);
+    if (section->role >= SECTION_ROLE_TRANSITION && section->role <= SECTION_ROLE_CODA) {
+        static const SectionFunctionKind FUNCTIONS[] = {SECTION_FUNCTION_TRANSITION, SECTION_FUNCTION_RETRANSITION,
+                                                        SECTION_FUNCTION_SUBORDINATE, SECTION_FUNCTION_CODA};
+        description.has_function = true;
+        description.function.function = FUNCTIONS[section->role - SECTION_ROLE_TRANSITION];
+        description.function.independent = section->function.independent;
+        description.function.lyric = section->function.lyric;
+    }
+    if (section->returns[0] != '\0') {
+        snprintf(description.returns, sizeof(description.returns), "%s", section->returns);
+        description.variation = section->variation;
+        description.mode = section->mode == SECTION_MODE_HOME ? SECTION_MODE_HOME : SECTION_MODE_NONE;
+        if (section->variation == SECTION_RETURN_SETTING) {
+            description.setting = (SectionSetting)setting_pattern(section, request, accompaniment);
+        }
+    }
+    description.has_figure = section->has_figure;
+    description.figure = section->figure;
+    description.layers = section->layers;
+    description.pedal = section->pedal;
+    description.has_construction = construction != NULL;
+    if (construction) {
+        description.construction = *construction;
+    }
+    description.leads_in = section->leads_in;
+    description.connective = section->leads_in && connective ? SECTION_CONNECTIVE_ALWAYS : SECTION_CONNECTIVE_NONE;
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->name, out));
-    if (result == PIECE_OK && liquidation) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_LIQUIDATION;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && !operator_section) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
-        constraint.params.archetype = (PlanArchetype)grow_pairing_archetype(&section->pairing);
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && !operator_section) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_THEME_PAIRING;
-        constraint.params.theme_pairing = section->pairing;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
     if (result == PIECE_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = section->cadence;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && !operator_section && section->pairing.beginning == SECTION_BEGINNING_ANTECEDENT) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = ANTECEDENT_CADENCE;
-        result = piece_add_constraint(plan, *out, &constraint);
+        result = piece_result_of_plan(plan_node_set_section(plan, *out, &description));
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
@@ -172,67 +189,8 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         constraint.params.accompaniment = *accompaniment;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_SECTION_LETTER;
-        memcpy(constraint.params.letter, section->letter, sizeof(constraint.params.letter));
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && section->role >= SECTION_ROLE_TRANSITION && section->role <= SECTION_ROLE_CODA) {
-        static const SectionFunctionKind FUNCTIONS[] = {SECTION_FUNCTION_TRANSITION, SECTION_FUNCTION_RETRANSITION,
-                                                     SECTION_FUNCTION_SUBORDINATE, SECTION_FUNCTION_CODA};
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_SECTION_FUNCTION;
-        constraint.params.section_function.function = FUNCTIONS[section->role - SECTION_ROLE_TRANSITION];
-        constraint.params.section_function.independent = section->function.independent;
-        constraint.params.section_function.lyric = section->function.lyric;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && section->returns[0] != '\0') {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_RETURN;
-        constraint.params.section_return.section = sections[form_spec_section_index(size, section->returns)];
-        constraint.params.section_return.variation = section->variation;
-        constraint.params.section_return.across_modes = section->mode == SECTION_MODE_HOME;
-        if (section->variation == SECTION_RETURN_SETTING) {
-            constraint.params.section_return.setting = setting_pattern(section, request, accompaniment);
-        }
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && section->has_figure) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_FIGURE;
-        constraint.params.figure = section->figure;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && section->layers != 0) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_LAYERS;
-        constraint.params.layers.lanes = section->layers;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && section->pedal != 0) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_PEDAL;
-        constraint.params.pedal.degree = section->pedal;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && construction) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CONSTRUCTION;
-        constraint.params.construction = *construction;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && section->leads_in) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_HOLD;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK && section->leads_in && connective) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CONNECTIVE;
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
+    (void)sections;
+    (void)size;
     return result;
 }
 
@@ -342,12 +300,13 @@ PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const Plan
     NodeId section;
     NodeId phrase;
     NodeId idea;
-    PlanConstraint constraint;
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, material, GROW_MATERIAL_NAME, &section));
     if (result == PIECE_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_MATERIAL;
-        result = piece_add_constraint(plan, section, &constraint);
+        SectionDescription description;
+        section_description_init(&description);
+        description.has_role = true;
+        description.role = SECTION_ROLE_MATERIAL;
+        result = piece_result_of_plan(plan_node_set_section(plan, section, &description));
     }
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_add_node(plan, section, PLAN_NODE_PHRASE, material, GROW_MATERIAL_NAME, &phrase));

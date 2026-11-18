@@ -98,7 +98,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             sections[count++] = child;
         }
     }
@@ -176,9 +176,9 @@ static void check_run(const PiecePlan *plan, const Row *row, unsigned long seed)
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 4);
     NodeId l = sections[2];
-    assert(plan_node_find_constraint(plan, l, PLAN_CONSTRAINT_LIQUIDATION));
-    assert(!plan_node_find_constraint(plan, l, PLAN_CONSTRAINT_ARCHETYPE) &&
-           !plan_node_find_constraint(plan, l, PLAN_CONSTRAINT_THEME_PAIRING));
+    assert(plan_section_has_role(plan, l, SECTION_ROLE_LIQUIDATION));
+    assert(!plan_section_or_empty(plan, l)->has_pairing &&
+           !plan_section_or_empty(plan, l)->has_pairing);
     PlanSpan span = plan_node_span(plan, l);
     Rational end = add_time(span.start, span.length);
     Rational bar = {row->beats, row->unit};

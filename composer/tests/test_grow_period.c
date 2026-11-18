@@ -176,19 +176,17 @@ static size_t expected_nodes(SectionBeginning beginning, SectionEnding ending, E
 
 static SectionPairing theme_pairing(const PiecePlan *plan, NodeId theme) {
     SectionPairing pairing = {SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION};
-    bool found = false;
-    for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
-        if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
-            pairing = constraint->params.theme_pairing;
-            found = true;
-        }
-    }
-    assert(found);
+    const SectionDescription *section = plan_node_section(plan, theme);
+    assert(section && section->has_pairing);
+    pairing = section->pairing;
     return pairing;
 }
 
 static bool node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out) {
+    if (plan_node_section(plan, node) && plan_node_section(plan, node)->has_cadence) {
+        *out = plan_node_section(plan, node)->cadence;
+        return true;
+    }
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
@@ -295,16 +293,6 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
     assert(pairing.beginning == beginning && pairing.ending == ending);
     PhraseLevelForm form;
     assert(standard_form_pairing_form(beginning_of(beginning), ending_of(ending), &form));
-    PlanArchetype archetype = PLAN_ARCHETYPE_SENTENCE;
-    for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE) {
-            archetype = constraint->params.archetype;
-        }
-    }
-    assert((form == PHRASE_LEVEL_FORM_SENTENCE) == (archetype == PLAN_ARCHETYPE_SENTENCE));
-    assert((form == PHRASE_LEVEL_FORM_PERIOD) == (archetype == PLAN_ARCHETYPE_PERIOD));
-    assert((form == PHRASE_LEVEL_FORM_HYBRID) == (archetype == PLAN_ARCHETYPE_HYBRID));
     if (form == PHRASE_LEVEL_FORM_HYBRID) {
         assert(standard_form_pairing_is_hybrid(beginning_of(beginning), ending_of(ending)));
     }

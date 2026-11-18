@@ -146,14 +146,22 @@ static bool same_subtree(const PiecePlan *plan, NodeId a, NodeId b) {
     return true;
 }
 
-static const PlanConstraint *return_of(const PiecePlan *plan, NodeId section) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            return constraint;
-        }
+/* The return a section holds, as a small record in a slot that stays valid through the next three calls; NULL for a section that returns none. */
+static const ReturnRef *return_of(const PiecePlan *plan, NodeId section) {
+    static ReturnRef slots[4];
+    static size_t next = 0;
+    const SectionDescription *described = plan_section_or_empty(plan, section);
+    NodeId source = described->returns[0] != '\0' ? plan_section_named(plan, described->returns) : PLAN_NODE_NONE;
+    ReturnRef *out = &slots[next++ % 4];
+    if (source == PLAN_NODE_NONE) {
+        return NULL;
     }
-    return NULL;
+    memset(out, 0, sizeof(*out));
+    out->section = source;
+    out->variation = described->variation;
+    out->setting = (PlanAccompanimentPattern)described->setting;
+    out->across_modes = described->mode == SECTION_MODE_HOME;
+    return out;
 }
 
 /* The sections of the piece, in order, without the material. */
@@ -247,10 +255,10 @@ static int test_exact(bool smoke) {
                 size_t count = sections_of(plan, sections);
                 completed++;
                 for (size_t i = 0; i < count; i++) {
-                    const PlanConstraint *back = return_of(plan, sections[i]);
+                    const ReturnRef *back = return_of(plan, sections[i]);
                     if (back) {
-                        assert(back->params.section_return.variation == SECTION_RETURN_EXACT);
-                        check_exact(plan, back->params.section_return.section, sections[i]);
+                        assert(back->variation == SECTION_RETURN_EXACT);
+                        check_exact(plan, back->section, sections[i]);
                         returns++;
                     }
                 }
@@ -333,9 +341,9 @@ static int test_ornament(void) {
             assert(count == 4);
             completed++;
             for (size_t i = 1; i < count; i += 2) {
-                const PlanConstraint *back = return_of(plan, sections[i]);
-                assert(back && back->params.section_return.variation == SECTION_RETURN_ORNAMENT);
-                added += check_ornament(plan, back->params.section_return.section, sections[i]);
+                const ReturnRef *back = return_of(plan, sections[i]);
+                assert(back && back->variation == SECTION_RETURN_ORNAMENT);
+                added += check_ornament(plan, back->section, sections[i]);
             }
         }
         compose_outcome_destroy(&outcome);
@@ -364,9 +372,9 @@ static int test_reharmonize(void) {
         if (compose(&request, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             size_t count = sections_of(plan, sections);
-            const PlanConstraint *back = return_of(plan, sections[2]);
-            assert(count == 4 && back && back->params.section_return.variation == SECTION_RETURN_REHARMONIZE);
-            NodeId source = back->params.section_return.section;
+            const ReturnRef *back = return_of(plan, sections[2]);
+            assert(count == 4 && back && back->variation == SECTION_RETURN_REHARMONIZE);
+            NodeId source = back->section;
             static Event a[MAX_EVENTS];
             static Event b[MAX_EVENTS];
             size_t changed;
@@ -465,14 +473,14 @@ static int test_varied(void) {
             NodeId root = plan_root(plan);
             for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
                 NodeId child = plan_node_child_at(plan, root, i);
-                if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
                     sections[count++] = child;
                 }
             }
-            const PlanConstraint *back = return_of(plan, sections[2]);
+            const ReturnRef *back = return_of(plan, sections[2]);
             bool changed = false;
-            assert(count == 3 && back && back->params.section_return.variation == SECTION_RETURN_VARIED);
-            added += check_varied(plan, back->params.section_return.section, sections[2]);
+            assert(count == 3 && back && back->variation == SECTION_RETURN_VARIED);
+            added += check_varied(plan, back->section, sections[2]);
             assert(form_return_cadence_changed(plan, sections[2], &changed));
             cadence += changed;
             composed++;
@@ -494,9 +502,9 @@ static int test_varied(void) {
         if (compose(&ternary, seed, NULL, NULL, &plan, &outcome) == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             assert(sections_of(plan, sections) == 3);
-            const PlanConstraint *back = return_of(plan, sections[2]);
-            assert(back && back->params.section_return.variation == SECTION_RETURN_VARIED);
-            check_varied(plan, back->params.section_return.section, sections[2]);
+            const ReturnRef *back = return_of(plan, sections[2]);
+            assert(back && back->variation == SECTION_RETURN_VARIED);
+            check_varied(plan, back->section, sections[2]);
             ternary_composed++;
         }
         compose_outcome_destroy(&outcome);
@@ -586,13 +594,13 @@ static size_t embellish_row(const FormSpec *form, const EmbellishRow *row, bool 
                 NodeId root = plan_root(plan);
                 for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
                     NodeId child = plan_node_child_at(plan, root, i);
-                    if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+                    if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
                         sections[count++] = child;
                     }
                 }
-                const PlanConstraint *back = return_of(plan, sections[4]);
-                assert(count == 6 && back && back->params.section_return.variation == SECTION_RETURN_EMBELLISH);
-                *added += check_embellish(plan, back->params.section_return.section, sections[4]);
+                const ReturnRef *back = return_of(plan, sections[4]);
+                assert(count == 6 && back && back->variation == SECTION_RETURN_EMBELLISH);
+                *added += check_embellish(plan, back->section, sections[4]);
             }
         }
         compose_outcome_destroy(&outcome);
@@ -707,10 +715,10 @@ static size_t setting_row(const FormSpec *form, const SettingRow *row) {
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             size_t count = sections_of(plan, sections);
-            const PlanConstraint *back = return_of(plan, sections[4]);
-            assert(count == 6 && back && back->params.section_return.variation == SECTION_RETURN_SETTING &&
-                   back->params.section_return.setting == PLAN_ACCOMPANIMENT_ARPEGGIATED);
-            check_setting(plan, back->params.section_return.section, sections[4]);
+            const ReturnRef *back = return_of(plan, sections[4]);
+            assert(count == 6 && back && back->variation == SECTION_RETURN_SETTING &&
+                   back->setting == PLAN_ACCOMPANIMENT_ARPEGGIATED);
+            check_setting(plan, back->section, sections[4]);
             composed++;
         }
         compose_outcome_destroy(&outcome);
@@ -734,9 +742,9 @@ static PlanAccompanimentPattern built_setting(const char *pattern, const Setting
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     sections_of(plan, sections);
-    const PlanConstraint *back = return_of(plan, sections[4]);
-    assert(back && back->params.section_return.variation == SECTION_RETURN_SETTING);
-    PlanAccompanimentPattern out = back->params.section_return.setting;
+    const ReturnRef *back = return_of(plan, sections[4]);
+    assert(back && back->variation == SECTION_RETURN_SETTING);
+    PlanAccompanimentPattern out = back->setting;
     plan_destroy(plan);
     form_spec_destroy(form);
     return out;
@@ -781,8 +789,8 @@ static int test_setting(void) {
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             sections_of(plan, sections);
-            const PlanConstraint *back = return_of(plan, sections[4]);
-            assert(back && back->params.section_return.setting == PLAN_ACCOMPANIMENT_ALBERTI);
+            const ReturnRef *back = return_of(plan, sections[4]);
+            assert(back && back->setting == PLAN_ACCOMPANIMENT_ALBERTI);
             assert(plan_node_state(plan, sections[4]) == PLAN_STATE_REALIZED);
             alberti++;
         }
@@ -805,15 +813,11 @@ static int test_setting(void) {
 
 static void make_reregister(PiecePlan *plan) {
     NodeId section = plan_node_child_at(plan, plan_root(plan), 2);
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        PlanConstraint constraint = *plan_node_constraint_at(plan, section, i);
-        if (constraint.kind == PLAN_CONSTRAINT_RETURN) {
-            constraint.params.section_return.variation = SECTION_RETURN_REREGISTER;
-            assert(plan_node_remove_constraint(plan, section, i) == PLAN_OK);
-            assert(plan_node_add_constraint(plan, section, &constraint) == PLAN_OK);
-            return;
-        }
-    }
+    SectionDescription described = *plan_node_section(plan, section);
+    assert(described.returns[0] != '\0');
+    described.variation = SECTION_RETURN_REREGISTER;
+    assert(plan_node_set_section(plan, section, &described) == PLAN_OK);
+
     assert(!"a return to edit");
 }
 
@@ -930,9 +934,9 @@ static void check_home(const PiecePlan *plan, NodeId source, NodeId section, con
     static Event b[MAX_EVENTS];
     AnalysisKey source_key;
     AnalysisKey keys[32];
-    const PlanConstraint *back = return_of(plan, section);
-    assert(back && back->params.section_return.section == source &&
-           back->params.section_return.variation == SECTION_RETURN_REHARMONIZE && back->params.section_return.across_modes);
+    const ReturnRef *back = return_of(plan, section);
+    assert(back && back->section == source &&
+           back->variation == SECTION_RETURN_REHARMONIZE && back->across_modes);
     assert(plan_node_state(plan, section) == PLAN_STATE_REALIZED);
     assert(keys_under(plan, source, &source_key, 1) == 1);
     size_t key_count = keys_under(plan, section, keys, 32);

@@ -222,9 +222,9 @@ static void test_build(void) {
     GrowRequest request = request_of(scenario, &one, 9, SENTENCE);
     PiecePlan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
-    const PlanConstraint *constraint = plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
+    const SectionDescription *constraint = plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction ? plan_node_section(plan, test_find_node(plan, "theme")) : NULL;
     assert(constraint);
-    expect_construction(&constraint->params.construction, &ROWS[4], "plan");
+    expect_construction(&constraint->construction, &ROWS[4], "plan");
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
@@ -248,8 +248,8 @@ static void test_build(void) {
     request.construction = &given;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId theme = test_find_node(plan, "theme");
-    constraint = plan_node_find_constraint(plan, theme, PLAN_CONSTRAINT_CONSTRUCTION);
-    assert(constraint && constraint->params.construction.reason == SECTION_CONSTRUCTION_GIVEN);
+    constraint = plan_section_or_empty(plan, theme)->has_construction ? plan_node_section(plan, theme) : NULL;
+    assert(constraint && constraint->construction.reason == SECTION_CONSTRUCTION_GIVEN);
     char text[192];
     assert(grow_section_describe(plan, theme, text, sizeof(text)) > 0);
     assert(strcmp(text, "4+5 sentence as given: fragment 2 is repeated a step lower (bar 7).") == 0);
@@ -283,7 +283,7 @@ static void test_refusals(void) {
     request = request_of(scenario, &one, 8, SENTENCE);
     PiecePlan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
-    assert(plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION) == NULL);
+    assert(!plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction);
     plan_destroy(plan);
 }
 

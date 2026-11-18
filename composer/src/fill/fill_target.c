@@ -15,8 +15,14 @@ PlanState fill_target_state(const PiecePlan *plan, FillTarget target) {
 }
 
 size_t fill_target_constraint_count(const PiecePlan *plan, FillTarget target) {
-    return target.kind == FILL_TARGET_NODE ? plan_node_constraint_count(plan, (NodeId)target.id)
-                                           : plan_lane_span_constraint_count(plan, (LaneSpanId)target.id);
+    if (target.kind != FILL_TARGET_NODE) {
+        return plan_lane_span_constraint_count(plan, (LaneSpanId)target.id);
+    }
+    /* A section's description counts as the constraints its members were, so the order of the targets is unchanged. */
+    return plan_node_constraint_count(plan, (NodeId)target.id) +
+           (plan_node_kind(plan, (NodeId)target.id) == PLAN_NODE_SECTION
+                ? section_description_weight(plan_section_or_empty(plan, (NodeId)target.id))
+                : 0u);
 }
 
 PlanSpan fill_target_span(const PiecePlan *plan, FillTarget target) {

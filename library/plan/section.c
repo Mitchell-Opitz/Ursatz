@@ -142,6 +142,34 @@ void section_description_init(SectionDescription *description) {
     description->key_end.anchor = SECTION_ANCHOR_HOME;
 }
 
+/*
+ * The weight of a description in the order the fill picks its targets: the number of constraints the members used to be, so the
+ * order stays as it was (R-543). A pairing was two (an archetype and a pairing); the role counts for a game loop part, the seam,
+ * source material and a liquidation, which were flags.
+ */
+size_t section_description_weight(const SectionDescription *d) {
+    size_t weight = 0;
+    weight += d->has_pairing ? 2u : 0u;
+    weight += d->has_construction ? 1u : 0u;
+    weight += d->free_phrase ? 1u : 0u;
+    weight += d->has_cadence ? 1u : 0u;
+    weight += d->has_first_cadence ? 1u : 0u;
+    weight += d->has_function ? 1u : 0u;
+    weight += d->letter[0] != '\0' ? 1u : 0u;
+    weight += d->has_figure ? 1u : 0u;
+    weight += d->returns[0] != '\0' ? 1u : 0u;
+    weight += d->layers != 0 ? 1u : 0u;
+    weight += d->pedal != 0 ? 1u : 0u;
+    weight += d->leads_in ? 1u : 0u;
+    weight += d->connective != SECTION_CONNECTIVE_NONE ? 1u : 0u;
+    if (d->has_role && (d->role == SECTION_ROLE_INTRO || d->role == SECTION_ROLE_BODY || d->role == SECTION_ROLE_TURNAROUND ||
+                        d->role == SECTION_ROLE_ENDING || d->role == SECTION_ROLE_SEAM || d->role == SECTION_ROLE_MATERIAL ||
+                        d->role == SECTION_ROLE_LIQUIDATION)) {
+        weight += 1u;
+    }
+    return weight;
+}
+
 /* ------------------------------------------------------------- the rules */
 
 static bool fail(SectionError *error, const char *path, const char *format, ...) {
@@ -253,7 +281,8 @@ static bool check_construction(const SectionDescription *d, SectionUse use, Sect
     if (!d->has_construction) {
         return true;
     }
-    if (d->has_role && !section_role_is_theme(d->role)) {
+    /* a plan's piece parts (intro, body, turnaround, ending) hold a theme's construction too */
+    if (use == SECTION_USE_FORM && d->has_role && !section_role_is_theme(d->role)) {
         return fail(error, "/construction", "only a theme-like section has a construction");
     }
     if ((use == SECTION_USE_FORM || use == SECTION_USE_REQUEST) && d->bars == 0) {
@@ -482,6 +511,13 @@ bool section_description_check(const SectionDescription *d, SectionUse use, Sect
         return fail(error, "/layers", "unknown lane");
     }
 
+    if (d->has_pairing && (d->pairing.beginning < SECTION_BEGINNING_PRESENTATION || d->pairing.beginning > SECTION_BEGINNING_COMPOUND_BASIC_IDEA)) {
+        return fail(error, "/beginning", "unknown beginning");
+    }
+    if (d->has_pairing && (d->pairing.ending < SECTION_ENDING_CONTINUATION || d->pairing.ending > SECTION_ENDING_CADENTIAL)) {
+        return fail(error, "/ending", "unknown ending");
+    }
+
     /* the roles with an operator of their own, and the transition */
     if (d->has_role && section_role_is_operator(d->role)) {
         const char *refused = operator_refusal(d, d->role != SECTION_ROLE_LIQUIDATION);
@@ -635,7 +671,8 @@ bool section_description_check(const SectionDescription *d, SectionUse use, Sect
     if (d->leads_in && returns) {
         return fail(error, "/leads_in", "a section that returns another cannot lead in");
     }
-    if (d->connective != SECTION_CONNECTIVE_NONE && !d->leads_in) {
+    /* a plan releases a section's hold while its stages run, so only a form needs the two together */
+    if (d->connective != SECTION_CONNECTIVE_NONE && !d->leads_in && use == SECTION_USE_FORM) {
         return fail(error, "/connective", "a connective needs leads_in");
     }
     return true;

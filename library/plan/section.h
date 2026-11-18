@@ -323,6 +323,9 @@ typedef struct {
 /* Zeroed, the return variation exact, the regions none, the anchors home. */
 void section_description_init(SectionDescription *description);
 
+/* How many constraints the members set used to be: the order the fill picks its targets in follows it. */
+size_t section_description_weight(const SectionDescription *description);
+
 /* The rules about a section itself for one use; false with the first refusal in *error (may be NULL). */
 bool section_description_check(const SectionDescription *description, SectionUse use, SectionError *error);
 

@@ -115,19 +115,14 @@ static bool melody_range(const PiecePlan *plan, NodeId section, Rational bar_sta
     return found;
 }
 
-/* The constraint's written flag, set: the constraint is replaced, as a constraint is not changed in place. */
+/* The connective's written flag, set on the section's description. */
 static PieceResult mark_written(PiecePlan *plan, NodeId section) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_CONNECTIVE) {
-            PlanConstraint constraint;
-            memset(&constraint, 0, sizeof(constraint));
-            constraint.kind = PLAN_CONSTRAINT_CONNECTIVE;
-            constraint.params.connective.written = true;
-            PieceResult result = piece_result_of_plan(plan_node_remove_constraint(plan, section, i));
-            return result == PIECE_OK ? piece_add_constraint(plan, section, &constraint) : result;
-        }
+    if (plan_section_or_empty(plan, section)->connective == SECTION_CONNECTIVE_NONE) {
+        return PIECE_OK;
     }
-    return PIECE_OK;
+    SectionDescription description = *plan_node_section(plan, section);
+    description.connective_written = true;
+    return piece_result_of_plan(plan_node_set_section(plan, section, &description));
 }
 
 PieceResult piece_connective_write(PiecePlan *plan, NodeId section) {

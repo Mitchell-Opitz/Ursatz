@@ -264,12 +264,9 @@ static void collect_descendants(const PiecePlan *plan, NodeId id, NodeSet *set) 
     }
 }
 
-/* Whether the constraint names a node in set: a motive it is made from, or the section it returns. */
+/* Whether the constraint names a node in set: a motive it is made from. */
 static bool names_removed(const PlanConstraint *constraint, const NodeSet *set) {
-    if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
-        return set_has(set, constraint->params.motive.motive);
-    }
-    return constraint->kind == PLAN_CONSTRAINT_RETURN && set_has(set, constraint->params.section_return.section);
+    return constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && set_has(set, constraint->params.motive.motive);
 }
 
 /* The constraints of a list that name a node in set, counted; with remove, taken out of it. */
@@ -313,6 +310,20 @@ static void detach_child(PiecePlan *plan, NodeId id) {
     }
 }
 
+/* Whether a section node's description returns one of the removed sections (it names it). */
+static bool section_returns_removed(const PiecePlan *plan, const PlanNode *node, const NodeSet *set) {
+    if (node->kind != PLAN_NODE_SECTION || node->section.returns[0] == '\0') {
+        return false;
+    }
+    for (size_t i = 0; i < set->count; i++) {
+        const char *name = plan->nodes[set->ids[i] - 1].name;
+        if (name && strcmp(name, node->section.returns) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* Removes the nodes of set, which holds whole subtrees, and what goes with them; nothing is changed on a refusal. */
 static PlanResult remove_nodes(PiecePlan *plan, const NodeSet *set) {
     /* Nothing is changed until every part of the removal is known to be allowed. */
@@ -334,7 +345,7 @@ static PlanResult remove_nodes(PiecePlan *plan, const NodeSet *set) {
     for (size_t i = 0; result == PLAN_OK && i < plan->node_count; i++) {
         PlanNode *node = &plan->nodes[i];
         if (!node->removed && !set_has(set, (NodeId)(i + 1)) && node->state == PLAN_STATE_GIVEN &&
-            constraints_naming(&node->constraints, set, false) > 0) {
+            (constraints_naming(&node->constraints, set, false) > 0 || section_returns_removed(plan, node, set))) {
             result = PLAN_ERR_GIVEN_LOCKED;
         }
     }
@@ -356,8 +367,14 @@ static PlanResult remove_nodes(PiecePlan *plan, const NodeSet *set) {
     }
     for (size_t i = 0; i < plan->node_count; i++) {
         if (!plan->nodes[i].removed) {
-            if (constraints_naming(&plan->nodes[i].constraints, set, true) > 0 && plan->nodes[i].kind == PLAN_NODE_SECTION) {
-                plan_section_from_constraints(plan, &plan->nodes[i].constraints, &plan->nodes[i].section);
+            constraints_naming(&plan->nodes[i].constraints, set, true);
+            /* a section that returned a removed one no longer returns */
+            if (section_returns_removed(plan, &plan->nodes[i], set)) {
+                SectionDescription *section = &plan->nodes[i].section;
+                section->returns[0] = '\0';
+                section->variation = SECTION_RETURN_EXACT;
+                section->setting = SECTION_SETTING_NONE;
+                section->mode = section->mode == SECTION_MODE_HOME ? SECTION_MODE_NONE : section->mode;
             }
         }
     }

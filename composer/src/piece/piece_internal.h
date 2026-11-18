@@ -31,7 +31,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
 PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
                                PlanSpan material, Rational bar, NodeId *out);
 
-/* Whether the plan is a piece structure plan: some section of it has a piece part (PLAN_CONSTRAINT_PIECE_PART). */
+/* Whether the plan is a piece structure plan: some section of it has a piece part (a section description with a role of a game loop part). */
 bool piece_is_structure_plan(const PiecePlan *plan);
 
 /* The seam section of a plan (R-171), or PLAN_NODE_NONE. */

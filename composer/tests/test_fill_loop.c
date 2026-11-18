@@ -193,9 +193,8 @@ static bool close_generate(const PiecePlan *plan, FillTarget target, FillRng *rn
 static PlanResult close_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)candidate;
     (void)context;
-    PlanConstraint archetype = {PLAN_CONSTRAINT_ARCHETYPE, {0}};
-    archetype.params.archetype = PLAN_ARCHETYPE_SENTENCE;
-    return plan_node_add_constraint(plan, (NodeId)target.id, &archetype);
+    PlanConstraint mark = {PLAN_CONSTRAINT_EMBELLISH, {0}};
+    return plan_node_add_constraint(plan, (NodeId)target.id, &mark);
 }
 
 static bool melody_applies(const PiecePlan *plan, FillTarget target, void *context) {

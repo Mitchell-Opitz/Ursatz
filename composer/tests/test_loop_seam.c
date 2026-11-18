@@ -86,14 +86,17 @@ static SeamHeard hear_case(const SeamCase *c) {
     NodeId seam;
     PlanLanePayload payload;
     LaneSpanId id;
-    PlanConstraint mark = {PLAN_CONSTRAINT_SEAM, {0}};
+    SectionDescription mark;
+    section_description_init(&mark);
+    mark.has_role = true;
+    mark.role = SECTION_ROLE_SEAM;
     SeamHeard heard;
     assert(plan);
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, (PlanSpan){whole(0, 1), whole(3, 1)}, "form", &form) ==
            PLAN_OK);
     assert(plan_add_node(plan, form, PLAN_NODE_SECTION, (PlanSpan){whole(0, 1), whole(1, 1)}, "body", &body) == PLAN_OK);
     assert(plan_add_node(plan, form, PLAN_NODE_SECTION, (PlanSpan){whole(1, 1), whole(1, 1)}, "seam", &seam) == PLAN_OK);
-    assert(plan_node_add_constraint(plan, seam, &mark) == PLAN_OK);
+    assert(plan_node_set_section(plan, seam, &mark) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
     payload.meter.beats_per_bar = 4;
     payload.meter.beat_unit = 4;
@@ -195,14 +198,17 @@ static void test_rules(void) {
     PiecePlan *plan = plan_create();
     NodeId form;
     NodeId seam;
-    PlanConstraint mark = {PLAN_CONSTRAINT_SEAM, {0}};
+    SectionDescription mark;
+    section_description_init(&mark);
+    mark.has_role = true;
+    mark.role = SECTION_ROLE_SEAM;
     PlanLanePayload payload;
     LaneSpanId id;
     assert(plan);
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, (PlanSpan){whole(0, 1), whole(2, 1)}, "form", &form) ==
            PLAN_OK);
     assert(plan_add_node(plan, form, PLAN_NODE_SECTION, (PlanSpan){whole(1, 1), whole(1, 1)}, "seam", &seam) == PLAN_OK);
-    assert(plan_node_add_constraint(plan, seam, &mark) == PLAN_OK);
+    assert(plan_node_set_section(plan, seam, &mark) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
     payload.key.material = test_materials()->major;
     assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, (PlanSpan){whole(0, 1), whole(2, 1)}, &payload, &id) ==
@@ -249,21 +255,12 @@ static void standard_structure(Fixture *fixture) {
     add_section(fixture, "t", "T", PIECE_PART_TURNAROUND, 4, PIECE_FILL_EMPTY);
 }
 
-static const PlanConstraint *node_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-        if (plan_node_constraint_at(plan, id, i)->kind == kind) {
-            return plan_node_constraint_at(plan, id, i);
-        }
-    }
-    return NULL;
-}
-
 /* The first or the last section of a part of the piece structure. */
 static NodeId part_section(const PiecePlan *plan, int part, bool last) {
     NodeId found = PLAN_NODE_NONE;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const PlanConstraint *constraint = node_constraint(plan, id, PLAN_CONSTRAINT_PIECE_PART);
-        if (constraint && constraint->params.piece_part.part == part && (last || found == PLAN_NODE_NONE)) {
+        int id_part;
+        if (plan_section_part_of(plan, id, &id_part) && id_part == part && (last || found == PLAN_NODE_NONE)) {
             found = id;
         }
     }
@@ -402,7 +399,7 @@ static void test_sweep(void) {
         completed++;
         NodeId seam = PLAN_NODE_NONE;
         for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-            if (node_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
+            if (plan_section_has_role(plan, id, SECTION_ROLE_SEAM)) {
                 seam = id;
             }
         }
@@ -417,7 +414,7 @@ static void test_sweep(void) {
         check_copy(plan, seam);
         check_render(plan, seam, end);
         /* The held loop end is written, and is still held. */
-        assert(node_constraint(plan, loop_end, PLAN_CONSTRAINT_HOLD));
+        assert(plan_section_or_empty(plan, loop_end)->leads_in);
         assert(plan_node_state(plan, loop_end) != PLAN_STATE_CONSTRAINED);
         assert(lane_written(plan, PLAN_LANE_HARMONY, end_span) && lane_written(plan, PLAN_LANE_BASS, end_span) &&
                lane_written(plan, PLAN_LANE_MELODY, end_span));

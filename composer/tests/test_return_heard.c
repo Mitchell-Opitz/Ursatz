@@ -50,13 +50,8 @@ static PieceRequest request_of(const Scenario *scenario) {
 
 /* The section a section returns, else PLAN_NODE_NONE. */
 static NodeId returned(const PiecePlan *plan, NodeId section) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            return constraint->params.section_return.section;
-        }
-    }
-    return PLAN_NODE_NONE;
+    const SectionDescription *described = plan_section_or_empty(plan, section);
+    return described->returns[0] != '\0' ? plan_section_named(plan, described->returns) : PLAN_NODE_NONE;
 }
 
 /* Runs one seed; the planned and the heard returns of a completed run are added, and true is returned. */

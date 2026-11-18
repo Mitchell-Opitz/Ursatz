@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cJSON.h>
+#include <plan/section_json.h>
 #include <theory/galant/galant_prototypes.h>
 
 #include <ursatz_composer/constraint.h>
@@ -106,8 +108,6 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     length.params.bars = 8;
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
     cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    PlanConstraint archetype = {PLAN_CONSTRAINT_ARCHETYPE, {0}};
-    archetype.params.archetype = PLAN_ARCHETYPE_SENTENCE;
     PlanConstraint motive_ref;
     memset(&motive_ref, 0, sizeof(motive_ref));
     motive_ref.kind = PLAN_CONSTRAINT_MOTIVE_REF;
@@ -118,7 +118,6 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     key_constraint.params.key = test_key(7, "major");
     assert(plan_node_add_constraint(plan, phrase, &length) == PLAN_OK);
     assert(plan_node_add_constraint(plan, phrase, &cadence) == PLAN_OK);
-    assert(plan_node_add_constraint(plan, phrase, &archetype) == PLAN_OK);
     assert(plan_node_add_constraint(plan, fragment, &motive_ref) == PLAN_OK);
     assert(plan_lane_span_add_constraint(plan, harmony_two, &key_constraint) == PLAN_OK);
     assert(plan_lane_span_add_constraint(plan, harmony_two, &motive_ref) == PLAN_OK);
@@ -132,8 +131,18 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     assert(plan_lane_span_add_constraint(plan, harmony_two, &schema) == PLAN_ERR_BAD_PAYLOAD);
 
     /* The constraints a grown theme carries. */
-    PlanConstraint material = {PLAN_CONSTRAINT_MATERIAL, {0}};
-    assert(plan_node_add_constraint(plan, section, &material) == PLAN_OK);
+    SectionDescription described;
+    section_description_init(&described);
+    described.has_role = true;
+    described.role = SECTION_ROLE_MATERIAL;
+    snprintf(described.letter, sizeof(described.letter), "A");
+    described.has_pairing = true;
+    described.pairing.beginning = SECTION_BEGINNING_COMPOUND_BASIC_IDEA;
+    described.pairing.ending = SECTION_ENDING_CADENTIAL;
+    described.has_cadence = true;
+    described.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    assert(plan_node_set_section(plan, section, &described) == PLAN_OK);
+    assert(plan_node_set_section(plan, phrase, &described) == PLAN_ERR_BAD_KIND);
     PlanConstraint shape = {PLAN_CONSTRAINT_HARMONY_SHAPE, {0}};
     shape.params.harmony_shape.kind = PLAN_HARMONY_SHAPE_PHRASE_MODEL;
     shape.params.harmony_shape.starts_on = PLAN_HARMONY_ANCHOR_TONIC;
@@ -143,12 +152,9 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     assert(plan_lane_span_add_constraint(plan, harmony_two, &shape) == PLAN_OK);
     shape.params.harmony_shape.max_cells_per_chord = -1;
     assert(plan_lane_span_add_constraint(plan, harmony_two, &shape) == PLAN_ERR_BAD_PAYLOAD);
-    PlanConstraint pairing = {PLAN_CONSTRAINT_THEME_PAIRING, {0}};
-    pairing.params.theme_pairing.beginning = SECTION_BEGINNING_COMPOUND_BASIC_IDEA;
-    pairing.params.theme_pairing.ending = SECTION_ENDING_CADENTIAL;
-    assert(plan_node_add_constraint(plan, phrase, &pairing) == PLAN_OK);
-    pairing.params.theme_pairing.ending = (SectionEnding)7;
-    assert(plan_node_add_constraint(plan, phrase, &pairing) == PLAN_ERR_BAD_PAYLOAD);
+    described.pairing.ending = (SectionEnding)7;
+    assert(plan_node_set_section(plan, section, &described) == PLAN_ERR_BAD_PAYLOAD);
+    described.pairing.ending = SECTION_ENDING_CADENTIAL;
 
     if (tone_labels > 0) {
         PlanConstraint tones;
@@ -177,8 +183,42 @@ static PiecePlan *build_sentence_plan(void) {
     return build_sentence_plan_with_tones(0);
 }
 
+/* The sentence plan with the descriptions of its section nodes cleared: what a plan of a format before 5 reads as. */
+static PiecePlan *build_plan_without_descriptions(void) {
+    PiecePlan *plan = build_sentence_plan();
+    SectionDescription empty;
+    section_description_init(&empty);
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION) {
+            assert(plan_node_set_section(plan, id, &empty) == PLAN_OK);
+        }
+    }
+    return plan;
+}
+
 static bool same_span(PlanSpan a, PlanSpan b) {
     return rational_cmp(a.start, b.start) == 0 && rational_cmp(a.length, b.length) == 0;
+}
+
+/* A plan read from a format before 5 has no description to compare: those tests turn the comparison off. */
+static bool compare_sections = true;
+
+/* Two section nodes have the same description when it writes the same JSON. */
+static bool same_section(const PiecePlan *a, const PiecePlan *b, NodeId id) {
+    const SectionDescription *x = plan_node_section(a, id);
+    const SectionDescription *y = plan_node_section(b, id);
+    if (!compare_sections) {
+        return true;
+    }
+    if (!x || !y) {
+        return x == y;
+    }
+    cJSON *left = section_to_json(x, SECTION_USE_PLAN);
+    cJSON *right = section_to_json(y, SECTION_USE_PLAN);
+    bool same = left && right && cJSON_Compare(left, right, true);
+    cJSON_Delete(left);
+    cJSON_Delete(right);
+    return same;
 }
 
 static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
@@ -199,14 +239,10 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.key.tonic_letter == b->params.key.tonic_letter &&
                a->params.key.tonic_accidental == b->params.key.tonic_accidental && a->params.key.material == b->params.key.material &&
                harmony_key_mode(&a->params.key) == harmony_key_mode(&b->params.key);
-    case PLAN_CONSTRAINT_ARCHETYPE:
-        return a->params.archetype == b->params.archetype;
     case PLAN_CONSTRAINT_EMBELLISH:
         return true;
     case PLAN_CONSTRAINT_SCHEMA:
         return a->params.schema.schema == b->params.schema.schema && a->params.schema.stage == b->params.schema.stage;
-    case PLAN_CONSTRAINT_MATERIAL:
-        return true;
     case PLAN_CONSTRAINT_HARMONY_SHAPE:
         return a->params.harmony_shape.kind == b->params.harmony_shape.kind &&
                a->params.harmony_shape.starts_on == b->params.harmony_shape.starts_on &&
@@ -214,38 +250,6 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.harmony_shape.max_cells_per_chord == b->params.harmony_shape.max_cells_per_chord &&
                a->params.harmony_shape.split_at_bars == b->params.harmony_shape.split_at_bars &&
                a->params.harmony_shape.pedal == b->params.harmony_shape.pedal;
-    case PLAN_CONSTRAINT_PEDAL:
-        return a->params.pedal.degree == b->params.pedal.degree;
-    case PLAN_CONSTRAINT_CONNECTIVE:
-        return a->params.connective.written == b->params.connective.written;
-    case PLAN_CONSTRAINT_LIQUIDATION:
-        return true;
-    case PLAN_CONSTRAINT_SECTION_FUNCTION:
-        return a->params.section_function.function == b->params.section_function.function &&
-               a->params.section_function.independent == b->params.section_function.independent &&
-               a->params.section_function.lyric == b->params.section_function.lyric;
-    case PLAN_CONSTRAINT_FIGURE:
-        return a->params.figure.kind == b->params.figure.kind && a->params.figure.rhythm == b->params.figure.rhythm &&
-               a->params.figure.reharmonize == b->params.figure.reharmonize &&
-               a->params.figure.change_at == b->params.figure.change_at && a->params.figure.climax == b->params.figure.climax;
-    case PLAN_CONSTRAINT_CONSTRUCTION: {
-        const SectionConstruction *x = &a->params.construction;
-        const SectionConstruction *y = &b->params.construction;
-        if (memcmp(x->idea_bars, y->idea_bars, sizeof(x->idea_bars)) != 0 || x->extension_count != y->extension_count ||
-            x->reason != y->reason) {
-            return false;
-        }
-        for (size_t i = 0; i < x->extension_count; i++) {
-            if (x->extensions[i].kind != y->extensions[i].kind || x->extensions[i].idea != y->extensions[i].idea ||
-                x->extensions[i].bars != y->extensions[i].bars || x->extensions[i].varied != y->extensions[i].varied) {
-                return false;
-            }
-        }
-        return true;
-    }
-    case PLAN_CONSTRAINT_THEME_PAIRING:
-        return a->params.theme_pairing.beginning == b->params.theme_pairing.beginning &&
-               a->params.theme_pairing.ending == b->params.theme_pairing.ending;
     case PLAN_CONSTRAINT_ACCOMPANIMENT:
         return a->params.accompaniment.pattern == b->params.accompaniment.pattern &&
                a->params.accompaniment.texture == b->params.accompaniment.texture &&
@@ -256,20 +260,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
     case PLAN_CONSTRAINT_COUNTERPOINT:
         return a->params.counterpoint.species == b->params.counterpoint.species &&
                a->params.counterpoint.above == b->params.counterpoint.above;
-    case PLAN_CONSTRAINT_RETURN:
-        return a->params.section_return.section == b->params.section_return.section &&
-               a->params.section_return.variation == b->params.section_return.variation &&
-               a->params.section_return.setting == b->params.section_return.setting &&
-               a->params.section_return.across_modes == b->params.section_return.across_modes;
-    case PLAN_CONSTRAINT_LAYERS:
-        return a->params.layers.lanes == b->params.layers.lanes;
-    case PLAN_CONSTRAINT_SECTION_LETTER:
-        return strcmp(a->params.letter, b->params.letter) == 0;
     case PLAN_CONSTRAINT_INVENT_MOTIVE:
         return true;
-    case PLAN_CONSTRAINT_PIECE_PART:
-        return a->params.piece_part.part == b->params.piece_part.part &&
-               strcmp(a->params.piece_part.id, b->params.piece_part.id) == 0;
     case PLAN_CONSTRAINT_MOTIVE_TONES: {
         const PlanMotiveTones *x = &a->params.motive_tones;
         const PlanMotiveTones *y = &b->params.motive_tones;
@@ -319,12 +311,6 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
     }
     case PLAN_CONSTRAINT_PICKUP:
         return a->params.pickup.num == b->params.pickup.num && a->params.pickup.den == b->params.pickup.den;
-    case PLAN_CONSTRAINT_FREE_PHRASE:
-    case PLAN_CONSTRAINT_HOLD:
-    case PLAN_CONSTRAINT_SEAM:
-        return true;
-    default:
-        break;
     }
     return false;
 }
@@ -386,6 +372,9 @@ static bool plans_equal(const PiecePlan *a, const PiecePlan *b) {
                 return false;
             }
         }
+        if (!same_section(a, b, id)) {
+            return false;
+        }
     }
     for (LaneSpanId id = 1; id <= plan_lane_span_count(a); id++) {
         PlanLaneKind lane = plan_lane_span_lane(a, id);
@@ -420,7 +409,7 @@ static void test_round_trip(void) {
     char *text = plan_to_json(plan, &error);
     assert(text != NULL);
     assert(text[strlen(text) - 1] == '\n');
-    assert(strstr(text, "\"format_version\": 4") != NULL);
+    assert(strstr(text, "\"format_version\": 5") != NULL);
 
     PiecePlan *parsed = NULL;
     expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
@@ -443,377 +432,6 @@ static void test_round_trip(void) {
     free(again);
     plan_destroy(plan);
     plan_destroy(parsed);
-}
-
-/*
- * The dominant pedal (R-446): a section's pedal constraint and a harmony shape with pedal round-trip byte for byte, a
- * plan without them is written as it always was, and a pedal on a degree but the dominant is refused.
- */
-static void test_pedal(void) {
-    PlanJsonError error;
-    PiecePlan *plain = build_sentence_plan();
-    char *plain_text = plan_to_json(plain, &error);
-    assert(plain_text && strstr(plain_text, "pedal") == NULL);
-
-    PiecePlan *plan = build_sentence_plan();
-    NodeId section = PLAN_NODE_NONE;
-    for (NodeId id = 1; id < 40 && section == PLAN_NODE_NONE; id++) {
-        if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION && plan_node_state(plan, id) != PLAN_STATE_GIVEN) {
-            section = id;
-        }
-    }
-    assert(section != PLAN_NODE_NONE);
-    PlanConstraint pedal = {PLAN_CONSTRAINT_PEDAL, {0}};
-    pedal.params.pedal.degree = 4;
-    assert(plan_node_add_constraint(plan, section, &pedal) == PLAN_ERR_BAD_PAYLOAD);
-    pedal.params.pedal.degree = 5;
-    assert(plan_node_add_constraint(plan, section, &pedal) == PLAN_OK);
-
-    PlanConstraint shape = {PLAN_CONSTRAINT_HARMONY_SHAPE, {0}};
-    shape.params.harmony_shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
-    shape.params.harmony_shape.starts_on = PLAN_HARMONY_ANCHOR_DOMINANT;
-    shape.params.harmony_shape.ends_on = PLAN_HARMONY_ANCHOR_TONIC;
-    shape.params.harmony_shape.pedal = true;
-    LaneSpanId spans[32];
-    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, bars(0, 8), spans, 32);
-    LaneSpanId held = PLAN_LANE_SPAN_NONE;
-    for (size_t i = 0; i < found && held == PLAN_LANE_SPAN_NONE; i++) {
-        if (plan_lane_span_state(plan, spans[i]) != PLAN_STATE_GIVEN) {
-            held = spans[i];
-        }
-    }
-    assert(held != PLAN_LANE_SPAN_NONE);
-    /* A pedal needs both anchors on the dominant. */
-    assert(plan_lane_span_add_constraint(plan, held, &shape) == PLAN_ERR_BAD_PAYLOAD);
-    shape.params.harmony_shape.ends_on = PLAN_HARMONY_ANCHOR_DOMINANT;
-    assert(plan_lane_span_add_constraint(plan, held, &shape) == PLAN_OK);
-
-    char *text = plan_to_json(plan, &error);
-    assert(text && strstr(text, "\"kind\": \"pedal\"") != NULL && strstr(text, "\"degree\": 5") != NULL &&
-           strstr(text, "\"pedal\": true") != NULL);
-    PiecePlan *parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
-    assert(plans_equal(plan, parsed));
-    char *again = plan_to_json(parsed, &error);
-    assert(again && strcmp(text, again) == 0);
-
-    /* A degree but the dominant is refused when the plan is read. */
-    char *wrong = strdup(text);
-    char *at = wrong ? strstr(wrong, "\"degree\": 5") : NULL;
-    assert(at);
-    at[10] = '4';
-    PiecePlan *refused = (PiecePlan *)0x1;
-    assert(plan_from_json(test_knowledge(), wrong, &refused, &error) != PLAN_OK && refused == NULL);
-
-    free(plain_text);
-    free(text);
-    free(again);
-    free(wrong);
-    plan_destroy(plain);
-    plan_destroy(plan);
-    plan_destroy(parsed);
-}
-
-/*
- * The connective (R-486): a section's connective constraint, written or not, round-trips byte for byte, a plan without
- * it is written as it always was, it is refused on anything but a section, and a file whose constraint has no `written`
- * (or one that is not a boolean) is refused when the plan is read.
- */
-static void test_connective(void) {
-    PlanJsonError error;
-    PiecePlan *plain = build_sentence_plan();
-    char *plain_text = plan_to_json(plain, &error);
-    assert(plain_text && strstr(plain_text, "connective") == NULL);
-
-    PiecePlan *plan = build_sentence_plan();
-    NodeId section = PLAN_NODE_NONE;
-    NodeId idea = PLAN_NODE_NONE;
-    for (NodeId id = 1; id < 40; id++) {
-        if (plan_has_node(plan, id) && plan_node_state(plan, id) != PLAN_STATE_GIVEN) {
-            if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && section == PLAN_NODE_NONE) {
-                section = id;
-            }
-            if (plan_node_kind(plan, id) == PLAN_NODE_IDEA && idea == PLAN_NODE_NONE) {
-                idea = id;
-            }
-        }
-    }
-    assert(section != PLAN_NODE_NONE);
-    PlanConstraint connective = {PLAN_CONSTRAINT_CONNECTIVE, {0}};
-    /* Only a section has one. */
-    if (idea != PLAN_NODE_NONE) {
-        assert(plan_node_add_constraint(plan, idea, &connective) == PLAN_ERR_BAD_PAYLOAD);
-    }
-    assert(plan_node_add_constraint(plan, section, &connective) == PLAN_OK);
-
-    char *text = plan_to_json(plan, &error);
-    assert(text && strstr(text, "\"kind\": \"connective\"") != NULL && strstr(text, "\"written\": false") != NULL);
-    PiecePlan *parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
-    assert(plans_equal(plan, parsed));
-    char *again = plan_to_json(parsed, &error);
-    assert(again && strcmp(text, again) == 0);
-
-    /* Written true: the constraint is replaced, and the text round-trips again. */
-    assert(plan_node_remove_constraint(plan, section, plan_node_constraint_count(plan, section) - 1) == PLAN_OK);
-    connective.params.connective.written = true;
-    assert(plan_node_add_constraint(plan, section, &connective) == PLAN_OK);
-    char *written_text = plan_to_json(plan, &error);
-    assert(written_text && strstr(written_text, "\"written\": true") != NULL);
-    PiecePlan *written_parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), written_text, &written_parsed, &error), &error);
-    assert(plans_equal(plan, written_parsed));
-    char *written_again = plan_to_json(written_parsed, &error);
-    assert(written_again && strcmp(written_text, written_again) == 0);
-    const PlanConstraint *read = plan_node_find_constraint(written_parsed, section, PLAN_CONSTRAINT_CONNECTIVE);
-    assert(read && read->params.connective.written);
-
-    /* `written` is required, and a boolean. */
-    char *missing = strdup(text);
-    char *at = missing ? strstr(missing, "\"written\"") : NULL;
-    assert(at);
-    memcpy(at, "\"writtex\"", 9);
-    PiecePlan *refused = (PiecePlan *)0x1;
-    assert(plan_from_json(test_knowledge(), missing, &refused, &error) != PLAN_OK && refused == NULL);
-    char *wrong = strdup(text);
-    at = wrong ? strstr(wrong, "false") : NULL;
-    assert(at);
-    memcpy(at, "\"no\" ", 5);
-    refused = (PiecePlan *)0x1;
-    assert(plan_from_json(test_knowledge(), wrong, &refused, &error) != PLAN_OK && refused == NULL);
-
-    free(plain_text);
-    free(text);
-    free(again);
-    free(written_text);
-    free(written_again);
-    free(missing);
-    free(wrong);
-    plan_destroy(plain);
-    plan_destroy(plan);
-    plan_destroy(parsed);
-    plan_destroy(written_parsed);
-}
-
-/*
- * The liquidation (R-494): a section's liquidation constraint has no members, round-trips byte for byte, a plan without it
- * is written as it always was, and the kind is refused with a member it does not have.
- */
-static void test_liquidation(void) {
-    PlanJsonError error;
-    PiecePlan *plain = build_sentence_plan();
-    char *plain_text = plan_to_json(plain, &error);
-    assert(plain_text && strstr(plain_text, "liquidation") == NULL);
-
-    PiecePlan *plan = build_sentence_plan();
-    NodeId section = PLAN_NODE_NONE;
-    for (NodeId id = 1; id < 40 && section == PLAN_NODE_NONE; id++) {
-        if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION && plan_node_state(plan, id) != PLAN_STATE_GIVEN) {
-            section = id;
-        }
-    }
-    assert(section != PLAN_NODE_NONE);
-    PlanConstraint liquidation = {PLAN_CONSTRAINT_LIQUIDATION, {0}};
-    assert(plan_node_add_constraint(plan, section, &liquidation) == PLAN_OK);
-    char *text = plan_to_json(plan, &error);
-    assert(text && strstr(text, "\"kind\": \"liquidation\"") != NULL);
-    PiecePlan *parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
-    assert(plans_equal(plan, parsed));
-    assert(plan_node_find_constraint(parsed, section, PLAN_CONSTRAINT_LIQUIDATION));
-    char *again = plan_to_json(parsed, &error);
-    assert(again && strcmp(text, again) == 0);
-
-    free(plain_text);
-    free(text);
-    free(again);
-    plan_destroy(plain);
-    plan_destroy(plan);
-    plan_destroy(parsed);
-}
-
-/*
- * The figure of a figurate return (R-497): the plan built from tests/fixtures/forms/figure-form.json (C major 2/4) holds
- * a RETURN of variation FIGURATE and a FIGURE on each variation and none on the theme, and writes and reads back byte for
- * byte; a plan with no figure is written as it always was; a figure missing a member, or with a root change over kept
- * harmony, is refused with its path.
- */
-static void test_figure(void) {
-    PlanJsonError error;
-    char path[1024];
-    snprintf(path, sizeof(path), "%s/forms/figure-form.json", COMPOSER_FIXTURE_DIR);
-    char *document = test_must_read_file(path, NULL);
-    FormSpec *form = NULL;
-    FormSpecError form_error;
-    assert(form_spec_parse(document, &form, &form_error) == FORM_SPEC_OK && form);
-    free(document);
-    PieceRequest request;
-    memset(&request, 0, sizeof(request));
-    request.form = form->name;
-    request.key = test_key(0, "major");
-    request.knowledge = test_knowledge();
-    request.meter.beats_per_bar = 2;
-    request.meter.beat_unit = 4;
-    PiecePlan *plan = NULL;
-    assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
-
-    NodeId root = plan_root(plan);
-    size_t sections = 0;
-    NodeId variations[3];
-    for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
-        NodeId child = plan_node_child_at(plan, root, i);
-        if (plan_node_kind(plan, child) != PLAN_NODE_SECTION || plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
-            continue;
-        }
-        const PlanConstraint *returned = plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_RETURN);
-        const PlanConstraint *figure = plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_FIGURE);
-        if (sections == 0) {
-            assert(!returned && !figure);
-        } else {
-            assert(returned && returned->params.section_return.variation == SECTION_RETURN_FIGURATE && figure);
-            variations[sections - 1] = child;
-        }
-        sections++;
-    }
-    assert(sections == 4);
-    const SectionFigure *first = &plan_node_find_constraint(plan, variations[0], PLAN_CONSTRAINT_FIGURE)->params.figure;
-    const SectionFigure *second = &plan_node_find_constraint(plan, variations[1], PLAN_CONSTRAINT_FIGURE)->params.figure;
-    const SectionFigure *third = &plan_node_find_constraint(plan, variations[2], PLAN_CONSTRAINT_FIGURE)->params.figure;
-    assert(first->kind == SECTION_FIGURE_NEIGHBOR && first->rhythm == SECTION_FIGURE_EIGHTHS && !first->reharmonize &&
-           first->change_at == 0 && !first->climax);
-    assert(second->kind == SECTION_FIGURE_SCALE && second->rhythm == SECTION_FIGURE_SIXTEENTHS && second->reharmonize &&
-           second->change_at == 3 && !second->climax);
-    assert(third->kind == SECTION_FIGURE_BROKEN_CHORD && third->rhythm == SECTION_FIGURE_SIXTEENTHS && !third->reharmonize &&
-           third->change_at == 0 && third->climax);
-
-    char *text = plan_to_json(plan, &error);
-    assert(text && strstr(text, "\"variation\": \"figurate\"") != NULL && strstr(text, "\"kind\": \"figure\"") != NULL);
-    assert(strstr(text, "\"figure\": \"broken-chord\"") != NULL && strstr(text, "\"harmony\": \"reharmonized\"") != NULL &&
-           strstr(text, "\"change_at\": 3") != NULL && strstr(text, "\"change_at\": null") != NULL &&
-           strstr(text, "\"climax\": true") != NULL);
-    PiecePlan *parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
-    assert(plans_equal(plan, parsed));
-    char *again = plan_to_json(parsed, &error);
-    assert(again && strcmp(text, again) == 0);
-
-    /* A plan with no figure is written as it always was. */
-    PiecePlan *plain = build_sentence_plan();
-    char *plain_text = plan_to_json(plain, &error);
-    assert(plain_text && strstr(plain_text, "\"figure\"") == NULL);
-
-    /* A figure with a member missing, or with a root change over kept harmony, is refused. */
-    static const struct {
-        const char *from;
-        const char *to;
-    } BAD[] = {{"\"rhythm\": \"eighths\"", "\"rhythmx\": \"eighths\""},
-               {"\"climax\": true", "\"climax\": 1"},
-               {"\"figure\": \"scale\"", "\"figure\": \"run\""},
-               {"\"harmony\": \"reharmonized\"", "\"harmony\": \"kept\""}};
-    for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++) {
-        const char *at = strstr(text, BAD[i].from);
-        assert(at);
-        size_t head = (size_t)(at - text);
-        size_t tail = strlen(at + strlen(BAD[i].from));
-        char *broken = malloc(head + strlen(BAD[i].to) + tail + 1);
-        assert(broken);
-        memcpy(broken, text, head);
-        strcpy(broken + head, BAD[i].to);
-        strcpy(broken + head + strlen(BAD[i].to), at + strlen(BAD[i].from));
-        PiecePlan *refused = NULL;
-        assert(plan_from_json(test_knowledge(), broken, &refused, &error) != PLAN_OK && refused == NULL);
-        assert(strstr(error.path, "constraints") != NULL);
-        free(broken);
-    }
-
-    free(text);
-    free(again);
-    free(plain_text);
-    plan_destroy(plan);
-    plan_destroy(parsed);
-    plan_destroy(plain);
-    form_spec_destroy(form);
-}
-
-/*
- * The section function of the parts of a larger form (R-503): the plan built from tests/fixtures/forms/parts-of-forms.json
- * (C major 4/4) holds a transition, a subordinate theme, a retransition and a coda, writes with each as
- * {"kind": "section_function", "function", "independent", "lyric"} and reads back byte for byte; a plan with none is written as
- * it always was; an unknown function, a missing member and a flag on a function that has none are refused with the path.
- */
-static void test_section_function(void) {
-    PlanJsonError error;
-    char path[1024];
-    snprintf(path, sizeof(path), "%s/forms/parts-of-forms.json", COMPOSER_FIXTURE_DIR);
-    char *document = test_must_read_file(path, NULL);
-    FormSpec *form = NULL;
-    FormSpecError form_error;
-    assert(form_spec_parse(document, &form, &form_error) == FORM_SPEC_OK && form);
-    free(document);
-    PieceRequest request;
-    memset(&request, 0, sizeof(request));
-    request.form = form->name;
-    request.key = test_key(0, "major");
-    request.knowledge = test_knowledge();
-    request.meter.beats_per_bar = 4;
-    request.meter.beat_unit = 4;
-    PiecePlan *plan = NULL;
-    assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
-
-    char *text = plan_to_json(plan, &error);
-    assert(text);
-    static const char *const FUNCTIONS[] = {"transition", "retransition", "subordinate", "coda"};
-    for (size_t i = 0; i < 4; i++) {
-        char member[64];
-        snprintf(member, sizeof(member), "\"function\": \"%s\"", FUNCTIONS[i]);
-        assert(strstr(text, member) != NULL);
-    }
-    assert(strstr(text, "\"kind\": \"section_function\"") != NULL && strstr(text, "\"independent\": false") != NULL &&
-           strstr(text, "\"lyric\": true") != NULL && strstr(text, "\"lyric\": false") != NULL);
-    PiecePlan *parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
-    assert(plans_equal(plan, parsed));
-    char *again = plan_to_json(parsed, &error);
-    assert(again && strcmp(text, again) == 0);
-
-    /* A plan with none is written as it always was. */
-    PiecePlan *plain = build_sentence_plan();
-    char *plain_text = plan_to_json(plain, &error);
-    assert(plain_text && strstr(plain_text, "section_function") == NULL);
-
-    /* An unknown function, a missing member, a member of the wrong type, a flag on a function that has none. */
-    static const struct {
-        const char *from;
-        const char *to;
-    } BAD[] = {{"\"function\": \"coda\"", "\"function\": \"bridge\""},
-               {"\"function\": \"coda\"", "\"function\": 1"},
-               {"\"function\": \"coda\"", "\"functionx\": \"coda\""},
-               {"\"lyric\": true", "\"lyric\": 1"},
-               {"\"independent\": false", "\"independent\": 0"},
-               {"\"lyric\": false", "\"lyric\": true"}}; /* the transition's own lyric flag is the first */
-    for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++) {
-        const char *at = strstr(text, BAD[i].from);
-        assert(at);
-        size_t head = (size_t)(at - text);
-        size_t tail = strlen(at + strlen(BAD[i].from));
-        char *broken = malloc(head + strlen(BAD[i].to) + tail + 1);
-        assert(broken);
-        memcpy(broken, text, head);
-        strcpy(broken + head, BAD[i].to);
-        strcpy(broken + head + strlen(BAD[i].to), at + strlen(BAD[i].from));
-        PiecePlan *refused = NULL;
-        assert(plan_from_json(test_knowledge(), broken, &refused, &error) != PLAN_OK && refused == NULL);
-        assert(strstr(error.path, "constraints") != NULL);
-        free(broken);
-    }
-
-    free(text);
-    free(again);
-    free(plain_text);
-    plan_destroy(plan);
-    plan_destroy(parsed);
-    plan_destroy(plain);
-    form_spec_destroy(form);
 }
 
 /*
@@ -865,230 +483,7 @@ static void test_motive_tones(void) {
     plan_destroy(scratch);
 }
 
-/*
- * The constraints of a piece plan: a section's letter, the section it returns and how, the lanes a layer sounds, and a
- * motive to invent. They round-trip, and malformed ones are refused.
- */
-static void test_section_constraints(void) {
-    PiecePlan *plan = plan_create();
-    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 13), "rounded-binary");
-    NodeId a = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "A");
-    NodeId b = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "B");
-    NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(8, 4), "A'");
-    NodeId phrase = add(plan, a, PLAN_NODE_PHRASE, bars(0, 4), "phrase");
-    NodeId material = add(plan, form, PLAN_NODE_SECTION, bars(12, 1), "material");
-    NodeId material_phrase = add(plan, material, PLAN_NODE_PHRASE, bars(12, 1), "material");
-    NodeId material_idea = add(plan, material_phrase, PLAN_NODE_IDEA, bars(12, 1), "material");
-    NodeId m0 = add(plan, material_idea, PLAN_NODE_MOTIVE, bars(12, 1), "m0");
-    PlanNote placeholder = plan_note(60, rational_ratio(0, 1), rational_ratio(1, 1));
-    PlanLanePayload melody;
-    memset(&melody, 0, sizeof(melody));
-    melody.notes.notes = &placeholder;
-    melody.notes.note_count = 1;
-    LaneSpanId open = add_lane(plan, m0, PLAN_LANE_MELODY, 0, bars(12, 1), &melody);
-
-    static const char *const LETTERS[] = {"A", "B", "A'"};
-    NodeId sections[] = {a, b, a2};
-    for (size_t i = 0; i < 3; i++) {
-        PlanConstraint letter = {PLAN_CONSTRAINT_SECTION_LETTER, {0}};
-        strcpy(letter.params.letter, LETTERS[i]);
-        assert(plan_node_add_constraint(plan, sections[i], &letter) == PLAN_OK);
-    }
-    PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
-    back.params.section_return.section = a;
-    back.params.section_return.variation = SECTION_RETURN_ORNAMENT;
-    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
-    PlanConstraint layers = {PLAN_CONSTRAINT_LAYERS, {0}};
-    layers.params.layers.lanes = PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE);
-    assert(plan_node_add_constraint(plan, b, &layers) == PLAN_OK);
-    PlanConstraint invent = {PLAN_CONSTRAINT_INVENT_MOTIVE, {0}};
-    assert(plan_lane_span_add_constraint(plan, open, &invent) == PLAN_OK);
-    /* A piece structure's sections name their part and id (R-169), and a free phrase is marked (R-170). */
-    static const int PARTS[] = {1, 1, 2};
-    static const char *const IDS[] = {"a", "b", "turn"};
-    for (size_t i = 0; i < 3; i++) {
-        PlanConstraint part = {PLAN_CONSTRAINT_PIECE_PART, {0}};
-        part.params.piece_part.part = PARTS[i];
-        strcpy(part.params.piece_part.id, IDS[i]);
-        assert(plan_node_add_constraint(plan, sections[i], &part) == PLAN_OK);
-    }
-    PlanConstraint free_phrase = {PLAN_CONSTRAINT_FREE_PHRASE, {0}};
-    assert(plan_node_add_constraint(plan, b, &free_phrase) == PLAN_OK);
-    PlanConstraint bad_part = {PLAN_CONSTRAINT_PIECE_PART, {0}};
-    assert(plan_node_add_constraint(plan, a, &bad_part) == PLAN_ERR_BAD_PAYLOAD); /* no id */
-    strcpy(bad_part.params.piece_part.id, "x");
-    bad_part.params.piece_part.part = PLAN_PIECE_PART_COUNT;
-    assert(plan_node_add_constraint(plan, a, &bad_part) == PLAN_ERR_BAD_PAYLOAD);
-    bad_part.params.piece_part.part = -1;
-    assert(plan_node_add_constraint(plan, a, &bad_part) == PLAN_ERR_BAD_PAYLOAD);
-    memset(bad_part.params.piece_part.id, 'x', PLAN_PIECE_ID_MAX); /* not terminated */
-    bad_part.params.piece_part.part = 0;
-    assert(plan_node_add_constraint(plan, a, &bad_part) == PLAN_ERR_BAD_PAYLOAD);
-
-    /* A return names a section; a layer sounds a lane there is; a letter is one to three characters. */
-    back.params.section_return.section = phrase;
-    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_ERR_BAD_PAYLOAD);
-    back.params.section_return.section = 99;
-    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_ERR_BAD_PAYLOAD);
-    back.params.section_return.section = a;
-    back.params.section_return.variation = (SectionReturnVariation)9;
-    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_ERR_BAD_PAYLOAD);
-    layers.params.layers.lanes = 0;
-    assert(plan_node_add_constraint(plan, b, &layers) == PLAN_ERR_BAD_PAYLOAD);
-    layers.params.layers.lanes = 1u << 9;
-    assert(plan_node_add_constraint(plan, b, &layers) == PLAN_ERR_BAD_PAYLOAD);
-    PlanConstraint letter = {PLAN_CONSTRAINT_SECTION_LETTER, {0}};
-    assert(plan_node_add_constraint(plan, a, &letter) == PLAN_ERR_BAD_PAYLOAD);
-    memcpy(letter.params.letter, "ABCD", PLAN_SECTION_LETTER_MAX);
-    assert(plan_node_add_constraint(plan, a, &letter) == PLAN_ERR_BAD_PAYLOAD);
-
-    PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
-    assert(text != NULL);
-    assert(strstr(text, "\"variation\": \"ornament\"") != NULL);
-    assert(strstr(text, "\"letter\": \"A'\"") != NULL);
-    assert(strstr(text, "\"invent_motive\"") != NULL);
-    assert(strstr(text, "\"piece_part\"") != NULL && strstr(text, "\"part\": \"turnaround\"") != NULL);
-    assert(strstr(text, "\"id\": \"turn\"") != NULL && strstr(text, "\"free_phrase\"") != NULL);
-    PiecePlan *parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
-    assert(plans_equal(plan, parsed));
-    const PlanConstraint *read = plan_node_constraint_at(parsed, b, 1);
-    assert(read && read->kind == PLAN_CONSTRAINT_LAYERS &&
-           read->params.layers.lanes == (PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE)));
-    char *again = plan_to_json(parsed, &error);
-    assert(again && strcmp(text, again) == 0);
-    /* A part that is none of the four is refused. */
-    PiecePlan *refused = NULL;
-    char *outro = strdup(text);
-    char *at = strstr(outro, "\"turnaround\"");
-    assert(at);
-    memcpy(at, "\"turnaroun_\"", 12);
-    assert(plan_from_json(test_knowledge(), outro, &refused, &error) != PLAN_OK && refused == NULL);
-    free(outro);
-    free(text);
-    free(again);
-    plan_destroy(parsed);
-    plan_destroy(plan);
-}
-
 static char *replace_all(const char *text, const char *from, const char *to);
-
-/* A reharmonized return across modes (R-524) round-trips byte for byte; the member is written only when set and refused on any other variation. */
-static void test_across_modes_return(void) {
-    PiecePlan *plan = plan_create();
-    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "across");
-    NodeId a = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "A");
-    NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "A'");
-    PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
-    back.params.section_return.section = a;
-    back.params.section_return.variation = SECTION_RETURN_EXACT;
-    back.params.section_return.across_modes = true;
-    /* only a reharmonized return crosses modes */
-    assert(plan_node_add_constraint(plan, a2, &back) != PLAN_OK);
-    back.params.section_return.variation = SECTION_RETURN_REHARMONIZE;
-    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
-    PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
-    assert(text != NULL && strstr(text, "\"variation\": \"reharmonize\"") != NULL &&
-           strstr(text, "\"across_modes\": true") != NULL);
-    PiecePlan *parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
-    assert(plans_equal(plan, parsed));
-    char *again = plan_to_json(parsed, &error);
-    assert(again && strcmp(text, again) == 0);
-    free(again);
-    plan_destroy(parsed);
-    /* across_modes on an exact return is refused at its path */
-    char *exact = replace_all(text, "\"variation\": \"reharmonize\"", "\"variation\": \"exact\"");
-    PiecePlan *refused = NULL;
-    assert(exact && plan_from_json(test_knowledge(), exact, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
-    assert(strstr(error.message, "only a reharmonized return crosses modes") != NULL &&
-           strstr(error.path, ".constraints[0].across_modes") != NULL);
-    free(exact);
-    /* a reharmonized return that does not cross modes writes no member */
-    back.params.section_return.across_modes = false;
-    assert(plan_node_remove_constraint(plan, a2, plan_node_constraint_count(plan, a2) - 1) == PLAN_OK);
-    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
-    char *plain = plan_to_json(plan, &error);
-    assert(plain && strstr(plain, "across_modes") == NULL);
-    free(plain);
-    free(text);
-    plan_destroy(plan);
-}
-
-/* A return of variation setting (R-518) round-trips byte for byte with its pattern; the member is required by it and refused by any other. */
-static void test_setting_return(void) {
-    PiecePlan *plan = plan_create();
-    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "setting");
-    NodeId a = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "A");
-    NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "A'");
-    PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
-    back.params.section_return.section = a;
-    back.params.section_return.variation = SECTION_RETURN_SETTING;
-    back.params.section_return.setting = PLAN_ACCOMPANIMENT_ANY;
-    /* a setting return needs one of the four patterns */
-    assert(plan_node_add_constraint(plan, a2, &back) != PLAN_OK);
-    back.params.section_return.setting = PLAN_ACCOMPANIMENT_MOTIVE;
-    assert(plan_node_add_constraint(plan, a2, &back) != PLAN_OK);
-    back.params.section_return.setting = PLAN_ACCOMPANIMENT_OOM_PAH;
-    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
-    assert(strcmp(section_return_variation_name(SECTION_RETURN_SETTING), "setting") == 0);
-    PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
-    assert(text != NULL && strstr(text, "\"variation\": \"setting\"") != NULL && strstr(text, "\"setting\": \"oom-pah\"") != NULL);
-    PiecePlan *parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
-    assert(plans_equal(plan, parsed));
-    char *again = plan_to_json(parsed, &error);
-    assert(again && strcmp(text, again) == 0);
-    free(again);
-    plan_destroy(parsed);
-    /* a setting return without the member, and the member on an exact return, are refused */
-    char *without = replace_all(text, "\"setting\": \"oom-pah\"", "\"spare\": \"oom-pah\"");
-    PiecePlan *refused = NULL;
-    assert(without && plan_from_json(test_knowledge(), without, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
-    assert(strstr(error.message, "a setting return names its setting") != NULL && strstr(error.path, ".constraints[0].setting") != NULL);
-    free(without);
-    char *exact = replace_all(text, "\"variation\": \"setting\"", "\"variation\": \"exact\"");
-    assert(exact && plan_from_json(test_knowledge(), exact, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
-    assert(strstr(error.message, "only a setting return has a setting") != NULL);
-    free(exact);
-    /* an exact return writes no setting member */
-    back.params.section_return.variation = SECTION_RETURN_EXACT;
-    assert(plan_node_remove_constraint(plan, a2, plan_node_constraint_count(plan, a2) - 1) == PLAN_OK);
-    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
-    char *plain = plan_to_json(plan, &error);
-    assert(plain && strstr(plain, "\"setting\":") == NULL);
-    free(plain);
-    free(text);
-    plan_destroy(plan);
-}
-
-/* A return of variation embellish (R-516) round-trips byte for byte. */
-static void test_embellish_return(void) {
-    PiecePlan *plan = plan_create();
-    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "embellish");
-    NodeId a = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "A");
-    NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "A'");
-    PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
-    back.params.section_return.section = a;
-    back.params.section_return.variation = SECTION_RETURN_EMBELLISH;
-    assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
-    assert(strcmp(section_return_variation_name(SECTION_RETURN_EMBELLISH), "embellish") == 0);
-    PlanJsonError error;
-    char *text = plan_to_json(plan, &error);
-    assert(text != NULL && strstr(text, "\"variation\": \"embellish\"") != NULL);
-    PiecePlan *parsed = NULL;
-    expect_ok(plan_from_json(test_knowledge(), text, &parsed, &error), &error);
-    assert(plans_equal(plan, parsed));
-    char *again = plan_to_json(parsed, &error);
-    assert(again && strcmp(text, again) == 0);
-    free(text);
-    free(again);
-    plan_destroy(parsed);
-    plan_destroy(plan);
-}
 
 /*
  * Plan files saved before relation steps write a motive ref as "transform" and the members it uses (docs/plan-format.md).
@@ -1226,6 +621,12 @@ static void test_empty_plan(void) {
 
 #define SPAN_0_1 "\"span\":{\"start\":{\"num\":0,\"den\":1},\"end\":{\"num\":1,\"den\":1}}"
 #define COMPOSER_ID_1 "\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":[]}"
+/* A plan of format 1 whose form has one section with these constraints (id 2). */
+#define OLD_SECTION(CONSTRAINTS)                                                                                       \
+    "{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1                                     \
+    ",\"children\":[{\"kind\":\"section\",\"label\":\"A\"," SPAN_0_1                                                  \
+    ",\"children\":[],\"composer\":{\"id\":2,\"state\":\"constrained\",\"constraints\":" CONSTRAINTS "}}],"        \
+    "\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":[]}}}"
 
 static void expect_error(const char *text, PlanResult expected, const char *expected_path) {
     PiecePlan *plan = (PiecePlan *)0x1;
@@ -1289,49 +690,44 @@ static void test_malformed_input(void) {
                  ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
                  "[{\"kind\":\"harmony_shape\",\"shape\":\"prolongation\",\"starts_on\":\"mediant\"}]}}}",
                  PLAN_ERR_FORMAT, "form.composer.constraints[0].starts_on");
+    /* The attributes of a section (formats 1 to 4 wrote them as constraints) are read into its description; the form node is not a
+       section, so it has none of them. */
     expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
                  ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
-                 "[{\"kind\":\"theme_pairing\",\"beginning\":\"presentation\"}]}}}",
-                 PLAN_ERR_FORMAT, "form.composer.constraints[0].ending");
+                 "[{\"kind\":\"theme_pairing\",\"beginning\":\"presentation\",\"ending\":\"continuation\"}]}}}",
+                 PLAN_ERR_FORMAT, "form.composer.constraints[0].kind");
+    expect_error(OLD_SECTION("[{\"kind\":\"theme_pairing\",\"beginning\":\"presentation\"}]"), PLAN_ERR_FORMAT,
+                 "form.children[0].composer.constraints[0].ending");
     {
         /* A pairing and a shape with their defaults leave out what is not asked for. */
         PiecePlan *parsed_pairing = NULL;
-        assert(plan_from_json(test_knowledge(), "{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
-                              ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
-                              "[{\"kind\":\"theme_pairing\",\"beginning\":\"antecedent\",\"ending\":\"consequent\"},"
-                              "{\"kind\":\"harmony_shape\",\"shape\":\"cadential\"},{\"kind\":\"material\"}]}}}",
+        assert(plan_from_json(test_knowledge(),
+                              OLD_SECTION("[{\"kind\":\"theme_pairing\",\"beginning\":\"antecedent\",\"ending\":\"consequent\"},"
+                                          "{\"kind\":\"harmony_shape\",\"shape\":\"cadential\"},{\"kind\":\"material\"},"
+                                          "{\"kind\":\"archetype\",\"type\":\"period\"}]"),
                               &parsed_pairing, &error) == PLAN_OK);
-        const PlanConstraint *read = plan_node_constraint_at(parsed_pairing, 1, 0);
-        assert(read && read->params.theme_pairing.beginning == SECTION_BEGINNING_ANTECEDENT &&
-               read->params.theme_pairing.ending == SECTION_ENDING_CONSEQUENT);
-        read = plan_node_constraint_at(parsed_pairing, 1, 1);
-        assert(read && read->params.harmony_shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL &&
+        const SectionDescription *described = plan_node_section(parsed_pairing, 2);
+        assert(described && described->has_pairing && described->pairing.beginning == SECTION_BEGINNING_ANTECEDENT &&
+               described->pairing.ending == SECTION_ENDING_CONSEQUENT && described->has_role &&
+               described->role == SECTION_ROLE_MATERIAL);
+        const PlanConstraint *read = plan_node_constraint_at(parsed_pairing, 2, 0);
+        assert(plan_node_constraint_count(parsed_pairing, 2) == 1 && read &&
+               read->params.harmony_shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL &&
                read->params.harmony_shape.starts_on == PLAN_HARMONY_ANCHOR_ANY &&
                read->params.harmony_shape.max_cells_per_chord == 0 && !read->params.harmony_shape.split_at_bars);
-        assert(plan_node_constraint_at(parsed_pairing, 1, 2)->kind == PLAN_CONSTRAINT_MATERIAL);
         plan_destroy(parsed_pairing);
     }
     /* The constraints of a piece plan. */
-    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
-                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
-                 "[{\"kind\":\"return\",\"section\":1,\"variation\":\"remix\"}]}}}",
-                 PLAN_ERR_FORMAT, "form.composer.constraints[0].variation");
-    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
-                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
-                 "[{\"kind\":\"return\",\"section\":1,\"variation\":\"exact\"}]}}}",
-                 PLAN_ERR_FORMAT, "form.composer.constraints[0]");
-    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
-                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
-                 "[{\"kind\":\"layers\",\"lanes\":[\"bass\",\"drums\"]}]}}}",
-                 PLAN_ERR_FORMAT, "form.composer.constraints[0].lanes[1]");
-    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
-                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
-                 "[{\"kind\":\"layers\",\"lanes\":[]}]}}}",
-                 PLAN_ERR_FORMAT, "form.composer.constraints[0].lanes");
-    expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
-                 ",\"children\":[],\"composer\":{\"id\":1,\"state\":\"constrained\",\"constraints\":"
-                 "[{\"kind\":\"section_letter\",\"letter\":\"ABCD\"}]}}}",
-                 PLAN_ERR_FORMAT, "form.composer.constraints[0].letter");
+    expect_error(OLD_SECTION("[{\"kind\":\"return\",\"section\":1,\"variation\":\"remix\"}]"), PLAN_ERR_FORMAT,
+                 "form.children[0].composer.constraints[0].variation");
+    expect_error(OLD_SECTION("[{\"kind\":\"return\",\"section\":1,\"variation\":\"exact\"}]"), PLAN_ERR_FORMAT,
+                 "form.children[0].composer.constraints[0]");
+    expect_error(OLD_SECTION("[{\"kind\":\"layers\",\"lanes\":[\"bass\",\"drums\"]}]"), PLAN_ERR_FORMAT,
+                 "form.children[0].composer.constraints[0].lanes[1]");
+    expect_error(OLD_SECTION("[{\"kind\":\"layers\",\"lanes\":[]}]"), PLAN_ERR_FORMAT,
+                 "form.children[0].composer.constraints[0].lanes");
+    expect_error(OLD_SECTION("[{\"kind\":\"section_letter\",\"letter\":\"ABCD\"}]"), PLAN_ERR_FORMAT,
+                 "form.children[0].composer.constraints[0].letter");
     /* A section outside its parent's span. */
     expect_error("{\"schema_version\":1,\"form\":{\"kind\":\"form\",\"label\":null," SPAN_0_1
                  ",\"children\":[{\"kind\":\"section\",\"label\":null,"
@@ -1385,7 +781,7 @@ static void check_plan_file(const char *path, const char *name) {
     char *written = plan_to_json(first, &error);
     assert(written != NULL);
     assert(strstr(written, "\"format\": \"ursatz-composer-plan\"") != NULL);
-    assert(strstr(written, "\"format_version\": 4") != NULL);
+    assert(strstr(written, "\"format_version\": 5") != NULL);
     assert(strstr(written, "schema_version") == NULL && strstr(written, "tonic_pitch_class") == NULL);
     assert(strstr(written, "\"ticks_per_quarter\"") == NULL && strstr(written, "\"voice_leading\"") == NULL);
     assert(plan_from_json(test_knowledge(), written, &second, &error) == PLAN_OK);
@@ -1456,7 +852,8 @@ static char *as_version_one(const char *v4) {
 }
 
 static void test_version_one_values(void) {
-    PiecePlan *plan = build_sentence_plan();
+    compare_sections = false;
+    PiecePlan *plan = build_plan_without_descriptions();
     PlanJsonError error;
     char *v2 = plan_to_json(plan, &error);
     assert(v2 != NULL);
@@ -1501,6 +898,7 @@ static void test_version_one_values(void) {
     free(v1);
     free(v2);
     plan_destroy(plan);
+    compare_sections = true;
 }
 
 static void test_spelling_round_trip(void) {
@@ -1555,7 +953,7 @@ static void test_format_errors(void) {
     assert(strcmp(error.path, "format") == 0);
     assert(plan_from_json(test_knowledge(), "{\"format\":\"ursatz-composer-plan\",\"form\":null}", &plan, &error) == PLAN_ERR_FORMAT);
     assert(strcmp(error.path, "format_version") == 0);
-    assert(plan_from_json(test_knowledge(), "{\"format\":\"ursatz-composer-plan\",\"format_version\":5,\"form\":null}", &plan, &error) ==
+    assert(plan_from_json(test_knowledge(), "{\"format\":\"ursatz-composer-plan\",\"format_version\":6,\"form\":null}", &plan, &error) ==
            PLAN_ERR_FORMAT);
     assert(strcmp(error.path, "format_version") == 0);
     assert(plan_from_json(test_knowledge(), "{\"format\":\"ursatz-composer-plan\",\"format_version\":2,\"form\":null}", &plan, &error) == PLAN_OK);
@@ -1580,7 +978,8 @@ static char *as_version_two(const char *v4) {
 
 /* Formats 1 and 2 read into materials: the major and the natural minor of the snapshot, the same keys the format 3 text holds. */
 static void test_older_formats_read_into_materials(void) {
-    PiecePlan *plan = build_sentence_plan();
+    compare_sections = false;
+    PiecePlan *plan = build_plan_without_descriptions();
     PlanJsonError error;
     char *v3 = plan_to_json(plan, &error);
     assert(v3 != NULL && strstr(v3, "\"mode\"") == NULL && strstr(v3, "omt.material.") != NULL);
@@ -1615,6 +1014,7 @@ static void test_older_formats_read_into_materials(void) {
     free(v2);
     free(v3);
     plan_destroy(plan);
+    compare_sections = true;
 }
 
 /* A plan with the key spans given, over 4 bars each: a span is a key, or a relation and an anchor not yet resolved (key.material NULL). */
@@ -1775,15 +1175,6 @@ int main(void) {
     test_round_trip();
     test_old_transforms();
     test_motive_tones();
-    test_pedal();
-    test_connective();
-    test_liquidation();
-    test_figure();
-    test_section_function();
-    test_section_constraints();
-    test_embellish_return();
-    test_setting_return();
-    test_across_modes_return();
     test_empty_plan();
     test_malformed_input();
     test_plan_files();

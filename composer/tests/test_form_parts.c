@@ -175,7 +175,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             sections[count++] = child;
         }
     }
@@ -376,7 +376,7 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
     NodeId r = sections[4];
     SectionFunction function;
     assert(plan_section_function_of(plan, r, &function) && function.function == SECTION_FUNCTION_RETRANSITION);
-    assert(!plan_node_find_constraint(plan, r, PLAN_CONSTRAINT_ARCHETYPE));
+    assert(!plan_section_or_empty(plan, r)->has_pairing);
     PlanSpan span = plan_node_span(plan, r);
 
     /* In the home key, from its first bar: every key span that touches R is the home key's. */
@@ -490,7 +490,7 @@ static void check_coda(const PiecePlan *plan, const Row *row, unsigned long seed
     NodeId k = sections[6];
     SectionFunction function;
     assert(plan_section_function_of(plan, k, &function) && function.function == SECTION_FUNCTION_CODA);
-    assert(!plan_node_find_constraint(plan, k, PLAN_CONSTRAINT_ARCHETYPE));
+    assert(!plan_section_or_empty(plan, k)->has_pairing);
 
     /* Three phrases of 4, 2 and 2 bars. */
     PlanSpan whole = plan_node_span(plan, k);
@@ -607,7 +607,8 @@ static void test_applies(void) {
     PlanSpan span = plan_node_span(plan, sections[6]);
     PlanConstraint constraints[16];
     size_t count = plan_node_constraint_count(plan, sections[6]);
-    assert(count > 0 && count <= 16);
+    assert(count <= 16);
+    const SectionDescription coda_description = *plan_node_section(plan, sections[6]);
     for (size_t i = 0; i < count; i++) {
         constraints[i] = *plan_node_constraint_at(plan, sections[6], i);
     }
@@ -619,6 +620,7 @@ static void test_applies(void) {
         assert(rational_div(length, (Rational){8, 1}, &edited.length) == RATIONAL_OK);
         NodeId node;
         assert(plan_add_node(plan, plan_root(plan), PLAN_NODE_SECTION, edited, "K", &node) == PLAN_OK);
+        assert(plan_node_set_section(plan, node, &coda_description) == PLAN_OK);
         for (size_t i = 0; i < count; i++) {
             assert(plan_node_add_constraint(plan, node, &constraints[i]) == PLAN_OK);
         }

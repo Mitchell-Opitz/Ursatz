@@ -381,19 +381,6 @@ static const Motive *basic_motive(const PieceRequest *request, Motive *storage) 
     return NULL;
 }
 
-/* The constraints a theme section has from the theme it is given: its archetype, pairing and cadences. */
-static PieceResult add_theme_constraints(PiecePlan *plan, NodeId id, const PiecePlan *theme_plan, NodeId theme) {
-    PieceResult result = PIECE_OK;
-    for (size_t i = 0; result == PIECE_OK && i < plan_node_constraint_count(theme_plan, theme); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(theme_plan, theme, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE || constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING ||
-            constraint->kind == PLAN_CONSTRAINT_CADENCE) {
-            result = piece_add_constraint(plan, id, constraint);
-        }
-    }
-    return result;
-}
-
 /* The section of a plan that a piece part and id name, or PLAN_NODE_NONE. */
 static NodeId find_part_section(const PiecePlan *plan, const PieceSection *section) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -486,51 +473,49 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
             return PIECE_ERR_BAD_REQUEST;
         }
     }
-    PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
-    if (result == PIECE_OK && coda) {
-        /* No archetype, theme pairing or free phrase: grow-coda lays the section out (R-509). */
-    } else if (result == PIECE_OK && given != PLAN_NODE_NONE) {
-        result = add_theme_constraints(plan, *out, theme_plan, given);
-    } else if (result == PIECE_OK && theme) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
-        constraint.params.archetype = (PlanArchetype)grow_pairing_archetype(&pairing);
-        result = piece_add_constraint(plan, *out, &constraint);
-        if (result == PIECE_OK) {
-            memset(&constraint, 0, sizeof(constraint));
-            constraint.kind = PLAN_CONSTRAINT_THEME_PAIRING;
-            constraint.params.theme_pairing = pairing;
-            result = piece_add_constraint(plan, *out, &constraint);
+    /* The description: a theme fill is the theme it was composed as, with its pairing and cadences, not the request's. */
+    SectionDescription description;
+    section_description_init(&description);
+    if (coda) {
+        /* No pairing or free phrase: grow-coda lays the section out (R-509). */
+    } else if (given != PLAN_NODE_NONE) {
+        const SectionDescription *given_description = plan_node_section(theme_plan, given);
+        description.has_pairing = given_description->has_pairing;
+        description.pairing = given_description->pairing;
+        description.has_cadence = given_description->has_cadence;
+        description.cadence = given_description->cadence;
+        description.has_first_cadence = given_description->has_first_cadence;
+        description.first_cadence = given_description->first_cadence;
+    } else if (theme) {
+        description.has_pairing = true;
+        description.pairing = pairing;
+        description.has_construction = constructed;
+        if (constructed) {
+            description.construction = construction;
         }
-        if (result == PIECE_OK && constructed) {
-            memset(&constraint, 0, sizeof(constraint));
-            constraint.kind = PLAN_CONSTRAINT_CONSTRUCTION;
-            constraint.params.construction = construction;
-            result = piece_add_constraint(plan, *out, &constraint);
-        }
-    } else if (result == PIECE_OK) {
+    } else {
         /* Any other length is a free phrase, which grow-theme lays out in ideas of a bar (grow_free.c). */
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_FREE_PHRASE;
-        result = piece_add_constraint(plan, *out, &constraint);
+        description.free_phrase = true;
     }
-    if (result == PIECE_OK && given == PLAN_NODE_NONE) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = section->cadence;
-        result = piece_add_constraint(plan, *out, &constraint);
+    if (given == PLAN_NODE_NONE) {
+        description.has_cadence = true;
+        description.cadence = section->cadence;
     }
-    if (result == PIECE_OK && theme && pairing.beginning == SECTION_BEGINNING_ANTECEDENT) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = ANTECEDENT_CADENCE;
-        result = piece_add_constraint(plan, *out, &constraint);
+    if (theme && pairing.beginning == SECTION_BEGINNING_ANTECEDENT) {
+        description.has_first_cadence = true;
+        description.first_cadence = ANTECEDENT_CADENCE;
     }
-    if (result == PIECE_OK && (transition || coda)) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_SECTION_FUNCTION;
-        constraint.params.section_function.function = transition ? SECTION_FUNCTION_TRANSITION : SECTION_FUNCTION_CODA;
-        result = piece_add_constraint(plan, *out, &constraint);
+    if (transition || coda) {
+        description.has_function = true;
+        description.function.function = transition ? SECTION_FUNCTION_TRANSITION : SECTION_FUNCTION_CODA;
+    }
+    snprintf(description.letter, sizeof(description.letter), "%s", section->letter);
+    description.has_role = true;
+    description.role = (SectionRole)(SECTION_ROLE_INTRO + (int)section->part);
+    snprintf(description.id, sizeof(description.id), "%s", section->id);
+    PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
+    if (result == PIECE_OK) {
+        result = piece_result_of_plan(plan_node_set_section(plan, *out, &description));
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
@@ -550,19 +535,6 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
         constraint.params.voicing = request->voicing;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_SECTION_LETTER;
-        snprintf(constraint.params.letter, sizeof(constraint.params.letter), "%s", section->letter);
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
-    if (result == PIECE_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_PIECE_PART;
-        constraint.params.piece_part.part = (int)section->part;
-        snprintf(constraint.params.piece_part.id, sizeof(constraint.params.piece_part.id), "%s", section->id);
-        result = piece_add_constraint(plan, *out, &constraint);
-    }
     if (result == PIECE_OK && section->pickup.num != 0) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_PICKUP;
@@ -570,14 +542,6 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
         result = piece_add_constraint(plan, *out, &constraint);
     }
     return result;
-}
-
-/* A constraint with no parameters on a node. */
-static PieceResult add_flag(PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
-    PlanConstraint constraint;
-    memset(&constraint, 0, sizeof(constraint));
-    constraint.kind = kind;
-    return piece_add_constraint(plan, id, &constraint);
 }
 
 /*
@@ -721,7 +685,9 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
             }
         }
         if (result == PIECE_OK && !loop_plan && is_held(form, &copy, i, cells)) {
-            result = add_flag(plan, id, PLAN_CONSTRAINT_HOLD);
+            SectionDescription held = *plan_node_section(plan, id);
+            held.leads_in = true;
+            result = piece_result_of_plan(plan_node_set_section(plan, id, &held));
         }
         if (result == PIECE_OK) {
             result = piece_result_of_plan(plan_result_of_rational(rational_add(start, span.length, &start)));
@@ -733,7 +699,13 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         NodeId seam;
         PlanSpan span = {start, bar};
         result = piece_result_of_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, span, "seam", &seam));
-        result = result == PIECE_OK ? add_flag(plan, seam, PLAN_CONSTRAINT_SEAM) : result;
+        if (result == PIECE_OK) {
+            SectionDescription seam_description;
+            section_description_init(&seam_description);
+            seam_description.has_role = true;
+            seam_description.role = SECTION_ROLE_SEAM;
+            result = piece_result_of_plan(plan_node_set_section(plan, seam, &seam_description));
+        }
         if (result == PIECE_OK) {
             PlanConstraint key;
             memset(&key, 0, sizeof(key));

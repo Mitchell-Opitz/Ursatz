@@ -877,7 +877,7 @@ static ToneScene build_tone_scene(bool keyed) {
     }
     assert(motive_from_notes_text(MOTIVE, &options, &motive, NULL) == MOTIVE_OK);
     assert(motive_attach(scene.plan, material_idea, extra.start, &motive, "m0", &scene.source, NULL) == PLAN_OK);
-    assert(plan_node_has_constraint(scene.plan, scene.source, PLAN_CONSTRAINT_MOTIVE_TONES) == keyed);
+    assert((plan_node_find_constraint(scene.plan, scene.source, PLAN_CONSTRAINT_MOTIVE_TONES) != NULL) == keyed);
     for (NodeId node = 1; node <= plan_node_count(scene.plan); node++) {
         if (plan_node_kind(scene.plan, node) != PLAN_NODE_MOTIVE) {
             assert(plan_node_set_state(scene.plan, node, PLAN_STATE_GIVEN) == PLAN_OK);

@@ -134,4 +134,13 @@ FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFill
 bool form_return_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out);
 
+/* A section's return as the readers use it: the section it returns, how it varies it, the setting of a setting return and whether it
+   crosses modes (REHARMONIZE: a source in the other mode is moved by the tonic step and mapped into the target's mode, R-524). */
+typedef struct {
+    NodeId section;
+    SectionReturnVariation variation;
+    PlanAccompanimentPattern setting;
+    bool across_modes;
+} ReturnRef;
+
 #endif
