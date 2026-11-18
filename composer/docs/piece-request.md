@@ -40,13 +40,16 @@ The body is required; the others may be left out, and a request without an endin
 | Member | Meaning |
 | --- | --- |
 | `id` | A name of 1 to 15 characters, different for each section. |
-| `part` | `intro`, `body`, `turnaround` or `ending`. |
+| `part` | `intro`, `body`, `turnaround` or `ending`. `role` is the same member under the name the section description gives it (R-605): give `role` or `part`, not both (refused at `/request/sections/<i>`). |
 | `letter` | The form letter shown in the MIDI marker; the id's first letter, capitalized, when left out. |
-| `beats` | The length: a whole number of beats of the meter, 1 or more. |
+| `beats` | The length: a whole number of beats of the meter, 1 or more; or `bars`, a whole number of bars. |
+| `region` | The key the section is in (R-610): `"home"` (the request's key, as without it), `{"tonic": "Eb", "material": "major"}`, or `{"relation": "dominant", "anchor": "home"}` where the relation is a [vocabulary](api/vocabulary-and-validation.md) `relations` id, name or alias and the anchor is `home`, `previous` (the section before) or the `id` of an earlier section. The Composer writes major and natural minor: a region in another material is refused at `/request/sections/<i>/region` ("section 'b' is in C locrian: the Composer writes major and natural minor keys until P69"). A section that starts in another key than the one before cannot open with a presentation (a key opens on a phrase model): give it `"into": "period"`, and the section that returns home too. The seam takes the first body section's key. |
 | `pickup` | Beats of anacrusis before the section, as a string or number (`"0"`, `"1"`, `"1/2"`); shorter than a bar. It is not part of `beats`. |
 | `cadence` | `null` for the default (an HC for the last section of the intro and of the loop, a PAC for the last of the ending, an IAC for the others), or `PAC`, `IAC`, `HC`, `DC` or `PC`. |
 | `function` | Optional, `null` or left out for none (API 1.23, R-508, R-510): `"transition"` (a body section but not the turnaround or the ending: a theme section of 4 or 8 whole bars with a half cadence, grown as the main theme's liquidating transition) or `"coda"` (the ending: 8 whole bars, a perfect authentic cadence, three phrases of 4, 2 and 2 bars). Any other value is refused at `/request/sections/<i>/function` (`the function must be transition or coda, not '<value>'`); a transition or coda the structure does not allow is the bad-request failure ([form-parts.md](form-parts.md#the-game-loop)). The vocabulary's `piece_functions` lists the values and the parts each can be in. The rows of the result name it. |
 | `fill` | What fills the section: see below. `null` or left out is `{"kind": "empty"}`. |
+
+A section is read through the section description of the plan library ([plan module](../../library/docs/modules/plan.md)): the members above, `null` for a member left out, and an error that names the member at its path (`/request/sections/<i>/cadence`) with the codec's message. A motif section whose motive is not the piece's basic motive (the first motif section's, else `motive`) has a motive of its own, a node `own <id>` in the material that the section's motive reference names (R-610); before P60 a later section's motive was dropped.
 
 A section of whole bars needs room for its cadence and a last chord of a whole bar: 2 bars at least. A section of one bar
 cannot be composed (the structure stage leaves it open). Sections that do not start or end on a barline, or are shorter than
@@ -76,8 +79,14 @@ there too, with the built-in names. The brief (`key`, `material`, `meter`, `moti
 | a form with sizes | `bars` (0 to 512) and `count` (0 to 64) pick the size (none: the form's default; a size the form has no such of is refused at `/request/bars`, or `/request/count` when only `count` was given, with the sizes it has); `modulate` plans the keys of the sections from the seed. `sections` and `voicing` are refused at their paths: the sections are the size's. |
 
 A form with sizes has the one version `piece`, no loop and no ending (`loop` is `null`, and `ending_musicxml` is refused). Its
-sections are those of its size, with the roles, returns and motives the [form document](forms.md) gives, and no fill of their
-own yet. The motive of the piece, when given, is the basic motive. Each seed that gets stuck is passed over and the next is
+sections are those of its size, with the roles, returns and motives the [form document](forms.md) gives. `sections` there lists
+overlays (R-610): each names a section of the size in `name` (refused at `/request/sections/<i>/name` when the size has none, or when
+it is named twice) and gives it a `region` (as above, `previous` being the section before in the size), a `motif` fill with a `motive`
+of its own, or a `theme` fill (`plan`, in the same material as the section's key: its pairing and cadences become the section's, its
+lanes are moved and transposed to it). `into`, `construction` and `forms` are refused, the form gives the shape; a fill on a section that
+returns another is refused ("'A return' returns 'A': give it to 'A'") and on a liquidation, retransition or coda ("a coda is grown by its
+operator"). The keys the form draws for the other sections are as before, and a request with regions plans the cadences across the sections
+as a modulating piece does. The motive of the piece, when given, is the basic motive. Each seed that gets stuck is passed over and the next is
 tried (up to 16), with the plan built again for each, so a modulating piece plans its keys again.
 
 ## Errors
