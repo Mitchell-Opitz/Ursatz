@@ -12,6 +12,7 @@
 #include "model/time/meter_map.h"
 #include "model/time/musical_time.h"
 #include "model/time/tempo_map.h"
+#include "model/time/time_span.h"
 
 /*
  * MusicXmlExport (music-export): serializes an in-memory score (musicxml_export_write_score) into a multi-part
@@ -72,6 +73,16 @@ typedef struct {
 } MusicXmlExportKeySignature;
 
 /*
+ * A sustain pedal marking in the part's staff: `pedal type="start"` at the span's start and `type="stop"` at its end
+ * (`<staff>` only in a part of several staves). The span holds (start before end) and starts at 0 or later.
+ */
+typedef struct {
+    TimeSpan span; /* whole notes */
+    size_t part_index;
+    int staff;
+} MusicXmlExportPedal;
+
+/*
  * Everything musicxml_export_write_score writes. All pointers are borrowed and never mutated, and every optional
  * member may be NULL (with its count 0 where it has one). The shape follows what musicxml_import_buffer returns, so
  * an import can be written back; MusicXmlExport does not include io/, so the caller copies the members across.
@@ -91,6 +102,11 @@ typedef struct {
  *     document is written from those; the events themselves, their ids and their order are untouched.
  *   - title / composer: written as <work><work-title> and <identification><creator type="composer"> (escaped); NULL or
  *     "" writes nothing.
+ *   - pedals (+ pedal_count): sustain pedal markings, each a <direction> with <pedal type="start" line="yes"/> at the
+ *     span's start and a stop at its end, in the measure that holds the time (a stop on the last barline is written at
+ *     that measure's end, so it adds no measure). A time inside a note is written before the next note with a negative
+ *     <offset> back to the time. ERR_UNKNOWN_PART and ERR_BAD_STAFF as for dynamics; ERR_NOT_REPRESENTABLE for a span
+ *     that does not hold or starts below 0; ERR_INCONSISTENT_INPUT for a count with no array.
  */
 typedef struct {
     NoteEvent *const *events;
@@ -114,6 +130,8 @@ typedef struct {
     const ScoreQuantizeOptions *quantize;
     const char *title;    /* written as <work><work-title>; NULL or "" writes nothing */
     const char *composer; /* written as <creator type="composer">; NULL or "" writes nothing */
+    const MusicXmlExportPedal *pedals;
+    size_t pedal_count;
 } MusicXmlExportScore;
 
 /*
