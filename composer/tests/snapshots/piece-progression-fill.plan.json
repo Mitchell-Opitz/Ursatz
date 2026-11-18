@@ -1099,7 +1099,14 @@
     "composer": {
       "id": 1,
       "state": "given",
-      "constraints": []
+      "constraints": [],
+      "form": {
+        "name": "game-loop",
+        "version": 2,
+        "hash": "dead34c86ff5af91",
+        "checks": ["sections", "returns", "keys", "cadences", "seam"],
+        "closing": false
+      }
     }
   },
   "melody": [{

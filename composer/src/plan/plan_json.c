@@ -15,6 +15,7 @@
 #include <analysis/texture/texture_rules.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 #include <plan/section_json.h>
@@ -316,6 +317,31 @@ static cJSON *span_constraints_json(const PiecePlan *plan, LaneSpanId id) {
     return array;
 }
 
+/* The checks a form runs, by name, in FormCheck bit order. */
+static const char *const FORM_CHECK_NAMES[] = {"sections", "returns", "keys", "cadences", "seam"};
+
+static cJSON *form_record_json(const PlanFormRecord *record) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *checks = cJSON_CreateArray();
+    bool ok = object && checks;
+    for (size_t i = 0; ok && i < COUNT_OF(FORM_CHECK_NAMES); i++) {
+        ok = (record->checks & (1u << i)) == 0 || plan_json_append(checks, cJSON_CreateString(FORM_CHECK_NAMES[i]));
+    }
+    ok = ok && plan_json_add(object, "name", cJSON_CreateString(record->name)) &&
+         plan_json_add(object, "version", json_number((long)record->version)) &&
+         plan_json_add(object, "hash", cJSON_CreateString(record->hash)) && plan_json_add(object, "checks", checks);
+    if (ok) {
+        checks = NULL;
+        ok = plan_json_add(object, "closing", cJSON_CreateBool(record->closing));
+    }
+    if (!ok) {
+        cJSON_Delete(object);
+        cJSON_Delete(checks);
+        return NULL;
+    }
+    return object;
+}
+
 static cJSON *node_json(const PiecePlan *plan, NodeId id) {
     cJSON *object = cJSON_CreateObject();
     cJSON *composer = cJSON_CreateObject();
@@ -327,6 +353,9 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
          plan_json_add(composer, "constraints", node_constraints_json(plan, id));
     if (ok && plan_node_kind(plan, id) == PLAN_NODE_SECTION) {
         ok = plan_json_add(composer, "section", section_to_json(plan_node_section(plan, id), SECTION_USE_PLAN));
+    }
+    if (ok && id == plan_root(plan) && plan_form_record(plan)) {
+        ok = plan_json_add(composer, "form", form_record_json(plan_form_record(plan)));
     }
     ok = ok && plan_json_add(object, "kind", cJSON_CreateString(NODE_KINDS[plan_node_kind(plan, id)])) &&
          plan_json_add(object, "label", name ? cJSON_CreateString(name) : cJSON_CreateNull()) &&
@@ -2075,6 +2104,69 @@ static bool read_section_member(JsonReader *reader, PiecePlan *plan, const cJSON
     return true;
 }
 
+/* Format 5: the form node's optional "form" member is the record of the form the plan was built from. */
+static bool read_form_record(JsonReader *reader, PiecePlan *plan, const cJSON *composer, const char *composer_path) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(composer, "form");
+    if (!item) {
+        return true;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, composer_path, "form");
+    if (!cJSON_IsObject(item)) {
+        return json_bad_format(reader, at, "expected an object");
+    }
+    PlanFormRecord record;
+    memset(&record, 0, sizeof(record));
+    const cJSON *name = plan_json_member(reader, item, at, "name", true);
+    const cJSON *hash = name ? plan_json_member(reader, item, at, "hash", true) : NULL;
+    const cJSON *checks = hash ? plan_json_member(reader, item, at, "checks", true) : NULL;
+    const cJSON *closing = checks ? plan_json_member(reader, item, at, "closing", true) : NULL;
+    long version;
+    char member[PLAN_JSON_PATH_MAX];
+    if (!closing || !json_read_int_member(reader, item, at, "version", 1, 1000, &version)) {
+        return false;
+    }
+    json_child_path(member, at, "name");
+    if (!cJSON_IsString(name) || name->valuestring[0] == '\0' || strlen(name->valuestring) >= PLAN_FORM_NAME_MAX) {
+        return json_bad_format(reader, member, "expected a form name of 1 to 31 characters");
+    }
+    json_child_path(member, at, "hash");
+    if (!cJSON_IsString(hash) || strlen(hash->valuestring) > PLAN_FORM_HASH_LEN) {
+        return json_bad_format(reader, member, "expected a hash of 16 lowercase hexadecimal digits or none");
+    }
+    json_child_path(member, at, "closing");
+    if (!cJSON_IsBool(closing)) {
+        return json_bad_format(reader, member, "expected true or false");
+    }
+    json_child_path(member, at, "checks");
+    if (!cJSON_IsArray(checks)) {
+        return json_bad_format(reader, member, "expected an array of check names");
+    }
+    size_t index = 0;
+    const cJSON *check;
+    cJSON_ArrayForEach(check, checks) {
+        char entry[PLAN_JSON_PATH_MAX];
+        int bit;
+        json_index_path(entry, member, index++);
+        if (!read_enum(reader, check, entry, FORM_CHECK_NAMES, COUNT_OF(FORM_CHECK_NAMES), &bit)) {
+            return false;
+        }
+        if ((record.checks & (1u << bit)) != 0) {
+            return json_bad_format(reader, entry, "a check is named twice");
+        }
+        record.checks |= 1u << bit;
+    }
+    snprintf(record.name, sizeof(record.name), "%s", name->valuestring);
+    snprintf(record.hash, sizeof(record.hash), "%s", hash->valuestring);
+    record.version = (unsigned)version;
+    record.closing = cJSON_IsTrue(closing);
+    PlanResult result = plan_set_form_record(plan, &record);
+    if (result != PLAN_OK) {
+        return json_fail(reader, result == PLAN_ERR_ALLOC ? PLAN_ERR_ALLOC : PLAN_ERR_FORMAT, at, "form %s", result_name(result));
+    }
+    return true;
+}
+
 typedef struct {
     const cJSON *json;
     NodeId parent;
@@ -2544,11 +2636,22 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
         const cJSON *composer = cJSON_GetObjectItemCaseSensitive(table[i].json, "composer");
         char composer_path[PLAN_JSON_PATH_MAX];
         json_child_path(composer_path, table[i].path, "composer");
-        int state;
         ok = read_constraints(reader, plan, composer, composer_path, i + 1, add_node_constraint) &&
              (reader->version < 5 || plan_node_kind(plan, (NodeId)(i + 1)) != PLAN_NODE_SECTION ||
               read_section_member(reader, plan, composer, composer_path, i + 1)) &&
-             read_enum_member(reader, composer, composer_path, "state", STATE_NAMES, COUNT_OF(STATE_NAMES), &state);
+             (reader->version < 5 || (NodeId)(i + 1) != plan_root(plan) || read_form_record(reader, plan, composer, composer_path));
+    }
+    /* A plan before format 5 knows its form by the name of its form node: its record and the closed sections come from the built-in
+       form of that name, before any node is Given. */
+    if (ok && reader->version < 5 && !piece_form_record_migrate(plan)) {
+        ok = json_fail(reader, PLAN_ERR_ALLOC, "form", "out of memory");
+    }
+    for (size_t i = 0; ok && i < node_count; i++) {
+        const cJSON *composer = cJSON_GetObjectItemCaseSensitive(table[i].json, "composer");
+        char composer_path[PLAN_JSON_PATH_MAX];
+        json_child_path(composer_path, table[i].path, "composer");
+        int state;
+        ok = read_enum_member(reader, composer, composer_path, "state", STATE_NAMES, COUNT_OF(STATE_NAMES), &state);
         if (ok) {
             plan_node_set_state(plan, (NodeId)(i + 1), (PlanState)state);
         }

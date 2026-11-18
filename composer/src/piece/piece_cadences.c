@@ -7,6 +7,7 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
+#include "piece/piece_internal.h"
 #include "util/plan_util.h"
 
 #define MAX_CADENCES 2
@@ -128,6 +129,33 @@ PieceResult piece_plan_cadences(PiecePlan *plan, const FormSpec *form, const For
         }
     }
     return PIECE_OK;
+}
+
+bool piece_form_record_migrate(PiecePlan *plan) {
+    NodeId root = plan_root(plan);
+    const char *root_name = root == PLAN_NODE_NONE ? NULL : plan_node_name(plan, root);
+    for (size_t i = 0; root_name && !plan_form_record(plan) && i < form_spec_builtin_count(); i++) {
+        if (strcmp(root_name, form_spec_builtin_plan_name(i)) != 0) {
+            continue;
+        }
+        FormSpec *form = NULL;
+        FormSpecResult parsed = form_spec_builtin(form_spec_builtin_name(i), &form);
+        if (parsed != FORM_SPEC_OK) {
+            return parsed != FORM_SPEC_ERR_ALLOC;
+        }
+        bool ok = piece_set_form_record(plan, form) == PIECE_OK;
+        NodeId sections[FORM_SPEC_MAX_SECTIONS];
+        size_t count = sections_of(plan, sections);
+        const FormSpecSize *size = ok && form->closing && count > 0 ? size_of_plan(form, plan, sections, count) : NULL;
+        for (size_t s = 0; ok && size && s < count; s++) {
+            SectionDescription described = *plan_section_or_empty(plan, sections[s]);
+            described.closed = size->sections[s].closed;
+            ok = plan_node_set_section(plan, sections[s], &described) == PLAN_OK;
+        }
+        form_spec_destroy(form);
+        return ok;
+    }
+    return true;
 }
 
 static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out);

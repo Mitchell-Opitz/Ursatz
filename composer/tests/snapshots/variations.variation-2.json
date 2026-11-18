@@ -1509,7 +1509,14 @@
     "composer": {
       "id": 1,
       "state": "given",
-      "constraints": []
+      "constraints": [],
+      "form": {
+        "name": "binary",
+        "version": 2,
+        "hash": "42d76a17dbeee51e",
+        "checks": ["sections", "returns", "keys", "cadences", "seam"],
+        "closing": true
+      }
     }
   },
   "melody": [{

@@ -1680,7 +1680,14 @@
           "kind": "style",
           "path": "<FIXTURES>/style-fast-minor.json",
           "weight": "1/2"
-        }]
+        }],
+      "form": {
+        "name": "game-loop",
+        "version": 2,
+        "hash": "dead34c86ff5af91",
+        "checks": ["sections", "returns", "keys", "cadences", "seam"],
+        "closing": false
+      }
     }
   },
   "melody": [{

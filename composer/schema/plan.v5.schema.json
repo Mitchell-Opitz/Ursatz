@@ -57,6 +57,18 @@
     "relationId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$", "maxLength": 63 },
     "anchor": { "enum": ["home", "previous"] },
     "time": { "type": "string", "pattern": "^-?[0-9]+/[0-9]+$" },
+    "formRecord": {
+      "type": "object",
+      "required": ["name", "version", "hash", "checks", "closing"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 31 },
+        "version": { "type": "integer", "minimum": 1, "description": "The version of the form document." },
+        "hash": { "type": "string", "pattern": "^([0-9a-f]{16})?$", "description": "FNV-1a 64 of the built-in document the plan was built from; empty for a form that is not built in." },
+        "checks": { "type": "array", "uniqueItems": true, "items": { "enum": ["sections", "returns", "keys", "cadences", "seam"] } },
+        "closing": { "type": "boolean", "description": "The form ends with a cadence: its cadences across the sections are planned and checked." }
+      },
+      "additionalProperties": false
+    },
     "node": {
       "type": "object",
       "required": ["kind", "label", "span", "children", "composer"],
@@ -72,7 +84,8 @@
             "id": { "type": "integer", "minimum": 1 },
             "state": { "$ref": "#/$defs/state" },
             "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
-            "section": { "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json#/$defs/plan_section" }
+            "section": { "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json#/$defs/plan_section" },
+            "form": { "$ref": "#/$defs/formRecord", "description": "On the form node: the form the plan was built from (R-608)." }
           }
         }
       }

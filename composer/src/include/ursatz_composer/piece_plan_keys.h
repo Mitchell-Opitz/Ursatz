@@ -113,4 +113,11 @@ typedef struct {
  */
 bool piece_check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out);
 
+/*
+ * A plan of a format before 5 has no form record: this gives it the record of the built-in form whose plan name is its root node's
+ * name, and each section's `closed` from that form's size (the first size with the plan's sections in its proportions). A plan of
+ * no built-in form is left as it is. False only when out of memory; nothing is Given yet when the plan reader calls it.
+ */
+bool piece_form_record_migrate(PiecePlan *plan);
+
 #endif

@@ -63,5 +63,3 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # no app 
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation_named  # no app resolves a relation by word until P60 (sections name relations); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 library/theory/tonality/region_relation.c region_resolve_named  # no app resolves a relation by word until P60 (per-section regions in requests); its tests call it
-composer/src/form/form_builtin.c form_spec_builtin_plan_name  # nothing reads a built-in form by its plan name until P60 B4 (the plan format reads a plan without a record)
-composer/src/plan/piece_plan.c plan_form_record  # nothing reads the record until P60 B4 (the plan format writes it)

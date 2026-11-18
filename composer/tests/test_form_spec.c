@@ -1223,6 +1223,11 @@ static int test_custom(void) {
     PieceResult ran;
     PiecePlan *plan = compose_custom(sections_only, first, &outcome, &ran);
     assert(ran == PIECE_OK);
+    /* The plan records the checks of the form it was built from; the written notes are the same. */
+    PlanFormRecord recorded = *plan_form_record(plan);
+    assert(recorded.checks == FORM_CHECK_SECTIONS);
+    recorded.checks = FORM_CHECK_ALL;
+    assert(plan_set_form_record(plan, &recorded) == PLAN_OK);
     char *again = plan_to_json(plan, NULL);
     assert(again && strcmp(again, first_json) == 0);
     assert(outcome.returns_planned == 0 && outcome.section_count == 3);
