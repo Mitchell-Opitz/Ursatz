@@ -80,8 +80,8 @@ lists them, from the region's relations by the home mode. Each section then star
 
 `compose_run` makes the checks the form's `checks` names: hearing each theme section as its shape (`hear`), hearing the
 returns, checking the keys and the cadences of a plan with several keys, and hearing the seam. `ComposeConfig.form` gives
-the form; NULL is the built-in form the plan's root is named for (`form_spec_builtin_for_plan`), and a plan of no
-built-in form, such as a theme or a fill plan, runs every check it has the parts for. A check never changes what is
+the form; NULL is the form the plan records (`plan_form_record`: its `checks`, and `closing`, which the cadence check reads with each
+section's `closed`), and a plan with no record, such as a theme or a fill plan, runs every check it has the parts for. A check never changes what is
 written: the key check only rejects a finished run. With a check off, its result is empty (`returns_planned` is 0 with
 `returns` off).
 

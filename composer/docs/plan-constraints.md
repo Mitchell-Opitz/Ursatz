@@ -61,3 +61,9 @@ members the transform uses (`tonal`, `steps`, `axis`, `interval`, `amount`, `kee
 step of the same relation (`none` into no step, `restated` into `exact`; `semitones` or `steps` into `by`; an absent
 `axis` into -1) and are written back as `step`; nothing writes the old names. A `transform` the table does not
 have fails the read with its name in the message. The format version stays 2.
+
+## Construction and pedal
+
+A theme's construction (R-468) is the `construction` member of its section's description: `{"ideas": {"basic idea": 3, "contrasting idea": 2, ...}, "extensions": [], "reason": "given"}`, with the ideas, extensions and reason it always had.
+
+The `pedal` member of a section's description (`"pedal": "dominant"`) and the `pedal` member of a `harmony_shape` (written `"pedal": true` after `split_at_bars`, only when set) ask for a dominant pedal under a presentation (R-446). The degree is required and only 5 is valid. A plan without either reads as before and writing it again gives the same bytes; the schema version is the same.
