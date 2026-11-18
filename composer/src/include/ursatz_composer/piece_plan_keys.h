@@ -40,6 +40,8 @@ typedef struct {
     AnalysisKey end;
     const char *start_relation;
     const char *end_relation;
+    PlanKeyAnchor anchor;      /* what the relations are taken from: home for a drawn region, else a request's region (R-610) */
+    const char *anchor_section; /* the anchor section's name for PLAN_KEY_ANCHOR_SECTION, else NULL */
 } PieceSectionKeys;
 
 typedef struct {
@@ -63,10 +65,12 @@ bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, cons
  * form, over the sections and the material, and sets the KEY constraint of a section that ends in another key to the
  * key it ends in. The home key is the KEY constraint of the first section. rng NULL plans no modulation (one span, the
  * home key); otherwise every choice is drawn from rng. knowledge resolves the regions and the parallel mode (piece_region_key); it may
- * be NULL for a form with no section in the parallel mode that stays home. *out is the plan made.
+ * be NULL for a form with no section in the parallel mode that stays home. *out is the plan made. regions (NULL for none) is one
+ * entry for each section of the size, the keys a request's overlays ask for (R-610): after the draws, a section with a region
+ * starts and ends in it, so the draws and every other section's key are as they were.
  */
 PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size,
-                            FillRng *rng, PieceKeyPlan *out);
+                            FillRng *rng, const PieceRegion *regions, PieceKeyPlan *out);
 
 typedef struct {
     bool ok;

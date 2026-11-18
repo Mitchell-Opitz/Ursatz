@@ -27,6 +27,8 @@ typedef struct {
     PlanSpan span;
     AnalysisKey key;
     const char *relation;
+    PlanKeyAnchor anchor;
+    const char *anchor_section;
 } KeySegment;
 
 #define MAX_SEGMENTS (2 * FORM_SPEC_MAX_SECTIONS + 1)
@@ -152,7 +154,8 @@ static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, 
 }
 
 /* Adds a segment, joined to the one before it when that is in the same key and ends where this one starts. */
-static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, AnalysisKey key, const char *relation) {
+static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, AnalysisKey key, const char *relation,
+                                PlanKeyAnchor anchor, const char *anchor_section) {
     if (*count > 0 && analysis_key_equals(&segments[*count - 1].key, &key)) {
         Rational end;
         PieceResult result = piece_result_of_plan(plan_span_end(segments[*count - 1].span, &end));
@@ -168,6 +171,8 @@ static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan sp
     segments[*count].span = span;
     segments[*count].key = key;
     segments[*count].relation = relation;
+    segments[*count].anchor = anchor;
+    segments[*count].anchor_section = anchor_section;
     (*count)++;
     return PIECE_OK;
 }
@@ -175,7 +180,7 @@ static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan sp
 /* A section whose key changes halfway has its first half in the key it starts in and its second in the key it ends in. */
 static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpan span, const PieceSectionKeys *keys) {
     if (analysis_key_equals(&keys->start, &keys->end)) {
-        return push_segment(segments, count, span, keys->start, keys->start_relation);
+        return push_segment(segments, count, span, keys->start, keys->start_relation, keys->anchor, keys->anchor_section);
     }
     PlanSpan first;
     PlanSpan second;
@@ -187,9 +192,9 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
     second.length = first.length;
     result = piece_result_of_plan(plan_result_of_rational(rational_add(span.start, first.length, &second.start)));
     if (result == PIECE_OK) {
-        result = push_segment(segments, count, first, keys->start, keys->start_relation);
+        result = push_segment(segments, count, first, keys->start, keys->start_relation, keys->anchor, keys->anchor_section);
     }
-    return result == PIECE_OK ? push_segment(segments, count, second, keys->end, keys->end_relation) : result;
+    return result == PIECE_OK ? push_segment(segments, count, second, keys->end, keys->end_relation, keys->anchor, keys->anchor_section) : result;
 }
 
 /* The KEY constraint of the section, replaced by the key it ends in. */
@@ -208,7 +213,7 @@ static PieceResult set_section_key(PiecePlan *plan, NodeId section, AnalysisKey 
 }
 
 PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *spec, const FormSpecSize *size,
-                            FillRng *rng, PieceKeyPlan *out) {
+                            FillRng *rng, const PieceRegion *regions, PieceKeyPlan *out) {
     if (!plan || !spec || !size || !out) {
         return PIECE_ERR_NULL;
     }
@@ -241,6 +246,19 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
     if (!draw_keys(knowledge, spec, size, home, rng, out->sections, &out->modulates)) {
         return PIECE_ERR_BAD_REQUEST;
     }
+    for (size_t i = 0; regions && i < count; i++) {
+        if (!regions[i].has_region) {
+            continue;
+        }
+        PieceSectionKeys *keys = &out->sections[i];
+        keys->start = regions[i].key;
+        keys->end = regions[i].key;
+        keys->start_relation = regions[i].relation[0] ? regions[i].relation : NULL;
+        keys->end_relation = keys->start_relation;
+        keys->anchor = regions[i].anchor;
+        keys->anchor_section = regions[i].anchor == PLAN_KEY_ANCHOR_SECTION ? regions[i].anchor_section : NULL;
+        out->modulates = out->modulates || !analysis_key_equals(&regions[i].key, &home);
+    }
 
     KeySegment segments[MAX_SEGMENTS];
     size_t segment_count = 0;
@@ -249,7 +267,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
         result = section_segments(segments, &segment_count, plan_node_span(plan, sections[i]), &out->sections[i]);
     }
     if (result == PIECE_OK) {
-        result = push_segment(segments, &segment_count, plan_node_span(plan, material), home, NULL);
+        result = push_segment(segments, &segment_count, plan_node_span(plan, material), home, NULL, PLAN_KEY_ANCHOR_HOME, NULL);
     }
     for (size_t i = 0; result == PIECE_OK && i < segment_count; i++) {
         PlanLanePayload payload;
@@ -259,7 +277,8 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
         result = piece_result_of_plan(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, segments[i].span, &payload, &id));
         if (result == PIECE_OK && segments[i].relation) {
             result = piece_result_of_plan(
-                plan_lane_span_set_key_relation(plan, id, segments[i].relation, PLAN_KEY_ANCHOR_HOME, NULL, true));
+                plan_lane_span_set_key_relation(plan, id, segments[i].relation, segments[i].anchor,
+                                                segments[i].anchor == PLAN_KEY_ANCHOR_SECTION ? segments[i].anchor_section : NULL, true));
         }
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
     }
@@ -395,6 +414,35 @@ PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSn
         snprintf(entry->text, sizeof(entry->text), "%s of %s", region->relation, anchor_name);
     }
     return PIECE_OK;
+}
+
+/*
+ * The regions of a form that takes its sections from its size, from the request's overlays: one entry for each section of the size, a
+ * section no overlay names having none. *regional says some overlay asks for a key other than home. A refusal is as
+ * piece_resolve_regions', *refused the index of the section of the size it is about.
+ */
+PieceResult piece_resolve_overlay_regions(const PieceRequest *request, const FormSpecSize *size, const KnowledgeSnapshot *knowledge,
+                                          PieceRegion *regions, bool *regional, size_t *refused, char *message, size_t message_size) {
+    PieceSection views[FORM_SPEC_MAX_SECTIONS];
+    *regional = false;
+    for (size_t i = 0; i < size->section_count; i++) {
+        piece_section_init(&views[i]);
+        for (size_t o = 0; o < request->overlay_count; o++) {
+            if (strcmp(request->overlays[o].description.name, size->sections[i].name) == 0) {
+                views[i].description = request->overlays[o].description;
+            }
+        }
+        snprintf(views[i].description.id, sizeof(views[i].description.id), "%.15s", size->sections[i].name);
+        *regional = *regional || (views[i].description.key_end.kind != SECTION_REGION_NONE &&
+                                  views[i].description.key_end.kind != SECTION_REGION_HOME);
+    }
+    if (!*regional) {
+        return PIECE_OK;
+    }
+    PieceRequest view = *request;
+    view.sections = views;
+    view.section_count = size->section_count;
+    return piece_resolve_regions(&view, knowledge, regions, refused, message, message_size);
 }
 
 /* ------------------------------------------------------------- the check */

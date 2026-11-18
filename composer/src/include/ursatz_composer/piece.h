@@ -166,6 +166,13 @@ typedef struct {
      */
     PieceSection *sections;
     size_t section_count;
+    /*
+     * The overlays of a form that takes its sections from its size (R-610): for each one the section of the size it names (its
+     * description's `name`), the key it asks for (`region`) and what fills it (a motif with a motive of its own, or a composed
+     * theme). A section no overlay names is as the form has it. The game loop ignores them.
+     */
+    const PieceSection *overlays;
+    size_t overlay_count;
     bool has_voicing;
     PlanVoicing voicing;
 } PieceRequest;
@@ -269,6 +276,10 @@ typedef struct {
  */
 PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSnapshot *knowledge, PieceRegion *out, size_t *refused,
                                   char *message, size_t message_size);
+
+/* The regions of a form that takes its sections from its size, from the request's overlays: an entry for each section of the size. */
+PieceResult piece_resolve_overlay_regions(const PieceRequest *request, const FormSpecSize *size, const KnowledgeSnapshot *knowledge,
+                                          PieceRegion *regions, bool *regional, size_t *refused, char *message, size_t message_size);
 
 /*
  * The cadences the form document gives, on every section of the request without has_cadence (the document's `cadences`:

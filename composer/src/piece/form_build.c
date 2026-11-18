@@ -285,8 +285,21 @@ static PieceResult add_independent_motive(PiecePlan *plan, NodeId idea, PlanSpan
     return result;
 }
 
+/*
+ * A motive of its own for a section (R-610): its notes, in a motive node named `own <section>` in the material at the bar
+ * `bar_index` from the material's start (the bars the motive's layout takes are the material's).
+ */
+PieceResult piece_add_own_motive(PiecePlan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index, const char *section,
+                                 const Motive *motive, NodeId *out) {
+    char name[64];
+    Rational start;
+    snprintf(name, sizeof(name), "own %s", section);
+    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, bars_of(bar, bar_index), &start)));
+    return result == PIECE_OK ? piece_result_of_plan(motive_attach_sourced(plan, idea, start, motive, name, NULL, out, NULL)) : result;
+}
+
 /* An independent transition asks for its own motive as a MOTIVE_REF with no step: the motive itself, not m0 made over. */
-static PieceResult add_independent_ref(PiecePlan *plan, NodeId id, NodeId motive) {
+PieceResult piece_add_own_ref(PiecePlan *plan, NodeId id, NodeId motive) {
     PlanConstraint constraint;
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
@@ -484,6 +497,41 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     if (request->motive && !grow_motive_fits_idea(request->motive, bar, basic_bars)) {
         return PIECE_ERR_MOTIVE_TOO_LONG;
     }
+    /* The overlays (R-610): each names a section of the size, once; a region asks for a key, a motif for a motive of its own. */
+    const PieceSection *overlay_of[FORM_SPEC_MAX_SECTIONS];
+    PieceRegion regions[FORM_SPEC_MAX_SECTIONS];
+    bool regional = false;
+    size_t own_bars = 0;
+    memset(overlay_of, 0, sizeof(overlay_of));
+    for (size_t o = 0; o < request->overlay_count; o++) {
+        size_t found = size->section_count;
+        for (size_t i = 0; i < size->section_count; i++) {
+            if (strcmp(request->overlays[o].description.name, size->sections[i].name) == 0) {
+                found = i;
+            }
+        }
+        if (found == size->section_count || overlay_of[found]) {
+            return PIECE_ERR_BAD_REQUEST;
+        }
+        overlay_of[found] = &request->overlays[o];
+    }
+    {
+        size_t refused;
+        char why[256];
+        if (piece_resolve_overlay_regions(request, size, request->knowledge, regions, &regional, &refused, why, sizeof(why)) != PIECE_OK) {
+            return PIECE_ERR_BAD_REQUEST;
+        }
+    }
+    for (size_t i = 0; i < size->section_count; i++) {
+        const PieceSection *overlay = overlay_of[i];
+        if (overlay && overlay->fill == PIECE_FILL_MOTIF && overlay->motive &&
+            (!request->motive || !motive_equal(overlay->motive, request->motive))) {
+            if (overlay->motive->note_count < 2 || !grow_motive_fits_idea(overlay->motive, bar, 1)) {
+                return PIECE_ERR_MOTIVE_TOO_LONG;
+            }
+            own_bars += grow_motive_layout_bars(overlay->motive, bar);
+        }
+    }
     size_t motive_bars = request->motive ? grow_motive_layout_bars(request->motive, bar) : 1;
     /* An independent transition has a motive of its own, one bar, in the material (R-504). */
     size_t independent_count = 0;
@@ -496,7 +544,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         return PIECE_ERR_ALLOC;
     }
     PlanSpan piece = {{0, 1}, bars_of(bar, size->bars)};
-    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars_of(size->section_count, motive_bars) + extension_bars + request->given_melodies + independent_count)};
+    PlanSpan material = {piece.length, bars_of(bar, piece_material_bars_of(size->section_count, motive_bars) + extension_bars + request->given_melodies + independent_count + own_bars)};
     PlanSpan extent = {{0, 1}, {0, 1}};
     PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(piece.length, material.length, &extent.length)));
     NodeId form_id = PLAN_NODE_NONE;
@@ -543,8 +591,18 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
                                             &size->sections[i], &independent[i]);
         }
     }
+    size_t own_at = independent_at;
     for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
-        result = independent[i] != PLAN_NODE_NONE ? add_independent_ref(plan, sections[i], independent[i])
+        const PieceSection *overlay = overlay_of[i];
+        if (independent[i] == PLAN_NODE_NONE && overlay && overlay->fill == PIECE_FILL_MOTIF && overlay->motive &&
+            (!request->motive || !motive_equal(overlay->motive, request->motive))) {
+            result = piece_add_own_motive(plan, plan_node_parent(plan, source), material, bar, own_at, size->sections[i].name,
+                                          overlay->motive, &independent[i]);
+            own_at += grow_motive_layout_bars(overlay->motive, bar);
+        }
+    }
+    for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
+        result = independent[i] != PLAN_NODE_NONE ? piece_add_own_ref(plan, sections[i], independent[i])
                                                   : add_section_motive(plan, size, i, sections[i], source);
     }
     if (result == PIECE_OK && request->has_style) {
@@ -561,8 +619,32 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         FillRng rng;
         bool modulate = request->modulate || form->modulates;
         fill_rng_seed(&rng, request->seed);
-        result = piece_plan_keys(plan, request->knowledge, form, size, modulate ? &rng : NULL, &keys);
-        result = result == PIECE_OK && modulate ? piece_plan_cadences(plan, form, size, &keys) : result;
+        result = piece_plan_keys(plan, request->knowledge, form, size, modulate ? &rng : NULL, regional ? regions : NULL, &keys);
+        result = result == PIECE_OK && (modulate || regional) ? piece_plan_cadences(plan, form, size, &keys) : result;
+    }
+    /* A composed theme given to a section (R-610): its pairing and cadences, then its realized lanes moved and transposed to the section. */
+    for (size_t i = 0; result == PIECE_OK && i < size->section_count; i++) {
+        const PieceSection *overlay = overlay_of[i];
+        if (!overlay || overlay->fill != PIECE_FILL_THEME || !overlay->theme_plan) {
+            continue;
+        }
+        NodeId theme = grow_find_theme(overlay->theme_plan, false);
+        const SectionDescription *from = theme != PLAN_NODE_NONE ? plan_node_section(overlay->theme_plan, theme) : NULL;
+        if (!from || !from->has_pairing) {
+            result = PIECE_ERR_BAD_REQUEST;
+            break;
+        }
+        SectionDescription given = *plan_section_or_empty(plan, sections[i]);
+        given.has_pairing = from->has_pairing;
+        given.pairing = from->pairing;
+        given.has_cadence = from->has_cadence;
+        given.cadence = from->cadence;
+        given.has_first_cadence = from->has_first_cadence;
+        given.first_cadence = from->first_cadence;
+        result = piece_result_of_plan(plan_node_set_section(plan, sections[i], &given));
+        if (result == PIECE_OK && plan_give_section(plan, sections[i], overlay->theme_plan, theme) != GIVEN_OK) {
+            result = PIECE_ERR_BAD_REQUEST;
+        }
     }
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));

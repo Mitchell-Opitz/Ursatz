@@ -34,6 +34,14 @@ PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const Plan
 /* Records the form a plan was built from (name, document version, the built-in document's hash, checks, closing), R-608. */
 PieceResult piece_set_form_record(PiecePlan *plan, const FormSpec *form);
 
+/*
+ * A motive of its own for a section in the material (R-610): the node `own <section>` holds the motive from the bar bar_index of
+ * the material (material is its span, bar the meter's); piece_add_own_ref makes the section's MOTIVE_REF name it, with no step.
+ */
+PieceResult piece_add_own_motive(PiecePlan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index, const char *section,
+                                 const Motive *motive, NodeId *out);
+PieceResult piece_add_own_ref(PiecePlan *plan, NodeId id, NodeId motive);
+
 /* Whether the plan is a piece structure plan: some section of it has a piece part (a section description with a role of a game loop part). */
 bool piece_is_structure_plan(const PiecePlan *plan);
 

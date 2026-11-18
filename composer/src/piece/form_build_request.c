@@ -517,6 +517,11 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
     return result;
 }
 
+/* Whether a motif section has a motive of its own: one that is not the piece's basic motive m0. */
+static bool has_own_motive(const PieceSection *section, const Motive *m0) {
+    return section->fill == PIECE_FILL_MOTIF && section->motive && (!m0 || !motive_equal(section->motive, m0));
+}
+
 /* The index of the first section of the loop's first part (the body), which the seam copies the first bar of. */
 static size_t first_body_index(const FormSpec *form, const PieceRequest *request) {
     for (size_t i = 0; i < request->section_count; i++) {
@@ -646,6 +651,8 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     }
     /* The keys the sections ask for with `region` (R-610); every section is in the home key without one. */
     PieceRegion regions[PIECE_STRUCTURE_MAX_SECTIONS];
+    NodeId section_ids[PIECE_STRUCTURE_MAX_SECTIONS];
+    memset(section_ids, 0, sizeof(section_ids));
     bool regional = false;
     for (size_t i = 0; i < copy.section_count; i++) {
         regional = regional || (copy.sections[i].description.key_end.kind != SECTION_REGION_NONE &&
@@ -672,6 +679,8 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     bool has_ending = false;
     /* The motive fills the basic idea of every section laid out: its construction's, else 2 bars of an 8-bar theme, 1 of a 4-bar one or a free phrase. */
     size_t basic_bars = 2;
+    size_t extension_total = 0; /* the bars of the constructions' repeats and additions, which come before the own motives */
+    size_t own_bars = 0;        /* the bars of the motives sections have of their own (R-610) */
     for (size_t i = 0; i < copy.section_count; i++) {
         has_ending = has_ending || piece_section_part(&copy.sections[i]) == PIECE_PART_ENDING;
         if (loop_plan ? !is_dropped(form, piece_section_part(&copy.sections[i])) : piece_section_part(&copy.sections[i]) != PIECE_PART_ENDING) {
@@ -685,6 +694,14 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
                 section_basic = construction.idea_bars[GROW_IDEA_BASIC];
                 /* The repeats and the addition of a construction have motives of their own in the material (R-468). */
                 material_bars += grow_extension_material_bars(&pairing, &construction);
+                extension_total += grow_extension_material_bars(&pairing, &construction);
+            }
+            if (has_own_motive(&copy.sections[i], motive) && (!loop_plan || piece_section_part(&copy.sections[i]) == PIECE_PART_ENDING)) {
+                if (copy.sections[i].motive->note_count < 2 || !grow_motive_fits_idea(copy.sections[i].motive, bar, section_basic)) {
+                    return PIECE_ERR_MOTIVE_TOO_LONG;
+                }
+                own_bars += grow_motive_layout_bars(copy.sections[i].motive, bar);
+                material_bars += grow_motive_layout_bars(copy.sections[i].motive, bar);
             }
             basic_bars = section_basic < basic_bars ? section_basic : basic_bars;
             laid = i + 1;
@@ -748,6 +765,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         NodeId loop_section = from_loop ? find_part_section(loop_plan, &copy.sections[i]) : PLAN_NODE_NONE;
         PlanSpan span = {start, beats_of(&request->meter, copy.sections[i].description.beats)};
         result = add_request_section(plan, &copy, &regions[i].key, &copy.sections[i], start_beats, motive, form_id, span, &id);
+        section_ids[i] = id;
         if (result == PIECE_OK && from_loop) {
             if (loop_section == PLAN_NODE_NONE || plan_give_section(plan, id, loop_plan, loop_section) != GIVEN_OK) {
                 result = PIECE_ERR_BAD_REQUEST;
@@ -798,6 +816,19 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     }
     if (result == PIECE_OK) {
         result = piece_add_material(plan, motive, NULL, form_id, material, bar, &source);
+    }
+    /* A motif section whose motive is not the piece's has a motive node of its own in the material, which its motive reference names. */
+    size_t own_at = motive_bars + extension_total;
+    for (size_t i = 0; result == PIECE_OK && i < laid; i++) {
+        if (section_ids[i] == PLAN_NODE_NONE || !has_own_motive(&copy.sections[i], motive) ||
+            (loop_plan && piece_section_part(&copy.sections[i]) != PIECE_PART_ENDING)) {
+            continue;
+        }
+        NodeId own;
+        result = piece_add_own_motive(plan, plan_node_parent(plan, source), material, bar, own_at, copy.sections[i].description.id,
+                                      copy.sections[i].motive, &own);
+        result = result == PIECE_OK ? piece_add_own_ref(plan, section_ids[i], own) : result;
+        own_at += grow_motive_layout_bars(copy.sections[i].motive, bar);
     }
     if (result == PIECE_OK && request->has_style) {
         PlanConstraint style;

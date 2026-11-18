@@ -536,7 +536,8 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
         piece->motive = request->piece_motive;
     }
     size_t forms = 0;
-    for (size_t i = 0; status == COMPOSER_OK && i < piece->section_count; i++) {
+    const size_t read_count = piece->section_count > piece->overlay_count ? piece->section_count : piece->overlay_count;
+    for (size_t i = 0; status == COMPOSER_OK && i < read_count; i++) {
         if (request->motive_json[i]) {
             snprintf(what, sizeof(what), "the motive of section '%s'", request->sections[i].description.id);
             snprintf(path, sizeof path, "%s/sections/%zu/fill/motive", base, i);
@@ -561,7 +562,7 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
     if (!request->pool || !request->pool_motives) {
         return api_fail_alloc(error);
     }
-    for (size_t i = 0; i < piece->section_count; i++) {
+    for (size_t i = 0; i < read_count; i++) {
         const cJSON *form = NULL;
         size_t at = 0;
         cJSON_ArrayForEach(form, request->forms_json[i]) {
@@ -672,7 +673,127 @@ static ComposerStatus read_form(PieceSpec *request, const cJSON *root, const cha
 }
 
 /*
- * The members of a form that takes its sections from its size: bars, count and modulate; sections and voicing are refused.
+ * The overlays of a sized form (R-610): `sections` holds objects that each name a section of the size and give it a region, a motif with
+ * a motive of its own or a composed theme; the other sections are as the form has them. Each is read through the section codec for an
+ * overlay, its fill as a game loop section's.
+ */
+static ComposerStatus read_overlays(PieceSpec *request, const cJSON *root, const char *base, const FormSpecSize *size, ComposerError *error) {
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(root, "sections");
+    PieceRequest *piece = &request->request;
+    const FormSpec *form = request->form;
+    char path[1100];
+    if (!list || cJSON_IsNull(list)) {
+        return COMPOSER_OK;
+    }
+    snprintf(path, sizeof path, "%s/sections", base);
+    if (!cJSON_IsArray(list) || (size_t)cJSON_GetArraySize(list) > size->section_count) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "sections lists the sections of %s to give something of their own, at most %zu",
+                        form->label, size->section_count);
+    }
+    size_t index = 0;
+    const cJSON *item;
+    cJSON_ArrayForEach(item, list) {
+        char at[1060];
+        snprintf(at, sizeof at, "%.300s/%zu", path, index);
+        if (!cJSON_IsObject(item)) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, at, "every section of the request must be an object");
+        }
+        cJSON *named = cJSON_Duplicate(item, true);
+        if (!named) {
+            return api_fail_alloc(error);
+        }
+        for (cJSON *member = named->child; member;) {
+            cJSON *next = member->next;
+            if (cJSON_IsNull(member)) {
+                cJSON_Delete(cJSON_DetachItemViaPointer(named, member));
+            }
+            member = next;
+        }
+        static const char *const SKIPPED[] = {"fill"};
+        PieceSection *section = &request->sections[index];
+        piece_section_init(section);
+        SectionError refused;
+        bool read = section_from_json(named, SECTION_USE_OVERLAY, SKIPPED, 1, &section->description, &refused);
+        cJSON_Delete(named);
+        if (!read) {
+            snprintf(path, sizeof path, "%.600s%s", at, refused.path);
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", refused.message);
+        }
+        char name[SECTION_NAME_MAX];
+        snprintf(name, sizeof(name), "%s", section->description.name);
+        snprintf(section->description.id, sizeof(section->description.id), "%.15s", name);
+        size_t found = size->section_count;
+        for (size_t i = 0; i < size->section_count; i++) {
+            if (strcmp(size->sections[i].name, name) == 0) {
+                found = i;
+            }
+        }
+        snprintf(path, sizeof path, "%s/name", at);
+        if (found == size->section_count) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "no section '%s' in the %s form at %zu bars", name, form->name, size->bars);
+        }
+        for (size_t earlier = 0; earlier < index; earlier++) {
+            if (strcmp(request->sections[earlier].description.name, name) == 0) {
+                return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s' is given twice", name);
+            }
+        }
+        snprintf(path, sizeof path, "%s/fill", at);
+        ComposerStatus filled = read_fill(request, index, cJSON_GetObjectItemCaseSensitive(item, "fill"), path, error);
+        if (filled != COMPOSER_OK) {
+            return filled;
+        }
+        /* What a section of a sized form takes: a motif with a motive, or a theme; its shape and what it returns are the form's. */
+        const SectionDescription *spec = &size->sections[found];
+        bool fills = section->fill != PIECE_FILL_EMPTY;
+        snprintf(path, sizeof path, "%s/fill", at);
+        if (section->fill == PIECE_FILL_PROGRESSION) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': a sized form's section takes a motif or a theme fill", name);
+        }
+        if (section->has_into || section->has_construction || request->forms_json[index]) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': the %s form gives it its shape; give a motive or a theme", name,
+                            form->name);
+        }
+        if (fills && spec->returns[0] != '\0') {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "'%s' returns '%s': give it to '%s'", name, spec->returns, spec->returns);
+        }
+        if (fills && (spec->role == SECTION_ROLE_LIQUIDATION || spec->role == SECTION_ROLE_RETRANSITION || spec->role == SECTION_ROLE_CODA)) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': a %s is grown by its operator", name, section_role_name(spec->role));
+        }
+        index++;
+    }
+    piece->section_count = 0;
+    piece->overlays = request->sections;
+    piece->overlay_count = index;
+    return COMPOSER_OK;
+}
+
+/* The regions the overlays ask for, once the key is read: refused at the overlay's region. */
+static ComposerStatus check_overlay_regions(PieceSpec *request, const char *base, ComposerError *error) {
+    PieceRequest *piece = &request->request;
+    const FormSpecSize *size = form_spec_size(request->form, piece->bars, piece->count);
+    if (!size || piece->overlay_count == 0) {
+        return COMPOSER_OK;
+    }
+    PieceRegion regions[FORM_SPEC_MAX_SECTIONS];
+    bool regional = false;
+    size_t refused_section = 0;
+    char why[256];
+    if (piece_resolve_overlay_regions(piece, size, request->knowledge, regions, &regional, &refused_section, why, sizeof why) == PIECE_OK) {
+        return COMPOSER_OK;
+    }
+    size_t overlay = 0;
+    for (size_t o = 0; o < piece->overlay_count; o++) {
+        if (strcmp(piece->overlays[o].description.name, size->sections[refused_section].name) == 0) {
+            overlay = o;
+        }
+    }
+    char path[200];
+    snprintf(path, sizeof path, "%.150s/sections/%zu/region", base, overlay);
+    return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", why);
+}
+
+/*
+ * The members of a form that takes its sections from its size: bars, count, modulate and the overlays in sections; voicing is refused.
  * A size the form does not have is refused with the ones it has.
  */
 static ComposerStatus read_sized(PieceSpec *request, const cJSON *root, const char *base, ComposerError *error) {
@@ -685,10 +806,6 @@ static ComposerStatus read_sized(PieceSpec *request, const cJSON *root, const ch
     bool has_count = false;
     bool modulate = false;
     bool present = false;
-    if (given_member(root, "sections")) {
-        snprintf(path, sizeof path, "%s/sections", base);
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s takes its sections from its form; leave out sections", form->label);
-    }
     if (given_member(root, "voicing")) {
         snprintf(path, sizeof path, "%s/voicing", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s has no voicing to give; leave out voicing", form->label);
@@ -714,7 +831,7 @@ static ComposerStatus read_sized(PieceSpec *request, const cJSON *root, const ch
     piece->bars = (size_t)bars;
     piece->count = (size_t)count;
     piece->modulate = modulate;
-    return COMPOSER_OK;
+    return read_overlays(request, root, base, form_spec_size(form, (size_t)bars, (size_t)count), error);
 }
 
 ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials,
@@ -805,7 +922,7 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapsho
         request->basic = request->sections[i].motive;
     }
     if (!given_sections) {
-        return COMPOSER_OK;
+        return check_overlay_regions(request, base, error);
     }
     /* The request checks before the default ending joins it: a request without a body is a bad one. */
     if (piece_request_check(piece) != PIECE_OK) {
