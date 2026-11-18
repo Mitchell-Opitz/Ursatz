@@ -1115,6 +1115,56 @@ const StandardTonalityRomanResult *analysis_chain_numerals(const AnalysisChain *
     return chain != NULL ? chain->pass.romans : NULL;
 }
 
+/* The pitch classes sounding in segment `index`, as a 12-bit mask. */
+static unsigned segment_pitch_classes(const CommonPracticeSegment *segment) {
+    unsigned mask = 0;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        mask |= 1u << (((segment->members[i].pitch % 12) + 12) % 12);
+    }
+    return mask;
+}
+
+AnalysisChainStatus analysis_chain_chord_reading(const AnalysisChain *chain, size_t index, ChordReading *out) {
+    if (chain == NULL || out == NULL) {
+        return ANALYSIS_CHAIN_ERR_NULL_ARGUMENT;
+    }
+    const Pass *pass = &chain->pass;
+    if (!chain->have_segs || pass->chords == NULL || index >= chain->count || chain->segs.segments == NULL ||
+        chain->config.knowledge == NULL) {
+        return ANALYSIS_CHAIN_ERR_CHORDS;
+    }
+    const CommonPracticeWeightedResult *result = &pass->chords[index];
+    const CommonPracticeSegment *segment = &chain->segs.segments[index];
+    /* The numerals stage built the chord input: its region's tonic and the bass it read. Without it the bass is the span's. */
+    const StandardTonalityChordInput *input = pass->tonal_inputs != NULL && index < pass->tonal_count ? &pass->tonal_inputs[index] : NULL;
+    bool has_numeral = input != NULL && input->has_numeral;
+    SonorityPitches sonority;
+    memset(&sonority, 0, sizeof(sonority));
+    sonority.span.start.value = chain->segs.starts[index];
+    sonority.span.end.value = chain->segs.ends[index];
+    sonority.pitch_classes = segment_pitch_classes(segment);
+    sonority.bass_pitch_class = has_numeral ? input->bass_pitch_class : -1;
+    int root = -1;
+    if (result->matched && result->best_chord != NULL) {
+        /* a chord the chain found: its tones are the sonority's pitch classes, the leftover tones are not part of the chord */
+        sonority.pitch_classes = common_practice_ranked_chord_mask(&result->best, has_numeral ? input->tonic_pitch_class : 0);
+        root = result->best.root_pitch_class;
+        if (sonority.bass_pitch_class < 0 && segment->has_bass) {
+            sonority.bass_pitch_class = ((segment->bass_pitch % 12) + 12) % 12;
+        }
+    }
+    if (!chord_reading_of_sonority(chain->config.knowledge, sonority, root, out)) {
+        return ANALYSIS_CHAIN_ERR_CHORDS;
+    }
+    /* A cadential six-four embellishes the dominant that follows it. The cadences stage prepared the segments that say so; a run
+       without it reads every chord as functional. There is no mixture or elision reading yet, so borrowed_from stays NULL and
+       there is no expected chord. */
+    if (root >= 0 && pass->prepared != NULL && harmony_cadence_is_cadential_six_four(&pass->prepared[index])) {
+        out->role = CHORD_ROLE_EMBELLISHING;
+    }
+    return ANALYSIS_CHAIN_OK;
+}
+
 const ChainSegments *analysis_chain_voice_segments(const AnalysisChain *chain) {
     return chain != NULL && chain->have_voice_segs ? &chain->voice_segs : NULL;
 }

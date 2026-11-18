@@ -23,6 +23,7 @@
 #include "analysis/harmony/analysis_resolution.h"
 #include "analysis/form/analysis_theme.h"
 #include "analysis/harmony/chord_input.h"
+#include "analysis/harmony/chord_reading.h"
 #include "analysis/galant/galant_analysis_match.h"
 #include "analysis/harmony/key_regions.h"
 #include "analysis/meter/meter_analysis_density.h"
@@ -207,6 +208,18 @@ const CommonPracticeWeightedResult *analysis_chain_chords(const AnalysisChain *c
 /* The chord input and the Roman numeral of each segment (analysis_chain_segment_count of each). */
 const StandardTonalityChordInput *analysis_chain_chord_inputs(const AnalysisChain *chain);
 const StandardTonalityRomanResult *analysis_chain_numerals(const AnalysisChain *chain);
+/*
+ * The chord of segment `index` as a reading of its sonority (chord_reading.h, R-592). A segment the chain gave a chord reads as that
+ * chord: the sonority holds the chord's tones (its root, third, fifth and seventh when it has one; the leftover tones are not in it), the
+ * root and the chord type are the chain's chord's (the snapshot's type for those tones), the bass is the chord input's when the
+ * numerals stage ran (the lowest sounding chord tone), else the bass the span was read over, else -1, and the role is EMBELLISHING for a
+ * cadential six-four, FUNCTIONAL otherwise. A segment with no chord reads as the aggregate of the pitch classes sounding in it: no root, no type, FUNCTIONAL. The span is
+ * the segment's window. `borrowed_from` is NULL and there is no expected chord (no mixture or elision reading exists). Without the
+ * cadences stage no segment is known as a cadential six-four, so each reads FUNCTIONAL. ANALYSIS_CHAIN_ERR_CHORDS when the chords stage
+ * did not run or `index` is not below analysis_chain_segment_count; ANALYSIS_CHAIN_ERR_NULL_ARGUMENT for a NULL chain or out. `*out` is
+ * untouched on an error. The chord type is borrowed from the config's snapshot. Nothing writes the readings until P62's reading layer.
+ */
+AnalysisChainStatus analysis_chain_chord_reading(const AnalysisChain *chain, size_t index, ChordReading *out);
 /* The segmentation the outer lines are read on (one segment per melody note), and the lines (one entry per such segment): the melody and meter stages read them (R-377). */
 const ChainSegments *analysis_chain_voice_segments(const AnalysisChain *chain);
 const OuterVoiceLines *analysis_chain_outer_voices(const AnalysisChain *chain);
