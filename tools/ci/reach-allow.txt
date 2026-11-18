@@ -19,6 +19,61 @@ library/model/time/tempo_map.c region_at_time  # no app converts a tempo map to 
 library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/time_span.c time_span_length  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
+library/realization/derivation.c note_derivation_add_source  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/derivation.c note_derivation_present  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/derivation.c note_derivation_set_operation  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/derivation.c note_derivation_set_run  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/derivation.c operation_name_valid  # helper of note_derivation_set_operation, which no app calls until P59 B7; its tests call it
+library/realization/line.c derivation_valid  # helper of line_add_note, which no app calls until P59 B7; its tests call it
+library/realization/line.c line_add_note  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_add_relation  # no app calls it until P74 (line-writing stages); its tests call it
+library/realization/line.c line_create  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_destroy  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_id  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_name  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_note_at  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_note_count  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_note_named  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_relation_at  # no app calls it until P74 (line-writing stages); its tests call it
+library/realization/line.c line_relation_count  # no app calls it until P74 (line-writing stages); its tests call it
+library/realization/line.c line_role  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_role_from_name  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/line.c line_role_name  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c note_named  # helper of performer_part_add_note and performer_part_set_note_flags, which no app calls until P59 B7; its tests call it
+library/realization/performer_part.c performer_part_add_note  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_add_pedal  # no app calls it until P75 (pedal writing); its tests call it
+library/realization/performer_part.c performer_part_create  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_destroy  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_id  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_instrument  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_local_meter_map  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_midi_program  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_name  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_note_at  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_note_count  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_number  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_pedal_at  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_pedal_count  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_players  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/performer_part.c performer_part_set_local_meter_map  # no app calls it until P61 (import into performer parts); its tests call it
+library/realization/performer_part.c performer_part_set_note_flags  # no app calls it until P62 (edits saved with the realization); its tests call it
+library/realization/performer_part.c performer_part_staff_count  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/realization.c realization_id_valid  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/scoring.c build_part  # helper of realization_score, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c check_all  # helper of realization_score, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c differs  # helper of build_part, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c duplicate_names  # helper of check_all, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c effective_octaves  # helper of check_all and build_part, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c find_by_name  # helper of check_all, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c id_hash  # helper of build_part, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c in_span  # helper of check_all and build_part, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c kept  # helper of build_part, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c line_name_of  # helper of check_all, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c part_name_of  # helper of check_all, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c realization_score  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/scoring.c release_fresh  # helper of realization_score, which no app calls until P59 B7; its tests call it
+library/realization/scoring.c scoring_assignment_check  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/scoring.c sort_by_onset  # helper of build_part, which no app calls until P59 B7; its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/instrument.c instrument_in_range  # no app tests a pitch against an instrument range until P59 B7 reads the piano entry (P75 keyboard limits); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app looks up a chord type by id (chord readings find it by members, P62 may name one); its tests call it
