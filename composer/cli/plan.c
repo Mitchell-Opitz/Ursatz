@@ -34,7 +34,7 @@ typedef struct {
     bool help;
     const char *form_text;
     const char *key_text;
-    const char *mode_text;
+    const char *material_text;
     const char *meter_text;
     const char *bars_text;
     const char *count_text;
@@ -70,7 +70,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --meter <n/m>        2/4, 3/4, 4/4 or 6/8\n");
     fprintf(out, "  --out <plan.json>    where the plan is written\n\n");
     fprintf(out, "Options:\n");
-    fprintf(out, "  --mode <major|minor> the mode when --key is a tonic only (default: major)\n");
+    fprintf(out, "  --material <word>    major or minor when --key is a tonic only (default: major; --mode is the same option)\n");
     fprintf(out, "  --bars <n>           the size of the piece in bars; the sizes of each form are listed when one is refused\n");
     fprintf(out, "  --count <n>          the variations (variations) or the layers (layered), instead of --bars\n");
     fprintf(out, "  --modulate           plan the keys and cadences across the sections from the seed (otherwise every section\n");
@@ -112,7 +112,7 @@ static void print_help(FILE *out) {
     fprintf(out, "key or meter); 2 the request cannot be satisfied (an unreadable motive, a motive too long for a bar);\n");
     fprintf(out, "3 the plan could not be written.\n\n");
     fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz-composer plan --form ternary --key \"A\" --mode minor --meter 3/4 --out piece.json\n");
+    fprintf(out, "  ursatz-composer plan --form ternary --key \"A\" --material minor --meter 3/4 --out piece.json\n");
     fprintf(out, "  ursatz-composer plan --form binary --key \"D minor\" --meter 4/4 --bars 8 --motive m.txt --out piece.json\n");
 }
 
@@ -131,8 +131,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->form_text;
         } else if (strcmp(arg, "--key") == 0) {
             target = &options->key_text;
-        } else if (strcmp(arg, "--mode") == 0) {
-            target = &options->mode_text;
+        } else if (strcmp(arg, "--material") == 0 || strcmp(arg, "--mode") == 0) {
+            target = &options->material_text;
         } else if (strcmp(arg, "--meter") == 0) {
             target = &options->meter_text;
         } else if (strcmp(arg, "--bars") == 0) {
@@ -267,7 +267,7 @@ static cJSON *motive_request(const Options *options, const char *path, Held *hel
         cJSON *midi_request = cJSON_CreateObject();
         char key[96];
         bool minor_key = strchr(options->key_text, ' ') != NULL;
-        snprintf(key, sizeof key, minor_key ? "%s" : "%s %s", options->key_text, options->mode_text ? options->mode_text : "major");
+        snprintf(key, sizeof key, minor_key ? "%s" : "%s %s", options->key_text, options->material_text ? options->material_text : "major");
         bool ok = midi_request && cJSON_AddStringToObject(midi_request, "meter", options->meter_text) &&
                   cJSON_AddStringToObject(midi_request, "key", key);
         char *printed = ok ? cJSON_PrintUnformatted(midi_request) : NULL;
@@ -317,7 +317,7 @@ static cJSON *build_request(const Options *options, Held *held) {
     cJSON *given = cJSON_CreateArray();
     cJSON *without = cJSON_CreateArray();
     bool ok = request && given && without && add_text(request, "form", options->form_text) &&
-              add_text(request, "key", options->key_text) && add_text(request, "mode", options->mode_text) &&
+              add_text(request, "key", options->key_text) && add_text(request, "material", options->material_text) &&
               add_text(request, "meter", options->meter_text) && add_text(request, "bars", options->bars_text) &&
               add_text(request, "count", options->count_text) && (!options->modulate || cJSON_AddTrueToObject(request, "modulate")) &&
               add_text(request, "corpus", options->from_corpus) && add_text(request, "like", options->like_path) &&

@@ -114,7 +114,7 @@ int cli_fail(int status, const char *format, ...) {
 
 int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *input_name) {
     static const char *const OPTIONS[] = {"format", "form", "harmony", "feature", "role", "tone", "tempo",
-                                          "count", "seed", "distance", "function", "depth", "mode", "suggest",
+                                          "count", "seed", "distance", "function", "depth", "mode", "material", "suggest",
                                           "into", "hybrid", "bars", "cadence", "first_cadence", "accompaniment", "texture",
                                           "voicing", "style_weight", "blend_weight", "blend_weights", "blend", "key", "candidates", "style", "at", "cells", "like", "like_progression", "style_without",
                                           "embellish", "schema", "sequence", "species", "op", "by", "degree", "axis", "interval", "amount",
@@ -164,7 +164,7 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
         {"midi and musicxml write the bass line (harmony makes no sound yet), so they cannot be used with bass false",
          "--midi and --musicxml write the bass line (harmony makes no sound yet), so they cannot be used with --no-bass"},
         {"(list_schemas lists them)", "(see --list-schemas)"},
-        {"give a tonic alone with mode", "give a tonic alone with --mode"},
+        {"give a tonic alone with material", "give a tonic alone with --material"},
         {"harmony, features and role describe a motive input", "--harmony, --feature and --role describe a motive file"},
         {"each_op takes no chain, count, distance or functions", "--each-op takes no --chain, --count, --distance or --function"},
         {"a distance takes random chains, not a chain", "--distance takes random chains, not --chain"},
@@ -180,11 +180,11 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
          "texture",
          "and --texture chorale write the inner voices themselves; they cannot be combined with --accompaniment or another "
          "--texture"},
-        {"leave out mode", "leave out --mode"},
+        {"leave out material", "leave out --material"},
         {"no size of count ", "no size of --count "},
         {" with count ", " with --count "},
         {"(or count ", "(or --count "},
-        {"with mode \"minor\"", "with --mode minor"},
+        {"with mode \"minor\"", "with --material minor"},
         {"needs a style: give style or", "needs a style: give --style or"},
         {"needs an at:", "needs an --at:"},
         {"needs corpus <dir>", "needs --from-corpus <dir>"},

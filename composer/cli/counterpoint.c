@@ -20,7 +20,7 @@ typedef struct {
     bool above;
     bool below;
     const char *key_text;
-    const char *mode_text;
+    const char *material_text;
     const char *meter_text;
     const char *seed_text;
     const char *suggest_text;
@@ -42,12 +42,12 @@ static void print_help(FILE *out) {
     fprintf(out, "  --species <1-4>      1 note against 1, 2 against 1, 4 against 1, or syncopated half notes tied over the\n");
     fprintf(out, "                       barline. Species 2 to 4 need a cantus firmus: one whole note a bar, three bars or more,\n");
     fprintf(out, "                       and species 3 a meter of four beats\n");
-    fprintf(out, "  --key <key>          tonic and mode in one argument (\"D minor\"), or a tonic with --mode\n");
+    fprintf(out, "  --key <key>          tonic and mode in one argument (\"D minor\"), or a tonic with --material\n");
     fprintf(out, "  --meter <n/m>        the meter of the line, for example 4/4\n\n");
     fprintf(out, "Options:\n");
     fprintf(out, "  --below              the line is the melody and the counter-melody sings below it (default)\n");
     fprintf(out, "  --above              the line is the bass and the counter-melody sings above it\n");
-    fprintf(out, "  --mode <major|minor> the mode, when --key gives only a tonic\n");
+    fprintf(out, "  --material <major|minor> the material, when --key gives only a tonic (--mode is the same option)\n");
     fprintf(out, "  --seed <n>           whole number from 0; the same seed gives the same counter-melody. Default: derived\n");
     fprintf(out, "                       from the clock; the seed used is always printed\n");
     fprintf(out, "  --suggest <n>        write n different counter-melodies (1 to %d); with files, number k goes to\n", MAX_SUGGESTIONS);
@@ -84,8 +84,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->species_text;
         } else if (strcmp(arg, "--key") == 0) {
             target = &options->key_text;
-        } else if (strcmp(arg, "--mode") == 0) {
-            target = &options->mode_text;
+        } else if (strcmp(arg, "--material") == 0 || strcmp(arg, "--mode") == 0) {
+            target = &options->material_text;
         } else if (strcmp(arg, "--meter") == 0) {
             target = &options->meter_text;
         } else if (strcmp(arg, "--seed") == 0) {
@@ -148,7 +148,7 @@ static cJSON *build_request(const Options *options, cJSON *line) {
     bool ok = cJSON_AddStringToObject(line, "key", options->key_text) &&
               cJSON_AddStringToObject(line, "species", options->species_text) &&
               (!options->above || cJSON_AddStringToObject(line, "position", "above")) &&
-              (!options->mode_text || cJSON_AddStringToObject(line, "mode", options->mode_text)) &&
+              (!options->material_text || cJSON_AddStringToObject(line, "material", options->material_text)) &&
               (!options->seed_text || cJSON_AddStringToObject(line, "seed", options->seed_text)) &&
               (!options->suggest_text || cJSON_AddStringToObject(line, "suggest", options->suggest_text)) &&
               (!(options->out_path || options->midi_path) || cJSON_AddTrueToObject(line, "plans")) &&
@@ -291,8 +291,8 @@ int run_counterpoint(int argc, char **argv) {
     input.path = options.input;
     input.meter_text = options.meter_text;
     input.key_text = options.key_text;
-    if (options.mode_text && !strchr(options.key_text, ' ') &&
-        snprintf(key_with_mode, sizeof key_with_mode, "%s %s", options.key_text, options.mode_text) < (int)sizeof key_with_mode) {
+    if (options.material_text && !strchr(options.key_text, ' ') &&
+        snprintf(key_with_mode, sizeof key_with_mode, "%s %s", options.key_text, options.material_text) < (int)sizeof key_with_mode) {
         input.key_text = key_with_mode;
     }
     cJSON *line = NULL;
