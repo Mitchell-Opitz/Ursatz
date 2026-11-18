@@ -590,6 +590,66 @@ static void test_motifs_in_c(void) {
   cJSON_Delete(saved);
 }
 
+/* A motif body names its material (R-597): the id the Composer offers is saved and read back with no key text, the old
+   key text "C minor" is read as the same material, and a material the Composer does not offer, or none, is 400. */
+static void test_motifs_with_materials(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  int status = 0;
+  char request[2048];
+  static const char *const kMaterialBody =
+      "{\"type\":\"motif\",\"name\":\"%s\",\"project_id\":\"%s\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\","
+      "\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"meter\":\"4/4\",%s,\"pickup\":\"0\",\"features\":[],"
+      "\"analysis\":null,\"derived\":null}}}";
+
+  snprintf(request, sizeof(request), kMaterialBody, "By material", project, "\"material\":\"omt.material.natural-minor\"");
+  cJSON *saved = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
+  check(status == 200 && ok_true(saved), "a motif with the material natural minor is saved");
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(saved, "item");
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s", string_of(item, "id"));
+  cJSON *answer = test_http_json(PORT, "GET", path, NULL, &status);
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "body"), "motif");
+  check(status == 200 && strcmp(string_of(motif, "material"), "omt.material.natural-minor") == 0 &&
+            !cJSON_GetObjectItemCaseSensitive(motif, "key"),
+        "the motif is read back with its material and no key text");
+  check(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(motif, "analysis")), "a motif with a material is analyzed");
+  cJSON_Delete(answer);
+
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions", string_of(item, "id"));
+  snprintf(request, sizeof(request),
+           "{\"note\":\"Major\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\","
+           "\"notes\":\"C4:q E4:e G4:e C5:h\",\"meter\":\"4/4\",\"material\":\"omt.material.major\",\"pickup\":\"0\","
+           "\"features\":[],\"analysis\":null,\"derived\":null}}}");
+  answer = test_http_json(PORT, "POST", path, request, &status);
+  check(status == 200 && ok_true(answer), "a new version with the material major is saved");
+  cJSON_Delete(answer);
+
+  snprintf(request, sizeof(request), kMaterialBody, "Not offered", project, "\"material\":\"omt.material.nowhere\"");
+  answer = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
+  check(status == 400 && strstr(string_of(answer, "error"), "C as the tonic") != NULL,
+        "a material the Composer does not offer is 400");
+  cJSON_Delete(answer);
+  snprintf(request, sizeof(request), kMaterialBody, "No material", project, "\"material\":null");
+  answer = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
+  check(status == 400, "a motif with a null material is 400");
+  cJSON_Delete(answer);
+
+  /* The old key text is read as the same material. */
+  snprintf(request, sizeof(request), kMaterialBody, "By key", project, "\"key\":\"C minor\"");
+  cJSON *old = test_http_json(PORT, "POST", "/api/materials/items", request, &status);
+  check(status == 200 && ok_true(old), "a motif with the key text C minor is saved");
+  snprintf(path, sizeof(path), "/api/materials/items/%s", string_of(cJSON_GetObjectItemCaseSensitive(old, "item"), "id"));
+  answer = test_http_json(PORT, "GET", path, NULL, &status);
+  const cJSON *old_motif = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "body"), "motif");
+  check(strcmp(string_of(old_motif, "material"), "omt.material.natural-minor") == 0 &&
+            !cJSON_GetObjectItemCaseSensitive(old_motif, "key") && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(old_motif, "analysis")),
+        "the old key text is read as the material natural minor and analyzed");
+  cJSON_Delete(answer);
+  cJSON_Delete(old);
+  cJSON_Delete(saved);
+}
+
 /* A new version of a motif says what changed (P18 B3); a new motif's first version is "Created". */
 static void test_version_notes(void) {
   char project[64] = "";
@@ -2337,6 +2397,7 @@ int main(void) {
   test_motif_forms();
   test_motif_import();
   test_motifs_in_c();
+  test_motifs_with_materials();
   test_motif_render();
 #ifdef URSATZ_GUI_TEST_PLAYBACK_FIXTURES
   test_served_playback();
