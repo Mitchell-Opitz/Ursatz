@@ -7,7 +7,7 @@ score export. Each gives the output the GUI's own code gave at its pin (`src/ser
 
 ## Import with tempo
 
-No new entry. `input_pipeline_import_file` (`<ursatz_analyzer/input_pipeline.h>`) fills `ImportedNotes.tempo_map` from
+No new entry. `analyzer_import_file` (`<ursatz_analyzer/input_pipeline.h>`, the library's `imported_score_import_file` underneath) fills `ImportedScore.tempo_map` from
 the one library parse of a MIDI file: its set-tempo events, or one defaulted region when it has none. A MusicXML import
 has no tempo map; its tempo is in `ImportedSource` (`tempo_declared`, `initial_quarters_per_minute`, `tempo_markings`).
 
@@ -16,17 +16,17 @@ has no tempo map; its tempo is in `ImportedSource` (`tempo_declared`, `initial_q
 `<ursatz_analyzer/playback.h>`
 
 ```c
-ImportedNotes notes;
+ImportedScore notes;
 AnalyzerPlayback playback;
 char *json = NULL;
-if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK &&
+if (analyzer_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL, 0) == ANALYZER_OK &&
     analyzer_playback_build(&notes, &playback) == ANALYZER_OK) {
     if (analyzer_playback_to_json(&playback, &notes, &json) == ANALYZER_OK) {
         /* send json, then free(json) */
     }
     analyzer_playback_destroy(&playback);
 }
-imported_notes_destroy(&notes);
+imported_score_destroy(&notes);
 ```
 
 | Field | Meaning |
@@ -37,7 +37,7 @@ imported_notes_destroy(&notes);
 | `end` | The latest onset plus length. |
 
 A MusicXML metronome mark at the position of an earlier region replaces it. When a notation reading with a value scale
-was applied (`notation_reading_apply`), every region's tempo is multiplied by the scale (a scale of 2 doubles it) so the
+was applied (`imported_reading_apply`), every region's tempo is multiplied by the scale (a scale of 2 doubles it) so the
 piece sounds as fast as before; a MIDI file's region positions are scaled too, a score's marks were scaled with its
 notes.
 
@@ -60,7 +60,7 @@ GUI keeps the last two with the piece. `ANALYZER_ERR_LIBRARY` when the library c
 
 ### Note ids and defaulted meter
 
-`analyzer_score_note_xml_ids(&notes, &ids, &count)` gives the base `xml:id` of each note in `ImportedNotes` order, as
+`analyzer_score_note_xml_ids(&notes, &ids, &count)` gives the base `xml:id` of each note in `ImportedScore` order, as
 the Ursatz library formats it (`musicxml_export_note_xml_id`, cut to 63 characters as the export cuts it). Free with
 `analyzer_score_note_xml_ids_destroy(ids, count)`. A tied note's segments carry the base id plus a fragment suffix
 (`_a` to `_z`, then `_26` and on), so a caller matches a note as the base id or the base id and a suffix. The id rule

@@ -10,11 +10,8 @@ Its public include directory is `include/`, and consumers include headers as
 
 | Header | Purpose |
 | --- | --- |
-| `input_pipeline.h` | The common input interface: `input_pipeline_import_file` reads a MIDI or MusicXML file (chosen by `InputFormat`, or detected) into `ImportedNotes`; `input_pipeline_import_memory` reads the same from bytes. |
-| `imported_notes.h` | `ImportedNotes`, what every input produces (notes, meter, key signatures, and an `ImportedSource` saying what the input states); `imported_notes_destroy` frees it. |
-| `midi_pipeline.h` | The MIDI backend of the input interface. |
-| `musicxml_pipeline.h` | The MusicXML backend of the input interface. |
-| `analysis_result.h` | `analyzer_analyze` turns `ImportedNotes` into an `AnalyzerResult`: the library chain's results and the report view the document is exported from (no claim layer, R-530). See [analysis-result.md](analysis-result.md). |
+| `input_pipeline.h` | The thin import entries for the GUI: `analyzer_import_file` and `analyzer_import_buffer` read a MIDI or MusicXML document into an `ImportedScore`. The imported score, `ImportedFormat` and the readings are the library's (`io/imported_score.h`, which this header includes). |
+| `analysis_result.h` | `analyzer_analyze` turns an `ImportedScore` into an `AnalyzerResult`: the library chain's results and the report view the document is exported from (no claim layer, R-530). See [analysis-result.md](analysis-result.md). |
 | `result_chain.h` | `analyzer_result_chain`, the `AnalysisChain` behind an `AnalyzerResult`. The one public header that includes a chain header; needs the `ursatz_analyzer::chain` target. |
 | `analysis_pipeline.h` | `run_analysis_pipeline`, a wrapper over `analyzer_analyze` that moves the report out as an `AnalysisReport`. |
 | `analysis_report.h` | `AnalysisReport` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
@@ -67,7 +64,7 @@ file helpers and a document analyzer.
 
 ## Pipeline
 
-`main.c` runs `input_pipeline` (MIDI or MusicXML import through Ursatz, both into `ImportedNotes`), then `analysis_pipeline`,
+`main.c` runs `input_pipeline` (MIDI or MusicXML import through Ursatz, both into `ImportedScore`), then `analysis_pipeline`,
 which runs the analysis as one `AnalyzerPass` (`chain.h`) inside `analyzer_analyze` (`analysis_result.h`). The Analyzer orchestrates the library's analysis chain
 (`analysis_chain_run` of `ursatz_chain`, R-217, R-241) and collects its results; it adds no analysis of its own to them.
 

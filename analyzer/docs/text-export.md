@@ -117,7 +117,7 @@ the last measure. A first measure greater than the last, a negative number, or a
 
 ```c
 AnalyzerTextExportOptions analyzer_text_export_options_default(void);
-AnalyzerStatus analyzer_text_export_piece(const ImportedNotes *notes, const char *document_json,
+AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
                                           const AnalyzerTextExportOptions *options, char **text);
 ```
 

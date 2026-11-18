@@ -62,7 +62,7 @@ and the GUI re-analyze older documents.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `notes` | array | Per prototype note `{"note_id", "pitch", "onset", "duration"}`: the ImportedNotes index, the MIDI pitch, and the onset (from the first note) and duration as exact `"n/d"` whole-note strings. |
+| `notes` | array | Per prototype note `{"note_id", "pitch", "onset", "duration"}`: the ImportedScore index, the MIDI pitch, and the onset (from the first note) and duration as exact `"n/d"` whole-note strings. |
 | `tonic_pc`, `material` | integer, string | The key region the first note starts in: its tonic and the id of its pitch material (`"omt.material.major"` or `"omt.material.natural-minor"`). Version 12 and older documents give a boolean `minor`. |
 | `bar`, `beat` | string | The meter at the first note as `"n/d"` whole notes; the beat is three units in 6/8, 9/8 and 12/8. |
 | `pickup` | string | The first note's position in its bar, `"0/1"` on a downbeat. |

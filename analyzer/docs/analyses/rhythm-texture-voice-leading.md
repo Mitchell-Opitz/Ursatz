@@ -52,7 +52,7 @@ Ursatz's target (80% of the syncopations and hyperdownbeats, every hemiola, ever
 
 The analyzer builds the neutral input of the texture adapter of Ursatz's standard-texture
 (`src/pipeline/texture_pipeline.c`) and reports the library's results.
-Every imported note carries a stream (`ImportedNotes.streams`: the part, that is the MIDI track and channel read back
+Every imported note carries a stream (`ImportedScore.streams`: the part, that is the MIDI track and channel read back
 from the file, or the MusicXML part), the kernel's voice separation runs per stream (a part is usually a hand) and gives each note a voice and
 a confidence, and the library measures each measure, classifies it with its defaults and merges equal consecutive
 measures into passages. The document's `texture` has a claim per passage (texture, category, measures, confidence and

@@ -2,7 +2,7 @@
 
 The `AnalyzerResult` the analysis returns and the exports built from it. Back to the [docs index](README.md).
 
-`analyzer_analyze` (`<ursatz_analyzer/analysis_result.h>`) runs the analysis once over `ImportedNotes` and returns an
+`analyzer_analyze` (`<ursatz_analyzer/analysis_result.h>`) runs the analysis once over `ImportedScore` and returns an
 `AnalyzerResult`: the library chain's results and the report view the document is exported from (R-217, R-220, R-252,
 R-530). The analysis document is an export of the
 result, not its source.

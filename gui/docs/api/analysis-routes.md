@@ -54,7 +54,7 @@ The Analyzer, Corpus, Styles and Motive links routes. [Docs index](../README.md)
     `beats/beat_type`, `value_scale` one of `1/4`, `1/2`, `1`, `2`, `4` (every
     start and duration is multiplied by it), `pickup` a fraction of a whole
     note (after scaling) shorter than one measure. It is stored in
-    `meta.json` and read by the Analyzer's `notation_reading_*` functions; an
+    `meta.json` and read by the Analyzer's `imported_reading_*` functions; an
     invalid value, or a pickup that does not fit the meter, answers `400`
     `"invalid notation"` and the piece keeps its old reading. A changed
     notation analyzes the piece again before the answer. The analysis (meter

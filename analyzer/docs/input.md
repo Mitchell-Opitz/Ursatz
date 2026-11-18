@@ -5,7 +5,7 @@ The input formats the Analyzer reads, the notation readings applied to the notes
 ## Input formats
 
 The analyzer reads MIDI and MusicXML. Both go through the same pipeline: each input becomes the
-same `ImportedNotes` (notes, a `MeterMap`, key signature events), so every later stage is
+same `ImportedScore` (notes, a `MeterMap`, key signature events), so every later stage is
 independent of the format, and the analyzer adds no parsing or music theory of its own. MusicXML is
 read by Ursatz's MusicXMLImporter.
 
@@ -14,10 +14,10 @@ read by Ursatz's MusicXMLImporter.
 - **Choosing the format.** By extension first; when the extension says nothing, by the file's first
   bytes (an `MThd` header is MIDI, an XML document is MusicXML). `--input-format midi|musicxml` forces
   the format and overrides both. A file whose format cannot be told is an error that names the flag.
-- **From memory.** `input_pipeline_import_memory(bytes, size, format, &notes)` reads the same two formats from bytes
-  instead of a path (`INPUT_FORMAT_AUTO` tells them apart by the first bytes, as for a file). The bytes are written to a
-  private `mkstemp` file under `TMPDIR` (or `/tmp`), imported through `input_pipeline_import_file` and removed before the
-  call returns, so the notes and the errors are those of a file. No bytes, or bytes of no known format, are refused.
+- **From memory.** `imported_score_import_buffer(bytes, size, format, &notes, &error)` (the library's `io/imported_score.h`;
+  `analyzer_import_buffer` for the GUI) reads the same two formats from bytes instead of a path (`IMPORTED_FORMAT_AUTO` tells
+  them apart by the first bytes, as for a file). No file is written: the notes are those of the file and the errors name "the
+  input" where a file's name its path. No bytes, or bytes of no known format, are refused.
 - **What is notated and what is inferred.** MusicXML states what MIDI does not: pitch spelling, the
   time and key signatures as written, the measures, a pickup, parts and voices. The report's Summary
   says which input was read and whether the meter, the key signature and the pitch spelling were
@@ -32,10 +32,10 @@ read by Ursatz's MusicXMLImporter.
   analyzed and the name falls back to the rule.
 - **Several parts.** All parts are analyzed together as one texture: none is dropped, and the soprano
   and bass are the highest and lowest notes sounding in any part. Each note keeps its part, staff and
-  voice (`ImportedSource` in `imported_notes.h`), and `metadata.input.parts` lists the parts with their
+  voice (`ImportedSource` in the library's `io/imported_score.h`), and `metadata.input.parts` lists the parts with their
   note counts. Per-part and per-voice analysis is not done.
 - **MIDI parts.** A MIDI file has one stream per track and channel that has notes, in order of first
-  appearance (`ImportedNotes.streams`). A stream is one part, except that two keyboard-like streams that sound
+  appearance (`ImportedScore.streams`). A stream is one part, except that two keyboard-like streams that sound
   together and differ in pitch are the two hands of one piano: Ursatz's `score_staves_pair_hands` joins them into
   one part (the higher stream is staff 1, the lower staff 2, and the part takes the higher stream's program and
   name), and `source.part_index` is the part of each note. A part is named from the track name (meta 0x03) and the General MIDI instrument of its
@@ -47,7 +47,7 @@ read by Ursatz's MusicXMLImporter.
   part has one. The file is parsed once, by the library's
   `midi_importer_import_complete`; the parts, their names and programs, the meter, the key signatures and the
   tempo map all come from that one import.
-- **Tempo map.** A MIDI file's set-tempo events are kept as `ImportedNotes.tempo_map` (one region per distinct
+- **Tempo map.** A MIDI file's set-tempo events are kept as `ImportedScore.tempo_map` (one region per distinct
   tick; a file with none gets one defaulted region of 120 quarters per minute). A MusicXML file has none (NULL).
   Note times do not depend on it.
 - **Tempo, dynamics, articulation.** Tempo and dynamics markings are imported, kept with their part
@@ -89,8 +89,8 @@ signature events, the end time, tempo markings and dynamics move with the notes.
 reading on its own. The analysis document's `meter` says what was done: `source` is `"override"` when a
 meter was set, and `reading` is `{"scale", "meter_overridden"}` (`null` when no reading was applied).
 A reading that cannot be applied (a pickup as long as the measure, a scale that is not allowed) exits 1
-with a message and writes nothing. The code is `notation_reading.h`; `notation_reading_apply` is the
-library entry point.
+with a message and writes nothing. The code is the library's `io/imported_score.h`; `imported_reading_apply` is the
+entry point.
 
 
 ## Meter and measure numbers

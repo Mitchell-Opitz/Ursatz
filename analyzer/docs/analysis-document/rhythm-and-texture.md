@@ -102,7 +102,7 @@ for. All the notes are one stream. The library names the ratio and places it (`b
 `texture` is one flat array of claims: the passages in time order (`label` `"passage"`), then the changes between
 consecutive passages (`label` `"change"`). The analyzer builds the neutral input of Ursatz's standard-texture adapter
 (`analysis/texture_analysis_input.h`) in `src/pipeline/texture_pipeline.c`, and copies the library's results; every texture, category, feature and confidence is
-the library's. The input holds every imported note with its stream (`ImportedNotes.streams`: the MIDI track chunk, the
+the library's. The input holds every imported note with its stream (`ImportedScore.streams`: the MIDI track chunk, the
 MusicXML part), the voice the kernel's voice separation gave it inside that stream (0 the top) and the separation's
 confidence. The library measures every measure from the first that has a note to the last, classifies each with its
 default configuration and merges consecutive measures of the same texture into passages. A claim's `framework` is

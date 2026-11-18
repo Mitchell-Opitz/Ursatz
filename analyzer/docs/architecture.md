@@ -46,7 +46,7 @@ The GUI entries:
 
 | Header | Entry | What it does | Doc |
 | --- | --- | --- | --- |
-| `input_pipeline.h` | `input_pipeline_import_file`, `input_pipeline_import_memory` | Imports a file or bytes, with its tempo map | [gui-api.md](gui-api.md#import-with-tempo) |
+| `input_pipeline.h` | `analyzer_import_file`, `analyzer_import_buffer` | Thin entries over the library import (`io/imported_score.h`): a file or bytes into an `ImportedScore`, with its tempo map and the failure message | [gui-api.md](gui-api.md#import-with-tempo) |
 | `playback.h` | `analyzer_playback_build`, `analyzer_playback_to_json` | Tempo regions and notes for a player | [gui-api.md](gui-api.md#playback-timing) |
 | `score_export.h` | `analyzer_score_export_musicxml`, `analyzer_score_note_xml_ids`, `analyzer_imported_meter_defaulted` | MusicXML score of the import, note ids, whether the meter was inferred | [gui-api.md](gui-api.md#score-export) |
 
@@ -98,7 +98,7 @@ The theory the Analyzer takes from the library is listed in [building.md](buildi
 One file, `piece.mid` or `piece.musicxml`, through `ursatz-analyzer piece.mid`:
 
 1. `main.c` reads the flags and calls `input_pipeline` ([input.md](input.md)).
-2. `input_pipeline` imports the file through the Ursatz MIDI or MusicXML importer into `ImportedNotes`: notes, a `MeterMap`, key signature events, the tempo map and an `ImportedSource` ([input.md](input.md#input-formats)). Notation readings (`--meter`, `--value-scale`, `--pickup`) are applied here.
+2. `analyzer_run_file` imports the file with the library (`imported_score_import_file`, `io/imported_score.h`, R-614) into an `ImportedScore`: notes, a `MeterMap`, key signature events, the tempo map and an `ImportedSource` ([input.md](input.md#input-formats)). It prints the import's error or warnings, as the command line always did. Notation readings (`--meter`, `--value-scale`, `--pickup`, `imported_reading_apply`) are applied here.
 3. `analyzer_analyze` runs `analysis_pipeline` as one `AnalyzerPass`: `chain_input` builds the chain's neutral input from the notes ([library.md](library.md#pipeline)).
 4. `analysis_chain_run` runs once over every stage: segments, key regions, chords, Roman numerals, outer voices, cadences, form, motives, meter, texture, voice leading, melody, schemas and sequences.
 5. The stage files read the chain's accessors into the `AnalysisReport`; the library calls the chain does not run (functions, six-fours, prolongations, phrase model) are made over its prepared harmony segments. See [analyses/harmony.md](analyses/harmony.md).
