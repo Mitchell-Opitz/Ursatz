@@ -25,21 +25,13 @@ typedef enum {
 } AnalyzerStatus;
 
 /*
- * The stages of a run. `stages` holds ANALYSIS_CHAIN_STAGE_* bits (bits 0 to 11, the library chain, from
- * ursatz_chain/analysis_chain.h) and the bits below for the Analyzer-only stages. The chain stages pull in the stages they need (ursatz_chain/analysis_chain.h).
+ * The stages of a run. `stages` holds ANALYSIS_CHAIN_STAGE_* bits (chain/analysis_chain.h): bits 0 to 11 are the library chain,
+ * bits 12 to 17 the stages of the collected result only. The chain stages pull in the stages they need.
  *
- * The report view, and so the document, is collected only when every chain stage is selected.
- * With fewer, the result holds the chain's results of those stages, and analyzer_result_report is an empty report.
- * The Analyzer-only stages read the chain's results: a bit set without the chain stage it reads gives no entries.
+ * The report view, and so the document, is collected only when every chain stage (ANALYSIS_CHAIN_STAGE_PERCEPTION) is selected.
+ * With fewer, the result holds the chain's results of those stages, and analyzer_result_report is an empty result.
+ * The result-only stages read the chain's results: a bit set without the chain stage it reads gives no entries.
  */
-#define ANALYZER_STAGE_PROGRESSIONS    (1u << 12)
-#define ANALYZER_STAGE_HARMONIC_RHYTHM (1u << 13)
-#define ANALYZER_STAGE_METER_CHECK     (1u << 14)
-#define ANALYZER_STAGE_RHYTHM          (1u << 15)
-#define ANALYZER_STAGE_MARKINGS        (1u << 16)
-#define ANALYZER_STAGE_FORM_PLAN       (1u << 17)
-#define ANALYZER_STAGE_ALL             ((1u << 18) - 1u) /* every chain stage (bits 0 to 11) and the above */
-
 typedef struct {
     unsigned stages;
     /* true (the default) reads the chords on harmonic spans (Ursatz AnalysisChainConfig.harmonic_spans); false reads one chord

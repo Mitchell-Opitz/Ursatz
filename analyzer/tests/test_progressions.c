@@ -6,10 +6,10 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <chain/chain_result.h>
+#include "chain/chain_result_progressions.h"
 #include <io/imported_score.h>
 
 #include "cJSON.h"
-#include "pipeline/progression_pipeline.h"
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -62,7 +62,7 @@ static ChainResult report_of(const char *spec) {
 }
 
 static bool is_pattern(const AnalysisProgression *progression, const char *label) {
-    char *actual = progression_label(progression);
+    char *actual = chain_progression_label(progression);
     bool same = actual && strcmp(actual, label) == 0;
     free(actual);
     return same;

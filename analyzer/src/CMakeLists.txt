@@ -1,30 +1,6 @@
 add_library(ursatz_analyzer STATIC
     version.c
     pipeline/input_pipeline.c
-    pipeline/chain_input.c
-    pipeline/pitch_class_util.c
-    pipeline/spelling_util.c
-    pipeline/key_region_pipeline.c
-    pipeline/chord_pipeline.c
-    pipeline/outer_voice_pipeline.c
-    pipeline/roman_numeral_pipeline.c
-    pipeline/harmony_pipeline.c
-    pipeline/form_pipeline.c
-    pipeline/form_plan_pipeline.c
-    pipeline/motive_pipeline.c
-    pipeline/motive_features.c
-    pipeline/motive_sketch_map.c
-    pipeline/melody_pipeline.c
-    pipeline/progression_pipeline.c
-    pipeline/harmonic_rhythm_pipeline.c
-    pipeline/meter_check_pipeline.c
-    pipeline/rhythm_pipeline.c
-    pipeline/texture_pipeline.c
-    pipeline/markings_pipeline.c
-    pipeline/voice_leading_pipeline.c
-    pipeline/voicing_check.c
-    pipeline/schema_pipeline.c
-    pipeline/chain.c
     pipeline/analysis_result.c
     pipeline/analysis_pipeline.c
     pipeline/chord_sequence.c

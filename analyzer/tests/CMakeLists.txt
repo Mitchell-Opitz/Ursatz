@@ -131,7 +131,7 @@ ursatz_test(test_harmonic_function_smoke TARGET test_harmonic_function ARGS smok
 ursatz_test(test_harmonic_function TARGET test_harmonic_function LABELS slow)
 
 ursatz_test_executable(test_progressions LIBS ursatz_analyzer analyzer_test_support cjson
-    INCLUDES ${PROJECT_SOURCE_DIR}/src)
+    INCLUDES ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/../library)
 ursatz_test(test_progressions_smoke TARGET test_progressions ARGS smoke)
 # Over 10 s in the fast set (about 38 s of CPU measured): runs nightly.
 ursatz_test(test_progressions TARGET test_progressions LABELS slow)

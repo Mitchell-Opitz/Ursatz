@@ -10,7 +10,7 @@
 
 #include "model/core/rational.h"
 #include "links/links_internal.h"
-#include "pipeline/motive_sketch_map.h"
+#include "chain/chain_motive_sketch.h"
 #include "test_support.h"
 #include "ursatz_test.h"
 #include "test_knowledge.h"

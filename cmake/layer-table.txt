@@ -102,7 +102,7 @@ only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge libr
 
 # The analysis chain: the model, theory and analysis groups, never an application.
 module chain library/chain prefix chain/
-uses chain model theory analysis
+uses chain model theory analysis io
 
 # Applications. A library header an application includes is a staged public header.
 module analyzer-api  analyzer/include  prefix ursatz_analyzer/

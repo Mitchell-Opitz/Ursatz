@@ -1,0 +1,167 @@
+#include "chain/chain_result_outer_voices.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "model/core/rational.h"
+#include "analysis/voices/outer_voice.h"
+#include "theory/tonality/key_vocabulary.h"
+#include "analysis/harmony/outer_scale_degrees.h"
+#include "chain/chain_result_spelling.h"
+#include "chain/chain_result_spelling.h"
+#include "model/pitch/midi_pitch.h"
+
+/* The position of the segment's member that is the entry's note, or segment->member_count when it is none. */
+static size_t member_of(const Segment *segment, const OuterVoiceEntry *entry) {
+    const char *id = entity_id_value(entry->note_id);
+    for (size_t m = 0; m < segment->member_count; m++) {
+        if (strcmp(segment->members[m].note_id, id) == 0) {
+            return m;
+        }
+    }
+    return segment->member_count;
+}
+
+/* "E5" for a MIDI note number, spelled with flats or sharps. */
+static char *pitch_name_create(int midi, bool prefer_flats) {
+    char name[16];
+    note_name(midi, prefer_flats, name);
+    return strdup(name);
+}
+
+/* Fills one outer note from the library's entry for the segment. False on allocation failure. */
+static bool fill_note(const ImportedScore *notes, const Segment *segment, const OuterVoiceEntry *entry, const AnalysisKeyRegion *region,
+                      const CommonPracticeMaterials *materials, AnalysisOuterNote *out) {
+    if (!entry->present) {
+        out->status = entry->bridged ? ANALYSIS_OUTER_BRIDGED
+                                     : (entry->guarded ? ANALYSIS_OUTER_GUARDED : ANALYSIS_OUTER_ABSENT);
+        return true;
+    }
+    size_t member = member_of(segment, entry);
+    if (member >= segment->member_count) {
+        out->status = ANALYSIS_OUTER_ABSENT;
+        return true;
+    }
+    out->status = ANALYSIS_OUTER_PRESENT;
+    out->note_id = segment->note_indices[member];
+    out->pitch = segment->members[member].pitch;
+    out->held = segment->members[member].held;
+    char spelled[16];
+    if (notes->source.spelling_notated &&
+        spelled_note_name(notes->events[out->note_id], out->pitch, true, spelled)) {
+        out->pitch_name = strdup(spelled);
+    } else {
+        out->pitch_name = pitch_name_create(out->pitch, region ? region->prefer_flats : false);
+    }
+    if (!out->pitch_name) {
+        return false;
+    }
+    CommonPracticeKeyMode mode;
+    if (region && common_practice_key_mode_of(region->material, &mode)) {
+        const char *degree =
+            common_practice_scale_degree_label(pitch_class_of_midi((int)out->pitch), region->tonic_pitch_class, mode, materials);
+        if (degree) {
+            out->degree = strdup(degree);
+            if (!out->degree) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/* a/b < c/d for positive denominators. */
+static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
+    return rational_cmp(rational_ratio(a, (long long)b), rational_ratio(c, (long long)d)) < 0;
+}
+
+/* The voice segment holding the chord segment's start: the line's entry at the chord's onset. voices->segment_count
+   when none does. */
+static size_t voice_segment_at(const Segmentation *voices, const Segment *chord, size_t from) {
+    for (size_t v = from; v < voices->segment_count; v++) {
+        const Segment *voice = &voices->segments[v];
+        if (!rational_less(chord->start_numerator, chord->start_denominator, voice->start_numerator,
+                           voice->start_denominator) &&
+            rational_less(chord->start_numerator, chord->start_denominator, voice->end_numerator,
+                          voice->end_denominator)) {
+            return v;
+        }
+    }
+    return voices->segment_count;
+}
+
+/* The chord segment holding the voice segment's start; 0 when none does. */
+static size_t chord_at(const Segmentation *segmentation, const Segment *voice, size_t from) {
+    for (size_t i = from; i < segmentation->segment_count; i++) {
+        const Segment *chord = &segmentation->segments[i];
+        if (!rational_less(voice->start_numerator, voice->start_denominator, chord->start_numerator,
+                           chord->start_denominator) &&
+            rational_less(voice->start_numerator, voice->start_denominator, chord->end_numerator,
+                          chord->end_denominator)) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+/* Fills report->outer_lines: one entry per voice segment. False on allocation failure. */
+static bool collect_outer_lines(const ImportedScore *notes, const Segmentation *voices, const Segmentation *segmentation,
+                                const ChordEstimate *chords, const AnalysisKeyRegion *regions,
+                                const OuterVoiceLines *lines, const CommonPracticeMaterials *materials,
+                                ChainResult *report) {
+    report->outer_lines = calloc(voices->segment_count, sizeof(*report->outer_lines));
+    if (!report->outer_lines) {
+        return false;
+    }
+    report->outer_line_count = voices->segment_count;
+    size_t chord = 0;
+    for (size_t v = 0; v < voices->segment_count; v++) {
+        const Segment *voice = &voices->segments[v];
+        AnalysisOuterLineEntry *out = &report->outer_lines[v];
+        out->time_numerator = voice->start_numerator;
+        out->time_denominator = voice->start_denominator;
+        out->end_numerator = voice->end_numerator;
+        out->end_denominator = voice->end_denominator;
+        out->soprano.status = ANALYSIS_OUTER_ABSENT;
+        out->bass.status = ANALYSIS_OUTER_ABSENT;
+        chord = chord_at(segmentation, voice, chord);
+        out->chord_index = chord;
+        const AnalysisKeyRegion *region = chords[chord].in_region ? &regions[chords[chord].region] : NULL;
+        if (!fill_note(notes, voice, &lines->soprano[v], region, materials, &out->soprano) ||
+            !fill_note(notes, voice, &lines->bass[v], region, materials, &out->bass)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool collect_outer_voices(const ImportedScore *notes, const Segmentation *voices, const Segmentation *segmentation,
+                          const ChordEstimate *chords, const AnalysisKeyRegion *regions, const OuterVoiceLines *lines,
+                          const CommonPracticeMaterials *materials, ChainResult *report) {
+    ChainEntry *entries = report->entries;
+    size_t count = segmentation->segment_count;
+    for (size_t i = 0; i < count; i++) {
+        entries[i].in_region = chords[i].in_region;
+        entries[i].region = chords[i].region;
+        entries[i].soprano.status = ANALYSIS_OUTER_ABSENT;
+        entries[i].bass.status = ANALYSIS_OUTER_ABSENT;
+    }
+    if (count == 0 || voices->segment_count == 0 || !lines || lines->count != voices->segment_count) {
+        return true; /* the library gave no lines for this piece: every line stays absent */
+    }
+
+    bool ok = true;
+    size_t v = 0;
+    for (size_t i = 0; ok && i < count; i++) {
+        v = voice_segment_at(voices, &segmentation->segments[i], v);
+        if (v >= voices->segment_count) {
+            v = 0;
+            continue;
+        }
+        const AnalysisKeyRegion *region = chords[i].in_region ? &regions[chords[i].region] : NULL;
+        ok = fill_note(notes, &voices->segments[v], &lines->soprano[v], region, materials, &entries[i].soprano) &&
+             fill_note(notes, &voices->segments[v], &lines->bass[v], region, materials, &entries[i].bass);
+    }
+    return ok && collect_outer_lines(notes, voices, segmentation, chords, regions, lines, materials, report);
+}

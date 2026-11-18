@@ -1,5 +1,6 @@
 #include "chain/analysis_chain.h"
 #include "chain/analysis_chain_internal.h"
+#include "chain/chain_collect.h"
 
 #include <limits.h>
 #include <stdlib.h>
@@ -20,7 +21,7 @@
 AnalysisChainConfig analysis_chain_config_default(void) {
     AnalysisChainConfig config;
     memset(&config, 0, sizeof(config));
-    config.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    config.stages = ANALYSIS_CHAIN_STAGE_PERCEPTION;
     config.segmentation = adaptive_segmentation_config_default();
     config.weighting = common_practice_weighted_config_default();
     config.key_regions = common_practice_key_regions_config_default(NULL); /* the chain sets the snapshot's materials */
@@ -107,6 +108,7 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     if (chain == NULL) {
         return;
     }
+    chain_collect_destroy_results(chain);
     if (chain->have_sequences) {
         scale_sequence_matches_destroy(&chain->sequences);
     }
@@ -206,6 +208,7 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     if (chain->have_pitches) {
         chain_pitches_destroy(&chain->pitches);
     }
+    chain_collect_destroy_input(chain);
     free(chain);
 }
 
@@ -1030,7 +1033,7 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
         chain->config.form.relation_match = chain_match_motive_relation;
         chain->config.form.relation_context = &chain->relation_context;
     }
-    chain->stages = stage_closure(config->stages);
+    chain->stages = stage_closure(config->stages & ANALYSIS_CHAIN_STAGE_PERCEPTION);
     chain->notes = notes;
     chain->key_events = key_events;
     chain->key_event_count = key_event_count;

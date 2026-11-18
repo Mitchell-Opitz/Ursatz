@@ -130,7 +130,7 @@ static void check_options(const char *fixture) {
 
     /* The defaults: all stages, chords on harmonic spans. */
     AnalyzerOptions defaults = analyzer_options_default();
-    CHECKF(defaults.stages == ANALYZER_STAGE_ALL && defaults.harmonic_spans && defaults.knowledge == NULL,
+    CHECKF(defaults.stages == ANALYSIS_CHAIN_STAGE_ALL && defaults.harmonic_spans && defaults.knowledge == NULL,
            "the default options are not all stages on spans with no knowledge");
 
     /* Arguments. */

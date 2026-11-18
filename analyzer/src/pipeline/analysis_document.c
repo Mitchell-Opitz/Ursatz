@@ -9,16 +9,14 @@
 #include <string.h>
 
 #include "cJSON.h"
+#include "model/pitch/pitch_arithmetic.h"
 #include "theory/tonality/common_practice_framework.h"
 #include "theory/tonality/common_practice_materials.h"
 #include "model/core/rational.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/analysis_result_internal.h"
 #include "pipeline/path_util.h"
-#include "pipeline/pitch_class_util.h"
 #include "theory/tonality/tonal_key.h"
-#include "pipeline/progression_pipeline.h"
-#include "pipeline/voicing_check.h"
 #include "theory/form/framework.h"
 #include "theory/harmony/harmony_framework.h"
 #include "theory/meter/beat_grid.h"
@@ -400,9 +398,9 @@ static cJSON *key_signatures_json(DocBuild *build, const ImportedScore *notes) {
     }
     for (size_t i = 0; i < notes->key_signature_events.count; i++) {
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
-        int major = key_signature_major_tonic(event->sharps_flats);
-        char *major_label = key_label_create(major, build->materials.major);
-        char *minor_label = key_label_create((major + 9) % 12, build->materials.natural_minor);
+        int major = chain_key_signature_major_tonic(event->sharps_flats);
+        char *major_label = chain_key_label(major, build->materials.major);
+        char *minor_label = chain_key_label((major + 9) % 12, build->materials.natural_minor);
         Rational start = event->position.value;
         cJSON *object = cJSON_CreateObject();
         bool ok = major_label && minor_label && object &&
@@ -809,7 +807,7 @@ static cJSON *pivot_chords_json(DocBuild *build, const ImportedScore *notes, con
 
 /* Whether a key is the major key of a notated signature or its relative minor. */
 static bool key_fits_signature(const AnalysisKeyRegion *region, int sharps_flats) {
-    int major = key_signature_major_tonic(sharps_flats);
+    int major = chain_key_signature_major_tonic(sharps_flats);
     CommonPracticeKeyMode mode;
     if (!common_practice_key_mode_of(region->material, &mode)) {
         return false;
@@ -837,9 +835,9 @@ static cJSON *disagreement_json(const DocBuild *build, const char *scope, long s
     char notated[96] = "";
     char message[256];
     if (event) {
-        int major = key_signature_major_tonic(event->sharps_flats);
-        char *major_label = key_label_create(major, build->materials.major);
-        char *minor_label = key_label_create((major + 9) % 12, build->materials.natural_minor);
+        int major = chain_key_signature_major_tonic(event->sharps_flats);
+        char *major_label = chain_key_label(major, build->materials.major);
+        char *minor_label = chain_key_label((major + 9) % 12, build->materials.natural_minor);
         if (major_label && minor_label) {
             snprintf(notated, sizeof(notated), "%s or %s", major_label, minor_label);
         }
@@ -2034,7 +2032,7 @@ static cJSON *progressions_json(DocBuild *build, const ImportedScore *notes, con
     }
     for (size_t i = 0; i < report->progression_count; i++) {
         const AnalysisProgression *progression = &report->progressions[i];
-        char *label = progression_label(progression);
+        char *label = chain_progression_label(progression);
         cJSON *entry = label ? cJSON_CreateObject() : NULL;
         cJSON *occurrences = entry ? cJSON_CreateArray() : NULL;
         bool ok = occurrences != NULL;
@@ -3608,7 +3606,7 @@ static cJSON *voice_chord_json(DocBuild *build, const ImportedScore *notes, cons
     Rational start;
     Rational end;
     voice_leading_entries_span(build, report, chord->entry, chord->entry, &start, &end);
-    cJSON *claim = claim_json_with(build, voicing_framework_name(), notes, chord->note_ids, chord->note_id_count, start, end,
+    cJSON *claim = claim_json_with(build, chain_voicing_framework_name(), notes, chord->note_ids, chord->note_id_count, start, end,
                                    "doubling", cJSON_CreateNumber(chord->uncertainty));
     if (!(claim && json_add(claim, "chord", cJSON_CreateNumber((double)chord->entry)) &&
           json_add(claim, "voices", cJSON_CreateNumber((double)chord->voices_sounding)) &&

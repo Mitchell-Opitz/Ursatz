@@ -80,7 +80,7 @@ static void test_knowledge_refusal(void) {
 
 int main(void) {
     assert(ANALYSIS_CHAIN_STAGE_COUNT == 12u);
-    assert(ANALYSIS_CHAIN_STAGE_ALL == 0xFFFu);
+    assert(ANALYSIS_CHAIN_STAGE_PERCEPTION == 0xFFFu);
 
     unsigned seen = 0;
     unsigned earlier = 0;
@@ -104,10 +104,10 @@ int main(void) {
         }
         earlier |= stage->bit;
     }
-    assert(seen == ANALYSIS_CHAIN_STAGE_ALL);
+    assert(seen == ANALYSIS_CHAIN_STAGE_PERCEPTION);
     assert(analysis_chain_stage_name(ANALYSIS_CHAIN_ERR_ALLOC) == NULL);
 
-    for (unsigned mask = 0; mask <= ANALYSIS_CHAIN_STAGE_ALL; mask++) {
+    for (unsigned mask = 0; mask <= ANALYSIS_CHAIN_STAGE_PERCEPTION; mask++) {
         assert(table_closure(mask) == old_stage_closure(mask));
     }
 

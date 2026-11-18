@@ -16,6 +16,29 @@ add_library(ursatz_chain
     form_bridge.c
     kernel_owners.c
     chain_result.c
+    chain_collect.c
+    chain_motive_sketch.c
+    chain_result_chords.c
+    chain_result_form.c
+    chain_result_form_plan.c
+    chain_result_harmonic_rhythm.c
+    chain_result_harmony.c
+    chain_result_key_regions.c
+    chain_result_markings.c
+    chain_result_melody.c
+    chain_result_meter_check.c
+    chain_result_motive.c
+    chain_result_motive_features.c
+    chain_result_numerals.c
+    chain_result_outer_voices.c
+    chain_result_progressions.c
+    chain_result_rhythm.c
+    chain_result_schemas.c
+    chain_result_spelling.c
+    chain_result_texture.c
+    chain_result_voice_leading.c
+    chain_result_voicing_check.c
+    chain_score_input.c
 )
 # Public headers (R-223), staged under chain/ in the build tree; the chain directory is private.
 ursatz_public_headers(ursatz_chain
@@ -25,8 +48,9 @@ ursatz_public_headers(ursatz_chain
         chain/analysis_chain.h
         chain/chain_inputs.h
         chain/chain_result.h
+        chain/chain_motive_sketch.h
 )
-target_link_libraries(ursatz_chain PUBLIC ursatz_analysis)
+target_link_libraries(ursatz_chain PUBLIC ursatz_analysis ursatz_io)
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

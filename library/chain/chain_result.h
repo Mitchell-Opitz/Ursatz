@@ -1189,4 +1189,25 @@ void chain_result_destroy(ChainResult *report);
 /* Frees a motive's features (their arrays) and clears them. NULL is a no-op. */
 void chain_motive_features_destroy(AnalysisMotiveFeatures *features);
 
+/* The label, key and voicing helpers the result's readers share. */
+
+/* Whether the key on tonic_pitch_class (0-11) is signed in flats: the library's spelling of the tonic with the fewer
+   accidentals in its signature (standard_tonality_key_tonic_of_pitch_class_material), a minor key judged by its relative major.
+   Eb major and F minor are, F# major and D# minor (a tie) are not. False for a NULL material. */
+bool chain_tonic_prefers_flats(int tonic_pitch_class, const PitchMaterial *material);
+
+/* "<tonic> <key word>" ("C major", "A minor") for a tonic pitch class and a material, spelled by chain_tonic_prefers_flats; a heap
+   string the caller frees, or NULL on allocation failure or a NULL material. */
+char *chain_key_label(int tonic_pitch_class, const PitchMaterial *material);
+
+/* The major-key tonic pitch class for a key signature's sharps/flats count (-7..7, negative flats);
+   the minor key of the same signature is 9 semitones above it. -1 for a count outside -7..7. */
+int chain_key_signature_major_tonic(int sharps_flats);
+
+/* The label of a pattern as Ursatz's corpus statistics print one: "I > IV > V > I". Owned; NULL on allocation failure. */
+char *chain_progression_label(const AnalysisProgression *progression);
+
+/* The library's framework name for the doubling and spacing claims. */
+const char *chain_voicing_framework_name(void);
+
 #endif

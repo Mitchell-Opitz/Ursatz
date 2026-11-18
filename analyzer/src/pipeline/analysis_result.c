@@ -7,19 +7,17 @@
 #include <chain/analysis_chain.h>
 
 #include "pipeline/analysis_result_internal.h"
-#include "pipeline/chain.h"
 
 struct AnalyzerResult {
-    AnalyzerPass pass;
-    void *owner; /* what the pass borrows, released after it (a hearing's notes) */
+    AnalysisChain *chain; /* owned: the library chain and its collected result */
+    const ImportedScore *notes;
+    AnalyzerOptions options;
+    void *owner; /* what the chain borrows, released after it (a hearing's notes) */
     void (*owner_destroy)(void *);
 };
 
-_Static_assert(ANALYZER_STAGE_ALL == (ANALYSIS_CHAIN_STAGE_ALL | ((1u << 18) - (1u << 12))),
-               "ANALYZER_STAGE_ALL covers the chain stages and the Analyzer bits");
-
 AnalyzerOptions analyzer_options_default(void) {
-    AnalyzerOptions options = {ANALYZER_STAGE_ALL, true, NULL};
+    AnalyzerOptions options = {ANALYSIS_CHAIN_STAGE_ALL, true, NULL};
     return options;
 }
 
@@ -27,7 +25,7 @@ void analyzer_result_destroy(AnalyzerResult *result) {
     if (!result) {
         return;
     }
-    analyzer_pass_destroy(&result->pass);
+    analysis_chain_destroy(result->chain);
     if (result->owner_destroy) {
         result->owner_destroy(result->owner);
     }
@@ -40,49 +38,54 @@ AnalyzerStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOption
     }
     *out = NULL;
     AnalyzerOptions used = options ? *options : analyzer_options_default();
-    if (!notes || !used.knowledge || (used.stages & ANALYSIS_CHAIN_STAGE_ALL) == 0) {
+    if (!notes || !used.knowledge || (used.stages & ANALYSIS_CHAIN_STAGE_PERCEPTION) == 0) {
         return ANALYZER_ERR_ARGUMENT;
     }
     AnalyzerResult *result = calloc(1, sizeof(*result));
     if (!result) {
         return ANALYZER_ERR_ALLOC;
     }
-    if (!analyzer_pass_run(&result->pass, notes, &used)) {
-        AnalyzerStatus status = result->pass.library || notes->count == 0 ? ANALYZER_ERR_ALLOC : ANALYZER_ERR_LIBRARY;
-        analyzer_result_destroy(result);
-        return status;
+    result->notes = notes;
+    result->options = used;
+    AnalysisChainConfig config = analysis_chain_config_default();
+    config.stages = used.stages;
+    config.harmonic_spans = used.harmonic_spans;
+    config.refine_keys = true;
+    config.knowledge = used.knowledge;
+    AnalysisChainStatus status = analysis_chain_run_score(notes, &config, &result->chain);
+    if (status != ANALYSIS_CHAIN_OK) {
+        free(result);
+        return status == ANALYSIS_CHAIN_ERR_ALLOC ? ANALYZER_ERR_ALLOC : ANALYZER_ERR_LIBRARY;
     }
     *out = result;
     return ANALYZER_OK;
 }
 
 const AnalysisChain *analyzer_result_chain(const AnalyzerResult *result) {
-    return result ? result->pass.library : NULL;
+    return result && result->notes->count > 0 ? result->chain : NULL;
 }
 
 const ChainResult *analyzer_result_report(const AnalyzerResult *result) {
-    return result ? &result->pass.report : NULL;
+    return result ? analysis_chain_result(result->chain) : NULL;
 }
 
 const ImportedScore *analyzer_result_notes(const AnalyzerResult *result) {
-    return result ? result->pass.notes : NULL;
+    return result ? result->notes : NULL;
 }
 
 const KnowledgeSnapshot *analyzer_result_knowledge(const AnalyzerResult *result) {
-    return result ? result->pass.options.knowledge : NULL;
+    return result ? result->options.knowledge : NULL;
 }
 
 bool analyzer_result_report_complete(const AnalyzerResult *result) {
-    return result && (result->pass.options.stages & ANALYSIS_CHAIN_STAGE_ALL) == ANALYSIS_CHAIN_STAGE_ALL;
+    return result && (result->options.stages & ANALYSIS_CHAIN_STAGE_PERCEPTION) == ANALYSIS_CHAIN_STAGE_PERCEPTION;
 }
 
 bool analyzer_result_take_report(AnalyzerResult *result, ChainResult *report) {
     if (!result) {
         return false;
     }
-    *report = result->pass.report;
-    memset(&result->pass.report, 0, sizeof(result->pass.report));
-    result->pass.report.home_duration_denominator = 1;
+    chain_result_take(result->chain, report);
     return true;
 }
 
