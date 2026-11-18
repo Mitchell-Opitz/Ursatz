@@ -62,6 +62,10 @@ step of the same relation (`none` into no step, `restated` into `exact`; `semito
 `axis` into -1) and are written back as `step`; nothing writes the old names. A `transform` the table does not
 have fails the read with its name in the message. The format version stays 2.
 
+## Adding a kind
+
+A constraint kind is one row of `src/plan/constraint_kinds.c` (R-609): its value in `PlanConstraintKind`, its name in the plan file, and three functions: `valid` (whether a constraint of the kind is valid in a plan, which `plan_node_add_constraint` and `plan_lane_span_add_constraint` ask), `write` (the members of its JSON object after `kind`) and `read` (the same members read, each refusal at its path). `plan_json.c` and `constraint.c` look the row up and call it, so no switch names a kind. The kind also goes in the constraint enum of `schema/plan.v5.schema.json`, with a row of the table above.
+
 ## Construction and pedal
 
 A theme's construction (R-468) is the `construction` member of its section's description: `{"ideas": {"basic idea": 3, "contrasting idea": 2, ...}, "extensions": [], "reason": "given"}`, with the ideas, extensions and reason it always had.
