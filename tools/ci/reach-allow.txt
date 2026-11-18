@@ -16,8 +16,8 @@ library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo m
 library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/time_span.c time_span_length  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app reads a chord type until P58 B16 (chord readings); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_of  # no app reads a chord type until P58 B16 (chord readings); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app looks up a chord type by id (chord readings find it by members, P62 may name one); its tests call it
+library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_of  # only chord_reading_of_sonority reads a chord type, and no app reads a chord reading until P62's reading layer; its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_at  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_count  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
@@ -25,3 +25,5 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # no app 
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_relation_named  # no app resolves a relation by word until P60 (sections name relations); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
 library/theory/tonality/region_relation.c region_resolve_named  # no app resolves a relation by word until P60 (per-section regions in requests); its tests call it
+library/analysis/harmony/chord_reading.c chord_reading_of_sonority  # no app reads a chord reading until P62's reading layer; its tests call it
+library/analysis/harmony/chord_reading.c mask_above_root  # helper of chord_reading_of_sonority, which no app calls until P62; its tests call it

@@ -29,6 +29,7 @@ add_library(ursatz_analysis
     harmony/analysis_six_four.c
     harmony/applied_chords.c
     harmony/chord_input.c
+    harmony/chord_reading.c
     harmony/harmonic_spans.c
     harmony/key_identification.c
     harmony/key_regions.c
