@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "K12 instrument: what a performer part needs to know about one instrument",
+  "type": "object",
+  "required": [
+    "content"
+  ],
+  "properties": {
+    "content": {
+      "type": "object",
+      "required": [
+        "family",
+        "transposition",
+        "clefs",
+        "range",
+        "general_midi_program"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "family": {
+          "enum": [
+            "keyboard",
+            "strings",
+            "woodwinds",
+            "brass",
+            "percussion",
+            "voice",
+            "plucked"
+          ]
+        },
+        "transposition": {
+          "type": "integer",
+          "minimum": -36,
+          "maximum": 36
+        },
+        "clefs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "enum": [
+              "treble",
+              "bass",
+              "alto",
+              "tenor"
+            ]
+          }
+        },
+        "range": {
+          "$ref": "#/$defs/range"
+        },
+        "comfortable_range": {
+          "$ref": "#/$defs/range"
+        },
+        "general_midi_program": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127
+        },
+        "pedals": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "sustain"
+            ]
+          }
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "midi",
+          "in_range"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "midi": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 127
+          },
+          "in_range": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "range": {
+      "type": "object",
+      "required": [
+        "lowest",
+        "highest"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "lowest": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127
+        },
+        "highest": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127
+        }
+      }
+    }
+  }
+}
