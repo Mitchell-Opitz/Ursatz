@@ -97,7 +97,9 @@ int main(void) {
         }
         assert((unsigned)stage->error == (unsigned)ANALYSIS_CHAIN_ERR_SEGMENTS + index);
         assert(stage->name != NULL && stage->name[0] != '\0');
-        assert(stage->prepare != NULL || stage->run_pass != NULL || stage->finish != NULL);
+        /* The meter row has no step of its own: its bit selects the collected rhythm stage, the one meter analysis (R-616). */
+        assert(stage->prepare != NULL || stage->run_pass != NULL || stage->finish != NULL ||
+               stage->bit == ANALYSIS_CHAIN_STAGE_METER);
         assert(strcmp(analysis_chain_stage_name(stage->error), stage->name) == 0);
         for (size_t other = 0; other < row; other++) {
             assert(strcmp(analysis_chain_stages[other].name, stage->name) != 0);

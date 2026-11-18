@@ -157,21 +157,6 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     if (chain->have_texture_input) {
         chain_texture_input_destroy(&chain->texture_input);
     }
-    if (chain->have_densities) {
-        standard_meter_densities_destroy(&chain->meter.densities);
-    }
-    if (chain->have_hypermeter) {
-        standard_meter_hypermeter_destroy(&chain->meter.hypermeter);
-    }
-    if (chain->have_hemiolas) {
-        standard_meter_hemiolas_destroy(&chain->meter.hemiolas);
-    }
-    if (chain->have_syncopations) {
-        standard_meter_syncopations_destroy(&chain->meter.syncopations);
-    }
-    if (chain->have_meter_input) {
-        chain_meter_input_destroy(&chain->meter_input);
-    }
     if (chain->have_motives) {
         standard_form_motives_destroy(&chain->motives);
     }
@@ -554,44 +539,6 @@ static AnalysisChainStatus motive_stage(AnalysisChain *chain) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     chain->have_motives = true;
-    return ANALYSIS_CHAIN_OK;
-}
-
-static AnalysisChainStatus meter_stage(AnalysisChain *chain) {
-    Pass *p = &chain->pass;
-    bool *changes = calloc(chain->segs.count > 0 ? chain->segs.count : 1, sizeof(bool));
-    if (changes == NULL) {
-        return ANALYSIS_CHAIN_ERR_ALLOC;
-    }
-    for (size_t s = 1; s < chain->count; s++) {
-        changes[s] = p->chords[s].matched && p->chords[s - 1].matched &&
-                     strcmp(chord_label(p->chords[s].best_chord), chord_label(p->chords[s - 1].best_chord)) != 0;
-    }
-    int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
-    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->lines, &chain->segs, changes, chain->config.first_measure,
-                                                     last, &p->form_input.input, &p->phrases, &p->expansions, &chain->meter_input);
-    free(changes);
-    if (built != CHAIN_INPUT_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_meter_input = true;
-    const StandardMeterInput *input = &chain->meter_input.input;
-    if (standard_meter_find_syncopations(input, &chain->config.meter, &chain->meter.syncopations) != STANDARD_METER_ANALYSIS_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_syncopations = true;
-    if (standard_meter_find_hemiolas(input, &chain->config.meter, &chain->meter.hemiolas) != STANDARD_METER_ANALYSIS_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_hemiolas = true;
-    if (standard_meter_find_hypermeter(input, &chain->config.meter, &chain->meter.hypermeter) != STANDARD_METER_ANALYSIS_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_hypermeter = true;
-    if (standard_meter_find_densities(input, &chain->config.meter, &chain->meter.densities) != STANDARD_METER_ANALYSIS_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_densities = true;
     return ANALYSIS_CHAIN_OK;
 }
 
@@ -988,7 +935,7 @@ const AnalysisChainStage analysis_chain_stages[ANALYSIS_CHAIN_STAGE_COUNT] = {
      "cadences", NULL, pass_cadences, NULL},
     {ANALYSIS_CHAIN_STAGE_FORM, ANALYSIS_CHAIN_STAGE_CADENCES, false, STAGE_ERROR(6), "form", NULL, pass_form, motive_stage},
     {ANALYSIS_CHAIN_STAGE_METER, ANALYSIS_CHAIN_STAGE_FORM | ANALYSIS_CHAIN_STAGE_CHORDS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES, false,
-     STAGE_ERROR(7), "meter", NULL, NULL, meter_stage},
+     STAGE_ERROR(7), "meter", NULL, NULL, NULL},
     {ANALYSIS_CHAIN_STAGE_TEXTURE, 0, true, STAGE_ERROR(8), "texture", NULL, NULL, texture_stage},
     {ANALYSIS_CHAIN_STAGE_VOICE_LEADING, ANALYSIS_CHAIN_STAGE_CADENCES | ANALYSIS_CHAIN_STAGE_SEGMENTS, true, STAGE_ERROR(9),
      "voice leading", NULL, NULL, voice_leading_stage},

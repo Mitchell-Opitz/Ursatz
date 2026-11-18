@@ -91,7 +91,8 @@
 #define ANALYSIS_CHAIN_STAGE_PROGRESSIONS    (1u << 12)
 #define ANALYSIS_CHAIN_STAGE_HARMONIC_RHYTHM (1u << 13)
 #define ANALYSIS_CHAIN_STAGE_METER_CHECK     (1u << 14)
-#define ANALYSIS_CHAIN_STAGE_RHYTHM          (1u << 15)
+/* Bit 15 is unused: it was ANALYSIS_CHAIN_STAGE_RHYTHM, the collected rhythm stage, which is now the chain's one meter analysis
+   (ANALYSIS_CHAIN_STAGE_METER, R-616). */
 #define ANALYSIS_CHAIN_STAGE_MARKINGS        (1u << 16)
 #define ANALYSIS_CHAIN_STAGE_FORM_PLAN       (1u << 17)
 /* The twelve chain stages: the result is collected when a run has all of them. */

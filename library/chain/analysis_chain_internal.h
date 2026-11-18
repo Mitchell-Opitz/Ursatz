@@ -8,16 +8,8 @@
 #include "theory/tonality/common_practice_materials.h"
 
 /*
- * The fields of an AnalysisChain: analysis_chain.c writes them; tests read the meter results through
- * tests/support/chain_test_access.h. Not staged: no application includes this header.
+ * The fields of an AnalysisChain: analysis_chain.c writes them. Not staged: no application includes this header.
  */
-
-typedef struct {
-    StandardMeterSyncopations syncopations;
-    StandardMeterHemiolas hemiolas;
-    StandardMeterHypermeter hypermeter;
-    StandardMeterDensities densities;
-} AnalysisChainMeter;
 
 /* The results of the stages from the key regions to the form, which run twice when the keys are refined. */
 typedef struct {
@@ -128,14 +120,6 @@ struct AnalysisChain {
     bool have_motive_themes;
     StandardFormMotives motives;
     bool have_motives;
-
-    ChainMeterInput meter_input;
-    bool have_meter_input;
-    AnalysisChainMeter meter;
-    bool have_syncopations;
-    bool have_hemiolas;
-    bool have_hypermeter;
-    bool have_densities;
 
     ChainTextureInput texture_input;
     bool have_texture_input;

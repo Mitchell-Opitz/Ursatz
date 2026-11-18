@@ -8,6 +8,7 @@
 
 #include "model/identity/entity_id.h"
 #include "../../tests/import_notes_test_util.h"
+#include "io/imported_score.h"
 #include "io/midi_importer.h"
 #include "model/pitch/pitch_numeric_value.h"
 #include "model/time/meter_map.h"
@@ -31,6 +32,9 @@
  */
 
 /* --- the pieces and their expected values --- */
+/* The meter digest (the ninth of each) was re-recorded in P61 B4 (R-616): it digests the collected result of analysis_chain_run_score, the
+   one meter analysis, not the chain's own meter stage. Old and new: Bach 114 b379b7449451fc25 to d5226521fa2d0d33, Mozart 545
+   4acf4ccb0f49ec12 to a7184b92bea05c9f, Clementi 36 7d05e72f7e0fa927 to fa5b120cb70735e7, Field 1 964c0c7325aec8cf to 552d4ce837161a72. */
 
 enum { STAGE_SEGMENTS, STAGE_KEYS, STAGE_CHORDS, STAGE_NUMERALS, STAGE_OUTER, STAGE_CADENCES, STAGE_FORM, STAGE_MOTIVES, STAGE_METER,
        STAGE_TEXTURE, STAGE_MELODY, STAGE_SCHEMAS, STAGE_VOICE_LEADING, STAGE_COUNT };
@@ -56,25 +60,25 @@ static const Reference REFERENCES[4] = {
     {"Bach 114", "Bach 114.mid", true, 7, 1, 32, 54, 1, 0, 3,
      {0x7e02c6de24f89a71ULL, 0xee0be0d3f1d49dd9ULL, 0x57d1c56f738fee22ULL,
       0x8daa29db941adcf9ULL, 0x7dcbf37f1948fe14ULL, 0x47fe0d7eaf8e51e3ULL,
-      0x3848e372f941a481ULL, 0xbf6b5ec9ca0e1519ULL, 0xb379b7449451fc25ULL,
+      0x3848e372f941a481ULL, 0xbf6b5ec9ca0e1519ULL, 0xd5226521fa2d0d33ULL,
       0x6e5efa0dc17f5c39ULL, 0x5d22a3bde9e33022ULL, 0xa31e272015f12c43ULL,
       0xcc3660d216a8801fULL}},
     {"Mozart 545", "Mozart 545.mid", false, 0, 1, 146, 210, 12, 16, 16,
      {0xfe08c6fd837c4002ULL, 0x5f99bf0634bd0695ULL, 0x153b2041480e162fULL,
       0x88d8e2c0586fa207ULL, 0x4ada091110983702ULL, 0x42d961225e107054ULL,
-      0x390f89ffa005de20ULL, 0xa02e3529e14ec675ULL, 0x4acf4ccb0f49ec12ULL,
+      0x390f89ffa005de20ULL, 0xa02e3529e14ec675ULL, 0xa7184b92bea05c9fULL,
       0x031e15b34d36bf99ULL, 0x78c36151401961e0ULL, 0x9d8f3cf1bce97e15ULL,
       0xd9c41c0558557992ULL}},
     {"Clementi 36", "Clementi 36.mid", false, 0, 1, 38, 46, 4, 4, 5,
      {0x615e98c862b87a88ULL, 0xd470fe755a435726ULL, 0xb3d7f43c4ca78b19ULL,
       0x69fb58652069fb46ULL, 0x4d10887062cc5a59ULL, 0x3847b570add6e6c1ULL,
-      0x27f5539e4580049fULL, 0x47fe0d7eaf8e51e3ULL, 0x7d05e72f7e0fa927ULL,
+      0x27f5539e4580049fULL, 0x47fe0d7eaf8e51e3ULL, 0xfa5b120cb70735e7ULL,
       0x63f983fedb650d5fULL, 0xbcb3720c73778d05ULL, 0xa31e272015f12c43ULL,
       0x339c5de9b3fd33c7ULL}},
     {"Field 1", "Field 1.mid", false, 3, 1, 16, 22, 1, 1, 2,
      {0x3bc95b70c6bef1acULL, 0xd0d1292d97b576cfULL, 0xb9eca6cd23f4b27dULL,
       0xede1387204f4886eULL, 0xc121b0921a83f0afULL, 0x295958eee017093eULL,
-      0x962b6cc585563f98ULL, 0x47fe0d7eaf8e51e3ULL, 0x964c0c7325aec8cfULL,
+      0x962b6cc585563f98ULL, 0x47fe0d7eaf8e51e3ULL, 0x552d4ce837161a72ULL,
       0x20c7011fc0a70dc0ULL, 0x90e231e606fcdb71ULL, 0xa31e272015f12c43ULL,
       0xd7824e8e276c1205ULL}},
 };
@@ -384,48 +388,80 @@ static void digest_motives(Digest *d, const AnalysisChain *c) {
     }
 }
 
+/* The meter results are the collected result's (R-616: the one meter analysis is the rhythm stage), read from the chain that
+   analysis_chain_run_score ran on the same piece, so the digest is of the result's syncopations, hemiolas, hypermeters and
+   densities. */
+static const AnalysisChain *scored_chain;
+
 static void digest_meter(Digest *d, const AnalysisChain *c) {
-    const AnalysisChainMeter *meter = analysis_chain_meter(c);
-    digest_int(d, (long long)meter->syncopations.count);
-    digest_int(d, (long long)meter->hemiolas.count);
-    /* simultaneous notes come in another order: the syncopations are a set, ordered by note */
-    const char **ids = calloc(meter->syncopations.count + 1, sizeof(char *));
-    assert(ids != NULL);
-    for (size_t i = 0; i < meter->syncopations.count; i++) {
-        ids[i] = meter->syncopations.items[i].claim.note_id;
+    (void)c;
+    const ChainResult *result = analysis_chain_result(scored_chain);
+    digest_int(d, (long long)result->syncopation_count);
+    digest_int(d, (long long)result->hemiola_count);
+    for (size_t i = 0; i < result->syncopation_count; i++) {
+        const AnalysisSyncopation *a = &result->syncopations[i];
+        digest_int(d, (long long)a->note);
+        digest_int(d, a->line);
+        digest_int(d, a->measure);
+        digest_double(d, a->beat);
+        digest_string(d, a->attack_level);
+        digest_string(d, a->through_level);
+        digest_int(d, a->strength);
+        digest_int(d, a->through_measure);
+        digest_double(d, a->through_beat);
+        digest_double(d, a->uncertainty);
     }
-    qsort(ids, meter->syncopations.count, sizeof(char *), compare_strings);
-    for (size_t k = 0; k < meter->syncopations.count; k++) {
-        for (size_t i = 0; i < meter->syncopations.count; i++) {
-            const StandardMeterSyncopation *a = &meter->syncopations.items[i];
-            if (a->claim.note_id != ids[k]) {
-                continue;
-            }
-            digest_string(d, a->claim.note_id);
-            digest_int(d, a->claim.line);
-            digest_int(d, a->claim.measure);
-            digest_int(d, a->claim.beat);
-            digest_int(d, a->claim.attack_level);
-            digest_int(d, a->claim.through_level);
-            digest_int(d, a->claim.strength);
-            digest_int(d, a->claim.through_measure);
-            digest_int(d, a->claim.through_beat);
-            digest_double(d, a->uncertainty);
+    for (size_t i = 0; i < result->hemiola_count; i++) {
+        const AnalysisHemiola *h = &result->hemiolas[i];
+        digest_int(d, h->first_measure);
+        digest_int(d, h->last_measure);
+        digest_int(d, h->duration_evidence);
+        digest_int(d, h->chord_evidence);
+        digest_int(d, h->accent_evidence);
+        digest_int(d, h->agreeing);
+        digest_int(d, h->available);
+        digest_double(d, h->uncertainty);
+    }
+    digest_int(d, (long long)result->hypermeter_count);
+    for (size_t i = 0; i < result->hypermeter_count; i++) {
+        const AnalysisHypermeter *h = &result->hypermeters[i];
+        digest_int(d, (long long)h->phrase);
+        digest_int(d, h->first_measure);
+        digest_int(d, h->measures);
+        digest_int(d, h->length);
+        digest_double(d, h->score);
+        digest_int(d, h->has_arrival ? h->arrival_measure : -1);
+        digest_int(d, (long long)h->hypermeasure_count);
+        for (size_t k = 0; k < h->hypermeasure_count; k++) {
+            const AnalysisHypermeasure *m = &h->hypermeasures[k];
+            digest_int(d, m->first_measure);
+            digest_int(d, m->last_measure);
+            digest_int(d, m->measures);
+            digest_string(d, m->kind);
+            digest_int(d, m->extra_hyperbeats);
+            digest_int(d, m->contains_cadence);
+            digest_double(d, m->score);
         }
     }
-    free(ids);
-    for (size_t i = 0; i < meter->hemiolas.count; i++) {
-        digest_bytes(d, &meter->hemiolas.items[i].claim, sizeof(meter->hemiolas.items[i].claim));
-    }
-    digest_int(d, (long long)meter->hypermeter.phrase_count);
-    digest_int(d, (long long)meter->hypermeter.hypermeasure_count);
-    digest_int(d, (long long)meter->hypermeter.reinterpretation_count);
-    for (size_t i = 0; i < meter->hypermeter.hypermeasure_count; i++) {
-        digest_bytes(d, &meter->hypermeter.hypermeasures[i].claim, sizeof(meter->hypermeter.hypermeasures[i].claim));
-    }
-    digest_int(d, (long long)meter->densities.count);
-    for (size_t i = 0; i < meter->densities.count; i++) {
-        digest_bytes(d, &meter->densities.items[i].claim, sizeof(meter->densities.items[i].claim));
+    digest_int(d, (long long)result->density_count);
+    for (size_t i = 0; i < result->density_count; i++) {
+        const AnalysisDensity *a = &result->densities[i];
+        digest_int(d, (long long)a->phrase);
+        digest_int(d, a->line);
+        digest_int(d, a->notes);
+        digest_int(d, a->attacks);
+        digest_int(d, a->measures);
+        digest_double(d, a->attacks_per_beat_mean);
+        digest_double(d, a->attacks_per_beat_max);
+        digest_double(d, a->mean_inter_onset);
+        digest_double(d, a->on_beat_share);
+        digest_double(d, a->off_beat_share);
+        digest_int(d, a->bin_count);
+        for (unsigned k = 0; k < a->bin_count; k++) {
+            digest_int(d, a->bins[k].value.num);
+            digest_int(d, a->bins[k].value.den);
+            digest_int(d, a->bins[k].count);
+        }
     }
 }
 
@@ -558,7 +594,7 @@ static void check_subsets(const char *context, ChainInput *input, const Referenc
     assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &cadences) == ANALYSIS_CHAIN_OK);
     if (!CHECK(analysis_chain_segments(cadences) != NULL && analysis_chain_key_regions(cadences) != NULL && analysis_chain_chords(cadences) != NULL)) abort();
     if (!CHECK(analysis_chain_numerals(cadences) != NULL && analysis_chain_outer_voices(cadences) != NULL && analysis_chain_cadences(cadences) != NULL)) abort();
-    if (!CHECK(analysis_chain_phrases(cadences) == NULL && analysis_chain_motives(cadences) == NULL && analysis_chain_meter(cadences) == NULL)) abort();
+    if (!CHECK(analysis_chain_phrases(cadences) == NULL && analysis_chain_motives(cadences) == NULL)) abort();
     if (!CHECK(analysis_chain_texture(cadences) == NULL && analysis_chain_voice_leading(cadences) == NULL && analysis_chain_melody(cadences) == NULL)) abort();
     if (!CHECK(analysis_chain_schemas(cadences) == NULL && analysis_chain_sequences(cadences) == NULL)) abort();
     /* with no form there is no second pass: the keys are the first pass's, and the cadences their own */
@@ -577,7 +613,7 @@ static void check_subsets(const char *context, ChainInput *input, const Referenc
     assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &form) == ANALYSIS_CHAIN_OK);
     if (!CHECK(stage_digest(STAGE_KEYS, form) == ref->digest[STAGE_KEYS])) abort();
     if (!CHECK(stage_digest(STAGE_FORM, form) == ref->digest[STAGE_FORM])) abort();
-    if (!CHECK(analysis_chain_motives(form) != NULL && analysis_chain_meter(form) == NULL && analysis_chain_texture(form) == NULL)) abort();
+    if (!CHECK(analysis_chain_motives(form) != NULL && analysis_chain_texture(form) == NULL)) abort();
     analysis_chain_destroy(form);
 
     /* the keys alone, and a run with refine_keys off, differ only in the second pass */
@@ -812,6 +848,20 @@ static void check_piece(const Reference *ref, bool dump) {
         fprintf(stderr, "%s: the chain failed at status %d\n", context, (int)status);
         abort();
     }
+    /* The same piece as an imported score, for the meter results of the collected result. */
+    char score_path[1024];
+    snprintf(score_path, sizeof(score_path), "%s/%s", URSATZ_CORPUS_DIR, ref->midi);
+    ImportedScore score;
+    assert(imported_score_import_file(score_path, IMPORTED_FORMAT_MIDI, &score, NULL) == IMPORTED_SCORE_OK);
+    if (ref->three_four) {
+        ImportedReading reading = imported_reading_none();
+        assert(imported_reading_parse_meter("3/4", &reading) && imported_reading_apply(&score, &reading) == IMPORTED_READING_OK);
+    }
+    AnalysisChainConfig scored_config = reference_config(ref);
+    scored_config.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    AnalysisChain *scored = NULL;
+    assert(analysis_chain_run_score(&score, &scored_config, &scored) == ANALYSIS_CHAIN_OK);
+    scored_chain = scored;
     size_t segments = analysis_chain_segment_count(chain);
     size_t key_regions = analysis_chain_key_regions(chain)->region_count;
     size_t cadences = analysis_chain_cadences(chain)->count;
@@ -840,6 +890,9 @@ static void check_piece(const Reference *ref, bool dump) {
         printf("  %s: %zu segments, %zu key regions, %zu cadences, %zu phrases; %d stages as expected\n", context, segments, key_regions,
                cadences, phrases, STAGE_COUNT);
     }
+    analysis_chain_destroy(scored);
+    scored_chain = NULL;
+    imported_score_destroy(&score);
     analysis_chain_destroy(chain);
     chain_input_destroy(&input);
 }

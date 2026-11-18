@@ -97,13 +97,17 @@ static void test_only_a_full_run_collects(void) {
     assert(analysis_chain_score(partial) == &score);
     analysis_chain_destroy(partial);
 
-    /* Every chain stage without the result-only stages: the result is collected without them. */
+    /* Every chain stage without the result-only stages: the result is collected without them. The meter stage is the chain's
+       own, so its results (the densities) are there; the progressions and the form plan are not. */
+    ImportedScore bach;
+    import("Bach 114.mid", &bach);
     c.stages = ANALYSIS_CHAIN_STAGE_PERCEPTION;
     AnalysisChain *perception = NULL;
-    assert(analysis_chain_run_score(&score, &c, &perception) == ANALYSIS_CHAIN_OK);
-    assert(analysis_chain_result(perception)->entry_count > 0);
-    assert(analysis_chain_result(perception)->density_count == 0 && analysis_chain_result(perception)->section_count == 0);
+    assert(analysis_chain_run_score(&bach, &c, &perception) == ANALYSIS_CHAIN_OK);
+    assert(analysis_chain_result(perception)->entry_count == 54 && analysis_chain_result(perception)->density_count == 8);
+    assert(analysis_chain_result(perception)->progression_count == 0 && analysis_chain_result(perception)->section_count == 0);
     analysis_chain_destroy(perception);
+    imported_score_destroy(&bach);
 
     /* No knowledge, no perception stage. */
     AnalysisChain *refused = NULL;
