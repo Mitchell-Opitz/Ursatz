@@ -179,6 +179,9 @@ PlanResult plan_add_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, Plan
     node->parent = parent;
     node->span = span;
     node->name = name_copy;
+    if (kind == PLAN_NODE_SECTION) {
+        section_description_init(&node->section);
+    }
     *out_id = id;
     return PLAN_OK;
 }
@@ -353,7 +356,9 @@ static PlanResult remove_nodes(PiecePlan *plan, const NodeSet *set) {
     }
     for (size_t i = 0; i < plan->node_count; i++) {
         if (!plan->nodes[i].removed) {
-            constraints_naming(&plan->nodes[i].constraints, set, true);
+            if (constraints_naming(&plan->nodes[i].constraints, set, true) > 0 && plan->nodes[i].kind == PLAN_NODE_SECTION) {
+                plan_section_from_constraints(plan, &plan->nodes[i].constraints, &plan->nodes[i].section);
+            }
         }
     }
     for (size_t i = 0; i < plan->lane_span_count; i++) {

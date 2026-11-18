@@ -1,5 +1,6 @@
 #include <ursatz_composer/constraint.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -234,6 +235,107 @@ static const PlanConstraint *list_at(const ConstraintList *list, size_t index) {
     return index < list->count ? &list->items[index] : NULL;
 }
 
+/* ------------------------------------------------------------- the description of a section node */
+
+/* The description a section's constraints make. A constraint that is none of these kinds stays a constraint. */
+void plan_section_from_constraints(const PiecePlan *plan, const ConstraintList *list, SectionDescription *out) {
+    size_t cadences = 0;
+    section_description_init(out);
+    for (size_t i = 0; i < list->count; i++) {
+        const PlanConstraint *constraint = &list->items[i];
+        switch (constraint->kind) {
+        case PLAN_CONSTRAINT_SECTION_LETTER:
+            snprintf(out->letter, sizeof(out->letter), "%s", constraint->params.letter);
+            break;
+        case PLAN_CONSTRAINT_PIECE_PART:
+            out->has_role = true;
+            out->role = (SectionRole)(SECTION_ROLE_INTRO + constraint->params.piece_part.part);
+            snprintf(out->id, sizeof(out->id), "%s", constraint->params.piece_part.id);
+            break;
+        case PLAN_CONSTRAINT_MATERIAL:
+            out->has_role = true;
+            out->role = SECTION_ROLE_MATERIAL;
+            break;
+        case PLAN_CONSTRAINT_SEAM:
+            out->has_role = true;
+            out->role = SECTION_ROLE_SEAM;
+            break;
+        case PLAN_CONSTRAINT_LIQUIDATION:
+            out->has_role = true;
+            out->role = SECTION_ROLE_LIQUIDATION;
+            break;
+        case PLAN_CONSTRAINT_FREE_PHRASE:
+            out->free_phrase = true;
+            break;
+        case PLAN_CONSTRAINT_HOLD:
+            out->leads_in = true;
+            break;
+        case PLAN_CONSTRAINT_THEME_PAIRING:
+            out->has_pairing = true;
+            out->pairing = constraint->params.theme_pairing;
+            break;
+        case PLAN_CONSTRAINT_CADENCE:
+            /* The first is the section's, a second the weak one an antecedent ends in. */
+            if (cadences == 0) {
+                out->has_cadence = true;
+                out->cadence = constraint->params.cadence;
+            } else if (cadences == 1) {
+                out->has_first_cadence = true;
+                out->first_cadence = constraint->params.cadence;
+            }
+            cadences++;
+            break;
+        case PLAN_CONSTRAINT_RETURN: {
+            const PlanReturn *section_return = &constraint->params.section_return;
+            const char *name = plan_node_name(plan, section_return->section);
+            snprintf(out->returns, sizeof(out->returns), "%s", name ? name : "");
+            out->variation = section_return->variation;
+            out->setting = section_return->setting >= PLAN_ACCOMPANIMENT_BLOCK && section_return->setting <= PLAN_ACCOMPANIMENT_OOM_PAH
+                               ? (SectionSetting)section_return->setting
+                               : SECTION_SETTING_NONE;
+            out->mode = section_return->across_modes ? SECTION_MODE_HOME : SECTION_MODE_NONE;
+            break;
+        }
+        case PLAN_CONSTRAINT_LAYERS:
+            out->layers = constraint->params.layers.lanes;
+            break;
+        case PLAN_CONSTRAINT_PEDAL:
+            out->pedal = constraint->params.pedal.degree;
+            break;
+        case PLAN_CONSTRAINT_CONSTRUCTION:
+            out->has_construction = true;
+            out->construction = constraint->params.construction;
+            break;
+        case PLAN_CONSTRAINT_CONNECTIVE:
+            out->connective = SECTION_CONNECTIVE_ALWAYS; /* the plan holds that it was asked for; sometimes was drawn at build */
+            out->connective_written = constraint->params.connective.written;
+            break;
+        case PLAN_CONSTRAINT_FIGURE:
+            out->has_figure = true;
+            out->figure = constraint->params.figure;
+            break;
+        case PLAN_CONSTRAINT_SECTION_FUNCTION:
+            out->has_function = true;
+            out->function = constraint->params.section_function;
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+const SectionDescription *plan_node_section(const PiecePlan *plan, NodeId id) {
+    const PlanNode *node = plan_node_at(plan, id);
+    return node && node->kind == PLAN_NODE_SECTION ? &node->section : NULL;
+}
+
+/* A section node's description follows its constraints. */
+static void section_refresh(const PiecePlan *plan, PlanNode *node) {
+    if (node->kind == PLAN_NODE_SECTION) {
+        plan_section_from_constraints(plan, &node->constraints, &node->section);
+    }
+}
+
 PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {
     if (!plan || !constraint) {
         return PLAN_ERR_NULL;
@@ -250,7 +352,11 @@ PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstr
          node->kind != PLAN_NODE_SECTION)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
-    return list_add(&node->constraints, constraint);
+    PlanResult added = list_add(&node->constraints, constraint);
+    if (added == PLAN_OK) {
+        section_refresh(plan, node);
+    }
+    return added;
 }
 
 size_t plan_node_constraint_count(const PiecePlan *plan, NodeId id) {
@@ -271,7 +377,11 @@ PlanResult plan_node_remove_constraint(PiecePlan *plan, NodeId id, size_t index)
     if (node->state == PLAN_STATE_GIVEN) {
         return PLAN_ERR_GIVEN_LOCKED;
     }
-    return list_remove(&node->constraints, index);
+    PlanResult removed = list_remove(&node->constraints, index);
+    if (removed == PLAN_OK) {
+        section_refresh(plan, node);
+    }
+    return removed;
 }
 
 PlanResult plan_lane_span_add_constraint(PiecePlan *plan, LaneSpanId id, const PlanConstraint *constraint) {

@@ -334,6 +334,9 @@ typedef struct {
     } params;
 } PlanConstraint;
 
+/* The description of a section node (plan/section.h): NULL for a node that is not a section. The pointer is valid until the plan changes. */
+const SectionDescription *plan_node_section(const PiecePlan *plan, NodeId id);
+
 /* Fails with PLAN_ERR_BAD_PAYLOAD for a constraint that is malformed or names a missing motive node. */
 PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint);
 size_t plan_node_constraint_count(const PiecePlan *plan, NodeId id);
