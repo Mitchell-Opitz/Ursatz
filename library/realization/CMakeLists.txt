@@ -9,6 +9,7 @@ add_library(ursatz_realization
     scoring.c
     movement.c
     work.c
+    piano_reduction.c
 )
 ursatz_public_headers(ursatz_realization
     BASE ${PROJECT_SOURCE_DIR}

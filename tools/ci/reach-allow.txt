@@ -14,6 +14,7 @@ library/model/pitch/region.c region_equals  # no app compares regions until P60 
 library/model/pitch/region.c same_material  # helper of region_equals, which no app calls until P60; its tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/model/time/meter_arithmetic.c meter_map_time_of  # the inverse of meter_map_position_of has no app caller until P59 reads the performer parts' local maps; its tests call it
+library/model/time/meter_map.c meter_map_copy  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
 library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/tempo_map.c region_at_time  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
@@ -39,6 +40,44 @@ library/realization/line.c line_relation_count  # no app calls it until P74 (lin
 library/realization/line.c line_role  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
 library/realization/line.c line_role_from_name  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
 library/realization/line.c line_role_name  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/movement.c grow  # helper of the movement adders, which no app calls until P59 B7; its tests call it
+library/realization/movement.c movement_add_assignment  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_add_compound_part  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/movement.c movement_add_key_signature  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_add_line  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_add_marker  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_add_part  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_add_played_span  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/movement.c movement_assignment_at  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_assignment_count  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_compound_part_at  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/movement.c movement_compound_part_count  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/movement.c movement_create  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_destroy  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_ensemble  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_home  # no app calls it until P60 (regions per section); its tests call it
+library/realization/movement.c movement_id  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_key_signature_at  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_key_signature_count  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_line_at  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_line_count  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_line_named  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_marker_at  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_marker_count  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_meter_map  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_part_at  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_part_count  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_part_named  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_played_span_at  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/movement.c movement_played_span_count  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/movement.c movement_score  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_set_ensemble  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_set_home  # no app calls it until P60 (regions per section); its tests call it
+library/realization/movement.c movement_set_meter_map  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_set_tempo_map  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_tempo_map  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c movement_title  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/movement.c time_ok  # helper of the movement adders, which no app calls until P59 B7; its tests call it
 library/realization/performer_part.c note_named  # helper of performer_part_add_note and performer_part_set_note_flags, which no app calls until P59 B7; its tests call it
 library/realization/performer_part.c performer_part_add_note  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
 library/realization/performer_part.c performer_part_add_pedal  # no app calls it until P75 (pedal writing); its tests call it
@@ -58,6 +97,8 @@ library/realization/performer_part.c performer_part_players  # no app calls it u
 library/realization/performer_part.c performer_part_set_local_meter_map  # no app calls it until P61 (import into performer parts); its tests call it
 library/realization/performer_part.c performer_part_set_note_flags  # no app calls it until P62 (edits saved with the realization); its tests call it
 library/realization/performer_part.c performer_part_staff_count  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
+library/realization/piano_reduction.c movement_reduce_to_piano  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/piano_reduction.c staff_of  # helper of movement_reduce_to_piano, which no app calls until P59 B7; its tests call it
 library/realization/realization.c realization_id_valid  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
 library/realization/scoring.c build_part  # helper of realization_score, which no app calls until P59 B7; its tests call it
 library/realization/scoring.c check_all  # helper of realization_score, which no app calls until P59 B7; its tests call it
@@ -74,6 +115,22 @@ library/realization/scoring.c realization_score  # no app calls it until P59 B7 
 library/realization/scoring.c release_fresh  # helper of realization_score, which no app calls until P59 B7; its tests call it
 library/realization/scoring.c scoring_assignment_check  # no app calls it until P59 B7 (the Composer export builds lines and parts); its tests call it
 library/realization/scoring.c sort_by_onset  # helper of build_part, which no app calls until P59 B7; its tests call it
+library/realization/work.c copy_text  # helper of work_create, which no app calls until P59 B7; its tests call it
+library/realization/work.c material_reference_valid  # helper of work_add_material, which no app calls until P62; its tests call it
+library/realization/work.c work_add_material  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/work.c work_add_movement  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_composer  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_create  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_destroy  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_ensemble  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_id  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_material_at  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/work.c work_material_count  # no app calls it until P62 (the composer saves its realization); its tests call it
+library/realization/work.c work_movement_at  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_movement_count  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_movement_ensemble  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_set_ensemble  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
+library/realization/work.c work_title  # no app calls it until P59 B7 (the Composer export builds the work); its tests call it
 library/theory/harmony/harmony_applied.c harmony_applied_label  # the root-position label; the Composer calls harmony_applied_label_inverted, whose inversion 0 is this label, and the tests check both
 library/theory/knowledge/instrument.c instrument_in_range  # no app tests a pitch against an instrument range until P59 B7 reads the piano entry (P75 keyboard limits); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app looks up a chord type by id (chord readings find it by members, P62 may name one); its tests call it
