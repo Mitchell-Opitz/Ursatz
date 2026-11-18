@@ -24,6 +24,16 @@
 - **Errors.** A NULL `name`, `text` or `position`, or a count above 0 with a NULL array, is `MIDI_RENDER_ERR_NULL_ARG`. Two names for one voice (two NULL voice ids included), a marker position that is negative or not a whole tick, or a name or text longer than 0x0FFFFFFF bytes is `MIDI_RENDER_ERR_NOT_REPRESENTABLE`. Nothing is written on error.
 - **Import.** The importer keeps ignoring both meta-events: notes, meter and tempo read back are the same with and without them (`test_midi_renderer_meta.c`).
 
+## Performer part tracks (R-599)
+
+`MidiRenderOptions.parts` (`MidiRenderPart { name, program, voice_ids, voice_count, pedals, pedal_count }`) groups voices into part tracks. With `part_count` 0 the renderer is exactly as above, one track per voice.
+
+- **Tracks.** Track 0 as before, then one track per part in the given order, named `name` at tick 0 when it is not NULL (the options' `track_names` are not read). A part none of whose voices has a note still gets its (empty) track.
+- **Channels.** Each voice id a part lists is one channel. Channels go to the voices of all parts together in the order they first sound (earliest start tick, then input order), skipping channel 9: the rule voice tracks follow, so a movement whose voices were tracks keeps each note's channel. More than 15 channels is `MIDI_RENDER_ERR_TOO_MANY_VOICES`.
+- **Programs and pedal.** Each channel gets a program change (`0xC0 | channel`, the part's General MIDI program 0 to 127) at tick 0 after the track name. Each pedal span of a part writes controller 64 with value 127 at its start tick and value 0 at its end tick on every channel of the part.
+- **Order at an equal tick** in a part track: the name, the program changes, the note-offs, controller 64 value 0, controller 64 value 127, the note-ons, otherwise input order.
+- **Refused** (`MIDI_RENDER_ERR_NOT_REPRESENTABLE`): a voice listed twice, a note with no voice or whose voice no part lists, a program outside 0 to 127, a pedal whose ticks are not whole. A NULL array with a count is `MIDI_RENDER_ERR_NULL_ARG`. A same-pitch overlap is refused per channel, so two voices of one part may sound the same pitch together.
+
 ## Exactness
 
 `tick = position * 4 * division`. A position or duration that is not a whole number of ticks is `MIDI_RENDER_ERR_NOT_REPRESENTABLE`; nothing is rounded. The same result covers: a negative position, a tick past the 28-bit delta limit, a pitch that is not an integer MIDI note number 0 to 127, two same-pitch notes overlapping in one voice track, tempo 0 or above 0xFFFFFF, a time signature top above 255, and a key signature sf outside -7 to 7.
@@ -34,4 +44,4 @@ The tests render four of the five framework-v1 reference pieces (Bach 114, Cleme
 
 ## Out of scope
 
-Velocity and dynamics, articulation, control and program events, sysex, SMPTE division, format 0 and 2, lyrics, cue points, MusicXML rehearsal marks, reading names or markers in the importer, MusicXML export, playback.
+Velocity and dynamics, articulation, control events other than a part's sustain pedal, program changes other than a part's, sysex, SMPTE division, format 0 and 2, lyrics, cue points, MusicXML rehearsal marks, reading names or markers in the importer, MusicXML export, playback.
