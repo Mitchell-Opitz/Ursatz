@@ -1043,10 +1043,11 @@ static cJSON *changes_json(const Row *row) {
     const char *setting = return_setting_name(row);
     const PitchMaterial *to_material = NULL;
     bool mapped = form_return_mode_change(row->plan, row->node, &to_material);
-    const char *mode = mapped ? (composer_material_is_minor(to_material) ? "minor" : "major") : NULL;
+    const char *material_id = mapped && to_material ? to_material->id : NULL;
+    const char *mode = mapped ? (composer_material_is_minor(to_material) ? "minor" : "major") : NULL; /* the text keeps its word */
     bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
               cJSON_AddStringToObject(entry, "variation", plan_return_variation_name(spec->variation)) &&
-              api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "mode", string_or_null(mode));
+              api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "material", string_or_null(material_id));
     char text[256] = "";
     size_t changed = 0;
     size_t chords = 0;

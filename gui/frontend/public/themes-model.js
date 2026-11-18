@@ -878,7 +878,7 @@
       });
     const brief = summary.brief || {};
     const tempo = brief.tempo || {};
-    const mode = brief.mode || {};
+    const mode = brief.material ? { mode: Vocab.keyWord(brief.material.material), from: brief.material.from } : brief.mode || {};
     const without = Array.isArray(brief.without) ? brief.without : [];
     const distance = theme.style_distance && typeof theme.style_distance === "object" ? theme.style_distance : null;
     const pieces = r.brief && typeof r.brief === "object" ? r.brief : {};

@@ -89,7 +89,7 @@ static void refused(const char *kind, const char *request, const char *path) {
 
 static cJSON *random_request(const char *mode, const char *meter) {
     cJSON *request = cJSON_CreateObject();
-    assert(cJSON_AddStringToObject(request, "mode", mode) && cJSON_AddStringToObject(request, "meter", meter));
+    assert(cJSON_AddStringToObject(request, "material", mode) && cJSON_AddStringToObject(request, "meter", meter));
     assert(cJSON_AddNumberToObject(request, "seed", 3));
     return request;
 }
@@ -132,7 +132,7 @@ static void test_lists(void) {
     composer_response_destroy(&response);
     composer_response_destroy(&response);
 
-    static const char *const NAMES[] = {"meters",         "modes",          "piece_modes",   "keys",
+    static const char *const NAMES[] = {"meters",         "materials",      "piece_materials", "keys",
                                         "pitch_class_names", "cadences",    "theme_cadences", "motive_forms",
                                         "random_motive_strategies",
                                         "roles",          "functions",      "distances",     "theme_slots",
@@ -231,7 +231,15 @@ static void test_lists(void) {
     assert(cJSON_GetArraySize(list("cadences")) == 5);
     assert(cJSON_GetArraySize(list("theme_cadences")) == 3);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("cadences"), 0)), "PAC") == 0);
-    assert(cJSON_GetArraySize(list("piece_modes")) == 3 && cJSON_GetArraySize(list("modes")) == 2);
+    assert(cJSON_GetArraySize(list("piece_materials")) == 3 && cJSON_GetArraySize(list("materials")) == 2);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("materials"), 0)), "omt.material.major") == 0 &&
+           strcmp(value_of(cJSON_GetArrayItem(list("materials"), 1)), "omt.material.natural-minor") == 0 &&
+           strcmp(value_of(cJSON_GetArrayItem(list("piece_materials"), 2)), "style") == 0);
+    {
+        const cJSON *names = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(list("pitch_class_names"), 1), "names");
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(names, "omt.material.major")->valuestring, "Db") == 0 &&
+               strcmp(cJSON_GetObjectItemCaseSensitive(names, "omt.material.natural-minor")->valuestring, "C#") == 0);
+    }
     const cJSON *pickups = cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups");
     for (int i = 0; i < 4; i++) {
         const cJSON *offered = cJSON_GetObjectItemCaseSensitive(pickups, value_of(cJSON_GetArrayItem(meters, i)));
@@ -251,7 +259,7 @@ static void test_round_trip(void) {
         accepted("random_motive", request);
         cJSON_Delete(request);
     }
-    cJSON_ArrayForEach(entry, list("modes")) {
+    cJSON_ArrayForEach(entry, list("materials")) {
         cJSON *request = random_request(value_of(entry), "4/4");
         accepted("random_motive", request);
         cJSON_Delete(request);
@@ -320,13 +328,14 @@ static void test_round_trip(void) {
         accepted("piece", request);
         cJSON_Delete(request);
     }
-    cJSON_ArrayForEach(entry, list("piece_modes")) {
+    cJSON_ArrayForEach(entry, list("piece_materials")) {
         if (strcmp(value_of(entry), "style") == 0) {
             continue; /* the mode "style" reads the key and mode from a style model file */
         }
         const char *parts[] = {"body"};
         cJSON *request = piece_request(parts, 1);
-        cJSON_ReplaceItemInObjectCaseSensitive(request, "mode", cJSON_CreateString(value_of(entry)));
+        cJSON_DeleteItemFromObjectCaseSensitive(request, "mode");
+        assert(cJSON_AddStringToObject(request, "material", value_of(entry)));
         accepted("piece", request);
         cJSON_Delete(request);
     }
@@ -693,7 +702,7 @@ static void test_defaults(void) {
     text = print(request);
     document = validated("random_motive", text, COMPOSER_OK, &response);
     const cJSON *filled = cJSON_GetObjectItemCaseSensitive(document, "request");
-    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(filled, "mode");
+    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(filled, "material");
     const cJSON *meter = cJSON_GetObjectItemCaseSensitive(filled, "meter");
     assert(cJSON_IsString(mode) && (strcmp(mode->valuestring, "major") == 0 || strcmp(mode->valuestring, "minor") == 0));
     assert(cJSON_IsString(meter) && strcmp(meter->valuestring, "random") != 0);
@@ -779,7 +788,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.25") == 0);
+    assert(strcmp(composer_api_version(), "2.0") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

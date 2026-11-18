@@ -103,8 +103,9 @@ static void print_theme_text(const cJSON *theme) {
 
 /* The brief as theme prints it: grow's brief lines. */
 void cli_print_brief_json(const cJSON *brief) {
-    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(brief, "mode");
-    printf("brief: mode %s (%s)", string_of(mode, "mode"), string_of(mode, "from"));
+    const cJSON *material = cJSON_GetObjectItemCaseSensitive(brief, "material");
+    char word[64];
+    printf("brief: mode %s (%s)", cli_material_word(string_of(material, "material"), word, sizeof word), string_of(material, "from"));
     const cJSON *brief_tempo = cJSON_GetObjectItemCaseSensitive(brief, "tempo");
     if (cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(brief_tempo, "qpm"))) {
         printf(", tempo ");

@@ -676,7 +676,7 @@ static ComposerStatus build_document(const Options *options, const Built *built,
 
 /* --- the lists of names --------------------------------------------------------------------------------- */
 
-/* `list_schemas`: {"schemas": [{"name", "function", "modes"}], "sequences": [name]}. */
+/* `list_schemas`: {"schemas": [{"name", "function", "materials"}], "sequences": [name]}. */
 static ComposerStatus list_names(const CommonPracticeMaterials *materials, ComposerResponse *out) {
     cJSON *document = cJSON_CreateObject();
     cJSON *schemas = document ? cJSON_AddArrayToObject(document, "schemas") : NULL;
@@ -689,14 +689,15 @@ static ComposerStatus list_names(const CommonPracticeMaterials *materials, Compo
             continue;
         }
         cJSON *entry = cJSON_CreateObject();
-        cJSON *modes = entry ? cJSON_CreateArray() : NULL;
-        ok = entry && modes && cJSON_AddStringToObject(entry, "name", galant_schema_name((GalantSchemaId)id)) &&
+        cJSON *materials_array = entry ? cJSON_CreateArray() : NULL;
+        ok = entry && materials_array && cJSON_AddStringToObject(entry, "name", galant_schema_name((GalantSchemaId)id)) &&
              cJSON_AddStringToObject(entry, "function", schema_function_name(galant_prototype((GalantSchemaId)id)->function)) &&
-             (!major || cJSON_AddItemToArray(modes, cJSON_CreateString("major"))) &&
-             (!is_minor || cJSON_AddItemToArray(modes, cJSON_CreateString("minor"))) && cJSON_AddItemToObject(entry, "modes", modes) &&
+             (!major || cJSON_AddItemToArray(materials_array, cJSON_CreateString(materials->major->id))) &&
+             (!is_minor || cJSON_AddItemToArray(materials_array, cJSON_CreateString(materials->natural_minor->id))) &&
+             cJSON_AddItemToObject(entry, "materials", materials_array) &&
              cJSON_AddItemToArray(schemas, entry);
         if (!ok) {
-            cJSON_Delete(modes);
+            cJSON_Delete(materials_array);
             cJSON_Delete(entry);
         }
     }

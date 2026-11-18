@@ -308,13 +308,15 @@ static unsigned char *read_file_body(struct mg_connection *conn, size_t *size, i
 static bool import_key_text(const cJSON *document, char *out, size_t out_size) {
   const cJSON *key = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "motive"), "key");
   const cJSON *tonic = cJSON_GetObjectItemCaseSensitive(key, "tonic_pitch_class");
-  const cJSON *mode = cJSON_GetObjectItemCaseSensitive(key, "mode");
+  const cJSON *material = cJSON_GetObjectItemCaseSensitive(key, "material");
   char name[16];
-  if (!cJSON_IsNumber(tonic) || !cJSON_IsString(mode) ||
-      !ursatz_gui_composer_tonic_name(tonic->valueint, mode->valuestring, name, sizeof(name))) {
+  char word[32];
+  if (!cJSON_IsNumber(tonic) || !cJSON_IsString(material) ||
+      !ursatz_gui_composer_tonic_name(tonic->valueint, material->valuestring, name, sizeof(name)) ||
+      !ursatz_gui_composer_key_word(material->valuestring, word, sizeof(word))) {
     return false;
   }
-  snprintf(out, out_size, "%s %s", name, mode->valuestring);
+  snprintf(out, out_size, "%s %s", name, word);
   return true;
 }
 

@@ -524,7 +524,7 @@ static cJSON *key_json(const MotiveAnalysis *analysis) {
     }
     cJSON *object = cJSON_CreateObject();
     bool ok = object && plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&analysis->key))) &&
-              add_string(object, "mode", composer_key_is_minor(&analysis->key) ? "minor" : "major") &&
+              add_string(object, "material", composer_key_material_id(&analysis->key)) &&
               add_string(object, "source", key_source_name(analysis->key_source));
     if (!ok) {
         cJSON_Delete(object);

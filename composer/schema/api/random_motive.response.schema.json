@@ -39,10 +39,10 @@
       "minProperties": 1,
       "additionalProperties": false,
       "properties": {
-        "mode": {
+        "material": {
           "enum": [
-            "major",
-            "minor"
+            "omt.material.major",
+            "omt.material.natural-minor"
           ]
         },
         "meter": {

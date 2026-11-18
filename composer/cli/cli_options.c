@@ -65,6 +65,26 @@ bool cli_equals_ignore_case(const char *a, const char *b) {
     return *a == *b;
 }
 
+const char *cli_material_word(const char *id, char *out, size_t size) {
+    ComposerResponse response;
+    memset(&response, 0, sizeof response);
+    snprintf(out, size, "%s", id ? id : "");
+    if (id && composer_api_vocabulary(cli_context(), &response) == COMPOSER_OK) {
+        cJSON *document = cJSON_Parse(response.json);
+        const cJSON *entry = NULL;
+        cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(document, "materials")) {
+            const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
+            const cJSON *label = cJSON_GetObjectItemCaseSensitive(entry, "label");
+            if (cJSON_IsString(value) && cJSON_IsString(label) && strcmp(value->valuestring, id) == 0) {
+                snprintf(out, size, "%s", label->valuestring);
+            }
+        }
+        cJSON_Delete(document);
+    }
+    composer_response_destroy(&response);
+    return out;
+}
+
 long cli_limit(const char *name) {
     ComposerResponse response;
     long value = 0;

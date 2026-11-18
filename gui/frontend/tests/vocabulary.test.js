@@ -52,7 +52,7 @@ async function main() {
   check(V.labelOf("piece_modes", "style") === "From the brief" && V.labelOf("meters", "9/8") === "9/8", "labels come from the list, else the value");
   check(V.entry("meters", "6/8").beats === 6 && V.entry("meters", "6/8").second_chord_beat === 3 && V.entry("meters", "2/4").second_chord_beat === undefined,
         "a meter says its beats and where a second chord starts");
-  check(same(V.values("keys").slice(0, 3), ["C major", "Db major", "D major"]) && V.entry("pitch_class_names", 3).minor === "D#" && V.entry("pitch_class_names", 3).major === "Eb",
+  check(same(V.values("keys").slice(0, 3), ["C major", "Db major", "D major"]) && V.entry("pitch_class_names", 3).names["omt.material.natural-minor"] === "D#" && V.entry("pitch_class_names", 3).names["omt.material.major"] === "Eb",
         "keys are spelled the Composer's way");
   check(V.limit("tempo_min") === 20 && V.limit("tempo_max") === 400 && V.limit("nothing", 7) === 7, "limits are numbers, with a fallback");
   check(V.seedMax("theme") === 4294967295 && V.seedMax("variants") === 4294967231, "the seed limits are given for each request");

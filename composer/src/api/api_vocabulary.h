@@ -29,8 +29,6 @@ void api_choice_list(const ApiChoice *table, char *out, size_t size);
 /* The values joined for a message: separator between entries, last_separator before the last ("a, b or c"). */
 void api_choice_join(const ApiChoice *table, const char *separator, const char *last_separator, char *out, size_t size);
 
-extern const ApiChoice API_MODES[];            /* major, minor */
-extern const ApiChoice API_PIECE_MODES[];      /* major, minor, style */
 extern const ApiChoice API_METERS[];           /* 2/4, 3/4, 4/4, 6/8 */
 extern const ApiChoice API_FUNCTIONS[];        /* beginning, continuation, contrast, cadential */
 extern const ApiChoice API_DISTANCES[];        /* close, medium, far */

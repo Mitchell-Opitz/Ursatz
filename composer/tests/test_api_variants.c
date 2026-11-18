@@ -99,7 +99,7 @@ static void test_operations(void) {
 static void test_variants(void) {
     ComposerResponse response;
     const char *const gui = "{\"functions\":[\"beginning\",\"continuation\"],\"distance\":\"medium\",\"count\":4,\"seed\":3,"
-                            "\"api_version\":1}";
+                            "\"api_version\":2}";
     char *request = variants_basic_request(gui);
     assert(composer_api_variants(test_context(), request, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "variants-basic.stdout.json");
@@ -235,12 +235,12 @@ static void test_random(void) {
         assert(composer_api_random_motive(test_context(), text, NULL, &response) == COMPOSER_OK);
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *drawn = cJSON_GetObjectItemCaseSensitive(document, "drawn");
-        assert(drawn && strcmp(cJSON_GetObjectItemCaseSensitive(drawn, "mode")->valuestring, DRAWS[i].mode) == 0);
+        assert(drawn && strstr(cJSON_GetObjectItemCaseSensitive(drawn, "material")->valuestring, DRAWS[i].mode));
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(drawn, "meter")->valuestring, DRAWS[i].meter) == 0);
         /* The motive is in the mode and the meter drawn. */
         const cJSON *motive = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "motives"), 0), "motive");
         const cJSON *key = cJSON_GetObjectItemCaseSensitive(motive, "key");
-        assert(strcmp(cJSON_GetObjectItemCaseSensitive(key, "mode")->valuestring, DRAWS[i].mode) == 0);
+        assert(strstr(cJSON_GetObjectItemCaseSensitive(key, "material")->valuestring, DRAWS[i].mode));
         assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(motive, "meter"), "beats_per_bar")->valueint ==
                atoi(DRAWS[i].meter));
         if (i == 0) {
@@ -257,7 +257,7 @@ static void test_random(void) {
     assert(strcmp(response.json, again.json) == 0);
     cJSON *only = cJSON_Parse(response.json);
     const cJSON *drawn_only = cJSON_GetObjectItemCaseSensitive(only, "drawn");
-    assert(drawn_only && cJSON_GetObjectItemCaseSensitive(drawn_only, "mode") && !cJSON_GetObjectItemCaseSensitive(drawn_only, "meter"));
+    assert(drawn_only && cJSON_GetObjectItemCaseSensitive(drawn_only, "material") && !cJSON_GetObjectItemCaseSensitive(drawn_only, "meter"));
     cJSON_Delete(only);
     composer_response_destroy(&response);
     composer_response_destroy(&again);
@@ -493,7 +493,7 @@ static void test_cancel(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.25") == 0);
+    assert(strcmp(composer_api_version(), "2.0") == 0);
     test_operations();
     test_variants();
     test_recognize();

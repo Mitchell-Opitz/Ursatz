@@ -710,7 +710,8 @@
   /* The mode and meter the Composer drew, from the random route's answer, or null when it names neither. */
   function drawnSettings(data) {
     const drawn = data && data.drawn && typeof data.drawn === "object" ? data.drawn : null;
-    return drawn && typeof drawn.mode === "string" && typeof drawn.meter === "string" ? { mode: drawn.mode, meter: drawn.meter } : null;
+    const mode = drawn && typeof drawn.material === "string" ? Vocab.keyWord(drawn.material) : "";
+    return mode && typeof drawn.meter === "string" ? { mode, meter: drawn.meter } : null;
   }
 
   /* The key text of a random candidate's motive ("D minor"), or "" when it has none. */
@@ -727,8 +728,8 @@
   function candidateKeyText(candidate) {
     const key = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.key : null;
     const names = key && Number.isInteger(key.tonic_pitch_class) ? Vocab.entry("pitch_class_names", key.tonic_pitch_class) : null;
-    const tonic = names && typeof key.mode === "string" ? names[key.mode] : null;
-    return tonic ? `${tonic} ${key.mode}` : "";
+    const tonic = names && typeof key.material === "string" && names.names ? names.names[key.material] : null;
+    return tonic ? `${tonic} ${Vocab.keyWord(key.material)}` : "";
   }
 
   /* The motif body to store for a random candidate (an entry of the random route's `motives`). values: the dialog

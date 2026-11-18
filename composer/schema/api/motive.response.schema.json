@@ -22,10 +22,10 @@
         },
         "key": {
           "type": "object",
-          "required": ["tonic_pitch_class", "mode"],
+          "required": ["tonic_pitch_class", "material"],
           "properties": {
             "tonic_pitch_class": { "type": "integer", "minimum": 0, "maximum": 11 },
-            "mode": { "enum": ["major", "minor"] }
+            "material": { "enum": ["omt.material.major", "omt.material.natural-minor"] }
           }
         },
         "form": { "enum": ["full", "rhythm", "contour"] },
@@ -64,10 +64,10 @@
         "bars": { "$ref": "#/$defs/rational" },
         "key": {
           "type": ["object", "null"],
-          "required": ["tonic_pitch_class", "mode", "source"],
+          "required": ["tonic_pitch_class", "material", "source"],
           "properties": {
             "tonic_pitch_class": { "type": "integer", "minimum": 0, "maximum": 11 },
-            "mode": { "enum": ["major", "minor"] },
+            "material": { "enum": ["omt.material.major", "omt.material.natural-minor"] },
             "source": { "enum": ["given", "inferred", "unspecified"] }
           }
         },

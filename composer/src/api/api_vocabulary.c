@@ -25,8 +25,6 @@
 
 /* --- the tables ------------------------------------------------------------------------------------------ */
 
-const ApiChoice API_MODES[] = {{"major", "Major"}, {"minor", "Minor"}, {NULL, NULL}};
-const ApiChoice API_PIECE_MODES[] = {{"major", "Major"}, {"minor", "Minor"}, {"style", "From the brief"}, {NULL, NULL}};
 const ApiChoice API_METERS[] = {{"2/4", "2/4"}, {"3/4", "3/4"}, {"4/4", "4/4"}, {"6/8", "6/8"}, {NULL, NULL}};
 const ApiChoice API_FUNCTIONS[] = {{"beginning", "Beginning"},
                                    {"continuation", "Continuation"},
@@ -167,6 +165,14 @@ static bool add_choices(cJSON *root, const char *name, const ApiChoice *table) {
     return list != NULL;
 }
 
+/* The materials the Composer composes in, as {value: the material's id, label: its key word}; a piece's list adds "style". */
+static bool add_materials(cJSON *root, const CommonPracticeMaterials *materials, const char *name, bool with_style) {
+    cJSON *list = add_list(root, name);
+    return list && add_choice(list, materials->major->id, materials->major->key_word) &&
+           add_choice(list, materials->natural_minor->id, materials->natural_minor->key_word) &&
+           (!with_style || add_choice(list, "style", "From the brief"));
+}
+
 /* The meters: the value, the beats of a bar and where a second chord may start (theme chords start on a cell of the meter). */
 static bool add_meters(cJSON *root) {
     cJSON *list = add_list(root, "meters");
@@ -209,8 +215,16 @@ static bool add_keys(cJSON *root, const CommonPracticeMaterials *materials) {
         *strchr(major, ' ') = '\0';
         *strchr(minor, ' ') = '\0';
         cJSON *entry = cJSON_CreateObject();
-        if (!entry || !cJSON_AddNumberToObject(entry, "value", pitch_class) || !cJSON_AddStringToObject(entry, "major", major) ||
-            !cJSON_AddStringToObject(entry, "minor", minor) || !cJSON_AddItemToArray(names, entry)) {
+        cJSON *spellings = entry ? cJSON_CreateObject() : NULL;
+        if (!entry || !spellings || !cJSON_AddNumberToObject(entry, "value", pitch_class) ||
+            !cJSON_AddStringToObject(spellings, materials->major->id, major) ||
+            !cJSON_AddStringToObject(spellings, materials->natural_minor->id, minor) ||
+            !cJSON_AddItemToObject(entry, "names", spellings)) {
+            cJSON_Delete(spellings);
+            cJSON_Delete(entry);
+            return false;
+        }
+        if (!cJSON_AddItemToArray(names, entry)) {
             cJSON_Delete(entry);
             return false;
         }
@@ -581,7 +595,7 @@ static bool add_limits(cJSON *root) {
 }
 
 bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials) {
-    return add_meters(root) && add_choices(root, "modes", API_MODES) && add_choices(root, "piece_modes", API_PIECE_MODES) &&
+    return add_meters(root) && add_materials(root, materials, "materials", false) && add_materials(root, materials, "piece_materials", true) &&
            add_keys(root, materials) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
            add_choices(root, "functions", API_FUNCTIONS) && add_choices(root, "distances", API_DISTANCES) &&
            add_theme_slots(root) && add_theme_lists(root) &&

@@ -1137,7 +1137,7 @@
     const versions = summary.versions && typeof summary.versions === "object" ? summary.versions : {};
     const brief = summary.brief || {};
     const tempo = brief.tempo || {};
-    const mode = brief.mode || {};
+    const mode = brief.material ? { mode: Vocab.keyWord(brief.material.material), from: brief.material.from } : brief.mode || {};
     const without = Array.isArray(brief.without) ? brief.without : [];
     const loop = summary.loop && typeof summary.loop === "object" ? summary.loop : null;
     const pieces = r.brief && typeof r.brief === "object" ? r.brief : {};

@@ -107,9 +107,10 @@ static void print_text(const cJSON *document) {
     printf("Seed: %.0f\n", member(document, "seed")->valuedouble);
     const cJSON *drawn = member(document, "drawn");
     if (drawn) {
-        const cJSON *mode = member(drawn, "mode");
+        const cJSON *mode = member(drawn, "material");
         const cJSON *meter = member(drawn, "meter");
-        printf("Drawn:%s%s%s%s\n", mode ? " mode " : "", mode ? mode->valuestring : "", meter ? (mode ? ", meter " : " meter ") : "",
+        char word[64];
+        printf("Drawn:%s%s%s%s\n", mode ? " mode " : "", mode ? cli_material_word(mode->valuestring, word, sizeof word) : "", meter ? (mode ? ", meter " : " meter ") : "",
                meter ? meter->valuestring : "");
     }
     size_t number = 0;

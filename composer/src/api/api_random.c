@@ -168,7 +168,7 @@ static ComposerStatus read_style(const cJSON *request, ComposerStyle **style, Co
 }
 
 /* {"seed", "motives": [<motive document>]}. NULL on failure. */
-static cJSON *random_document(unsigned long seed, const Motive *motives, size_t count, const char *drawn_mode,
+static cJSON *random_document(unsigned long seed, const Motive *motives, size_t count, const char *drawn_material,
                               const char *drawn_meter, const ComposerPreferences *preferences) {
     cJSON *document = cJSON_CreateObject();
     cJSON *array = document && cJSON_AddNumberToObject(document, "seed", (double)seed)
@@ -190,9 +190,9 @@ static cJSON *random_document(unsigned long seed, const Motive *motives, size_t 
         }
     }
     /* "drawn" names what the seed drew, and is there only when something was. */
-    cJSON *drawn = drawn_mode || drawn_meter ? cJSON_AddObjectToObject(document, "drawn") : NULL;
-    if ((drawn_mode || drawn_meter) &&
-        (!drawn || (drawn_mode && !cJSON_AddStringToObject(drawn, "mode", drawn_mode)) ||
+    cJSON *drawn = drawn_material || drawn_meter ? cJSON_AddObjectToObject(document, "drawn") : NULL;
+    if ((drawn_material || drawn_meter) &&
+        (!drawn || (drawn_material && !cJSON_AddStringToObject(drawn, "material", drawn_material)) ||
          (drawn_meter && !cJSON_AddStringToObject(drawn, "meter", drawn_meter)))) {
         cJSON_Delete(document);
         return NULL;
@@ -245,7 +245,7 @@ static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot 
     for (size_t i = 0; has_role && i < made; i++) {
         motives[i].accompaniment = accompaniment;
     }
-    cJSON *document = random_document(options.seed, motives, made, drawn_mode, drawn_meter, has_preferences ? &preferences : NULL);
+    cJSON *document = random_document(options.seed, motives, made, drawn_mode ? options.material->id : NULL, drawn_meter, has_preferences ? &preferences : NULL);
     if (!document) {
         return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }

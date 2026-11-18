@@ -293,7 +293,7 @@ static void test_done_when(void) {
     assert(marker_tick("ending.mid", "loopStart") < 0 && marker_tick("ending.mid", "loopEnd") < 0);
     /* The ending is the version after the body: the default ending of 2 bars, closing in a PAC. */
     assert(strstr(shown, "\"part\":\"ending\",\"function\":null,\"letter\":\"E\",\"start\":\"14/1\",\"beats\":8,\"cadence\":\"PAC\""));
-    assert(strstr(shown, "\"mode\":{\"mode\":\"minor\",\"from\":\"style\"}"));
+    assert(strstr(shown, "\"material\":{\"material\":\"omt.material.natural-minor\",\"from\":\"style\"}"));
 
     /* The Analyzer check passes on both: five items each (a cadence for each of the four sections, the key). */
     assert(count_of(shown, "\"contradicts\":false") == 2 && count_of(shown, "\"analyzer_check\":null") == 0);

@@ -223,10 +223,10 @@ static void print_names(const cJSON *document) {
     cJSON_ArrayForEach(schema, cJSON_GetObjectItemCaseSensitive(document, "schemas")) {
         bool major = false;
         bool is_minor = false;
-        const cJSON *mode = NULL;
-        cJSON_ArrayForEach(mode, cJSON_GetObjectItemCaseSensitive(schema, "modes")) {
-            major = major || strcmp(mode->valuestring, "major") == 0;
-            is_minor = is_minor || strcmp(mode->valuestring, "minor") == 0;
+        const cJSON *material = NULL;
+        cJSON_ArrayForEach(material, cJSON_GetObjectItemCaseSensitive(schema, "materials")) {
+            major = major || strcmp(material->valuestring, "omt.material.major") == 0;
+            is_minor = is_minor || strcmp(material->valuestring, "omt.material.natural-minor") == 0;
         }
         printf("  %-24s %-15s %s\n", cli_json_string(schema, "name"), cli_json_string(schema, "function"),
                major && is_minor ? "major, minor" : (major ? "major" : "minor"));

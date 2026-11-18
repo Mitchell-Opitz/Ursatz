@@ -1981,7 +1981,7 @@ static void test_served_defaults_and_draws(void) {
              cJSON_GetObjectItemCaseSensitive(draw, "seed")->valuedouble);
     cJSON *answer = test_http_json(PORT, "POST", "/api/materials/motifs/random", request, &status);
     const cJSON *drawn = cJSON_GetObjectItemCaseSensitive(answer, "drawn");
-    check(status == 200 && ok_true(answer) && strcmp(string_of(drawn, "mode"), string_of(draw, "mode")) == 0 &&
+    check(status == 200 && ok_true(answer) && strstr(string_of(drawn, "material"), string_of(draw, "mode")) != NULL &&
               strcmp(string_of(drawn, "meter"), string_of(draw, "meter")) == 0,
           "a seed draws the mode and meter the GUI drew");
     cJSON_Delete(answer);

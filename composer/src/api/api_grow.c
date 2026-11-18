@@ -1490,14 +1490,14 @@ static cJSON *ratio_number(const ComposerRatio *ratio) {
 cJSON *api_brief_json(const GrowBrief *brief) {
     cJSON *object = cJSON_CreateObject();
     cJSON *tempo = cJSON_CreateObject();
-    cJSON *mode = cJSON_CreateObject();
+    cJSON *material = cJSON_CreateObject();
     cJSON *without = cJSON_CreateArray();
-    if (!object || !tempo || !mode || !without ||
+    if (!object || !tempo || !material || !without ||
         !cJSON_AddItemToObject(tempo, "qpm", brief->tempo.denominator > 0 ? ratio_number(&brief->tempo) : cJSON_CreateNull()) ||
         !cJSON_AddStringToObject(tempo, "from", brief->tempo_from) ||
-        !cJSON_AddStringToObject(mode, "mode", composer_material_is_minor(brief->material) ? "minor" : "major") ||
-        !cJSON_AddStringToObject(mode, "from", brief->mode_from) || !cJSON_AddItemToObject(object, "tempo", tempo) ||
-        !cJSON_AddItemToObject(object, "mode", mode) ||
+        !cJSON_AddStringToObject(material, "material", brief->material ? brief->material->id : "omt.material.major") ||
+        !cJSON_AddStringToObject(material, "from", brief->mode_from) || !cJSON_AddItemToObject(object, "tempo", tempo) ||
+        !cJSON_AddItemToObject(object, "material", material) ||
         !cJSON_AddItemToObject(object, "density", brief->has_density ? ratio_number(&brief->density) : cJSON_CreateNull()) ||
         !cJSON_AddItemToObject(object, "without", without) ||
         (brief->development && !cJSON_AddStringToObject(object, "development", brief->development))) {
@@ -1505,8 +1505,8 @@ cJSON *api_brief_json(const GrowBrief *brief) {
         if (!object || !cJSON_GetObjectItem(object, "tempo")) {
             cJSON_Delete(tempo);
         }
-        if (!object || !cJSON_GetObjectItem(object, "mode")) {
-            cJSON_Delete(mode);
+        if (!object || !cJSON_GetObjectItem(object, "material")) {
+            cJSON_Delete(material);
         }
         if (!object || !cJSON_GetObjectItem(object, "without")) {
             cJSON_Delete(without);

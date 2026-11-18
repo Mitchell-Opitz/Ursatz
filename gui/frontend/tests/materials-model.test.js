@@ -282,17 +282,17 @@ check(random.method === "POST" && random.url === "/api/materials/motifs/random",
 check(randomBody.mode === "random" && randomBody.meter === "random" && !("key" in randomBody) && randomBody.form === "full", "random request leaves the mode and meter to the Composer and sends no key");
 check(randomBody.count === 1 && randomBody.seed === 7 && !("style_id" in randomBody) && M.RANDOM_DEFAULT_COUNT === undefined && M.randomProblems === undefined, "random request draws one motif from the seed with no style and no count option");
 check(M.randomSettings === undefined, "the draw of the mode and meter is not computed here");
-check(same(M.drawnSettings({ drawn: { mode: "minor", meter: "6/8" } }), { mode: "minor", meter: "6/8" }), "the drawn mode and meter come from the answer");
+check(same(M.drawnSettings({ drawn: { material: "omt.material.natural-minor", meter: "6/8" } }), { mode: "minor", meter: "6/8" }), "the drawn mode and meter come from the answer");
 for (const captured of require("../../backend/tests/fixtures/composer/b11_captures.json").random) {
-  const answer = { drawn: { mode: captured.mode, meter: captured.meter } };
+  const answer = { drawn: { material: captured.mode === "minor" ? "omt.material.natural-minor" : "omt.material.major", meter: captured.meter } };
   check(same(M.drawnSettings(answer), { mode: captured.mode, meter: captured.meter }) && JSON.parse(M.randomRequest({ seed: captured.seed }).body).seed === captured.seed, `seed ${captured.seed} shows the captured ${captured.mode} ${captured.meter}`);
 }
-check(M.drawnSettings({ drawn: { mode: "minor" } }) === null && M.drawnSettings({}) === null && M.drawnSettings(null) === null, "an answer that names no draw gives none");
+check(M.drawnSettings({ drawn: { material: "omt.material.natural-minor" } }) === null && M.drawnSettings({}) === null && M.drawnSettings(null) === null, "an answer that names no draw gives none");
 
 const candidate = {
   seed: 3,
   motive: {
-    motive: { key: { tonic_pitch_class: 3, mode: "minor" } },
+    motive: { key: { tonic_pitch_class: 3, material: "omt.material.natural-minor" } },
     analysis: { notes_text: "c4:q eb4:e g4:e", degrees_text: "1:q b3:e 5:e", rhythm_text: "x:q x:e x:e", pickup: "1" },
   },
 };
@@ -303,7 +303,7 @@ check(saved.motif.pickup === "1" && saved.motif.role === "accompaniment" && save
 const savedRhythm = M.randomCandidateToBody(candidate, { form: "rhythm", meter: "4/4" });
 check(savedRhythm.motif.notes === "x:q x:e x:e" && savedRhythm.motif.role === "melodic", "a rhythm candidate is saved from its rhythm text");
 check(M.randomCandidateToBody({ motive: { analysis: {} } }, {}).motif.key === null, "a candidate without a key saves a null key");
-const drawnMotive = { motive: { key: { tonic_pitch_class: 0, mode: "major" }, notes: [] }, analysis: { notes_text: "C4:q E4:e G4:e", degrees_text: "1:q 3:e 5:e", pickup: "0" } };
+const drawnMotive = { motive: { key: { tonic_pitch_class: 0, material: "omt.material.major" }, notes: [] }, analysis: { notes_text: "C4:q E4:e G4:e", degrees_text: "1:q 3:e 5:e", pickup: "0" } };
 const wrapped = M.randomCandidate(drawnMotive, 5);
 check(wrapped.seed === 5 && wrapped.motive.analysis.notes_text === "C4:q E4:e G4:e" && M.candidateKeyText(wrapped) === "C major", "a motive as the Composer draws it is wrapped for the page");
 check(M.randomCandidateToBody(wrapped, { form: "full", meter: "4/4" }).motif.notes === "C4:q E4:e G4:e", "a drawn candidate gives its notes to the editor");
@@ -312,7 +312,7 @@ check(M.rerollSeed === undefined, "the model has no reroll seed (one Random butt
 const segmentedCandidate = {
   seed: 3,
   motive: {
-    motive: { key: { tonic_pitch_class: 0, mode: "major" } },
+    motive: { key: { tonic_pitch_class: 0, material: "omt.material.major" } },
     analysis: {
       notes_text: "c4:q d4:q e4:h", pickup: "0",
       base_harmony: { given: true, text: "I V" },

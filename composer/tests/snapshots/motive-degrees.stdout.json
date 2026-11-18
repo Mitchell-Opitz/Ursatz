@@ -7,7 +7,7 @@
     },
     "key": {
       "tonic_pitch_class": 0,
-      "mode": "minor"
+      "material": "omt.material.natural-minor"
     },
     "notes": [{
         "midi_pitch": 60,
@@ -87,7 +87,7 @@
     },
     "key": {
       "tonic_pitch_class": 0,
-      "mode": "minor",
+      "material": "omt.material.natural-minor",
       "source": "given"
     },
     "intervals": [{

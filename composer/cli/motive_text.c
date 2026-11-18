@@ -1,6 +1,9 @@
 #include "motive_text.h"
 
+#include "cli_context.h"
+
 #include <cJSON.h>
+#include <ursatz_composer/composer_api.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -41,12 +44,32 @@ static Rational rational(const cJSON *object, const char *name) {
 
 /* ------------------------------------------------------------------- texts */
 
-static void key_text(long tonic, const char *mode, char *out, size_t size) {
-    static const char *const MAJOR[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
-    static const char *const MINOR[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"};
-    bool is_minor = strcmp(mode, "minor") == 0;
-    long pc = ((tonic % 12) + 12) % 12;
-    snprintf(out, size, "%s %s", is_minor ? MINOR[pc] : MAJOR[pc], is_minor ? "minor" : "major");
+/* The key's name, "D minor": the tonic's spelling and the key word of the material, both from the Composer's vocabulary. */
+static void key_text(long tonic, const char *material, char *out, size_t size) {
+    ComposerResponse response;
+    memset(&response, 0, sizeof response);
+    cJSON *vocabulary = composer_api_vocabulary(cli_context(), &response) == COMPOSER_OK ? cJSON_Parse(response.json) : NULL;
+    const char *spelling = NULL;
+    const char *word = NULL;
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, member(vocabulary, "pitch_class_names")) {
+        if (number(entry, "value") == ((tonic % 12) + 12) % 12) {
+            const cJSON *name = member(member(entry, "names"), material);
+            spelling = cJSON_IsString(name) ? name->valuestring : NULL;
+        }
+    }
+    cJSON_ArrayForEach(entry, member(vocabulary, "materials")) {
+        if (strcmp(string(entry, "value"), material) == 0) {
+            word = string(entry, "label");
+        }
+    }
+    if (spelling && word) {
+        snprintf(out, size, "%s %s", spelling, word);
+    } else {
+        snprintf(out, size, "%ld %s", tonic, material);
+    }
+    cJSON_Delete(vocabulary);
+    composer_response_destroy(&response);
 }
 
 /* A position in beats, counting from 1: "1", "2+1/2". */
@@ -254,7 +277,7 @@ bool motive_text_print(const char *response_json, FILE *out) {
     fprintf(out, "Pickup: %s\n", strcmp(pickup, "0") == 0 ? "none" : pickup);
     const cJSON *key = member(analysis, "key");
     if (cJSON_IsObject(key)) {
-        key_text(number(key, "tonic_pitch_class"), string(key, "mode"), text, sizeof(text));
+        key_text(number(key, "tonic_pitch_class"), string(key, "material"), text, sizeof(text));
         fprintf(out, "Key: %s (%s)\n", text, string(key, "source"));
     } else {
         fprintf(out, "Key: unspecified (no key was given and the pitches do not settle on one)\n");

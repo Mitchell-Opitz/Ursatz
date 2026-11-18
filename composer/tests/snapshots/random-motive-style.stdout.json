@@ -9,7 +9,7 @@
         },
         "key": {
           "tonic_pitch_class": 0,
-          "mode": "major"
+          "material": "omt.material.major"
         },
         "notes": [{
             "midi_pitch": 67,
@@ -150,7 +150,7 @@
         },
         "key": {
           "tonic_pitch_class": 0,
-          "mode": "major",
+          "material": "omt.material.major",
           "source": "given"
         },
         "intervals": [{
@@ -648,7 +648,7 @@
         },
         "key": {
           "tonic_pitch_class": 0,
-          "mode": "major"
+          "material": "omt.material.major"
         },
         "notes": [{
             "midi_pitch": 64,
@@ -719,7 +719,7 @@
         },
         "key": {
           "tonic_pitch_class": 0,
-          "mode": "major",
+          "material": "omt.material.major",
           "source": "given"
         },
         "intervals": [{

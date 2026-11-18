@@ -28,10 +28,12 @@
  * 1.24 adds each section's setting and the tonic major mode to the forms entry, the setting to the rows' changes, and the embellish and
  * setting variations.
  * 1.25 adds the home mode and the elaboration role to the forms entry, and the mode of a copy across modes to the rows' changes.
+ * 2.0 names materials: the replies hold "material" (a K1 id) where they held "mode", the vocabulary holds "materials" and
+ * "piece_materials" and the pitch class names by material, and a request names "api_version" 2.
  */
 
-#define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 25
+#define COMPOSER_API_VERSION_MAJOR 2
+#define COMPOSER_API_VERSION_MINOR 0
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

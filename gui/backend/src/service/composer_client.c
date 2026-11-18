@@ -194,16 +194,32 @@ int ursatz_gui_composer_vocabulary_required_index(const char *list) {
   return -1;
 }
 
-bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size) {
-  if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !mode) {
+bool ursatz_gui_composer_tonic_name(int pitch_class, const char *material, char *out, size_t out_size) {
+  if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !material) {
     return false;
   }
   const cJSON *entry = NULL;
   cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "pitch_class_names")) {
     const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
-    const cJSON *name = cJSON_GetObjectItemCaseSensitive(entry, mode);
+    const cJSON *name = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(entry, "names"), material);
     if (cJSON_IsNumber(value) && value->valueint == pitch_class && cJSON_IsString(name)) {
       snprintf(out, out_size, "%s", name->valuestring);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ursatz_gui_composer_key_word(const char *material, char *out, size_t out_size) {
+  if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !material) {
+    return false;
+  }
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "materials")) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(entry, "label");
+    if (cJSON_IsString(value) && cJSON_IsString(label) && strcmp(value->valuestring, material) == 0) {
+      snprintf(out, out_size, "%s", label->valuestring);
       return true;
     }
   }

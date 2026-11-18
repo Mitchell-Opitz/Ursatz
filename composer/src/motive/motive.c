@@ -770,7 +770,7 @@ static cJSON *meter_json(const PlanMeter *meter) {
 static cJSON *key_json(const AnalysisKey *key) {
     cJSON *object = cJSON_CreateObject();
     if (object && !(plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(key))) &&
-                    plan_json_add(object, "mode", cJSON_CreateString(composer_key_is_minor(key) ? "minor" : "major")))) {
+                    plan_json_add(object, "material", cJSON_CreateString(composer_key_material_id(key))))) {
         cJSON_Delete(object);
         return NULL;
     }

@@ -32,7 +32,7 @@
       "type": "object",
       "required": [
         "tempo",
-        "mode",
+        "material",
         "density",
         "without"
       ],
@@ -62,18 +62,18 @@
             }
           }
         },
-        "mode": {
+        "material": {
           "type": "object",
           "required": [
-            "mode",
+            "material",
             "from"
           ],
           "additionalProperties": false,
           "properties": {
-            "mode": {
+            "material": {
               "enum": [
-                "major",
-                "minor"
+                "omt.material.major",
+                "omt.material.natural-minor"
               ]
             },
             "from": {
@@ -773,7 +773,7 @@
         "copied",
         "variation",
         "setting",
-        "mode",
+        "material",
         "melody_added",
         "chords_changed",
         "chords",
@@ -809,13 +809,13 @@
           ],
           "description": "The pattern of the new accompaniment of a setting return (R-518); null for any other variation."
         },
-        "mode": {
+        "material": {
           "enum": [
-            "major",
-            "minor",
+            "omt.material.major",
+            "omt.material.natural-minor",
             null
           ],
-          "description": "The mode a copy across modes is mapped into (R-524, R-499); null for a copy in keys of the same mode and for a section composed anew."
+          "description": "The material (a K1 id) a copy across modes is mapped into (R-524, R-499); null for a copy in keys of the same mode and for a section composed anew."
         },
         "melody_added": {
           "type": [

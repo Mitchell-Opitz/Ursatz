@@ -83,8 +83,12 @@ const cJSON *ursatz_gui_composer_vocabulary_list(const char *name);
  * theme needs); -1 when there is none. */
 int ursatz_gui_composer_vocabulary_required_index(const char *list);
 
-/* The spelling of the tonic of pitch_class (0 to 11) in mode ("major" or "minor") in the vocabulary's pitch_class_names;
- * false when it has none. */
-bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size);
+/* The spelling of the tonic of pitch_class (0 to 11) in a key of the material (its id, "omt.material.major") in the vocabulary's
+ * pitch_class_names; false when it has none. */
+bool ursatz_gui_composer_tonic_name(int pitch_class, const char *material, char *out, size_t out_size);
+
+/* The key word of the material (its id) in the vocabulary's materials ("minor" for "omt.material.natural-minor"); false when
+ * it names none. */
+bool ursatz_gui_composer_key_word(const char *material, char *out, size_t out_size);
 
 #endif /* URSATZ_GUI_COMPOSER_CLIENT_H */
