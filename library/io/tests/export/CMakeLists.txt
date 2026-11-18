@@ -19,3 +19,5 @@ ursatz_test(score_clefs LIBS ursatz_io VALGRIND)
 ursatz_test(musicxml_export_mozart545 LIBS ursatz_io ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 ursatz_test(musicxml_export_bach_prelude LIBS ursatz_io ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+ursatz_test(musicxml_pedals LIBS ursatz_io VALGRIND)
+ursatz_test(movement_export LIBS ursatz_io VALGRIND)

@@ -228,7 +228,7 @@ typedef struct {
     unsigned long raw_d;
     long long tick;
     size_t source; /* the index into the input array of its kind */
-    bool written;  /* a pedal marking written at the end of its measure ahead of the dirs before it */
+    bool written;  /* a pedal stop already written at the end of the last measure */
 } Dir;
 
 /* One voice of one staff of one part: the notes that share a VoiceReference (or have none). */
@@ -1887,13 +1887,10 @@ static void write_dynamic(const Prep *prep, XmlBuf *buf, const Dir *dir) {
     xmlbuf_append(buf, "      </direction>\n");
 }
 
-/* A sustain pedal marking; `offset` shifts it back from where the writer is (ticks, 0 or below). */
-static void write_pedal(const Prep *prep, XmlBuf *buf, const Dir *dir, long long offset) {
+/* A sustain pedal marking. */
+static void write_pedal(const Prep *prep, XmlBuf *buf, const Dir *dir) {
     xmlbuf_append(buf, "      <direction placement=\"below\">\n        <direction-type>\n          <pedal type=\"%s\" line=\"yes\"/>\n        </direction-type>\n",
                   dir->kind == DIR_PEDAL_START ? "start" : "stop");
-    if (offset != 0) {
-        xmlbuf_append(buf, "        <offset>%lld</offset>\n", offset);
-    }
     if (prep->parts[dir->part].staff_count > 1) {
         xmlbuf_append(buf, "        <staff>%d</staff>\n", dir->staff);
     }
@@ -1901,7 +1898,7 @@ static void write_pedal(const Prep *prep, XmlBuf *buf, const Dir *dir, long long
 }
 
 /* The dirs that share one tick, in kind order. A key at the start of a measure is already in its <attributes>. */
-static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, size_t count, long long measure_start, long long at) {
+static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, size_t count, long long measure_start) {
     bool key_written = false;
     const Dir *tempo = NULL;
     for (size_t i = 0; i < count; i++) {
@@ -1938,7 +1935,7 @@ static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, siz
     }
     for (size_t i = 0; i < count; i++) {
         if ((group[i].kind == DIR_PEDAL_STOP || group[i].kind == DIR_PEDAL_START) && !group[i].written) {
-            write_pedal(prep, buf, &group[i], group[i].tick - at);
+            write_pedal(prep, buf, &group[i]);
         }
     }
 }
@@ -1956,25 +1953,25 @@ static void write_dirs_through(DirCtx *ctx, XmlBuf *buf, long long tick) {
         while (stop < end && prep->dirs[stop].tick == prep->dirs[begin].tick) {
             stop++;
         }
-        write_dir_group(prep, buf, &prep->dirs[begin], stop - begin, ctx->measure_start, tick);
+        write_dir_group(prep, buf, &prep->dirs[begin], stop - begin, ctx->measure_start);
         *ctx->pos = stop;
     }
 }
 
 /*
- * Writes the pedal markings of the part that fall in this measure and were not reached by a segment start (a time inside the last
- * segment of the measure), after the measure's first voice, whose end is where the writer is: each with a negative <offset> back to
- * its time. The last measure also takes the markings at its end, a stop on the final barline. Marks them written.
+ * The last measure's end: a pedal stop on the final barline has no segment after it to be written before, and adds no measure, so
+ * it is written after the measure's first voice, where the writer is at the end of the measure. (Every other time of a marking is
+ * a cut of its part, so a segment starts there.) Marks it written.
  */
 static void flush_pedals(const DirCtx *ctx, XmlBuf *buf, long long measure_end, bool last_measure) {
+    if (!last_measure) {
+        return;
+    }
     const Prep *prep = ctx->prep;
     for (size_t d = *ctx->pos; d < prep->dir_first[ctx->part + 1]; d++) {
         Dir *dir = &prep->dirs[d];
-        if ((dir->kind != DIR_PEDAL_STOP && dir->kind != DIR_PEDAL_START) || dir->written) {
-            continue;
-        }
-        if (dir->tick < measure_end || (last_measure && dir->tick == measure_end)) {
-            write_pedal(prep, buf, dir, dir->tick - measure_end);
+        if (dir->kind == DIR_PEDAL_STOP && !dir->written && dir->tick == measure_end) {
+            write_pedal(prep, buf, dir);
             dir->written = true;
         }
     }

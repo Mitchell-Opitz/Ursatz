@@ -104,8 +104,8 @@ typedef struct {
  *     "" writes nothing.
  *   - pedals (+ pedal_count): sustain pedal markings, each a <direction> with <pedal type="start" line="yes"/> at the
  *     span's start and a stop at its end, in the measure that holds the time (a stop on the last barline is written at
- *     that measure's end, so it adds no measure). A time inside a note is written before the next note with a negative
- *     <offset> back to the time. ERR_UNKNOWN_PART and ERR_BAD_STAFF as for dynamics; ERR_NOT_REPRESENTABLE for a span
+ *     that measure's end, so it adds no measure). Like a dynamic, a time inside a note cuts the note there and ties it.
+ *     ERR_UNKNOWN_PART and ERR_BAD_STAFF as for dynamics; ERR_NOT_REPRESENTABLE for a span
  *     that does not hold or starts below 0; ERR_INCONSISTENT_INPUT for a count with no array.
  */
 typedef struct {
