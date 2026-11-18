@@ -126,12 +126,12 @@ static bool is_theme_section(const PiecePlan *plan, NodeId id) {
     bool pairing = false;
     bool free_phrase = false;
     bool liquidation = false;
-    PlanSectionFunction function;
+    SectionFunction function;
     if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
         return false;
     }
     if (plan_section_function_of(plan, id, &function)) {
-        liquidation = function.function == PLAN_FUNCTION_RETRANSITION || function.function == PLAN_FUNCTION_CODA;
+        liquidation = function.function == SECTION_FUNCTION_RETRANSITION || function.function == SECTION_FUNCTION_CODA;
     }
     for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
         PlanConstraintKind kind = plan_node_constraint_at(plan, id, i)->kind;
@@ -518,9 +518,9 @@ static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *
     unsigned long denominator = 0;
     for (size_t t = 0; (checks & FORM_CHECK_SECTIONS) && t < theme_count; t++) {
         ComposeHeard *heard = &outcome->sections[t];
-        PlanSectionFunction function;
+        SectionFunction function;
         const bool operator_part = plan_section_function_of(plan, themes[t], &function) &&
-                                   (function.function == PLAN_FUNCTION_RETRANSITION || function.function == PLAN_FUNCTION_CODA);
+                                   (function.function == SECTION_FUNCTION_RETRANSITION || function.function == SECTION_FUNCTION_CODA);
         if (!heard->in_scope || operator_part || plan_node_has_constraint(plan, themes[t], PLAN_CONSTRAINT_LIQUIDATION)) {
             /* A liquidation (R-494), a retransition or a coda (R-503) is no theme shape: nothing to hear it as, and it adds nothing to the score. */
             continue;
@@ -766,7 +766,7 @@ static bool returns_pending(const PiecePlan *plan, const NodeId *themes, size_t 
 }
 
 /* The FIGURE constraint of a section, when it has one. */
-static bool figure_of(const PiecePlan *plan, NodeId section, PlanFigure *out) {
+static bool figure_of(const PiecePlan *plan, NodeId section, SectionFigure *out) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
         if (constraint->kind == PLAN_CONSTRAINT_FIGURE) {
@@ -781,11 +781,11 @@ static bool figure_of(const PiecePlan *plan, NodeId section, PlanFigure *out) {
 static size_t reharmonized(const PiecePlan *plan, const NodeId *themes, size_t theme_count, NodeId *out) {
     size_t count = 0;
     for (size_t t = 0; t < theme_count; t++) {
-        PlanReturnVariation variation;
-        PlanFigure figure;
+        SectionReturnVariation variation;
+        SectionFigure figure;
         if (form_return_source(plan, themes[t], NULL, &variation) &&
-            (variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_VARIED ||
-             (variation == PLAN_RETURN_FIGURATE && figure_of(plan, themes[t], &figure) && figure.reharmonize))) {
+            (variation == SECTION_RETURN_REHARMONIZE || variation == SECTION_RETURN_VARIED ||
+             (variation == SECTION_RETURN_FIGURATE && figure_of(plan, themes[t], &figure) && figure.reharmonize))) {
             out[count++] = themes[t];
         }
     }
@@ -796,8 +796,8 @@ static size_t reharmonized(const PiecePlan *plan, const NodeId *themes, size_t t
 static size_t figurate(const PiecePlan *plan, const NodeId *themes, size_t theme_count, NodeId *out) {
     size_t count = 0;
     for (size_t t = 0; t < theme_count; t++) {
-        PlanReturnVariation variation;
-        if (form_return_source(plan, themes[t], NULL, &variation) && variation == PLAN_RETURN_FIGURATE) {
+        SectionReturnVariation variation;
+        if (form_return_source(plan, themes[t], NULL, &variation) && variation == SECTION_RETURN_FIGURATE) {
             out[count++] = themes[t];
         }
     }
@@ -848,11 +848,11 @@ static PieceResult run_returns(Run *run) {
             size_t changed = 0;
             size_t total = 0;
             bool cadence = false;
-            PlanReturnVariation variation = PLAN_RETURN_REHARMONIZE;
-            PlanFigure figure = {0};
+            SectionReturnVariation variation = SECTION_RETURN_REHARMONIZE;
+            SectionFigure figure = {0};
             fits = fits && form_return_melody_fits(plan, pending[i]);
             form_return_source(plan, pending[i], NULL, &variation);
-            if (attempt < attempts / 2 && variation == PLAN_RETURN_VARIED) {
+            if (attempt < attempts / 2 && variation == SECTION_RETURN_VARIED) {
                 fits = fits && form_return_cadence_changed(plan, pending[i], &cadence) && cadence;
             } else if (attempt < attempts / 2 && figure_of(plan, pending[i], &figure) && figure.change_at > 0) {
                 /* The root changes at the bar the figure asks for. */

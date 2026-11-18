@@ -375,7 +375,7 @@ static void test_applies(const FormSpec *form) {
 int main(void) {
     FormSpec *form = load_form();
     assert(strcmp(form->name, "liquidation-form") == 0 && form->sizes[0].section_count == 4 &&
-           form->sizes[0].sections[2].role == FORM_ROLE_LIQUIDATION && form->sizes[0].sections[2].bars == 4);
+           form->sizes[0].sections[2].role == SECTION_ROLE_LIQUIDATION && form->sizes[0].sections[2].bars == 4);
     int status = rows_composed(form);
     test_round_trip(form);
     test_applies(form);

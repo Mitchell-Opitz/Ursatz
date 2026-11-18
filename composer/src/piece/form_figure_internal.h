@@ -51,9 +51,9 @@ bool form_figure_has_pitch_class(unsigned mask, int pitch);
 FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section);
 void form_figure_reading_free(FigureReading *reading);
 bool form_figure_cell_bounds(const FigureReading *reading, size_t cell, Rational *start, Rational *end);
-bool form_figure_find(const PiecePlan *plan, NodeId section, PlanFigure *out);
+bool form_figure_find(const PiecePlan *plan, NodeId section, SectionFigure *out);
 /* The notes a figure has per cell; 0 when it is not a whole number from 2 to 8. */
-size_t form_figure_notes_per_cell(const FigureReading *reading, PlanFigureRhythm rhythm, Rational *length);
+size_t form_figure_notes_per_cell(const FigureReading *reading, SectionFigureRhythm rhythm, Rational *length);
 /* The notes a kept cell holds, added to out. */
 bool form_figure_kept_notes(const FigureReading *reading, size_t cell, int octave, FigureNote *out, size_t *count);
 

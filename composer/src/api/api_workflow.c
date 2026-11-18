@@ -125,7 +125,7 @@ cJSON *api_section_json(const ApiSection *section) {
     if (ok && section->returns) {
         cJSON *returns = cJSON_CreateObject();
         ok = returns && cJSON_AddStringToObject(returns, "section", section->returns_letter) &&
-             cJSON_AddStringToObject(returns, "variation", plan_return_variation_name(section->variation)) &&
+             cJSON_AddStringToObject(returns, "variation", section_return_variation_name(section->variation)) &&
              api_add(object, "returns", returns);
     } else {
         ok = ok && cJSON_AddNullToObject(object, "returns");

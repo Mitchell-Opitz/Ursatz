@@ -191,9 +191,9 @@ static bool form_fixed(const PiecePlan *plan, FillTarget target) {
     if (target.kind != FILL_TARGET_NODE) {
         return true;
     }
-    PlanSectionFunction function;
+    SectionFunction function;
     if (plan_section_function_of(plan, target.id, &function) &&
-        (function.function == PLAN_FUNCTION_RETRANSITION || function.function == PLAN_FUNCTION_CODA)) {
+        (function.function == SECTION_FUNCTION_RETRANSITION || function.function == SECTION_FUNCTION_CODA)) {
         return true;
     }
     for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
@@ -215,7 +215,7 @@ static bool form_labels(const GrowThemeSpec *spec, ComposerStyleLabels *labels) 
     }
     unsigned bars[2] = {(unsigned)spec->bars, 0};
     size_t phrases = 1;
-    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+    if (spec->pairing.beginning == SECTION_BEGINNING_ANTECEDENT) {
         bars[0] = bars[1] = (unsigned)(spec->bars / 2);
         phrases = 2;
     }

@@ -91,7 +91,7 @@ ComposerStatus api_read_accompaniment(const char *pattern_text, const char *text
 }
 
 /* "antecedent+continuation": a beginning, a plus sign and an ending. */
-static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
+static bool parse_hybrid(const char *text, SectionPairing *pairing) {
     const char *plus = strchr(text, '+');
     if (!plus) {
         return false;
@@ -101,13 +101,13 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
     bool ending_found = false;
     for (int i = 0; API_THEME_BEGINNINGS[i].value; i++) {
         if (strlen(API_THEME_BEGINNINGS[i].value) == length && strncmp(text, API_THEME_BEGINNINGS[i].value, length) == 0) {
-            pairing->beginning = (PlanThemeBeginning)i;
+            pairing->beginning = (SectionBeginning)i;
             beginning_found = true;
         }
     }
     for (int i = 0; API_THEME_ENDINGS[i].value; i++) {
         if (request_equals_ignore_case(plus + 1, API_THEME_ENDINGS[i].value)) {
-            pairing->ending = (PlanThemeEnding)i;
+            pairing->ending = (SectionEnding)i;
             ending_found = true;
         }
     }
@@ -118,7 +118,7 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
 
 static const char *const EXTENSION_KINDS[] = {"repeat", "stretch", "addition", "evaded"};
 
-static ComposerStatus read_extension(const cJSON *item, const char *base, size_t index, PlanExtension *out, ComposerError *error) {
+static ComposerStatus read_extension(const cJSON *item, const char *base, size_t index, SectionExtension *out, ComposerError *error) {
     char path[192];
     snprintf(path, sizeof path, "%s/extensions/%zu", base, index);
     if (!cJSON_IsObject(item)) {
@@ -143,7 +143,7 @@ static ComposerStatus read_extension(const cJSON *item, const char *base, size_t
         snprintf(member, sizeof member, "%s/kind", path);
         return api_fail(error, COMPOSER_ERR_REQUEST, member, "kind must be repeat, stretch, addition or evaded, not '%s'", kind);
     }
-    out->kind = (PlanExtensionKind)kind_at;
+    out->kind = (SectionExtensionKind)kind_at;
     if (idea) {
         const ThemeShapeIdea *row = theme_shape_idea_find(idea);
         if (!row) {
@@ -151,7 +151,7 @@ static ComposerStatus read_extension(const cJSON *item, const char *base, size_t
             return api_fail(error, COMPOSER_ERR_REQUEST, member, "unknown idea '%s'", idea);
         }
         out->idea = (unsigned char)row->idea;
-    } else if (out->kind == PLAN_EXTENSION_REPEAT || out->kind == PLAN_EXTENSION_STRETCH) {
+    } else if (out->kind == SECTION_EXTENSION_REPEAT || out->kind == SECTION_EXTENSION_STRETCH) {
         snprintf(member, sizeof member, "%s/idea", path);
         return api_fail(error, COMPOSER_ERR_REQUEST, member, "a %s needs the idea it follows", kind);
     }
@@ -167,12 +167,12 @@ static ComposerStatus read_extension(const cJSON *item, const char *base, size_t
     return COMPOSER_OK;
 }
 
-ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *base, PlanConstruction *construction,
+ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *base, SectionConstruction *construction,
                                                  ComposerError *error) {
     char ideas_path[192];
     snprintf(ideas_path, sizeof ideas_path, "%s/ideas", base);
     memset(construction, 0, sizeof(*construction));
-    construction->reason = PLAN_CONSTRUCTION_GIVEN;
+    construction->reason = SECTION_CONSTRUCTION_GIVEN;
     const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(item, "ideas");
     if (!cJSON_IsObject(ideas)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, ideas_path,
@@ -198,9 +198,9 @@ ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *
         if (!cJSON_IsArray(extensions)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, extensions_path, "\"extensions\" must be a list");
         }
-        if ((size_t)cJSON_GetArraySize(extensions) > PLAN_CONSTRUCTION_EXTENSIONS) {
+        if ((size_t)cJSON_GetArraySize(extensions) > SECTION_CONSTRUCTION_EXTENSIONS) {
             return api_fail(error, COMPOSER_ERR_REQUEST, extensions_path, "a construction has at most %d extensions",
-                            PLAN_CONSTRUCTION_EXTENSIONS);
+                            SECTION_CONSTRUCTION_EXTENSIONS);
         }
         const cJSON *extension = NULL;
         cJSON_ArrayForEach(extension, extensions) {
@@ -225,7 +225,7 @@ ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, 
         return api_fail(error, COMPOSER_ERR_REQUEST, "/construction",
                         "\"construction\" must be null or {\"ideas\": {...}, \"extensions\": [...]}");
     }
-    PlanConstruction *construction = &out->construction;
+    SectionConstruction *construction = &out->construction;
     ComposerStatus read = api_grow_read_construction_object(item, "/construction", construction, error);
     if (read != COMPOSER_OK) {
         return read;
@@ -234,7 +234,7 @@ ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, 
     /* Without bars the theme is as long as its construction. */
     if (!out->text->bars) {
         size_t total = grow_construction_extra_bars(&out->pairing, construction);
-        for (int idea = 0; idea < PLAN_CONSTRUCTION_IDEAS; idea++) {
+        for (int idea = 0; idea < SECTION_CONSTRUCTION_IDEAS; idea++) {
             total += construction->idea_bars[idea];
         }
         if (total >= 3 && total <= 16) {
@@ -251,12 +251,12 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     }
     if (request_equals_ignore_case(text->into, "sentence")) {
         out->into = GROW_INTO_SENTENCE;
-        out->pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-        out->pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+        out->pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+        out->pairing.ending = SECTION_ENDING_CONTINUATION;
     } else if (request_equals_ignore_case(text->into, "period")) {
         out->into = GROW_INTO_PERIOD;
-        out->pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
-        out->pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
+        out->pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
+        out->pairing.ending = SECTION_ENDING_CONSEQUENT;
     } else if (request_equals_ignore_case(text->into, "hybrid")) {
         out->into = GROW_INTO_HYBRID;
     } else {
@@ -275,10 +275,10 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
                             "(continuation, consequent or cadential), not '%s'",
                             text->hybrid);
         }
-        bool sentence = out->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
-                        out->pairing.ending == PLAN_THEME_ENDING_CONTINUATION;
-        bool period = out->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
-                      out->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT;
+        bool sentence = out->pairing.beginning == SECTION_BEGINNING_PRESENTATION &&
+                        out->pairing.ending == SECTION_ENDING_CONTINUATION;
+        bool period = out->pairing.beginning == SECTION_BEGINNING_ANTECEDENT &&
+                      out->pairing.ending == SECTION_ENDING_CONSEQUENT;
         if (sentence || period) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/hybrid", "%s is a %s, not a hybrid; use into %s", text->hybrid,
                             sentence ? "sentence" : "period", sentence ? "sentence" : "period");
@@ -348,7 +348,7 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     }
     out->first_cadence = CADENCE_TYPE_HALF;
     if (text->first_cadence) {
-        if (out->pairing.beginning != PLAN_THEME_BEGINNING_ANTECEDENT) {
+        if (out->pairing.beginning != SECTION_BEGINNING_ANTECEDENT) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/first_cadence",
                             "first_cadence applies only to a period or a hybrid that begins with an antecedent");
         }
@@ -1539,7 +1539,7 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     out->development = setup->material ? api_development_name(setup->development) : NULL; /* a theme's, not a grow's */
 }
 
-cJSON *api_grow_construction_json(const PlanConstruction *given, const PlanThemePairing *pairing, const char *text) {
+cJSON *api_grow_construction_json(const SectionConstruction *given, const SectionPairing *pairing, const char *text) {
     static const char *const REASONS[] = {"given", "motive", "length"};
     GrowConstructionSpans spans;
     grow_construction_spans(pairing, given, &spans);
@@ -1569,8 +1569,8 @@ cJSON *api_grow_construction_json(const PlanConstruction *given, const PlanTheme
              cJSON_AddNumberToObject(item, "first_bar", (double)spans.idea_first[next] + 1);
     }
     for (size_t k = 0; ok && k < given->extension_count; k++) {
-        const PlanExtension *extension = &given->extensions[k];
-        bool names_idea = extension->kind == PLAN_EXTENSION_REPEAT || extension->kind == PLAN_EXTENSION_STRETCH;
+        const SectionExtension *extension = &given->extensions[k];
+        bool names_idea = extension->kind == SECTION_EXTENSION_REPEAT || extension->kind == SECTION_EXTENSION_STRETCH;
         cJSON *item = cJSON_CreateObject();
         ok = item && cJSON_AddItemToArray(extensions, item) && cJSON_AddStringToObject(item, "kind", EXTENSION_KINDS[extension->kind]) &&
              cJSON_AddItemToObject(item, "idea",
@@ -1639,18 +1639,18 @@ static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const G
 }
 
 /* The construction as the request gave it: {"ideas": {"<idea>": bars}, "extensions": [{"kind", "idea", "bars", "varied"}]}. */
-static cJSON *given_construction_json(const PlanConstruction *construction) {
+static cJSON *given_construction_json(const SectionConstruction *construction) {
     cJSON *object = cJSON_CreateObject();
     cJSON *ideas = object ? cJSON_AddObjectToObject(object, "ideas") : NULL;
     cJSON *extensions = object ? cJSON_AddArrayToObject(object, "extensions") : NULL;
     bool ok = object && ideas && extensions;
-    for (int idea = 0; ok && idea < PLAN_CONSTRUCTION_IDEAS; idea++) {
+    for (int idea = 0; ok && idea < SECTION_CONSTRUCTION_IDEAS; idea++) {
         ok = construction->idea_bars[idea] == 0 ||
              cJSON_AddNumberToObject(ideas, theme_shape_idea_name((GrowIdea)idea), construction->idea_bars[idea]) != NULL;
     }
     for (size_t k = 0; ok && k < construction->extension_count; k++) {
-        const PlanExtension *extension = &construction->extensions[k];
-        bool names_idea = extension->kind == PLAN_EXTENSION_REPEAT || extension->kind == PLAN_EXTENSION_STRETCH;
+        const SectionExtension *extension = &construction->extensions[k];
+        bool names_idea = extension->kind == SECTION_EXTENSION_REPEAT || extension->kind == SECTION_EXTENSION_STRETCH;
         cJSON *item = cJSON_CreateObject();
         ok = item && cJSON_AddItemToArray(extensions, item) && cJSON_AddStringToObject(item, "kind", EXTENSION_KINDS[extension->kind]) &&
              cJSON_AddItemToObject(item, "idea",
@@ -1680,7 +1680,7 @@ cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const Gr
               cJSON_AddNumberToObject(root, "bars", (double)setup->bars) &&
               cJSON_AddStringToObject(root, "into", text->into) && cJSON_AddStringToObject(root, "pairing", pairing) &&
               cJSON_AddStringToObject(root, "cadence", plan_cadence_name(setup->cadence));
-    if (ok && setup->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+    if (ok && setup->pairing.beginning == SECTION_BEGINNING_ANTECEDENT) {
         ok = cJSON_AddStringToObject(root, "first_cadence", plan_cadence_name(setup->first_cadence)) != NULL;
     }
     if (ok && setup->has_construction) {

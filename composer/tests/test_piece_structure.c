@@ -565,7 +565,7 @@ static LaneSpanId last_chord(const PiecePlan *plan, NodeId section) {
 /* T of the loop version: a transition ending on V or V7, its continuation liquidated (fragment 2 by 1 step or more on a segment). */
 static bool transition_ok(const PiecePlan *plan, NodeId t) {
     const PlanConstraint *function = node_constraint(plan, t, PLAN_CONSTRAINT_SECTION_FUNCTION);
-    if (!function || function->params.section_function.function != PLAN_FUNCTION_TRANSITION) {
+    if (!function || function->params.section_function.function != SECTION_FUNCTION_TRANSITION) {
         return false;
     }
     const char *numeral = plan_lane_span_payload(plan, last_chord(plan, t))->harmony.roman_numeral;
@@ -577,7 +577,7 @@ static bool transition_ok(const PiecePlan *plan, NodeId t) {
 /* K of the ending version: the coda function, three phrases of 4, 2 and 2 bars, no archetype. */
 static bool coda_ok(const PiecePlan *plan, NodeId k) {
     const PlanConstraint *function = node_constraint(plan, k, PLAN_CONSTRAINT_SECTION_FUNCTION);
-    if (!function || function->params.section_function.function != PLAN_FUNCTION_CODA ||
+    if (!function || function->params.section_function.function != SECTION_FUNCTION_CODA ||
         node_constraint(plan, k, PLAN_CONSTRAINT_ARCHETYPE) || plan_node_child_count(plan, k) != 3) {
         return false;
     }

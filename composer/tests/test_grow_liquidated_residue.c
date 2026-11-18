@@ -34,21 +34,21 @@ typedef struct {
     const char *name;
     const char *file;
     size_t bars;
-    PlanThemeBeginning beginning;
-    PlanThemeEnding ending;
+    SectionBeginning beginning;
+    SectionEnding ending;
 } Case;
 
 static const Case CASES[] = {
-    {"test motif sentence", COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", 8, PLAN_THEME_BEGINNING_PRESENTATION,
-     PLAN_THEME_ENDING_CONTINUATION},
-    {"two-bar 3/4 period", COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json", 8, PLAN_THEME_BEGINNING_ANTECEDENT,
-     PLAN_THEME_ENDING_CONSEQUENT},
-    {"one-bar 4/4 sentence", COMPOSER_FIXTURE_DIR "/rates/one-bar-4-4.json", 8, PLAN_THEME_BEGINNING_PRESENTATION,
-     PLAN_THEME_ENDING_CONTINUATION},
-    {"one-bar 4/4 4-bar sentence", COMPOSER_FIXTURE_DIR "/rates/one-bar-4-4.json", 4, PLAN_THEME_BEGINNING_PRESENTATION,
-     PLAN_THEME_ENDING_CONTINUATION},
-    {"two-bar 3/4 4-bar sentence", COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json", 4, PLAN_THEME_BEGINNING_PRESENTATION,
-     PLAN_THEME_ENDING_CONTINUATION},
+    {"test motif sentence", COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", 8, SECTION_BEGINNING_PRESENTATION,
+     SECTION_ENDING_CONTINUATION},
+    {"two-bar 3/4 period", COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json", 8, SECTION_BEGINNING_ANTECEDENT,
+     SECTION_ENDING_CONSEQUENT},
+    {"one-bar 4/4 sentence", COMPOSER_FIXTURE_DIR "/rates/one-bar-4-4.json", 8, SECTION_BEGINNING_PRESENTATION,
+     SECTION_ENDING_CONTINUATION},
+    {"one-bar 4/4 4-bar sentence", COMPOSER_FIXTURE_DIR "/rates/one-bar-4-4.json", 4, SECTION_BEGINNING_PRESENTATION,
+     SECTION_ENDING_CONTINUATION},
+    {"two-bar 3/4 4-bar sentence", COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json", 4, SECTION_BEGINNING_PRESENTATION,
+     SECTION_ENDING_CONTINUATION},
 };
 
 static Motive load_motive(const char *path) {
@@ -153,7 +153,7 @@ static void compose(const Case *test, unsigned long seed, GrowRun *run, Motive *
     memset(&setup, 0, sizeof(setup));
     setup.knowledge = test_knowledge();
     setup.text = &text;
-    setup.into = test->beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? GROW_INTO_PERIOD : GROW_INTO_HYBRID;
+    setup.into = test->beginning == SECTION_BEGINNING_ANTECEDENT ? GROW_INTO_PERIOD : GROW_INTO_HYBRID;
     setup.pairing.beginning = test->beginning;
     setup.pairing.ending = test->ending;
     setup.key = key;
@@ -192,10 +192,10 @@ static void test_cadential_ideas(void) {
             int tonic = analysis_key_tonic_pitch_class(&key);
             bool is_minor = harmony_key_mode(&key) == HARMONY_MODE_MINOR;
             const PiecePlan *plan = run.themes[0].plan;
-            if (test->ending == PLAN_THEME_ENDING_CONTINUATION) {
+            if (test->ending == SECTION_ENDING_CONTINUATION) {
                 check_idea(plan, &motive, &analysis, "cadential", "m4", tonic, is_minor, shortest);
                 ideas++;
-            } else if (test->ending == PLAN_THEME_ENDING_CADENTIAL) {
+            } else if (test->ending == SECTION_ENDING_CADENTIAL) {
                 check_idea(plan, &motive, &analysis, "cadential 1", "m2", tonic, is_minor, shortest);
                 check_idea(plan, &motive, &analysis, "cadential 2", "m3", tonic, is_minor, shortest);
                 ideas += 2;
@@ -253,8 +253,8 @@ static void test_no_residue(void) {
     setup.knowledge = test_knowledge();
     setup.text = &text;
     setup.into = GROW_INTO_HYBRID;
-    setup.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    setup.pairing.ending = PLAN_THEME_ENDING_CADENTIAL;
+    setup.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    setup.pairing.ending = SECTION_ENDING_CADENTIAL;
     setup.key = key;
     setup.meter = options.meter;
     setup.bars = 8;

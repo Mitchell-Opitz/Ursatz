@@ -53,8 +53,8 @@ static GrowRequest make_request(const Motive *motive) {
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     return request;
 }

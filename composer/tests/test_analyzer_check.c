@@ -88,8 +88,8 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
     request.key = key;
     request.meter = meter;
     request.bars = 8;
-    request.pairing.beginning = shape == PERIOD ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = shape == PERIOD ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = shape == PERIOD ? SECTION_BEGINNING_ANTECEDENT : SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = shape == PERIOD ? SECTION_ENDING_CONSEQUENT : SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;

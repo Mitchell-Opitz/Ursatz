@@ -63,16 +63,16 @@ int main(void) {
     size_t cases = 0;
     for (int m = 0; m < 2; m++) {
         for (int b = 0; b < 2; b++) {
-            for (int beginning = PLAN_THEME_BEGINNING_PRESENTATION; beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA;
+            for (int beginning = SECTION_BEGINNING_PRESENTATION; beginning <= SECTION_BEGINNING_COMPOUND_BASIC_IDEA;
                  beginning++) {
-                for (int ending = PLAN_THEME_ENDING_CONTINUATION; ending <= PLAN_THEME_ENDING_CADENTIAL; ending++) {
+                for (int ending = SECTION_ENDING_CONTINUATION; ending <= SECTION_ENDING_CADENTIAL; ending++) {
                     GrowThemeRequest request;
                     GrowLayout layout;
                     memset(&request, 0, sizeof(request));
                     request.bar = METERS[m];
                     request.bars = BARS[b];
-                    request.pairing.beginning = (PlanThemeBeginning)beginning;
-                    request.pairing.ending = (PlanThemeEnding)ending;
+                    request.pairing.beginning = (SectionBeginning)beginning;
+                    request.pairing.ending = (SectionEnding)ending;
                     assert(grow_layout_of(&request, &layout));
                     for (size_t place = GROW_PLACE_BASIC; place <= GROW_PLACE_REPETITION; place++) {
                         check_place(&layout, request.bar, request.bars, place, BEGINNING[place]);

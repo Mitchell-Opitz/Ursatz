@@ -773,7 +773,7 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
 
 /* A consequent restates the basic idea and ends with a contrasting idea that is not the antecedent's. */
 static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
-    const MotiveRelationStep *avoid = spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? &spec->contrast : NULL;
+    const MotiveRelationStep *avoid = spec->pairing.beginning == SECTION_BEGINNING_ANTECEDENT ? &spec->contrast : NULL;
     /* It ends in the cadence's tone: the tonic for a perfect authentic cadence, the third for an imperfect one. */
     AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
     int tonic = analysis_key_tonic_pitch_class(&ends_in);
@@ -839,11 +839,11 @@ static bool draw_cadential(const GrowThemeRequest *request, GrowThemeSpec *spec)
 
 bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     switch (spec->pairing.ending) {
-    case PLAN_THEME_ENDING_CONTINUATION:
+    case SECTION_ENDING_CONTINUATION:
         return draw_continuation(request, rng, spec);
-    case PLAN_THEME_ENDING_CONSEQUENT:
+    case SECTION_ENDING_CONSEQUENT:
         return draw_consequent(request, rng, spec);
-    case PLAN_THEME_ENDING_CADENTIAL:
+    case SECTION_ENDING_CADENTIAL:
         return draw_cadential(request, spec);
     }
     return false;
@@ -886,7 +886,7 @@ static bool faster_cadential_fits(const GrowBuild *build) {
     size_t chords = grow_chords_before_last(build->request, PLAN_HARMONY_SHAPE_CADENTIAL, build->request->cadence);
     for (size_t k = 0; k <= layout->extension_count; k++) {
         Rational length = k == layout->extension_count ? layout->length[GROW_PLACE_CADENTIAL]
-                                                       : layout->extensions[k].kind == PLAN_EXTENSION_EVADED ? layout->extensions[k].length
+                                                       : layout->extensions[k].kind == SECTION_EXTENSION_EVADED ? layout->extensions[k].length
                                                                                                                 : rational_ratio(0, 1);
         Rational bars;
         if (length.num == 0) {
@@ -933,7 +933,7 @@ static PlanConstraint deceptive_cadence(void) {
 /* The layout extension of the evaded cadence, SIZE_MAX when the theme has none. */
 static size_t evaded_extension(const GrowLayout *layout) {
     for (size_t k = 0; k < layout->extension_count; k++) {
-        if (layout->extensions[k].kind == PLAN_EXTENSION_EVADED) {
+        if (layout->extensions[k].kind == SECTION_EXTENSION_EVADED) {
             return k;
         }
     }
@@ -951,7 +951,7 @@ static PlanResult add_faster_targets(GrowBuild *build, const Part *parts, size_t
     PlanConstraint deceptive = deceptive_cadence();
     bool evaded = evaded_extension(&build->layout) != SIZE_MAX;
     for (size_t i = 0; result == PLAN_OK && i < count; i++) {
-        bool after = parts[i].extension != SIZE_MAX && build->layout.extensions[parts[i].extension].kind == PLAN_EXTENSION_EVADED;
+        bool after = parts[i].extension != SIZE_MAX && build->layout.extensions[parts[i].extension].kind == SECTION_EXTENSION_EVADED;
         bool last = parts[i].extension == SIZE_MAX && parts[i].slot == last_slot;
         PlanHarmonyShape shape;
         memset(&shape, 0, sizeof(shape));
@@ -995,8 +995,8 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
     const GrowThemeSpec *spec = build->spec;
     NodeId motives[GROW_PLACE_COUNT];
     PlanMotiveRef refs[GROW_PLACE_COUNT];
-    PlanMotiveRef asked[GROW_PLACE_COUNT + PLAN_CONSTRUCTION_EXTENSIONS];
-    Part parts[GROW_PLACE_COUNT + PLAN_CONSTRUCTION_EXTENSIONS];
+    PlanMotiveRef asked[GROW_PLACE_COUNT + SECTION_CONSTRUCTION_EXTENSIONS];
+    Part parts[GROW_PLACE_COUNT + SECTION_CONSTRUCTION_EXTENSIONS];
     size_t count = 0;
     size_t evaded = evaded_extension(&build->layout);
     PlanResult result = PLAN_OK;
@@ -1010,7 +1010,7 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
         parts[count++].extension = SIZE_MAX;
         /* A repeat follows the idea it repeats (R-468). */
         for (size_t k = 0; result == PLAN_OK && k < build->layout.extension_count; k++) {
-            if (build->layout.extensions[k].kind == PLAN_EXTENSION_REPEAT && build->layout.extensions[k].place == slot) {
+            if (build->layout.extensions[k].kind == SECTION_EXTENSION_REPEAT && build->layout.extensions[k].place == slot) {
                 result = grow_add_repeat_node(build, container, k, &parts[count].node);
                 parts[count].slot = slot;
                 parts[count++].extension = k;
@@ -1032,7 +1032,7 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
         result = grow_add_motive(build, slot, &refs[slot], &motives[slot]);
     }
     for (size_t i = 0; result == PLAN_OK && i < count; i++) {
-        if (parts[i].extension != SIZE_MAX && build->layout.extensions[parts[i].extension].kind == PLAN_EXTENSION_REPEAT) {
+        if (parts[i].extension != SIZE_MAX && build->layout.extensions[parts[i].extension].kind == SECTION_EXTENSION_REPEAT) {
             grow_extension_ref(build, parts[i].extension, &asked[i]);
         } else if (parts[i].extension != SIZE_MAX) {
             /* The idea after an evaded cadence restates the motive of the idea before it exactly. */
@@ -1177,18 +1177,18 @@ static PlanResult build_addition(GrowBuild *build, size_t k) {
 PlanResult grow_ending_build(GrowBuild *build) {
     PlanResult result = PLAN_ERR_BAD_PAYLOAD;
     switch (build->spec->pairing.ending) {
-    case PLAN_THEME_ENDING_CONTINUATION:
+    case SECTION_ENDING_CONTINUATION:
         result = build_continuation(build);
         break;
-    case PLAN_THEME_ENDING_CONSEQUENT:
+    case SECTION_ENDING_CONSEQUENT:
         result = build_consequent(build);
         break;
-    case PLAN_THEME_ENDING_CADENTIAL:
+    case SECTION_ENDING_CADENTIAL:
         result = build_cadential(build);
         break;
     }
     for (size_t k = 0; result == PLAN_OK && k < build->layout.extension_count; k++) {
-        if (build->layout.extensions[k].kind == PLAN_EXTENSION_ADDITION) {
+        if (build->layout.extensions[k].kind == SECTION_EXTENSION_ADDITION) {
             result = build_addition(build, k);
         }
     }

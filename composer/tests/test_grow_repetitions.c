@@ -36,8 +36,8 @@ static GrowRequest make_request(const Motive *motive, int tonic, HarmonyMode mod
     request.meter.beats_per_bar = beats;
     request.meter.beat_unit = unit;
     request.bars = bars;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     return request;
 }

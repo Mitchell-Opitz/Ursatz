@@ -120,13 +120,13 @@ target ursatz_chain chain
 target ursatz_io io
 target ursatz_realization realization
 target ursatz_plan plan
-staged model theory analysis chain io realization analyzer-api analyzer composer
+staged model theory analysis chain io realization plan analyzer-api analyzer composer
 generated analyzer version.h ursatz_analyzer_producer_key.h
 
 uses analyzer-api  model theory analysis io
 allow analyzer/include/ursatz_analyzer/result_chain.h chain -- the chain's claims, for a consumer that links ursatz_analyzer::chain
 uses analyzer      model theory analysis chain io analyzer-api cjson ezxml
-uses composer      model theory realization analysis chain io analyzer-api composer-api cjson
+uses composer      model theory realization plan analysis chain io analyzer-api composer-api cjson
 uses composer-cli  composer-api cjson
 uses gui           analyzer-api composer-api cjson civetweb
 allow gui/backend/src/service/knowledge_service.h theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer

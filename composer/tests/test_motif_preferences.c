@@ -245,8 +245,8 @@ static void sentence_setup(GrowSetup *setup, GrowBriefText *text, const Motive *
     setup->knowledge = test_knowledge();
     setup->text = text;
     setup->into = GROW_INTO_HYBRID;
-    setup->pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    setup->pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    setup->pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    setup->pairing.ending = SECTION_ENDING_CONTINUATION;
     setup->key = motive_key(motive);
     setup->meter = motive_meter(motive);
     setup->bars = 8;

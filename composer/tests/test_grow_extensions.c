@@ -50,39 +50,39 @@ typedef struct {
 
 typedef struct {
     const char *name;
-    PlanThemeBeginning beginning;
-    PlanThemeEnding ending;
+    SectionBeginning beginning;
+    SectionEnding ending;
     unsigned char ideas[GROW_IDEA_COUNT]; /* by GrowIdea */
-    PlanExtension extension;
+    SectionExtension extension;
     size_t bars;     /* the theme */
     Check check;
     Span spans[12];  /* the nodes of the theme, 0 bars ends the list */
 } Case;
 
-#define PERIOD PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT
-#define SENTENCE PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION
+#define PERIOD SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT
+#define SENTENCE SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION
 
 /* Ideas in GrowIdea order: basic, repetition, contrasting, consequent basic, consequent contrasting, fragment 1, fragment 2,
    cadential, cadential 1, cadential 2. */
 static const Case CASES[] = {
     {"sentence, repeat of fragment 2", SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0},
-     {PLAN_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 0, false}, 9, CHECK_SEQUENCE,
+     {SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 0, false}, 9, CHECK_SEQUENCE,
      {{"basic idea", 0, 2}, {"repetition", 2, 2}, {"fragment 1", 4, 1}, {"fragment 2", 5, 1},
       {"fragment 2 repeated", 6, 1}, {"cadential", 7, 2}, {NULL, 0, 0}}},
     {"sentence, stretched cadential idea", SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0},
-     {PLAN_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false}, 9, CHECK_STRETCH,
+     {SECTION_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false}, 9, CHECK_STRETCH,
      {{"basic idea", 0, 2}, {"repetition", 2, 2}, {"fragment 1", 4, 1}, {"fragment 2", 5, 1}, {"cadential", 6, 3},
       {NULL, 0, 0}}},
     {"sentence, addition of 2 bars", SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0},
-     {PLAN_EXTENSION_ADDITION, 0, 2, false}, 10, CHECK_ADDITION,
+     {SECTION_EXTENSION_ADDITION, 0, 2, false}, 10, CHECK_ADDITION,
      {{"basic idea", 0, 2}, {"repetition", 2, 2}, {"fragment 1", 4, 1}, {"fragment 2", 5, 1}, {"cadential", 6, 2},
       {"addition", 8, 2}, {"addition idea", 8, 2}, {NULL, 0, 0}}},
     {"sentence, evaded cadence", SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0},
-     {PLAN_EXTENSION_EVADED, 0, 0, false}, 10, CHECK_EVADED,
+     {SECTION_EXTENSION_EVADED, 0, 0, false}, 10, CHECK_EVADED,
      {{"basic idea", 0, 2}, {"repetition", 2, 2}, {"fragment 1", 4, 1}, {"fragment 2", 5, 1}, {"cadential", 6, 2},
       {"cadential after the evaded cadence", 8, 2}, {NULL, 0, 0}}},
     {"4+6 period, varied repeat of the consequent contrasting idea", PERIOD, {2, 0, 2, 2, 2, 0, 0, 0, 0, 0},
-     {PLAN_EXTENSION_REPEAT, GROW_IDEA_CONSEQUENT_CONTRASTING, 2, true}, 10, CHECK_VARIED,
+     {SECTION_EXTENSION_REPEAT, GROW_IDEA_CONSEQUENT_CONTRASTING, 2, true}, 10, CHECK_VARIED,
      {{"basic idea", 0, 2}, {"contrasting idea", 2, 2}, {"consequent basic idea", 4, 2},
       {"consequent contrasting idea", 6, 2}, {"consequent contrasting idea repeated", 8, 2}, {NULL, 0, 0}}},
 };
@@ -103,18 +103,18 @@ static Motive make_motive(const Scenario *scenario) {
     return motive;
 }
 
-static PlanConstruction construction_of(const Case *item) {
-    PlanConstruction construction;
+static SectionConstruction construction_of(const Case *item) {
+    SectionConstruction construction;
     memset(&construction, 0, sizeof(construction));
     memcpy(construction.idea_bars, item->ideas, sizeof(construction.idea_bars));
     construction.extension_count = 1;
     construction.extensions[0] = item->extension;
-    construction.reason = PLAN_CONSTRUCTION_GIVEN;
+    construction.reason = SECTION_CONSTRUCTION_GIVEN;
     return construction;
 }
 
 static GrowRequest make_request(const Scenario *scenario, const Motive *motive, const Case *item,
-                                const PlanConstruction *construction) {
+                                const SectionConstruction *construction) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
@@ -310,7 +310,7 @@ static void check_extension(const PiecePlan *plan, const Scenario *scenario, con
 }
 
 /* The plan carries the construction as given, extension included. */
-static void check_constraint(const PiecePlan *plan, const PlanConstruction *wanted) {
+static void check_constraint(const PiecePlan *plan, const SectionConstruction *wanted) {
     const PlanConstraint *constraint = plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
     assert(constraint);
     assert(memcmp(constraint->params.construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
@@ -321,7 +321,7 @@ static void check_constraint(const PiecePlan *plan, const PlanConstruction *want
 /* Grows one case from one seed; whether it composed. With `check`, the plan is held to the case. */
 static bool run_case(const Scenario *scenario, const Case *item, unsigned long seed, bool check) {
     Motive motive = make_motive(scenario);
-    PlanConstruction construction = construction_of(item);
+    SectionConstruction construction = construction_of(item);
     GrowRequest request = make_request(scenario, &motive, item, &construction);
     GrowConfig config;
     PiecePlan *plan = NULL;
@@ -367,7 +367,7 @@ static void test_rates(void) {
 static void check_layout_of(const Case *item, const size_t *starts, const size_t *lengths, size_t beginning, size_t ending) {
     GrowThemeRequest request;
     GrowLayout layout;
-    PlanConstruction construction = construction_of(item);
+    SectionConstruction construction = construction_of(item);
     memset(&request, 0, sizeof(request));
     request.bar = rational_ratio(1, 1);
     request.bars = item->bars;
@@ -405,14 +405,14 @@ static void test_layouts(void) {
     memset(&request, 0, sizeof(request));
     request.bar = rational_ratio(1, 1);
     request.bars = 10;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     request.has_construction = true;
     request.construction = construction_of(&CASES[2]);
     request.construction.extension_count = 2;
-    request.construction.extensions[0] = (PlanExtension){PLAN_EXTENSION_ADDITION, 0, 0, false};
-    request.construction.extensions[1] = (PlanExtension){PLAN_EXTENSION_EVADED, 0, 0, false};
+    request.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_ADDITION, 0, 0, false};
+    request.construction.extensions[1] = (SectionExtension){SECTION_EXTENSION_EVADED, 0, 0, false};
     request.bars = 11;
     assert(grow_layout_of(&request, &layout));
     /* The evaded idea (the cadential idea's 2 bars) is before the 1-bar addition, whatever their order in the construction. */
@@ -423,12 +423,12 @@ static void test_layouts(void) {
     assert(rational_cmp(layout.extensions[1].length, rational_ratio(2, 1)) == 0);
     /* A stretch and a repeat before it: the repeat takes the stretched idea's bars. */
     request.construction.extension_count = 2;
-    request.construction.extensions[0] = (PlanExtension){PLAN_EXTENSION_STRETCH, GROW_IDEA_FRAGMENT_2, 0, false};
-    request.construction.extensions[1] = (PlanExtension){PLAN_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 0, false};
+    request.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_STRETCH, GROW_IDEA_FRAGMENT_2, 0, false};
+    request.construction.extensions[1] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 0, false};
     request.bars = 8 + 1 + 2;
     assert(!grow_layout_of(&request, &layout)); /* a stretch cannot lengthen fragment 2 */
-    request.construction.extensions[0] = (PlanExtension){PLAN_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false};
-    request.construction.extensions[1] = (PlanExtension){PLAN_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 0, false};
+    request.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false};
+    request.construction.extensions[1] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 0, false};
     request.bars = 8 + 1 + 1;
     assert(grow_layout_of(&request, &layout));
     assert(rational_cmp(layout.start[GROW_PLACE_CADENTIAL], rational_ratio(7, 1)) == 0);
@@ -436,15 +436,15 @@ static void test_layouts(void) {
     assert(rational_cmp(layout.extensions[1].start, rational_ratio(6, 1)) == 0);
     /* A second evaded cadence, an addition of 3 bars and an HC to evade have no layout. */
     request.construction.extension_count = 2;
-    request.construction.extensions[0] = (PlanExtension){PLAN_EXTENSION_EVADED, 0, 0, false};
-    request.construction.extensions[1] = (PlanExtension){PLAN_EXTENSION_EVADED, 0, 0, false};
+    request.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_EVADED, 0, 0, false};
+    request.construction.extensions[1] = (SectionExtension){SECTION_EXTENSION_EVADED, 0, 0, false};
     request.bars = 12;
     assert(!grow_layout_of(&request, &layout));
     request.construction.extension_count = 1;
-    request.construction.extensions[0] = (PlanExtension){PLAN_EXTENSION_ADDITION, 0, 3, false};
+    request.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_ADDITION, 0, 3, false};
     request.bars = 11;
     assert(!grow_layout_of(&request, &layout));
-    request.construction.extensions[0] = (PlanExtension){PLAN_EXTENSION_EVADED, 0, 0, false};
+    request.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_EVADED, 0, 0, false};
     request.bars = 10;
     request.cadence = CADENCE_TYPE_HALF;
     assert(!grow_layout_of(&request, &layout));
@@ -465,25 +465,25 @@ static void expect_refusal(const GrowRequest *request, const char *path, const c
 static void test_refusals(void) {
     const Scenario *scenario = &SCENARIOS[0];
     Motive motive = make_motive(scenario);
-    PlanConstruction construction = construction_of(&CASES[0]);
+    SectionConstruction construction = construction_of(&CASES[0]);
     GrowRequest request = make_request(scenario, &motive, &CASES[0], &construction);
     PiecePlan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
 
     /* An extension after an idea it cannot follow, or one the pairing does not have. */
-    PlanConstruction other = construction;
+    SectionConstruction other = construction;
     GrowRequest changed = request;
     changed.construction = &other;
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_REPEAT, GROW_IDEA_BASIC, 0, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_BASIC, 0, false};
     expect_refusal(&changed, "/construction/extensions/0", "a repeat cannot follow the basic idea");
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_REPEAT, GROW_IDEA_CADENTIAL, 0, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_CADENTIAL, 0, false};
     expect_refusal(&changed, "/construction/extensions/0", "a repeat cannot follow the cadential");
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_REPEAT, GROW_IDEA_CONTRASTING, 0, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_CONTRASTING, 0, false};
     expect_refusal(&changed, "/construction/extensions/0", "the presentation+continuation has no contrasting idea");
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_STRETCH, GROW_IDEA_FRAGMENT_1, 1, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_STRETCH, GROW_IDEA_FRAGMENT_1, 1, false};
     expect_refusal(&changed, "/construction/extensions/0", "a stretch cannot follow the fragment 1");
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 0, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 0, false};
     changed.bars = 10;
     expect_refusal(&changed, "/construction/ideas", "the ideas are 9 bars; the theme has 10");
 
@@ -491,28 +491,28 @@ static void test_refusals(void) {
     changed = request;
     changed.construction = &other;
     changed.cadence = CADENCE_TYPE_HALF;
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_EVADED, 0, 0, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_EVADED, 0, 0, false};
     changed.bars = 10;
     expect_refusal(&changed, "/construction/extensions/0", "an HC cannot be evaded");
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_ADDITION, 0, 1, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_ADDITION, 0, 1, false};
     changed.bars = 9;
     expect_refusal(&changed, "/construction/extensions/0", "an addition follows a PAC or an IAC");
     changed.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     other.extension_count = 2;
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_EVADED, 0, 0, false};
-    other.extensions[1] = (PlanExtension){PLAN_EXTENSION_EVADED, 0, 0, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_EVADED, 0, 0, false};
+    other.extensions[1] = (SectionExtension){SECTION_EXTENSION_EVADED, 0, 0, false};
     changed.bars = 12;
     expect_refusal(&changed, "/construction/extensions/1", "a theme has one evaded cadence");
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_ADDITION, 0, 1, false};
-    other.extensions[1] = (PlanExtension){PLAN_EXTENSION_ADDITION, 0, 1, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_ADDITION, 0, 1, false};
+    other.extensions[1] = (SectionExtension){SECTION_EXTENSION_ADDITION, 0, 1, false};
     changed.bars = 10;
     expect_refusal(&changed, "/construction/extensions/1", "a theme has one addition");
     other.extension_count = 1;
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_ADDITION, 0, 3, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_ADDITION, 0, 3, false};
     changed.bars = 11;
     expect_refusal(&changed, "/construction/extensions/0", "an addition is 2 bars at most");
     /* An evaded idea of one bar has no room for the cadence. */
-    other.extensions[0] = (PlanExtension){PLAN_EXTENSION_EVADED, 0, 1, false};
+    other.extensions[0] = (SectionExtension){SECTION_EXTENSION_EVADED, 0, 1, false};
     changed.bars = 9;
     expect_refusal(&changed, "/bars", "9 bars leave no room for the cadence");
 }

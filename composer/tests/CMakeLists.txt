@@ -134,7 +134,7 @@ ursatz_test_executable(test_grow_extensions LIBS ursatz_composer composer_test_s
 ursatz_test(test_grow_extensions_fast TARGET test_grow_extensions ARGS fast)
 ursatz_test(test_grow_extensions TARGET test_grow_extensions LABELS slow)
 ursatz_test_executable(test_grow_period LIBS ursatz_composer composer_test_support)
-# One test for each of the nine pairings of a beginning and an ending (the order of PlanThemeBeginning and PlanThemeEnding).
+# One test for each of the nine pairings of a beginning and an ending (the order of SectionBeginning and SectionEnding).
 set(GROW_BEGINNINGS presentation antecedent compound_basic_idea)
 set(GROW_ENDINGS continuation consequent cadential)
 foreach(beginning RANGE 2)

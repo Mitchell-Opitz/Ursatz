@@ -80,8 +80,8 @@ static bool section_key(const PiecePlan *plan, NodeId section, AnalysisKey *out)
 
 /* Whether the section is a transition: it ends on the new key's V in a half cadence, not a PAC (R-503, R-512). */
 static bool is_transition(const PiecePlan *plan, NodeId section) {
-    PlanSectionFunction function;
-    return plan_section_function_of(plan, section, &function) && function.function == PLAN_FUNCTION_TRANSITION;
+    SectionFunction function;
+    return plan_section_function_of(plan, section, &function) && function.function == SECTION_FUNCTION_TRANSITION;
 }
 
 /* The CADENCE constraints of the section, replaced by these. */

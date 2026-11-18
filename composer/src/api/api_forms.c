@@ -60,7 +60,7 @@ static const char *key_name(const FormSpec *form, int key) {
 }
 
 /* The slots of a theme with this pairing, each with the ideas the pairing's beginning and ending give it. */
-static bool add_slots(cJSON *section, const PlanThemePairing *pairing) {
+static bool add_slots(cJSON *section, const SectionPairing *pairing) {
     cJSON *slots = cJSON_AddArrayToObject(section, "slots");
     if (!slots) {
         return false;
@@ -146,8 +146,8 @@ static bool add_figure(cJSON *section, const FormSectionSpec *spec) {
         return api_add(section, "figure", cJSON_CreateNull());
     }
     cJSON *figure = cJSON_CreateObject();
-    if (!figure || !cJSON_AddStringToObject(figure, "kind", plan_figure_kind_name(spec->figure.kind)) ||
-        !cJSON_AddStringToObject(figure, "rhythm", plan_figure_rhythm_name(spec->figure.rhythm)) ||
+    if (!figure || !cJSON_AddStringToObject(figure, "kind", section_figure_kind_name(spec->figure.kind)) ||
+        !cJSON_AddStringToObject(figure, "rhythm", section_figure_rhythm_name(spec->figure.rhythm)) ||
         !cJSON_AddStringToObject(figure, "harmony", spec->figure.reharmonize ? "reharmonized" : "kept") ||
         !api_add(figure, "change_at", spec->figure.change_at > 0 ? cJSON_CreateNumber((double)spec->figure.change_at) : cJSON_CreateNull()) ||
         !cJSON_AddBoolToObject(figure, "climax", spec->figure.climax)) {
@@ -177,7 +177,7 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
     bool has_motive = spec->has_motive && motive_relation_step_text(&spec->motive, motive, sizeof motive);
     bool returns = spec->returns != FORM_SPEC_NO_RETURN && spec->returns < size->section_count;
     return cJSON_AddStringToObject(section, "name", spec->name) && cJSON_AddStringToObject(section, "letter", spec->letter) &&
-           add_choice_member(section, "role", form_role_name(spec->role), form_role_label(spec->role)) &&
+           add_choice_member(section, "role", section_role_name(spec->role), section_role_label(spec->role)) &&
            add_number_or_null(section, "bars", spec->bars) && add_number_or_null(section, "beats", spec->beats) &&
            add_choice_member(section, "beginning", theme_shape_beginning(spec->pairing.beginning)->plan_name,
                              beginning->label) &&
@@ -185,9 +185,9 @@ static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *s
            api_add(section, "cadence", cadence) && cJSON_AddBoolToObject(section, "closed", spec->closed) &&
            add_keys(section, form, spec) && add_string_or_null(section, "motive", has_motive ? motive : NULL) &&
            add_string_or_null(section, "returns", returns ? size->sections[spec->returns].name : NULL) &&
-           add_string_or_null(section, "variation", returns ? plan_return_variation_name(spec->variation) : NULL) &&
+           add_string_or_null(section, "variation", returns ? section_return_variation_name(spec->variation) : NULL) &&
            add_string_or_null(section, "setting",
-                              returns && spec->variation == PLAN_RETURN_SETTING ? api_accompaniment_name(spec->setting) : NULL) &&
+                              returns && spec->variation == SECTION_RETURN_SETTING ? api_accompaniment_name(spec->setting) : NULL) &&
            add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing) &&
            add_construction(section, spec) && cJSON_AddBoolToObject(section, "leads_in", spec->leads_in) &&
            add_connective(section, spec->connective) && add_figure(section, spec) &&
@@ -234,15 +234,15 @@ static bool add_request_members(cJSON *form_json, const FormSpec *form) {
     }
     for (size_t i = 0; i < form->role_count; i++) {
         cJSON *role = cJSON_CreateObject();
-        if (!role || !cJSON_AddStringToObject(role, "value", form_role_name(form->roles[i])) ||
-            !cJSON_AddStringToObject(role, "label", form_role_label(form->roles[i])) ||
-            !cJSON_AddBoolToObject(role, "required", form->roles[i] == FORM_ROLE_BODY) || !cJSON_AddItemToArray(roles, role)) {
+        if (!role || !cJSON_AddStringToObject(role, "value", section_role_name(form->roles[i])) ||
+            !cJSON_AddStringToObject(role, "label", section_role_label(form->roles[i])) ||
+            !cJSON_AddBoolToObject(role, "required", form->roles[i] == SECTION_ROLE_BODY) || !cJSON_AddItemToArray(roles, role)) {
             cJSON_Delete(role);
             return false;
         }
     }
     for (size_t i = 0; i < form->loop_role_count; i++) {
-        if (!append_string(loop_roles, form_role_name(form->loop_roles[i]))) {
+        if (!append_string(loop_roles, section_role_name(form->loop_roles[i]))) {
             return false;
         }
     }
@@ -264,7 +264,7 @@ static bool add_request_members(cJSON *form_json, const FormSpec *form) {
             return false;
         }
         for (size_t r = 0; r < rule->role_count; r++) {
-            if (!append_string(names, form_role_name(rule->roles[r]))) {
+            if (!append_string(names, section_role_name(rule->roles[r]))) {
                 return false;
             }
         }
@@ -278,7 +278,7 @@ static bool add_request_members(cJSON *form_json, const FormSpec *form) {
     const FormDefaultEnding *ending = &form->default_ending;
     cJSON *object = cJSON_CreateObject();
     if (!object || !cJSON_AddStringToObject(object, "id", ending->id) || !cJSON_AddStringToObject(object, "letter", ending->letter) ||
-        !cJSON_AddStringToObject(object, "role", form_role_name(ending->role)) ||
+        !cJSON_AddStringToObject(object, "role", section_role_name(ending->role)) ||
         !cJSON_AddNumberToObject(object, "bars", (double)ending->bars) ||
         !cJSON_AddStringToObject(object, "cadence", plan_cadence_name(ending->cadence))) {
         cJSON_Delete(object);

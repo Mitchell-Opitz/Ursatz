@@ -65,8 +65,8 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = bars;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     return request;
 }
@@ -117,14 +117,14 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
     assert(plan_node_kind(plan, test_find_node(plan, "cadential")) == PLAN_NODE_IDEA);
 
     /* standard-form's hard rules, asked of what is in the plan. */
-    PlanThemePairing pairing = {PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT};
+    SectionPairing pairing = {SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT};
     for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
         if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
             pairing = constraint->params.theme_pairing;
         }
     }
-    assert(pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION && pairing.ending == PLAN_THEME_ENDING_CONTINUATION);
+    assert(pairing.beginning == SECTION_BEGINNING_PRESENTATION && pairing.ending == SECTION_ENDING_CONTINUATION);
     PhraseLevelForm form;
     assert(standard_form_pairing_form(PHRASE_BEGINNING_PRESENTATION, PHRASE_ENDING_CONTINUATION, &form));
     assert(form == PHRASE_LEVEL_FORM_SENTENCE);
@@ -346,11 +346,11 @@ static void test_bad_requests(void) {
     assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     /* An antecedent ends in a cadence weaker than the theme's, and no cadence is weaker than a half cadence. */
     changed = request;
-    changed.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
-    changed.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
+    changed.pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
+    changed.pairing.ending = SECTION_ENDING_CONSEQUENT;
     changed.cadence = CADENCE_TYPE_HALF;
     assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
-    changed.pairing.beginning = (PlanThemeBeginning)7;
+    changed.pairing.beginning = (SectionBeginning)7;
     assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     changed = request;
     changed.cadence = CADENCE_TYPE_DECEPTIVE;

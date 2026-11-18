@@ -51,6 +51,19 @@ typedef enum {
     GROW_IDEA_COUNT
 } GrowIdea;
 
+/* The ideas are the section description's (plan/section.h): the same values in the same order. */
+_Static_assert((int)GROW_IDEA_BASIC == (int)SECTION_IDEA_BASIC, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_REPETITION == (int)SECTION_IDEA_REPETITION, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_CONTRASTING == (int)SECTION_IDEA_CONTRASTING, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_CONSEQUENT_BASIC == (int)SECTION_IDEA_CONSEQUENT_BASIC, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_CONSEQUENT_CONTRASTING == (int)SECTION_IDEA_CONSEQUENT_CONTRASTING, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_FRAGMENT_1 == (int)SECTION_IDEA_FRAGMENT_1, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_FRAGMENT_2 == (int)SECTION_IDEA_FRAGMENT_2, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_CADENTIAL == (int)SECTION_IDEA_CADENTIAL, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_CADENTIAL_1 == (int)SECTION_IDEA_CADENTIAL_1, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_CADENTIAL_2 == (int)SECTION_IDEA_CADENTIAL_2, "GrowIdea follows SectionIdea");
+_Static_assert((int)GROW_IDEA_COUNT == SECTION_CONSTRUCTION_IDEAS, "GrowIdea follows SectionIdea");
+
 /* The role an idea has in a theme by its name (R-355, grow_idea_role). */
 typedef enum {
     GROW_ROLE_NONE,
@@ -62,7 +75,7 @@ typedef enum {
 
 /*
  * One beginning (presentation, antecedent, compound basic idea) or one ending (continuation, consequent, cadential).
- * `value` is the PlanThemeBeginning or PlanThemeEnding. `plan_name` is the word the plan's theme-pairing constraint
+ * `value` is the SectionBeginning or SectionEnding. `plan_name` is the word the plan's theme-pairing constraint
  * uses; `library_name` is the name standard-form's phrase_beginning_from_name and phrase_ending_from_name take.
  */
 typedef struct {
@@ -73,7 +86,7 @@ typedef struct {
 } ThemeShapeHalf;
 
 /*
- * One idea of one half. `half` is the PlanThemeBeginning (in_beginning) or PlanThemeEnding value it belongs to;
+ * One idea of one half. `half` is the SectionBeginning (in_beginning) or SectionEnding value it belongs to;
  * `place` is the GrowPlace index the idea holds in a theme of that half (grow_internal.h); `first` is whether the
  * idea is the first of its slot; `units` is its length in eighths of the theme.
  */
@@ -98,8 +111,8 @@ typedef struct {
 } ThemeShapeSlot;
 
 /* The halves: the three beginnings, then the three endings, in enum order. */
-const ThemeShapeHalf *theme_shape_beginning(PlanThemeBeginning beginning);
-const ThemeShapeHalf *theme_shape_ending(PlanThemeEnding ending);
+const ThemeShapeHalf *theme_shape_beginning(SectionBeginning beginning);
+const ThemeShapeHalf *theme_shape_ending(SectionEnding ending);
 /* The half of that kind with that plan name; NULL for an unknown name or NULL. */
 const ThemeShapeHalf *theme_shape_half_find(bool beginning, const char *plan_name);
 
@@ -107,9 +120,9 @@ const ThemeShapeHalf *theme_shape_half_find(bool beginning, const char *plan_nam
 size_t theme_shape_idea_count(void);
 const ThemeShapeIdea *theme_shape_idea_at(size_t index);
 /* The row of the idea under the pairing's beginning or ending; NULL when the pairing has none. */
-const ThemeShapeIdea *theme_shape_idea_in(const PlanThemePairing *pairing, GrowIdea idea);
+const ThemeShapeIdea *theme_shape_idea_in(const SectionPairing *pairing, GrowIdea idea);
 /* The row at that place under the pairing: places BASIC and REPETITION come from the beginning, the others from the ending. */
-const ThemeShapeIdea *theme_shape_place_in(const PlanThemePairing *pairing, unsigned place);
+const ThemeShapeIdea *theme_shape_place_in(const SectionPairing *pairing, unsigned place);
 /* The row of the idea with that name in any half (the first); NULL for an unknown name or NULL. */
 const ThemeShapeIdea *theme_shape_idea_find(const char *name);
 /* The slot of the idea (the first row it has); GROW_SLOT_BASIC for an invalid idea. */

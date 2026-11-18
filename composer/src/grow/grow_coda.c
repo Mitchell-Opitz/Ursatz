@@ -97,8 +97,8 @@ static bool read_coda(const PiecePlan *plan, FillTarget target, CodaRequest *out
         plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_HOLD) || form_return_handles(plan, target.id)) {
         return false;
     }
-    PlanSectionFunction function;
-    if (!plan_section_function_of(plan, target.id, &function) || function.function != PLAN_FUNCTION_CODA) {
+    SectionFunction function;
+    if (!plan_section_function_of(plan, target.id, &function) || function.function != SECTION_FUNCTION_CODA) {
         return false;
     }
     theme->section = target.id;

@@ -399,10 +399,10 @@ static bool add_piece_intos(cJSON *root) {
     for (int into = 0; list && API_PIECE_INTOS[into].value; into++) {
         cJSON *entry = add_choice(list, API_PIECE_INTOS[into].value, API_PIECE_INTOS[into].label);
         int found = 0;
-        PlanThemePairing pairing = {0};
+        SectionPairing pairing = {0};
         for (int b = 0; b < 3; b++) {
             for (int e = 0; e < 3; e++) {
-                PlanThemePairing candidate = {(PlanThemeBeginning)b, (PlanThemeEnding)e};
+                SectionPairing candidate = {(SectionBeginning)b, (SectionEnding)e};
                 if (grow_pairing_archetype(&candidate) == into) {
                     pairing = candidate;
                     found++;
@@ -461,13 +461,13 @@ static bool add_regular_bars(cJSON *root) {
 }
 
 /* Whether some pairing has the idea and takes an extension of the kind on it. */
-static bool extension_on_idea(PlanExtensionKind kind, GrowIdea idea) {
-    for (int beginning = PLAN_THEME_BEGINNING_PRESENTATION; beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA; beginning++) {
-        for (int ending = PLAN_THEME_ENDING_CONTINUATION; ending <= PLAN_THEME_ENDING_CADENTIAL; ending++) {
-            PlanThemePairing pairing;
+static bool extension_on_idea(SectionExtensionKind kind, GrowIdea idea) {
+    for (int beginning = SECTION_BEGINNING_PRESENTATION; beginning <= SECTION_BEGINNING_COMPOUND_BASIC_IDEA; beginning++) {
+        for (int ending = SECTION_ENDING_CONTINUATION; ending <= SECTION_ENDING_CADENTIAL; ending++) {
+            SectionPairing pairing;
             memset(&pairing, 0, sizeof(pairing));
-            pairing.beginning = (PlanThemeBeginning)beginning;
-            pairing.ending = (PlanThemeEnding)ending;
+            pairing.beginning = (SectionBeginning)beginning;
+            pairing.ending = (SectionEnding)ending;
             if (grow_extension_allowed(&pairing, kind, idea)) {
                 return true;
             }
@@ -481,12 +481,12 @@ static bool add_theme_extensions(cJSON *root) {
     static const struct {
         const char *value;
         const char *label;
-        PlanExtensionKind kind;
+        SectionExtensionKind kind;
         bool names_idea;
-    } KINDS[] = {{"repeat", "Internal repetition", PLAN_EXTENSION_REPEAT, true},
-                 {"stretch", "Stretched cadence", PLAN_EXTENSION_STRETCH, true},
-                 {"addition", "Addition after the cadence", PLAN_EXTENSION_ADDITION, false},
-                 {"evaded", "Evaded cadence", PLAN_EXTENSION_EVADED, false}};
+    } KINDS[] = {{"repeat", "Internal repetition", SECTION_EXTENSION_REPEAT, true},
+                 {"stretch", "Stretched cadence", SECTION_EXTENSION_STRETCH, true},
+                 {"addition", "Addition after the cadence", SECTION_EXTENSION_ADDITION, false},
+                 {"evaded", "Evaded cadence", SECTION_EXTENSION_EVADED, false}};
     cJSON *list = add_list(root, "theme_extensions");
     for (size_t i = 0; list && i < sizeof(KINDS) / sizeof(KINDS[0]); i++) {
         cJSON *entry = add_choice(list, KINDS[i].value, KINDS[i].label);
@@ -500,7 +500,7 @@ static bool add_theme_extensions(cJSON *root) {
                 return false;
             }
         }
-        if (KINDS[i].kind == PLAN_EXTENSION_REPEAT && !cJSON_AddBoolToObject(entry, "varied", true)) {
+        if (KINDS[i].kind == SECTION_EXTENSION_REPEAT && !cJSON_AddBoolToObject(entry, "varied", true)) {
             return false;
         }
     }

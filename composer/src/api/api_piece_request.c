@@ -40,7 +40,7 @@ void api_piece_request_destroy(PieceSpec *request) {
 }
 
 /* "antecedent+continuation": a beginning, a plus sign and an ending (as grow --hybrid), the words of the vocabulary. */
-static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
+static bool parse_hybrid(const char *text, SectionPairing *pairing) {
     const char *plus = strchr(text, '+');
     if (!plus) {
         return false;
@@ -50,13 +50,13 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
     bool ending_found = false;
     for (int i = 0; API_THEME_BEGINNINGS[i].value; i++) {
         if (strlen(API_THEME_BEGINNINGS[i].value) == length && strncmp(text, API_THEME_BEGINNINGS[i].value, length) == 0) {
-            pairing->beginning = (PlanThemeBeginning)i;
+            pairing->beginning = (SectionBeginning)i;
             beginning_found = true;
         }
     }
     for (int i = 0; API_THEME_ENDINGS[i].value; i++) {
         if (request_equals_ignore_case(plus + 1, API_THEME_ENDINGS[i].value)) {
-            pairing->ending = (PlanThemeEnding)i;
+            pairing->ending = (SectionEnding)i;
             ending_found = true;
         }
     }
@@ -155,10 +155,10 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
                                 "antecedent+continuation",
                                 id);
             }
-            bool sentence = section->hybrid.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
-                            section->hybrid.ending == PLAN_THEME_ENDING_CONTINUATION;
-            bool period = section->hybrid.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
-                          section->hybrid.ending == PLAN_THEME_ENDING_CONSEQUENT;
+            bool sentence = section->hybrid.beginning == SECTION_BEGINNING_PRESENTATION &&
+                            section->hybrid.ending == SECTION_ENDING_CONTINUATION;
+            bool period = section->hybrid.beginning == SECTION_BEGINNING_ANTECEDENT &&
+                          section->hybrid.ending == SECTION_ENDING_CONSEQUENT;
             if (sentence || period) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': %s is a %s, not a hybrid", id, hybrid,
                                 sentence ? "sentence" : "period");

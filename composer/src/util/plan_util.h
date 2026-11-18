@@ -44,7 +44,7 @@ bool plan_in_subtree(const PiecePlan *plan, NodeId node, NodeId root);
 bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out);
 
 /* The part of a larger form a section node is (its section function constraint, R-503); false when it has none. */
-bool plan_section_function_of(const PiecePlan *plan, NodeId node, PlanSectionFunction *out);
+bool plan_section_function_of(const PiecePlan *plan, NodeId node, SectionFunction *out);
 
 /* The piece result of a plan result: OK, an allocation failure, else a bad request. */
 PieceResult piece_result_of_plan(PlanResult result);

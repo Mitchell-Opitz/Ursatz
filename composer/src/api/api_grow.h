@@ -90,12 +90,12 @@ typedef enum { GROW_INTO_SENTENCE, GROW_INTO_PERIOD, GROW_INTO_HYBRID } GrowInto
 typedef struct {
     const GrowBriefText *text; /* kept for the messages; must outlive the run */
     GrowInto into;
-    PlanThemePairing pairing;
+    SectionPairing pairing;
     AnalysisKey key;
     PlanMeter meter;
     size_t bars;
     bool has_construction;                   /* a construction was given (api_grow_read_construction), reason GIVEN */
-    PlanConstruction construction;
+    SectionConstruction construction;
     CadenceType cadence;
     CadenceType first_cadence;
     bool has_accompaniment;
@@ -169,13 +169,13 @@ ComposerStatus api_grow_read_construction(const cJSON *request, GrowSetup *out, 
  * The construction object itself ({"ideas": {...}, "extensions": [...]}, reason GIVEN) into *out, whose members are
  * refused at `base` ("/construction", or the path of a section's construction in a piece request).
  */
-ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *base, PlanConstruction *out, ComposerError *error);
+ComposerStatus api_grow_read_construction_object(const cJSON *item, const char *base, SectionConstruction *out, ComposerError *error);
 
 /*
  * A construction as a response gives it (R-468): {"halves", "ideas", "extensions", "reason", "text"}, `text` the sentence
  * that says why (grow_construction_describe). NULL when memory runs out.
  */
-cJSON *api_grow_construction_json(const PlanConstruction *construction, const PlanThemePairing *pairing, const char *text);
+cJSON *api_grow_construction_json(const SectionConstruction *construction, const SectionPairing *pairing, const char *text);
 
 /* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive". */
 const char *api_accompaniment_name(PlanAccompanimentPattern pattern);

@@ -355,7 +355,7 @@ static ComposerStatus refuse_idea_beside_part(const GrowMaterial *material, cons
                               setup->pairing.beginning, &basic, &step)) {
         return COMPOSER_OK;
     }
-    const char *part = setup->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? "antecedent" : "presentation";
+    const char *part = setup->pairing.beginning == SECTION_BEGINNING_ANTECEDENT ? "antecedent" : "presentation";
     char path[96];
     if (theme->slot_motive[GROW_SLOT_CONTRASTING]) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/slots/contrasting",

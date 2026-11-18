@@ -81,10 +81,10 @@ static bool read_liquidate(const PiecePlan *plan, FillTarget target, LiquidateRe
         return false;
     }
     /* A liquidation, or a retransition: a section whose function is retransition and which has no liquidation of its own. */
-    PlanSectionFunction function;
+    SectionFunction function;
     const bool liquidation = plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_LIQUIDATION);
     request.retransition = !liquidation && plan_section_function_of(plan, target.id, &function) &&
-                           function.function == PLAN_FUNCTION_RETRANSITION;
+                           function.function == SECTION_FUNCTION_RETRANSITION;
     if (!liquidation && !request.retransition) {
         return false;
     }

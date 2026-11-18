@@ -372,7 +372,7 @@ static bool authentic_inside(const PiecePlan *plan, const KeyLane *lane, const N
 static bool opens_retransition(const PiecePlan *plan, const NodeId *sections, size_t count, Rational at) {
     for (size_t s = 0; s < count; s++) {
         const PlanConstraint *function = find(plan, sections[s], PLAN_CONSTRAINT_SECTION_FUNCTION);
-        if (function && function->params.section_function.function == PLAN_FUNCTION_RETRANSITION &&
+        if (function && function->params.section_function.function == SECTION_FUNCTION_RETRANSITION &&
             rational_cmp(plan_node_span(plan, sections[s]).start, at) == 0) {
             return true;
         }

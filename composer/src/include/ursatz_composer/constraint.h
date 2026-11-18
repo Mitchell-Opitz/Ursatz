@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <analysis/motive/motive_relation.h>
+#include <plan/section.h>
 #include <theory/vocabulary/cadence_type.h>
 
 #include <ursatz_composer/lanes.h>
@@ -127,24 +128,6 @@ typedef struct {
     bool pedal;
 } PlanHarmonyShape;
 
-typedef enum {
-    PLAN_THEME_BEGINNING_PRESENTATION,
-    PLAN_THEME_BEGINNING_ANTECEDENT,
-    PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA
-} PlanThemeBeginning;
-
-typedef enum {
-    PLAN_THEME_ENDING_CONTINUATION,
-    PLAN_THEME_ENDING_CONSEQUENT,
-    PLAN_THEME_ENDING_CADENTIAL
-} PlanThemeEnding;
-
-/* The nine pairings of a beginning and an ending; the standard-form theme types are made from them. */
-typedef struct {
-    PlanThemeBeginning beginning;
-    PlanThemeEnding ending;
-} PlanThemePairing;
-
 /*
  * An accompaniment under a written melody and bass, in the inner voice lanes (R-065). The pattern is Composer
  * vocabulary; ANY leaves it to the operator, which a texture target narrows. texture is a StandardTexture value
@@ -198,80 +181,12 @@ typedef struct {
  * A returning section (R-068, R-070): section is the section node it returns, variation how the return differs
  * from it. The constraint must name a section node.
  */
-typedef enum {
-    PLAN_RETURN_EXACT,
-    PLAN_RETURN_ORNAMENT,
-    PLAN_RETURN_REHARMONIZE,
-    PLAN_RETURN_REREGISTER,
-    PLAN_RETURN_VARIED, /* a moderately varied repetition (Schoenberg's A1): a few ornaments and a reharmonized ending */
-    PLAN_RETURN_FIGURATE, /* the melody rewritten as a motive of variation over a skeleton of the returned one (R-497) */
-    PLAN_RETURN_EMBELLISH, /* the ornament melody, eighth notes split into sixteenths when no longer note can be (R-516) */
-    PLAN_RETURN_SETTING /* the harmony, bass and melody kept, the accompaniment written anew in `setting` (R-518) */
-} PlanReturnVariation;
-
 typedef struct {
     NodeId section;
-    PlanReturnVariation variation;
+    SectionReturnVariation variation;
     PlanAccompanimentPattern setting; /* SETTING: the pattern of the new accompaniment: block, arpeggiated, alberti or oom-pah */
     bool across_modes; /* REHARMONIZE: a source in the other mode is moved by the tonic step and mapped into the target's mode (R-524) */
 } PlanReturn;
-
-/* The name of a return variation as plans, forms and the API write it; NULL for a value out of range. */
-const char *plan_return_variation_name(PlanReturnVariation variation);
-/* The variation a name stands for; false (out untouched) for an unknown name. */
-bool plan_return_variation_from_name(const char *name, PlanReturnVariation *out);
-
-/*
- * The motive of variation of a figurate return (R-497, R-498): one figure of one cell held in one rhythm through the
- * variation. reharmonize puts the figure over a reharmonized copy; change_at, when not 0, is the bar of the section
- * (from 1) at which that copy's root must change, and needs reharmonize; climax puts the variation an octave higher
- * when it fits the melody range.
- */
-typedef enum {
-    PLAN_FIGURE_NEIGHBOR,
-    PLAN_FIGURE_SCALE,
-    PLAN_FIGURE_BROKEN_CHORD
-} PlanFigureKind;
-
-typedef enum {
-    PLAN_FIGURE_EIGHTHS,
-    PLAN_FIGURE_SIXTEENTHS
-} PlanFigureRhythm;
-
-typedef struct {
-    PlanFigureKind kind;
-    PlanFigureRhythm rhythm;
-    bool reharmonize;
-    unsigned change_at;
-    bool climax;
-} PlanFigure;
-
-/* The names of a figure's kind and rhythm as plans and forms write them; NULL for a value out of range. */
-const char *plan_figure_kind_name(PlanFigureKind kind);
-const char *plan_figure_rhythm_name(PlanFigureRhythm rhythm);
-/* The kind or rhythm a name stands for; false (out untouched) for an unknown name. */
-bool plan_figure_kind_from_name(const char *name, PlanFigureKind *out);
-bool plan_figure_rhythm_from_name(const char *name, PlanFigureRhythm *out);
-
-/* The part of a larger form a section is (R-503). */
-typedef enum {
-    PLAN_FUNCTION_TRANSITION,
-    PLAN_FUNCTION_RETRANSITION,
-    PLAN_FUNCTION_SUBORDINATE,
-    PLAN_FUNCTION_CODA
-} PlanFunctionKind;
-
-/* independent: a transition made from a motive of its own (R-504); lyric: a subordinate theme whose motive is m0 augmented (R-506). */
-typedef struct {
-    PlanFunctionKind function;
-    bool independent;
-    bool lyric;
-} PlanSectionFunction;
-
-/* "transition", "retransition", "subordinate", "coda"; NULL for a value out of range. */
-const char *plan_function_kind_name(PlanFunctionKind kind);
-/* The function a name stands for; false (out untouched) for an unknown name. */
-bool plan_function_kind_from_name(const char *name, PlanFunctionKind *out);
 
 /*
  * The lanes that sound in a layer section: bit (1u << lane) for each PlanLaneKind. A layer section is grown in
@@ -279,6 +194,7 @@ bool plan_function_kind_from_name(const char *name, PlanFunctionKind *out);
  */
 #define PLAN_LAYER_BIT(lane) (1u << (unsigned)(lane))
 #define PLAN_LAYERS_ALL (PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE + 1) - 1u)
+_Static_assert(PLAN_LAYERS_ALL == SECTION_LAYERS_ALL, "PlanLayers follows SECTION_LAYERS_ALL");
 
 typedef struct {
     unsigned lanes;
@@ -379,43 +295,6 @@ typedef struct {
 } PlanPedal;
 
 /*
- * The construction of a theme (R-468, R-469): the bars of each of its ideas, and its extensions, on the theme's section
- * node. idea_bars is indexed by GrowIdea (theme_shape.h; PLAN_CONSTRUCTION_IDEAS is GROW_IDEA_COUNT): an idea the
- * theme's pairing has needs 1 bar or more, an idea it does not have is 0. An extension (R-468) follows or stretches the
- * idea numbered `idea` and is `bars` bars long, written as a varied copy when `varied`. reason is why the theme has
- * this construction: given by the caller, taken from the length of a motive, or taken from the length asked for.
- */
-#define PLAN_CONSTRUCTION_IDEAS 10
-#define PLAN_CONSTRUCTION_EXTENSIONS 3
-
-typedef enum {
-    PLAN_EXTENSION_REPEAT,
-    PLAN_EXTENSION_STRETCH,
-    PLAN_EXTENSION_ADDITION,
-    PLAN_EXTENSION_EVADED
-} PlanExtensionKind;
-
-typedef struct {
-    PlanExtensionKind kind;
-    unsigned char idea; /* the GrowIdea the extension follows or stretches */
-    unsigned char bars;
-    bool varied;
-} PlanExtension;
-
-typedef enum {
-    PLAN_CONSTRUCTION_GIVEN,
-    PLAN_CONSTRUCTION_FROM_MOTIVE,
-    PLAN_CONSTRUCTION_FROM_LENGTH
-} PlanConstructionReason;
-
-typedef struct {
-    unsigned char idea_bars[PLAN_CONSTRUCTION_IDEAS];
-    size_t extension_count;
-    PlanExtension extensions[PLAN_CONSTRUCTION_EXTENSIONS];
-    PlanConstructionReason reason;
-} PlanConstruction;
-
-/*
  * A connective (R-486): the last bar of a held section ends with a short stepwise line into the first note of the next
  * section. written is false until the seam stage has written it, and stays false when the line could not be written
  * within the melodic rules.
@@ -435,7 +314,7 @@ typedef struct {
         PlanArchetype archetype;
         PlanSchemaRef schema;
         PlanHarmonyShape harmony_shape;
-        PlanThemePairing theme_pairing;
+        SectionPairing theme_pairing;
         PlanAccompaniment accompaniment;
         PlanVoicing voicing;
         PlanCounterpoint counterpoint;
@@ -448,10 +327,10 @@ typedef struct {
         PlanPiecePart piece_part;
         PlanMotiveTones motive_tones;
         PlanPedal pedal;
-        PlanConstruction construction;
+        SectionConstruction construction;
         PlanConnective connective;
-        PlanFigure figure;
-        PlanSectionFunction section_function;
+        SectionFigure figure;
+        SectionFunction section_function;
     } params;
 } PlanConstraint;
 

@@ -54,7 +54,7 @@ typedef struct {
 /* What a candidate of form-return carries: the returned section as it is, and the target as it is to become. */
 typedef struct {
     unsigned long magic;
-    PlanReturnVariation variation;
+    SectionReturnVariation variation;
     PlanSpan span;       /* the target section's span */
     AnalysisKey key;         /* the key at its start */
     PlanMeter meter;

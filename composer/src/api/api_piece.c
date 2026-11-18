@@ -933,13 +933,13 @@ static void planned_key_near_end(const PiecePlan *plan, PlanSpan section, char *
  * has the plan and node of the section it performs, so it takes that section's function.
  */
 static cJSON *function_json(const Row *row) {
-    PlanSectionFunction function;
+    SectionFunction function;
     if (!row->plan || !plan_section_function_of(row->plan, row->node, &function)) {
         return cJSON_CreateNull();
     }
     char text[192];
     switch (function.function) {
-    case PLAN_FUNCTION_TRANSITION: {
+    case SECTION_FUNCTION_TRANSITION: {
         char start[16];
         char end[16];
         bool flats;
@@ -951,10 +951,10 @@ static cJSON *function_json(const Row *row) {
                  modulates ? ", modulating to " : "", modulates ? end : "");
         break;
     }
-    case PLAN_FUNCTION_RETRANSITION:
+    case SECTION_FUNCTION_RETRANSITION:
         snprintf(text, sizeof text, "a retransition over the dominant pedal, ending on the main theme's head");
         break;
-    case PLAN_FUNCTION_SUBORDINATE:
+    case SECTION_FUNCTION_SUBORDINATE:
         snprintf(text, sizeof text, "a subordinate theme%s", function.lyric ? ", lyric" : "");
         break;
     default:
@@ -962,7 +962,7 @@ static cJSON *function_json(const Row *row) {
         break;
     }
     cJSON *entry = cJSON_CreateObject();
-    if (!entry || !cJSON_AddStringToObject(entry, "kind", plan_function_kind_name(function.function)) ||
+    if (!entry || !cJSON_AddStringToObject(entry, "kind", section_function_kind_name(function.function)) ||
         !cJSON_AddBoolToObject(entry, "independent", function.independent) || !cJSON_AddBoolToObject(entry, "lyric", function.lyric) ||
         !cJSON_AddStringToObject(entry, "text", text)) {
         cJSON_Delete(entry);
@@ -1021,7 +1021,7 @@ static const char *return_setting_name(const Row *row) {
     for (size_t i = 0; i < plan_node_constraint_count(row->plan, row->node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(row->plan, row->node, i);
         if (constraint && constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            return constraint->params.section_return.variation == PLAN_RETURN_SETTING
+            return constraint->params.section_return.variation == SECTION_RETURN_SETTING
                        ? api_accompaniment_name(constraint->params.section_return.setting)
                        : NULL;
         }
@@ -1046,7 +1046,7 @@ static cJSON *changes_json(const Row *row) {
     const char *material_id = mapped && to_material ? to_material->id : NULL;
     const char *mode = mapped ? (composer_material_is_minor(to_material) ? "minor" : "major") : NULL; /* the text keeps its word */
     bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
-              cJSON_AddStringToObject(entry, "variation", plan_return_variation_name(spec->variation)) &&
+              cJSON_AddStringToObject(entry, "variation", section_return_variation_name(spec->variation)) &&
               api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "material", string_or_null(material_id));
     char text[256] = "";
     size_t changed = 0;
@@ -1132,9 +1132,9 @@ static bool melody_note_at(const PiecePlan *plan, NodeId section, Rational onset
 
 /* The sentence of a figure: "neighbor tones in sixteenths over the skeleton E5 D5 C5 ..." with what changes the harmony, the mode and the octave. */
 static void figure_text(const FormSectionSpec *spec, bool raised, const char *skeleton, bool more, char *text, size_t size) {
-    const PlanFigure *figure = &spec->figure;
-    const char *kind = figure->kind == PLAN_FIGURE_NEIGHBOR ? "neighbor tones" : (figure->kind == PLAN_FIGURE_SCALE ? "a scale line" : "a broken chord");
-    size_t used = (size_t)snprintf(text, size, "%s in %s", kind, plan_figure_rhythm_name(figure->rhythm));
+    const SectionFigure *figure = &spec->figure;
+    const char *kind = figure->kind == SECTION_FIGURE_NEIGHBOR ? "neighbor tones" : (figure->kind == SECTION_FIGURE_SCALE ? "a scale line" : "a broken chord");
+    size_t used = (size_t)snprintf(text, size, "%s in %s", kind, section_figure_rhythm_name(figure->rhythm));
     if (figure->reharmonize && used < size) {
         used += (size_t)snprintf(text + used, size - used, ", reharmonized");
     }
@@ -1167,7 +1167,7 @@ static cJSON *figure_json(const Row *row) {
         free(skeleton);
         return cJSON_CreateNull();
     }
-    const PlanFigure *figure = &spec->figure;
+    const SectionFigure *figure = &spec->figure;
     bool raised = false;
     for (size_t k = 0; figure->climax && k < skeleton->count; k++) {
         int first;
@@ -1190,8 +1190,8 @@ static cJSON *figure_json(const Row *row) {
     char text[256];
     figure_text(spec, raised, head, skeleton->count > FIGURE_TEXT_TONES, text, sizeof text);
     cJSON *entry = ok ? cJSON_CreateObject() : NULL;
-    ok = entry && cJSON_AddStringToObject(entry, "kind", plan_figure_kind_name(figure->kind)) &&
-         cJSON_AddStringToObject(entry, "rhythm", plan_figure_rhythm_name(figure->rhythm)) &&
+    ok = entry && cJSON_AddStringToObject(entry, "kind", section_figure_kind_name(figure->kind)) &&
+         cJSON_AddStringToObject(entry, "rhythm", section_figure_rhythm_name(figure->rhythm)) &&
          cJSON_AddStringToObject(entry, "harmony", figure->reharmonize ? "reharmonized" : "kept") &&
          api_add(entry, "change_at", figure->change_at > 0 ? cJSON_CreateNumber((double)figure->change_at) : cJSON_CreateNull()) &&
          cJSON_AddBoolToObject(entry, "climax", figure->climax) && cJSON_AddBoolToObject(entry, "raised", raised) &&
@@ -1228,7 +1228,7 @@ static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
     bool returns = spec->returns != FORM_SPEC_NO_RETURN && spec->returns < row->size->section_count;
     cJSON *entry = cJSON_CreateObject();
     bool ok = entry && cJSON_AddStringToObject(entry, "id", spec->name) &&
-              cJSON_AddStringToObject(entry, "role", form_role_name(spec->role)) &&
+              cJSON_AddStringToObject(entry, "role", section_role_name(spec->role)) &&
               cJSON_AddStringToObject(entry, "letter", spec->letter) && api_add(entry, "start", time_json(row->start)) &&
               cJSON_AddNumberToObject(entry, "beats", span_beats(request, row->length)) &&
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&

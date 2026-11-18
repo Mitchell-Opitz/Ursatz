@@ -58,7 +58,7 @@
 bool form_return_handles(const PiecePlan *plan, NodeId section);
 
 /* The section the target returns and how, when form_return_handles holds. */
-bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, PlanReturnVariation *variation);
+bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, SectionReturnVariation *variation);
 
 /*
  * Whether every melody note that starts on a strong beat (the start of a cell of the meter, where a chord may start) in

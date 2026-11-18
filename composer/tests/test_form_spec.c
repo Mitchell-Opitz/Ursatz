@@ -221,7 +221,7 @@ static void test_builtin_forms(void) {
                    size->is_default == row->sizes[z].is_default);
             for (size_t i = 0; i < size->section_count; i++) {
                 const FormSectionSpec *section = &size->sections[i];
-                assert(form_role_is_theme(section->role) && section->bars > 0 && section->beats == 0);
+                assert(section_role_is_theme(section->role) && section->bars > 0 && section->beats == 0);
                 assert(section->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || section->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
                        section->cadence == CADENCE_TYPE_HALF);
                 assert(section->returns == FORM_SPEC_NO_RETURN || section->returns < i);
@@ -265,9 +265,9 @@ static void test_builtin_details(void) {
            !rounded->sections[2].closed);
     assert(rounded->sections[1].cadence == CADENCE_TYPE_HALF && strcmp(rounded->sections[1].cadence_name, "half") == 0);
     assert(rounded->sections[1].bars == 4 && rounded->sections[2].bars == 4 && form_spec_size(form, 24, 0)->sections[1].bars == 8);
-    assert(rounded->sections[2].returns == 0 && rounded->sections[2].variation == PLAN_RETURN_EXACT &&
+    assert(rounded->sections[2].returns == 0 && rounded->sections[2].variation == SECTION_RETURN_EXACT &&
            strcmp(rounded->sections[2].letter, "A'") == 0 &&
-           rounded->sections[1].pairing.beginning == PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA);
+           rounded->sections[1].pairing.beginning == SECTION_BEGINNING_COMPOUND_BASIC_IDEA);
     form_spec_destroy(form);
 
     form = builtin("ternary");
@@ -280,10 +280,10 @@ static void test_builtin_details(void) {
         assert(ternary->sections[0].key_start == FORM_SPEC_HOME && ternary->sections[0].key_end == 0);
         assert(ternary->sections[1].key_start == 0 && ternary->sections[1].key_end == FORM_SPEC_HOME);
         assert(ternary->sections[1].cadence == CADENCE_TYPE_HALF && ternary->sections[1].pedal == 5);
-        assert(ternary->sections[2].variation == PLAN_RETURN_VARIED && ternary->sections[2].returns == 0);
+        assert(ternary->sections[2].variation == SECTION_RETURN_VARIED && ternary->sections[2].returns == 0);
         assert(strcmp(ternary->sections[2].name, "A return") == 0 && strcmp(ternary->sections[2].letter, "A") == 0 &&
-               ternary->sections[0].pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
-               ternary->sections[0].pairing.ending == PLAN_THEME_ENDING_CONSEQUENT);
+               ternary->sections[0].pairing.beginning == SECTION_BEGINNING_ANTECEDENT &&
+               ternary->sections[0].pairing.ending == SECTION_ENDING_CONSEQUENT);
     }
     form_spec_destroy(form);
 
@@ -300,7 +300,7 @@ static void test_builtin_details(void) {
                    section->key_end == (away ? 0 : FORM_SPEC_HOME));
             if (i > 0) {
                 bool odd = i % 2 == 1;
-                assert(section->returns == 0 && section->variation == (odd ? PLAN_RETURN_ORNAMENT : PLAN_RETURN_REHARMONIZE));
+                assert(section->returns == 0 && section->variation == (odd ? SECTION_RETURN_ORNAMENT : SECTION_RETURN_REHARMONIZE));
                 assert(section->has_motive &&
                        section->motive.kind == (odd ? MOTIVE_RELATION_DIMINISH : MOTIVE_RELATION_INTERVAL_CHANGE));
             }
@@ -350,14 +350,14 @@ static void test_builtin_details(void) {
             assert(size->sections[1].has_motive && size->sections[1].motive.kind == MOTIVE_RELATION_INVERT &&
                    size->sections[1].pedal == 5 && size->sections[1].leads_in &&
                    size->sections[1].connective == FORM_CONNECTIVE_SOMETIMES);
-            assert(size->sections[2].returns == 0 && size->sections[2].variation == PLAN_RETURN_VARIED &&
+            assert(size->sections[2].returns == 0 && size->sections[2].variation == SECTION_RETURN_VARIED &&
                    strcmp(size->sections[2].name, "A return") == 0 && !size->sections[2].leads_in);
-            PlanThemeBeginning beginning = trio ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
-            PlanThemeEnding ending = trio ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
+            SectionBeginning beginning = trio ? SECTION_BEGINNING_ANTECEDENT : SECTION_BEGINNING_PRESENTATION;
+            SectionEnding ending = trio ? SECTION_ENDING_CONSEQUENT : SECTION_ENDING_CONTINUATION;
             assert(size->sections[0].pairing.beginning == beginning && size->sections[0].pairing.ending == ending &&
                    size->sections[2].pairing.beginning == beginning && size->sections[2].pairing.ending == ending &&
-                   size->sections[1].pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
-                   size->sections[1].pairing.ending == PLAN_THEME_ENDING_CONTINUATION);
+                   size->sections[1].pairing.beginning == SECTION_BEGINNING_PRESENTATION &&
+                   size->sections[1].pairing.ending == SECTION_ENDING_CONTINUATION);
         }
         form_spec_destroy(form);
     }
@@ -418,24 +418,24 @@ static void test_builtin_details(void) {
     static const struct {
         const char *name;
         const char *letter;
-        FormRole role;
+        SectionRole role;
         size_t bars;
-        PlanThemeBeginning beginning;
-        PlanThemeEnding ending;
+        SectionBeginning beginning;
+        SectionEnding ending;
         CadenceType cadence;
         int key;
         size_t returns;
         bool closed;
     } SCHERZO[] = {
-        {"A", "A", FORM_ROLE_THEME, 8, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, true},
-        {"P", "B", FORM_ROLE_PATTERN, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 0, FORM_SPEC_NO_RETURN, false},
-        {"S1", "B", FORM_ROLE_SEQUENCE, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 1, 1, false},
-        {"S2", "B", FORM_ROLE_SEQUENCE, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, FORM_SPEC_HOME, 1, false},
-        {"L", "B", FORM_ROLE_LIQUIDATION, 4, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION, CADENCE_TYPE_HALF, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, false},
-        {"A return", "A", FORM_ROLE_RETURN, 8, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, 0, true},
-        {"E", "E", FORM_ROLE_EPISODE, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 2, FORM_SPEC_NO_RETURN, false},
-        {"C1", "C", FORM_ROLE_CODETTA, 4, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CADENTIAL, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, true},
-        {"C2", "C", FORM_ROLE_CODETTA, 4, PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA, PLAN_THEME_ENDING_CADENTIAL, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, false},
+        {"A", "A", SECTION_ROLE_THEME, 8, SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, true},
+        {"P", "B", SECTION_ROLE_PATTERN, 4, SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 0, FORM_SPEC_NO_RETURN, false},
+        {"S1", "B", SECTION_ROLE_SEQUENCE, 4, SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 1, 1, false},
+        {"S2", "B", SECTION_ROLE_SEQUENCE, 4, SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, FORM_SPEC_HOME, 1, false},
+        {"L", "B", SECTION_ROLE_LIQUIDATION, 4, SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION, CADENCE_TYPE_HALF, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, false},
+        {"A return", "A", SECTION_ROLE_RETURN, 8, SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, 0, true},
+        {"E", "E", SECTION_ROLE_EPISODE, 4, SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, 2, FORM_SPEC_NO_RETURN, false},
+        {"C1", "C", SECTION_ROLE_CODETTA, 4, SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CADENTIAL, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, true},
+        {"C2", "C", SECTION_ROLE_CODETTA, 4, SECTION_BEGINNING_COMPOUND_BASIC_IDEA, SECTION_ENDING_CADENTIAL, CADENCE_TYPE_PERFECT_AUTHENTIC, FORM_SPEC_HOME, FORM_SPEC_NO_RETURN, false},
     };
     for (size_t z = 0; z < form->size_count; z++) {
         const FormSpecSize *size = &form->sizes[z];
@@ -448,15 +448,15 @@ static void test_builtin_details(void) {
             assert(section->role == SCHERZO[i].role && section->bars == bars && section->cadence == SCHERZO[i].cadence);
             assert(section->closed == SCHERZO[i].closed && section->returns == SCHERZO[i].returns);
             assert(section->key_start == SCHERZO[i].key && section->key_end == SCHERZO[i].key);
-            if (section->role != FORM_ROLE_LIQUIDATION) {
+            if (section->role != SECTION_ROLE_LIQUIDATION) {
                 assert(section->pairing.beginning == SCHERZO[i].beginning && section->pairing.ending == SCHERZO[i].ending);
             }
             /* Only the two long themes of the larger size have a construction, and the return keeps the first's. */
             assert(section->has_construction == (size->bars == 60 && (i == 0 || i == 5)) && !section->construction_auto);
             assert(section->pedal == 0 && !section->leads_in && !section->has_motive);
         }
-        assert(size->sections[2].variation == PLAN_RETURN_EXACT && size->sections[3].variation == PLAN_RETURN_EXACT &&
-               size->sections[5].variation == PLAN_RETURN_VARIED);
+        assert(size->sections[2].variation == SECTION_RETURN_EXACT && size->sections[3].variation == SECTION_RETURN_EXACT &&
+               size->sections[5].variation == SECTION_RETURN_VARIED);
     }
     assert(form_spec_size(form, 0, 0)->bars == 44 && form_spec_size(form, 60, 0)->sections[0].construction.idea_bars[0] != 0);
     form_spec_destroy(form);
@@ -474,31 +474,31 @@ static void test_main_and_subordinate(void) {
     typedef struct {
         const char *name;
         const char *letter;
-        FormRole role;
+        SectionRole role;
         size_t bars;
-        PlanThemeBeginning beginning;
-        PlanThemeEnding ending;
+        SectionBeginning beginning;
+        SectionEnding ending;
         CadenceType cadence;
         int key_start;
         int key_end;
         size_t returns;
         bool closed;
     } Row;
-    const PlanThemeBeginning PRES = PLAN_THEME_BEGINNING_PRESENTATION;
-    const PlanThemeBeginning ANT = PLAN_THEME_BEGINNING_ANTECEDENT;
-    const PlanThemeEnding CONTINUATION = PLAN_THEME_ENDING_CONTINUATION;
-    const PlanThemeEnding CONSEQUENT = PLAN_THEME_ENDING_CONSEQUENT;
+    const SectionBeginning PRES = SECTION_BEGINNING_PRESENTATION;
+    const SectionBeginning ANT = SECTION_BEGINNING_ANTECEDENT;
+    const SectionEnding CONTINUATION = SECTION_ENDING_CONTINUATION;
+    const SectionEnding CONSEQUENT = SECTION_ENDING_CONSEQUENT;
     const CadenceType PAC = CADENCE_TYPE_PERFECT_AUTHENTIC;
     const size_t NO = FORM_SPEC_NO_RETURN;
-    const Row A = {"A", "A", FORM_ROLE_THEME, 8, PRES, CONTINUATION, PAC, FORM_SPEC_HOME, FORM_SPEC_HOME, NO, true};
-    const Row T = {"T", "T", FORM_ROLE_TRANSITION, 8, PRES, CONTINUATION, CADENCE_TYPE_HALF, FORM_SPEC_HOME, 0, NO, false};
-    const Row S1_57 = {"S1", "B", FORM_ROLE_SUBORDINATE, 9, PRES, CONTINUATION, PAC, 0, 0, NO, false};
-    const Row S1_48 = {"S1", "B", FORM_ROLE_SUBORDINATE, 8, PRES, CONTINUATION, PAC, 0, 0, NO, false};
-    const Row S2 = {"S2", "B", FORM_ROLE_SUBORDINATE, 8, ANT, CONSEQUENT, PAC, 0, 0, NO, false};
-    const Row C = {"C", "C", FORM_ROLE_CODETTA, 4, ANT, PLAN_THEME_ENDING_CADENTIAL, PAC, 0, 0, NO, false};
-    const Row R = {"R", "R", FORM_ROLE_RETRANSITION, 4, PRES, CONTINUATION, CADENCE_TYPE_HALF, FORM_SPEC_HOME, FORM_SPEC_HOME, NO, false};
-    const Row AR = {"A return", "A", FORM_ROLE_RETURN, 8, PRES, CONTINUATION, PAC, FORM_SPEC_HOME, FORM_SPEC_HOME, 0, true};
-    const Row K = {"K", "K", FORM_ROLE_CODA, 8, PRES, CONTINUATION, PAC, FORM_SPEC_HOME, FORM_SPEC_HOME, NO, true};
+    const Row A = {"A", "A", SECTION_ROLE_THEME, 8, PRES, CONTINUATION, PAC, FORM_SPEC_HOME, FORM_SPEC_HOME, NO, true};
+    const Row T = {"T", "T", SECTION_ROLE_TRANSITION, 8, PRES, CONTINUATION, CADENCE_TYPE_HALF, FORM_SPEC_HOME, 0, NO, false};
+    const Row S1_57 = {"S1", "B", SECTION_ROLE_SUBORDINATE, 9, PRES, CONTINUATION, PAC, 0, 0, NO, false};
+    const Row S1_48 = {"S1", "B", SECTION_ROLE_SUBORDINATE, 8, PRES, CONTINUATION, PAC, 0, 0, NO, false};
+    const Row S2 = {"S2", "B", SECTION_ROLE_SUBORDINATE, 8, ANT, CONSEQUENT, PAC, 0, 0, NO, false};
+    const Row C = {"C", "C", SECTION_ROLE_CODETTA, 4, ANT, SECTION_ENDING_CADENTIAL, PAC, 0, 0, NO, false};
+    const Row R = {"R", "R", SECTION_ROLE_RETRANSITION, 4, PRES, CONTINUATION, CADENCE_TYPE_HALF, FORM_SPEC_HOME, FORM_SPEC_HOME, NO, false};
+    const Row AR = {"A return", "A", SECTION_ROLE_RETURN, 8, PRES, CONTINUATION, PAC, FORM_SPEC_HOME, FORM_SPEC_HOME, 0, true};
+    const Row K = {"K", "K", SECTION_ROLE_CODA, 8, PRES, CONTINUATION, PAC, FORM_SPEC_HOME, FORM_SPEC_HOME, NO, true};
     const Row AT_57[] = {A, T, S1_57, S2, C, R, AR, K};
     const Row AT_48[] = {A, T, S1_48, C, R, AR, K};
     assert(form->size_count == 2 && form_spec_default_size(form)->bars == 57);
@@ -514,7 +514,7 @@ static void test_main_and_subordinate(void) {
             assert(section->key_start == rows[i].key_start && section->key_end == rows[i].key_end);
             assert(section->returns == rows[i].returns && section->closed == rows[i].closed);
             /* The retransition and the coda have no pairing: they are made by operators (R-503). */
-            if (section->role != FORM_ROLE_RETRANSITION && section->role != FORM_ROLE_CODA) {
+            if (section->role != SECTION_ROLE_RETRANSITION && section->role != SECTION_ROLE_CODA) {
                 assert(section->pairing.beginning == rows[i].beginning && section->pairing.ending == rows[i].ending);
             }
             assert(section->pedal == 0 && !section->leads_in && !section->has_figure && !section->parallel);
@@ -531,10 +531,10 @@ static void test_main_and_subordinate(void) {
             /* Only S1 at 57 bars has a construction: nine bars with the fragment 2 repeated. */
             assert(section->has_construction == (large && i == 2) && !section->construction_auto);
         }
-        assert(size->sections[size->section_count - 2].variation == PLAN_RETURN_EXACT);
+        assert(size->sections[size->section_count - 2].variation == SECTION_RETURN_EXACT);
     }
-    const PlanConstruction *s1 = &form_spec_size(form, 57, 0)->sections[2].construction;
-    assert(s1->extension_count == 1 && s1->extensions[0].kind == PLAN_EXTENSION_REPEAT);
+    const SectionConstruction *s1 = &form_spec_size(form, 57, 0)->sections[2].construction;
+    assert(s1->extension_count == 1 && s1->extensions[0].kind == SECTION_EXTENSION_REPEAT);
     form_spec_destroy(form);
 }
 
@@ -551,18 +551,18 @@ static void test_figured_variations(void) {
         assert(form->meters[m].beats_per_bar == METERS[m].beats_per_bar && form->meters[m].beat_unit == METERS[m].beat_unit);
     }
     typedef struct {
-        PlanFigureKind kind;
-        PlanFigureRhythm rhythm;
+        SectionFigureKind kind;
+        SectionFigureRhythm rhythm;
         bool reharmonize;
         unsigned change_at;
         bool climax;
         bool parallel;
     } FigureRow;
-    static const FigureRow V1 = {PLAN_FIGURE_NEIGHBOR, PLAN_FIGURE_EIGHTHS, false, 0, false, false};
-    static const FigureRow V2 = {PLAN_FIGURE_NEIGHBOR, PLAN_FIGURE_SIXTEENTHS, false, 0, false, false};
-    static const FigureRow V3 = {PLAN_FIGURE_SCALE, PLAN_FIGURE_EIGHTHS, true, 0, false, true};
-    static const FigureRow V4 = {PLAN_FIGURE_SCALE, PLAN_FIGURE_SIXTEENTHS, true, 3, false, false};
-    static const FigureRow V5 = {PLAN_FIGURE_BROKEN_CHORD, PLAN_FIGURE_SIXTEENTHS, false, 0, true, false};
+    static const FigureRow V1 = {SECTION_FIGURE_NEIGHBOR, SECTION_FIGURE_EIGHTHS, false, 0, false, false};
+    static const FigureRow V2 = {SECTION_FIGURE_NEIGHBOR, SECTION_FIGURE_SIXTEENTHS, false, 0, false, false};
+    static const FigureRow V3 = {SECTION_FIGURE_SCALE, SECTION_FIGURE_EIGHTHS, true, 0, false, true};
+    static const FigureRow V4 = {SECTION_FIGURE_SCALE, SECTION_FIGURE_SIXTEENTHS, true, 3, false, false};
+    static const FigureRow V5 = {SECTION_FIGURE_BROKEN_CHORD, SECTION_FIGURE_SIXTEENTHS, false, 0, true, false};
     const FigureRow *const at56[] = {&V1, &V2, &V3, &V4, &V5};
     const FigureRow *const at40[] = {&V1, &V3, &V5};
     for (size_t z = 0; z < form->size_count; z++) {
@@ -574,18 +574,18 @@ static void test_figured_variations(void) {
         assert(size->section_count == variations + 3);
         /* The theme: an eight-bar period, closed, home. */
         const FormSectionSpec *theme = &size->sections[0];
-        assert(strcmp(theme->name, "theme") == 0 && strcmp(theme->letter, "T") == 0 && theme->role == FORM_ROLE_THEME &&
+        assert(strcmp(theme->name, "theme") == 0 && strcmp(theme->letter, "T") == 0 && theme->role == SECTION_ROLE_THEME &&
                theme->bars == 8 && theme->closed && theme->returns == FORM_SPEC_NO_RETURN && !theme->has_figure && !theme->parallel &&
-               theme->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT && theme->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT &&
+               theme->pairing.beginning == SECTION_BEGINNING_ANTECEDENT && theme->pairing.ending == SECTION_ENDING_CONSEQUENT &&
                theme->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
         for (size_t v = 0; v < variations; v++) {
             const FormSectionSpec *section = &size->sections[v + 1];
             char letter[32];
             snprintf(letter, sizeof(letter), "V%zu", v + 1);
-            assert(strcmp(section->letter, letter) == 0 && section->role == FORM_ROLE_VARIATION && section->bars == 8 &&
-                   section->closed && section->returns == 0 && section->variation == PLAN_RETURN_FIGURATE &&
+            assert(strcmp(section->letter, letter) == 0 && section->role == SECTION_ROLE_VARIATION && section->bars == 8 &&
+                   section->closed && section->returns == 0 && section->variation == SECTION_RETURN_FIGURATE &&
                    section->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && !section->has_motive && !section->has_construction);
-            assert(section->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT && section->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT);
+            assert(section->pairing.beginning == SECTION_BEGINNING_ANTECEDENT && section->pairing.ending == SECTION_ENDING_CONSEQUENT);
             assert(section->has_figure && section->figure.kind == figures[v]->kind && section->figure.rhythm == figures[v]->rhythm &&
                    section->figure.reharmonize == figures[v]->reharmonize && section->figure.change_at == figures[v]->change_at &&
                    section->figure.climax == figures[v]->climax && section->parallel == figures[v]->parallel);
@@ -595,11 +595,11 @@ static void test_figured_variations(void) {
         /* The coda: two codettas, the second a compound basic idea that is not closed. */
         const FormSectionSpec *c1 = &size->sections[variations + 1];
         const FormSectionSpec *c2 = &size->sections[variations + 2];
-        assert(strcmp(c1->name, "C1") == 0 && strcmp(c1->letter, "C") == 0 && c1->role == FORM_ROLE_CODETTA && c1->bars == 4 &&
-               c1->closed && c1->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT && c1->pairing.ending == PLAN_THEME_ENDING_CADENTIAL);
-        assert(strcmp(c2->name, "C2") == 0 && strcmp(c2->letter, "C") == 0 && c2->role == FORM_ROLE_CODETTA && c2->bars == 4 &&
-               !c2->closed && c2->pairing.beginning == PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA &&
-               c2->pairing.ending == PLAN_THEME_ENDING_CADENTIAL && c1->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC &&
+        assert(strcmp(c1->name, "C1") == 0 && strcmp(c1->letter, "C") == 0 && c1->role == SECTION_ROLE_CODETTA && c1->bars == 4 &&
+               c1->closed && c1->pairing.beginning == SECTION_BEGINNING_ANTECEDENT && c1->pairing.ending == SECTION_ENDING_CADENTIAL);
+        assert(strcmp(c2->name, "C2") == 0 && strcmp(c2->letter, "C") == 0 && c2->role == SECTION_ROLE_CODETTA && c2->bars == 4 &&
+               !c2->closed && c2->pairing.beginning == SECTION_BEGINNING_COMPOUND_BASIC_IDEA &&
+               c2->pairing.ending == SECTION_ENDING_CADENTIAL && c1->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC &&
                c2->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
         assert(!c1->has_figure && !c2->has_figure && c1->returns == FORM_SPEC_NO_RETURN && c2->returns == FORM_SPEC_NO_RETURN);
     }
@@ -919,21 +919,21 @@ static void test_game_loop(void) {
     assert(strcmp(form->name, "game-loop") == 0 && strcmp(form->plan_name, "structure") == 0 && form->label[0] != '\0');
     assert(form->request_sections && form->size_count == 0 && !form->closing && form->region_count == 0 &&
            form->checks == FORM_CHECK_ALL && !form->accompaniment_required);
-    assert(form->role_count == 4 && form->roles[0] == FORM_ROLE_INTRO && form->roles[1] == FORM_ROLE_BODY &&
-           form->roles[2] == FORM_ROLE_TURNAROUND && form->roles[3] == FORM_ROLE_ENDING);
-    assert(form->loop_role_count == 2 && form->loop_roles[0] == FORM_ROLE_BODY && form->loop_roles[1] == FORM_ROLE_TURNAROUND);
-    assert(form_spec_role_in_loop(form, FORM_ROLE_BODY) && !form_spec_role_in_loop(form, FORM_ROLE_INTRO) &&
-           form_spec_has_role(form, FORM_ROLE_ENDING) && !form_spec_has_role(form, FORM_ROLE_THEME));
+    assert(form->role_count == 4 && form->roles[0] == SECTION_ROLE_INTRO && form->roles[1] == SECTION_ROLE_BODY &&
+           form->roles[2] == SECTION_ROLE_TURNAROUND && form->roles[3] == SECTION_ROLE_ENDING);
+    assert(form->loop_role_count == 2 && form->loop_roles[0] == SECTION_ROLE_BODY && form->loop_roles[1] == SECTION_ROLE_TURNAROUND);
+    assert(form_spec_role_in_loop(form, SECTION_ROLE_BODY) && !form_spec_role_in_loop(form, SECTION_ROLE_INTRO) &&
+           form_spec_has_role(form, SECTION_ROLE_ENDING) && !form_spec_has_role(form, SECTION_ROLE_THEME));
     assert(form->default_cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
            strcmp(form->default_cadence_name, "imperfect-authentic") == 0 && form->last_cadence_count == 3);
-    assert(form->last_cadences[0].role_count == 1 && form->last_cadences[0].roles[0] == FORM_ROLE_ENDING &&
+    assert(form->last_cadences[0].role_count == 1 && form->last_cadences[0].roles[0] == SECTION_ROLE_ENDING &&
            form->last_cadences[0].cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
-    assert(form->last_cadences[1].role_count == 2 && form->last_cadences[1].roles[0] == FORM_ROLE_BODY &&
-           form->last_cadences[1].roles[1] == FORM_ROLE_TURNAROUND && form->last_cadences[1].cadence == CADENCE_TYPE_HALF);
-    assert(form->last_cadences[2].role_count == 1 && form->last_cadences[2].roles[0] == FORM_ROLE_INTRO &&
+    assert(form->last_cadences[1].role_count == 2 && form->last_cadences[1].roles[0] == SECTION_ROLE_BODY &&
+           form->last_cadences[1].roles[1] == SECTION_ROLE_TURNAROUND && form->last_cadences[1].cadence == CADENCE_TYPE_HALF);
+    assert(form->last_cadences[2].role_count == 1 && form->last_cadences[2].roles[0] == SECTION_ROLE_INTRO &&
            form->last_cadences[2].cadence == CADENCE_TYPE_HALF);
     assert(form->has_default_ending && strcmp(form->default_ending.id, "end") == 0 &&
-           strcmp(form->default_ending.letter, "E") == 0 && form->default_ending.role == FORM_ROLE_ENDING &&
+           strcmp(form->default_ending.letter, "E") == 0 && form->default_ending.role == SECTION_ROLE_ENDING &&
            form->default_ending.bars == 2 && form->default_ending.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     form_spec_destroy(form);
 
@@ -1253,7 +1253,7 @@ static int test_uneven_form(void) {
             assert(count == 2 && outcome.section_count == 2);
             for (size_t i = 0; i < 2; i++) {
                 const PlanConstraint *construction = plan_node_find_constraint(plan, sections[i], PLAN_CONSTRAINT_CONSTRUCTION);
-                assert(construction && construction->params.construction.reason == PLAN_CONSTRUCTION_GIVEN);
+                assert(construction && construction->params.construction.reason == SECTION_CONSTRUCTION_GIVEN);
                 assert(section_written(plan, sections[i]) && outcome.sections[i].construction_text[0] != '\0');
             }
             composed++;
@@ -1340,7 +1340,7 @@ static void test_construction(void) {
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
     const FormSectionSpec *section = &form->sizes[0].sections[0];
     assert(section->has_construction && !section->construction_auto && section->bars == 6 &&
-           section->construction.reason == PLAN_CONSTRUCTION_GIVEN && section->construction.extension_count == 0 &&
+           section->construction.reason == SECTION_CONSTRUCTION_GIVEN && section->construction.extension_count == 0 &&
            section->construction.idea_bars[GROW_IDEA_BASIC] == 2 && section->construction.idea_bars[GROW_IDEA_REPETITION] == 1 &&
            section->construction.idea_bars[GROW_IDEA_CADENTIAL] == 1 && section->construction.idea_bars[GROW_IDEA_CONTRASTING] == 0);
     form_spec_destroy(form);
@@ -1352,7 +1352,7 @@ static void test_construction(void) {
                           "\"bars\": 1, \"varied\": true}]}");
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
     section = &form->sizes[0].sections[0];
-    assert(section->construction.extension_count == 1 && section->construction.extensions[0].kind == PLAN_EXTENSION_REPEAT &&
+    assert(section->construction.extension_count == 1 && section->construction.extensions[0].kind == SECTION_EXTENSION_REPEAT &&
            section->construction.extensions[0].idea == GROW_IDEA_FRAGMENT_2 && section->construction.extensions[0].bars == 1 &&
            section->construction.extensions[0].varied);
     form_spec_destroy(form);
@@ -1520,9 +1520,9 @@ static void test_modulating_reader(void) {
     FormSpec *form = NULL;
     FormSpecError error;
     for (size_t i = 0; i < sizeof(ROLES_OK) / sizeof(ROLES_OK[0]); i++) {
-        FormRole role;
-        assert(form_role_find(ROLES_OK[i].role, &role) && form_role_is_theme(role));
-        assert(strcmp(form_role_name(role), ROLES_OK[i].role) == 0 && form_role_label(role) != NULL);
+        SectionRole role;
+        assert(section_role_find(ROLES_OK[i].role, &role) && section_role_is_theme(role));
+        assert(strcmp(section_role_name(role), ROLES_OK[i].role) == 0 && section_role_label(role) != NULL);
         snprintf(sizes, sizeof(sizes),
                  "{\"bars\": %zu, \"default\": true, \"sections\": [{\"name\": \"A\", \"letter\": \"A\", \"role\": \"%s\", "
                  "\"bars\": %zu, \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": "
@@ -1596,24 +1596,24 @@ static void test_figure_reader(void) {
     const FormSectionSpec *sections = form->sizes[0].sections;
     assert(!sections[0].has_figure && sections[0].returns == FORM_SPEC_NO_RETURN);
     for (size_t i = 1; i < 4; i++) {
-        assert(sections[i].has_figure && sections[i].returns == 0 && sections[i].variation == PLAN_RETURN_FIGURATE);
+        assert(sections[i].has_figure && sections[i].returns == 0 && sections[i].variation == SECTION_RETURN_FIGURATE);
     }
-    assert(sections[1].figure.kind == PLAN_FIGURE_NEIGHBOR && sections[1].figure.rhythm == PLAN_FIGURE_EIGHTHS &&
+    assert(sections[1].figure.kind == SECTION_FIGURE_NEIGHBOR && sections[1].figure.rhythm == SECTION_FIGURE_EIGHTHS &&
            !sections[1].figure.reharmonize && sections[1].figure.change_at == 0 && !sections[1].figure.climax);
-    assert(sections[2].figure.kind == PLAN_FIGURE_SCALE && sections[2].figure.rhythm == PLAN_FIGURE_SIXTEENTHS &&
+    assert(sections[2].figure.kind == SECTION_FIGURE_SCALE && sections[2].figure.rhythm == SECTION_FIGURE_SIXTEENTHS &&
            sections[2].figure.reharmonize && sections[2].figure.change_at == 3 && !sections[2].figure.climax);
-    assert(sections[3].figure.kind == PLAN_FIGURE_BROKEN_CHORD && sections[3].figure.rhythm == PLAN_FIGURE_SIXTEENTHS &&
+    assert(sections[3].figure.kind == SECTION_FIGURE_BROKEN_CHORD && sections[3].figure.rhythm == SECTION_FIGURE_SIXTEENTHS &&
            !sections[3].figure.reharmonize && sections[3].figure.change_at == 0 && sections[3].figure.climax);
     form_spec_destroy(form);
 
     /* The names the constraint, the form and the plan share. */
-    PlanFigureKind kind;
-    PlanFigureRhythm rhythm;
-    assert(plan_figure_kind_from_name("broken-chord", &kind) && kind == PLAN_FIGURE_BROKEN_CHORD &&
-           strcmp(plan_figure_kind_name(PLAN_FIGURE_SCALE), "scale") == 0 && !plan_figure_kind_from_name("run", &kind));
-    assert(plan_figure_rhythm_from_name("sixteenths", &rhythm) && rhythm == PLAN_FIGURE_SIXTEENTHS &&
-           strcmp(plan_figure_rhythm_name(PLAN_FIGURE_EIGHTHS), "eighths") == 0 && !plan_figure_rhythm_from_name("triplets", &rhythm));
-    assert(plan_figure_kind_name((PlanFigureKind)9) == NULL && plan_figure_rhythm_name((PlanFigureRhythm)9) == NULL);
+    SectionFigureKind kind;
+    SectionFigureRhythm rhythm;
+    assert(section_figure_kind_find("broken-chord", &kind) && kind == SECTION_FIGURE_BROKEN_CHORD &&
+           strcmp(section_figure_kind_name(SECTION_FIGURE_SCALE), "scale") == 0 && !section_figure_kind_find("run", &kind));
+    assert(section_figure_rhythm_find("sixteenths", &rhythm) && rhythm == SECTION_FIGURE_SIXTEENTHS &&
+           strcmp(section_figure_rhythm_name(SECTION_FIGURE_EIGHTHS), "eighths") == 0 && !section_figure_rhythm_find("triplets", &rhythm));
+    assert(section_figure_kind_name((SectionFigureKind)9) == NULL && section_figure_rhythm_name((SectionFigureRhythm)9) == NULL);
 
     /* A figure with only its two required members reads with the defaults. */
     figure_document(text, sizeof(text), FIGURATE, ", \"figure\": {\"kind\": \"neighbor\", \"rhythm\": \"eighths\"}");
@@ -1718,8 +1718,8 @@ static void test_figure_reader(void) {
         for (size_t z = 0; z < built->size_count; z++) {
             for (size_t k = 0; k < built->sizes[z].section_count; k++) {
                 const FormSectionSpec *section = &built->sizes[z].sections[k];
-                assert(section->has_figure == (figured && section->role == FORM_ROLE_VARIATION) &&
-                       (section->variation == PLAN_RETURN_FIGURATE) == section->has_figure);
+                assert(section->has_figure == (figured && section->role == SECTION_ROLE_VARIATION) &&
+                       (section->variation == SECTION_RETURN_FIGURATE) == section->has_figure);
             }
         }
         form_spec_destroy(built);
@@ -1819,7 +1819,7 @@ static void test_setting_reader(void) {
     for (size_t i = 0; i < sizeof(PATTERNS) / sizeof(PATTERNS[0]); i++) {
         snprintf(member, sizeof(member), ", \"setting\": \"%s\"", PATTERNS[i].name);
         figure_document(text, sizeof(text), ", \"variation\": \"setting\"", member);
-        assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].variation == PLAN_RETURN_SETTING &&
+        assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].variation == SECTION_RETURN_SETTING &&
                form->sizes[0].sections[1].setting == PATTERNS[i].pattern && form->sizes[0].sections[0].setting == 0);
         form_spec_destroy(form);
     }
@@ -1864,16 +1864,16 @@ static void test_liquidation_reader(void) {
     char section[1024];
     FormSpec *form = NULL;
     FormSpecError error;
-    FormRole role;
-    assert(form_role_find("liquidation", &role) && role == FORM_ROLE_LIQUIDATION && form_role_is_theme(role));
-    assert(strcmp(form_role_name(role), "liquidation") == 0 && strcmp(form_role_label(role), "Liquidation") == 0);
+    SectionRole role;
+    assert(section_role_find("liquidation", &role) && role == SECTION_ROLE_LIQUIDATION && section_role_is_theme(role));
+    assert(strcmp(section_role_name(role), "liquidation") == 0 && strcmp(section_role_label(role), "Liquidation") == 0);
 
     snprintf(section, sizeof(section), SECTION, "");
     snprintf(sizes, sizeof(sizes), "{\"bars\": 4, \"default\": true, \"sections\": [%s]}", section);
     document(text, sizeof(text), "", sizes);
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
     const FormSectionSpec *spec = &form->sizes[0].sections[0];
-    assert(spec->role == FORM_ROLE_LIQUIDATION && spec->bars == 4 && spec->pairing.beginning == 0 && spec->pairing.ending == 0 &&
+    assert(spec->role == SECTION_ROLE_LIQUIDATION && spec->bars == 4 && spec->pairing.beginning == 0 && spec->pairing.ending == 0 &&
            spec->returns == FORM_SPEC_NO_RETURN && !spec->has_construction && spec->pedal == 0);
     form_spec_destroy(form);
 
@@ -1900,7 +1900,7 @@ static void test_liquidation_reader(void) {
         bool scherzo = strcmp(built->name, "scherzo") == 0;
         for (size_t z = 0; z < built->size_count; z++) {
             for (size_t k = 0; k < built->sizes[z].section_count; k++) {
-                assert((built->sizes[z].sections[k].role == FORM_ROLE_LIQUIDATION) == (scherzo && k == 4));
+                assert((built->sizes[z].sections[k].role == SECTION_ROLE_LIQUIDATION) == (scherzo && k == 4));
             }
         }
         form_spec_destroy(built);
@@ -1924,13 +1924,13 @@ static void test_elaboration_role(void) {
     char text[4096];
     FormSpec *form = NULL;
     FormSpecError error;
-    FormRole role;
-    assert(form_role_find("elaboration", &role) && role == FORM_ROLE_ELABORATION && form_role_is_theme(role));
-    assert(strcmp(form_role_name(role), "elaboration") == 0 && strcmp(form_role_label(role), "Elaboration") == 0);
+    SectionRole role;
+    assert(section_role_find("elaboration", &role) && role == SECTION_ROLE_ELABORATION && section_role_is_theme(role));
+    assert(strcmp(section_role_name(role), "elaboration") == 0 && strcmp(section_role_label(role), "Elaboration") == 0);
     part_document(text, sizeof(text), "elaboration", 8,
                   ", \"beginning\": \"presentation\", \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\"");
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
-    assert(form->sizes[0].sections[0].role == FORM_ROLE_ELABORATION);
+    assert(form->sizes[0].sections[0].role == SECTION_ROLE_ELABORATION);
     form_spec_destroy(form);
 }
 
@@ -2009,35 +2009,35 @@ static void test_parts_reader(void) {
 
     /* The roles: a theme-like row each, with its name and label. */
     for (size_t i = 0; i < 4; i++) {
-        FormRole role;
-        assert(form_role_find(ROLES_NEW[i].role, &role) && form_role_is_theme(role));
-        assert(strcmp(form_role_name(role), ROLES_NEW[i].role) == 0 && strcmp(form_role_label(role), ROLES_NEW[i].label) == 0);
+        SectionRole role;
+        assert(section_role_find(ROLES_NEW[i].role, &role) && section_role_is_theme(role));
+        assert(strcmp(section_role_name(role), ROLES_NEW[i].role) == 0 && strcmp(section_role_label(role), ROLES_NEW[i].label) == 0);
     }
-    assert(FORM_ROLE_COUNT == 19);
+    assert(SECTION_ROLE_FORM_COUNT == 19);
 
     /* One section of each new role parses with its members set. */
     part_document(text, sizeof(text), "transition", 8, TRANSITION_OK ", \"independent\": true");
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
-    assert(form->sizes[0].sections[0].role == FORM_ROLE_TRANSITION && form->sizes[0].sections[0].independent &&
+    assert(form->sizes[0].sections[0].role == SECTION_ROLE_TRANSITION && form->sizes[0].sections[0].independent &&
            !form->sizes[0].sections[0].lyric && !form->sizes[0].sections[0].has_motive);
     form_spec_destroy(form);
     part_document(text, sizeof(text), "transition", 4,
                   ", \"beginning\": \"compound_basic_idea\", \"ending\": \"continuation\", \"cadence\": \"half\"");
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && !form->sizes[0].sections[0].independent &&
-           form->sizes[0].sections[0].pairing.beginning == PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA);
+           form->sizes[0].sections[0].pairing.beginning == SECTION_BEGINNING_COMPOUND_BASIC_IDEA);
     form_spec_destroy(form);
     part_document(text, sizeof(text), "transition", 8, TRANSITION_OK ", \"keys\": {\"end\": \"away\"}");
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[0].key_end == 0);
     form_spec_destroy(form);
     part_document(text, sizeof(text), "retransition", 4, ", \"cadence\": \"half\"");
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
-    assert(form->sizes[0].sections[0].role == FORM_ROLE_RETRANSITION && form->sizes[0].sections[0].bars == 4 &&
+    assert(form->sizes[0].sections[0].role == SECTION_ROLE_RETRANSITION && form->sizes[0].sections[0].bars == 4 &&
            form->sizes[0].sections[0].pairing.beginning == 0 && form->sizes[0].sections[0].pairing.ending == 0 &&
            form->sizes[0].sections[0].cadence == CADENCE_TYPE_HALF);
     form_spec_destroy(form);
     part_document(text, sizeof(text), "subordinate", 8, SUBORDINATE_OK ", \"lyric\": true");
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
-    assert(form->sizes[0].sections[0].role == FORM_ROLE_SUBORDINATE && form->sizes[0].sections[0].lyric &&
+    assert(form->sizes[0].sections[0].role == SECTION_ROLE_SUBORDINATE && form->sizes[0].sections[0].lyric &&
            form->sizes[0].sections[0].has_motive && form->sizes[0].sections[0].motive.kind == MOTIVE_RELATION_AUGMENT &&
            form->sizes[0].sections[0].motive.value[0] == 0);
     form_spec_destroy(form);
@@ -2047,7 +2047,7 @@ static void test_parts_reader(void) {
     form_spec_destroy(form);
     part_document(text, sizeof(text), "coda", 8, ", \"cadence\": \"perfect-authentic\"");
     assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
-    assert(form->sizes[0].sections[0].role == FORM_ROLE_CODA && form->sizes[0].sections[0].bars == 8 &&
+    assert(form->sizes[0].sections[0].role == SECTION_ROLE_CODA && form->sizes[0].sections[0].bars == 8 &&
            form->sizes[0].sections[0].cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     form_spec_destroy(form);
 
@@ -2076,14 +2076,14 @@ static void test_parts_reader(void) {
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     static const struct {
         const char *name;
-        PlanFunctionKind function;
+        SectionFunctionKind function;
         bool independent;
         bool lyric;
         bool archetype;
-    } PARTS[] = {{"T", PLAN_FUNCTION_TRANSITION, false, false, true},
-                 {"S", PLAN_FUNCTION_SUBORDINATE, false, true, true},
-                 {"R", PLAN_FUNCTION_RETRANSITION, false, false, false},
-                 {"K", PLAN_FUNCTION_CODA, false, false, false}};
+    } PARTS[] = {{"T", SECTION_FUNCTION_TRANSITION, false, false, true},
+                 {"S", SECTION_FUNCTION_SUBORDINATE, false, true, true},
+                 {"R", SECTION_FUNCTION_RETRANSITION, false, false, false},
+                 {"K", SECTION_FUNCTION_CODA, false, false, false}};
     size_t found = 0;
     size_t with_function = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, plan_root(plan)); i++) {
@@ -2659,7 +2659,7 @@ static int test_modulates(void) {
     }
     free(text);
     assert(strcmp(form->name, "modulating-form") == 0 && form->modulates && form->sizes[0].section_count == 4 &&
-           form->sizes[0].sections[1].role == FORM_ROLE_PATTERN && form->sizes[0].sections[2].role == FORM_ROLE_SEQUENCE);
+           form->sizes[0].sections[1].role == SECTION_ROLE_PATTERN && form->sizes[0].sections[2].role == SECTION_ROLE_SEQUENCE);
     static const struct {
         const char *name;
         int pitch_class;

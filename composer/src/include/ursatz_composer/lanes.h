@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <analysis/notes/analysis_key.h>
+#include <plan/section.h>
 #include <theory/harmony/harmonic_function.h>
 
 #include <ursatz_composer/piece_plan.h>
@@ -27,6 +28,14 @@ typedef enum {
     PLAN_LANE_MELODY,
     PLAN_LANE_INNER_VOICE
 } PlanLaneKind;
+
+/* The lanes are the section description's (plan/section.h): the same values in the same order. */
+_Static_assert((int)PLAN_LANE_METER == (int)SECTION_LANE_METER, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_KEY == (int)SECTION_LANE_KEY, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_HARMONY == (int)SECTION_LANE_HARMONY, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_BASS == (int)SECTION_LANE_BASS, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_MELODY == (int)SECTION_LANE_MELODY, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_INNER_VOICE == (int)SECTION_LANE_INNER_VOICE, "PlanLaneKind follows SectionLane");
 
 /* beat_unit is the note value of one beat (4 for a quarter); bars_per_hyperbar is 0 when there is none. */
 typedef struct {

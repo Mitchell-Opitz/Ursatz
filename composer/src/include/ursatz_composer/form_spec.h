@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <plan/section.h>
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/piece_plan.h>
 
@@ -39,47 +41,6 @@
 /* The most meters a form lists. */
 #define FORM_SPEC_MAX_METERS 4
 
-/*
- * What a section is in the form. The theme-like rows of the role table (theme, contrast, return, variation, layer,
- * pattern, sequence, episode, codetta, liquidation, transition, retransition, subordinate, coda, elaboration) are the sections grow-theme builds; the others
- * (intro, body, turnaround, ending) are for forms whose sections are free phrases (P46 to P53 add rows). The transition, retransition, subordinate
- * theme and coda are the parts of a larger form (R-503); the elaboration is the sonata-allegro's middle section (R-523), a theme-like role with no rules of its own.
- */
-typedef enum {
-    FORM_ROLE_THEME,
-    FORM_ROLE_CONTRAST,
-    FORM_ROLE_RETURN,
-    FORM_ROLE_VARIATION,
-    FORM_ROLE_LAYER,
-    FORM_ROLE_PATTERN,
-    FORM_ROLE_SEQUENCE,
-    FORM_ROLE_EPISODE,
-    FORM_ROLE_CODETTA,
-    FORM_ROLE_LIQUIDATION,
-    FORM_ROLE_TRANSITION,
-    FORM_ROLE_RETRANSITION,
-    FORM_ROLE_SUBORDINATE,
-    FORM_ROLE_CODA,
-    FORM_ROLE_ELABORATION,
-    FORM_ROLE_INTRO,
-    FORM_ROLE_BODY,
-    FORM_ROLE_TURNAROUND,
-    FORM_ROLE_ENDING
-} FormRole;
-
-#define FORM_ROLE_COUNT 19
-
-/* "theme", "contrast", "return", "variation", "layer", "pattern", "sequence", "episode", "codetta", "liquidation", "transition",
- * "retransition", "subordinate", "coda", "elaboration", "intro", "body", "turnaround", "ending"; NULL for an invalid role. */
-const char *form_role_name(FormRole role);
-/* The label of a role: "Theme", "Contrast", "Return", "Variation", "Layer", "Pattern", "Sequence", "Episode", "Codetta",
- * "Liquidation", "Transition", "Retransition", "Subordinate theme", "Coda", "Elaboration", "Intro", "Loop body", "Turnaround", "Ending" (the four parts as the API vocabulary's piece_parts label them); NULL for an invalid role. */
-const char *form_role_label(FormRole role);
-/* False for a name that is none of these. */
-bool form_role_find(const char *name, FormRole *out);
-/* True for the roles of a section grow-theme builds (the theme-like rows of the role table). */
-bool form_role_is_theme(FormRole role);
-
 /* The checks of a compose run a form may switch off; a form that names none runs every one. */
 typedef enum {
     FORM_CHECK_SECTIONS = 1u << 0, /* each theme section is heard as its shape */
@@ -110,17 +71,17 @@ typedef struct {
 typedef struct {
     char name[FORM_SPEC_SECTION_NAME_MAX]; /* the section node's name: "A", "theme", "variation 1", "layer 1" */
     char letter[PLAN_SECTION_LETTER_MAX];  /* "A", "B", "A'", "T", "V1", "L1" */
-    FormRole role;
+    SectionRole role;
     size_t bars;                           /* its length in whole bars; 0 when it is given in beats */
     size_t beats;                          /* its length in whole beats of the meter; 0 when it is given in bars */
-    PlanThemePairing pairing;
+    SectionPairing pairing;
     CadenceType cadence;                   /* the core type of the cadence it ends in: PAC, IAC or HC */
     char cadence_name[FORM_SPEC_CADENCE_NAME_MAX]; /* the cadence's name in the standard-harmony vocabulary */
     bool closed;                           /* it may close in the home key with a PAC before the piece ends */
     int key_start;                         /* FORM_SPEC_HOME, or the index of the region it starts in */
     int key_end;                           /* FORM_SPEC_HOME, or the index of the region it ends in */
     size_t returns;                        /* the index of the section it returns, or FORM_SPEC_NO_RETURN */
-    PlanReturnVariation variation;         /* how it varies the section it returns; read only when it returns one */
+    SectionReturnVariation variation;         /* how it varies the section it returns; read only when it returns one */
     PlanAccompanimentPattern setting;      /* the pattern of a setting return's new accompaniment (R-518): block, arpeggiated, alberti or oom-pah */
     bool has_motive;                       /* its motive is made from m0 by `motive`; false for m0 itself */
     MotiveRelationStep motive;             /* how its motive is made from m0 (open parameters are drawn) */
@@ -130,9 +91,9 @@ typedef struct {
     int connective;                        /* FORM_CONNECTIVE_*: a stepwise link in its last bar; only with leads_in */
     bool has_construction;                /* the section is a theme of `bars` bars of any length, 3 to 16, with a construction (R-468) */
     bool construction_auto;                /* the construction is chosen at build from the bars and the motive (R-469); else `construction` */
-    PlanConstruction construction;         /* the bars of each idea and the extensions, reason GIVEN; read when has_construction and not auto */
+    SectionConstruction construction;         /* the bars of each idea and the extensions, reason GIVEN; read when has_construction and not auto */
     bool has_figure;                       /* the motive of variation of a figurate return (R-497) */
-    PlanFigure figure;                     /* read when has_figure */
+    SectionFigure figure;                     /* read when has_figure */
     bool parallel;                         /* the section is in the home key's parallel key (R-499); only a figurate variation */
     bool tonic_major;                      /* the section is in the home tonic's major key (R-517): home in a major piece, its parallel key in a minor one; only a return */
     bool home_mode;                        /* the section is at home in the home mode, its source copied across modes when it is in the other (R-524); only a reharmonize return */
@@ -151,7 +112,7 @@ typedef struct {
 
 /* A cadence rule of a form whose sections the request gives: the last section whose role is one of `roles` ends in `cadence`. */
 typedef struct {
-    FormRole roles[FORM_SPEC_MAX_PARTS];
+    SectionRole roles[FORM_SPEC_MAX_PARTS];
     size_t role_count;
     CadenceType cadence;                           /* the core type: PAC, IAC or HC */
     char cadence_name[FORM_SPEC_CADENCE_NAME_MAX]; /* its name in the standard-harmony vocabulary */
@@ -161,7 +122,7 @@ typedef struct {
 typedef struct {
     char id[FORM_SPEC_ID_MAX];
     char letter[PLAN_SECTION_LETTER_MAX];
-    FormRole role;
+    SectionRole role;
     size_t bars;
     CadenceType cadence;
     char cadence_name[FORM_SPEC_CADENCE_NAME_MAX];
@@ -220,9 +181,9 @@ typedef struct {
      * else the first rule of last_cadences whose roles hold the last section of that role; the section a request with no
      * ending gets.
      */
-    FormRole roles[FORM_SPEC_MAX_PARTS];
+    SectionRole roles[FORM_SPEC_MAX_PARTS];
     size_t role_count;
-    FormRole loop_roles[FORM_SPEC_MAX_PARTS];
+    SectionRole loop_roles[FORM_SPEC_MAX_PARTS];
     size_t loop_role_count;
     CadenceType default_cadence;
     char default_cadence_name[FORM_SPEC_CADENCE_NAME_MAX];
@@ -264,9 +225,9 @@ const FormSpecSize *form_spec_size(const FormSpec *form, size_t bars, size_t cou
 const FormSpecSize *form_spec_default_size(const FormSpec *form);
 
 /* Whether the role is one of the form's `roles` (a form whose sections the request gives). */
-bool form_spec_has_role(const FormSpec *form, FormRole role);
+bool form_spec_has_role(const FormSpec *form, SectionRole role);
 /* Whether the role is one of the form's loop roles. */
-bool form_spec_role_in_loop(const FormSpec *form, FormRole role);
+bool form_spec_role_in_loop(const FormSpec *form, SectionRole role);
 
 /* Whether a piece of the form may be in the meter: true when the form lists no meters or lists this one. */
 bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter);

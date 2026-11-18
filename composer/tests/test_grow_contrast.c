@@ -71,8 +71,8 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, bool perio
     request.key = motive_key(motive);
     request.meter = motive_meter(motive);
     request.bars = 8;
-    request.pairing.beginning = period ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = period ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = period ? SECTION_BEGINNING_ANTECEDENT : SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = period ? SECTION_ENDING_CONSEQUENT : SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     request.first_cadence = CADENCE_TYPE_HALF;
     memset(&config, 0, sizeof(config));
@@ -253,8 +253,8 @@ static void composes_under(const GrowContrast *settings, size_t count) {
                     setup.knowledge = test_knowledge();
                     setup.text = &text;
                     setup.into = period ? GROW_INTO_PERIOD : GROW_INTO_SENTENCE;
-                    setup.pairing.beginning = period ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
-                    setup.pairing.ending = period ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
+                    setup.pairing.beginning = period ? SECTION_BEGINNING_ANTECEDENT : SECTION_BEGINNING_PRESENTATION;
+                    setup.pairing.ending = period ? SECTION_ENDING_CONSEQUENT : SECTION_ENDING_CONTINUATION;
                     setup.key = motive_key(&FIXTURES[f].motive);
                     setup.meter = motive_meter(&FIXTURES[f].motive);
                     setup.bars = 8;

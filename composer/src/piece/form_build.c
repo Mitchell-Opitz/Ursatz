@@ -119,7 +119,7 @@ static bool piece_accompaniment(const FormSpec *form, const PieceRequest *reques
  * that leads in is held (R-486), and a connective is asked for when `connective` (a "sometimes" is drawn by the caller).
  */
 static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, const FormSectionSpec *section,
-                               const PlanConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
+                               const SectionConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
                                const PlanAccompaniment *accompaniment, bool connective, NodeId *out) {
     PlanConstraint constraint;
     /*
@@ -127,9 +127,9 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
      * pairing or antecedent cadence. A liquidation has the liquidation constraint in their place; a transition, retransition,
      * subordinate theme and coda have the section function constraint (R-503).
      */
-    const bool liquidation = section->role == FORM_ROLE_LIQUIDATION;
+    const bool liquidation = section->role == SECTION_ROLE_LIQUIDATION;
     const bool operator_section =
-        liquidation || section->role == FORM_ROLE_RETRANSITION || section->role == FORM_ROLE_CODA;
+        liquidation || section->role == SECTION_ROLE_RETRANSITION || section->role == SECTION_ROLE_CODA;
     PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->name, out));
     if (result == PIECE_OK && liquidation) {
         memset(&constraint, 0, sizeof(constraint));
@@ -154,7 +154,7 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         constraint.params.cadence = section->cadence;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && !operator_section && section->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+    if (result == PIECE_OK && !operator_section && section->pairing.beginning == SECTION_BEGINNING_ANTECEDENT) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = ANTECEDENT_CADENCE;
@@ -178,12 +178,12 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         memcpy(constraint.params.letter, section->letter, sizeof(constraint.params.letter));
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && section->role >= FORM_ROLE_TRANSITION && section->role <= FORM_ROLE_CODA) {
-        static const PlanFunctionKind FUNCTIONS[] = {PLAN_FUNCTION_TRANSITION, PLAN_FUNCTION_RETRANSITION,
-                                                     PLAN_FUNCTION_SUBORDINATE, PLAN_FUNCTION_CODA};
+    if (result == PIECE_OK && section->role >= SECTION_ROLE_TRANSITION && section->role <= SECTION_ROLE_CODA) {
+        static const SectionFunctionKind FUNCTIONS[] = {SECTION_FUNCTION_TRANSITION, SECTION_FUNCTION_RETRANSITION,
+                                                     SECTION_FUNCTION_SUBORDINATE, SECTION_FUNCTION_CODA};
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_SECTION_FUNCTION;
-        constraint.params.section_function.function = FUNCTIONS[section->role - FORM_ROLE_TRANSITION];
+        constraint.params.section_function.function = FUNCTIONS[section->role - SECTION_ROLE_TRANSITION];
         constraint.params.section_function.independent = section->independent;
         constraint.params.section_function.lyric = section->lyric;
         result = piece_add_constraint(plan, *out, &constraint);
@@ -194,7 +194,7 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         constraint.params.section_return.section = sections[section->returns];
         constraint.params.section_return.variation = section->variation;
         constraint.params.section_return.across_modes = section->home_mode;
-        if (section->variation == PLAN_RETURN_SETTING) {
+        if (section->variation == SECTION_RETURN_SETTING) {
             constraint.params.section_return.setting = setting_pattern(section, request, accompaniment);
         }
         result = piece_add_constraint(plan, *out, &constraint);
@@ -382,20 +382,20 @@ PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const Plan
  * are zeroed, with has[i] false for them.
  */
 static bool size_buildable(const FormSpecSize *size, const PlanMeter *meter, const Motive *motive,
-                           PlanConstruction *constructions, bool *has) {
+                           SectionConstruction *constructions, bool *has) {
     for (size_t i = 0; i < size->section_count; i++) {
         const FormSectionSpec *section = &size->sections[i];
         memset(&constructions[i], 0, sizeof(constructions[i]));
         has[i] = section->has_construction;
-        if (section->beats != 0 || !form_role_is_theme(section->role)) {
+        if (section->beats != 0 || !section_role_is_theme(section->role)) {
             return false;
         }
-        if (section->role == FORM_ROLE_LIQUIDATION || section->role == FORM_ROLE_RETRANSITION) {
+        if (section->role == SECTION_ROLE_LIQUIDATION || section->role == SECTION_ROLE_RETRANSITION) {
             /* The operator lays out its own 4 bars (the reader refuses any other); it has no theme to be buildable. */
             if (section->bars != 4) {
                 return false;
             }
-        } else if (section->role == FORM_ROLE_CODA) {
+        } else if (section->role == SECTION_ROLE_CODA) {
             /* The coda operator lays out its own 8 bars (the reader refuses any other). */
             if (section->bars != 8) {
                 return false;
@@ -420,7 +420,7 @@ static bool size_buildable(const FormSpecSize *size, const PlanMeter *meter, con
 }
 
 /* The bars of a section's basic idea: its construction's, else 2 of an 8-bar theme and 1 of any other. */
-static size_t section_basic_bars(const FormSectionSpec *section, const PlanConstruction *construction, bool has) {
+static size_t section_basic_bars(const FormSectionSpec *section, const SectionConstruction *construction, bool has) {
     return has ? construction->idea_bars[GROW_IDEA_BASIC] : (section->bars == 8 ? 2 : 1);
 }
 
@@ -484,7 +484,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     PlanAccompaniment accompaniment;
     bool accompanied = piece_accompaniment(form, request, &accompaniment);
     size_t cells_per_bar;
-    PlanConstruction constructions[FORM_SPEC_MAX_SECTIONS];
+    SectionConstruction constructions[FORM_SPEC_MAX_SECTIONS];
     bool has_construction[FORM_SPEC_MAX_SECTIONS];
     if (!form_spec_meter_allowed(form, &request->meter) || !grow_cells_per_bar(&request->meter, &cells_per_bar) ||
         analysis_key_tonic_pitch_class(&request->key) < 0 ||

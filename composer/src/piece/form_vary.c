@@ -547,22 +547,22 @@ static bool reregister(ReturnPayload *payload) {
 
 bool return_vary(ReturnPayload *payload, FillRng *rng) {
     switch (payload->variation) {
-    case PLAN_RETURN_EXACT:
+    case SECTION_RETURN_EXACT:
         return true;
-    case PLAN_RETURN_ORNAMENT:
+    case SECTION_RETURN_ORNAMENT:
         return ornament_melody(payload, rng, 0, false);
-    case PLAN_RETURN_EMBELLISH:
+    case SECTION_RETURN_EMBELLISH:
         return ornament_melody(payload, rng, 0, true);
-    case PLAN_RETURN_VARIED:
+    case SECTION_RETURN_VARIED:
         return ornament_melody(payload, rng, 1, false) && reharmonize(payload);
-    case PLAN_RETURN_REHARMONIZE:
+    case SECTION_RETURN_REHARMONIZE:
         return reharmonize(payload);
-    case PLAN_RETURN_REREGISTER:
+    case SECTION_RETURN_REREGISTER:
         return payload->octave != 0 && reregister(payload);
-    case PLAN_RETURN_FIGURATE:
+    case SECTION_RETURN_FIGURATE:
         /* The copy keeps its melody: compose_run writes the figure (form_figure_write) once the harmony is final (R-497). */
         return payload->reharmonize ? reharmonize(payload) : true;
-    case PLAN_RETURN_SETTING:
+    case SECTION_RETURN_SETTING:
         return set_accompaniment(payload, payload->setting);
     }
     return false;
@@ -893,26 +893,26 @@ static void check_setting(const ReturnPayload *payload, FillCheck *out) {
 
 void return_vary_check(const ReturnPayload *payload, FillCheck *out) {
     switch (payload->variation) {
-    case PLAN_RETURN_ORNAMENT:
-    case PLAN_RETURN_EMBELLISH:
+    case SECTION_RETURN_ORNAMENT:
+    case SECTION_RETURN_EMBELLISH:
         check_ornament(payload, out);
         break;
-    case PLAN_RETURN_REHARMONIZE:
+    case SECTION_RETURN_REHARMONIZE:
         check_reharmonize(payload, out);
         break;
-    case PLAN_RETURN_VARIED:
+    case SECTION_RETURN_VARIED:
         check_varied(payload, out);
         break;
-    case PLAN_RETURN_REREGISTER:
+    case SECTION_RETURN_REREGISTER:
         check_reregister(payload, out);
         break;
-    case PLAN_RETURN_FIGURATE:
+    case SECTION_RETURN_FIGURATE:
         check_figurate(payload, out);
         break;
-    case PLAN_RETURN_SETTING:
+    case SECTION_RETURN_SETTING:
         check_setting(payload, out);
         break;
-    case PLAN_RETURN_EXACT:
+    case SECTION_RETURN_EXACT:
         break;
     }
 }

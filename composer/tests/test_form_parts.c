@@ -212,8 +212,8 @@ static void check_transition(const PiecePlan *plan, const Row *row, unsigned lon
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 4);
     NodeId t = sections[1];
-    PlanSectionFunction function;
-    assert(plan_section_function_of(plan, t, &function) && function.function == PLAN_FUNCTION_TRANSITION);
+    SectionFunction function;
+    assert(plan_section_function_of(plan, t, &function) && function.function == SECTION_FUNCTION_TRANSITION);
     PlanSpan span = plan_node_span(plan, t);
     Rational bar = {row->beats, row->unit};
     Rational half = {0, 1};
@@ -374,8 +374,8 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 7);
     NodeId r = sections[4];
-    PlanSectionFunction function;
-    assert(plan_section_function_of(plan, r, &function) && function.function == PLAN_FUNCTION_RETRANSITION);
+    SectionFunction function;
+    assert(plan_section_function_of(plan, r, &function) && function.function == SECTION_FUNCTION_RETRANSITION);
     assert(!plan_node_find_constraint(plan, r, PLAN_CONSTRAINT_ARCHETYPE));
     PlanSpan span = plan_node_span(plan, r);
 
@@ -488,8 +488,8 @@ static void check_coda(const PiecePlan *plan, const Row *row, unsigned long seed
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 7);
     NodeId k = sections[6];
-    PlanSectionFunction function;
-    assert(plan_section_function_of(plan, k, &function) && function.function == PLAN_FUNCTION_CODA);
+    SectionFunction function;
+    assert(plan_section_function_of(plan, k, &function) && function.function == SECTION_FUNCTION_CODA);
     assert(!plan_node_find_constraint(plan, k, PLAN_CONSTRAINT_ARCHETYPE));
 
     /* Three phrases of 4, 2 and 2 bars. */

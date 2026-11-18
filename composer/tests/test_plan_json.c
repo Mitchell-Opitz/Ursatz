@@ -144,10 +144,10 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     shape.params.harmony_shape.max_cells_per_chord = -1;
     assert(plan_lane_span_add_constraint(plan, harmony_two, &shape) == PLAN_ERR_BAD_PAYLOAD);
     PlanConstraint pairing = {PLAN_CONSTRAINT_THEME_PAIRING, {0}};
-    pairing.params.theme_pairing.beginning = PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA;
-    pairing.params.theme_pairing.ending = PLAN_THEME_ENDING_CADENTIAL;
+    pairing.params.theme_pairing.beginning = SECTION_BEGINNING_COMPOUND_BASIC_IDEA;
+    pairing.params.theme_pairing.ending = SECTION_ENDING_CADENTIAL;
     assert(plan_node_add_constraint(plan, phrase, &pairing) == PLAN_OK);
-    pairing.params.theme_pairing.ending = (PlanThemeEnding)7;
+    pairing.params.theme_pairing.ending = (SectionEnding)7;
     assert(plan_node_add_constraint(plan, phrase, &pairing) == PLAN_ERR_BAD_PAYLOAD);
 
     if (tone_labels > 0) {
@@ -229,8 +229,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.figure.reharmonize == b->params.figure.reharmonize &&
                a->params.figure.change_at == b->params.figure.change_at && a->params.figure.climax == b->params.figure.climax;
     case PLAN_CONSTRAINT_CONSTRUCTION: {
-        const PlanConstruction *x = &a->params.construction;
-        const PlanConstruction *y = &b->params.construction;
+        const SectionConstruction *x = &a->params.construction;
+        const SectionConstruction *y = &b->params.construction;
         if (memcmp(x->idea_bars, y->idea_bars, sizeof(x->idea_bars)) != 0 || x->extension_count != y->extension_count ||
             x->reason != y->reason) {
             return false;
@@ -670,20 +670,20 @@ static void test_figure(void) {
         if (sections == 0) {
             assert(!returned && !figure);
         } else {
-            assert(returned && returned->params.section_return.variation == PLAN_RETURN_FIGURATE && figure);
+            assert(returned && returned->params.section_return.variation == SECTION_RETURN_FIGURATE && figure);
             variations[sections - 1] = child;
         }
         sections++;
     }
     assert(sections == 4);
-    const PlanFigure *first = &plan_node_find_constraint(plan, variations[0], PLAN_CONSTRAINT_FIGURE)->params.figure;
-    const PlanFigure *second = &plan_node_find_constraint(plan, variations[1], PLAN_CONSTRAINT_FIGURE)->params.figure;
-    const PlanFigure *third = &plan_node_find_constraint(plan, variations[2], PLAN_CONSTRAINT_FIGURE)->params.figure;
-    assert(first->kind == PLAN_FIGURE_NEIGHBOR && first->rhythm == PLAN_FIGURE_EIGHTHS && !first->reharmonize &&
+    const SectionFigure *first = &plan_node_find_constraint(plan, variations[0], PLAN_CONSTRAINT_FIGURE)->params.figure;
+    const SectionFigure *second = &plan_node_find_constraint(plan, variations[1], PLAN_CONSTRAINT_FIGURE)->params.figure;
+    const SectionFigure *third = &plan_node_find_constraint(plan, variations[2], PLAN_CONSTRAINT_FIGURE)->params.figure;
+    assert(first->kind == SECTION_FIGURE_NEIGHBOR && first->rhythm == SECTION_FIGURE_EIGHTHS && !first->reharmonize &&
            first->change_at == 0 && !first->climax);
-    assert(second->kind == PLAN_FIGURE_SCALE && second->rhythm == PLAN_FIGURE_SIXTEENTHS && second->reharmonize &&
+    assert(second->kind == SECTION_FIGURE_SCALE && second->rhythm == SECTION_FIGURE_SIXTEENTHS && second->reharmonize &&
            second->change_at == 3 && !second->climax);
-    assert(third->kind == PLAN_FIGURE_BROKEN_CHORD && third->rhythm == PLAN_FIGURE_SIXTEENTHS && !third->reharmonize &&
+    assert(third->kind == SECTION_FIGURE_BROKEN_CHORD && third->rhythm == SECTION_FIGURE_SIXTEENTHS && !third->reharmonize &&
            third->change_at == 0 && third->climax);
 
     char *text = plan_to_json(plan, &error);
@@ -896,7 +896,7 @@ static void test_section_constraints(void) {
     }
     PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
     back.params.section_return.section = a;
-    back.params.section_return.variation = PLAN_RETURN_ORNAMENT;
+    back.params.section_return.variation = SECTION_RETURN_ORNAMENT;
     assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
     PlanConstraint layers = {PLAN_CONSTRAINT_LAYERS, {0}};
     layers.params.layers.lanes = PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE);
@@ -931,7 +931,7 @@ static void test_section_constraints(void) {
     back.params.section_return.section = 99;
     assert(plan_node_add_constraint(plan, a2, &back) == PLAN_ERR_BAD_PAYLOAD);
     back.params.section_return.section = a;
-    back.params.section_return.variation = (PlanReturnVariation)9;
+    back.params.section_return.variation = (SectionReturnVariation)9;
     assert(plan_node_add_constraint(plan, a2, &back) == PLAN_ERR_BAD_PAYLOAD);
     layers.params.layers.lanes = 0;
     assert(plan_node_add_constraint(plan, b, &layers) == PLAN_ERR_BAD_PAYLOAD);
@@ -982,11 +982,11 @@ static void test_across_modes_return(void) {
     NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "A'");
     PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
     back.params.section_return.section = a;
-    back.params.section_return.variation = PLAN_RETURN_EXACT;
+    back.params.section_return.variation = SECTION_RETURN_EXACT;
     back.params.section_return.across_modes = true;
     /* only a reharmonized return crosses modes */
     assert(plan_node_add_constraint(plan, a2, &back) != PLAN_OK);
-    back.params.section_return.variation = PLAN_RETURN_REHARMONIZE;
+    back.params.section_return.variation = SECTION_RETURN_REHARMONIZE;
     assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
     PlanJsonError error;
     char *text = plan_to_json(plan, &error);
@@ -1025,7 +1025,7 @@ static void test_setting_return(void) {
     NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "A'");
     PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
     back.params.section_return.section = a;
-    back.params.section_return.variation = PLAN_RETURN_SETTING;
+    back.params.section_return.variation = SECTION_RETURN_SETTING;
     back.params.section_return.setting = PLAN_ACCOMPANIMENT_ANY;
     /* a setting return needs one of the four patterns */
     assert(plan_node_add_constraint(plan, a2, &back) != PLAN_OK);
@@ -1033,7 +1033,7 @@ static void test_setting_return(void) {
     assert(plan_node_add_constraint(plan, a2, &back) != PLAN_OK);
     back.params.section_return.setting = PLAN_ACCOMPANIMENT_OOM_PAH;
     assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
-    assert(strcmp(plan_return_variation_name(PLAN_RETURN_SETTING), "setting") == 0);
+    assert(strcmp(section_return_variation_name(SECTION_RETURN_SETTING), "setting") == 0);
     PlanJsonError error;
     char *text = plan_to_json(plan, &error);
     assert(text != NULL && strstr(text, "\"variation\": \"setting\"") != NULL && strstr(text, "\"setting\": \"oom-pah\"") != NULL);
@@ -1055,7 +1055,7 @@ static void test_setting_return(void) {
     assert(strstr(error.message, "only a setting return has a setting") != NULL);
     free(exact);
     /* an exact return writes no setting member */
-    back.params.section_return.variation = PLAN_RETURN_EXACT;
+    back.params.section_return.variation = SECTION_RETURN_EXACT;
     assert(plan_node_remove_constraint(plan, a2, plan_node_constraint_count(plan, a2) - 1) == PLAN_OK);
     assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
     char *plain = plan_to_json(plan, &error);
@@ -1073,9 +1073,9 @@ static void test_embellish_return(void) {
     NodeId a2 = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "A'");
     PlanConstraint back = {PLAN_CONSTRAINT_RETURN, {0}};
     back.params.section_return.section = a;
-    back.params.section_return.variation = PLAN_RETURN_EMBELLISH;
+    back.params.section_return.variation = SECTION_RETURN_EMBELLISH;
     assert(plan_node_add_constraint(plan, a2, &back) == PLAN_OK);
-    assert(strcmp(plan_return_variation_name(PLAN_RETURN_EMBELLISH), "embellish") == 0);
+    assert(strcmp(section_return_variation_name(SECTION_RETURN_EMBELLISH), "embellish") == 0);
     PlanJsonError error;
     char *text = plan_to_json(plan, &error);
     assert(text != NULL && strstr(text, "\"variation\": \"embellish\"") != NULL);
@@ -1302,8 +1302,8 @@ static void test_malformed_input(void) {
                               "{\"kind\":\"harmony_shape\",\"shape\":\"cadential\"},{\"kind\":\"material\"}]}}}",
                               &parsed_pairing, &error) == PLAN_OK);
         const PlanConstraint *read = plan_node_constraint_at(parsed_pairing, 1, 0);
-        assert(read && read->params.theme_pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
-               read->params.theme_pairing.ending == PLAN_THEME_ENDING_CONSEQUENT);
+        assert(read && read->params.theme_pairing.beginning == SECTION_BEGINNING_ANTECEDENT &&
+               read->params.theme_pairing.ending == SECTION_ENDING_CONSEQUENT);
         read = plan_node_constraint_at(parsed_pairing, 1, 1);
         assert(read && read->params.harmony_shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL &&
                read->params.harmony_shape.starts_on == PLAN_HARMONY_ANCHOR_ANY &&

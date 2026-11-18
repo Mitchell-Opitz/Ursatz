@@ -84,10 +84,10 @@ typedef struct {
     const Motive *motive;        /* motif: the section's own motive, else the piece's basic motive */
     bool has_into;               /* motif: a theme section's archetype */
     PlanArchetype into;          /* sentence by default; PLAN_ARCHETYPE_HYBRID reads `hybrid` */
-    PlanThemePairing hybrid;
+    SectionPairing hybrid;
     bool has_construction;       /* motif: a theme of the section's whole bars, 3 to 16, with a construction (R-468); no pickup */
     bool construction_auto;      /* the construction is chosen from the bars and the motive (R-469); else `construction` */
-    PlanConstruction construction; /* reason GIVEN; read when has_construction and not construction_auto */
+    SectionConstruction construction; /* reason GIVEN; read when has_construction and not construction_auto */
     const struct GrowPoolForm *pool; /* the motive forms the section's motives stage offers (B6) */
     size_t pool_count;
     const PiecePlan *theme_plan; /* theme: the composed theme to take the realized lanes from; must outlive the build */

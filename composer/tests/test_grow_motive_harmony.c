@@ -101,14 +101,14 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, bool sentenc
         request.key = test_key(0, "major");
         request.meter.beats_per_bar = 6;
         request.meter.beat_unit = 8;
-        request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-        request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+        request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+        request.pairing.ending = SECTION_ENDING_CONTINUATION;
     } else {
         request.key = test_key(9, "minor");
         request.meter.beats_per_bar = 3;
         request.meter.beat_unit = 4;
-        request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
-        request.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
+        request.pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
+        request.pairing.ending = SECTION_ENDING_CONSEQUENT;
         request.first_cadence = CADENCE_TYPE_HALF;
     }
     request.chords = chords;
@@ -267,8 +267,8 @@ int main(void) {
         request.key = options.key;
         request.meter = options.meter;
         request.bars = 8;
-        request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-        request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+        request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+        request.pairing.ending = SECTION_ENDING_CONTINUATION;
         request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
         PiecePlan *plan = NULL;
         GrowOutcome outcome;

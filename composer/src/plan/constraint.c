@@ -63,10 +63,10 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                                   shape->ends_on == PLAN_HARMONY_ANCHOR_DOMINANT));
     }
     case PLAN_CONSTRAINT_THEME_PAIRING: {
-        const PlanThemePairing *pairing = &constraint->params.theme_pairing;
-        return pairing->beginning >= PLAN_THEME_BEGINNING_PRESENTATION &&
-               pairing->beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA &&
-               pairing->ending >= PLAN_THEME_ENDING_CONTINUATION && pairing->ending <= PLAN_THEME_ENDING_CADENTIAL;
+        const SectionPairing *pairing = &constraint->params.theme_pairing;
+        return pairing->beginning >= SECTION_BEGINNING_PRESENTATION &&
+               pairing->beginning <= SECTION_BEGINNING_COMPOUND_BASIC_IDEA &&
+               pairing->ending >= SECTION_ENDING_CONTINUATION && pairing->ending <= SECTION_ENDING_CADENTIAL;
     }
     case PLAN_CONSTRAINT_ACCOMPANIMENT: {
         const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
@@ -87,10 +87,10 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         const PlanReturn *section_return = &constraint->params.section_return;
         return plan_has_node(plan, section_return->section) &&
                plan_node_kind(plan, section_return->section) == PLAN_NODE_SECTION &&
-               section_return->variation >= PLAN_RETURN_EXACT && section_return->variation <= PLAN_RETURN_SETTING &&
-               (section_return->variation != PLAN_RETURN_SETTING ||
+               section_return->variation >= SECTION_RETURN_EXACT && section_return->variation <= SECTION_RETURN_SETTING &&
+               (section_return->variation != SECTION_RETURN_SETTING ||
                 (section_return->setting >= PLAN_ACCOMPANIMENT_BLOCK && section_return->setting <= PLAN_ACCOMPANIMENT_OOM_PAH)) &&
-               (!section_return->across_modes || section_return->variation == PLAN_RETURN_REHARMONIZE);
+               (!section_return->across_modes || section_return->variation == SECTION_RETURN_REHARMONIZE);
     }
     case PLAN_CONSTRAINT_LAYERS:
         return constraint->params.layers.lanes != 0 && (constraint->params.layers.lanes & ~PLAN_LAYERS_ALL) == 0;
@@ -166,37 +166,37 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return true;
     }
     case PLAN_CONSTRAINT_FIGURE: {
-        const PlanFigure *figure = &constraint->params.figure;
-        return figure->kind >= PLAN_FIGURE_NEIGHBOR && figure->kind <= PLAN_FIGURE_BROKEN_CHORD &&
-               figure->rhythm >= PLAN_FIGURE_EIGHTHS && figure->rhythm <= PLAN_FIGURE_SIXTEENTHS &&
+        const SectionFigure *figure = &constraint->params.figure;
+        return figure->kind >= SECTION_FIGURE_NEIGHBOR && figure->kind <= SECTION_FIGURE_BROKEN_CHORD &&
+               figure->rhythm >= SECTION_FIGURE_EIGHTHS && figure->rhythm <= SECTION_FIGURE_SIXTEENTHS &&
                (figure->change_at == 0 || figure->reharmonize);
     }
     case PLAN_CONSTRAINT_SECTION_FUNCTION: {
-        const PlanSectionFunction *function = &constraint->params.section_function;
-        return function->function >= PLAN_FUNCTION_TRANSITION && function->function <= PLAN_FUNCTION_CODA &&
-               (!function->independent || function->function == PLAN_FUNCTION_TRANSITION) &&
-               (!function->lyric || function->function == PLAN_FUNCTION_SUBORDINATE);
+        const SectionFunction *function = &constraint->params.section_function;
+        return function->function >= SECTION_FUNCTION_TRANSITION && function->function <= SECTION_FUNCTION_CODA &&
+               (!function->independent || function->function == SECTION_FUNCTION_TRANSITION) &&
+               (!function->lyric || function->function == SECTION_FUNCTION_SUBORDINATE);
     }
     case PLAN_CONSTRAINT_PEDAL:
         return constraint->params.pedal.degree == 5;
     case PLAN_CONSTRAINT_CONSTRUCTION: {
-        const PlanConstruction *construction = &constraint->params.construction;
-        for (size_t i = 0; i < PLAN_CONSTRUCTION_IDEAS; i++) {
+        const SectionConstruction *construction = &constraint->params.construction;
+        for (size_t i = 0; i < SECTION_CONSTRUCTION_IDEAS; i++) {
             if (construction->idea_bars[i] > 16) {
                 return false;
             }
         }
-        if (construction->extension_count > PLAN_CONSTRUCTION_EXTENSIONS) {
+        if (construction->extension_count > SECTION_CONSTRUCTION_EXTENSIONS) {
             return false;
         }
         for (size_t i = 0; i < construction->extension_count; i++) {
-            const PlanExtension *extension = &construction->extensions[i];
-            if (extension->kind < PLAN_EXTENSION_REPEAT || extension->kind > PLAN_EXTENSION_EVADED ||
-                extension->idea >= PLAN_CONSTRUCTION_IDEAS || extension->bars > 4) {
+            const SectionExtension *extension = &construction->extensions[i];
+            if (extension->kind < SECTION_EXTENSION_REPEAT || extension->kind > SECTION_EXTENSION_EVADED ||
+                extension->idea >= SECTION_CONSTRUCTION_IDEAS || extension->bars > 4) {
                 return false;
             }
         }
-        return construction->reason >= PLAN_CONSTRUCTION_GIVEN && construction->reason <= PLAN_CONSTRUCTION_FROM_LENGTH;
+        return construction->reason >= SECTION_CONSTRUCTION_GIVEN && construction->reason <= SECTION_CONSTRUCTION_FROM_LENGTH;
     }
     case PLAN_CONSTRAINT_PIECE_PART: {
         const PlanPiecePart *part = &constraint->params.piece_part;
@@ -333,91 +333,6 @@ const PlanConstraint *plan_lane_span_find_constraint(const PiecePlan *plan, Lane
     return NULL;
 }
 
-static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister", "varied", "figurate", "embellish", "setting"};
-static const char *const FIGURE_KIND_NAMES[] = {"neighbor", "scale", "broken-chord"};
-static const char *const FIGURE_RHYTHM_NAMES[] = {"eighths", "sixteenths"};
-static const char *const FUNCTION_KIND_NAMES[] = {"transition", "retransition", "subordinate", "coda"};
-
-const char *plan_return_variation_name(PlanReturnVariation variation) {
-    if ((int)variation < 0 || (size_t)variation >= sizeof(RETURN_VARIATION_NAMES) / sizeof(RETURN_VARIATION_NAMES[0])) {
-        return NULL;
-    }
-    return RETURN_VARIATION_NAMES[variation];
-}
-
-bool plan_return_variation_from_name(const char *name, PlanReturnVariation *out) {
-    if (!name) {
-        return false;
-    }
-    for (size_t i = 0; i < sizeof(RETURN_VARIATION_NAMES) / sizeof(RETURN_VARIATION_NAMES[0]); i++) {
-        if (strcmp(name, RETURN_VARIATION_NAMES[i]) == 0) {
-            *out = (PlanReturnVariation)i;
-            return true;
-        }
-    }
-    return false;
-}
-
 bool plan_node_has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
     return plan_node_find_constraint(plan, id, kind) != NULL;
-}
-
-const char *plan_figure_kind_name(PlanFigureKind kind) {
-    if ((int)kind < 0 || (size_t)kind >= sizeof(FIGURE_KIND_NAMES) / sizeof(FIGURE_KIND_NAMES[0])) {
-        return NULL;
-    }
-    return FIGURE_KIND_NAMES[kind];
-}
-
-bool plan_figure_kind_from_name(const char *name, PlanFigureKind *out) {
-    if (!name) {
-        return false;
-    }
-    for (size_t i = 0; i < sizeof(FIGURE_KIND_NAMES) / sizeof(FIGURE_KIND_NAMES[0]); i++) {
-        if (strcmp(name, FIGURE_KIND_NAMES[i]) == 0) {
-            *out = (PlanFigureKind)i;
-            return true;
-        }
-    }
-    return false;
-}
-
-const char *plan_figure_rhythm_name(PlanFigureRhythm rhythm) {
-    if ((int)rhythm < 0 || (size_t)rhythm >= sizeof(FIGURE_RHYTHM_NAMES) / sizeof(FIGURE_RHYTHM_NAMES[0])) {
-        return NULL;
-    }
-    return FIGURE_RHYTHM_NAMES[rhythm];
-}
-
-bool plan_figure_rhythm_from_name(const char *name, PlanFigureRhythm *out) {
-    if (!name) {
-        return false;
-    }
-    for (size_t i = 0; i < sizeof(FIGURE_RHYTHM_NAMES) / sizeof(FIGURE_RHYTHM_NAMES[0]); i++) {
-        if (strcmp(name, FIGURE_RHYTHM_NAMES[i]) == 0) {
-            *out = (PlanFigureRhythm)i;
-            return true;
-        }
-    }
-    return false;
-}
-
-const char *plan_function_kind_name(PlanFunctionKind kind) {
-    if ((int)kind < 0 || (size_t)kind >= sizeof(FUNCTION_KIND_NAMES) / sizeof(FUNCTION_KIND_NAMES[0])) {
-        return NULL;
-    }
-    return FUNCTION_KIND_NAMES[kind];
-}
-
-bool plan_function_kind_from_name(const char *name, PlanFunctionKind *out) {
-    if (!name) {
-        return false;
-    }
-    for (size_t i = 0; i < sizeof(FUNCTION_KIND_NAMES) / sizeof(FUNCTION_KIND_NAMES[0]); i++) {
-        if (strcmp(name, FUNCTION_KIND_NAMES[i]) == 0) {
-            *out = (PlanFunctionKind)i;
-            return true;
-        }
-    }
-    return false;
 }
