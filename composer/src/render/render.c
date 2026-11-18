@@ -52,6 +52,9 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
     free(rendered->pitch_values);
     free(rendered->part_index);
     free(rendered->spans);
+    free(rendered->note_ids);
+    free(rendered->note_sources);
+    free(rendered->note_operations);
     free(rendered->parts);
     meter_map_destroy(rendered->meter_map);
     free(rendered->keys);
@@ -285,6 +288,9 @@ typedef struct {
     size_t part;
     LaneSpanId span;
     size_t index;
+    PlanNoteId id;
+    PlanNoteId source;
+    PlanNoteOperation operation;
 } NoteSource;
 
 static int compare_notes(const void *left, const void *right) {
@@ -608,6 +614,9 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
             source->part = part;
             source->span = id;
             source->index = n;
+            source->id = note->id;
+            source->source = note->source;
+            source->operation = note->operation;
         }
     }
     if (result == PLAN_RENDER_OK && note_count > 1) {
@@ -621,7 +630,11 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         out->pitch_values = calloc(note_count, sizeof(PitchNumericValue *));
         out->part_index = calloc(note_count, sizeof(size_t));
         out->spans = calloc(note_count, sizeof(LaneSpanId));
-        if (!out->events || !out->pitch_values || !out->part_index || !out->spans) {
+        out->note_ids = calloc(note_count, sizeof(PlanNoteId));
+        out->note_sources = calloc(note_count, sizeof(PlanNoteId));
+        out->note_operations = calloc(note_count, sizeof(PlanNoteOperation));
+        if (!out->events || !out->pitch_values || !out->part_index || !out->spans || !out->note_ids || !out->note_sources ||
+            !out->note_operations) {
             result = PLAN_RENDER_ERR_ALLOC;
         }
     }
@@ -634,6 +647,9 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         if (result == PLAN_RENDER_OK) {
             out->part_index[i] = notes[i].part;
             out->spans[i] = notes[i].span;
+            out->note_ids[i] = notes[i].id;
+            out->note_sources[i] = notes[i].source;
+            out->note_operations[i] = notes[i].operation;
             out->count++;
         }
     }
@@ -662,8 +678,12 @@ PlanRenderResult render_notes(const RenderNote *notes, size_t count, const Analy
     out->pitch_values = calloc(count, sizeof(PitchNumericValue *));
     out->part_index = calloc(count, sizeof(size_t));
     out->spans = calloc(count, sizeof(LaneSpanId));
+    out->note_ids = calloc(count, sizeof(PlanNoteId)); /* notes in no plan have no ids */
+    out->note_sources = calloc(count, sizeof(PlanNoteId));
+    out->note_operations = calloc(count, sizeof(PlanNoteOperation));
     out->parts = calloc(count, sizeof(RenderedPart));
-    if (!sources || !out->events || !out->pitch_values || !out->part_index || !out->spans || !out->parts) {
+    if (!sources || !out->events || !out->pitch_values || !out->part_index || !out->spans || !out->note_ids || !out->note_sources ||
+        !out->note_operations || !out->parts) {
         result = PLAN_RENDER_ERR_ALLOC;
     }
     for (size_t i = 0; result == PLAN_RENDER_OK && i < count; i++) {
