@@ -39,6 +39,7 @@ add_library(ursatz_composer STATIC
     plan/lanes.c
     plan/plan_state.c
     plan/constraint.c
+    plan/constraint_kinds.c
     plan/plan_json.c
     plan/plan_key_spans.c
     check/analyzer_check.c

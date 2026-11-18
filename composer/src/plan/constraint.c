@@ -7,6 +7,7 @@
 #include <theory/galant/galant_prototypes.h>
 #include <analysis/texture/texture_rules.h>
 
+#include "plan/constraint_kinds.h"
 #include "plan/plan_internal.h"
 #include "util/plan_util.h"
 #include "util/util.h"
@@ -16,126 +17,9 @@ void constraint_list_free(ConstraintList *list) {
     memset(list, 0, sizeof(*list));
 }
 
-/* The meter the plan starts in, from its first meter lane span; 4/4 while it has none (a pickup on 1/32 is on every
-   meter's grid, so only a triplet pickup depends on which meter is chosen). */
-static PlanMeter first_meter(const PiecePlan *plan) {
-    LaneSpanId id;
-    PlanSpan whole = plan_node_span(plan, plan_root(plan));
-    if (plan_lane_find(plan, PLAN_LANE_METER, 0, whole, &id, 1) == 0) {
-        return (PlanMeter){4, 4, 0};
-    }
-    return plan_lane_span_payload(plan, id)->meter;
-}
-
 static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *constraint) {
-    switch (constraint->kind) {
-    case PLAN_CONSTRAINT_LENGTH_BARS:
-        return constraint->params.bars > 0;
-    case PLAN_CONSTRAINT_CADENCE:
-        return plan_cadence_index(constraint->params.cadence, NULL);
-    case PLAN_CONSTRAINT_MOTIVE_REF: {
-        const PlanMotiveRef *ref = &constraint->params.motive;
-        return plan_has_node(plan, ref->motive) && plan_node_kind(plan, ref->motive) == PLAN_NODE_MOTIVE &&
-               (!ref->has_step || (ref->step.kind >= 0 && ref->step.kind < MOTIVE_RELATION_KIND_COUNT));
-    }
-    case PLAN_CONSTRAINT_KEY:
-        return analysis_key_tonic_pitch_class(&constraint->params.key) >= 0 && analysis_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
-               composer_key_valid(&constraint->params.key);
-    case PLAN_CONSTRAINT_EMBELLISH:
-        return true;
-    case PLAN_CONSTRAINT_SCHEMA: {
-        const GalantPrototype *prototype = galant_prototype((GalantSchemaId)constraint->params.schema.schema);
-        return prototype && constraint->params.schema.stage >= 0 &&
-               (size_t)constraint->params.schema.stage < prototype->stage_count;
-    }
-    case PLAN_CONSTRAINT_HARMONY_SHAPE: {
-        const PlanHarmonyShape *shape = &constraint->params.harmony_shape;
-        return shape->kind >= PLAN_HARMONY_SHAPE_PROLONGATION && shape->kind <= PLAN_HARMONY_SHAPE_CADENTIAL &&
-               shape->starts_on >= PLAN_HARMONY_ANCHOR_ANY && shape->starts_on <= PLAN_HARMONY_ANCHOR_PIVOT &&
-               shape->ends_on >= PLAN_HARMONY_ANCHOR_ANY && shape->ends_on <= PLAN_HARMONY_ANCHOR_DOMINANT &&
-               shape->max_cells_per_chord >= 0 &&
-               (!shape->pedal || (shape->kind == PLAN_HARMONY_SHAPE_PROLONGATION &&
-                                  shape->starts_on == PLAN_HARMONY_ANCHOR_DOMINANT &&
-                                  shape->ends_on == PLAN_HARMONY_ANCHOR_DOMINANT));
-    }
-    case PLAN_CONSTRAINT_ACCOMPANIMENT: {
-        const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
-        int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
-        int high = accompaniment->high ? accompaniment->high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
-        return accompaniment->pattern >= PLAN_ACCOMPANIMENT_ANY && accompaniment->pattern <= PLAN_ACCOMPANIMENT_MOTIVE &&
-               (accompaniment->pattern == PLAN_ACCOMPANIMENT_MOTIVE) == (accompaniment->motive_node[0] != '\0') &&
-               memchr(accompaniment->motive_node, '\0', sizeof(accompaniment->motive_node)) &&
-               accompaniment->texture >= -1 && accompaniment->texture < (int)STANDARD_TEXTURE_COUNT &&
-               accompaniment->low >= 0 && accompaniment->low <= 127 && accompaniment->high >= 0 &&
-               accompaniment->high <= 127 && low < high;
-    }
-    case PLAN_CONSTRAINT_VOICING:
-        return true;
-    case PLAN_CONSTRAINT_COUNTERPOINT:
-        return constraint->params.counterpoint.species >= 1 && constraint->params.counterpoint.species <= 4;
-    case PLAN_CONSTRAINT_INVENT_MOTIVE:
-        return true;
-    case PLAN_CONSTRAINT_STYLE: {
-        const PlanStyle *style = &constraint->params.style;
-        size_t length = strnlen(style->path, PLAN_STYLE_PATH_MAX);
-        /* A weight of 0/0 is the default; any other has a denominator. */
-        size_t blend_length = strnlen(style->blend_path, PLAN_STYLE_PATH_MAX);
-        if (length == 0 || length >= PLAN_STYLE_PATH_MAX || blend_length >= PLAN_STYLE_PATH_MAX ||
-            (style->weight_denominator == 0 && style->weight_numerator != 0)) {
-            return false;
-        }
-        for (int d = 0; blend_length > 0 && d < 4; d++) {
-            if (style->blend_denominator[d] == 0 || style->blend_numerator[d] > style->blend_denominator[d]) {
-                return false;
-            }
-        }
-        if (style->without_count > PLAN_STYLE_WITHOUT_MAX) {
-            return false;
-        }
-        for (size_t i = 0; i < style->without_count; i++) {
-            size_t name_length = strnlen(style->without[i], PLAN_STYLE_WITHOUT_NAME_MAX);
-            if (name_length == 0 || name_length >= PLAN_STYLE_WITHOUT_NAME_MAX) {
-                return false;
-            }
-        }
-        return true;
-    }
-    case PLAN_CONSTRAINT_SOURCE: {
-        const PlanSource *source = &constraint->params.source;
-        size_t length = strnlen(source->piece, PLAN_SOURCE_PIECE_MAX);
-        return length > 0 && length < PLAN_SOURCE_PIECE_MAX && source->score_denominator > 0 &&
-               source->score_numerator <= source->score_denominator;
-    }
-    case PLAN_CONSTRAINT_PICKUP: {
-        /* The bar it must be shorter than is the meter's, which the melody operator reads; no bar is as long as two wholes. */
-        Rational pickup = constraint->params.pickup;
-        return pickup.den > 0 && pickup.num > 0 && pickup.num < 2 * pickup.den &&
-               plan_meter_pickup_on_grid(first_meter(plan), pickup);
-    }
-    case PLAN_CONSTRAINT_MOTIVE_TONES: {
-        const PlanMotiveTones *tones = &constraint->params.motive_tones;
-        if (tones->chord_count == 0 || tones->chord_count > PLAN_TONES_MAX_CHORDS || tones->label_count == 0 ||
-            tones->label_count > PLAN_TONES_MAX_NOTES) {
-            return false;
-        }
-        for (size_t i = 0; i < tones->chord_count; i++) {
-            const PlanToneChord *chord = &tones->chords[i];
-            size_t length = strnlen(chord->numeral, PLAN_ROMAN_NUMERAL_MAX);
-            if (length == 0 || length >= PLAN_ROMAN_NUMERAL_MAX || chord->onset.den == 0 || chord->onset.num < 0 ||
-                chord->length.den == 0 || chord->length.num <= 0) {
-                return false;
-            }
-        }
-        for (size_t i = 0; i < tones->label_count; i++) {
-            size_t length = strnlen(tones->labels[i], PLAN_TONE_LABEL_MAX);
-            if (length == 0 || length >= PLAN_TONE_LABEL_MAX) {
-                return false;
-            }
-        }
-        return true;
-    }
-    }
-    return false;
+    const ConstraintKindRow *row = constraint_kind_row(constraint->kind);
+    return row && row->valid(plan, constraint);
 }
 
 static PlanResult list_add(ConstraintList *list, const PlanConstraint *constraint) {
