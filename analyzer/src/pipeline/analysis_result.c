@@ -17,7 +17,7 @@ struct AnalyzerResult {
 };
 
 AnalyzerOptions analyzer_options_default(void) {
-    AnalyzerOptions options = {ANALYSIS_CHAIN_STAGE_ALL, true, NULL};
+    AnalyzerOptions options = {ANALYSIS_CHAIN_STAGE_ALL, NULL};
     return options;
 }
 
@@ -49,7 +49,6 @@ AnalyzerStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOption
     result->options = used;
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = used.stages;
-    config.harmonic_spans = used.harmonic_spans;
     config.refine_keys = true;
     config.knowledge = used.knowledge;
     AnalysisChainStatus status = analysis_chain_run_score(notes, &config, &result->chain);

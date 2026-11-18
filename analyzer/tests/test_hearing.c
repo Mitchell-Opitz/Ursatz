@@ -41,10 +41,9 @@ typedef struct {
     size_t entries;
     size_t cadences;
 } Reading;
-/* The cadences are those claimed at the phrase points since Ursatz P41 (R-390): without spans they were 5, 15, 15, 13, 12 and with
-   spans 0, 23, 5, 17, 3; the entries did not move. Since Ursatz P42 (keys placed on phrases, R-397) they are, without spans,
-   0, 8, 8, 8, 2 (were 2, 9, 7, 8, 3) and with spans 0, 16, 4, 9, 0 (were 0, 15, 4, 9, 1); the entries did not move. */
-static const Reading WITHOUT_SPANS[] = {{155, 0}, {606, 8}, {205, 8}, {268, 8}, {169, 2}};
+/* The cadences are those claimed at the phrase points since Ursatz P41 (R-390), on harmonic spans (the chain's default, the only
+   setting the Analyzer has since P61 B6; before it a hearing could ask for one chord per segment). Since Ursatz P42 (keys placed on
+   phrases, R-397) they are 0, 16, 4, 9, 0; the entries did not move. */
 static const Reading WITH_SPANS[] = {{54, 0}, {210, 16}, {46, 4}, {107, 9}, {82, 0}};
 
 /* The material of a key the test hears: NULL without a key. */
@@ -204,17 +203,6 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
                "%s: default hearing %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
                report->cadence_count, WITH_SPANS[piece].entries, WITH_SPANS[piece].cadences);
     }
-    AnalyzerHearingOptions no_spans = test_hearing_options();
-    no_spans.analysis.harmonic_spans = false;
-    AnalyzerResult *unspanned = NULL;
-    CHECKF(analyzer_hear(&hearing, &no_spans, &unspanned) == ANALYZER_OK && unspanned, "%s: hear without spans", fixture);
-    if (unspanned) {
-        const ChainResult *report = analyzer_result_report(unspanned);
-        CHECKF(report->entry_count == WITHOUT_SPANS[piece].entries && report->cadence_count == WITHOUT_SPANS[piece].cadences,
-               "%s: hearing without spans %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
-               report->cadence_count, WITHOUT_SPANS[piece].entries, WITHOUT_SPANS[piece].cadences);
-    }
-    analyzer_result_destroy(unspanned);
     AnalyzerResult *direct = NULL;
     CHECKF(analyzer_analyze(&notes, test_analyzer_defaults(), &direct) == ANALYZER_OK && direct, "%s: analyze", fixture);
     if (!heard || !direct) {

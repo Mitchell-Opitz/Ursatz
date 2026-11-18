@@ -16,9 +16,11 @@ bars, 12 as a hybrid, none unheard:
 
 | Bars | Heard as a sentence | Heard as another form | No theme |
 | --- | --- | --- | --- |
-| 8 | 20 of 40 (50%) | 17 | 3 |
+| 8 | 16 of 40 (40%) | 17 | 7 |
 | 4 | 0 of 40 (0%) | 0 | 40 |
-| all | 20 of 80 (25%) | 17 | 43 |
+| all | 16 of 80 (20%) | 17 | 47 |
+
+P61 B6 (the Composer hears on harmonic spans, R-618): 19 of 80 before, 16 of 80 after.
 
 Measured again when the presentation drew its repetition by weight (P34 B1): the sequence and the dominant form are heard
 as a hybrid, so the share heard as a sentence fell from 75% to 50% at 8 bars.
@@ -41,17 +43,17 @@ phrase and theme stages, not tuned away:
 Measured by `tests/test_grow_period_heard.c`, one `ctest` test for each pairing but the sentence, over four keys and
 meters and seeds 1 to 10 (`ctest` runs each as WILL_FAIL, since each asserts that every theme of 8 bars is heard as the
 form it was grown as: a period for an antecedent and a consequent, a hybrid with the requested beginning and ending for
-the rest). The compound basic idea and a continuation was heard in every run with the motive-forms and is heard in 38 of
-40 through the Analyzer. The "before" column is the figure measured with the adapter reading the planned chords:
+the rest). The compound basic idea and a continuation was heard in every run with the motive-forms and is heard in 32 of
+40 through the Analyzer (38 before P61 B6, 40 before P36's Analyzer hearing; B6 hears on harmonic spans). The "before" column is the figure measured with the adapter reading the planned chords:
 
 | Pairing | Before | 8 bars: heard as requested | Heard as another form or with other parts | No theme |
 | --- | --- | --- | --- | --- |
 | Presentation + consequent | 9 of 40 (22%) | 5 of 40 (12%) | 33 (19 as another form, 14 as a hybrid with other parts) | 2 |
 | Presentation + cadential | 0 of 40 (0%) | 0 of 40 (0%) | 39 (32 as another form, 7 as a hybrid with other parts) | 1 |
 | Antecedent + continuation | 30 of 40 (75%) | 14 of 40 (35%) | 2 (hybrids with other parts) | 24 |
-| Antecedent + consequent (period) | 0 of 40 (0%) | 3 of 40 (7%) | 16 (as another form) | 21 |
+| Antecedent + consequent (period) | 0 of 40 (0%) | 32 of 40 (80%) (38 before P61 B6) | 3 (as another form) | 5 |
 | Antecedent + cadential | 0 of 40 (0%) | 0 of 40 (0%) | 37 (hybrids with other parts) | 3 |
-| Compound basic idea + continuation | 40 of 40 (100%) | 38 of 40 (95%) | 0 | 2 |
+| Compound basic idea + continuation | 40 of 40 (100%) | 32 of 40 (80%) (38 before P61 B6) | 0 | 8 |
 | Compound basic idea + consequent | 19 of 40 (47%) | 3 of 40 (7%) | 34 (hybrids with other parts) | 3 |
 | Compound basic idea + cadential | 0 of 40 (0%) | 0 of 40 (0%) | 34 (hybrids with other parts) | 6 |
 

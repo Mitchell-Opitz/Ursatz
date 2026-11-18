@@ -247,11 +247,9 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
         heard_span_release(&heard);
         return HEARING_ERR_ANALYSIS;
     }
-    /* Spans off until the next commit aligns the hearing with the Analyzer's settings. */
     AnalysisChainConfig config = analysis_chain_config_default();
     config.knowledge = hearing->knowledge;
     config.stages = ANALYSIS_CHAIN_STAGE_ALL; /* the style distance reads the result-only stages (progressions, form plan) */
-    config.harmonic_spans = false;
     atomic_fetch_add(&hearing_chain_runs_made, 1);
     AnalysisChainStatus status = analysis_chain_run_score(heard.score, &config, &heard.chain);
     if (status != ANALYSIS_CHAIN_OK) {

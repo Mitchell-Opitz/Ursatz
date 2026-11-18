@@ -122,7 +122,6 @@ bool accomp_hear(const AccompContext *context, const KnowledgeSnapshot *knowledg
         AnalysisChainConfig config = analysis_chain_config_default();
         config.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
         config.knowledge = knowledge;
-        config.harmonic_spans = false; /* until the next commit aligns the hearing with the Analyzer's settings */
         ok = ok && analysis_chain_run_score(&score, &config, &chain) == ANALYSIS_CHAIN_OK;
     }
     const StandardTextureAnalysis *analysis = ok ? analysis_chain_texture(chain) : NULL;

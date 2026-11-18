@@ -34,15 +34,12 @@ typedef enum {
  */
 typedef struct {
     unsigned stages;
-    /* true (the default) reads the chords on harmonic spans (Ursatz AnalysisChainConfig.harmonic_spans); false reads one chord
-       per segment, as before Ursatz P39. The Composer's hearing sets it false until P41 (R-378). */
-    bool harmonic_spans;
     /* The knowledge snapshot the analysis reads its pitch materials from (borrowed). Required: the defaults carry none, so
        analyzer_analyze with no knowledge is ANALYZER_ERR_ARGUMENT. It must outlive the result: the keys of the result point into it. */
     const KnowledgeSnapshot *knowledge;
 } AnalyzerOptions;
 
-/* All stages, harmonic spans, no knowledge snapshot (the caller sets one). */
+/* All stages, the chain's default settings (chords on harmonic spans), no knowledge snapshot (the caller sets one). */
 AnalyzerOptions analyzer_options_default(void);
 
 /*

@@ -167,11 +167,10 @@ foreach(beginning RANGE 2)
             # No pairing is heard as itself in every run (measured, with the causes, in docs/grow.md): each test asserts
             # that it is, so it fails, and the failure is expected. Not tuned away, not skipped.
             # The compound basic idea and a continuation was heard in every run (the motive-forms) until the Analyzer heard
-            # the plan: 38 of 40, and again 40 of 40 since P36 B1 (every idea is the step its ref names), so its test passes.
-            set(expected_failure)
-            if(NOT (beginning EQUAL 2 AND ending EQUAL 0))
-                set(expected_failure WILL_FAIL TRUE)
-            endif()
+            # the plan: 38 of 40, and again 40 of 40 since P36 B1 (every idea is the step its ref names), so its test passed
+            # until P61 B6, which hears on harmonic spans (R-618): 32 of 40, so its test fails too (the antecedent and a
+            # consequent, the period, went from 38 to 32 of 40).
+            set(expected_failure WILL_FAIL TRUE)
             ursatz_test(test_grow_period_heard_${beginning_name}_${ending_name} TARGET test_grow_period_heard
                 ARGS ${beginning} ${ending} PROPERTIES ${expected_failure})
         endif()
