@@ -319,8 +319,9 @@ static void test_check_and_candidates(void) {
     expect_failure("fill", "plan_cli_binary.json --candidates many", 1, "--candidates must be");
     expect_failure("fill", "plan_cli_binary.json --candidates", 1, "--candidates needs a value");
 
-    /* grow --check passes over a seed the Analyzer contradicts and prints the seed that was kept. */
-    out = output_of("grow", FIXTURE("motive_d_minor.txt") " --into sentence --key \"D minor\" --meter 4/4 --seed 1 --check");
+    /* grow --check passes over a seed the Analyzer contradicts and prints the seed that was kept. A period in D minor 4/4: since P61 B6 (the
+       hearing on harmonic spans, R-618) the Analyzer no longer contradicts seed 1 of the sentence this test used. */
+    out = output_of("grow", FIXTURE("motive_d_minor.txt") " --into period --key \"D minor\" --meter 4/4 --seed 1 --check");
     assert(strstr(out, "\nseed ") != NULL);
     assert(strstr(out, "\nseed 1\n") == NULL); /* seed 1 is contradicted; the first seed heard as planned is kept */
     free(out);
