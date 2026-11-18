@@ -19,7 +19,7 @@ function section(id, part, letter, beats, fill, extra) {
 function filled() {
   const state = P.emptyState("pce-1");
   state.key = "D";
-  state.mode = "minor";
+  state.material = "omt.material.natural-minor";
   state.sections = [
     section("s0", "intro", "I", 8),
     section("s1", "body", "A", 32, { kind: "motif", item_id: "mot-1", version: 2, into: "sentence", hybrid: "" }),
@@ -44,7 +44,7 @@ state.seed = "7";
 state.uses = [{ item_id: "mot-1", version: 2 }];
 const body = P.bodyFromState(state);
 check(Array.isArray(body.uses) && body.uses.length === 1, "the body keeps the uses");
-check(body.piece.structure.key === "D" && body.piece.structure.mode === "minor" && body.piece.structure.meter === "4/4", "the body holds key, mode and meter");
+check(body.piece.structure.key === "D" && body.piece.structure.material === "omt.material.natural-minor" && !("mode" in body.piece.structure) && body.piece.structure.meter === "4/4", "the body holds key, material and meter");
 check(body.piece.structure.sections.length === 5 && body.piece.structure.sections[1].fill.item_id === "mot-1", "the body holds the sections in order");
 check(body.piece.structure.sections[1].fill.into === "sentence" && body.piece.structure.sections[1].fill.hybrid === null, "a motif of 8 bars keeps its theme form");
 check(body.piece.structure.sections[2].fill.into === "sentence", "a motif of 4 bars keeps its theme form");
@@ -66,7 +66,7 @@ check(back.tempo === "170" && back.seed === "7" && back.accompaniment.kind === "
 /* placeholders and unfinished fills */
 for (const placeholder of [{ uses: [], piece: { structure: null } }, { uses: [], piece: { structure: "x" } }, { uses: [], piece: { structure: [] } }, { uses: [], piece: { structure: { sections: null } } }, null]) {
   const s = P.stateFromBody(placeholder, "pce-2");
-  check(s.sections.length === 0 && s.mode === "major" && s.key === "C", `a placeholder gives the defaults (${JSON.stringify(placeholder)})`);
+  check(s.sections.length === 0 && s.material === "omt.material.major" && s.key === "C", `a placeholder gives the defaults (${JSON.stringify(placeholder)})`);
 }
 const unfinished = filled();
 unfinished.sections[1].fill = { kind: "motif", item_id: "", version: 0, into: "sentence" };
@@ -100,7 +100,7 @@ const form = filled();
 form.key = "H";
 form.tempo = "10";
 form.seed = "-1";
-form.mode = "style";
+form.material = "style";
 form.sections[4].fill.numerals = "I $ V";
 form.sections[4].fill.cells = "9";
 check(P.formProblems(form).length === 1 && /brief/.test(P.formProblems(form)[0]), "only the missing brief stops the form: the Composer judges the values");
@@ -202,20 +202,20 @@ check(empty.seed === null && empty.versions.length === 0 && empty.loop === "" &&
 /* forms (forms.json is generated from the Composer's forms route answer) */
 const roundedState = P.withForm(P.emptyState("pce-2"), "rounded-binary");
 roundedState.key = "A";
-roundedState.mode = "minor";
+roundedState.material = "omt.material.natural-minor";
 roundedState.meter = "3/4";
 roundedState.bars = 24;
 roundedState.modulate = true;
 roundedState.motive = { item_id: "mot-9", version: 3 };
 const roundedBody = P.bodyFromState(roundedState);
 check(
-  same(roundedBody.piece.structure, { form: "rounded-binary", key: "A", mode: "minor", meter: "3/4", bars: 24, count: 0, modulate: true }),
+  same(roundedBody.piece.structure, { form: "rounded-binary", key: "A", material: "omt.material.natural-minor", meter: "3/4", bars: 24, count: 0, modulate: true }),
   "a sized form's body holds its form, size and modulate and no sections",
 );
 const roundedBack = P.stateFromBody(roundedBody, "pce-2");
 check(
   roundedBack.form === "rounded-binary" && roundedBack.bars === 24 && roundedBack.count === 0 && roundedBack.modulate === true && roundedBack.sections.length === 0 &&
-    roundedBack.key === "A" && roundedBack.mode === "minor" && roundedBack.meter === "3/4" && roundedBack.motive.item_id === "mot-9",
+    roundedBack.key === "A" && roundedBack.material === "omt.material.natural-minor" && roundedBack.meter === "3/4" && roundedBack.motive.item_id === "mot-9",
   "a rounded binary state round-trips through its body",
 );
 check(same(P.bodyFromState(roundedBack), roundedBody), "a rounded binary body round-trips through its state");
@@ -263,7 +263,7 @@ check(same(P.actionSections(roundedState, oneView.versions[0].view.rows).map((en
 /* sources and themes */
 const updates = P.updatedUses({ uses_status: [{ item_id: "mot-1", name: "Motif A", version: 1, current_version: 2 }, { item_id: "thm-1", version: 2, current_version: 2 }, { item_id: "x", version: 1, current_version: 4, missing: true }] });
 check(updates.length === 1 && updates[0].label === "Source updated: Motif A v2", "an updated source is offered");
-const themeBody = { theme: { form: { into: "hybrid", hybrid: "presentation+continuation", key: "D", mode: "minor", meter: "4/4", bars: 8 }, result: { seed: 1 } } };
+const themeBody = { theme: { form: { into: "hybrid", hybrid: "presentation+continuation", key: "D", material: "omt.material.natural-minor", meter: "4/4", bars: 8 }, result: { seed: 1 } } };
 check(P.themeLengthBeats(themeBody) === 32 && P.themeLengthBeats({ theme: { form: { bars: 4, meter: "3/4" } } }) === 12 && P.themeLengthBeats({}) === null, "a theme's length in beats");
 check(P.themeFormText(themeBody) === "hybrid (presentation+continuation) in D minor, 4/4, 8 bars" && P.themeComposed(themeBody) && !P.themeComposed({ theme: { form: {}, result: null } }), "a theme's form and whether it was composed");
 check(P.motifIsFree(section("s", "body", "A", 6)) && !P.motifIsFree(section("s", "body", "A", 32)) && P.motifIsFree(section("s", "body", "A", 32, null, { pickup: "1" })), "a motif fill is free unless 4 or 8 bars without a pickup");

@@ -82,7 +82,7 @@ const body = {
     form: "full",
     notes: "D4:q F4:e",
     meter: "3/4",
-    key: "D minor",
+    material: "omt.material.natural-minor",
     pickup: "1/2",
     features: [{ label: "a", first: 0, last: 1 }],
     analysis: { analysis: {} },
@@ -90,10 +90,10 @@ const body = {
   },
 };
 const values = M.motifFormValues(body);
-check(values.role === "accompaniment" && values.mode === "minor" && values.pickup === "1/2", "form values read the motif and the mode of its key");
-check(M.motifFormValues({ motif: { key: "C major" } }).mode === "major", "a key on C major reads as major");
-check(M.motifFormValues({ motif: { key: null } }).mode === "major" && M.motifFormValues(null).mode === "major", "mode defaults to major");
-check(same(M.MOTIF_MODES, ["major", "minor"]) && M.TONIC_HINT.startsWith("Write the notes with C as the tonic"), "the modes and the tonic hint");
+check(values.role === "accompaniment" && values.material === "omt.material.natural-minor" && values.pickup === "1/2", "form values read the motif and its material");
+check(M.motifFormValues({ motif: { material: "omt.material.major" } }).material === "omt.material.major", "a motif in C major reads as major");
+check(M.motifFormValues({ motif: { material: null } }).material === "omt.material.major" && M.motifFormValues(null).material === "omt.material.major", "the material defaults to major");
+check(same(M.MOTIF_MATERIALS.map((entry) => [entry.value, entry.label]), [["omt.material.major", "major"], ["omt.material.natural-minor", "minor"]]) && M.TONIC_HINT.startsWith("Write the notes with C as the tonic"), "the materials and the tonic hint");
 check(same(values.features, [{ label: "a", first: 1, last: 2 }]), "features show note numbers from 1");
 check(values.harmony === "" && M.motifFormValues({ motif: { harmony: "I V6@2" } }).harmony === "I V6@2", "form values read the harmony");
 check(M.motifFormProblems({ ...values, harmony: "I V6@2 I@3" }).length === 0, "a harmony is fine");
@@ -105,7 +105,7 @@ check(M.errorField("harmony: token 2 (column 4) is not a chord") === "harmony" &
 const withHarmony = M.renderRequest({ motif: { form: "full", degrees: "1:q", meter: "4/4", harmony: "I V@2", features: [{ label: "a", first: 0, last: 1 }] } });
 check(JSON.parse(withHarmony.body).harmony === "I V@2" && JSON.parse(withHarmony.body).features.length === 1, "a render passes the harmony and features");
 check(JSON.parse(M.renderRequest({ motif: { form: "full", degrees: "1:q", meter: "4/4" } }).body).harmony === undefined, "a render without harmony leaves it out");
-check(JSON.parse(M.randomRequest({ mode: "major", meter: "4/4", role: "accompaniment", seed: 1 }).body).role === undefined, "random motifs have no role option");
+check(JSON.parse(M.randomRequest({ meter: "4/4", role: "accompaniment", seed: 1 }).body).role === undefined, "random motifs have no role option");
 const blank = M.motifFormValues(null);
 check(blank.notes === "" && blank.meter === "4/4" && blank.pickup === "0" && blank.form === "full", "a new motif form has defaults");
 check(M.motifFormProblems(blank).length === 1 && M.motifFormProblems(blank)[0].field === "notes", "empty notes are a problem");
@@ -113,9 +113,9 @@ check(M.motifFormProblems({ ...values }).length === 0, "a filled form has no pro
 check(M.motifFormProblems({ ...values, key: "Dm" }).length === 0, "the form has no key to check");
 
 const rebuilt = M.buildMotifBody({ ...values, notes: " C4:q ", pickup: "" }, body);
-check(rebuilt.motif.notes === "C4:q" && rebuilt.motif.key === "C minor" && rebuilt.motif.pickup === "0", "body trims notes, writes the key in C and an empty pickup is 0");
-check(M.buildMotifBody({ ...values, mode: "major" }, null).motif.key === "C major" && M.buildMotifBody({ ...values, mode: "dorian" }, null).motif.key === "C major", "the body key is C in the chosen mode, major for anything else");
-check(M.buildMotifBody({ ...values, form: "rhythm", mode: "minor" }, null).motif.key === "C minor", "every form is written in C");
+check(rebuilt.motif.notes === "C4:q" && rebuilt.motif.material === "omt.material.natural-minor" && !("key" in rebuilt.motif) && rebuilt.motif.pickup === "0", "body trims notes, stores the material and no key text, and an empty pickup is 0");
+check(M.buildMotifBody({ ...values, material: "omt.material.major" }, null).motif.material === "omt.material.major" && M.buildMotifBody({ ...values, material: "omt.material.dorian" }, null).motif.material === "omt.material.major", "the body material is the chosen one, major for anything else");
+check(M.buildMotifBody({ ...values, form: "rhythm", material: "omt.material.natural-minor" }, null).motif.material === "omt.material.natural-minor", "every form is written in C");
 check(same(rebuilt.motif.features, [{ label: "a", first: 0, last: 1 }]), "body stores features from 0");
 check(rebuilt.uses.length === 1 && rebuilt.motif.derived.source_item === "mot-1", "body keeps uses and derived");
 check(rebuilt.motif.analysis === null, "body leaves the analysis to the backend");
@@ -179,14 +179,14 @@ check(M.formHint("full") === M.NOTE_HINT, "the full form shows the note list hin
 check(M.formHint("rhythm").includes("x:q x:e x:e x:h"), "the rhythm form shows the rhythm syntax");
 check(M.formHint("contour").includes("0 2 1 3"), "the contour form shows the contour syntax");
 check(M.formHint("rhythm") !== M.formHint("contour"), "each form has its own hint");
-const imported = M.importToFormValues({ notes_text: "C4:q Eb4:q", meter: "3/4", key: "C minor", moved_from: "D minor", key_found: true, pickup: "1" });
+const imported = M.importToFormValues({ notes_text: "C4:q Eb4:q", meter: "3/4", key: "C minor", material: "omt.material.natural-minor", moved_from: "D minor", key_found: true, pickup: "1" });
 check(imported.form === "full" && imported.notes === "C4:q Eb4:q" && imported.meter === "3/4", "an import fills a full motif");
-check(imported.mode === "minor" && imported.pickup === "1", "an import fills the mode and pickup");
-const unkeyedImport = M.importToFormValues({ notes_text: "D4:q", meter: "4/4", key: "C major", moved_from: null, key_found: false, pickup: "0" });
-check(unkeyedImport.mode === "major" && unkeyedImport.pickup === "0", "an import without a key reads as C major");
-check(M.importNotice({ key: "C minor", moved_from: "D minor", key_found: true }) === "Moved from D minor to C minor.", "the notice names the key the notes moved from");
-check(M.importNotice({ key: "C major", moved_from: null, key_found: false }) === "No key found: read as C major.", "the notice says when no key was found");
-check(M.importNotice({ key: "C minor", moved_from: null, key_found: true }) === "Filled from the MIDI file.", "a MIDI file already in C is just filled");
+check(imported.material === "omt.material.natural-minor" && imported.pickup === "1", "an import fills the material and pickup");
+const unkeyedImport = M.importToFormValues({ notes_text: "D4:q", meter: "4/4", key: "C major", material: "omt.material.major", moved_from: null, key_found: false, pickup: "0" });
+check(unkeyedImport.material === "omt.material.major" && unkeyedImport.pickup === "0", "an import without a key reads as C major");
+check(M.importNotice({ key: "C minor", material: "omt.material.natural-minor", moved_from: "D minor", key_found: true }) === "Moved from D minor to C minor.", "the notice names the key the notes moved from");
+check(M.importNotice({ key: "C major", material: "omt.material.major", moved_from: null, key_found: false }) === "No key found: read as C major.", "the notice says when no key was found");
+check(M.importNotice({ key: "C minor", material: "omt.material.natural-minor", moved_from: null, key_found: true }) === "Filled from the MIDI file.", "a MIDI file already in C is just filled");
 check(M.importToFormValues(null).meter === "4/4" && M.importToFormValues(null).notes === "", "an empty import answer gives defaults");
 const importRequest = M.buildImportMidiRequest("file");
 check(importRequest.method === "POST" && importRequest.url === "/api/materials/motifs/import" && importRequest.body === "file", "the import posts the file");
@@ -262,14 +262,15 @@ check(M.deleteWarning("Hook", 404, { error: "not found" }) === null, "another fa
 check(M.deleteWarning("Hook", 409, null) === null, "a 409 without users is not the warning");
 
 const renderBody = {
-  motif: { role: "accompaniment", form: "full", meter: "3/4", key: "D minor", pickup: "1", degrees: "1:q 3:e 5:e" },
+  motif: { role: "accompaniment", form: "full", meter: "3/4", material: "omt.material.natural-minor", pickup: "1", degrees: "1:q 3:e 5:e" },
 };
 const rendered = M.renderRequest(renderBody);
 const renderedBody = JSON.parse(rendered.body);
 check(rendered.method === "POST" && rendered.url === "/api/materials/render", "render request is a POST to /render");
-check(renderedBody.degrees === "1:q 3:e 5:e" && renderedBody.key === "D minor" && renderedBody.pickup === "1", "render request carries the stored motif");
+check(renderedBody.degrees === "1:q 3:e 5:e" && renderedBody.key === "C minor" && renderedBody.pickup === "1", "render request carries the stored motif, in C");
+check(JSON.parse(M.renderRequest(renderBody, "D minor").body).key === "D minor", "a random motif renders in the key it was drawn in");
 check(!("render_key" in renderedBody) && renderedBody.role === "accompaniment", "render request carries the role and no render key");
-const plain = JSON.parse(M.renderRequest({ motif: { form: "rhythm", degrees: "x:q x:q", meter: "4/4", key: null } }).body);
+const plain = JSON.parse(M.renderRequest({ motif: { form: "rhythm", degrees: "x:q x:q", meter: "4/4", material: null } }).body);
 check(!("key" in plain) && !("render_key" in plain) && plain.pickup === "0" && plain.role === "melodic", "render request leaves out a missing key and defaults the pickup and role");
 check(M.RENDER_KEYS === undefined, "the render keys are gone");
 const urls = M.versionScoreUrls("mot-1", 2, "D minor");
@@ -279,13 +280,14 @@ check(urls.playbackUrl === "/api/materials/items/mot-1/versions/2/playback", "pl
 const random = M.randomRequest({ mode: "minor", meter: " 3/4 ", key: "D major", form: "contour", style_id: "sty-1", count: 20, seed: "7" });
 const randomBody = JSON.parse(random.body);
 check(random.method === "POST" && random.url === "/api/materials/motifs/random", "random request is a POST to /motifs/random");
-check(randomBody.mode === "random" && randomBody.meter === "random" && !("key" in randomBody) && randomBody.form === "full", "random request leaves the mode and meter to the Composer and sends no key");
+check(randomBody.material === "random" && !("mode" in randomBody) && randomBody.meter === "random" && !("key" in randomBody) && randomBody.form === "full", "random request leaves the mode and meter to the Composer and sends no key");
 check(randomBody.count === 1 && randomBody.seed === 7 && !("style_id" in randomBody) && M.RANDOM_DEFAULT_COUNT === undefined && M.randomProblems === undefined, "random request draws one motif from the seed with no style and no count option");
 check(M.randomSettings === undefined, "the draw of the mode and meter is not computed here");
-check(same(M.drawnSettings({ drawn: { material: "omt.material.natural-minor", meter: "6/8" } }), { mode: "minor", meter: "6/8" }), "the drawn mode and meter come from the answer");
+check(same(M.drawnSettings({ drawn: { material: "omt.material.natural-minor", meter: "6/8" } }), { material: "omt.material.natural-minor", meter: "6/8" }), "the drawn material and meter come from the answer");
 for (const captured of require("../../backend/tests/fixtures/composer/b11_captures.json").random) {
-  const answer = { drawn: { material: captured.mode === "minor" ? "omt.material.natural-minor" : "omt.material.major", meter: captured.meter } };
-  check(same(M.drawnSettings(answer), { mode: captured.mode, meter: captured.meter }) && JSON.parse(M.randomRequest({ seed: captured.seed }).body).seed === captured.seed, `seed ${captured.seed} shows the captured ${captured.mode} ${captured.meter}`);
+  const material = captured.mode === "minor" ? "omt.material.natural-minor" : "omt.material.major";
+  const answer = { drawn: { material, meter: captured.meter } };
+  check(same(M.drawnSettings(answer), { material, meter: captured.meter }) && JSON.parse(M.randomRequest({ seed: captured.seed }).body).seed === captured.seed, `seed ${captured.seed} shows the captured ${captured.mode} ${captured.meter}`);
 }
 check(M.drawnSettings({ drawn: { material: "omt.material.natural-minor" } }) === null && M.drawnSettings({}) === null && M.drawnSettings(null) === null, "an answer that names no draw gives none");
 
@@ -298,11 +300,11 @@ const candidate = {
 };
 check(M.candidateKeyText(candidate) === "D# minor", "the candidate key is written as the Composer writes keys");
 const saved = M.randomCandidateToBody(candidate, { form: "full", meter: "3/4", role: "accompaniment" });
-check(saved.motif.notes === "c4:q eb4:e g4:e" && saved.motif.key === "D# minor" && saved.motif.meter === "3/4", "a saved random motif keeps the notes, key and meter");
+check(saved.motif.notes === "c4:q eb4:e g4:e" && saved.motif.material === "omt.material.natural-minor" && saved.motif.meter === "3/4", "a saved random motif keeps the notes, material and meter");
 check(saved.motif.pickup === "1" && saved.motif.role === "accompaniment" && saved.motif.form === "full" && saved.motif.degrees === null, "a saved random motif keeps the pickup and role and leaves the degrees to the backend");
 const savedRhythm = M.randomCandidateToBody(candidate, { form: "rhythm", meter: "4/4" });
 check(savedRhythm.motif.notes === "x:q x:e x:e" && savedRhythm.motif.role === "melodic", "a rhythm candidate is saved from its rhythm text");
-check(M.randomCandidateToBody({ motive: { analysis: {} } }, {}).motif.key === null, "a candidate without a key saves a null key");
+check(M.randomCandidateToBody({ motive: { analysis: {} } }, {}).motif.material === null, "a candidate without a key saves a null material");
 const drawnMotive = { motive: { key: { tonic_pitch_class: 0, material: "omt.material.major" }, notes: [] }, analysis: { notes_text: "C4:q E4:e G4:e", degrees_text: "1:q 3:e 5:e", pickup: "0" } };
 const wrapped = M.randomCandidate(drawnMotive, 5);
 check(wrapped.seed === 5 && wrapped.motive.analysis.notes_text === "C4:q E4:e G4:e" && M.candidateKeyText(wrapped) === "C major", "a motive as the Composer draws it is wrapped for the page");
@@ -371,7 +373,7 @@ const stored = {
     form: "full",
     notes: "C4:q E4:e G4:e",
     meter: "4/4",
-    key: "C major",
+    material: "omt.material.major",
     pickup: "0",
     harmony: null,
     features: [{ label: "head", first: 0, last: 1 }],
@@ -383,7 +385,7 @@ const stored = {
 const editorValues = () => M.motifFormValues(stored);
 check(!M.motifBodyChanged(editorValues(), stored), "an untouched editor is not a change");
 check(M.motifBodyChanged({ ...editorValues(), notes: "C4:q E4:e A4:e" }, stored), "other notes are a change");
-check(M.motifBodyChanged({ ...editorValues(), mode: "minor" }, stored), "another mode is a change");
+check(M.motifBodyChanged({ ...editorValues(), material: "omt.material.natural-minor" }, stored), "another material is a change");
 check(M.motifBodyChanged({ ...editorValues(), features: [{ label: "tail", first: 1, last: 2 }] }, stored), "another segment is a change");
 check(!M.motifBodyChanged({ ...editorValues(), notes: "  C4:q E4:e G4:e  " }, stored), "spaces around the notes are not a change");
 check(!M.motifBodyChanged({ ...editorValues(), pickup: "" }, { motif: { ...stored.motif, pickup: "0" } }), "an empty pickup reads as 0");

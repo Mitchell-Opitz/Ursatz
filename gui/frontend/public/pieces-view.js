@@ -531,7 +531,7 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
   const facts = (served) =>
     themeFacts([
       ["Form", form ? form.label : state.form],
-      ["Key", `${state.key} ${state.mode}, ${state.meter}`],
+      ["Key", `${state.key} ${Vocabulary.materialWord(state.material)}, ${state.meter}`],
       ...(PiecesModel.isSized(form) ? sizedFacts() : []),
       ...state.sections.map((section, index) => {
         const cadence = PiecesModel.cadenceOf(state, index, served);
@@ -610,7 +610,7 @@ function buildPieceEditor(ctx) {
     ),
   );
   const key = themeField(header, "Key", themeInput("D or Bb", state.key));
-  const mode = themeField(header, "Mode", themeSelect(PiecesModel.MODES, state.mode));
+  const mode = themeField(header, "Mode", themeSelect(PiecesModel.MATERIALS, state.material));
   const meter = themeField(header, "Meter", themeSelect(PiecesModel.meterChoices(PiecesModel.formOf(state.form)), state.meter));
   const tempo = themeField(header, "Tempo", themeInput("from the brief", state.tempo));
   /* The meter list and the tempo hint follow the form (R-485): a form that fixes its meters lists only those, and one that
@@ -633,7 +633,7 @@ function buildPieceEditor(ctx) {
   }
   function syncHeader() {
     state.key = key.value;
-    state.mode = mode.value;
+    state.material = mode.value;
     state.meter = meter.value;
     state.tempo = tempo.value;
     drawStrip();
@@ -1027,7 +1027,7 @@ function buildPieceEditor(ctx) {
     roots: [el],
     build: () => PiecesModel.validateRequest(state),
     field: PiecesModel.fieldForPath,
-    fields: () => ({ form: formSelect, key, mode, meter, tempo, sections: stripEl, size: sizeSelect, modulate: modulateBox }),
+    fields: () => ({ form: formSelect, key, material: mode, meter, tempo, sections: stripEl, size: sizeSelect, modulate: modulateBox }),
     onResult: (result) => {
       served = result.ok && result.complete ? PiecesModel.servedCadences(result.request, state) : [];
       showDefaultCadence();

@@ -529,6 +529,7 @@ static void test_motif_import(void) {
   check(strcmp(string_of(answer, "notes_text"), "C4:q D#4:q") == 0, "the import answers the notes moved to C");
   check(strcmp(string_of(answer, "meter"), "4/4") == 0, "the import answers the meter");
   check(strcmp(string_of(answer, "key"), "C minor") == 0, "the import answers the key in C");
+  check(strcmp(string_of(answer, "material"), "omt.material.natural-minor") == 0, "the import answers the material of the key");
   check(strcmp(string_of(answer, "moved_from"), "D minor") == 0, "the import answers the key it moved from");
   check(strcmp(string_of(answer, "pickup"), "0") == 0, "the import answers the pickup");
   check(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(answer, "analysis")), "the import answers the analysis");
@@ -536,6 +537,7 @@ static void test_motif_import(void) {
 
   answer = import_exchange(file, size, "", &status);
   check(status == 200 && strcmp(string_of(answer, "key"), "C major") == 0 &&
+            strcmp(string_of(answer, "material"), "omt.material.major") == 0 &&
             cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(answer, "moved_from")) &&
             strcmp(string_of(answer, "notes_text"), "D4:q F4:q") == 0,
         "a file without a key is read as C major with the notes unchanged");
@@ -1984,6 +1986,14 @@ static void test_served_defaults_and_draws(void) {
     check(status == 200 && ok_true(answer) && strstr(string_of(drawn, "material"), string_of(draw, "mode")) != NULL &&
               strcmp(string_of(drawn, "meter"), string_of(draw, "meter")) == 0,
           "a seed draws the mode and meter the GUI drew");
+    /* The material member says the same as the old mode member. */
+    snprintf(request, sizeof(request), "{\"material\":\"random\",\"meter\":\"random\",\"form\":\"full\",\"count\":1,\"seed\":%.0f}",
+             cJSON_GetObjectItemCaseSensitive(draw, "seed")->valuedouble);
+    cJSON *by_material = test_http_json(PORT, "POST", "/api/materials/motifs/random", request, &status);
+    check(status == 200 && ok_true(by_material) &&
+              strcmp(string_of(cJSON_GetObjectItemCaseSensitive(by_material, "drawn"), "material"), string_of(drawn, "material")) == 0,
+          "the material member draws what the mode member drew");
+    cJSON_Delete(by_material);
     cJSON_Delete(answer);
   }
 

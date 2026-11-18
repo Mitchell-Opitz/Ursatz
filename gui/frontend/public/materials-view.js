@@ -364,10 +364,10 @@ function buildRandomMotifs(statusEl, onUse) {
       fail(answer.data, "Could not draw a motif");
       return;
     }
-    values.mode = drawn.mode;
+    values.material = drawn.material;
     values.meter = drawn.meter;
     const candidate = MaterialsModel.randomCandidate(motive, seed);
-    const rendered = await sendMaterialsRequest(MaterialsModel.renderRequest(VariantTree.candidateBody(MaterialsModel.randomCandidateToBody(candidate, values), candidate)));
+    const rendered = await sendMaterialsRequest(MaterialsModel.renderRequest(VariantTree.candidateBody(MaterialsModel.randomCandidateToBody(candidate, values), candidate), MaterialsModel.candidateKeyText(candidate)));
     draw.disabled = false;
     if (!rendered.ok) {
       fail(rendered.data, "Could not render the motif");
@@ -841,7 +841,7 @@ function buildMotifEditor(body, tabStatus) {
     status.show(MaterialsModel.importNotice(answer.data));
   });
 
-  /* Sets the form, notes, meter, mode and pickup (and the role when given) from values. */
+  /* Sets the form, notes, meter, material and pickup (and the role when given) from values. */
   function fill(filled) {
     if (filled.role) {
       role.value = filled.role;
@@ -850,7 +850,7 @@ function buildMotifEditor(body, tabStatus) {
     hint.textContent = MaterialsModel.formHint(filled.form);
     notes.value = filled.notes;
     meter.value = filled.meter;
-    mode.value = filled.mode;
+    material.value = filled.material;
     pickup.value = filled.pickup;
   }
 
@@ -860,14 +860,14 @@ function buildMotifEditor(body, tabStatus) {
   meter.size = 6;
   field("Meter", meter, "meter");
 
-  const mode = materialsElement("select");
-  for (const option of MaterialsModel.MOTIF_MODES) {
-    const o = materialsElement("option", "", option);
-    o.value = option;
-    mode.appendChild(o);
+  const material = materialsElement("select");
+  for (const option of MaterialsModel.MOTIF_MATERIALS) {
+    const o = materialsElement("option", "", String(option.label));
+    o.value = option.value;
+    material.appendChild(o);
   }
-  mode.value = initial.mode;
-  field("Mode", mode, "mode");
+  material.value = initial.material;
+  field("Mode", material, "material");
 
   const pickup = materialsElement("input");
   pickup.type = "text";
@@ -967,7 +967,7 @@ function buildMotifEditor(body, tabStatus) {
       form: form.value,
       notes: notes.value,
       meter: meter.value,
-      mode: mode.value,
+      material: material.value,
       pickup: pickup.value,
       harmony: harmony.value,
       toneOverrides: { ...toneOverrides },
@@ -1124,7 +1124,7 @@ function buildMotifScore(id, item, body) {
     const urls = MaterialsModel.versionScoreUrls(id, item.current_version);
     workspace = ScoreWorkspace.mount(mountEl, {
       title: item.name,
-      subtitle: `${motif.form || "full"} motif · v${item.current_version} · ${motif.key || "C major"}`,
+      subtitle: `${motif.form || "full"} motif · v${item.current_version} · ${MaterialsModel.motifKeyText(motif) || "C major"}`,
       musicxmlUrl: urls.musicxmlUrl,
       playbackUrl: urls.playbackUrl,
     });

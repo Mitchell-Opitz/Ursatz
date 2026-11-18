@@ -1,7 +1,7 @@
 /* Themes view (P16): the theme form state, the version body it makes, its
  * problems, the brief picks, the compose request and the rows of a result.
  * No DOM; themes-view.js renders from these. The form state is
- *   {id, uses, into, hybrid, mode, meter, bars, cadence, firstCadence, development,
+ *   {id, uses, into, hybrid, material, meter, bars, cadence, firstCadence, development,
  *    slots: [{slot, item_id, version}], ideas: [{idea, item_id, version}], accompaniment: {kind, pattern,
  *    item_id, version}, picks: [...], switches: {<category>: bool}, weight,
  *    tempo, check, seed}
@@ -22,7 +22,9 @@
   const intos = () => Vocab.list("piece_intos");
   const beginnings = () => Vocab.values("theme_beginnings");
   const endings = () => Vocab.values("theme_endings");
-  const modes = () => Vocab.list("piece_modes");
+  /* The materials a theme or a piece can be in: each material's id, and "style" for the brief's own; the first is the default. */
+  const materials = () => Vocab.list("piece_materials");
+  const defaultMaterial = () => (materials()[0] || {}).value || "";
   const meters = () => Vocab.values("meters");
   const barChoices = () => Vocab.values("theme_bars").map(Number);
   const cadences = () => Vocab.values("theme_cadences");
@@ -90,8 +92,8 @@
       uses: [],
       into: "sentence",
       hybrid: "presentation+continuation",
-      mode: "major",
-      modeChosen: false,
+      material: defaultMaterial(),
+      materialChosen: false,
       meter: "4/4",
       bars: 8,
       cadence: "PAC",
@@ -451,7 +453,7 @@
       form: {
         into: s.into,
         hybrid: hybrid ? text(s.hybrid) : null,
-        mode: s.mode,
+        material: s.material,
         meter: s.meter,
         bars: Number(s.bars),
         cadence: s.cadence,
@@ -486,8 +488,8 @@
     if (typeof form.hybrid === "string" && form.hybrid !== "") {
       state.hybrid = form.hybrid;
     }
-    if (modes().some((entry) => entry.value === form.mode)) {
-      state.mode = form.mode;
+    if (materials().some((entry) => entry.value === form.material)) {
+      state.material = form.material;
     }
     if (meters().includes(form.meter)) {
       state.meter = form.meter;
@@ -514,7 +516,7 @@
         state.chords[entry.bar] = entry.text;
       }
     }
-    state.modeChosen = state.slots.some((entry) => entry.slot === requiredSlot());
+    state.materialChosen = state.slots.some((entry) => entry.slot === requiredSlot());
     const acc = theme.accompaniment;
     if (acc && typeof acc === "object") {
       state.accompaniment =
@@ -533,23 +535,20 @@
     return state;
   }
 
-  /* "major" or "minor" from a motif version body's key (`C minor`), null when the body names neither. */
-  function motifMode(body) {
-    const key = body && body.motif && typeof body.motif.key === "string" ? body.motif.key.toLowerCase() : "";
-    if (key.includes("minor")) {
-      return "minor";
-    }
-    return key.includes("major") ? "major" : null;
+  /* The material of a motif version body (its id), null when the body names none the Composer offers. */
+  function motifMaterial(body) {
+    const material = body && body.motif ? body.motif.material : null;
+    return typeof material === "string" && materials().some((entry) => entry.value === material) ? material : null;
   }
 
-  /* R-205: the first time the basic slot is set, the mode takes the motif's mode unless the mode was changed by
-   * hand. Sets state.mode and answers true when it did. */
-  function applyBasicMode(state, hadBasic, motifBody) {
-    const mode = motifMode(motifBody);
-    if (hadBasic || state.modeChosen || mode === null) {
+  /* R-205: the first time the basic slot is set, the material takes the motif's material unless it was changed by
+   * hand. Sets state.material and answers true when it did. */
+  function applyBasicMaterial(state, hadBasic, motifBody) {
+    const material = motifMaterial(motifBody);
+    if (hadBasic || state.materialChosen || material === null) {
       return false;
     }
-    state.mode = mode;
+    state.material = material;
     return true;
   }
 
@@ -620,7 +619,7 @@
     if (!slots.some((entry) => entry && entry.slot === requiredSlot() && text(entry.item_id))) {
       problems.push("The basic idea needs a motif.");
     }
-    if (s.mode === "style" && briefFromPicks(s.picks) === null) {
+    if (s.material === "style" && briefFromPicks(s.picks) === null) {
       problems.push("The mode from the brief needs a brief.");
     }
     if ((Array.isArray(s.ideas) ? s.ideas : []).some((entry) => entry && !text(entry.item_id))) {
@@ -638,7 +637,8 @@
   const FIELD_PATHS = [
     ["/into", "into"],
     ["/hybrid", "hybrid"],
-    ["/mode", "mode"],
+    ["/material", "material"],
+    ["/mode", "material"],
     ["/meter", "meter"],
     ["/bars", "bars"],
     ["/construction", "construction"],
@@ -965,8 +965,8 @@
     get ENDINGS() {
       return endings();
     },
-    get MODES() {
-      return modes();
+    get MATERIALS() {
+      return Vocab.materialChoices("piece_materials");
     },
     get METERS() {
       return meters();
@@ -1032,8 +1032,8 @@
     formIdeas,
     rootMotif,
     variantChoices,
-    motifMode,
-    applyBasicMode,
+    motifMaterial,
+    applyBasicMaterial,
     withoutFromSwitches,
     switchesFromWithout,
     briefFromPicks,

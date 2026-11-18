@@ -3,7 +3,7 @@
   "seed": 3,
   "key": "C major",
   "meter": "4/4",
-  "brief": { "tempo": { "qpm": 96, "from": "style" }, "mode": { "mode": "major", "from": "request" }, "density": 2, "without": [] },
+  "brief": { "tempo": { "qpm": 96, "from": "style" }, "material": { "material": "omt.material.major", "from": "request" }, "density": 2, "without": [] },
   "loop": null,
   "versions": {
     "piece": {

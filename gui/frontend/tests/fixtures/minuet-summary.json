@@ -8,8 +8,8 @@
       "qpm": 112,
       "from": "form"
     },
-    "mode": {
-      "mode": "major",
+    "material": {
+      "material": "omt.material.major",
       "from": "request"
     },
     "density": null,

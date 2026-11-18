@@ -49,7 +49,7 @@ async function main() {
 
   // lists and limits
   check(same(V.values("meters"), ["2/4", "3/4", "4/4", "6/8"]), "the meters are the Composer's four");
-  check(V.labelOf("piece_modes", "style") === "From the brief" && V.labelOf("meters", "9/8") === "9/8", "labels come from the list, else the value");
+  check(V.labelOf("piece_materials", "style") === "From the brief" && V.labelOf("materials", "omt.material.natural-minor") === "minor" && V.keyWord("omt.material.natural-minor") === "minor" && V.materialWord("style") === "style" && V.materialWord("omt.material.major") === "major" && V.materialChoices("piece_materials")[0].label === "Major" && V.labelOf("meters", "9/8") === "9/8", "labels come from the list, else the value");
   check(V.entry("meters", "6/8").beats === 6 && V.entry("meters", "6/8").second_chord_beat === 3 && V.entry("meters", "2/4").second_chord_beat === undefined,
         "a meter says its beats and where a second chord starts");
   check(same(V.values("keys").slice(0, 3), ["C major", "Db major", "D major"]) && V.entry("pitch_class_names", 3).names["omt.material.natural-minor"] === "D#" && V.entry("pitch_class_names", 3).names["omt.material.major"] === "Eb",
@@ -78,11 +78,11 @@ async function main() {
   check(M.TONE_ROLE_OPTIONS[0].value === "" && M.TONE_ROLE_OPTIONS[0].label === "" && M.TONE_ROLE_OPTIONS.length === 1 + fixture.tone_labels.length,
         "the tone choices are the Composer's with an empty one for no override");
   check(M.toneRoleLabel("chord") === "CT" && M.toneRoleLabel("changing-tone") === "CT2" && M.toneRoleLabel("") === null, "tone abbreviations are the Composer's");
-  const motif = M.validateRequest({ role: "melodic", form: "full", notes: "C4:q D4:q", meter: "4/4", mode: "minor", pickup: "", harmony: "", features: [], toneOverrides: {} }, null);
-  check(JSON.parse(motif.body).type === "motif" && JSON.parse(motif.body).body.motif.key === "C minor", "the motif editor asks the validate route about its body");
+  const motif = M.validateRequest({ role: "melodic", form: "full", notes: "C4:q D4:q", meter: "4/4", material: "omt.material.natural-minor", pickup: "", harmony: "", features: [], toneOverrides: {} }, null);
+  check(JSON.parse(motif.body).type === "motif" && JSON.parse(motif.body).body.motif.material === "omt.material.natural-minor", "the motif editor asks the validate route about its body");
   // a GUI spelling of a key is kept as stored in the body
   check(T.formFromBody({ uses: [], theme: { form: { into: "period", meter: "6/8", bars: 4, cadence: "HC" }, slots: [] } }, "x").meter === "6/8" &&
-          P.stateFromBody({ uses: [], piece: { structure: { key: "C# major", mode: "major", meter: "4/4", sections: [] } } }, "x").key === "C# major",
+          P.stateFromBody({ uses: [], piece: { structure: { key: "C# major", material: "omt.material.major", meter: "4/4", sections: [] } } }, "x").key === "C# major",
         "an item saved with a GUI key spelling opens as stored");
 
   // the validator
