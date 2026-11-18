@@ -132,105 +132,31 @@ void analyzer_violations_free(AnalyzerViolation *violations, size_t count) {
     free(violations);
 }
 
-/* The measure and beat of a time in whole notes on the fragment's meter; 0 and 0.0 when it cannot be placed. */
-static void place(const MeterMap *map, long numerator, unsigned long denominator, int *measure, double *beat) {
-    *measure = 0;
-    *beat = 0.0;
-    MusicalTime time;
-    MetricalPosition *position = NULL;
-    const TimeSignature *signature = NULL;
-    Duration unit;
-    if (musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK) {
-        if (metrical_position_from_time(map, &time, &position) == METRICAL_POSITION_OK) {
-            int m = metrical_position_measure(position);
-            const Duration *offset = metrical_position_offset(position);
-            if (metrical_position_reading_signature(map, m, &signature) == METRICAL_POSITION_OK &&
-                time_signature_unit_duration(signature, &unit) == DURATION_OK && unit.value.num > 0) {
-                *measure = m;
-                *beat = 1.0 + ((double)offset->value.num / (double)offset->value.den) /
-                                  ((double)unit.value.num / (double)unit.value.den);
-            }
-        }
-    }
-    metrical_position_destroy(position);
-}
-
-/* Appends one violation; the rule and the note ids are copied. false on allocation failure. */
-static bool add_violation(const MeterMap *map, AnalyzerViolation **list, size_t *count, size_t *capacity, const char *rule, bool hard, long numerator, unsigned long denominator,
-                          const size_t *note_ids, size_t note_id_count) {
-    if (*count == *capacity) {
-        size_t grown = *capacity ? *capacity * 2 : 8;
-        AnalyzerViolation *bigger = realloc(*list, grown * sizeof **list);
-        if (!bigger) {
-            return false;
-        }
-        *list = bigger;
-        *capacity = grown;
-    }
-    AnalyzerViolation *violation = &(*list)[*count];
-    *violation = (AnalyzerViolation){0};
-    violation->rule = strdup(rule);
-    violation->note_ids = malloc((note_id_count > 0 ? note_id_count : 1) * sizeof *violation->note_ids);
-    if (!violation->rule || !violation->note_ids) {
-        free(violation->rule);
-        free(violation->note_ids);
-        return false;
-    }
-    memcpy(violation->note_ids, note_ids, note_id_count * sizeof *note_ids);
-    violation->note_id_count = note_id_count;
-    violation->hard = hard;
-    place(map, numerator, denominator, &violation->measure, &violation->beat);
-    (*count)++;
-    return true;
-}
-
-static const char *voice_rule_id(const AnalysisVoiceViolation *fault) {
-    if (strcmp(fault->rule, "parallel-fifths") == 0 || strcmp(fault->rule, "parallel-octaves") == 0) {
-        return fault->rule;
-    }
-    return fault->arrival_interval == 5 ? "direct-fifths" : "direct-octaves";
-}
-
 AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, AnalyzerViolation **out, size_t *count) {
     if (!result || !out || !count) {
         return ANALYZER_ERR_ARGUMENT;
     }
     *out = NULL;
     *count = 0;
-    const ChainResult *report = analyzer_result_report(result);
-    const ImportedScore *notes = analyzer_result_notes(result);
-    if (!report || !notes) {
+    if (!analyzer_result_report(result) || !analyzer_result_notes(result)) {
         return ANALYZER_ERR_ARGUMENT;
     }
-    const MeterMap *map = notes->meter.meter_map;
-    const AnalysisVoiceLeading *leading = &report->voice_leading;
-    AnalyzerViolation *list = NULL;
-    size_t used = 0, capacity = 0;
-    bool ok = true;
-    for (size_t i = 0; ok && leading->present && i < leading->violation_count; i++) {
-        const AnalysisVoiceViolation *fault = &leading->violations[i];
-        const ChainEntry *arrival = &report->entries[fault->entry_to];
-        bool parallel = fault->rule[0] == 'p';
-        ok = add_violation(map, &list, &used, &capacity, voice_rule_id(fault), parallel, arrival->time.num,
-                           arrival->time.den, fault->note_ids, 4);
-    }
-    for (int pass = 0; ok && pass < 2; pass++) {
-        const char *wanted = pass == 0 ? "seventh-resolves-down" : "leading-tone-resolves";
-        for (size_t i = 0; ok && leading->present && i < leading->resolution_count; i++) {
-            const AnalysisVoiceResolution *fault = &leading->resolutions[i];
-            if (strcmp(fault->rule, wanted) != 0) {
-                continue;
-            }
-            const ChainEntry *arrival = &report->entries[fault->entry_to];
-            ok = add_violation(map, &list, &used, &capacity,
-                               pass == 0 ? "unresolved-seventh" : "unresolved-leading-tone", false,
-                               arrival->time.num, arrival->time.den, fault->note_ids, 2);
-        }
-    }
-    if (!ok) {
-        analyzer_violations_free(list, used);
+    /* The library finds the faults (chain_result_voice_faults); a ChainVoiceFault has the members of an AnalyzerViolation. */
+    ChainVoiceFault *faults = NULL;
+    size_t used = 0;
+    if (!chain_result_voice_faults(analyzer_result_run_chain(result), &faults, &used)) {
         return ANALYZER_ERR_ALLOC;
     }
+    AnalyzerViolation *list = used ? malloc(used * sizeof *list) : NULL;
+    if (used && !list) {
+        chain_voice_faults_free(faults, used);
+        return ANALYZER_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < used; i++) {
+        list[i] = (AnalyzerViolation){faults[i].rule, faults[i].hard, faults[i].measure, faults[i].beat,
+                                      faults[i].note_ids, faults[i].note_id_count};
+    }
+    free(faults);
     *out = list;
     *count = used;
     return ANALYZER_OK;

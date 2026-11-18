@@ -1169,4 +1169,28 @@ char *chain_progression_label(const AnalysisProgression *progression);
 /* The library's framework name for the doubling and spacing claims. */
 const char *chain_voicing_framework_name(void);
 
+/* One rule the heard music breaks, as the Composer's check reads it (R-618). rule is one of "parallel-fifths",
+   "parallel-octaves", "direct-fifths", "direct-octaves", "unresolved-seventh", "unresolved-leading-tone" (counterpoint is checked
+   with standard-counterpoint, not here). hard is true for parallel fifths and octaves. The place is the measure and beat (1 is the
+   first beat, a fraction when between beats) where the fault arrives on the score's meter map; measure is 0 and beat 0 when
+   the meter cannot place it. note_ids are indices into the score the chain ran on. */
+typedef struct {
+    char *rule;       /* owned */
+    bool hard;
+    int measure;
+    double beat;
+    size_t *note_ids; /* owned */
+    size_t note_id_count;
+} ChainVoiceFault;
+
+typedef struct AnalysisChain AnalysisChain;
+
+/* Every voice-leading fault of the chain's collected result (parallels, directs, unresolved sevenths and leading tones, in
+   that order). *out is a new array the caller releases with chain_voice_faults_free; it is NULL when *count is 0. false, with
+   *out NULL and *count 0, for a NULL argument, a chain that ran on no score (analysis_chain_run) or on allocation failure. */
+bool chain_result_voice_faults(const AnalysisChain *chain, ChainVoiceFault **out, size_t *count);
+
+/* Frees the array and each fault's rule and note ids. NULL is a no-op. */
+void chain_voice_faults_free(ChainVoiceFault *faults, size_t count);
+
 #endif

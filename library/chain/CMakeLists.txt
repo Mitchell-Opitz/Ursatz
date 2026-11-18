@@ -36,6 +36,7 @@ add_library(ursatz_chain
     chain_result_schemas.c
     chain_result_spelling.c
     chain_result_texture.c
+    chain_result_voice_faults.c
     chain_result_voice_leading.c
     chain_result_voicing_check.c
     chain_score_input.c
