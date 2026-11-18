@@ -211,10 +211,26 @@
           "minimum": 1
         },
         "beginning": {
-          "$ref": "#/$defs/choice"
+          "description": "Null for a liquidation, a retransition and a coda: an operator grows them, they have no beginning.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/choice"
+            }
+          ]
         },
         "ending": {
-          "$ref": "#/$defs/choice"
+          "description": "Null for a liquidation, a retransition and a coda: an operator grows them, they have no ending.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/choice"
+            }
+          ]
         },
         "cadence": {
           "$ref": "#/$defs/cadence"
@@ -289,7 +305,11 @@
           "description": "The degree its presentation sits over in the bass: null, or the dominant pedal (R-446)."
         },
         "slots": {
-          "type": "array",
+          "description": "Null for a liquidation, a retransition and a coda: an operator grows them, they have no slots.",
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "$ref": "#/$defs/slot"
           }

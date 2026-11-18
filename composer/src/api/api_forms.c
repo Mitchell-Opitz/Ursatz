@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <plan/section_json.h>
+
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/theme_shape.h>
@@ -29,12 +31,6 @@ static bool add_choice_member(cJSON *object, const char *name, const char *value
         return false;
     }
     return api_add(object, name, choice);
-}
-
-/* The degree a section's presentation sits over in the bass: only the dominant (5) is a choice (R-446). */
-static bool add_pedal(cJSON *section, int pedal) {
-    return pedal == 5 ? add_choice_member(section, "pedal", "dominant", "Dominant pedal")
-                      : api_add(section, "pedal", cJSON_CreateNull());
 }
 
 static bool add_string_or_null(cJSON *object, const char *name, const char *text) {
@@ -103,16 +99,6 @@ static bool add_layers(cJSON *section, unsigned mask) {
     return list != NULL;
 }
 
-static bool add_keys(cJSON *section, const FormSpec *form, const SectionDescription *spec) {
-    cJSON *keys = cJSON_CreateObject();
-    if (!keys || !cJSON_AddStringToObject(keys, "start", key_name(form, form_spec_region_of(form, &spec->key_start))) ||
-        !cJSON_AddStringToObject(keys, "end", key_name(form, form_spec_region_of(form, &spec->key_end)))) {
-        cJSON_Delete(keys);
-        return false;
-    }
-    return api_add(section, "keys", keys);
-}
-
 /*
  * The construction of a section that has one (R-468), served as a theme's response gives it (api_grow_construction_json),
  * or "auto" when the Composer chooses it with the piece's motive. A section without one has no member.
@@ -127,17 +113,6 @@ static bool add_construction(cJSON *section, const SectionDescription *spec) {
     char text[192];
     grow_construction_describe(&spec->construction, &spec->pairing, text, sizeof text);
     return api_add(section, "construction", api_grow_construction_json(&spec->construction, &spec->pairing, text));
-}
-
-/* How a section that leads into the next ends (R-486): null for no connective, else {"value", "label"}. */
-static bool add_connective(cJSON *section, int connective) {
-    if (connective == SECTION_CONNECTIVE_SOMETIMES) {
-        return add_choice_member(section, "connective", "sometimes", "Sometimes");
-    }
-    if (connective == SECTION_CONNECTIVE_ALWAYS) {
-        return add_choice_member(section, "connective", "always", "Always");
-    }
-    return api_add(section, "connective", cJSON_CreateNull());
 }
 
 /* The motive of variation of a figurate return (R-497): null for no figure, else {"kind", "rhythm", "harmony", "change_at", "climax"}. */
@@ -157,44 +132,109 @@ static bool add_figure(cJSON *section, const SectionDescription *spec) {
     return api_add(section, "figure", figure);
 }
 
+/* A member of the codec's object copied under its name, or null when the codec left it out (it holds only what is set). */
+static bool copy_or_null(cJSON *to, const cJSON *base, const char *name) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(base, name);
+    return api_add(to, name, item ? cJSON_Duplicate(item, true) : cJSON_CreateNull());
+}
+
+/* The label of a choice member: the vocabulary's word for the value the codec wrote. */
+typedef struct {
+    const char *member;
+    const char *(*label)(const SectionDescription *spec);
+} ChoiceRow;
+
+static const char *role_label(const SectionDescription *spec) {
+    return section_role_label(spec->role);
+}
+
+static const char *beginning_label(const SectionDescription *spec) {
+    return API_THEME_BEGINNINGS[spec->pairing.beginning].label;
+}
+
+static const char *ending_label(const SectionDescription *spec) {
+    return API_THEME_ENDINGS[spec->pairing.ending].label;
+}
+
+static const char *pedal_label(const SectionDescription *spec) {
+    (void)spec;
+    return "Dominant pedal";
+}
+
+static const char *connective_label(const SectionDescription *spec) {
+    return spec->connective == SECTION_CONNECTIVE_ALWAYS ? "Always" : "Sometimes";
+}
+
+/* The members served as {"value", "label"}, or null when the section has none: a liquidation, retransition and coda have no beginning or ending. */
+static const ChoiceRow CHOICES[] = {{"role", role_label},       {"beginning", beginning_label}, {"ending", ending_label},
+                                    {"pedal", pedal_label},     {"connective", connective_label}};
+
+static bool add_choice_row(cJSON *section, const cJSON *base, const SectionDescription *spec, const ChoiceRow *row) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(base, row->member);
+    if (!cJSON_IsString(item)) {
+        return api_add(section, row->member, cJSON_CreateNull());
+    }
+    return add_choice_member(section, row->member, item->valuestring, row->label(spec));
+}
+
+static const ChoiceRow *choice_row(const char *member) {
+    for (size_t i = 0; i < sizeof(CHOICES) / sizeof(CHOICES[0]); i++) {
+        if (strcmp(CHOICES[i].member, member) == 0) {
+            return &CHOICES[i];
+        }
+    }
+    return NULL;
+}
+
+/* The key a section starts or ends in, "home" when the codec left it out. */
+static bool add_key_member(cJSON *keys, const cJSON *base_keys, const char *name) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(base_keys, name);
+    return cJSON_AddStringToObject(keys, name, cJSON_IsString(item) ? item->valuestring : "home") != NULL;
+}
+
+/*
+ * A form's section as the Pieces view needs it: the members of the section codec (the document's own, written by
+ * section_to_json for a form), then the choices as {"value", "label"} and the members that always have a value. bars and
+ * beats are both there, null for the one the section does not give.
+ */
 static bool add_section(cJSON *list, const FormSpec *form, const FormSpecSize *size, const SectionDescription *spec) {
+    cJSON *base = section_to_json(spec, SECTION_USE_FORM);
     cJSON *section = cJSON_CreateObject();
-    if (!section || !cJSON_AddItemToArray(list, section)) {
+    if (!base || !section || !cJSON_AddItemToArray(list, section)) {
+        cJSON_Delete(base);
         cJSON_Delete(section);
         return false;
     }
-    const ApiThemePart *beginning = &API_THEME_BEGINNINGS[spec->pairing.beginning];
-    const ApiThemePart *ending = &API_THEME_ENDINGS[spec->pairing.ending];
     const HarmonyCadenceKind *kind = harmony_cadence_kind_find(spec->cadence_name);
     cJSON *cadence = cJSON_CreateObject();
     if (!cadence || !cJSON_AddStringToObject(cadence, "value", spec->cadence_name) ||
         !cJSON_AddStringToObject(cadence, "label", kind ? kind->label : spec->cadence_name) ||
         !cJSON_AddStringToObject(cadence, "core", plan_cadence_name(spec->cadence))) {
         cJSON_Delete(cadence);
+        cJSON_Delete(base);
         return false;
     }
-    char motive[96];
-    MotiveRelationStep step;
-    bool has_motive = form_spec_section_motive(spec, &step) && motive_relation_step_text(&step, motive, sizeof motive);
     bool returns = form_spec_section_index(size, spec->returns) != FORM_SPEC_NO_RETURN;
-    return cJSON_AddStringToObject(section, "name", spec->name) && cJSON_AddStringToObject(section, "letter", spec->letter) &&
-           add_choice_member(section, "role", section_role_name(spec->role), section_role_label(spec->role)) &&
-           add_number_or_null(section, "bars", spec->bars) && add_number_or_null(section, "beats", spec->beats) &&
-           add_choice_member(section, "beginning", theme_shape_beginning(spec->pairing.beginning)->plan_name,
-                             beginning->label) &&
-           add_choice_member(section, "ending", theme_shape_ending(spec->pairing.ending)->plan_name, ending->label) &&
-           api_add(section, "cadence", cadence) && cJSON_AddBoolToObject(section, "closed", spec->closed) &&
-           add_keys(section, form, spec) && add_string_or_null(section, "motive", has_motive ? motive : NULL) &&
-           add_string_or_null(section, "returns", returns ? spec->returns : NULL) &&
-           add_string_or_null(section, "variation", returns ? section_return_variation_name(spec->variation) : NULL) &&
-           add_string_or_null(section, "setting",
-                              returns && spec->variation == SECTION_RETURN_SETTING ? api_accompaniment_name((PlanAccompanimentPattern)spec->setting) : NULL) &&
-           add_layers(section, spec->layers) && add_pedal(section, spec->pedal) && add_slots(section, &spec->pairing) &&
-           add_construction(section, spec) && cJSON_AddBoolToObject(section, "leads_in", spec->leads_in) &&
-           add_connective(section, spec->connective) && add_figure(section, spec) &&
-           add_string_or_null(section, "mode", section_mode_name(spec->mode)) &&
-           cJSON_AddBoolToObject(section, "independent", spec->function.independent) &&
-           cJSON_AddBoolToObject(section, "lyric", spec->function.lyric);
+    cJSON *keys = cJSON_CreateObject();
+    const cJSON *base_keys = cJSON_GetObjectItemCaseSensitive(base, "keys");
+    bool ok = keys && add_key_member(keys, base_keys, "start") && add_key_member(keys, base_keys, "end");
+    ok = ok && copy_or_null(section, base, "name") && copy_or_null(section, base, "letter") &&
+         add_choice_row(section, base, spec, choice_row("role")) && add_number_or_null(section, "bars", spec->bars) &&
+         add_number_or_null(section, "beats", spec->beats) && add_choice_row(section, base, spec, choice_row("beginning")) &&
+         add_choice_row(section, base, spec, choice_row("ending")) && api_add(section, "cadence", cadence) &&
+         cJSON_AddBoolToObject(section, "closed", spec->closed) && api_add(section, "keys", keys) &&
+         copy_or_null(section, base, "motive") && copy_or_null(section, base, "returns") &&
+         add_string_or_null(section, "variation", returns ? section_return_variation_name(spec->variation) : NULL) &&
+         copy_or_null(section, base, "setting");
+    ok = ok && add_layers(section, spec->layers) && add_choice_row(section, base, spec, choice_row("pedal")) &&
+         (spec->has_pairing ? add_slots(section, &spec->pairing) : api_add(section, "slots", cJSON_CreateNull())) &&
+         add_construction(section, spec) && cJSON_AddBoolToObject(section, "leads_in", spec->leads_in) &&
+         add_choice_row(section, base, spec, choice_row("connective")) && add_figure(section, spec) &&
+         copy_or_null(section, base, "mode") && cJSON_AddBoolToObject(section, "independent", spec->function.independent) &&
+         cJSON_AddBoolToObject(section, "lyric", spec->function.lyric);
+    cJSON_Delete(base);
+    (void)form;
+    return ok;
 }
 
 static bool add_sizes(cJSON *form_json, const FormSpec *form) {

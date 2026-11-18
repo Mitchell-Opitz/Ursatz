@@ -23,7 +23,6 @@ library/model/time/time_span.c time_span_length  # the time value API has no cal
 library/plan/section_json.c section_json_member_count  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
 library/plan/section_json.c section_json_member_name  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
 library/plan/section_json.c section_json_member_uses  # no app calls it until P60 B6 (piece requests read their sections through the codec); its tests call it
-library/plan/section_json.c section_to_json  # no app calls it until P60 B2 (forms read their sections through the section codec); its tests call it
 library/realization/derivation.c note_derivation_present  # no app calls it until P62 (the realization codec writes only the derivations a note has); its tests call it
 library/realization/line.c line_add_relation  # no app calls it until P74 (line-writing stages); its tests call it
 library/realization/line.c line_name  # no app calls it until P62 (the realization codec writes line names); its tests call it

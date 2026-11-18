@@ -539,7 +539,7 @@ static void test_main_and_subordinate(void) {
             if (section->role != SECTION_ROLE_RETRANSITION && section->role != SECTION_ROLE_CODA) {
                 assert(section->pairing.beginning == rows[i].beginning && section->pairing.ending == rows[i].ending);
             }
-            assert(section->pedal == 0 && !section->leads_in && !section->has_figure && !section->mode == SECTION_MODE_PARALLEL);
+            assert(section->pedal == 0 && !section->leads_in && !section->has_figure && section->mode != SECTION_MODE_PARALLEL);
             /* The transition is not independent, and only S2 is lyric (which reads its motive as m0 augmented). */
             const bool lyric = large && i == 3;
             assert(!section->function.independent && section->function.lyric == lyric);
@@ -597,7 +597,7 @@ static void test_figured_variations(void) {
         /* The theme: an eight-bar period, closed, home. */
         const SectionDescription *theme = &size->sections[0];
         assert(strcmp(theme->name, "theme") == 0 && strcmp(theme->letter, "T") == 0 && theme->role == SECTION_ROLE_THEME &&
-               theme->bars == 8 && theme->closed && theme->returns[0] == '\0' && !theme->has_figure && !theme->mode == SECTION_MODE_PARALLEL &&
+               theme->bars == 8 && theme->closed && theme->returns[0] == '\0' && !theme->has_figure && theme->mode != SECTION_MODE_PARALLEL &&
                theme->pairing.beginning == SECTION_BEGINNING_ANTECEDENT && theme->pairing.ending == SECTION_ENDING_CONSEQUENT &&
                theme->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
         for (size_t v = 0; v < variations; v++) {
@@ -610,7 +610,7 @@ static void test_figured_variations(void) {
             assert(section->pairing.beginning == SECTION_BEGINNING_ANTECEDENT && section->pairing.ending == SECTION_ENDING_CONSEQUENT);
             assert(section->has_figure && section->figure.kind == figures[v]->kind && section->figure.rhythm == figures[v]->rhythm &&
                    section->figure.reharmonize == figures[v]->reharmonize && section->figure.change_at == figures[v]->change_at &&
-                   section->figure.climax == figures[v]->climax && section->mode == SECTION_MODE_PARALLEL == figures[v]->parallel);
+                   section->figure.climax == figures[v]->climax && (section->mode == SECTION_MODE_PARALLEL) == figures[v]->parallel);
             /* No keys: the parallel mode is not a key lane, and every other variation is home. */
             assert(key_of(form, &section->key_start) == FORM_SPEC_HOME && key_of(form, &section->key_end) == FORM_SPEC_HOME);
         }
@@ -1842,7 +1842,7 @@ static void test_setting_reader(void) {
         snprintf(member, sizeof(member), ", \"setting\": \"%s\"", PATTERNS[i].name);
         figure_document(text, sizeof(text), ", \"variation\": \"setting\"", member);
         assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK && form->sizes[0].sections[1].variation == SECTION_RETURN_SETTING &&
-               form->sizes[0].sections[1].setting == PATTERNS[i].pattern && form->sizes[0].sections[0].setting == 0);
+               (PlanAccompanimentPattern)form->sizes[0].sections[1].setting == PATTERNS[i].pattern && form->sizes[0].sections[0].setting == 0);
         form_spec_destroy(form);
     }
     /* an unknown setting, a setting return without one, and a setting with any other variation */
