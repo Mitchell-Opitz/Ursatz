@@ -333,6 +333,10 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema slow)
 endif()
 
+# The corpus passages the Composer API takes inline (R-619), over Bach 114 analyzed in the build tree (the smoke's size).
+ursatz_test(test_corpus_passages LIBS ursatz_analyzer analyzer_test_support cjson
+    DEFINITIONS URSATZ_PASSAGES_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/corpus_passages_work" VALGRIND)
+
 ursatz_test_executable(test_similar_material LIBS ursatz_analyzer analyzer_test_support cjson
     DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_SIMILAR_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/similar_work"
