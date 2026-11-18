@@ -5,6 +5,7 @@ add_library(ursatz_realization
     realization.c
     derivation.c
     line.c
+    performer_part.c
 )
 ursatz_public_headers(ursatz_realization
     BASE ${PROJECT_SOURCE_DIR}
