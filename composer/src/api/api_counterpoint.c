@@ -190,6 +190,7 @@ static PiecePlan *build_plan(const Options *options, const Motive *motive, LaneS
                    PLAN_OK &&
          plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     ok = ok && plan_node_set_state(plan, owner, PLAN_STATE_GIVEN) == PLAN_OK;
+    memset(&placeholder, 0, sizeof(placeholder));
     placeholder.midi = 60;
     placeholder.spelled = false;
     placeholder.offset = fraction(0, 1);

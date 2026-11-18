@@ -1,6 +1,7 @@
 {
   "format": "ursatz-composer-plan",
-  "format_version": 3,
+  "format_version": 4,
+  "next_note_id": 20,
   "metadata": {
     "composer_version": "",
     "ursatz_commit": ""
@@ -274,7 +275,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 1
             }]
         }
       }
@@ -310,7 +312,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 2
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -320,7 +323,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 3
             }, {
               "midi_pitch": 79,
               "offset": {
@@ -330,7 +334,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 4
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -340,7 +345,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 5
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -350,7 +356,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 6
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -360,7 +367,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 7
             }, {
               "midi_pitch": 79,
               "offset": {
@@ -370,7 +378,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 8
             }, {
               "midi_pitch": 79,
               "offset": {
@@ -380,7 +389,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 9
             }, {
               "midi_pitch": 77,
               "offset": {
@@ -390,7 +400,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 10
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -400,7 +411,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 11
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -410,7 +422,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 12
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -420,7 +433,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 13
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -430,7 +444,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 14
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -440,7 +455,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 15
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -450,7 +466,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 16
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -460,7 +477,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 17
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -470,7 +488,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 18
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -480,7 +499,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 19
             }]
         }
       }

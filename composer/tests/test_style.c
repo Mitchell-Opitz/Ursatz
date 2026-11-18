@@ -90,6 +90,7 @@ static Rational time_of(long num, unsigned long den) {
 
 static PlanNote note(int pitch, Rational offset, Rational duration) {
     PlanNote result;
+    memset(&result, 0, sizeof(result));
     result.midi = pitch;
     result.spelled = false;
     result.offset = offset;
@@ -611,8 +612,9 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  */
 /* Re-recorded at P36 B3 (liquidated residues, R-345) and at P37 B2 (ideas ranked by fidelity, R-355: seeds 1, 3 and 5). */
 /* Re-recorded at P58 B14 (plan format 3: keys name their material, a key from a form region names its relation); the notes are the same. */
-static const unsigned long long MAIN_HASH[5] = {0xcc6b2002ceda07f5ULL, 0x44ef43437f101ec7ULL, 0x2cf20d8dda38cec7ULL,
-                                                0x17efe6174bea5901ULL, 0x3d91958ff2c04907ULL};
+/* Re-recorded at P59 B6 (plan format 4: every note has an id, and a source and operation where the Composer knows one); the notes are the same. */
+static const unsigned long long MAIN_HASH[5] = {0x2ef6b4c855b3306cULL, 0x96da7aac71d7e5ceULL, 0xc8cf8785003ca765ULL,
+                                                0x7fe99bab908e0fc2ULL, 0x46106d1417347766ULL};
 
 static int test_same(void) {
     /* CHORALES_MOTIVES, not CHORALES: since P41 B7 the chorales model holds tempo and note-density, which a style applies at weight 0 too. */

@@ -87,6 +87,7 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
     PlanLanePayload payload;
     PlanNote notes[CHORDS];
     LaneSpanId id;
+    memset(notes, 0, sizeof(notes));
     memset(&piece, 0, sizeof(piece));
     piece.plan = plan_create();
     assert(plan_add_node(piece.plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, "form", &piece.owner) == PLAN_OK);

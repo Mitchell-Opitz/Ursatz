@@ -2,7 +2,7 @@
 
 A piece plan is written as JSON text by `plan_to_json` and read from text by `plan_from_json`
 (`<ursatz_composer/plan_json.h>`): text in, text out, and the caller reads and writes the file. The format is the Composer's own: it has a
-name, a version and a JSON Schema ([`schema/plan.v3.schema.json`](../schema/plan.v3.schema.json), JSON Schema 2020-12),
+name, a version and a JSON Schema ([`schema/plan.v4.schema.json`](../schema/plan.v4.schema.json), JSON Schema 2020-12),
 and it is written on library values: a key's tonic is a spelled note name, a chord's function is the library's function
 name, a note may carry its spelling. Writing always gives format version 3 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
 Reading takes versions 2 and 1, the formats of every plan saved before it, and maps them to materials ([Format versions](#format-versions)). Back to the [docs index](README.md).

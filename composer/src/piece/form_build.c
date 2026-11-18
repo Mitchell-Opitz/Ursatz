@@ -270,6 +270,7 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
     PlanConstraint constraint;
     PieceResult result = piece_result_of_plan(plan_add_node(plan, idea, PLAN_NODE_MOTIVE, span, GROW_SOURCE_NAME, &node));
     memset(&payload, 0, sizeof(payload));
+    memset(&note, 0, sizeof(note));
     note.midi = INVENT_PLACEHOLDER;
     note.spelled = false;
     note.offset = (Rational){0, 1};
@@ -306,6 +307,7 @@ static PieceResult add_independent_motive(PiecePlan *plan, NodeId idea, PlanSpan
         result = piece_result_of_plan(plan_add_node(plan, idea, PLAN_NODE_MOTIVE, span, name, &node));
     }
     memset(&payload, 0, sizeof(payload));
+    memset(&note, 0, sizeof(note));
     note.midi = INVENT_PLACEHOLDER;
     note.spelled = false;
     note.offset = (Rational){0, 1};

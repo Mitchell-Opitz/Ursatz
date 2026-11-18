@@ -464,6 +464,10 @@ static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *
     return false;
 }
 
+/* How a note was made from its source, by the name the file gives it (the index is the PlanNoteOperation). */
+static const char *const plan_note_operation_names[] = {"", "copy", "motive", "return"};
+#define PLAN_NOTE_OPERATION_COUNT (sizeof(plan_note_operation_names) / sizeof(plan_note_operation_names[0]))
+
 static cJSON *notes_json(const PlanNotes *notes) {
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < notes->note_count; i++) {
@@ -474,7 +478,12 @@ static cJSON *notes_json(const PlanNotes *notes) {
         if (!(object && spelt && plan_json_add(object, "midi_pitch", json_number(note->midi)) &&
               (!note->spelled || plan_json_add(object, "spelling", cJSON_CreateString(spelling))) &&
               plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
-              plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den)) && plan_json_append(array, object))) {
+              plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den)) &&
+              plan_json_add(object, "id", json_number((double)note->id)) &&
+              (note->source == PLAN_NOTE_NONE ||
+               (plan_json_add(object, "source", json_number((double)note->source)) &&
+                plan_json_add(object, "operation", cJSON_CreateString(plan_note_operation_names[note->operation])))) &&
+              plan_json_append(array, object))) {
             if (object && !cJSON_GetObjectItem(object, "duration")) {
                 cJSON_Delete(object);
             }
@@ -635,6 +644,7 @@ static cJSON *document_json(const PiecePlan *plan) {
     }
     bool ok = plan_json_add(document, "format", cJSON_CreateString(PLAN_FORMAT_NAME)) &&
               plan_json_add(document, "format_version", json_number(URSATZ_COMPOSER_PLAN_FORMAT_VERSION)) &&
+              plan_json_add(document, "next_note_id", json_number((double)plan_next_note_id(plan))) &&
               plan_json_add(document, "metadata", metadata_json(plan)) && plan_json_add(document, "meter", meter_json(plan)) &&
               plan_json_add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_KEY)) &&
               plan_json_add(document, "chords", lane_array_json(plan, 1u << PLAN_LANE_HARMONY)) &&
@@ -2201,6 +2211,89 @@ static bool collect_section(JsonReader *reader, const cJSON *document, const cha
     return true;
 }
 
+/* The note ids a version 4 file has named so far: open addressing, so a repeat is found at once. */
+struct NoteIdSet {
+    size_t *slots;
+    size_t capacity;
+    size_t count;
+    size_t max; /* the highest id seen */
+};
+
+/* Adds id; false when the set already holds it or memory ran out (*grown_failed then says which). */
+static bool note_id_set_add(struct NoteIdSet *set, size_t id, bool *out_of_memory) {
+    *out_of_memory = false;
+    if (set->count * 2 >= set->capacity) {
+        size_t capacity = set->capacity ? set->capacity * 2 : 64;
+        size_t *slots = calloc(capacity, sizeof(size_t));
+        if (!slots) {
+            *out_of_memory = true;
+            return false;
+        }
+        for (size_t i = 0; i < set->capacity; i++) {
+            if (set->slots[i]) {
+                size_t at = (set->slots[i] * 11400714819323198485ull) & (capacity - 1);
+                while (slots[at]) {
+                    at = (at + 1) & (capacity - 1);
+                }
+                slots[at] = set->slots[i];
+            }
+        }
+        free(set->slots);
+        set->slots = slots;
+        set->capacity = capacity;
+    }
+    size_t at = (id * 11400714819323198485ull) & (set->capacity - 1);
+    while (set->slots[at]) {
+        if (set->slots[at] == id) {
+            return false;
+        }
+        at = (at + 1) & (set->capacity - 1);
+    }
+    set->slots[at] = id;
+    set->count++;
+    if (id > set->max) {
+        set->max = id;
+    }
+    return true;
+}
+
+/* A version 4 note's "id" (required, unique in the file, from 1), "source" and "operation" (optional). */
+static bool read_note_identity(JsonReader *reader, const cJSON *item, const char *at, PlanNote *note) {
+    long id;
+    if (!json_read_int_member(reader, item, at, "id", 1, 0x7fffffffffffffffL, &id)) {
+        return false;
+    }
+    bool out_of_memory = false;
+    if (reader->note_ids && !note_id_set_add(reader->note_ids, (size_t)id, &out_of_memory)) {
+        char id_path[PLAN_JSON_PATH_MAX];
+        json_child_path(id_path, at, "id");
+        return out_of_memory ? json_fail(reader, PLAN_ERR_ALLOC, id_path, "out of memory")
+                             : json_bad_format(reader, id_path, "this note id is already another note's");
+    }
+    note->id = (PlanNoteId)id;
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(item, "source");
+    if (source) {
+        char source_path[PLAN_JSON_PATH_MAX];
+        json_child_path(source_path, at, "source");
+        long value;
+        if (!json_read_long(reader, source, source_path, 1, 0x7fffffffffffffffL, &value)) {
+            return false;
+        }
+        note->source = (PlanNoteId)value;
+    }
+    const cJSON *operation = cJSON_GetObjectItemCaseSensitive(item, "operation");
+    if (operation) {
+        char operation_path[PLAN_JSON_PATH_MAX];
+        json_child_path(operation_path, at, "operation");
+        int value;
+        if (!read_enum(reader, operation, operation_path, plan_note_operation_names + 1, PLAN_NOTE_OPERATION_COUNT - 1, &value)) {
+            return false;
+        }
+        note->operation = (PlanNoteOperation)(value + 1);
+    }
+    return true;
+}
+
 static bool read_payload(JsonReader *reader, const cJSON *composer, const char *composer_path, PlanLaneKind lane,
                          PlanLanePayload *payload, PlanKeyRelation *relation, PlanNote **notes_storage) {
     const cJSON *object = plan_json_member(reader, composer, composer_path, "payload", true);
@@ -2280,6 +2373,9 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
                 return false;
             }
             notes[index].midi = (int)pitch;
+            if (reader->version >= 4 && !read_note_identity(reader, item, at, &notes[index])) {
+                return false;
+            }
             notes[index].spelled = false;
             const cJSON *spelling = cJSON_GetObjectItemCaseSensitive(item, "spelling");
             if (spelling) {
@@ -2467,9 +2563,41 @@ static bool read_metadata(JsonReader *reader, const cJSON *document, PiecePlan *
     return true;
 }
 
+/* Everything after the version: the metadata, the form, the lane spans and, from version 4, the next note id. */
+static PlanResult read_document_body(JsonReader *reader, const cJSON *document, PiecePlan *plan) {
+    if (!read_metadata(reader, document, plan)) {
+        return reader->result;
+    }
+    const cJSON *form = plan_json_member(reader, document, "", "form", true);
+    if (!form) {
+        return reader->result;
+    }
+    if (!cJSON_IsNull(form) && !build_nodes(reader, plan, form)) {
+        return reader->result;
+    }
+    if (!build_lane_spans(reader, plan, document)) {
+        return reader->result;
+    }
+    if (reader->version >= 4) {
+        long next;
+        if (!json_read_int_member(reader, document, "", "next_note_id", 1, 0x7fffffffffffffffL, &next)) {
+            return reader->result;
+        }
+        if ((size_t)next <= reader->note_ids->max) {
+            json_bad_format(reader, "next_note_id", "must be above every note id");
+            return reader->result;
+        }
+        plan_note_next_id_set(plan, (PlanNoteId)next);
+    }
+    if (!apply_states(reader, plan, document)) {
+        return reader->result;
+    }
+    return PLAN_OK;
+}
+
 static PlanResult read_document(const cJSON *document, PiecePlan *plan, const CommonPracticeMaterials *materials,
                                 const KnowledgeSnapshot *knowledge, PlanJsonError *error) {
-    JsonReader reader = {error, PLAN_OK, 0, materials, knowledge};
+    JsonReader reader = {error, PLAN_OK, 0, materials, knowledge, NULL};
     if (!cJSON_IsObject(document)) {
         json_bad_format(&reader, "", "expected a JSON object");
         return reader.result;
@@ -2489,23 +2617,13 @@ static PlanResult read_document(const cJSON *document, PiecePlan *plan, const Co
         return reader.result;
     }
     reader.version = (int)version;
-    if (!read_metadata(&reader, document, plan)) {
-        return reader.result;
+    struct NoteIdSet note_ids = {NULL, 0, 0, 0};
+    if (reader.version >= 4) {
+        reader.note_ids = &note_ids;
     }
-    const cJSON *form = plan_json_member(&reader, document, "", "form", true);
-    if (!form) {
-        return reader.result;
-    }
-    if (!cJSON_IsNull(form) && !build_nodes(&reader, plan, form)) {
-        return reader.result;
-    }
-    if (!build_lane_spans(&reader, plan, document)) {
-        return reader.result;
-    }
-    if (!apply_states(&reader, plan, document)) {
-        return reader.result;
-    }
-    return PLAN_OK;
+    PlanResult result = read_document_body(&reader, document, plan);
+    free(note_ids.slots);
+    return result;
 }
 
 PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error) {

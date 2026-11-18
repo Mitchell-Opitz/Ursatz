@@ -57,6 +57,9 @@ struct PiecePlan {
  */
 void plan_note_ids_assign(PiecePlan *plan, PlanNote *notes, size_t count, LaneSpanId replacing);
 
+/* Sets the next note id (a plan file names it); it only rises: a value at or below the current one changes nothing. */
+void plan_note_next_id_set(PiecePlan *plan, PlanNoteId next);
+
 void constraint_list_free(ConstraintList *list);
 
 /* dst takes everything src holds and src is destroyed; ids and pointers into dst's old contents are void. */

@@ -35,7 +35,7 @@ endif()
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_plan_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v3.schema.json
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v4.schema.json
                      -DSNAPSHOT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_plan_schema.cmake
         LABELS schema

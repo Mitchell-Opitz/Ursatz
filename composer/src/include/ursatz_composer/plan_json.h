@@ -5,18 +5,20 @@
 #include <ursatz_composer/piece_plan.h>
 
 /*
- * A plan as JSON, in the Composer's own format (R-260), described by schema/plan.v3.schema.json: "format"
+ * A plan as JSON, in the Composer's own format (R-260), described by schema/plan.v4.schema.json: "format"
  * "ursatz-composer-plan", "format_version", "metadata", the node tree under "form", and the lane spans under "meter",
  * "keys", "chords", "melody" and "texture". Keys carry a spelled "tonic" and a "material" (the id of a pitch material); a key
  * span the Composer drew from a form region also names the "relation" and "anchor" it came from. Writing always gives version
- * URSATZ_COMPOSER_PLAN_FORMAT_VERSION; reading also takes version 2 (keys name a "mode", major or minor) and version 1 (every
- * plan saved before it: "schema_version" 1, tonic pitch classes, motive "transform" names). See docs/plan-format.md.
+ * URSATZ_COMPOSER_PLAN_FORMAT_VERSION; reading also takes version 3 (notes have no ids: they get 1 to n in file order), version 2
+ * (keys name a "mode", major or minor) and version 1 (every plan saved before it: "schema_version" 1, tonic pitch classes, motive
+ * "transform" names). Version 4 gives every note an "id" (unique, from 1) and, where the Composer knows it, a "source" and an
+ * "operation", and the document a "next_note_id" above every id (R-601). See docs/plan-format.md.
  *
  * Reading ignores fields it does not know, but rejects unknown values in the
  * fields it owns (kind, state, lane, constraint kind) and anything malformed.
  */
 
-#define URSATZ_COMPOSER_PLAN_FORMAT_VERSION 3
+#define URSATZ_COMPOSER_PLAN_FORMAT_VERSION 4
 /* The "schema_version" of a version 1 file, which is only read. */
 #define PLAN_JSON_SCHEMA_VERSION 1
 #define PLAN_JSON_PATH_MAX 128

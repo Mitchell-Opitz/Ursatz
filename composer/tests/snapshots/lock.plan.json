@@ -1,6 +1,7 @@
 {
   "format": "ursatz-composer-plan",
-  "format_version": 3,
+  "format_version": 4,
+  "next_note_id": 169,
   "metadata": {
     "composer_version": "",
     "ursatz_commit": ""
@@ -1503,7 +1504,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 2
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -1513,7 +1515,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 3
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -1523,7 +1526,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 4
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -1533,7 +1537,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 5
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -1543,7 +1548,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 6
             }]
         }
       }
@@ -1582,7 +1588,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 128,
+              "source": 36,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1592,7 +1601,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 129,
+              "source": 37,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1602,7 +1614,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 130,
+              "source": 38,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1612,7 +1627,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 131,
+              "source": 39,
+              "operation": "motive"
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -1622,7 +1640,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 132,
+              "source": 40,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1632,7 +1653,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 133
             }, {
               "midi_pitch": 65,
               "offset": {
@@ -1642,7 +1664,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 134
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -1652,7 +1675,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 135
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -1662,7 +1686,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 136
             }, {
               "midi_pitch": 60,
               "offset": {
@@ -1672,7 +1697,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 137
             }]
         }
       }
@@ -1712,7 +1738,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 138,
+              "source": 128,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1722,7 +1751,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 139,
+              "source": 129,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1732,7 +1764,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 140,
+              "source": 130,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1742,7 +1777,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 141,
+              "source": 131,
+              "operation": "motive"
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -1752,7 +1790,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 142,
+              "source": 132,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1762,7 +1803,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 143,
+              "source": 133,
+              "operation": "motive"
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -1772,7 +1816,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 144,
+              "source": 134,
+              "operation": "motive"
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -1782,7 +1829,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 145,
+              "source": 135,
+              "operation": "motive"
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -1792,7 +1842,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 146,
+              "source": 136,
+              "operation": "motive"
             }, {
               "midi_pitch": 60,
               "offset": {
@@ -1802,7 +1855,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 147,
+              "source": 137,
+              "operation": "motive"
             }]
         }
       }
@@ -1838,7 +1894,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 11
             }, {
               "midi_pitch": 57,
               "offset": {
@@ -1848,7 +1905,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 12
             }, {
               "midi_pitch": 57,
               "offset": {
@@ -1858,7 +1916,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 13
             }]
         }
       }
@@ -1894,7 +1953,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 14
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -1904,7 +1964,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 15
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -1914,7 +1975,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 16
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -1924,7 +1986,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 17
             }]
         }
       }
@@ -1964,7 +2027,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 148,
+              "source": 46,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1974,7 +2040,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 149,
+              "source": 47,
+              "operation": "motive"
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -1984,7 +2053,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 150,
+              "source": 48,
+              "operation": "motive"
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -1994,7 +2066,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 151
             }, {
               "midi_pitch": 65,
               "offset": {
@@ -2004,7 +2077,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 152
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -2014,7 +2088,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 153
             }]
         }
       }
@@ -2054,7 +2129,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 154,
+              "source": 49,
+              "operation": "motive"
             }, {
               "midi_pitch": 65,
               "offset": {
@@ -2064,7 +2142,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 155,
+              "source": 50,
+              "operation": "motive"
             }, {
               "midi_pitch": 65,
               "offset": {
@@ -2074,7 +2155,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 156,
+              "source": 51,
+              "operation": "motive"
             }, {
               "midi_pitch": 77,
               "offset": {
@@ -2084,7 +2168,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 157
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -2094,7 +2179,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 158
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -2104,7 +2190,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 159
             }]
         }
       }
@@ -2147,7 +2234,10 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 160,
+              "source": 52,
+              "operation": "motive"
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -2157,7 +2247,10 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 161,
+              "source": 53,
+              "operation": "motive"
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -2167,7 +2260,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 162,
+              "source": 54,
+              "operation": "motive"
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -2177,7 +2273,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 163,
+              "source": 55,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2187,7 +2286,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 164
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2197,7 +2297,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 165
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2207,7 +2308,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 166
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2217,7 +2319,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 167
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -2227,7 +2330,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 168
             }]
         }
       }
@@ -2266,7 +2370,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 91,
+              "source": 2,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2276,7 +2383,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 92,
+              "source": 3,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2286,7 +2396,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 93,
+              "source": 4,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2296,7 +2409,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 94,
+              "source": 5,
+              "operation": "motive"
             }, {
               "midi_pitch": 77,
               "offset": {
@@ -2306,7 +2422,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 95,
+              "source": 6,
+              "operation": "motive"
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -2316,7 +2435,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 96
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -2326,7 +2446,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 97
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -2336,7 +2457,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 98
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -2346,7 +2468,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 99
             }, {
               "midi_pitch": 79,
               "offset": {
@@ -2356,7 +2479,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 100
             }]
         }
       }
@@ -2396,7 +2520,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 101,
+              "source": 91,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2406,7 +2533,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 102,
+              "source": 92,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2416,7 +2546,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 103,
+              "source": 93,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2426,7 +2559,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 104,
+              "source": 94,
+              "operation": "motive"
             }, {
               "midi_pitch": 77,
               "offset": {
@@ -2436,7 +2572,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 105,
+              "source": 95,
+              "operation": "motive"
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -2446,7 +2585,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 106,
+              "source": 96,
+              "operation": "motive"
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -2456,7 +2598,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 107,
+              "source": 97,
+              "operation": "motive"
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -2466,7 +2611,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 108,
+              "source": 98,
+              "operation": "motive"
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -2476,7 +2624,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 109,
+              "source": 99,
+              "operation": "motive"
             }, {
               "midi_pitch": 79,
               "offset": {
@@ -2486,7 +2637,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 110,
+              "source": 100,
+              "operation": "motive"
             }]
         }
       }
@@ -2522,7 +2676,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 26
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -2532,7 +2687,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 27
             }]
         }
       }
@@ -2568,7 +2724,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 28
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2578,7 +2735,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 29
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2588,7 +2746,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 30
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -2598,7 +2757,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 31
             }]
         }
       }
@@ -2638,7 +2798,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 111,
+              "source": 61,
+              "operation": "motive"
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -2648,7 +2811,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 112,
+              "source": 62,
+              "operation": "motive"
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -2658,7 +2824,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 113
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -2668,7 +2835,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 114
             }]
         }
       }
@@ -2708,7 +2876,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 115,
+              "source": 63,
+              "operation": "motive"
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -2718,7 +2889,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 116,
+              "source": 64,
+              "operation": "motive"
             }, {
               "midi_pitch": 84,
               "offset": {
@@ -2728,7 +2902,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 117
             }, {
               "midi_pitch": 81,
               "offset": {
@@ -2738,7 +2913,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 118
             }]
         }
       }
@@ -2781,7 +2957,10 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 119,
+              "source": 65,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2791,7 +2970,10 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 120,
+              "source": 66,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2801,7 +2983,10 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 121,
+              "source": 67,
+              "operation": "motive"
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -2811,7 +2996,10 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 122,
+              "source": 68,
+              "operation": "motive"
             }, {
               "midi_pitch": 79,
               "offset": {
@@ -2821,7 +3009,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 123
             }, {
               "midi_pitch": 77,
               "offset": {
@@ -2831,7 +3020,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 124
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -2841,7 +3031,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 125
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -2851,7 +3042,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 126
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -2861,7 +3053,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 127
             }]
         }
       }
@@ -2897,7 +3090,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 36
             }, {
               "midi_pitch": 57,
               "offset": {
@@ -2907,7 +3101,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 37
             }, {
               "midi_pitch": 57,
               "offset": {
@@ -2917,7 +3112,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 38
             }, {
               "midi_pitch": 57,
               "offset": {
@@ -2927,7 +3123,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 39
             }, {
               "midi_pitch": 52,
               "offset": {
@@ -2937,7 +3134,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 40
             }]
         }
       }
@@ -2973,7 +3171,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 41
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -2983,7 +3182,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 42
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -2993,7 +3193,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 43
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -3003,7 +3204,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 44
             }, {
               "midi_pitch": 64,
               "offset": {
@@ -3013,7 +3215,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 45
             }]
         }
       }
@@ -3049,7 +3252,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 46
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -3059,7 +3263,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 47
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -3069,7 +3274,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 48
             }]
         }
       }
@@ -3105,7 +3311,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 49
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -3115,7 +3322,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 50
             }, {
               "midi_pitch": 67,
               "offset": {
@@ -3125,7 +3333,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 51
             }]
         }
       }
@@ -3161,7 +3370,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 52
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -3171,7 +3381,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 53
             }, {
               "midi_pitch": 69,
               "offset": {
@@ -3181,7 +3392,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 54
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -3191,7 +3403,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 55
             }]
         }
       }
@@ -3227,7 +3440,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 56
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -3237,7 +3451,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 57
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -3247,7 +3462,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 58
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -3257,7 +3473,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 59
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -3267,7 +3484,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 60
             }]
         }
       }
@@ -3303,7 +3521,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 61
             }, {
               "midi_pitch": 76,
               "offset": {
@@ -3313,7 +3532,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 62
             }]
         }
       }
@@ -3349,7 +3569,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 63
             }, {
               "midi_pitch": 74,
               "offset": {
@@ -3359,7 +3580,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 64
             }]
         }
       }
@@ -3395,7 +3617,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 65
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -3405,7 +3628,8 @@
               "duration": {
                 "num": 1,
                 "den": 16
-              }
+              },
+              "id": 66
             }, {
               "midi_pitch": 71,
               "offset": {
@@ -3415,7 +3639,8 @@
               "duration": {
                 "num": 1,
                 "den": 8
-              }
+              },
+              "id": 67
             }, {
               "midi_pitch": 72,
               "offset": {
@@ -3425,7 +3650,8 @@
               "duration": {
                 "num": 1,
                 "den": 4
-              }
+              },
+              "id": 68
             }]
         }
       }
@@ -3462,7 +3688,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 80
             }, {
               "midi_pitch": 48,
               "offset": {
@@ -3472,7 +3699,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 81
             }, {
               "midi_pitch": 60,
               "offset": {
@@ -3482,7 +3710,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 82
             }]
         }
       }
@@ -3518,7 +3747,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 83
             }, {
               "midi_pitch": 60,
               "offset": {
@@ -3528,7 +3758,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 84
             }, {
               "midi_pitch": 48,
               "offset": {
@@ -3538,7 +3769,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 85
             }]
         }
       }
@@ -3574,7 +3806,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 86
             }]
         }
       }
@@ -3610,7 +3843,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 69
             }]
         }
       }
@@ -3646,7 +3880,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 72
             }]
         }
       }
@@ -3682,7 +3917,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 75
             }]
         }
       }
@@ -3718,7 +3954,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 70
             }]
         }
       }
@@ -3754,7 +3991,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 71
             }]
         }
       }
@@ -3790,7 +4028,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 73
             }]
         }
       }
@@ -3826,7 +4065,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 74
             }]
         }
       }
@@ -3862,7 +4102,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 76
             }]
         }
       }
@@ -3898,7 +4139,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 77
             }, {
               "midi_pitch": 43,
               "offset": {
@@ -3908,7 +4150,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 78
             }]
         }
       }
@@ -3944,7 +4187,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 79
             }]
         }
       }
@@ -3980,7 +4224,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 87
             }]
         }
       }
@@ -4016,7 +4261,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 88
             }]
         }
       }
@@ -4052,7 +4298,8 @@
               "duration": {
                 "num": 1,
                 "den": 2
-              }
+              },
+              "id": 89
             }]
         }
       }
@@ -4088,7 +4335,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 90
             }]
         }
       }

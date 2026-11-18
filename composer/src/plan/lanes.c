@@ -169,6 +169,12 @@ void plan_note_ids_assign(PiecePlan *plan, PlanNote *notes, size_t count, LaneSp
     }
 }
 
+void plan_note_next_id_set(PiecePlan *plan, PlanNoteId next) {
+    if (plan && next > plan->next_note_id) {
+        plan->next_note_id = next;
+    }
+}
+
 PlanNoteId plan_next_note_id(const PiecePlan *plan) {
     return plan ? plan->next_note_id : 0;
 }

@@ -375,7 +375,7 @@ static void export_plan(const char *plan_text, ComposerResponse *response) {
     cJSON_Delete(request);
 }
 
-/* The plans of formats 1, 2 and 3 are the same plan: read, written (always in format 3) and exported they are the same. */
+/* The plans of formats 1, 2, 3 and 4 are the same plan: read, written (always in format 4) and exported they are the same. */
 static void test_plan_formats(void) {
     static const char *const FIXTURES[] = {"sentence_c_major.json", "sentence_c_to_g.json", "period_a_minor.json"};
     for (size_t i = 0; i < sizeof(FIXTURES) / sizeof(FIXTURES[0]); i++) {
@@ -386,8 +386,11 @@ static void test_plan_formats(void) {
         PiecePlan *read = NULL;
         PlanJsonError error;
         assert(plan_from_json(test_knowledge(), v1, &read, &error) == PLAN_OK);
-        char *v3 = plan_to_json(read, &error);
-        assert(v3 && strstr(v3, "\"format_version\": 3") && strstr(v3, "\"mode\"") == NULL && strstr(v3, "omt.material.") != NULL);
+        char *v4 = plan_to_json(read, &error);
+        assert(v4 && strstr(v4, "\"format_version\": 4") && strstr(v4, "\"mode\"") == NULL && strstr(v4, "omt.material.") != NULL);
+        /* format 3 is the same text without the note ids */
+        char *v3 = test_plan_text_as_format_three(v4);
+        assert(v3 && strstr(v3, "\"format_version\": 3") && strstr(v3, "next_note_id") == NULL);
 
         /* format 2 names the mode: major or minor, where format 3 names the material */
         char *v2 = replace_all(v3, "\"format_version\": 3", "\"format_version\": 2");
@@ -406,25 +409,29 @@ static void test_plan_formats(void) {
         ComposerResponse from_v1;
         ComposerResponse from_v2;
         ComposerResponse from_v3;
+        ComposerResponse from_v4;
         export_plan(v1, &from_v1);
         export_plan(v2, &from_v2);
         export_plan(v3, &from_v3);
-        assert(from_v1.midi_size > 14 && same_reply(&from_v1, &from_v2) && same_reply(&from_v1, &from_v3));
+        export_plan(v4, &from_v4);
+        assert(from_v1.midi_size > 14 && same_reply(&from_v1, &from_v2) && same_reply(&from_v1, &from_v3) && same_reply(&from_v1, &from_v4));
         composer_response_destroy(&from_v1);
         composer_response_destroy(&from_v2);
         composer_response_destroy(&from_v3);
+        composer_response_destroy(&from_v4);
 
-        /* every format writes back as the format 3 text */
+        /* every format writes back as the format 4 text (a format 1 to 3 file gets its note ids 1 to n in file order) */
         PiecePlan *again = NULL;
         assert(plan_from_json(test_knowledge(), v2, &again, &error) == PLAN_OK);
         char *written = plan_to_json(again, &error);
-        assert(written && strcmp(written, v3) == 0);
+        assert(written && strcmp(written, v4) == 0);
         free(written);
         plan_destroy(again);
         plan_destroy(read);
         free(v1);
         free(v2);
         free(v3);
+        free(v4);
     }
 }
 

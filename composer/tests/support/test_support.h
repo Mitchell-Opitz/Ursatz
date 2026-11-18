@@ -13,6 +13,13 @@
 void test_write_text(const char *path, const char *text);
 
 /*
+ * A plan text of format 4 as the format 3 text the same plan had: `format_version` 3, no `next_note_id`, and no `id`, `source` or
+ * `operation` on a note. For the tests that read older formats (what the plan reads from them is checked against the plan the
+ * format 4 text holds). Newly allocated; the caller frees it. NULL when the text is not JSON.
+ */
+char *test_plan_text_as_format_three(const char *text);
+
+/*
  * The notes of a MIDI file through Ursatz's complete import (midi_importer_import_complete): the NoteEvents and their
  * index-paired PitchNumericValues, newly allocated arrays the caller owns (destroy each, then free both arrays), in
  * time order. The rest of the import is destroyed. On failure nothing is written.
