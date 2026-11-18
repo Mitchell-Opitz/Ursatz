@@ -40,6 +40,7 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/relationship.md](modules/relationship.md): L6 relationship: typed links between entities.
 - [docs/modules/interpretation.md](modules/interpretation.md): L6 interpretation: claims, chords, keys, uncertainty.
 - [docs/modules/theory.md](modules/theory.md): L7 theory: Theory Framework type, style models.
+- [docs/modules/knowledge.md](modules/knowledge.md): L7 knowledge: the snapshot of knowledge entries, the instrument kind.
 - [docs/modules/rules.md](modules/rules.md): L7 rules: Rule, Constraint, Preference and their callbacks.
 - [docs/modules/analysis.md](modules/analysis.md): L8 analysis: overview of the analyzers and what is deferred.
 - [docs/modules/io.md](modules/io.md): L9 io: importers, key signature scans, neutral import notes.
