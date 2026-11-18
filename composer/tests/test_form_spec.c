@@ -2723,6 +2723,114 @@ static int test_modulates(void) {
     return status;
 }
 
+/* ------------------------------------------------------------- the section rules of the Composer (R-605, R-606) */
+
+/* The text is refused naming `path` with a message that holds `message`. */
+static void refused_with(const char *text, const char *path, const char *message) {
+    FormSpec *form = NULL;
+    FormSpecError error;
+    FormSpecResult result = form_spec_parse(text, &form, &error);
+    if (result != FORM_SPEC_ERR_INVALID || form != NULL || strcmp(error.path, path) != 0 || strstr(error.message, message) == NULL) {
+        fprintf(stderr, "expected a refusal at '%s' with '%s', got result %d at '%s': %s\n%s\n", path, message, (int)result,
+                error.path, error.message, text);
+        exit(1);
+    }
+}
+
+/* A size of two sections: the first A, a theme of 8 bars, then `second` (its members, with the name B). */
+static void two_sections(char *out, size_t cap, const char *region, const char *second) {
+    snprintf(out, cap,
+             "{\"schema\": \"ursatz-form\", \"version\": 2, \"name\": \"t\", \"label\": \"T\", \"regions\": [%s], \"sizes\": "
+             "[{\"bars\": 16, \"default\": true, \"sections\": ["
+             "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"antecedent\", "
+             "\"ending\": \"consequent\", \"cadence\": \"perfect-authentic\", \"closed\": true}, "
+             "{\"name\": \"B\", \"letter\": \"B\", %s}]}]}",
+             region, second);
+}
+
+#define AWAY "{\"name\": \"away\", \"major\": [\"omt.relation.dominant\"], \"minor\": [\"omt.relation.mediant\"]}"
+#define PAIR_PRESENTATION "\"beginning\": \"presentation\", \"ending\": \"continuation\""
+#define THEME_B "\"role\": \"theme\", \"bars\": 8, " PAIR_PRESENTATION ", \"cadence\": \"half\""
+
+/* Regions list relations; a section is read by the library codec, then checked here; each refusal names its path and says why. */
+static void test_section_rules(void) {
+    FormSpec *form = NULL;
+    FormSpecError error;
+    char text[4096];
+    /* the regions: relation ids of the snapshot */
+    two_sections(text, sizeof(text), AWAY, THEME_B);
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    assert(form->region_count == 1 && strcmp(form->regions[0].major[0], "omt.relation.dominant") == 0 &&
+           strcmp(form->regions[0].minor[0], "omt.relation.mediant") == 0);
+    form_spec_destroy(form);
+    two_sections(text, sizeof(text), "{\"name\": \"away\", \"major\": [5], \"minor\": [\"omt.relation.mediant\"]}", THEME_B);
+    refused_with(text, "/regions/0/major/0", "must be a relation id");
+    two_sections(text, sizeof(text), "{\"name\": \"away\", \"major\": [], \"minor\": [\"omt.relation.mediant\"]}", THEME_B);
+    refused_with(text, "/regions/0/major", "must hold 1 to 8 relations");
+    /* a cadence abbreviation reads as its kind's name */
+    two_sections(text, sizeof(text), "", "\"role\": \"theme\", \"bars\": 8, " PAIR_PRESENTATION ", \"cadence\": \"HC\"");
+    assert(form_spec_parse(text, &form, &error) == FORM_SPEC_OK);
+    assert(form->sizes[0].sections[1].cadence == CADENCE_TYPE_HALF && strcmp(form->sizes[0].sections[1].cadence_name, "half") == 0);
+    form_spec_destroy(form);
+
+    /* the library's rules, through the codec, at their path under the section */
+    two_sections(text, sizeof(text), "", THEME_B ", \"returns\": \"A\", \"variation\": \"setting\"");
+    refused_with(text, "/sizes/0/sections/1/variation", "a setting return names its setting");
+    two_sections(text, sizeof(text), "", THEME_B ", \"nonsense\": 1");
+    refused_with(text, "/sizes/0/sections/1/nonsense", "unknown member");
+    two_sections(text, sizeof(text), "", THEME_B ", \"harmony\": {\"schema\": \"x\"}");
+    refused_with(text, "/sizes/0/sections/1/harmony", "is not given here");
+
+    /* the rules of the Composer */
+    two_sections(text, sizeof(text), "", THEME_B);
+    char *repeated = replaced_in(text, "{\"name\": \"B\", \"letter\": \"B\"", "{\"name\": \"A\", \"letter\": \"B\"");
+    refused_with(repeated, "/sizes/0/sections/1/name", "section name \"A\" repeated in the size");
+    free(repeated);
+    two_sections(text, sizeof(text), "", THEME_B ", \"name\": \"A\"");
+    refused_with(text, "/sizes/0/sections/1/name", "member given twice");
+    two_sections(text, sizeof(text), AWAY, "\"role\": \"theme\", \"bars\": 8, " PAIR_PRESENTATION ", \"cadence\": \"half\", \"keys\": {\"end\": \"nowhere\"}");
+    refused_with(text, "/sizes/0/sections/1/keys/end", "unknown region \"nowhere\"");
+    two_sections(text, sizeof(text), "", THEME_B ", \"returns\": \"Z\"");
+    refused_with(text, "/sizes/0/sections/1/returns", "\"Z\" is not an earlier section of the size");
+    two_sections(text, sizeof(text), "", THEME_B ", \"returns\": \"B\"");
+    refused_with(text, "/sizes/0/sections/1/returns", "\"B\" is not an earlier section of the size");
+    two_sections(text, sizeof(text), "", THEME_B ", \"returns\": \"A\", \"construction\": \"auto\"");
+    refused_with(text, "/sizes/0/sections/1/construction", "a return keeps the construction of A");
+    two_sections(text, sizeof(text), "", THEME_B ", \"motive\": \"nonsense\"");
+    refused_with(text, "/sizes/0/sections/1/motive", "not a motive relation: \"nonsense\"");
+    two_sections(text, sizeof(text), "", "\"role\": \"liquidation\", \"bars\": 8, \"cadence\": \"half\"");
+    refused_with(text, "/sizes/0/sections/1/bars", "a liquidation is 4 bars");
+    two_sections(text, sizeof(text), "", "\"role\": \"retransition\", \"bars\": 8, \"cadence\": \"half\"");
+    refused_with(text, "/sizes/0/sections/1/bars", "a retransition is 4 bars");
+    two_sections(text, sizeof(text), "", "\"role\": \"coda\", \"bars\": 4, \"cadence\": \"perfect-authentic\"");
+    refused_with(text, "/sizes/0/sections/1/bars", "a coda is 8 bars");
+    two_sections(text, sizeof(text), "", "\"role\": \"liquidation\", \"bars\": 4, \"cadence\": \"perfect-authentic\"");
+    refused_with(text, "/sizes/0/sections/1/cadence", "a liquidation ends in a half cadence");
+    two_sections(text, sizeof(text), "", "\"role\": \"retransition\", \"bars\": 4, \"cadence\": \"perfect-authentic\"");
+    refused_with(text, "/sizes/0/sections/1/cadence", "a retransition ends in a half cadence");
+    two_sections(text, sizeof(text), "", "\"role\": \"transition\", \"bars\": 4, " PAIR_PRESENTATION ", \"cadence\": \"perfect-authentic\"");
+    refused_with(text, "/sizes/0/sections/1/cadence", "a transition ends in a half cadence");
+    two_sections(text, sizeof(text), "", "\"role\": \"coda\", \"bars\": 8, \"cadence\": \"half\"");
+    refused_with(text, "/sizes/0/sections/1/cadence", "a coda ends in a perfect authentic cadence");
+    two_sections(text, sizeof(text), "", "\"role\": \"theme\", \"bars\": 8, " PAIR_PRESENTATION ", \"cadence\": \"deceptive\"");
+    refused_with(text, "/sizes/0/sections/1/cadence", "a section ends in a perfect authentic, imperfect authentic or half cadence");
+    two_sections(text, sizeof(text), "", "\"role\": \"transition\", \"bars\": 4, \"beginning\": \"antecedent\", \"ending\": \"continuation\", \"cadence\": \"half\"");
+    refused_with(text, "/sizes/0/sections/1/beginning", "a transition begins with a presentation or a compound basic idea");
+    two_sections(text, sizeof(text), "", "\"role\": \"transition\", \"bars\": 4, \"beginning\": \"presentation\", \"ending\": \"consequent\", \"cadence\": \"half\"");
+    refused_with(text, "/sizes/0/sections/1/ending", "a transition ends with a continuation");
+    two_sections(text, sizeof(text), AWAY, "\"role\": \"transition\", \"bars\": 4, " PAIR_PRESENTATION ", \"cadence\": \"half\", \"keys\": {\"end\": \"away\"}");
+    refused_with(text, "/sizes/0/sections/1/bars", "a transition that modulates is 8 bars");
+    two_sections(text, sizeof(text), "", "\"role\": \"theme\", \"bars\": 6, " PAIR_PRESENTATION ", \"cadence\": \"half\"");
+    refused_with(text, "/sizes/0/sections/1/bars", "a theme-like section of 6 bars needs a construction; only 4 or 8 bars have none");
+    two_sections(text, sizeof(text), "", "\"role\": \"theme\", \"bars\": 20, " PAIR_PRESENTATION ", \"cadence\": \"half\", \"construction\": \"auto\"");
+    refused_with(text, "/sizes/0/sections/1/bars", "a section with a construction is 3 to 16 bars");
+    two_sections(text, sizeof(text), "", "\"role\": \"theme\", \"bars\": 6, " PAIR_PRESENTATION ", \"cadence\": \"half\", \"construction\": {\"ideas\": {\"basic idea\": 2}}");
+    refused_with(text, "/sizes/0/sections/1/construction", "the construction adds up to 2 bars but the section is 6");
+    two_sections(text, sizeof(text), "", "\"role\": \"theme\", \"bars\": 8, " PAIR_PRESENTATION ", \"cadence\": \"half\", \"leads_in\": true");
+    /* a section that leads in is the last of the size: refused with the size's rules */
+    refused_with(text, "/sizes/0/sections/1/leads_in", "the last section of a size has no section to lead into");
+}
+
 int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "modulates") == 0) {
         return test_modulates();
@@ -2767,6 +2875,7 @@ int main(int argc, char **argv) {
     test_setting_reader();
     test_parts_reader();
     test_elaboration_role();
+    test_section_rules();
     printf("form documents: %zu built-in forms and the game loop, the reader's refusals and the sizes are as docs/forms.md says\n", FORM_COUNT);
     return 0;
 }

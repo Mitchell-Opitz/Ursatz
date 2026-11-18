@@ -49,6 +49,17 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         PROPERTIES FIXTURES_REQUIRED plan_files_written RESOURCE_LOCK plan_json_files)
 endif()
 
+# Every built-in form validates against the form schema, which references the section fragment of the plan group.
+if(URSATZ_JSONSCHEMA_PYTHON)
+    ursatz_test(test_form_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/form.v2.schema.json
+                     -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
+                     -DFORMS_DIR=${PROJECT_SOURCE_DIR}/forms
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_form_schema.cmake
+        LABELS schema)
+endif()
+
 ursatz_test(test_render_plan LIBS ursatz_composer DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
 add_dependencies(test_render_plan ursatz-composer)
 

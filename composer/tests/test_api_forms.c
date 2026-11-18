@@ -351,6 +351,34 @@ static void test_independent_and_lyric(void) {
     }
 }
 
+/* A liquidation, a retransition and a coda are grown by an operator: they have no beginning, no ending and no slots (null); every other section has all three. */
+static void test_operator_sections(void) {
+    size_t liquidations = 0;
+    size_t retransitions = 0;
+    size_t codas = 0;
+    size_t others = 0;
+    const cJSON *form = NULL;
+    cJSON_ArrayForEach(form, member(forms, "forms")) {
+        const cJSON *size = NULL;
+        cJSON_ArrayForEach(size, member(form, "sizes")) {
+            const cJSON *section = NULL;
+            cJSON_ArrayForEach(section, member(size, "sections")) {
+                const char *role = text(member(section, "role"), "value");
+                bool operator_section = strcmp(role, "liquidation") == 0 || strcmp(role, "retransition") == 0 || strcmp(role, "coda") == 0;
+                assert(cJSON_IsNull(member(section, "beginning")) == operator_section);
+                assert(cJSON_IsNull(member(section, "ending")) == operator_section);
+                assert(cJSON_IsNull(member(section, "slots")) == operator_section);
+                assert(operator_section || cJSON_IsArray(member(section, "slots")));
+                liquidations += strcmp(role, "liquidation") == 0;
+                retransitions += strcmp(role, "retransition") == 0;
+                codas += strcmp(role, "coda") == 0;
+                others += operator_section ? 0 : 1;
+            }
+        }
+    }
+    assert(liquidations > 0 && retransitions > 0 && codas > 0 && others > 0);
+}
+
 static void test_layered(void) {
     const cJSON *form = form_named("layered");
     assert(strcmp(text(member(form, "settings"), "accompaniment"), "required") == 0);
@@ -596,6 +624,7 @@ int main(void) {
     test_sonatina_forms();
     test_independent_and_lyric();
     test_layered();
+    test_operator_sections();
     test_pedal();
     test_minuet();
     test_scherzo();
