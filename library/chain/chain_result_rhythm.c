@@ -1,6 +1,7 @@
 #include "chain/chain_result_rhythm.h"
 
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,191 +40,54 @@ static int size_less(const void *left, const void *right) {
     return a < b ? -1 : (a > b ? 1 : 0);
 }
 
-/* The line of a note in the library's input: 0 the outer-voice soprano, 1 the bass, 2 any other. */
-#define LINE_SOPRANO 0
-#define LINE_BASS 1
-#define LINE_OTHER 2
-
-/* An id of the input and the ImportedScore index of its note. */
+/* The library's input (built by chain_build_meter_input, the one meter input builder) and what maps it back to the score. */
 typedef struct {
-    const char *id;
-    size_t note;
-} IdIndex;
-
-/* The library's input and what keeps it alive: the notes it borrows, and the index of each id. */
-typedef struct {
-    StandardMeterInput input;
-    AnalysisNote *notes; /* the input's notes, in import order: the library's input borrows them */
-    size_t note_count;
-    IdIndex *ids; /* sorted by id; one per input note */
-    size_t id_count;
-    int *lines;   /* per ImportedScore index: its line, or -1 for a note left out of the input */
+    ChainMeterInput meter;
+    const ChainScoreInput *score; /* the chain's neutral input: the ImportedScore index of a note id */
+    int *lines; /* per ImportedScore index: its line (0 the outer soprano, 1 the bass, 2 any other), or -1 for a note not in the input */
 } RhythmBuild;
 
 static void build_destroy(RhythmBuild *build) {
-    standard_meter_input_destroy(&build->input);
-    free(build->notes);
-    free(build->ids);
+    chain_meter_input_destroy(&build->meter);
     free(build->lines);
     memset(build, 0, sizeof(*build));
 }
 
-static int compare_ids(const void *a, const void *b) {
-    return strcmp(*(const char *const *)a, *(const char *const *)b);
-}
-
-/* The ids of the notes the line takes, sorted. NULL with count 0 on failure; *out_count is the number of ids. */
-static const char **line_ids(const OuterVoiceEntry *entries, size_t count, size_t *out_count) {
-    const char **ids = malloc((count == 0 ? 1 : count) * sizeof(char *));
-    if (!ids) {
-        return NULL;
-    }
-    size_t n = 0;
-    for (size_t s = 0; s < count; s++) {
-        if (entries[s].present && entries[s].note_id != NULL) {
-            ids[n++] = entity_id_value(entries[s].note_id);
-        }
-    }
-    qsort(ids, n, sizeof(char *), compare_ids);
-    *out_count = n;
-    return ids;
-}
-
-static bool in_ids(const char **ids, size_t count, const char *id) {
-    return bsearch(&id, ids, count, sizeof(char *), compare_ids) != NULL;
-}
-
-static int compare_id_index(const void *a, const void *b) {
-    return strcmp(((const IdIndex *)a)->id, ((const IdIndex *)b)->id);
-}
-
-/* The input's notes: every imported note with a length, in import order. A note the library refuses as invalid is left
-   out (its line stays -1). */
-static bool build_notes(RhythmBuild *build, const ImportedScore *notes, const OuterVoiceLines *lines) {
-    const MeterMap *map = notes->meter.meter_map;
-    size_t soprano_count = 0;
-    size_t bass_count = 0;
-    const char **soprano = line_ids(lines->soprano, lines->count, &soprano_count);
-    const char **bass = line_ids(lines->bass, lines->count, &bass_count);
-    bool ok = soprano && bass && (build->lines = malloc((notes->count + 1) * sizeof(int))) != NULL &&
-              (build->notes = calloc(notes->count + 1, sizeof(AnalysisNote))) != NULL;
-    for (size_t i = 0; ok && i < notes->count; i++) {
-        build->lines[i] = -1;
-        const NoteEvent *event = notes->events[i];
-        MusicalTime onset = *temporal_anchor_position(note_event_temporal_anchor(event));
-        MusicalTime release;
-        TimeSpan span;
-        if (musical_time_plus(onset, *note_event_duration(event), &release) != MUSICAL_TIME_OK ||
-            time_span_make(onset, release, &span) != TIME_SPAN_OK) {
-            ok = false;
-            break;
-        }
-        const char *id = entity_id_value(note_event_id(event));
-        int line = in_ids(soprano, soprano_count, id) ? LINE_SOPRANO : (in_ids(bass, bass_count, id) ? LINE_BASS : LINE_OTHER);
-        /* A note the library would refuse (an empty or too long id, a span that is not ahead) is left out. */
-        if (id[0] == '\0' || strlen(id) >= STANDARD_METER_ID_MAX || !time_span_holds(span)) {
-            continue;
-        }
-        long pitch = pitch_numeric_value_position_numerator(notes->pitch_values[i]);
-        build->notes[build->note_count++] = (AnalysisNote){.note_id = id,
-                                                           .span = span,
-                                                           .midi = pitch >= 0 && pitch <= 127 ? (int)pitch
-                                                                                              : ANALYSIS_PITCH_UNKNOWN,
-                                                           .track = ANALYSIS_INDEX_NONE,
-                                                           .voice = (size_t)line,
-                                                           .voice_confidence = 1.0};
-        build->lines[i] = line;
-    }
-    free(soprano);
-    free(bass);
-    if (!ok || standard_meter_input_init(&build->input, map, build->notes, build->note_count) != STANDARD_METER_ANALYSIS_OK) {
-        return false;
-    }
-    build->ids = malloc((build->input.note_count + 1) * sizeof(IdIndex));
-    if (!build->ids) {
-        return false;
-    }
-    size_t next = 0;
-    for (size_t i = 0; i < notes->count; i++) {
-        if (build->lines[i] >= 0) {
-            build->ids[next].id = build->input.notes[next].note_id;
-            build->ids[next].note = i;
-            next++;
-        }
-    }
-    build->id_count = next;
-    qsort(build->ids, build->id_count, sizeof(IdIndex), compare_id_index);
-    return true;
-}
-
 /* The ImportedScore index of the input note with the id, or SIZE_MAX with none. */
 static size_t note_of_id(const RhythmBuild *build, const char *id) {
-    IdIndex key = {id, 0};
-    const IdIndex *found = bsearch(&key, build->ids, build->id_count, sizeof(IdIndex), compare_id_index);
-    return found ? found->note : SIZE_MAX;
+    size_t index = chain_score_input_import_index(build->score, id);
+    return index == (size_t)-1 ? SIZE_MAX : index;
 }
 
-/* A chord change at the start of every chord segment whose harmony differs from the segment before it (the first
-   segment is not one: nothing changes into it). */
-static bool build_chord_changes(RhythmBuild *build, const ChainResult *report) {
-    bool *change = NULL;
-    if (!harmonic_rhythm_change_flags(report->entries, report->entry_count, &change)) {
+/* The input of every note, a chord change at the start of every chord segment whose harmony differs from the one before it (the
+   harmonic rhythm's definition: another base numeral or key region) and the form stage's phrases with the arrival of their
+   cadence and the length change of their expansion, all from the chain's one builder. Pickups count (first measure 0). */
+static bool build_input(RhythmBuild *build, const ImportedScore *notes, const ChainScoreInput *input, const OuterVoiceLines *lines,
+                        const ChainSegments *segments, const FormStage *form, const ChainResult *report) {
+    bool *changes = NULL;
+    if (!harmonic_rhythm_change_flags(report->entries, report->entry_count, &changes)) {
         return false;
     }
-    for (size_t i = 1; i < report->entry_count; i++) {
-        const ChainEntry *entry = &report->entries[i];
-        if (!change[i]) {
-            continue;
-        }
-        MusicalTime time;
-        char id[48];
-        snprintf(id, sizeof(id), "chord-change-%zu", i);
-        if (musical_time_make(entry->time.num, (long long)entry->time.den, &time) != MUSICAL_TIME_OK ||
-            standard_meter_input_add_chord_change(&build->input, id, time) != STANDARD_METER_ANALYSIS_OK) {
-            free(change);
-            return false;
-        }
+    ChainInputStatus built = chain_build_meter_input(&input->set, lines, segments, changes, 0, INT_MAX, &form->built.input,
+                                                     &form->phrases, &form->expansions, &build->meter);
+    free(changes);
+    if (built != CHAIN_INPUT_OK) {
+        return false;
     }
-    free(change);
-    return true;
-}
-
-/* The form stage's phrases as the library's phrases: the span with its extension, the arrival chord of the cadence and
-   the length change of the expansion that concerns the phrase. */
-static bool build_phrases(RhythmBuild *build, const FormStage *form) {
-    const StandardFormPhrases *phrases = &form->phrases;
-    for (size_t i = 0; i < phrases->count; i++) {
-        const StandardFormPhrase *phrase = &phrases->items[i];
-        const TimeSpan *arrival = phrase->claim.cadence_index >= 0
-                                      ? &form->built.input.cadences[phrase->claim.cadence_index].arrival
-                                      : NULL;
-        StandardMeterExpansionKind expansion = STANDARD_METER_EXPANSION_NONE;
-        int measures = 0;
-        for (size_t e = 0; e < form->expansions.count; e++) {
-            const StandardFormExpansionClaim *claim = &form->expansions.items[e].claim;
-            if (claim->phrase != phrase->claim.index) {
-                continue;
-            }
-            switch (claim->kind) {
-                case STANDARD_FORM_EXPANSION_INTERNAL:
-                    expansion = STANDARD_METER_EXPANSION_INTERNAL;
-                    break;
-                case STANDARD_FORM_EXPANSION_EXTERNAL:
-                    expansion = STANDARD_METER_EXPANSION_EXTERNAL;
-                    break;
-                default:
-                    expansion = STANDARD_METER_EXPANSION_CONTRACTION;
-                    break;
-            }
-            measures = claim->measures_changed;
-            break;
-        }
-        char id[48];
-        snprintf(id, sizeof(id), "phrase-%zu", i);
-        if (standard_meter_input_add_phrase(&build->input, id, phrase->span, arrival, expansion, measures, false) !=
-            STANDARD_METER_ANALYSIS_OK) {
+    build->score = input;
+    build->lines = malloc((notes->count + 1) * sizeof(int));
+    if (!build->lines) {
+        return false;
+    }
+    for (size_t i = 0; i < notes->count; i++) {
+        build->lines[i] = -1;
+    }
+    for (size_t k = 0; k < build->meter.note_count; k++) {
+        size_t note = note_of_id(build, build->meter.notes[k].note_id);
+        if (note == SIZE_MAX) {
             return false;
         }
+        build->lines[note] = (int)build->meter.notes[k].voice;
     }
     return true;
 }
@@ -234,10 +98,10 @@ static bool build_phrases(RhythmBuild *build, const FormStage *form) {
    is in the phrase's span. */
 static size_t *phrase_notes(const RhythmBuild *build, const ImportedScore *notes, size_t phrase, int line, size_t *count) {
     StandardMeterConfig config = standard_meter_config_default();
-    Rational start = build->input.phrases[phrase].span.start.value;
-    Rational end = build->input.phrases[phrase].span.end.value;
+    Rational start = build->meter.input.phrases[phrase].span.start.value;
+    Rational end = build->meter.input.phrases[phrase].span.end.value;
     *count = 0;
-    size_t *ids = malloc((build->input.note_count + 1) * sizeof(size_t));
+    size_t *ids = malloc((build->meter.input.note_count + 1) * sizeof(size_t));
     if (!ids) {
         free(ids);
         return NULL;
@@ -262,7 +126,7 @@ static size_t *phrase_notes(const RhythmBuild *build, const ImportedScore *notes
 
 static bool collect_densities(const RhythmBuild *build, const ImportedScore *notes, ChainResult *report) {
     StandardMeterDensities densities = {NULL, 0};
-    if (standard_meter_find_densities(&build->input, NULL, &densities) != STANDARD_METER_ANALYSIS_OK) {
+    if (standard_meter_find_densities(&build->meter.input, NULL, &densities) != STANDARD_METER_ANALYSIS_OK) {
         return false;
     }
     size_t count = densities.count;
@@ -313,9 +177,35 @@ static const char *level_name(int level) {
     return level >= 0 && level < 5 ? NAMES[level] : "finer";
 }
 
+/* Two syncopations of one place and kind, apart from the note. */
+static bool same_syncopation_but_note(const AnalysisSyncopation *x, const AnalysisSyncopation *y) {
+    return x->line == y->line && x->measure == y->measure && x->beat == y->beat && x->attack_level == y->attack_level &&
+           x->through_level == y->through_level && x->strength == y->strength &&
+           x->through_measure == y->through_measure && x->through_beat == y->through_beat;
+}
+
+static int syncopation_by_note(const void *a, const void *b) {
+    size_t x = ((const AnalysisSyncopation *)a)->note;
+    size_t y = ((const AnalysisSyncopation *)b)->note;
+    return x < y ? -1 : (x > y ? 1 : 0);
+}
+
+/* The library reports the syncopations of notes that start together in the input's own order; the report keeps the order of
+   the score: a run of syncopations of one place and kind is in the order of its notes. */
+static void order_runs_by_note(AnalysisSyncopation *items, size_t count) {
+    for (size_t first = 0; first < count;) {
+        size_t last = first + 1;
+        while (last < count && same_syncopation_but_note(&items[first], &items[last])) {
+            last++;
+        }
+        qsort(items + first, last - first, sizeof(AnalysisSyncopation), syncopation_by_note);
+        first = last;
+    }
+}
+
 static bool collect_syncopations(const RhythmBuild *build, ChainResult *report) {
     StandardMeterSyncopations found = {NULL, 0};
-    if (standard_meter_find_syncopations(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
+    if (standard_meter_find_syncopations(&build->meter.input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
         return false;
     }
     size_t count = found.count;
@@ -343,6 +233,7 @@ static bool collect_syncopations(const RhythmBuild *build, ChainResult *report) 
         free(items);
         return false;
     }
+    order_runs_by_note(items, count);
     report->syncopations = items;
     report->syncopation_count = count;
     return true;
@@ -359,7 +250,7 @@ static void free_hemiolas(AnalysisHemiola *items, size_t count) {
 
 static bool collect_hemiolas(const RhythmBuild *build, ChainResult *report) {
     StandardMeterHemiolas found = {NULL, 0};
-    if (standard_meter_find_hemiolas(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
+    if (standard_meter_find_hemiolas(&build->meter.input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
         return false;
     }
     size_t count = found.count;
@@ -429,7 +320,7 @@ static void free_hypermeters(AnalysisHypermeter *items, size_t count) {
 static bool collect_hypermeter(const RhythmBuild *build, const ImportedScore *notes, ChainResult *report) {
     StandardMeterHypermeter found;
     memset(&found, 0, sizeof(found));
-    if (standard_meter_find_hypermeter(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
+    if (standard_meter_find_hypermeter(&build->meter.input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
         return false;
     }
     size_t count = found.phrase_count;
@@ -489,17 +380,15 @@ static const char *tuplet_level_name(TupletLevel level) {
     return level == TUPLET_LEVEL_BEAT ? "beat" : (level == TUPLET_LEVEL_SUBDIVISION ? "subdivision" : "multi-beat");
 }
 
-/* Every note of the input, in import order, as the library's note set, and the tuplets the library finds in it. The
-   library orders the notes of equal onset itself and does not need the set sorted; import order keeps the order of
-   the notes of a tuplet that the report has always had. It reads all notes as one stream: a tuplet is a figure of the
-   music, not of a line. */
+/* Every note of the input as the library's note set, and the tuplets the library finds in it. It reads all notes as one
+   stream: a tuplet is a figure of the music, not of a line. */
 static bool collect_tuplets(const RhythmBuild *build, const ImportedScore *notes, ChainResult *report) {
     (void)notes;
-    size_t count = build->input.note_count;
-    const AnalysisNote *set_notes = build->input.notes;
+    size_t count = build->meter.input.note_count;
+    const AnalysisNote *set_notes = build->meter.input.notes;
     StandardMeterTuplets found = {NULL, 0};
     AnalysisTuplet *items = NULL;
-    AnalysisNoteSet set = {set_notes, count, build->input.map};
+    AnalysisNoteSet set = {set_notes, count, build->meter.input.map};
     bool ok = standard_meter_find_tuplets(&set, NULL, &found) == STANDARD_METER_ANALYSIS_OK;
     if (ok && found.count > 0) {
         items = calloc(found.count, sizeof(AnalysisTuplet));
@@ -517,6 +406,8 @@ static bool collect_tuplets(const RhythmBuild *build, const ImportedScore *notes
             item->note_ids[k] = note_of_id(build, set_notes[tuplet->notes[k]].note_id);
         }
         item->note_id_count = tuplet->note_count;
+        /* The notes of a tuplet in import order, as the report has always had them (the input is in time order). */
+        qsort(item->note_ids, item->note_id_count, sizeof(size_t), size_less);
         item->framework = framework_name(standard_meter_framework());
         item->actual = tuplet->actual;
         item->normal = tuplet->normal;
@@ -546,16 +437,16 @@ static bool collect_tuplets(const RhythmBuild *build, const ImportedScore *notes
     return true;
 }
 
-bool rhythm_stage_collect(const ImportedScore *notes, const OuterVoiceLines *lines, const FormStage *form,
-                          ChainResult *report) {
+bool rhythm_stage_collect(const ImportedScore *notes, const ChainScoreInput *input, const OuterVoiceLines *lines,
+                          const ChainSegments *segments, const FormStage *form, ChainResult *report) {
     const MeterMap *map = notes->meter.meter_map;
     if (!map || notes->count == 0 || !form->have_input || form->phrases.count == 0 ||
-        form->phrases.count != report->phrase_count || lines->count == 0) {
+        form->phrases.count != report->phrase_count || lines->count == 0 || !segments) {
         return true;
     }
     RhythmBuild build;
     memset(&build, 0, sizeof(build));
-    bool ok = build_notes(&build, notes, lines) && build_chord_changes(&build, report) && build_phrases(&build, form) &&
+    bool ok = build_input(&build, notes, input, lines, segments, form, report) &&
               collect_densities(&build, notes, report) && collect_syncopations(&build, report) &&
               collect_hemiolas(&build, report) && collect_hypermeter(&build, notes, report) &&
               collect_tuplets(&build, notes, report);

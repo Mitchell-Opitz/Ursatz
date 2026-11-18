@@ -272,7 +272,7 @@ static bool collect_pass(ChainCollect *pass) {
     RUN(melody_stage_collect(notes, &pass->input, pass->library, segmentation, report));
     /* The rhythm input reads the voice lines (analysis_chain_outer_voices), one entry per melody note: the lines the
        library chain's own meter reads (R-377), so the report's meter claims agree with the chain's. */
-    RUN_STAGE(ANALYSIS_CHAIN_STAGE_RHYTHM, rhythm_stage_collect(notes, &pass->lines, &pass->form, report));
+    RUN_STAGE(ANALYSIS_CHAIN_STAGE_RHYTHM, rhythm_stage_collect(notes, &pass->input, &pass->lines, analysis_chain_segments(pass->library), &pass->form, report));
     RUN(texture_stage_collect(notes, pass->library, report));
     RUN_STAGE(ANALYSIS_CHAIN_STAGE_MARKINGS, markings_stage_collect(notes, report));
     RUN(voice_leading_stage_collect(notes, &pass->input, pass->library, &pass->harmony, report));

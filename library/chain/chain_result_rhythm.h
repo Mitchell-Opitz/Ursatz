@@ -6,8 +6,11 @@
 #include <chain/chain_result.h>
 #include <io/imported_score.h>
 
+#include "chain/chain_inputs.h"
+
 #include "analysis/voices/outer_voice.h"
 #include "chain/chain_result_form.h"
+#include "chain/chain_score_input.h"
 
 /*
  * The rhythm and meter of the piece, from the neutral input of Ursatz's standard-meter adapter
@@ -25,8 +28,10 @@
  * an error. Fills the report's densities here and the later results in the stages below it.
  */
 
-/* Returns false only on allocation or library failure. lines is the chain's outer voice lines. */
-bool rhythm_stage_collect(const ImportedScore *notes, const OuterVoiceLines *lines, const FormStage *form,
-                          ChainResult *report);
+/* Returns false only on allocation or library failure. input is the chain's neutral input of the score (note ids to score
+   indices), lines the chain's outer voice lines and segments its chord segments; the library input is the chain's one meter
+   input (chain_build_meter_input). */
+bool rhythm_stage_collect(const ImportedScore *notes, const ChainScoreInput *input, const OuterVoiceLines *lines,
+                          const ChainSegments *segments, const FormStage *form, ChainResult *report);
 
 #endif

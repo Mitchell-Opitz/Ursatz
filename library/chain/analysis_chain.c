@@ -559,17 +559,18 @@ static AnalysisChainStatus motive_stage(AnalysisChain *chain) {
 
 static AnalysisChainStatus meter_stage(AnalysisChain *chain) {
     Pass *p = &chain->pass;
-    const char **labels = calloc(chain->segs.count > 0 ? chain->segs.count : 1, sizeof(char *));
-    if (labels == NULL) {
+    bool *changes = calloc(chain->segs.count > 0 ? chain->segs.count : 1, sizeof(bool));
+    if (changes == NULL) {
         return ANALYSIS_CHAIN_ERR_ALLOC;
     }
-    for (size_t s = 0; s < chain->count; s++) {
-        labels[s] = p->chords[s].matched ? chord_label(p->chords[s].best_chord) : NULL;
+    for (size_t s = 1; s < chain->count; s++) {
+        changes[s] = p->chords[s].matched && p->chords[s - 1].matched &&
+                     strcmp(chord_label(p->chords[s].best_chord), chord_label(p->chords[s - 1].best_chord)) != 0;
     }
     int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
-    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->lines, &chain->segs, labels, chain->config.first_measure,
+    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->lines, &chain->segs, changes, chain->config.first_measure,
                                                      last, &p->form_input.input, &p->phrases, &p->expansions, &chain->meter_input);
-    free(labels);
+    free(changes);
     if (built != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_METER;
     }

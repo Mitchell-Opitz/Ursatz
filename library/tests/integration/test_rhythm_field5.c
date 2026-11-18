@@ -189,10 +189,11 @@ int main(void) {
     CommonPracticeWeightedResults chords = {0};
     assert(common_practice_identify_weighted_sequence(p.segments, scope, cadence_annotation.home, COMMON_PRACTICE_KEY_MAJOR, NULL,
                                                       &chords) == COMMON_PRACTICE_WEIGHTED_OK);
-    const char **labels = (const char **)calloc(p.segment_count, sizeof(char *));
+    bool *labels = (bool *)calloc(p.segment_count + 1, sizeof(bool));
     assert(labels != NULL);
-    for (size_t s = 0; s < scope; s++) {
-        labels[s] = chords.items[s].matched ? chord_label(chords.items[s].best_chord) : NULL;
+    for (size_t s = 1; s < scope; s++) {
+        labels[s] = chords.items[s].matched && chords.items[s - 1].matched &&
+                    strcmp(chord_label(chords.items[s].best_chord), chord_label(chords.items[s - 1].best_chord)) != 0;
     }
 
     /* --- the annotated phrases --- */
