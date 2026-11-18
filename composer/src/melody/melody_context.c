@@ -25,6 +25,7 @@ void melody_context_zero(MelodyContext *context) {
     for (size_t i = 0; i < MOTIVE_MAX_NOTES; i++) {
         context->motive_onset[i] = POSITION_ZERO;
         context->motive_duration[i] = POSITION_ZERO;
+        context->motive_note_id[i] = PLAN_NOTE_NONE;
     }
     for (size_t i = 0; i < MELODY_BAR_NOTES; i++) {
         context->repeat_onset[i] = POSITION_ZERO;
@@ -225,6 +226,7 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
     for (size_t i = 0; i < notes->note_count; i++) {
         context->motive_onset[i] = notes->notes[i].offset;
         context->motive_duration[i] = notes->notes[i].duration;
+        context->motive_note_id[i] = notes->notes[i].id;
         if (!position_is_positive(context->motive_duration[i]) || notes->notes[i].midi < 0 ||
             notes->notes[i].midi > 127) {
             return false;
@@ -602,6 +604,7 @@ static void restate_previous(const PiecePlan *plan, MelodyContext *context) {
         context->motive_pitch[i] = notes->notes[i].midi;
         context->motive_onset[i] = onset[i];
         context->motive_duration[i] = duration[i];
+        context->motive_note_id[i] = notes->notes[i].id;
     }
     context->motive_count = notes->note_count;
     context->motive_length = position_add(onset[notes->note_count - 1], duration[notes->note_count - 1]);

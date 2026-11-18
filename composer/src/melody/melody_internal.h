@@ -67,6 +67,7 @@ typedef struct {
     size_t motive_count;
     int motive_pitch[MOTIVE_MAX_NOTES];
     Rational motive_onset[MOTIVE_MAX_NOTES];
+    PlanNoteId motive_note_id[MOTIVE_MAX_NOTES]; /* the plan note each motive note is (0 when it has none), for the links of R-601 */
     Rational motive_duration[MOTIVE_MAX_NOTES];
     Rational motive_length;
     /*
