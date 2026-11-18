@@ -42,14 +42,14 @@ static const Scenario SCENARIOS[] = {
 
 typedef struct {
     const char *name;
-    PlanThemeBeginning beginning;
-    PlanThemeEnding ending;
+    SectionBeginning beginning;
+    SectionEnding ending;
     unsigned char ideas[GROW_IDEA_COUNT]; /* by GrowIdea */
     bool long_motive;                     /* the basic motive is three bars */
 } Case;
 
-#define PERIOD PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT
-#define SENTENCE PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION
+#define PERIOD SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT
+#define SENTENCE SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION
 
 /* Ideas in GrowIdea order: basic, repetition, contrasting, consequent basic, consequent contrasting, fragment 1, fragment 2,
    cadential, cadential 1, cadential 2. */
@@ -78,11 +78,11 @@ static Motive make_motive(const Scenario *scenario, const char *text) {
     return motive;
 }
 
-static PlanConstruction construction_of(const Case *item) {
-    PlanConstruction construction;
+static SectionConstruction construction_of(const Case *item) {
+    SectionConstruction construction;
     memset(&construction, 0, sizeof(construction));
     memcpy(construction.idea_bars, item->ideas, sizeof(construction.idea_bars));
-    construction.reason = PLAN_CONSTRUCTION_GIVEN;
+    construction.reason = SECTION_CONSTRUCTION_GIVEN;
     return construction;
 }
 
@@ -95,7 +95,7 @@ static size_t bars_of(const Case *item) {
 }
 
 static GrowRequest make_request(const Scenario *scenario, const Motive *motive, const Case *item,
-                                const PlanConstruction *construction) {
+                                const SectionConstruction *construction) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
@@ -161,18 +161,18 @@ static void check_spans(const PiecePlan *plan, const Scenario *scenario, const C
 }
 
 /* The plan carries the construction as given. */
-static void check_constraint(const PiecePlan *plan, const PlanConstruction *wanted) {
-    const PlanConstraint *constraint = plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
+static void check_constraint(const PiecePlan *plan, const SectionConstruction *wanted) {
+    const SectionDescription *constraint = plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction ? plan_node_section(plan, test_find_node(plan, "theme")) : NULL;
     assert(constraint);
-    assert(memcmp(constraint->params.construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
-    assert(constraint->params.construction.extension_count == 0);
-    assert(constraint->params.construction.reason == PLAN_CONSTRUCTION_GIVEN);
+    assert(memcmp(constraint->construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
+    assert(constraint->construction.extension_count == 0);
+    assert(constraint->construction.reason == SECTION_CONSTRUCTION_GIVEN);
 }
 
 /* Grows one case from one seed; whether it composed. With `check`, the plan's spans are held to the construction. */
 static bool run_case(const Scenario *scenario, const Case *item, unsigned long seed, bool check) {
     Motive motive = make_motive(scenario, item->long_motive ? scenario->long_motive : scenario->motive);
-    PlanConstruction construction = construction_of(item);
+    SectionConstruction construction = construction_of(item);
     GrowRequest request = make_request(scenario, &motive, item, &construction);
     GrowConfig config;
     PiecePlan *plan = NULL;
@@ -228,7 +228,7 @@ static void expect_refusal(const GrowRequest *request, const char *path, const c
 static void test_refusals(void) {
     const Scenario *scenario = &SCENARIOS[0];
     Motive motive = make_motive(scenario, scenario->motive);
-    PlanConstruction construction = construction_of(&CASES[0]);
+    SectionConstruction construction = construction_of(&CASES[0]);
     GrowRequest request = make_request(scenario, &motive, &CASES[0], &construction);
     PiecePlan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
@@ -252,7 +252,7 @@ static void test_refusals(void) {
     changed = request;
     changed.bars = 7;
     expect_refusal(&changed, "/construction/ideas", "the ideas are 6 bars; the theme has 7");
-    PlanConstruction other = construction;
+    SectionConstruction other = construction;
     changed.construction = &other;
     changed.bars = 6;
     other.idea_bars[GROW_IDEA_FRAGMENT_1] = 1;
@@ -264,7 +264,7 @@ static void test_refusals(void) {
 
     /* A continuation's fragments are shorter than its basic idea: a 1-bar basic idea has no whole-bar fragment. */
     static const Case ONE_BAR = {"1+2+1+1+2 sentence", SENTENCE, {1, 2, 0, 0, 0, 1, 1, 2, 0, 0}, false};
-    PlanConstruction one_bar = construction_of(&ONE_BAR);
+    SectionConstruction one_bar = construction_of(&ONE_BAR);
     changed = make_request(scenario, &motive, &ONE_BAR, &one_bar);
     expect_refusal(&changed, "/construction/ideas", "the fragment 1 needs fewer bars than the basic idea");
     one_bar.idea_bars[GROW_IDEA_FRAGMENT_1] = 0;
@@ -292,8 +292,8 @@ static void test_round_trip(void) {
     const Scenario *scenario = &SCENARIOS[0];
     for (size_t c = 0; c < CASE_COUNT; c++) {
         Motive motive = make_motive(scenario, CASES[c].long_motive ? scenario->long_motive : scenario->motive);
-        PlanConstruction construction = construction_of(&CASES[c]);
-        construction.reason = (PlanConstructionReason)(c % 3);
+        SectionConstruction construction = construction_of(&CASES[c]);
+        construction.reason = (SectionConstructionReason)(c % 3);
         GrowRequest request = make_request(scenario, &motive, &CASES[c], &construction);
         PiecePlan *plan = NULL;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
@@ -304,9 +304,9 @@ static void test_round_trip(void) {
         assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
         char *text_again = plan_to_json(again, &error);
         assert(text_again && strcmp(text, text_again) == 0);
-        const PlanConstraint *read = plan_node_find_constraint(again, test_find_node(again, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
-        assert(read && memcmp(read->params.construction.idea_bars, construction.idea_bars, sizeof(construction.idea_bars)) == 0);
-        assert(read->params.construction.reason == construction.reason);
+        const SectionDescription *read = plan_section_or_empty(again, test_find_node(again, "theme"))->has_construction ? plan_node_section(again, test_find_node(again, "theme")) : NULL;
+        assert(read && memcmp(read->construction.idea_bars, construction.idea_bars, sizeof(construction.idea_bars)) == 0);
+        assert(read->construction.reason == construction.reason);
         free(text);
         free(text_again);
         plan_destroy(plan);
@@ -316,21 +316,21 @@ static void test_round_trip(void) {
     /* Extensions round trip too, and a constraint on anything but a section, or a refused idea, is not read. */
     PiecePlan *plan = NULL;
     Motive motive = make_motive(scenario, scenario->motive);
-    PlanConstruction construction = construction_of(&CASES[3]);
+    SectionConstruction construction = construction_of(&CASES[3]);
     GrowRequest request = make_request(scenario, &motive, &CASES[3], &construction);
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId theme = test_find_node(plan, "theme");
-    PlanConstraint extended = {PLAN_CONSTRAINT_CONSTRUCTION, {0}};
-    extended.params.construction = construction;
-    extended.params.construction.extension_count = 2;
-    extended.params.construction.extensions[0] = (PlanExtension){PLAN_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false};
-    extended.params.construction.extensions[1] = (PlanExtension){PLAN_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 2, true};
-    extended.params.construction.reason = PLAN_CONSTRUCTION_FROM_LENGTH;
+    SectionDescription extended = *plan_node_section(plan, theme);
+    extended.has_construction = true;
+    extended.construction = construction;
+    extended.construction.extension_count = 2;
+    extended.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false};
+    extended.construction.extensions[1] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 2, true};
+    extended.construction.reason = SECTION_CONSTRUCTION_FROM_LENGTH;
     PiecePlan *scratch = NULL;
     assert(grow_build_plan_checked(&request, &scratch, NULL) == GROW_OK);
     NodeId scratch_theme = test_find_node(scratch, "theme");
-    assert(plan_node_remove_constraint(scratch, scratch_theme, plan_node_constraint_count(scratch, scratch_theme) - 1) == PLAN_OK);
-    assert(plan_node_add_constraint(scratch, scratch_theme, &extended) == PLAN_OK);
+    assert(plan_node_set_section(scratch, scratch_theme, &extended) == PLAN_OK);
     PlanJsonError error;
     char *text = plan_to_json(scratch, &error);
     assert(text && strstr(text, "\"stretch\"") && strstr(text, "\"cadential\""));
@@ -343,28 +343,21 @@ static void test_round_trip(void) {
     plan_destroy(again);
     plan_destroy(scratch);
 
-    /* The constraint is only for a section node, with ideas to 16 bars and at most 3 extensions of 4 bars. */
-    NodeId motive_node = PLAN_NODE_NONE;
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        if (plan_node_kind(plan, id) == PLAN_NODE_PHRASE && plan_node_state(plan, id) != PLAN_STATE_GIVEN) {
-            motive_node = id;
-        }
-    }
-    assert(motive_node != PLAN_NODE_NONE);
-    PlanConstraint bad = {PLAN_CONSTRAINT_CONSTRUCTION, {0}};
-    bad.params.construction = construction;
-    assert(plan_node_add_constraint(plan, motive_node, &bad) == PLAN_ERR_BAD_PAYLOAD);
-    bad.params.construction.idea_bars[0] = 17;
-    assert(plan_node_add_constraint(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
-    bad.params.construction = construction;
-    bad.params.construction.extension_count = 4;
-    assert(plan_node_add_constraint(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
-    bad.params.construction.extension_count = 1;
-    bad.params.construction.extensions[0].bars = 5;
-    assert(plan_node_add_constraint(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
-    bad.params.construction.extensions[0].bars = 1;
-    bad.params.construction.extensions[0].idea = GROW_IDEA_COUNT;
-    assert(plan_node_add_constraint(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    /* The construction is only for a section node, with ideas to 16 bars and at most 3 extensions of 4 bars. */
+    SectionDescription bad = *plan_node_section(plan, theme);
+    bad.has_construction = true;
+    bad.construction = construction;
+    bad.construction.idea_bars[0] = 17;
+    assert(plan_node_set_section(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    bad.construction = construction;
+    bad.construction.extension_count = 4;
+    assert(plan_node_set_section(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    bad.construction.extension_count = 1;
+    bad.construction.extensions[0].bars = 5;
+    assert(plan_node_set_section(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    bad.construction.extensions[0].bars = 1;
+    bad.construction.extensions[0].idea = GROW_IDEA_COUNT;
+    assert(plan_node_set_section(plan, theme, &bad) == PLAN_ERR_BAD_PAYLOAD);
     plan_destroy(plan);
 
     /* A plan with an unknown idea in a construction is refused with its path. */

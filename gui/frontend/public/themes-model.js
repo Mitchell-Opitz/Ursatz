@@ -54,7 +54,7 @@
   const maxSeed = () => Vocab.seedMax("theme");
   /* UI limits the Composer does not hold (R-276). */
   const CHORD_BARS = 16;
-  /* Extensions a given construction may carry (the Composer's PLAN_CONSTRUCTION_EXTENSIONS). */
+  /* Extensions a given construction may carry (the Composer's SECTION_CONSTRUCTION_EXTENSIONS). */
   const MAX_EXTENSIONS = 3;
   const CHORD_TEXT_MAX = 64;
   const SWITCH_TEXT = "Use the brief's motive degrees, intervals, rhythm, non-chord figures";

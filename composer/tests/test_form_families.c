@@ -7,6 +7,7 @@
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/form_return.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
@@ -233,14 +234,22 @@ static int shift_between(AnalysisKey from, AnalysisKey to) {
     return step > 6 ? step - 12 : step;
 }
 
-static const PlanConstraint *return_of(const PiecePlan *plan, NodeId section) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            return constraint;
-        }
+/* The return a section holds, as a small record in a slot that stays valid through the next three calls; NULL for a section that returns none. */
+static const ReturnRef *return_of(const PiecePlan *plan, NodeId section) {
+    static ReturnRef slots[4];
+    static size_t next = 0;
+    const SectionDescription *described = plan_section_or_empty(plan, section);
+    NodeId source = described->returns[0] != '\0' ? plan_section_named(plan, described->returns) : PLAN_NODE_NONE;
+    ReturnRef *out = &slots[next++ % 4];
+    if (source == PLAN_NODE_NONE) {
+        return NULL;
     }
-    return NULL;
+    memset(out, 0, sizeof(*out));
+    out->section = source;
+    out->variation = described->variation;
+    out->setting = (PlanAccompanimentPattern)described->setting;
+    out->across_modes = described->mode == SECTION_MODE_HOME;
+    return out;
 }
 
 /* A1 (rondo) or E (sonatina) keeps every melody note of its source at its onset, moved by the key difference (none for A1), and
@@ -371,9 +380,9 @@ static void check_rondo(const PiecePlan *plan, const FormFamily *family, const R
         assert(is_key(key_at(&lane, plan_node_span(plan, sections[family->r2]).start), row->tonic, row->mode));
     }
     /* A1 keeps every melody note of A and has more. */
-    const PlanConstraint *back = return_of(plan, sections[family->a1]);
-    assert(back && back->params.section_return.variation == PLAN_RETURN_EMBELLISH &&
-           back->params.section_return.section == sections[family->a]);
+    const ReturnRef *back = return_of(plan, sections[family->a1]);
+    assert(back && back->variation == SECTION_RETURN_EMBELLISH &&
+           back->section == sections[family->a]);
     check_embellished(plan, sections[family->a], sections[family->a1], 0);
     /* B1 is in the tonic major, its melody is B's moved by the key difference, and the section after it is home. */
     if (family->b1 != NONE) {
@@ -384,9 +393,9 @@ static void check_rondo(const PiecePlan *plan, const FormFamily *family, const R
     }
     /* A2 of the large and sonata rondos is A reharmonized: its melody is A's. */
     if (family->reh != NONE) {
-        const PlanConstraint *again = return_of(plan, sections[family->reh]);
-        assert(again && again->params.section_return.variation == PLAN_RETURN_REHARMONIZE &&
-               again->params.section_return.section == sections[family->a]);
+        const ReturnRef *again = return_of(plan, sections[family->reh]);
+        assert(again && again->variation == SECTION_RETURN_REHARMONIZE &&
+               again->section == sections[family->a]);
         assert(plan_node_state(plan, sections[family->reh]) == PLAN_STATE_REALIZED);
         check_moved(plan, sections[family->a], sections[family->reh],
                     shift_between(key_at(&lane, plan_node_span(plan, sections[family->a]).start),
@@ -394,10 +403,10 @@ static void check_rondo(const PiecePlan *plan, const FormFamily *family, const R
     }
     /* The section set in a new accompaniment is A set. */
     if (family->set != NONE) {
-        const PlanConstraint *setting = return_of(plan, sections[family->set]);
-        assert(setting && setting->params.section_return.variation == PLAN_RETURN_SETTING &&
-               setting->params.section_return.setting == PLAN_ACCOMPANIMENT_ARPEGGIATED &&
-               setting->params.section_return.section == sections[family->a]);
+        const ReturnRef *setting = return_of(plan, sections[family->set]);
+        assert(setting && setting->variation == SECTION_RETURN_SETTING &&
+               setting->setting == PLAN_ACCOMPANIMENT_ARPEGGIATED &&
+               setting->section == sections[family->a]);
         check_setting(plan, sections[family->a], sections[family->set]);
     }
     if (family->c != NONE) {
@@ -431,8 +440,8 @@ static void check_sonatina(const PiecePlan *plan, const FormFamily *family, cons
     const AnalysisKey at_b = key_at(&lane, plan_node_span(plan, s[B]).start);
     /* E: the elaboration key, B embellished and moved. */
     check_one_key(plan, &lane, s[E], elaboration, HARMONY_MODE_MAJOR);
-    const PlanConstraint *back = return_of(plan, s[E]);
-    assert(back && back->params.section_return.variation == PLAN_RETURN_EMBELLISH && back->params.section_return.section == s[B]);
+    const ReturnRef *back = return_of(plan, s[E]);
+    assert(back && back->variation == SECTION_RETURN_EMBELLISH && back->section == s[B]);
     check_embellished(plan, s[B], s[E], shift_between(at_b, key_at(&lane, plan_node_span(plan, s[E]).start)));
     /* P and S: the development and sequence keys; S's melody is P's moved. */
     check_one_key(plan, &lane, s[P], row->tonic + (is_minor ? 5 : 9), HARMONY_MODE_MINOR);
@@ -447,13 +456,13 @@ static void check_sonatina(const PiecePlan *plan, const FormFamily *family, cons
     const NodeId sources[2] = {s[B], s[C1]};
     const NodeId copies[2] = {s[B1], s[C3]};
     for (size_t i = 0; i < 2; i++) {
-        const PlanConstraint *again = return_of(plan, copies[i]);
-        assert(again && again->params.section_return.section == sources[i]);
+        const ReturnRef *again = return_of(plan, copies[i]);
+        assert(again && again->section == sources[i]);
         if (major_recap) {
-            assert(again->params.section_return.variation == PLAN_RETURN_EXACT && !again->params.section_return.across_modes);
+            assert(again->variation == SECTION_RETURN_EXACT && !again->across_modes);
             check_one_key(plan, &lane, copies[i], row->tonic, HARMONY_MODE_MAJOR);
         } else {
-            assert(again->params.section_return.variation == PLAN_RETURN_REHARMONIZE && again->params.section_return.across_modes);
+            assert(again->variation == SECTION_RETURN_REHARMONIZE && again->across_modes);
             check_one_key(plan, &lane, copies[i], row->tonic, row->mode);
         }
         const int shift = shift_between(key_at(&lane, plan_node_span(plan, sources[i]).start),

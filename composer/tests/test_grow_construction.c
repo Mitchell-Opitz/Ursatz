@@ -36,7 +36,7 @@ static const Scenario SCENARIOS[] = {
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
 typedef struct {
-    PlanExtensionKind kind;
+    SectionExtensionKind kind;
     GrowIdea idea;
     unsigned char bars;
     bool varied;
@@ -48,51 +48,51 @@ typedef struct {
     const char *name;
     size_t bars;
     MotifLength motif;
-    PlanThemeBeginning beginning;
-    PlanThemeEnding ending;
+    SectionBeginning beginning;
+    SectionEnding ending;
     unsigned char ideas[GROW_IDEA_COUNT]; /* by GrowIdea */
-    PlanConstructionReason reason;
+    SectionConstructionReason reason;
     size_t extension_count;
-    Extension extensions[PLAN_CONSTRUCTION_EXTENSIONS];
+    Extension extensions[SECTION_CONSTRUCTION_EXTENSIONS];
     const char *text;
 } Row;
 
-#define PERIOD PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT
-#define SENTENCE PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION
-#define CADENTIAL PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CADENTIAL
+#define PERIOD SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT
+#define SENTENCE SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION
+#define CADENTIAL SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CADENTIAL
 
 /* Ideas in GrowIdea order: basic, repetition, contrasting, consequent basic, consequent contrasting, fragment 1, fragment 2,
    cadential, cadential 1, cadential 2. */
 static const Row ROWS[] = {
-    {"6-bar period", 6, ONE, PERIOD, {2, 0, 1, 2, 1, 0, 0, 0, 0, 0}, PLAN_CONSTRUCTION_FROM_LENGTH, 0, {{0}},
+    {"6-bar period", 6, ONE, PERIOD, {2, 0, 1, 2, 1, 0, 0, 0, 0, 0}, SECTION_CONSTRUCTION_FROM_LENGTH, 0, {{0}},
      "3+3 period: the section is 6 bars, so each phrase is 3."},
-    {"10-bar period", 10, ONE, PERIOD, {2, 0, 2, 2, 2, 0, 0, 0, 0, 0}, PLAN_CONSTRUCTION_FROM_LENGTH, 1,
-     {{PLAN_EXTENSION_REPEAT, GROW_IDEA_CONSEQUENT_CONTRASTING, 2, true}},
+    {"10-bar period", 10, ONE, PERIOD, {2, 0, 2, 2, 2, 0, 0, 0, 0, 0}, SECTION_CONSTRUCTION_FROM_LENGTH, 1,
+     {{SECTION_EXTENSION_REPEAT, GROW_IDEA_CONSEQUENT_CONTRASTING, 2, true}},
      "4+6 period: the section is 10 bars, so the consequent repeats its contrasting idea, varied (bars 9 and 10)."},
-    {"10-bar period from a 3-bar motif", 10, THREE, PERIOD, {3, 0, 2, 3, 2, 0, 0, 0, 0, 0}, PLAN_CONSTRUCTION_FROM_MOTIVE, 0,
+    {"10-bar period from a 3-bar motif", 10, THREE, PERIOD, {3, 0, 2, 3, 2, 0, 0, 0, 0, 0}, SECTION_CONSTRUCTION_FROM_MOTIVE, 0,
      {{0}}, "5+5 period: the motif is 3 bars, so the basic idea is 3 bars and each phrase 5."},
-    {"12-bar period from a 3-bar motif", 12, THREE, PERIOD, {3, 0, 3, 3, 3, 0, 0, 0, 0, 0}, PLAN_CONSTRUCTION_FROM_MOTIVE, 0,
+    {"12-bar period from a 3-bar motif", 12, THREE, PERIOD, {3, 0, 3, 3, 3, 0, 0, 0, 0, 0}, SECTION_CONSTRUCTION_FROM_MOTIVE, 0,
      {{0}}, "6+6 period: the motif is 3 bars, so the basic idea is 3 bars and each phrase 6."},
-    {"9-bar sentence", 9, ONE, SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0}, PLAN_CONSTRUCTION_FROM_LENGTH, 1,
-     {{PLAN_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 1, false}},
+    {"9-bar sentence", 9, ONE, SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0}, SECTION_CONSTRUCTION_FROM_LENGTH, 1,
+     {{SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 1, false}},
      "4+5 sentence: the section is 9 bars, so fragment 2 is repeated a step lower (bar 7)."},
-    {"10-bar sentence", 10, ONE, SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0}, PLAN_CONSTRUCTION_FROM_LENGTH, 1,
-     {{PLAN_EXTENSION_EVADED, GROW_IDEA_CADENTIAL, 2, false}},
+    {"10-bar sentence", 10, ONE, SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0}, SECTION_CONSTRUCTION_FROM_LENGTH, 1,
+     {{SECTION_EXTENSION_EVADED, GROW_IDEA_CADENTIAL, 2, false}},
      "4+6 sentence: the section is 10 bars, so the cadence in bar 8 is evaded (V to vi) and the cadential idea returns to close "
      "in bar 10."},
-    {"11-bar sentence", 11, ONE, SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0}, PLAN_CONSTRUCTION_FROM_LENGTH, 2,
-     {{PLAN_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 1, false}, {PLAN_EXTENSION_EVADED, GROW_IDEA_CADENTIAL, 2, false}},
+    {"11-bar sentence", 11, ONE, SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0}, SECTION_CONSTRUCTION_FROM_LENGTH, 2,
+     {{SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 1, false}, {SECTION_EXTENSION_EVADED, GROW_IDEA_CADENTIAL, 2, false}},
      "4+7 sentence: the section is 11 bars, so fragment 2 is repeated a step lower (bar 7) and the cadence in bar 9 is evaded "
      "(V to vi) and the cadential idea returns to close in bar 11."},
-    {"12-bar sentence", 12, ONE, SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0}, PLAN_CONSTRUCTION_FROM_LENGTH, 2,
-     {{PLAN_EXTENSION_EVADED, GROW_IDEA_CADENTIAL, 2, false}, {PLAN_EXTENSION_ADDITION, GROW_IDEA_CADENTIAL, 2, false}},
+    {"12-bar sentence", 12, ONE, SENTENCE, {2, 2, 0, 0, 0, 1, 1, 2, 0, 0}, SECTION_CONSTRUCTION_FROM_LENGTH, 2,
+     {{SECTION_EXTENSION_EVADED, GROW_IDEA_CADENTIAL, 2, false}, {SECTION_EXTENSION_ADDITION, GROW_IDEA_CADENTIAL, 2, false}},
      "4+6 sentence: the section is 12 bars, so the cadence in bar 8 is evaded (V to vi) and the cadential idea returns to close "
      "in bar 10 and a 2-bar addition follows (bars 11 and 12)."},
-    {"7-bar period", 7, ONE, PERIOD, {2, 0, 1, 2, 1, 0, 0, 0, 0, 0}, PLAN_CONSTRUCTION_FROM_LENGTH, 1,
-     {{PLAN_EXTENSION_STRETCH, GROW_IDEA_CONSEQUENT_CONTRASTING, 1, false}},
+    {"7-bar period", 7, ONE, PERIOD, {2, 0, 1, 2, 1, 0, 0, 0, 0, 0}, SECTION_CONSTRUCTION_FROM_LENGTH, 1,
+     {{SECTION_EXTENSION_STRETCH, GROW_IDEA_CONSEQUENT_CONTRASTING, 1, false}},
      "3+4 period: the section is 7 bars, so the consequent contrasting idea is stretched to 2 bars (bars 6 and 7)."},
-    {"9-bar cadential ending", 9, ONE, CADENTIAL, {2, 2, 0, 0, 0, 0, 0, 0, 2, 2}, PLAN_CONSTRUCTION_FROM_LENGTH, 1,
-     {{PLAN_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL_2, 1, false}},
+    {"9-bar cadential ending", 9, ONE, CADENTIAL, {2, 2, 0, 0, 0, 0, 0, 0, 2, 2}, SECTION_CONSTRUCTION_FROM_LENGTH, 1,
+     {{SECTION_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL_2, 1, false}},
      "4+5 hybrid: the section is 9 bars, so the cadential 2 is stretched to 3 bars (bars 7 to 9)."},
 };
 #define ROW_COUNT (sizeof(ROWS) / sizeof(ROWS[0]))
@@ -117,11 +117,11 @@ static PlanMeter meter_of(const Scenario *scenario) {
     return meter;
 }
 
-static void expect_construction(const PlanConstruction *construction, const Row *row, const char *where) {
+static void expect_construction(const SectionConstruction *construction, const Row *row, const char *where) {
     bool same = memcmp(construction->idea_bars, row->ideas, sizeof(row->ideas)) == 0 && construction->reason == row->reason &&
                 construction->extension_count == row->extension_count;
     for (size_t k = 0; same && k < row->extension_count; k++) {
-        const PlanExtension *got = &construction->extensions[k];
+        const SectionExtension *got = &construction->extensions[k];
         same = got->kind == row->extensions[k].kind && got->idea == row->extensions[k].idea &&
                got->bars == row->extensions[k].bars && got->varied == row->extensions[k].varied;
     }
@@ -140,8 +140,8 @@ static void test_rows(void) {
         Motive three = make_motive(scenario, scenario->three);
         for (size_t r = 0; r < ROW_COUNT; r++) {
             const Row *row = &ROWS[r];
-            PlanThemePairing pairing = {row->beginning, row->ending};
-            PlanConstruction construction;
+            SectionPairing pairing = {row->beginning, row->ending};
+            SectionConstruction construction;
             char text[192];
             memset(&construction, 0xAA, sizeof(construction));
             assert(grow_construction_choose(row->motif == THREE ? &three : &one, &meter, row->bars, &pairing,
@@ -153,7 +153,7 @@ static void test_rows(void) {
             }
             assert(strcmp(text, row->text) == 0 && written == strlen(row->text));
             /* No draw: asking again gives the same. */
-            PlanConstruction again;
+            SectionConstruction again;
             assert(grow_construction_choose(row->motif == THREE ? &three : &one, &meter, row->bars, &pairing,
                                             CADENCE_TYPE_PERFECT_AUTHENTIC, &again));
             assert(memcmp(&construction, &again, sizeof(construction)) == 0);
@@ -161,8 +161,8 @@ static void test_rows(void) {
     }
 }
 
-static bool is_zero(const PlanConstruction *construction) {
-    PlanConstruction zero;
+static bool is_zero(const SectionConstruction *construction) {
+    SectionConstruction zero;
     memset(&zero, 0, sizeof(zero));
     return memcmp(construction, &zero, sizeof(zero)) == 0;
 }
@@ -173,9 +173,9 @@ static void test_none(void) {
         PlanMeter meter = meter_of(scenario);
         Motive one = make_motive(scenario, scenario->one);
         Motive two = make_motive(scenario, scenario->two);
-        PlanConstruction construction;
-        PlanThemePairing period = {PERIOD};
-        PlanThemePairing sentence = {SENTENCE};
+        SectionConstruction construction;
+        SectionPairing period = {PERIOD};
+        SectionPairing sentence = {SENTENCE};
         /* 4 and 8 bars with a motif of 2 bars or fewer are built as they always were. */
         static const size_t PLAIN[2] = {4, 8};
         for (size_t k = 0; k < 2; k++) {
@@ -201,8 +201,8 @@ static void test_none(void) {
     }
 }
 
-static GrowRequest request_of(const Scenario *scenario, const Motive *motive, size_t bars, PlanThemeBeginning beginning,
-                              PlanThemeEnding ending) {
+static GrowRequest request_of(const Scenario *scenario, const Motive *motive, size_t bars, SectionBeginning beginning,
+                              SectionEnding ending) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
@@ -222,9 +222,9 @@ static void test_build(void) {
     GrowRequest request = request_of(scenario, &one, 9, SENTENCE);
     PiecePlan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
-    const PlanConstraint *constraint = plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION);
+    const SectionDescription *constraint = plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction ? plan_node_section(plan, test_find_node(plan, "theme")) : NULL;
     assert(constraint);
-    expect_construction(&constraint->params.construction, &ROWS[4], "plan");
+    expect_construction(&constraint->construction, &ROWS[4], "plan");
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
@@ -237,19 +237,19 @@ static void test_build(void) {
     plan_destroy(plan);
 
     /* A given construction keeps its reason and is described as given. */
-    PlanConstruction given;
+    SectionConstruction given;
     memset(&given, 0, sizeof(given));
     memcpy(given.idea_bars, ROWS[4].ideas, sizeof(given.idea_bars));
     given.extension_count = 1;
-    given.extensions[0].kind = PLAN_EXTENSION_REPEAT;
+    given.extensions[0].kind = SECTION_EXTENSION_REPEAT;
     given.extensions[0].idea = GROW_IDEA_FRAGMENT_2;
     given.extensions[0].bars = 1;
-    given.reason = PLAN_CONSTRUCTION_GIVEN;
+    given.reason = SECTION_CONSTRUCTION_GIVEN;
     request.construction = &given;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId theme = test_find_node(plan, "theme");
-    constraint = plan_node_find_constraint(plan, theme, PLAN_CONSTRAINT_CONSTRUCTION);
-    assert(constraint && constraint->params.construction.reason == PLAN_CONSTRUCTION_GIVEN);
+    constraint = plan_section_or_empty(plan, theme)->has_construction ? plan_node_section(plan, theme) : NULL;
+    assert(constraint && constraint->construction.reason == SECTION_CONSTRUCTION_GIVEN);
     char text[192];
     assert(grow_section_describe(plan, theme, text, sizeof(text)) > 0);
     assert(strcmp(text, "4+5 sentence as given: fragment 2 is repeated a step lower (bar 7).") == 0);
@@ -277,13 +277,13 @@ static void test_refusals(void) {
     expect_refusal(&request, "no construction makes a 17-bar sentence from this motif");
     request = request_of(scenario, &two, 5, PERIOD);
     expect_refusal(&request, "no construction makes a 5-bar period from this motif");
-    request = request_of(scenario, &one, 6, PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA, PLAN_THEME_ENDING_CONTINUATION);
+    request = request_of(scenario, &one, 6, SECTION_BEGINNING_COMPOUND_BASIC_IDEA, SECTION_ENDING_CONTINUATION);
     expect_refusal(&request, "no construction makes a 6-bar hybrid from this motif");
     /* 4 and 8 bars with no construction are as before: no refusal of the length. */
     request = request_of(scenario, &one, 8, SENTENCE);
     PiecePlan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
-    assert(plan_node_find_constraint(plan, test_find_node(plan, "theme"), PLAN_CONSTRAINT_CONSTRUCTION) == NULL);
+    assert(!plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction);
     plan_destroy(plan);
 }
 

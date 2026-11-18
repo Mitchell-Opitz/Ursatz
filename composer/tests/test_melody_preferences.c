@@ -63,8 +63,8 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, const Melody
     request.meter.beats_per_bar = 6;
     request.meter.beat_unit = 8;
     request.bars = 8;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     request.chords = chords;
     request.chord_count = CHORDS;
@@ -178,8 +178,8 @@ static PiecePlan *compose_period(unsigned long seed, const MelodyFillParams *mel
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
-    request.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
+    request.pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
+    request.pairing.ending = SECTION_ENDING_CONSEQUENT;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PiecePlan *plan = NULL;
     GrowOutcome outcome;

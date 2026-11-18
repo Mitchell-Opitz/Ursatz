@@ -61,12 +61,12 @@ typedef struct {
     size_t count;
 } Size;
 
-#define P PLAN_THEME_BEGINNING_PRESENTATION
-#define AN PLAN_THEME_BEGINNING_ANTECEDENT
-#define CBI PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA
-#define CONT PLAN_THEME_ENDING_CONTINUATION
-#define CONS PLAN_THEME_ENDING_CONSEQUENT
-#define CAD PLAN_THEME_ENDING_CADENTIAL
+#define P SECTION_BEGINNING_PRESENTATION
+#define AN SECTION_BEGINNING_ANTECEDENT
+#define CBI SECTION_BEGINNING_COMPOUND_BASIC_IDEA
+#define CONT SECTION_ENDING_CONTINUATION
+#define CONS SECTION_ENDING_CONSEQUENT
+#define CAD SECTION_ENDING_CADENTIAL
 #define NONE FORM_SPEC_NO_RETURN
 /* The sonata rondo's P and S sit on the region degree of the piece's mode: vi or iv, ii or v (R-520). */
 #define DEVELOPMENT 1
@@ -78,8 +78,8 @@ typedef struct {
 typedef struct {
     const char *letter;
     size_t bars;
-    PlanThemeBeginning beginning;
-    PlanThemeEnding ending;
+    SectionBeginning beginning;
+    SectionEnding ending;
     CadenceType cadence;
     size_t returns;
     unsigned layers;
@@ -87,9 +87,9 @@ typedef struct {
     int key_offset;   /* the section's key above the home key, in semitones: the scherzo's planned keys (R-493) */
     bool parallel;    /* the section is in the home tonic's other mode (R-499): the figured variations' V3 */
     bool has_figure;  /* a figurate return with a FIGURE constraint (R-497): the figured variations' variations */
-    PlanFigure figure;
+    SectionFigure figure;
     bool region;      /* the section ends in the form's region (V in major, III in minor): the main and subordinate themes (R-509) */
-    int function;     /* a SECTION_FUNCTION constraint of this PlanFunctionKind (R-503), or -1 for none */
+    int function;     /* a SECTION_FUNCTION constraint of this SectionFunctionKind (R-503), or -1 for none */
     bool lyric;       /* a lyric subordinate theme: m0 augmented (R-506) */
     bool tonic_major; /* the section is in the home tonic's major key (R-517): the rondos' B1 */
     bool second;      /* the section is in the second region (vi or IV in major, VI or iv in minor): the rondos' C (R-520) */
@@ -103,7 +103,7 @@ static const unsigned ACCOMPANIED = PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_
 static const unsigned WITH_MELODY =
     PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE) | PLAN_LAYER_BIT(PLAN_LANE_MELODY);
 
-static void set(Expected *e, const char *letter, size_t bars, PlanThemeBeginning beginning, PlanThemeEnding ending,
+static void set(Expected *e, const char *letter, size_t bars, SectionBeginning beginning, SectionEnding ending,
                 CadenceType cadence, size_t returns, unsigned layers) {
     e->letter = letter;
     e->bars = bars;
@@ -127,7 +127,7 @@ static void set(Expected *e, const char *letter, size_t bars, PlanThemeBeginning
 
 /* A retransition or a coda is an operator section like the liquidation: no pairing and no archetype (R-503). */
 static bool is_operator(const Expected *e) {
-    return e->liquidation || e->function == PLAN_FUNCTION_RETRANSITION || e->function == PLAN_FUNCTION_CODA;
+    return e->liquidation || e->function == SECTION_FUNCTION_RETRANSITION || e->function == SECTION_FUNCTION_CODA;
 }
 
 #define IS(name) (strcmp(kind, name) == 0)
@@ -169,8 +169,8 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
     } else if (IS("minuet") || IS("trio")) {
         /* The ternary's A, B, A, with B over a pedal leading into A return: the minuet's A a sentence, the trio's a period. */
         size_t third = size.bars / 3;
-        PlanThemeBeginning beginning = IS("trio") ? AN : P;
-        PlanThemeEnding ending = IS("trio") ? CONS : CONT;
+        SectionBeginning beginning = IS("trio") ? AN : P;
+        SectionEnding ending = IS("trio") ? CONS : CONT;
         set(&out[n++], "A", third, beginning, ending, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n++], "B", third, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         set(&out[n++], "A", third, beginning, ending, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
@@ -198,14 +198,14 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
            sixteenths, V3 a scale line in eighths in the parallel mode, V4 a scale line in sixteenths over a reharmonized
            copy with the root changed at bar 3, V5 a broken chord in sixteenths at the climax (the three of the size of 40
            are V1, V3 as the parallel one and V5); then the two codettas. */
-        static const PlanFigure NEIGHBOR_8 = {PLAN_FIGURE_NEIGHBOR, PLAN_FIGURE_EIGHTHS, false, 0, false};
-        static const PlanFigure NEIGHBOR_16 = {PLAN_FIGURE_NEIGHBOR, PLAN_FIGURE_SIXTEENTHS, false, 0, false};
-        static const PlanFigure SCALE_8_PARALLEL = {PLAN_FIGURE_SCALE, PLAN_FIGURE_EIGHTHS, true, 0, false};
-        static const PlanFigure SCALE_16_CHANGED = {PLAN_FIGURE_SCALE, PLAN_FIGURE_SIXTEENTHS, true, 3, false};
-        static const PlanFigure BROKEN_16_CLIMAX = {PLAN_FIGURE_BROKEN_CHORD, PLAN_FIGURE_SIXTEENTHS, false, 0, true};
-        const PlanFigure *const AT_56[] = {&NEIGHBOR_8, &NEIGHBOR_16, &SCALE_8_PARALLEL, &SCALE_16_CHANGED, &BROKEN_16_CLIMAX};
-        const PlanFigure *const AT_40[] = {&NEIGHBOR_8, &SCALE_8_PARALLEL, &BROKEN_16_CLIMAX};
-        const PlanFigure *const *figures = size.count == 5 ? AT_56 : AT_40;
+        static const SectionFigure NEIGHBOR_8 = {SECTION_FIGURE_NEIGHBOR, SECTION_FIGURE_EIGHTHS, false, 0, false};
+        static const SectionFigure NEIGHBOR_16 = {SECTION_FIGURE_NEIGHBOR, SECTION_FIGURE_SIXTEENTHS, false, 0, false};
+        static const SectionFigure SCALE_8_PARALLEL = {SECTION_FIGURE_SCALE, SECTION_FIGURE_EIGHTHS, true, 0, false};
+        static const SectionFigure SCALE_16_CHANGED = {SECTION_FIGURE_SCALE, SECTION_FIGURE_SIXTEENTHS, true, 3, false};
+        static const SectionFigure BROKEN_16_CLIMAX = {SECTION_FIGURE_BROKEN_CHORD, SECTION_FIGURE_SIXTEENTHS, false, 0, true};
+        const SectionFigure *const AT_56[] = {&NEIGHBOR_8, &NEIGHBOR_16, &SCALE_8_PARALLEL, &SCALE_16_CHANGED, &BROKEN_16_CLIMAX};
+        const SectionFigure *const AT_40[] = {&NEIGHBOR_8, &SCALE_8_PARALLEL, &BROKEN_16_CLIMAX};
+        const SectionFigure *const *figures = size.count == 5 ? AT_56 : AT_40;
         set(&out[n++], "T", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         for (size_t k = 1; k <= size.count; k++) {
             letters[n][0] = 'V';
@@ -226,23 +226,23 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         out[n].region = true;
-        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        out[n++].function = SECTION_FUNCTION_TRANSITION;
         set(&out[n], "B", size.bars == 57 ? 9 : 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         out[n].region = true;
-        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        out[n++].function = SECTION_FUNCTION_SUBORDINATE;
         if (size.bars == 57) {
             set(&out[n], "B", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
             out[n].region = true;
-            out[n].function = PLAN_FUNCTION_SUBORDINATE;
+            out[n].function = SECTION_FUNCTION_SUBORDINATE;
             out[n++].lyric = true;
         }
         set(&out[n], "C", 4, AN, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         out[n++].region = true;
         set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        out[n++].function = SECTION_FUNCTION_RETRANSITION;
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
         set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_CODA;
+        out[n++].function = SECTION_FUNCTION_CODA;
     } else if (IS("andante-aba") || IS("andante-abab") || IS("small-rondo-ababa") || IS("small-rondo-abaca")) {
         /* The Andante and small rondo forms (P52 B5, R-520): A, the transition T to the subordinate region (V, or III in
            minor), B there, the retransition R home, A1 (A returned as `embellish`), then per form: the coda K; T1, B1
@@ -254,31 +254,31 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         out[n].region = true;
-        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        out[n++].function = SECTION_FUNCTION_TRANSITION;
         size_t b = n;
         set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         out[n].region = true;
-        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        out[n++].function = SECTION_FUNCTION_SUBORDINATE;
         set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        out[n++].function = SECTION_FUNCTION_RETRANSITION;
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
         if (abab) {
             set(&out[n], "T", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-            out[n++].function = PLAN_FUNCTION_TRANSITION;
+            out[n++].function = SECTION_FUNCTION_TRANSITION;
             set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, b, 0);
             out[n].tonic_major = true;
-            out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+            out[n++].function = SECTION_FUNCTION_SUBORDINATE;
         } else if (IS("small-rondo-abaca")) {
             set(&out[n], "C", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
             out[n++].second = true;
         }
         if (rondo) {
             set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-            out[n++].function = PLAN_FUNCTION_RETRANSITION;
+            out[n++].function = SECTION_FUNCTION_RETRANSITION;
             set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
         }
         set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_CODA;
+        out[n++].function = SECTION_FUNCTION_CODA;
     } else if (IS("large-rondo") || IS("sonata-rondo")) {
         /* The large rondo and sonata rondo (P52 B6, R-520): A, T, B, R, A1 (`embellish`), then C in the trio (large) or P and S
            (sonata: P in the development, S its sequence in another key), R1, A2 (reharmonized), T1, B1 (B in the tonic major),
@@ -288,13 +288,13 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         out[n].region = true;
-        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        out[n++].function = SECTION_FUNCTION_TRANSITION;
         size_t b = n;
         set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         out[n].region = true;
-        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        out[n++].function = SECTION_FUNCTION_SUBORDINATE;
         set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        out[n++].function = SECTION_FUNCTION_RETRANSITION;
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
         if (sonata) {
             size_t pattern = n;
@@ -307,18 +307,18 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
             out[n++].second = true;
         }
         set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        out[n++].function = SECTION_FUNCTION_RETRANSITION;
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
         set(&out[n], "T", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        out[n++].function = SECTION_FUNCTION_TRANSITION;
         set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, b, 0);
         out[n].tonic_major = true;
-        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        out[n++].function = SECTION_FUNCTION_SUBORDINATE;
         set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        out[n++].function = SECTION_FUNCTION_RETRANSITION;
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
         set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_CODA;
+        out[n++].function = SECTION_FUNCTION_CODA;
     } else if (IS("sonatina") || IS("sonatina-tonic-major")) {
         /* The sonatina forms (P53 B2, R-523): the exposition A, T, B and the codettas C1 and C2 in the subordinate region; the
            elaboration E (B returned as `embellish` in IV or VI) with P and S as in the sonata rondo and the retransition R; the
@@ -330,11 +330,11 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         out[n].region = true;
-        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        out[n++].function = SECTION_FUNCTION_TRANSITION;
         size_t b = n;
         set(&out[n], "B", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         out[n].region = true;
-        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        out[n++].function = SECTION_FUNCTION_SUBORDINATE;
         size_t c1 = n;
         set(&out[n], "C", 4, AN, CAD, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         out[n++].region = true;
@@ -348,19 +348,19 @@ static size_t expected_sections(const char *kind, Size size, Expected *out) {
         set(&out[n], "D", 4, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, pattern, 0);
         out[n++].region_key = SEQUENCE;
         set(&out[n], "R", 4, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_RETRANSITION;
+        out[n++].function = SECTION_FUNCTION_RETRANSITION;
         set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, a, 0);
         set(&out[n], "T", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_TRANSITION;
+        out[n++].function = SECTION_FUNCTION_TRANSITION;
         set(&out[n], "B", 8, P, CONT, major_recap ? CADENCE_TYPE_PERFECT_AUTHENTIC : CADENCE_TYPE_HALF, b, 0);
         out[n].tonic_major = major_recap;
-        out[n++].function = PLAN_FUNCTION_SUBORDINATE;
+        out[n++].function = SECTION_FUNCTION_SUBORDINATE;
         set(&out[n], "C", 4, AN, CAD, major_recap ? CADENCE_TYPE_PERFECT_AUTHENTIC : CADENCE_TYPE_HALF, c1, 0);
         out[n++].tonic_major = major_recap;
         set(&out[n], "C", 4, CBI, CAD, CADENCE_TYPE_HALF, NONE, 0);
         n++;
         set(&out[n], "K", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
-        out[n++].function = PLAN_FUNCTION_CODA;
+        out[n++].function = SECTION_FUNCTION_CODA;
     } else if (IS("layered")) {
         static const unsigned *const BUILD_UP[3] = {&BASS, &ACCOMPANIED, &WITH_MELODY};
         for (size_t k = 1; k <= size.count; k++) {
@@ -513,39 +513,31 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         assert(bars_of(span.length, scenario->beats) == (long)expected[i].bars);
         at += (long)expected[i].bars;
 
-        const PlanConstraint *letter = find(plan, section, PLAN_CONSTRAINT_SECTION_LETTER, 0);
-        const PlanConstraint *pairing = find(plan, section, PLAN_CONSTRAINT_THEME_PAIRING, 0);
-        const PlanConstraint *cadence = find(plan, section, PLAN_CONSTRAINT_CADENCE, 0);
+        const SectionDescription *described = plan_node_section(plan, section);
         const PlanConstraint *key = find(plan, section, PLAN_CONSTRAINT_KEY, 0);
-        const PlanConstraint *liquidation = find(plan, section, PLAN_CONSTRAINT_LIQUIDATION, 0);
-        const PlanConstraint *function = find(plan, section, PLAN_CONSTRAINT_SECTION_FUNCTION, 0);
-        const PlanConstraint *back = find(plan, section, PLAN_CONSTRAINT_RETURN, 0);
-        const PlanConstraint *layers = find(plan, section, PLAN_CONSTRAINT_LAYERS, 0);
-        assert(letter && strcmp(letter->params.letter, expected[i].letter) == 0);
+        const bool liquidation = described->has_role && described->role == SECTION_ROLE_LIQUIDATION;
+        assert(described->letter[0] != '\0' && strcmp(described->letter, expected[i].letter) == 0);
         /* The part of a larger form a section is, and only that (R-503). */
-        assert((function != NULL) == (expected[i].function >= 0));
-        if (function) {
-            assert((int)function->params.section_function.function == expected[i].function &&
-                   function->params.section_function.lyric == expected[i].lyric &&
-                   !function->params.section_function.independent);
+        assert(described->has_function == (expected[i].function >= 0));
+        if (described->has_function) {
+            assert((int)described->function.function == expected[i].function &&
+                   described->function.lyric == expected[i].lyric && !described->function.independent);
         }
         if (is_operator(&expected[i])) {
-            assert((liquidation != NULL) == expected[i].liquidation);
-            assert(!pairing && find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) == NULL);
+            assert(liquidation == expected[i].liquidation);
+            assert(!described->has_pairing);
         } else {
-            assert(!liquidation && pairing && pairing->params.theme_pairing.beginning == expected[i].beginning &&
-                   pairing->params.theme_pairing.ending == expected[i].ending);
-            assert(find(plan, section, PLAN_CONSTRAINT_ARCHETYPE, 0) != NULL);
+            assert(!liquidation && described->has_pairing && described->pairing.beginning == expected[i].beginning &&
+                   described->pairing.ending == expected[i].ending);
         }
         /* B1 is not closed: in a major piece the tonic major is the home key, and a closing form plans a PAC there that is not
            closed as a half cadence; in a minor piece it is the parallel major and keeps its PAC (R-517, piece_cadences.c). */
         const CadenceType want = expected[i].tonic_major && scenario->mode == HARMONY_MODE_MAJOR ? CADENCE_TYPE_HALF
                                                                                                        : expected[i].cadence;
-        assert(cadence && cadence->params.cadence == want);
+        assert(described->has_cadence && described->cadence == want);
         /* An antecedent's weak cadence comes second. */
-        const PlanConstraint *weak = find(plan, section, PLAN_CONSTRAINT_CADENCE, 1);
-        assert((expected[i].beginning == AN) == (weak != NULL));
-        assert(!weak || weak->params.cadence == CADENCE_TYPE_HALF);
+        assert((expected[i].beginning == AN) == described->has_first_cadence);
+        assert(!described->has_first_cadence || described->first_cadence == CADENCE_TYPE_HALF);
         /* A section in the parallel mode is on the home tonic in the other mode. */
         /* The region of the main and subordinate themes is V in major and III in minor, which is a major key. */
         const HarmonyMode mode = expected[i].parallel || (expected[i].region && scenario->mode == HARMONY_MODE_MINOR) ? (scenario->mode == HARMONY_MODE_MAJOR ? HARMONY_MODE_MINOR
@@ -576,21 +568,20 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
                    harmony_key_mode(&key->params.key) == mode);
         }
         /* A figure rides on a figurate return and only there (R-497). */
-        const PlanConstraint *figure = find(plan, section, PLAN_CONSTRAINT_FIGURE, 0);
+        const SectionFigure *figure = described->has_figure ? &described->figure : NULL;
         assert((figure != NULL) == expected[i].has_figure);
         if (figure) {
-            assert(back && back->params.section_return.variation == PLAN_RETURN_FIGURATE);
-            assert(figure->params.figure.kind == expected[i].figure.kind && figure->params.figure.rhythm == expected[i].figure.rhythm &&
-                   figure->params.figure.reharmonize == expected[i].figure.reharmonize &&
-                   figure->params.figure.change_at == expected[i].figure.change_at &&
-                   figure->params.figure.climax == expected[i].figure.climax);
+            assert(described->returns[0] != '\0' && described->variation == SECTION_RETURN_FIGURATE);
+            assert(figure->kind == expected[i].figure.kind && figure->rhythm == expected[i].figure.rhythm &&
+                   figure->reharmonize == expected[i].figure.reharmonize && figure->change_at == expected[i].figure.change_at &&
+                   figure->climax == expected[i].figure.climax);
         }
         if (expected[i].returns == NONE) {
-            assert(back == NULL);
+            assert(described->returns[0] == '\0');
         } else {
-            assert(back && back->params.section_return.section == sections[expected[i].returns]);
+            assert(plan_section_named(plan, described->returns) == sections[expected[i].returns]);
         }
-        assert(expected[i].layers == 0 ? layers == NULL : (layers && layers->params.layers.lanes == expected[i].layers));
+        assert(described->layers == expected[i].layers);
         /* A layered form carries an accompaniment in every layer. */
         assert(IS("layered") == (find(plan, section, PLAN_CONSTRAINT_ACCOMPANIMENT, 0) != NULL));
         /* A section made from m0 other than as m0 itself names m0; a returning one takes its source's motive. */
@@ -619,7 +610,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
     }
     /* The material, after the sections: m0 Given, or open with a motive to invent. */
     NodeId material = plan_node_child_at(plan, form, count);
-    assert(find(plan, material, PLAN_CONSTRAINT_MATERIAL, 0) != NULL);
+    assert(plan_section_has_role(plan, material, SECTION_ROLE_MATERIAL));
     assert(bars_of(plan_node_span(plan, material).start, scenario->beats) == at);
     NodeId m0 = PLAN_NODE_NONE;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -697,7 +688,7 @@ static void test_structure(const char *kind) {
 /* ------------------------------------------------------------ composing */
 
 /* What the grow tests measured, heard as requested out of 40 (docs/grow.md), for the themes the templates use. */
-static unsigned grow_measured(PlanThemeBeginning beginning, PlanThemeEnding ending, size_t bars) {
+static unsigned grow_measured(SectionBeginning beginning, SectionEnding ending, size_t bars) {
     if (bars != 8) {
         return 0; /* every theme of 4 bars: no theme heard */
     }

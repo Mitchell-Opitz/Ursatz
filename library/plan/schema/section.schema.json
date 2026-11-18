@@ -1,0 +1,1009 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json",
+  "title": "Ursatz section description",
+  "description": "One section described once for forms, plans and piece requests (R-605). `section` holds every member; the profiles state which a form, a plan, a request and an overlay hold. library/plan/section_json.c is the codec, and its member table equals the properties of `section` (test plan_section).",
+  "$defs": {
+    "section": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 31
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 15
+        },
+        "letter": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "theme",
+            "contrast",
+            "return",
+            "variation",
+            "layer",
+            "pattern",
+            "sequence",
+            "episode",
+            "codetta",
+            "liquidation",
+            "transition",
+            "retransition",
+            "subordinate",
+            "coda",
+            "elaboration",
+            "intro",
+            "body",
+            "turnaround",
+            "ending",
+            "material",
+            "seam"
+          ]
+        },
+        "bars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "beats": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "pickup": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4096
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+(/[0-9]+)?$"
+            }
+          ]
+        },
+        "beginning": {
+          "type": "string",
+          "enum": [
+            "presentation",
+            "antecedent",
+            "compound_basic_idea"
+          ]
+        },
+        "ending": {
+          "type": "string",
+          "enum": [
+            "continuation",
+            "consequent",
+            "cadential"
+          ]
+        },
+        "cadence": {
+          "$ref": "#/$defs/cadence"
+        },
+        "first_cadence": {
+          "$ref": "#/$defs/cadence"
+        },
+        "closed": {
+          "type": "boolean"
+        },
+        "keys": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "$ref": "#/$defs/region"
+            },
+            "end": {
+              "$ref": "#/$defs/region"
+            }
+          },
+          "additionalProperties": false
+        },
+        "region": {
+          "$ref": "#/$defs/region"
+        },
+        "motive": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 63
+        },
+        "returns": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 31
+        },
+        "variation": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "ornament",
+            "reharmonize",
+            "reregister",
+            "varied",
+            "figurate",
+            "embellish",
+            "setting"
+          ]
+        },
+        "setting": {
+          "type": "string",
+          "enum": [
+            "block",
+            "arpeggiated",
+            "alberti",
+            "oom-pah"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "parallel",
+            "major",
+            "home"
+          ]
+        },
+        "layers": {
+          "$ref": "#/$defs/layers"
+        },
+        "pedal": {
+          "const": "dominant"
+        },
+        "leads_in": {
+          "type": "boolean"
+        },
+        "connective": {
+          "type": "string",
+          "enum": [
+            "sometimes",
+            "always"
+          ]
+        },
+        "connective_written": {
+          "type": "boolean"
+        },
+        "construction": {
+          "$ref": "#/$defs/construction"
+        },
+        "figure": {
+          "$ref": "#/$defs/figure"
+        },
+        "function": {
+          "type": "string",
+          "enum": [
+            "transition",
+            "retransition",
+            "subordinate",
+            "coda"
+          ]
+        },
+        "independent": {
+          "type": "boolean"
+        },
+        "lyric": {
+          "type": "boolean"
+        },
+        "free_phrase": {
+          "type": "boolean"
+        },
+        "harmony": {
+          "$ref": "#/$defs/harmony"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "role"
+            ],
+            "properties": {
+              "role": {
+                "enum": [
+                  "liquidation"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "construction": false,
+              "motive": false,
+              "returns": false,
+              "variation": false,
+              "pedal": false,
+              "leads_in": false,
+              "connective": false,
+              "layers": false,
+              "beats": false,
+              "figure": false,
+              "beginning": false,
+              "ending": false
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "role"
+            ],
+            "properties": {
+              "role": {
+                "enum": [
+                  "retransition",
+                  "coda"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "construction": false,
+              "motive": false,
+              "returns": false,
+              "variation": false,
+              "pedal": false,
+              "leads_in": false,
+              "connective": false,
+              "layers": false,
+              "beats": false,
+              "figure": false,
+              "beginning": false,
+              "ending": false,
+              "mode": false,
+              "keys": false,
+              "independent": false,
+              "lyric": false
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "role"
+            ],
+            "properties": {
+              "role": {
+                "enum": [
+                  "transition"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "returns": false,
+              "variation": false,
+              "figure": false,
+              "mode": false,
+              "pedal": false
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "variation"
+            ],
+            "properties": {
+              "variation": {
+                "not": {
+                  "const": "exact"
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "returns"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "variation"
+            ],
+            "properties": {
+              "variation": {
+                "const": "setting"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "setting"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "variation"
+            ],
+            "properties": {
+              "variation": {
+                "const": "figurate"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "figure"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "setting"
+            ]
+          },
+          "then": {
+            "required": [
+              "variation"
+            ],
+            "properties": {
+              "variation": {
+                "const": "setting"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "figure"
+            ]
+          },
+          "then": {
+            "required": [
+              "variation"
+            ],
+            "properties": {
+              "variation": {
+                "const": "figurate"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "mode"
+            ],
+            "properties": {
+              "mode": {
+                "const": "parallel"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "variation"
+            ],
+            "properties": {
+              "variation": {
+                "const": "figurate"
+              },
+              "keys": false
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "mode"
+            ],
+            "properties": {
+              "mode": {
+                "const": "major"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "returns"
+            ],
+            "properties": {
+              "variation": {
+                "not": {
+                  "const": "figurate"
+                }
+              },
+              "keys": false
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "mode"
+            ],
+            "properties": {
+              "mode": {
+                "const": "home"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "returns",
+              "variation"
+            ],
+            "properties": {
+              "variation": {
+                "const": "reharmonize"
+              },
+              "keys": false
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "pedal"
+            ]
+          },
+          "then": {
+            "required": [
+              "beginning"
+            ],
+            "properties": {
+              "beginning": {
+                "const": "presentation"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "connective"
+            ]
+          },
+          "then": {
+            "required": [
+              "leads_in"
+            ],
+            "properties": {
+              "leads_in": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "leads_in"
+            ],
+            "properties": {
+              "leads_in": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "returns": false
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "lyric"
+            ],
+            "properties": {
+              "lyric": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "motive": false,
+              "returns": false
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "independent"
+            ],
+            "properties": {
+              "independent": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "motive": false
+            }
+          }
+        }
+      ],
+      "dependentRequired": {
+        "beginning": [
+          "ending"
+        ],
+        "ending": [
+          "beginning"
+        ]
+      }
+    },
+    "cadence": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z-]{1,30}$"
+    },
+    "region": {
+      "oneOf": [
+        {
+          "const": "home"
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 31,
+          "not": {
+            "const": "home"
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tonic": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 3
+            },
+            "material": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63
+            }
+          },
+          "required": [
+            "tonic",
+            "material"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "relation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 63
+            },
+            "anchor": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 31
+            }
+          },
+          "required": [
+            "relation"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "harmony": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "progression": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "cells": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            }
+          },
+          "required": [
+            "progression"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 31
+            }
+          },
+          "required": [
+            "schema"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "chords": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "bar": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4096
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 31
+                  }
+                },
+                "required": [
+                  "bar",
+                  "text"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "chords"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "construction": {
+      "oneOf": [
+        {
+          "const": "auto"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ideas": {
+              "type": "object",
+              "propertyNames": {
+                "enum": [
+                  "basic idea",
+                  "repetition",
+                  "contrasting idea",
+                  "consequent basic idea",
+                  "consequent contrasting idea",
+                  "fragment 1",
+                  "fragment 2",
+                  "cadential",
+                  "cadential 1",
+                  "cadential 2"
+                ]
+              },
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              }
+            },
+            "extensions": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "repeat",
+                      "stretch",
+                      "addition",
+                      "evaded"
+                    ]
+                  },
+                  "idea": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "basic idea",
+                          "repetition",
+                          "contrasting idea",
+                          "consequent basic idea",
+                          "consequent contrasting idea",
+                          "fragment 1",
+                          "fragment 2",
+                          "cadential",
+                          "cadential 1",
+                          "cadential 2"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "bars": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4
+                  },
+                  "varied": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "given",
+                "motive",
+                "length"
+              ]
+            }
+          },
+          "required": [
+            "ideas"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "figure": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "neighbor",
+            "scale",
+            "broken-chord"
+          ]
+        },
+        "rhythm": {
+          "type": "string",
+          "enum": [
+            "eighths",
+            "sixteenths"
+          ]
+        },
+        "harmony": {
+          "type": "string",
+          "enum": [
+            "kept",
+            "reharmonized"
+          ]
+        },
+        "change_at": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4096
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "climax": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "rhythm"
+      ],
+      "additionalProperties": false
+    },
+    "layers": {
+      "oneOf": [
+        {
+          "const": "all"
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "meter",
+              "key",
+              "harmony",
+              "bass",
+              "melody",
+              "inner_voice"
+            ]
+          }
+        }
+      ]
+    },
+    "form_section": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/section"
+        }
+      ],
+      "required": [
+        "name",
+        "letter",
+        "role",
+        "cadence"
+      ],
+      "properties": {
+        "id": false,
+        "pickup": false,
+        "first_cadence": false,
+        "connective_written": false,
+        "free_phrase": false,
+        "harmony": false,
+        "region": false,
+        "function": false,
+        "role": {
+          "type": "string",
+          "enum": [
+            "theme",
+            "contrast",
+            "return",
+            "variation",
+            "layer",
+            "pattern",
+            "sequence",
+            "episode",
+            "codetta",
+            "liquidation",
+            "transition",
+            "retransition",
+            "subordinate",
+            "coda",
+            "elaboration",
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ]
+        },
+        "layers": {
+          "oneOf": [
+            {
+              "const": "all"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "bass",
+                  "inner_voice",
+                  "melody"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "bars"
+          ]
+        },
+        {
+          "required": [
+            "beats"
+          ]
+        }
+      ],
+      "if": {
+        "properties": {
+          "role": {
+            "not": {
+              "enum": [
+                "liquidation",
+                "retransition",
+                "coda"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "beginning",
+          "ending"
+        ]
+      },
+      "unevaluatedProperties": false
+    },
+    "plan_section": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/section"
+        }
+      ],
+      "properties": {
+        "name": false,
+        "bars": false,
+        "beats": false,
+        "pickup": false,
+        "motive": false,
+        "region": false
+      },
+      "unevaluatedProperties": false
+    },
+    "request_section": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/section"
+        }
+      ],
+      "required": [
+        "id",
+        "role"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ]
+        },
+        "function": {
+          "type": "string",
+          "enum": [
+            "transition",
+            "coda"
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "bars"
+          ]
+        },
+        {
+          "required": [
+            "beats"
+          ]
+        }
+      ]
+    },
+    "overlay": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/section"
+        }
+      ],
+      "required": [
+        "name"
+      ]
+    }
+  }
+}

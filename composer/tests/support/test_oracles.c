@@ -230,7 +230,7 @@ static bool is_scale_step(const AnalysisKey *key, int from, int to) {
 }
 
 bool form_figure_check(const PiecePlan *plan, NodeId section, char *reason, size_t size) {
-    PlanFigure figure;
+    SectionFigure figure;
     FigureReading *reading = plan && form_figure_find(plan, section, &figure) ? form_figure_read_section(plan, section) : NULL;
     size_t own_count = 0;
     FigureSourceNote *own = reading ? form_figure_read_melody(plan, section, 0, false, 0, NULL, &own_count) : NULL;
@@ -303,14 +303,14 @@ bool form_figure_check(const PiecePlan *plan, NodeId section, char *reason, size
             int pitch = cell_notes[i]->pitch;
             if (i == 0 && pitch != tone) {
                 ok = fault(reason, size, k, "the cell does not start on the skeleton tone");
-            } else if (figure.kind == PLAN_FIGURE_NEIGHBOR && i % 2 == 0 && pitch != tone) {
+            } else if (figure.kind == SECTION_FIGURE_NEIGHBOR && i % 2 == 0 && pitch != tone) {
                 ok = fault(reason, size, k, "a neighbor figure leaves the skeleton tone on an even note");
-            } else if (figure.kind == PLAN_FIGURE_NEIGHBOR && i % 2 == 1 &&
+            } else if (figure.kind == SECTION_FIGURE_NEIGHBOR && i % 2 == 1 &&
                        (util_absolute(pitch - tone) < 1 || util_absolute(pitch - tone) > 2)) {
                 ok = fault(reason, size, k, "a neighbor is not a step from the skeleton tone");
-            } else if (figure.kind == PLAN_FIGURE_SCALE && i > 0 && !is_scale_step(&reading->key, cell_notes[i - 1]->pitch, pitch)) {
+            } else if (figure.kind == SECTION_FIGURE_SCALE && i > 0 && !is_scale_step(&reading->key, cell_notes[i - 1]->pitch, pitch)) {
                 ok = fault(reason, size, k, "a scale figure moves by more than a step");
-            } else if (figure.kind == PLAN_FIGURE_BROKEN_CHORD && !form_figure_has_pitch_class(reading->mask[k], pitch)) {
+            } else if (figure.kind == SECTION_FIGURE_BROKEN_CHORD && !form_figure_has_pitch_class(reading->mask[k], pitch)) {
                 ok = fault(reason, size, k, "a broken chord holds a note that is not a tone of the chord");
             }
         }

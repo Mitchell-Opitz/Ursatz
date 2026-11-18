@@ -74,29 +74,28 @@ static bool read_liquidate(const PiecePlan *plan, FillTarget target, LiquidateRe
     if (target.kind != FILL_TARGET_NODE || !plan_has_node(plan, target.id) ||
         plan_node_kind(plan, target.id) != PLAN_NODE_SECTION ||
         plan_node_state(plan, target.id) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, target.id) != 0 ||
-        plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_ARCHETYPE) ||
-        plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_THEME_PAIRING) ||
-        plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_RETURN) ||
-        plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_HOLD) || form_return_handles(plan, target.id)) {
+        plan_section_or_empty(plan, target.id)->has_pairing ||
+        plan_section_or_empty(plan, target.id)->returns[0] != '\0' ||
+        plan_section_or_empty(plan, target.id)->leads_in || form_return_handles(plan, target.id)) {
         return false;
     }
     /* A liquidation, or a retransition: a section whose function is retransition and which has no liquidation of its own. */
-    PlanSectionFunction function;
-    const bool liquidation = plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_LIQUIDATION);
+    SectionFunction function;
+    const bool liquidation = plan_section_has_role(plan, target.id, SECTION_ROLE_LIQUIDATION);
     request.retransition = !liquidation && plan_section_function_of(plan, target.id, &function) &&
-                           function.function == PLAN_FUNCTION_RETRANSITION;
+                           function.function == SECTION_FUNCTION_RETRANSITION;
     if (!liquidation && !request.retransition) {
         return false;
     }
     theme->section = target.id;
     theme->span = plan_node_span(plan, target.id);
-    bool cadence = false;
+    const bool cadence = plan_section_or_empty(plan, target.id)->has_cadence;
+    if (cadence) {
+        theme->cadence = plan_section_or_empty(plan, target.id)->cadence;
+    }
     for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence) {
-            cadence = true;
-            theme->cadence = constraint->params.cadence;
-        } else if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
+        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
             theme->has_accompaniment = true;
             theme->accompaniment = constraint->params.accompaniment;
         } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {

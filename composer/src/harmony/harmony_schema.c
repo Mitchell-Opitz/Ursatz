@@ -155,6 +155,19 @@ bool harmony_schema_find(const char *name, GalantSchemaId *id) {
     return false;
 }
 
+bool harmony_schema_chords(const AnalysisKey *key, GalantSchemaId id, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t *count) {
+    const GalantPrototype *prototype = galant_prototype(id);
+    PhraseChord chords[GALANT_MAX_STAGES];
+    if (!key || !prototype || !derive_schema(key, prototype, chords)) {
+        return false;
+    }
+    for (size_t i = 0; i < prototype->stage_count; i++) {
+        snprintf(numerals[i], PLAN_ROMAN_NUMERAL_MAX, "%s", chords[i].roman);
+    }
+    *count = prototype->stage_count;
+    return true;
+}
+
 bool harmony_schema_available(GalantSchemaId id, const PitchMaterial *material) {
     const GalantPrototype *prototype = galant_prototype(id);
     PhraseChord chords[GALANT_MAX_STAGES];

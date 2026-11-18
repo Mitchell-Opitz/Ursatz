@@ -36,15 +36,15 @@ typedef struct {
     const char *file;
     const char *key;
     const char *meter;
-    PlanThemeBeginning beginning;
-    PlanThemeEnding ending;
+    SectionBeginning beginning;
+    SectionEnding ending;
 } Case;
 
 static const Case CASES[] = {
-    {"test-motif sentence", "sentence", COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", "C major", "6/8", PLAN_THEME_BEGINNING_PRESENTATION,
-     PLAN_THEME_ENDING_CONTINUATION},
-    {"two-bar-3-4 period", "period", COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json", "A minor", "3/4", PLAN_THEME_BEGINNING_ANTECEDENT,
-     PLAN_THEME_ENDING_CONSEQUENT}};
+    {"test-motif sentence", "sentence", COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", "C major", "6/8", SECTION_BEGINNING_PRESENTATION,
+     SECTION_ENDING_CONTINUATION},
+    {"two-bar-3-4 period", "period", COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json", "A minor", "3/4", SECTION_BEGINNING_ANTECEDENT,
+     SECTION_ENDING_CONSEQUENT}};
 
 static Motive load_motive(const char *path) {
     char *text = test_must_read_file(path, NULL);
@@ -206,7 +206,7 @@ int main(int argc, char **argv) {
             memset(&setup, 0, sizeof(setup));
             setup.knowledge = test_knowledge();
             setup.text = &text;
-            setup.into = CASES[c].beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? GROW_INTO_PERIOD : GROW_INTO_HYBRID;
+            setup.into = CASES[c].beginning == SECTION_BEGINNING_ANTECEDENT ? GROW_INTO_PERIOD : GROW_INTO_HYBRID;
             setup.pairing.beginning = CASES[c].beginning;
             setup.pairing.ending = CASES[c].ending;
             setup.key = motive_key(&motive);

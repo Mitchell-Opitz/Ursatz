@@ -4,50 +4,45 @@
 
 #include "grow/grow_internal.h"
 
-/* The beginnings and endings, in PlanThemeBeginning and PlanThemeEnding order. The plan names have underscores, the library names hyphens. */
+/* The beginnings and endings, in SectionBeginning and SectionEnding order. The plan names have underscores, the library names hyphens. */
 static const ThemeShapeHalf HALVES[] = {
-    {true, PLAN_THEME_BEGINNING_PRESENTATION, "presentation", "presentation"},
-    {true, PLAN_THEME_BEGINNING_ANTECEDENT, "antecedent", "antecedent"},
-    {true, PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA, "compound_basic_idea", "compound-basic-idea"},
-    {false, PLAN_THEME_ENDING_CONTINUATION, "continuation", "continuation"},
-    {false, PLAN_THEME_ENDING_CONSEQUENT, "consequent", "consequent"},
-    {false, PLAN_THEME_ENDING_CADENTIAL, "cadential", "cadential"},
+    {true, SECTION_BEGINNING_PRESENTATION, "presentation", "presentation"},
+    {true, SECTION_BEGINNING_ANTECEDENT, "antecedent", "antecedent"},
+    {true, SECTION_BEGINNING_COMPOUND_BASIC_IDEA, "compound_basic_idea", "compound-basic-idea"},
+    {false, SECTION_ENDING_CONTINUATION, "continuation", "continuation"},
+    {false, SECTION_ENDING_CONSEQUENT, "consequent", "consequent"},
+    {false, SECTION_ENDING_CADENTIAL, "cadential", "cadential"},
 };
 
 /* The ideas of each half, in the order of the halves. The place is the GrowPlace index, the units the eighths of the theme. */
 static const ThemeShapeIdea IDEAS[] = {
-    {GROW_IDEA_BASIC, "basic idea", true, PLAN_THEME_BEGINNING_PRESENTATION, GROW_PLACE_BASIC, GROW_SLOT_BASIC, true,
+    {GROW_IDEA_BASIC, "basic idea", true, SECTION_BEGINNING_PRESENTATION, GROW_PLACE_BASIC, GROW_SLOT_BASIC, true,
      GROW_ROLE_PRESENTATION, 2},
-    {GROW_IDEA_REPETITION, "repetition", true, PLAN_THEME_BEGINNING_PRESENTATION, GROW_PLACE_REPETITION, GROW_SLOT_BASIC,
+    {GROW_IDEA_REPETITION, "repetition", true, SECTION_BEGINNING_PRESENTATION, GROW_PLACE_REPETITION, GROW_SLOT_BASIC,
      false, GROW_ROLE_PRESENTATION, 2},
-    {GROW_IDEA_BASIC, "basic idea", true, PLAN_THEME_BEGINNING_ANTECEDENT, GROW_PLACE_BASIC, GROW_SLOT_BASIC, true,
+    {GROW_IDEA_BASIC, "basic idea", true, SECTION_BEGINNING_ANTECEDENT, GROW_PLACE_BASIC, GROW_SLOT_BASIC, true,
      GROW_ROLE_PRESENTATION, 2},
-    {GROW_IDEA_CONTRASTING, "contrasting idea", true, PLAN_THEME_BEGINNING_ANTECEDENT, GROW_PLACE_CONTRAST,
+    {GROW_IDEA_CONTRASTING, "contrasting idea", true, SECTION_BEGINNING_ANTECEDENT, GROW_PLACE_CONTRAST,
      GROW_SLOT_CONTRASTING, true, GROW_ROLE_CONTRAST, 2},
-    {GROW_IDEA_BASIC, "basic idea", true, PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA, GROW_PLACE_BASIC, GROW_SLOT_BASIC, true,
+    {GROW_IDEA_BASIC, "basic idea", true, SECTION_BEGINNING_COMPOUND_BASIC_IDEA, GROW_PLACE_BASIC, GROW_SLOT_BASIC, true,
      GROW_ROLE_PRESENTATION, 2},
-    {GROW_IDEA_CONTRASTING, "contrasting idea", true, PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA, GROW_PLACE_CONTRAST,
+    {GROW_IDEA_CONTRASTING, "contrasting idea", true, SECTION_BEGINNING_COMPOUND_BASIC_IDEA, GROW_PLACE_CONTRAST,
      GROW_SLOT_CONTRASTING, true, GROW_ROLE_CONTRAST, 2},
-    {GROW_IDEA_FRAGMENT_1, "fragment 1", false, PLAN_THEME_ENDING_CONTINUATION, GROW_PLACE_FRAGMENT_1,
+    {GROW_IDEA_FRAGMENT_1, "fragment 1", false, SECTION_ENDING_CONTINUATION, GROW_PLACE_FRAGMENT_1,
      GROW_SLOT_CONTINUATION, true, GROW_ROLE_CONTINUATION, 1},
-    {GROW_IDEA_FRAGMENT_2, "fragment 2", false, PLAN_THEME_ENDING_CONTINUATION, GROW_PLACE_FRAGMENT_2,
+    {GROW_IDEA_FRAGMENT_2, "fragment 2", false, SECTION_ENDING_CONTINUATION, GROW_PLACE_FRAGMENT_2,
      GROW_SLOT_CONTINUATION, false, GROW_ROLE_CONTINUATION, 1},
-    {GROW_IDEA_CADENTIAL, "cadential", false, PLAN_THEME_ENDING_CONTINUATION, GROW_PLACE_CADENTIAL, GROW_SLOT_CADENTIAL,
+    {GROW_IDEA_CADENTIAL, "cadential", false, SECTION_ENDING_CONTINUATION, GROW_PLACE_CADENTIAL, GROW_SLOT_CADENTIAL,
      true, GROW_ROLE_CADENTIAL, 2},
-    {GROW_IDEA_CONSEQUENT_BASIC, "consequent basic idea", false, PLAN_THEME_ENDING_CONSEQUENT, GROW_PLACE_RESTATED,
+    {GROW_IDEA_CONSEQUENT_BASIC, "consequent basic idea", false, SECTION_ENDING_CONSEQUENT, GROW_PLACE_RESTATED,
      GROW_SLOT_BASIC, false, GROW_ROLE_PRESENTATION, 2},
-    {GROW_IDEA_CONSEQUENT_CONTRASTING, "consequent contrasting idea", false, PLAN_THEME_ENDING_CONSEQUENT,
+    {GROW_IDEA_CONSEQUENT_CONTRASTING, "consequent contrasting idea", false, SECTION_ENDING_CONSEQUENT,
      GROW_PLACE_CONSEQUENT_CONTRAST, GROW_SLOT_CONTRASTING, false, GROW_ROLE_CONTRAST, 2},
-    {GROW_IDEA_CADENTIAL_1, "cadential 1", false, PLAN_THEME_ENDING_CADENTIAL, GROW_PLACE_CADENTIAL_1, GROW_SLOT_CADENTIAL,
+    {GROW_IDEA_CADENTIAL_1, "cadential 1", false, SECTION_ENDING_CADENTIAL, GROW_PLACE_CADENTIAL_1, GROW_SLOT_CADENTIAL,
      true, GROW_ROLE_CADENTIAL, 2},
-    {GROW_IDEA_CADENTIAL_2, "cadential 2", false, PLAN_THEME_ENDING_CADENTIAL, GROW_PLACE_CADENTIAL_2, GROW_SLOT_CADENTIAL,
+    {GROW_IDEA_CADENTIAL_2, "cadential 2", false, SECTION_ENDING_CADENTIAL, GROW_PLACE_CADENTIAL_2, GROW_SLOT_CADENTIAL,
      false, GROW_ROLE_CADENTIAL, 2},
 };
-
-/* The ideas in GrowIdea order, by name. */
-static const char *const IDEA_NAMES[GROW_IDEA_COUNT] = {
-    "basic idea", "repetition", "contrasting idea", "consequent basic idea", "consequent contrasting idea",
-    "fragment 1", "fragment 2", "cadential", "cadential 1", "cadential 2"};
 
 static const ThemeShapeSlot SLOTS[GROW_SLOT_COUNT] = {
     {GROW_SLOT_BASIC, "basic", "beginning", NULL},
@@ -58,12 +53,12 @@ static const ThemeShapeSlot SLOTS[GROW_SLOT_COUNT] = {
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
 
-const ThemeShapeHalf *theme_shape_beginning(PlanThemeBeginning beginning) {
-    return beginning >= 0 && beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA ? &HALVES[beginning] : NULL;
+const ThemeShapeHalf *theme_shape_beginning(SectionBeginning beginning) {
+    return beginning >= 0 && beginning <= SECTION_BEGINNING_COMPOUND_BASIC_IDEA ? &HALVES[beginning] : NULL;
 }
 
-const ThemeShapeHalf *theme_shape_ending(PlanThemeEnding ending) {
-    return ending >= 0 && ending <= PLAN_THEME_ENDING_CADENTIAL ? &HALVES[3 + (int)ending] : NULL;
+const ThemeShapeHalf *theme_shape_ending(SectionEnding ending) {
+    return ending >= 0 && ending <= SECTION_ENDING_CADENTIAL ? &HALVES[3 + (int)ending] : NULL;
 }
 
 const ThemeShapeHalf *theme_shape_half_find(bool beginning, const char *plan_name) {
@@ -84,11 +79,11 @@ const ThemeShapeIdea *theme_shape_idea_at(size_t index) {
 }
 
 /* Whether the row belongs to the pairing's beginning or its ending. */
-static bool row_in(const ThemeShapeIdea *row, const PlanThemePairing *pairing) {
+static bool row_in(const ThemeShapeIdea *row, const SectionPairing *pairing) {
     return row->half == (row->in_beginning ? (int)pairing->beginning : (int)pairing->ending);
 }
 
-const ThemeShapeIdea *theme_shape_idea_in(const PlanThemePairing *pairing, GrowIdea idea) {
+const ThemeShapeIdea *theme_shape_idea_in(const SectionPairing *pairing, GrowIdea idea) {
     for (size_t i = 0; pairing && i < COUNT_OF(IDEAS); i++) {
         if (IDEAS[i].idea == idea && row_in(&IDEAS[i], pairing)) {
             return &IDEAS[i];
@@ -97,7 +92,7 @@ const ThemeShapeIdea *theme_shape_idea_in(const PlanThemePairing *pairing, GrowI
     return NULL;
 }
 
-const ThemeShapeIdea *theme_shape_place_in(const PlanThemePairing *pairing, unsigned place) {
+const ThemeShapeIdea *theme_shape_place_in(const SectionPairing *pairing, unsigned place) {
     bool from_beginning = place == GROW_PLACE_BASIC || place == GROW_PLACE_REPETITION;
     for (size_t i = 0; pairing && i < COUNT_OF(IDEAS); i++) {
         if (IDEAS[i].place == place && IDEAS[i].in_beginning == from_beginning && row_in(&IDEAS[i], pairing)) {
@@ -126,7 +121,7 @@ GrowSlot theme_shape_idea_slot(GrowIdea idea) {
 }
 
 const char *theme_shape_idea_name(GrowIdea idea) {
-    return idea >= 0 && idea < GROW_IDEA_COUNT ? IDEA_NAMES[idea] : "unknown";
+    return idea >= 0 && idea < GROW_IDEA_COUNT ? section_idea_name((SectionIdea)idea) : "unknown";
 }
 
 const ThemeShapeSlot *theme_shape_slot(GrowSlot slot) {

@@ -137,8 +137,8 @@ int main(void) {
                 setup.knowledge = test_knowledge();
                 setup.text = &text;
                 setup.into = period ? GROW_INTO_PERIOD : GROW_INTO_HYBRID;
-                setup.pairing.beginning = period ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
-                setup.pairing.ending = period ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
+                setup.pairing.beginning = period ? SECTION_BEGINNING_ANTECEDENT : SECTION_BEGINNING_PRESENTATION;
+                setup.pairing.ending = period ? SECTION_ENDING_CONSEQUENT : SECTION_ENDING_CONTINUATION;
                 setup.key = motive_key(&motive);
                 setup.meter = motive_meter(&motive);
                 setup.bars = 8;

@@ -1,5 +1,7 @@
 #include "util/plan_util.h"
 
+#include <string.h>
+
 #include <model/identity/entity_id.h>
 #include <model/time/meter_arithmetic.h>
 #include <model/time/meter_map.h>
@@ -138,15 +140,13 @@ bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) {
     return false;
 }
 
-bool plan_section_function_of(const PiecePlan *plan, NodeId node, PlanSectionFunction *out) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
-        if (constraint->kind == PLAN_CONSTRAINT_SECTION_FUNCTION) {
-            *out = constraint->params.section_function;
-            return true;
-        }
+bool plan_section_function_of(const PiecePlan *plan, NodeId node, SectionFunction *out) {
+    const SectionDescription *section = plan_node_section(plan, node);
+    if (!section || !section->has_function) {
+        return false;
     }
-    return false;
+    *out = section->function;
+    return true;
 }
 
 PieceResult piece_result_of_plan(PlanResult result) {

@@ -1,10 +1,10 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "ternary",
   "label": "Ternary",
   "closing": true,
-  "regions": [{"name": "away", "major": [5, 3], "minor": [3, 5]}],
+  "regions": [{"name": "away", "major": ["omt.relation.dominant", "omt.relation.mediant"], "minor": ["omt.relation.mediant", "omt.relation.dominant"]}],
   "sizes": [
     {"bars": 12, "sections": [
       {"name": "A", "letter": "A", "role": "theme", "bars": 4, "beginning": "antecedent", "ending": "consequent", "cadence": "perfect-authentic", "closed": true, "keys": {"end": "away"}},

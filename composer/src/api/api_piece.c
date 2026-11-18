@@ -251,7 +251,7 @@ void api_piece_lanes_name(const PieceEdit *edit, char *out, size_t size) {
 /* A section's fill in the request, or PIECE_FILL_EMPTY for an id the request does not have. */
 static PieceFillKind request_fill(const PieceSpec *request, const char *id) {
     for (size_t s = 0; s < request->request.section_count; s++) {
-        if (strcmp(request->sections[s].id, id) == 0) {
+        if (strcmp(request->sections[s].description.id, id) == 0) {
             return request->sections[s].fill;
         }
     }
@@ -461,12 +461,12 @@ bool api_piece_loop_region(const PiecePlan *plan, Rational *start, Rational *end
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
             continue;
         }
-        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            if (constraint->kind != PLAN_CONSTRAINT_PIECE_PART) {
-                continue;
-            }
-            int part = constraint->params.piece_part.part;
+        const SectionDescription *section = plan_node_section(plan, id);
+        if (!section->has_role || section->role < SECTION_ROLE_INTRO || section->role > SECTION_ROLE_ENDING) {
+            continue;
+        }
+        {
+            int part = (int)(section->role - SECTION_ROLE_INTRO);
             PlanSpan span = plan_node_span(plan, id);
             Rational span_end;
             if ((part != (int)PIECE_PART_BODY && part != (int)PIECE_PART_TURNAROUND) ||
@@ -516,7 +516,7 @@ cJSON *api_piece_plan_object(const PiecePlan *plan) {
 
 typedef struct {
     const PieceSection *section;     /* the section the request gave, for a form whose sections it gives */
-    const FormSectionSpec *spec;     /* the section of the form's size, for a form with sizes */
+    const SectionDescription *spec;     /* the section of the form's size, for a form with sizes */
     const FormSpecSize *size;
     const char *source;
     Rational start;
@@ -528,6 +528,8 @@ typedef struct {
     NodeId node;
     char key_heard[16]; /* the key the Analyzer heard at the section's start over the whole piece, "" when none */
     char key[16];       /* the key the plan gives the section's start (R-493), "" when the plan has none */
+    char region[128];   /* the region as the request asked for it or the form names it (R-610), "" for none */
+    char harmony[320];  /* the harmony as the request gave it (R-610): the numerals, "schema <name>" or the chord bars; "" for none */
     bool key_flats;     /* that key is spelled with flats: the figure's skeleton names its tones so */
     bool pedal;        /* a harmony span in the section's first half was written over a pedal */
     bool kept;         /* a regenerate left the section as it was: it was neither heard nor checked */
@@ -671,6 +673,25 @@ static void planned_key_at(const PiecePlan *plan, PlanSpan section, char *out, s
     free(ids);
 }
 
+/* The harmony of a section as the request gave it: its progression's numerals (and cells), "schema <name>" or "bar 2: V, bar 3: I V". */
+static void harmony_text(const SectionHarmony *harmony, char *out, size_t size) {
+    out[0] = '\0';
+    if (harmony->kind == SECTION_HARMONY_PROGRESSION) {
+        if (harmony->cells) {
+            snprintf(out, size, "%s (%u cells each)", harmony->numerals, harmony->cells);
+        } else {
+            snprintf(out, size, "%s", harmony->numerals);
+        }
+    } else if (harmony->kind == SECTION_HARMONY_SCHEMA) {
+        snprintf(out, size, "schema %s", harmony->schema);
+    } else if (harmony->kind == SECTION_HARMONY_CHORDS) {
+        size_t used = 0;
+        for (size_t i = 0; i < harmony->chord_count && used + 1 < size; i++) {
+            used += (size_t)snprintf(out + used, size - used, "%sbar %u: %s", i ? ", " : "", harmony->chords[i].bar, harmony->chords[i].text);
+        }
+    }
+}
+
 /* The sections of a size of a form with sizes, each matched to the plan's section of its name, in order. */
 static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion *version, const FormSpecSize *size, Row *rows) {
     const AnalyzerCheck *check = version->outcome.analyzer_check_count > 0 ? &version->outcome.analyzer_checks[0] : NULL;
@@ -684,18 +705,20 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
         keys = NULL;
         key_count = 0;
     }
+    PieceRegion regions[FORM_SPEC_MAX_SECTIONS];
+    bool regional = false;
+    size_t refused = 0;
+    char why[64];
+    if (!size || piece_resolve_overlay_regions(&request->request, size, request->knowledge, regions, &regional, &refused, why, sizeof why) !=
+                     PIECE_OK) {
+        regional = false;
+    }
     for (size_t i = 0; size && i < size->section_count && count < PIECE_ROWS_MAX; i++) {
         NodeId id = sized_section_find(plan, size->sections[i].name);
         if (id == PLAN_NODE_NONE) {
             continue;
         }
-        const PlanConstraint *cadence = NULL;
-        const PlanConstraint *connective = NULL;
-        for (size_t c = 0; c < plan_node_constraint_count(plan, id); c++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, c);
-            cadence = constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence ? constraint : cadence;
-            connective = constraint->kind == PLAN_CONSTRAINT_CONNECTIVE && !connective ? constraint : connective;
-        }
+        const SectionDescription *described = plan_node_section(plan, id);
         Row *row = &rows[count++];
         memset(row, 0, sizeof(*row));
         row->connective = -1;
@@ -704,12 +727,12 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
         row->start = plan_node_span(plan, id).start;
         row->length = plan_node_span(plan, id).length;
         row->kept = size_section_kept(version, id);
-        row->has_cadence = cadence != NULL;
-        row->cadence = cadence ? cadence->params.cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
+        row->has_cadence = described->has_cadence;
+        row->cadence = described->has_cadence ? described->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
         row->plan = plan;
         row->node = id;
         row->pedal = section_pedal(plan, plan_node_span(plan, id));
-        row->connective = connective ? (connective->params.connective.written ? 1 : 0) : -1;
+        row->connective = described->connective != SECTION_CONNECTIVE_NONE ? (described->connective_written ? 1 : 0) : -1;
         if (size->sections[i].leads_in && i + 1 < size->section_count) {
             NodeId next = sized_section_find(plan, size->sections[i + 1].name);
             char ignored[PLAN_ROMAN_NUMERAL_MAX];
@@ -719,7 +742,19 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
         }
         key_heard_at(keys, key_count, row->start, row->key_heard, sizeof row->key_heard);
         planned_key_at(plan, plan_node_span(plan, id), row->key, sizeof row->key, &row->key_flats);
-        if (cadence) {
+        for (size_t o = 0; o < request->request.overlay_count; o++) {
+            if (strcmp(request->request.overlays[o].description.name, size->sections[i].name) == 0) {
+                harmony_text(&request->request.overlays[o].description.harmony, row->harmony, sizeof row->harmony);
+            }
+        }
+        if (regional && regions[i].has_region) {
+            snprintf(row->region, sizeof row->region, "%s", regions[i].text);
+        } else if (size->sections[i].key_end.kind == SECTION_REGION_FORM || size->sections[i].key_start.kind == SECTION_REGION_FORM) {
+            snprintf(row->region, sizeof row->region, "%s",
+                     size->sections[i].key_end.kind == SECTION_REGION_FORM ? size->sections[i].key_end.form_region
+                                                                              : size->sections[i].key_start.form_region);
+        }
+        if (described->has_cadence) {
             row->heard = heard_cadence(check, next_item++);
         }
         if (!check) {
@@ -800,27 +835,32 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
     size_t next_item = 0;
     size_t count = 0;
     const PiecePlan *plan = version->plan;
+    PieceRegion loop_regions[PIECE_STRUCTURE_MAX_SECTIONS];
+    size_t loop_refused = 0;
+    char loop_why[64];
+    bool loop_regional = request->request.section_count > 0 &&
+                         piece_resolve_regions(&request->request, request->knowledge, loop_regions, &loop_refused, loop_why, sizeof loop_why) ==
+                             PIECE_OK;
     for (NodeId id = 1; id <= plan_node_count(plan) && count < PIECE_ROWS_MAX; id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION ||
-            plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
+            plan_section_has_role(plan, id, SECTION_ROLE_SEAM)) {
             continue;
         }
-        const PlanConstraint *part = NULL;
-        const PlanConstraint *cadence = NULL;
-        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            part = constraint->kind == PLAN_CONSTRAINT_PIECE_PART ? constraint : part;
-            cadence = constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence ? constraint : cadence;
-        }
-        if (!part) {
+        const SectionDescription *described = plan_node_section(plan, id);
+        const bool has_part = described->has_role && described->role >= SECTION_ROLE_INTRO && described->role <= SECTION_ROLE_ENDING;
+        if (!has_part) {
             continue;
         }
         Row *row = &rows[count];
         memset(row, 0, sizeof(*row));
         for (size_t s = 0; s < request->request.section_count; s++) {
-            if (strcmp(request->sections[s].id, part->params.piece_part.id) == 0) {
+            if (strcmp(request->sections[s].description.id, described->id) == 0) {
                 row->section = &request->sections[s];
                 row->source = request->source[s];
+                harmony_text(&request->sections[s].description.harmony, row->harmony, sizeof row->harmony);
+                if (loop_regional && loop_regions[s].has_region) {
+                    snprintf(row->region, sizeof row->region, "%s", loop_regions[s].text);
+                }
             }
         }
         if (!row->section) {
@@ -830,9 +870,9 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
         row->node = id;
         row->start = plan_node_span(plan, id).start;
         row->kept = section_kept(version, id);
-        row->has_cadence = cadence != NULL;
-        row->cadence = cadence ? cadence->params.cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
-        if (cadence && check) {
+        row->has_cadence = described->has_cadence;
+        row->cadence = described->has_cadence ? described->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
+        if (described->has_cadence && check) {
             row->heard = heard_cadence(check, next_item);
             next_item++;
         }
@@ -933,13 +973,13 @@ static void planned_key_near_end(const PiecePlan *plan, PlanSpan section, char *
  * has the plan and node of the section it performs, so it takes that section's function.
  */
 static cJSON *function_json(const Row *row) {
-    PlanSectionFunction function;
+    SectionFunction function;
     if (!row->plan || !plan_section_function_of(row->plan, row->node, &function)) {
         return cJSON_CreateNull();
     }
     char text[192];
     switch (function.function) {
-    case PLAN_FUNCTION_TRANSITION: {
+    case SECTION_FUNCTION_TRANSITION: {
         char start[16];
         char end[16];
         bool flats;
@@ -951,10 +991,10 @@ static cJSON *function_json(const Row *row) {
                  modulates ? ", modulating to " : "", modulates ? end : "");
         break;
     }
-    case PLAN_FUNCTION_RETRANSITION:
+    case SECTION_FUNCTION_RETRANSITION:
         snprintf(text, sizeof text, "a retransition over the dominant pedal, ending on the main theme's head");
         break;
-    case PLAN_FUNCTION_SUBORDINATE:
+    case SECTION_FUNCTION_SUBORDINATE:
         snprintf(text, sizeof text, "a subordinate theme%s", function.lyric ? ", lyric" : "");
         break;
     default:
@@ -962,7 +1002,7 @@ static cJSON *function_json(const Row *row) {
         break;
     }
     cJSON *entry = cJSON_CreateObject();
-    if (!entry || !cJSON_AddStringToObject(entry, "kind", plan_function_kind_name(function.function)) ||
+    if (!entry || !cJSON_AddStringToObject(entry, "kind", section_function_kind_name(function.function)) ||
         !cJSON_AddBoolToObject(entry, "independent", function.independent) || !cJSON_AddBoolToObject(entry, "lyric", function.lyric) ||
         !cJSON_AddStringToObject(entry, "text", text)) {
         cJSON_Delete(entry);
@@ -974,15 +1014,17 @@ static cJSON *function_json(const Row *row) {
 /* A row of a form whose sections the request gives: {id, part, function, letter, start, beats, cadence, heard, [in_scope], fill, source, [construction_text]}. */
 static cJSON *loop_row_json(const Row *row) {
     cJSON *entry = cJSON_CreateObject();
-    bool ok = entry && cJSON_AddStringToObject(entry, "id", row->section->id) &&
-              cJSON_AddStringToObject(entry, "part", piece_part_name(row->section->part)) &&
+    bool ok = entry && cJSON_AddStringToObject(entry, "id", row->section->description.id) &&
+              cJSON_AddStringToObject(entry, "part", piece_part_name(piece_section_part(row->section))) &&
               api_add(entry, "function", function_json(row)) &&
-              cJSON_AddStringToObject(entry, "letter", row->section->letter) && api_add(entry, "start", time_json(row->start)) &&
-              cJSON_AddNumberToObject(entry, "beats", (double)row->section->beats) &&
+              cJSON_AddStringToObject(entry, "letter", row->section->description.letter) && api_add(entry, "start", time_json(row->start)) &&
+              cJSON_AddNumberToObject(entry, "beats", (double)row->section->description.beats) &&
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
               api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
               cJSON_AddStringToObject(entry, "fill", piece_fill_name(row->section->fill)) &&
-              cJSON_AddStringToObject(entry, "source", row->source) && add_construction_text(entry, row);
+              cJSON_AddStringToObject(entry, "source", row->source) &&
+              api_add(entry, "region", string_or_null(row->region[0] ? row->region : NULL)) &&
+              api_add(entry, "harmony", string_or_null(row->harmony[0] ? row->harmony : NULL)) && add_construction_text(entry, row);
     if (!ok) {
         cJSON_Delete(entry);
         return NULL;
@@ -1018,26 +1060,21 @@ static void append_part(char *text, size_t size, const char *part) {
 
 /* The pattern of the new accompaniment of a section whose RETURN is a setting (R-518, after the plan's substitution); NULL otherwise. */
 static const char *return_setting_name(const Row *row) {
-    for (size_t i = 0; i < plan_node_constraint_count(row->plan, row->node); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(row->plan, row->node, i);
-        if (constraint && constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            return constraint->params.section_return.variation == PLAN_RETURN_SETTING
-                       ? api_accompaniment_name(constraint->params.section_return.setting)
-                       : NULL;
-        }
-    }
-    return NULL;
+    const SectionDescription *section = plan_node_section(row->plan, row->node);
+    return section && section->returns[0] != '\0' && section->variation == SECTION_RETURN_SETTING
+               ? api_accompaniment_name((PlanAccompanimentPattern)section->setting)
+               : NULL;
 }
 
 /* How a section that returns another differs from it: null for a section that returns none. */
 static cJSON *changes_json(const Row *row) {
-    const FormSectionSpec *spec = row->spec;
-    bool returns = spec->returns != FORM_SPEC_NO_RETURN && spec->returns < row->size->section_count;
-    NodeId source = returns ? sized_section_find(row->plan, row->size->sections[spec->returns].name) : PLAN_NODE_NONE;
+    const SectionDescription *spec = row->spec;
+    bool returns = form_spec_section_index(row->size, spec->returns) != FORM_SPEC_NO_RETURN;
+    NodeId source = returns ? sized_section_find(row->plan, spec->returns) : PLAN_NODE_NONE;
     if (!returns || source == PLAN_NODE_NONE) {
         return cJSON_CreateNull();
     }
-    const char *name = row->size->sections[spec->returns].name;
+    const char *name = spec->returns;
     bool copied = form_return_copies(row->plan, row->node);
     cJSON *entry = cJSON_CreateObject();
     const char *setting = return_setting_name(row);
@@ -1046,7 +1083,7 @@ static cJSON *changes_json(const Row *row) {
     const char *material_id = mapped && to_material ? to_material->id : NULL;
     const char *mode = mapped ? (composer_material_is_minor(to_material) ? "minor" : "major") : NULL; /* the text keeps its word */
     bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
-              cJSON_AddStringToObject(entry, "variation", plan_return_variation_name(spec->variation)) &&
+              cJSON_AddStringToObject(entry, "variation", section_return_variation_name(spec->variation)) &&
               api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "material", string_or_null(material_id));
     char text[256] = "";
     size_t changed = 0;
@@ -1131,17 +1168,17 @@ static bool melody_note_at(const PiecePlan *plan, NodeId section, Rational onset
 }
 
 /* The sentence of a figure: "neighbor tones in sixteenths over the skeleton E5 D5 C5 ..." with what changes the harmony, the mode and the octave. */
-static void figure_text(const FormSectionSpec *spec, bool raised, const char *skeleton, bool more, char *text, size_t size) {
-    const PlanFigure *figure = &spec->figure;
-    const char *kind = figure->kind == PLAN_FIGURE_NEIGHBOR ? "neighbor tones" : (figure->kind == PLAN_FIGURE_SCALE ? "a scale line" : "a broken chord");
-    size_t used = (size_t)snprintf(text, size, "%s in %s", kind, plan_figure_rhythm_name(figure->rhythm));
+static void figure_text(const SectionDescription *spec, bool raised, const char *skeleton, bool more, char *text, size_t size) {
+    const SectionFigure *figure = &spec->figure;
+    const char *kind = figure->kind == SECTION_FIGURE_NEIGHBOR ? "neighbor tones" : (figure->kind == SECTION_FIGURE_SCALE ? "a scale line" : "a broken chord");
+    size_t used = (size_t)snprintf(text, size, "%s in %s", kind, section_figure_rhythm_name(figure->rhythm));
     if (figure->reharmonize && used < size) {
         used += (size_t)snprintf(text + used, size - used, ", reharmonized");
     }
     if (figure->change_at > 0 && used < size) {
         used += (size_t)snprintf(text + used, size - used, ", root changed at bar %u", figure->change_at);
     }
-    if (spec->parallel && used < size) {
+    if (spec->mode == SECTION_MODE_PARALLEL && used < size) {
         used += (size_t)snprintf(text + used, size - used, ", in the parallel mode");
     }
     if (raised && used < size) {
@@ -1161,13 +1198,13 @@ static void figure_text(const FormSectionSpec *spec, bool raised, const char *sk
  * names a pitch (C4 = middle C), spelled with flats in a flat key; raised is whether the climax octave was applied.
  */
 static cJSON *figure_json(const Row *row) {
-    const FormSectionSpec *spec = row->spec;
+    const SectionDescription *spec = row->spec;
     FormSkeleton *skeleton = (spec->has_figure && form_return_copies(row->plan, row->node)) ? calloc(1, sizeof(*skeleton)) : NULL;
     if (!skeleton || !form_figure_skeleton(row->plan, row->node, skeleton)) {
         free(skeleton);
         return cJSON_CreateNull();
     }
-    const PlanFigure *figure = &spec->figure;
+    const SectionFigure *figure = &spec->figure;
     bool raised = false;
     for (size_t k = 0; figure->climax && k < skeleton->count; k++) {
         int first;
@@ -1190,12 +1227,12 @@ static cJSON *figure_json(const Row *row) {
     char text[256];
     figure_text(spec, raised, head, skeleton->count > FIGURE_TEXT_TONES, text, sizeof text);
     cJSON *entry = ok ? cJSON_CreateObject() : NULL;
-    ok = entry && cJSON_AddStringToObject(entry, "kind", plan_figure_kind_name(figure->kind)) &&
-         cJSON_AddStringToObject(entry, "rhythm", plan_figure_rhythm_name(figure->rhythm)) &&
+    ok = entry && cJSON_AddStringToObject(entry, "kind", section_figure_kind_name(figure->kind)) &&
+         cJSON_AddStringToObject(entry, "rhythm", section_figure_rhythm_name(figure->rhythm)) &&
          cJSON_AddStringToObject(entry, "harmony", figure->reharmonize ? "reharmonized" : "kept") &&
          api_add(entry, "change_at", figure->change_at > 0 ? cJSON_CreateNumber((double)figure->change_at) : cJSON_CreateNull()) &&
          cJSON_AddBoolToObject(entry, "climax", figure->climax) && cJSON_AddBoolToObject(entry, "raised", raised) &&
-         api_add(entry, "mode", string_or_null(spec->parallel ? "parallel" : NULL)) && api_add(entry, "skeleton", tones) &&
+         api_add(entry, "mode", string_or_null(spec->mode == SECTION_MODE_PARALLEL ? "parallel" : NULL)) && api_add(entry, "skeleton", tones) &&
          cJSON_AddStringToObject(entry, "text", text);
     if (!ok) {
         cJSON_Delete(entry);
@@ -1222,21 +1259,24 @@ static cJSON *upbeat_json(const Row *row) {
 
 /* A row of a form with sizes: {id, role, letter, start, beats, cadence, heard, [in_scope], returns, motive, key_heard, key, pedal, changes, figure, function, part, repeat_of, upbeat, connective, [construction_text]}. */
 static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
-    const FormSectionSpec *spec = row->spec;
+    const SectionDescription *spec = row->spec;
     char motive[96];
-    bool has_motive = spec->has_motive && motive_relation_step_text(&spec->motive, motive, sizeof motive);
-    bool returns = spec->returns != FORM_SPEC_NO_RETURN && spec->returns < row->size->section_count;
+    MotiveRelationStep step;
+    bool has_motive = form_spec_section_motive(spec, &step) && motive_relation_step_text(&step, motive, sizeof motive);
+    bool returns = form_spec_section_index(row->size, spec->returns) != FORM_SPEC_NO_RETURN;
     cJSON *entry = cJSON_CreateObject();
     bool ok = entry && cJSON_AddStringToObject(entry, "id", spec->name) &&
-              cJSON_AddStringToObject(entry, "role", form_role_name(spec->role)) &&
+              cJSON_AddStringToObject(entry, "role", section_role_name(spec->role)) &&
               cJSON_AddStringToObject(entry, "letter", spec->letter) && api_add(entry, "start", time_json(row->start)) &&
               cJSON_AddNumberToObject(entry, "beats", span_beats(request, row->length)) &&
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
               api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
-              api_add(entry, "returns", string_or_null(returns ? row->size->sections[spec->returns].name : NULL)) &&
+              api_add(entry, "returns", string_or_null(returns ? spec->returns : NULL)) &&
               api_add(entry, "motive", string_or_null(has_motive ? motive : NULL)) &&
               api_add(entry, "key_heard", string_or_null(row->key_heard[0] ? row->key_heard : NULL)) &&
               api_add(entry, "key", string_or_null(row->key[0] ? row->key : NULL)) &&
+              api_add(entry, "region", string_or_null(row->region[0] ? row->region : NULL)) &&
+              api_add(entry, "harmony", string_or_null(row->harmony[0] ? row->harmony : NULL)) &&
               api_add(entry, "pedal", string_or_null(row->pedal ? "dominant" : NULL)) &&
               api_add(entry, "changes", changes_json(row)) && api_add(entry, "figure", figure_json(row)) &&
               api_add(entry, "function", function_json(row)) && api_add(entry, "part", string_or_null(row->part)) &&

@@ -1,6 +1,7 @@
 add_library(ursatz_composer STATIC
     composer.c
     util/request_parse.c
+    util/request_chords.c
     api/api_internal.c
     api/api_versions.c
     api/api_export.c
@@ -39,6 +40,7 @@ add_library(ursatz_composer STATIC
     plan/lanes.c
     plan/plan_state.c
     plan/constraint.c
+    plan/constraint_kinds.c
     plan/plan_json.c
     plan/plan_key_spans.c
     check/analyzer_check.c
@@ -128,6 +130,7 @@ add_library(ursatz_composer STATIC
     piece/piece_reopen.c
     piece/seam_hear.c
     piece/connective.c
+    piece/section_harmony.c
     piece/piece_perform.c
     piece/form_vary.c
     piece/form_figure.c
@@ -172,13 +175,13 @@ target_include_directories(ursatz_composer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(ursatz_composer
-    PRIVATE ursatz_io ursatz_realization ursatz_analysis ursatz_analyzer ursatz_analyzer::chain cjson
+    PRIVATE ursatz_io ursatz_realization ursatz_plan ursatz_analysis ursatz_analyzer ursatz_analyzer::chain cjson
 )
 # The tests reach the internal headers and the libraries the sources use; no consumer does.
 add_library(ursatz_composer_internal INTERFACE)
 target_include_directories(ursatz_composer_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ursatz_composer_internal INTERFACE
-    ursatz_io ursatz_realization ursatz_analysis ursatz_analyzer ursatz_analyzer::chain cjson
+    ursatz_io ursatz_realization ursatz_plan ursatz_analysis ursatz_analyzer ursatz_analyzer::chain cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
     URSATZ_COMPOSER_VERSION="${PROJECT_VERSION}"

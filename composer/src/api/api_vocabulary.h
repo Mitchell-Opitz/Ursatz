@@ -47,8 +47,8 @@ typedef struct {
     size_t idea_count;
 } ApiThemePart;
 
-extern const ApiThemePart API_THEME_BEGINNINGS[]; /* presentation, antecedent, cbi: in PlanThemeBeginning order, NULL ends */
-extern const ApiThemePart API_THEME_ENDINGS[];    /* continuation, consequent, cadential: in PlanThemeEnding order, NULL ends */
+extern const ApiThemePart API_THEME_BEGINNINGS[]; /* presentation, antecedent, cbi: in SectionBeginning order, NULL ends */
+extern const ApiThemePart API_THEME_ENDINGS[];    /* continuation, consequent, cadential: in SectionEnding order, NULL ends */
 
 /* The limits the readers hold and the vocabulary shows. */
 #define API_TEMPO_MIN 20UL

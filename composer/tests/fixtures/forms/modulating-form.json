@@ -1,10 +1,10 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "modulating-form",
   "label": "Modulating form",
   "modulates": true,
-  "regions": [{"name": "pattern", "major": [5], "minor": [5]}],
+  "regions": [{"name": "pattern", "major": ["omt.relation.dominant"], "minor": ["omt.relation.dominant"]}],
   "sizes": [
     {"bars": 24, "default": true, "sections": [
       {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},

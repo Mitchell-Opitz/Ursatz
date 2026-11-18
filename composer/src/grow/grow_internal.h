@@ -55,7 +55,7 @@ typedef enum { GROW_REPEAT_EXACT, GROW_REPEAT_DOMINANT_FORM, GROW_REPEAT_SEQUENC
  * added. An addition lies after the theme's last idea: place is that idea's, start and length are the addition's.
  */
 typedef struct {
-    PlanExtensionKind kind;
+    SectionExtensionKind kind;
     GrowPlace place;
     Rational start;
     Rational length;
@@ -81,7 +81,7 @@ typedef struct {
     size_t idea_ending_bars;
     size_t main_ending_bars; /* the ending's bars up to the idea after an evaded cadence: `ending_bars` without it */
     size_t extension_count;
-    GrowLayoutExtension extensions[PLAN_CONSTRUCTION_EXTENSIONS]; /* in the construction's order */
+    GrowLayoutExtension extensions[SECTION_CONSTRUCTION_EXTENSIONS]; /* in the construction's order */
 } GrowLayout;
 
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
@@ -91,7 +91,7 @@ typedef struct {
     PlanMeter meter;
     AnalysisKey key;
     CadenceType cadence;
-    PlanThemePairing pairing;
+    SectionPairing pairing;
     GrowLayout layout;                 /* where each idea lies (grow_layout_of) */
     CadenceType first_cadence;         /* the weak cadence an antecedent ends in */
     PlanHarmonyShapeKind beginning_shape;  /* the shape of an antecedent's chords */
@@ -175,8 +175,8 @@ typedef struct {
      * The motives of the extensions that have one of their own (R-468): extended[k] is what the repeat or the addition
      * layout.extensions[k] is, a made node of the material when has_extended[k]. A stretch and an evaded cadence make none.
      */
-    Motive extended[PLAN_CONSTRUCTION_EXTENSIONS];
-    bool has_extended[PLAN_CONSTRUCTION_EXTENSIONS];
+    Motive extended[SECTION_CONSTRUCTION_EXTENSIONS];
+    bool has_extended[SECTION_CONSTRUCTION_EXTENSIONS];
     bool has_construction;                 /* the request's: the label names the halves' bars */
     GrowContinuation continuation;         /* the request's, for the build (grow_apply) */
     bool basic_as_written;                 /* the request's */
@@ -199,9 +199,9 @@ typedef struct {
     CadenceType cadence;
     CadenceType first_cadence; /* meaningful when has_first */
     bool has_first;
-    PlanThemePairing pairing;
+    SectionPairing pairing;
     bool has_construction;   /* the section has a construction (R-468): its ideas are the bars it gives */
-    PlanConstruction construction;
+    SectionConstruction construction;
     NodeId source;
     size_t bars;
     size_t cells_per_bar;
@@ -241,7 +241,7 @@ typedef struct {
     NodeId short_node[GROW_PLACE_COUNT];  /* the material node holding an idea's shortened source, else PLAN_NODE_NONE */
     NodeId distant_node[GROW_PLACE_COUNT]; /* the material node holding an idea's distant contrast, else PLAN_NODE_NONE */
     NodeId new_node;                       /* the material node holding the contrasting slot's new material, else PLAN_NODE_NONE */
-    NodeId extension_node[PLAN_CONSTRUCTION_EXTENSIONS]; /* the material node holding an extension's motive, else none */
+    NodeId extension_node[SECTION_CONSTRUCTION_EXTENSIONS]; /* the material node holding an extension's motive, else none */
 } GrowBuild;
 
 /* A length of count units. */
@@ -321,7 +321,7 @@ const char *grow_coda_judge(const GrowCodaSpec *spec, unsigned *held, unsigned *
 bool grow_main_theme_head(const Motive *source, Rational half, Motive *out);
 
 /* The ARCHETYPE (PlanArchetype) a pairing is, or -1 for a pairing standard-form does not know. */
-int grow_pairing_archetype(const PlanThemePairing *pairing);
+int grow_pairing_archetype(const SectionPairing *pairing);
 /*
  * The chords a phrase model of this shape and cadence has before its last: a tonic unless the shape is cadential, the
  * predominants the key's mode has, a dominant unless the cadence is half.
@@ -343,7 +343,7 @@ bool grow_layout_of(const GrowThemeRequest *request, GrowLayout *out);
  * lengthens the idea that ends the theme (the cadential idea, the consequent contrasting idea, cadential 2) or an
  * antecedent's contrasting idea. An addition and an evaded cadence name no idea: they are always allowed here.
  */
-bool grow_extension_allowed(const PlanThemePairing *pairing, PlanExtensionKind kind, GrowIdea idea);
+bool grow_extension_allowed(const SectionPairing *pairing, SectionExtensionKind kind, GrowIdea idea);
 /*
  * The motives of the extensions of the spec's layout, drawn after the beginning and the ending: a repeat's is its idea's
  * developed motive in sequence one step down (or, varied, with its last interval changed), an addition's the trailing
@@ -363,7 +363,7 @@ typedef struct {
     size_t evaded;
     size_t addition;
 } GrowConstructionBars;
-void grow_construction_bars(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionBars *out);
+void grow_construction_bars(const SectionPairing *pairing, const SectionConstruction *construction, GrowConstructionBars *out);
 /*
  * Where the ideas and the extensions of a construction lie, as grow_construction_describe counts them: 0-based first bars
  * and bars, a stretched idea with its stretch, an extension with its bars made explicit (a stretch spans the idea it
@@ -374,19 +374,19 @@ typedef struct {
     size_t halves[2];
     size_t idea_first[GROW_IDEA_COUNT];
     size_t idea_bars[GROW_IDEA_COUNT];
-    size_t extension_first[PLAN_CONSTRUCTION_EXTENSIONS];
-    size_t extension_bars[PLAN_CONSTRUCTION_EXTENSIONS];
+    size_t extension_first[SECTION_CONSTRUCTION_EXTENSIONS];
+    size_t extension_bars[SECTION_CONSTRUCTION_EXTENSIONS];
 } GrowConstructionSpans;
-void grow_construction_spans(const PlanThemePairing *pairing, const PlanConstruction *construction, GrowConstructionSpans *out);
+void grow_construction_spans(const SectionPairing *pairing, const SectionConstruction *construction, GrowConstructionSpans *out);
 /* The bars the extensions of a construction add to its ideas' (R-468), as grow_layout_of lays them out. */
-size_t grow_construction_extra_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
+size_t grow_construction_extra_bars(const SectionPairing *pairing, const SectionConstruction *construction);
 /*
  * The sentence grow_construction_describe writes for the theme section's CONSTRUCTION and THEME_PAIRING constraints, ""
  * (and 0) for a section without a construction.
  */
 size_t grow_section_describe(const PiecePlan *plan, NodeId section, char *text, size_t size);
 /* The bars a construction's repeats and additions need in the material at most: a bar each at least, else their own. */
-size_t grow_extension_material_bars(const PlanThemePairing *pairing, const PlanConstruction *construction);
+size_t grow_extension_material_bars(const SectionPairing *pairing, const SectionConstruction *construction);
 /*
  * As grow_add_chord_targets, over `span` of the owner, which may stop short of the owner's end (the harmony of an ending
  * up to the idea after an evaded cadence, R-468).
@@ -398,8 +398,8 @@ PlanResult grow_add_repeat_node(GrowBuild *build, NodeId container, size_t k, No
 /* The ref of an extension's idea: its motive node (`extension <k>`), restated exactly. */
 void grow_extension_ref(const GrowBuild *build, size_t k, PlanMotiveRef *out);
 /* standard-form's own beginning and ending for the plan's. */
-int grow_phrase_beginning(PlanThemeBeginning beginning);
-int grow_phrase_ending(PlanThemeEnding ending);
+int grow_phrase_beginning(SectionBeginning beginning);
+int grow_phrase_ending(SectionEnding ending);
 /* Whether two motives go up and down in the same places. */
 bool grow_same_contour(const Motive *a, const Motive *b);
 /*
@@ -438,15 +438,15 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
  * The slot an idea belongs to under the pairing, and whether it is the slot's first idea (the one that takes the slot's
  * motive itself): the repetition of a presentation, the consequent basic idea and the basic idea are the basic slot's.
  */
-GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowPlace idea, bool *first);
+GrowSlot grow_idea_slot(const SectionPairing *pairing, GrowPlace idea, bool *first);
 /* Whether the pairing has an idea of the slot, and the eighths of the theme its first idea has. */
-bool grow_slot_used(const PlanThemePairing *pairing, GrowSlot slot, size_t *units);
+bool grow_slot_used(const SectionPairing *pairing, GrowSlot slot, size_t *units);
 /* Whether the idea's motive is one given for it: its own (R-206), or its slot's for the slot's first idea. */
 bool grow_idea_own(const GrowThemeSpec *spec, GrowPlace idea);
 /* The place an idea has under a pairing; false when the pairing has no such idea. */
-bool grow_idea_place(const PlanThemePairing *pairing, GrowIdea idea, GrowPlace *place);
+bool grow_idea_place(const SectionPairing *pairing, GrowIdea idea, GrowPlace *place);
 /* The eighths of the theme the idea at a place has. */
-size_t grow_place_units(const PlanThemePairing *pairing, GrowPlace place);
+size_t grow_place_units(const SectionPairing *pairing, GrowPlace place);
 /* The material node of an idea's own motive ("i<k>"), else PLAN_NODE_NONE. */
 NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea);
 /* The name of the idea's material node. */
@@ -474,14 +474,14 @@ PlanResult grow_ending_build(GrowBuild *build);
  * bars, a pairing standard-form knows, a PAC, IAC or HC with room in half the theme, and for an antecedent a weaker
  * first cadence (HC or IAC) that has room too.
  */
-bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const SectionPairing *pairing,
                           CadenceType cadence, CadenceType first);
 /*
  * The same for a theme with a construction (R-468): 3 to 16 bars, the construction's ideas fit the pairing and add up
  * to the bars, and each half has room for its cadence by the bars the construction gives it.
  */
-bool grow_construction_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
-                                 CadenceType cadence, CadenceType first, const PlanConstruction *construction);
+bool grow_construction_buildable(const PlanMeter *meter, size_t bars, const SectionPairing *pairing,
+                                 CadenceType cadence, CadenceType first, const SectionConstruction *construction);
 /* Whether an accompaniment can be written in the meter, as a homophonic texture, Alberti only in a simple meter. */
 bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment);
 
@@ -510,14 +510,14 @@ bool grow_motive_fits_idea(const Motive *motive, Rational bar, size_t idea_bars)
  * Whether a motive longer than the basic idea is exactly as long as the first part of the theme, part_bars bars, and the
  * beginning is one with a part to fill whole: a presentation or an antecedent (a compound basic idea is one idea).
  */
-bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t part_bars, PlanThemeBeginning beginning);
+bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t part_bars, SectionBeginning beginning);
 /*
  * The basic idea a part-length motive gives the rest of the theme: its leading notes that start inside the idea's
  * bars, as the MotiveRelationStep (a leading fragment) that makes it from the motive. False when the motive is not
  * part-length, fewer than two notes start inside the idea, or a note runs past the idea's end.
  */
 bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t part_bars, size_t basic_bars,
-                          PlanThemeBeginning beginning, Motive *basic, MotiveRelationStep *step);
+                          SectionBeginning beginning, Motive *basic, MotiveRelationStep *step);
 /* The bars a motive's node takes in the material, ceil(length / bar), at least one: its pickup is part of the node. */
 size_t grow_motive_layout_bars(const Motive *motive, Rational bar);
 

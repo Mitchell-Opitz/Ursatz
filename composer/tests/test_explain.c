@@ -78,8 +78,8 @@ static PiecePlan *period_a_minor(Motive *motive) {
     request.key = test_key(9, "minor");
     request.meter = options.meter;
     request.bars = 8;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
-    request.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
+    request.pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
+    request.pairing.ending = SECTION_ENDING_CONSEQUENT;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;

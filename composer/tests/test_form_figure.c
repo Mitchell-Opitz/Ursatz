@@ -129,7 +129,7 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             assert(count < MAX_SECTIONS);
             sections[count++] = child;
         }
@@ -150,7 +150,7 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
         if (v == 1) {
             assert(changed == 0);
         }
-        const PlanReturn *ignored = NULL;
+        const ReturnRef *ignored = NULL;
         (void)ignored;
         counts->returns++;
         counts->heard += return_heard_find(&outcome->returns, theme, sections[v]) != NULL;
@@ -202,7 +202,7 @@ static void check_parallel_plan(PiecePlan *plan) {
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             assert(count < MAX_SECTIONS);
             sections[count++] = child;
         }

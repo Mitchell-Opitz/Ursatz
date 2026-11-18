@@ -1,6 +1,7 @@
 #include <ursatz_composer/form_spec.h>
 
 #include <cJSON.h>
+#include <plan/section_json.h>
 #include <theory/harmony/harmony_cadence_kinds.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -16,43 +17,6 @@
 
 /* ------------------------------------------------------------- the vocabularies the document names */
 
-typedef struct {
-    const char *name;
-    const char *label;
-    bool theme;
-} RoleRow;
-
-/* The role table: P46 to P53 add rows. */
-static const RoleRow ROLES[FORM_ROLE_COUNT] = {
-    {"theme", "Theme", true},         {"contrast", "Contrast", true},   {"return", "Return", true},
-    {"variation", "Variation", true}, {"layer", "Layer", true},         {"pattern", "Pattern", true},
-    {"sequence", "Sequence", true},   {"episode", "Episode", true},    {"codetta", "Codetta", true},
-    {"liquidation", "Liquidation", true}, {"transition", "Transition", true}, {"retransition", "Retransition", true},
-    {"subordinate", "Subordinate theme", true}, {"coda", "Coda", true}, {"elaboration", "Elaboration", true}, {"intro", "Intro", false},
-    {"body", "Loop body", false}, {"turnaround", "Turnaround", false},  {"ending", "Ending", false}};
-
-const char *form_role_name(FormRole role) {
-    return role >= 0 && role < FORM_ROLE_COUNT ? ROLES[role].name : NULL;
-}
-
-const char *form_role_label(FormRole role) {
-    return role >= 0 && role < FORM_ROLE_COUNT ? ROLES[role].label : NULL;
-}
-
-bool form_role_find(const char *name, FormRole *out) {
-    for (int role = 0; name && role < FORM_ROLE_COUNT; role++) {
-        if (strcmp(name, ROLES[role].name) == 0) {
-            *out = (FormRole)role;
-            return true;
-        }
-    }
-    return false;
-}
-
-bool form_role_is_theme(FormRole role) {
-    return role >= 0 && role < FORM_ROLE_COUNT && ROLES[role].theme;
-}
-
 static const struct {
     const char *name;
     FormCheck check;
@@ -63,12 +27,6 @@ static const struct {
               {"seam", FORM_CHECK_SEAM}};
 #define CHECK_COUNT (sizeof(CHECKS) / sizeof(CHECKS[0]))
 
-
-static const struct {
-    const char *name;
-    PlanLaneKind lane;
-} LANES[] = {{"bass", PLAN_LANE_BASS}, {"inner_voice", PLAN_LANE_INNER_VOICE}, {"melody", PLAN_LANE_MELODY}};
-#define LANE_COUNT (sizeof(LANES) / sizeof(LANES[0]))
 
 /* ------------------------------------------------------------- reading */
 
@@ -240,7 +198,9 @@ static const cJSON *array_member(Reader *reader, const cJSON *object, const char
 
 /* ------------------------------------------------------------- regions */
 
-static bool read_degrees(Reader *reader, const cJSON *region, const char *path, const char *key, int *out, size_t *count) {
+/* A list of relation ids of the knowledge snapshot (K6): 1 to FORM_SPEC_MAX_DEGREES of them. */
+static bool read_relations(Reader *reader, const cJSON *region, const char *path, const char *key, char (*out)[SECTION_WORD_MAX],
+                           size_t *count) {
     char at[64];
     const cJSON *list = array_member(reader, region, path, key, true, at, sizeof(at));
     if (!list) {
@@ -248,16 +208,19 @@ static bool read_degrees(Reader *reader, const cJSON *region, const char *path, 
     }
     size_t n = (size_t)cJSON_GetArraySize(list);
     if (n < 1 || n > FORM_SPEC_MAX_DEGREES) {
-        return fail(reader, at, "must hold 1 to %d degrees", FORM_SPEC_MAX_DEGREES);
+        return fail(reader, at, "must hold 1 to %d relations", FORM_SPEC_MAX_DEGREES);
     }
     for (size_t i = 0; i < n; i++) {
         char item[64];
-        long degree;
+        const cJSON *id = cJSON_GetArrayItem(list, (int)i);
         join_index(item, sizeof(item), at, i);
-        if (!whole(reader, cJSON_GetArrayItem(list, (int)i), item, 1, 7, &degree)) {
-            return false;
+        if (!cJSON_IsString(id) || !id->valuestring) {
+            return fail(reader, item, "must be a relation id such as \"omt.relation.dominant\"");
         }
-        out[i] = (int)degree;
+        if (id->valuestring[0] == '\0' || strlen(id->valuestring) >= SECTION_WORD_MAX) {
+            return fail(reader, item, "must be 1 to %d characters", SECTION_WORD_MAX - 1);
+        }
+        snprintf(out[i], SECTION_WORD_MAX, "%s", id->valuestring);
     }
     *count = n;
     return true;
@@ -284,8 +247,8 @@ static bool read_regions(Reader *reader, const cJSON *root, FormSpec *form) {
         }
         if (!members(reader, region, item, ALLOWED, 3) ||
             !read_name(reader, region, item, "name", true, out->name, sizeof(out->name), NULL) ||
-            !read_degrees(reader, region, item, "major", out->major, &out->major_count) ||
-            !read_degrees(reader, region, item, "minor", out->minor, &out->minor_count)) {
+            !read_relations(reader, region, item, "major", out->major, &out->major_count) ||
+            !read_relations(reader, region, item, "minor", out->minor, &out->minor_count)) {
             return false;
         }
         char name_at[64];
@@ -312,87 +275,33 @@ int form_spec_region_find(const FormSpec *form, const char *name) {
     return -1;
 }
 
+int form_spec_region_of(const FormSpec *form, const SectionRegion *region) {
+    if (region->kind != SECTION_REGION_FORM) {
+        return FORM_SPEC_HOME;
+    }
+    int found = form_spec_region_find(form, region->form_region);
+    return found < 0 ? FORM_SPEC_HOME : found;
+}
+
+size_t form_spec_section_index(const FormSpecSize *size, const char *name) {
+    for (size_t i = 0; size && name && name[0] && i < size->section_count; i++) {
+        if (strcmp(size->sections[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return FORM_SPEC_NO_RETURN;
+}
+
+bool form_spec_section_motive(const SectionDescription *section, MotiveRelationStep *out) {
+    if (section->function.lyric) {
+        memset(out, 0, sizeof(*out));
+        out->kind = MOTIVE_RELATION_AUGMENT;
+        return true;
+    }
+    return section->motive[0] != '\0' && motive_relation_step_parse(section->motive, out);
+}
+
 /* ------------------------------------------------------------- sections */
-
-/* "home" or the name of a region. */
-static bool read_key(Reader *reader, const FormSpec *form, const cJSON *keys, const char *path, const char *key, int *out) {
-    char at[64];
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(keys, key);
-    if (!item) {
-        return true;
-    }
-    join(at, sizeof(at), path, key);
-    if (!cJSON_IsString(item) || !item->valuestring) {
-        return fail(reader, at, "must be \"home\" or a region name");
-    }
-    if (strcmp(item->valuestring, "home") == 0) {
-        *out = FORM_SPEC_HOME;
-        return true;
-    }
-    int region = form_spec_region_find(form, item->valuestring);
-    if (region < 0) {
-        return fail(reader, at, "unknown region \"%s\"", item->valuestring);
-    }
-    *out = region;
-    return true;
-}
-
-static bool read_layers(Reader *reader, const cJSON *section, const char *path, unsigned *out) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(section, "layers");
-    char at[64];
-    if (!item) {
-        return true;
-    }
-    join(at, sizeof(at), path, "layers");
-    if (cJSON_IsString(item) && item->valuestring && strcmp(item->valuestring, "all") == 0) {
-        *out = PLAN_LAYERS_ALL;
-        return true;
-    }
-    if (!cJSON_IsArray(item) || cJSON_GetArraySize(item) < 1) {
-        return fail(reader, at, "must be \"all\" or a list of lanes");
-    }
-    unsigned mask = 0;
-    for (int i = 0; i < cJSON_GetArraySize(item); i++) {
-        const cJSON *lane = cJSON_GetArrayItem(item, i);
-        char lane_at[64];
-        bool known = false;
-        join_index(lane_at, sizeof(lane_at), at, (size_t)i);
-        if (!cJSON_IsString(lane) || !lane->valuestring) {
-            return fail(reader, lane_at, "must be a lane name");
-        }
-        for (size_t l = 0; l < LANE_COUNT; l++) {
-            if (strcmp(lane->valuestring, LANES[l].name) == 0) {
-                mask |= PLAN_LAYER_BIT(LANES[l].lane);
-                known = true;
-            }
-        }
-        if (!known) {
-            return fail(reader, lane_at, "unknown lane \"%s\" (bass, inner_voice, melody)", lane->valuestring);
-        }
-    }
-    *out = mask;
-    return true;
-}
-
-static bool read_choice(Reader *reader, const cJSON *section, const char *path, const char *key, const char *const *names,
-                        size_t count, int *out) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(section, key);
-    char at[64];
-    if (!item) {
-        return true;
-    }
-    join(at, sizeof(at), path, key);
-    if (!cJSON_IsString(item) || !item->valuestring) {
-        return fail(reader, at, "must be a string");
-    }
-    for (size_t i = 0; i < count; i++) {
-        if (strcmp(item->valuestring, names[i]) == 0) {
-            *out = (int)i;
-            return true;
-        }
-    }
-    return fail(reader, at, "unknown %s \"%s\"", key, item->valuestring);
-}
 
 /* A cadence member: a name of the standard-harmony vocabulary whose core is PAC, IAC or HC. */
 static bool read_cadence(Reader *reader, const cJSON *object, const char *path, const char *key, bool required,
@@ -418,142 +327,39 @@ static bool read_cadence(Reader *reader, const cJSON *object, const char *path, 
     return true;
 }
 
-/* ------------------------------------------------------------- a section's construction */
-
-static const char *const EXTENSION_KINDS[] = {"repeat", "stretch", "addition", "evaded"};
-
-/* One whole number member of an object, 0 to max, into *out; the default when the member is absent. */
-static bool read_small(Reader *reader, const cJSON *object, const char *path, const char *key, long max, long *out) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    char at[96];
+/* A compound form's part key: "home" or the name of a region. */
+static bool read_key(Reader *reader, const FormSpec *form, const cJSON *keys, const char *path, const char *key, int *out) {
+    char at[64];
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(keys, key);
     if (!item) {
         return true;
     }
     join(at, sizeof(at), path, key);
-    if (!cJSON_IsNumber(item) || item->valuedouble != (double)(long)item->valuedouble || item->valuedouble < 0 ||
-        item->valuedouble > (double)max) {
-        return fail(reader, at, "must be a whole number from 0 to %ld", max);
+    if (!cJSON_IsString(item) || !item->valuestring) {
+        return fail(reader, at, "must be \"home\" or a region name");
     }
-    *out = (long)item->valuedouble;
-    return true;
-}
-
-static bool read_extension(Reader *reader, const cJSON *item, const char *path, PlanExtension *out) {
-    static const char *const ALLOWED[] = {"kind", "idea", "bars", "varied"};
-    char at[96];
-    long bars = 0;
-    memset(out, 0, sizeof(*out));
-    if (!cJSON_IsObject(item)) {
-        return fail(reader, path, "must be {\"kind\", \"idea\", \"bars\", \"varied\"}");
-    }
-    if (!members(reader, item, path, ALLOWED, 4)) {
-        return false;
-    }
-    const cJSON *kind = member_of(reader, item, path, "kind", true);
-    if (!kind) {
-        return false;
-    }
-    join(at, sizeof(at), path, "kind");
-    int found = -1;
-    for (int k = 0; cJSON_IsString(kind) && kind->valuestring && k < 4; k++) {
-        found = strcmp(kind->valuestring, EXTENSION_KINDS[k]) == 0 ? k : found;
-    }
-    if (found < 0) {
-        return fail(reader, at, "must be repeat, stretch, addition or evaded");
-    }
-    out->kind = (PlanExtensionKind)found;
-    const cJSON *idea = cJSON_GetObjectItemCaseSensitive(item, "idea");
-    join(at, sizeof(at), path, "idea");
-    if (idea && !cJSON_IsNull(idea)) {
-        const ThemeShapeIdea *row = cJSON_IsString(idea) && idea->valuestring ? theme_shape_idea_find(idea->valuestring) : NULL;
-        if (!row) {
-            return fail(reader, at, "must be the name of an idea");
-        }
-        out->idea = (unsigned char)row->idea;
-    } else if (out->kind == PLAN_EXTENSION_REPEAT || out->kind == PLAN_EXTENSION_STRETCH) {
-        return fail(reader, at, "a %s needs the idea it follows", EXTENSION_KINDS[found]);
-    }
-    if (!read_small(reader, item, path, "bars", 4, &bars)) {
-        return false;
-    }
-    out->bars = (unsigned char)bars;
-    const cJSON *varied = cJSON_GetObjectItemCaseSensitive(item, "varied");
-    if (varied) {
-        join(at, sizeof(at), path, "varied");
-        if (!cJSON_IsBool(varied)) {
-            return fail(reader, at, "must be true or false");
-        }
-        out->varied = cJSON_IsTrue(varied);
-    }
-    return true;
-}
-
-/*
- * The construction member (R-468, R-469): "auto", or {"ideas": {"<idea name>": bars}, "extensions": [{"kind", "idea",
- * "bars", "varied"}]}. Whether the ideas fit the pairing is checked when the form is built (it needs the meter); the
- * bars they add up to are checked here against the section's.
- */
-static bool read_construction(Reader *reader, const cJSON *item, const char *path, FormSectionSpec *out) {
-    static const char *const ALLOWED[] = {"ideas", "extensions"};
-    char at[96];
-    out->has_construction = true;
-    if (cJSON_IsString(item) && item->valuestring && strcmp(item->valuestring, "auto") == 0) {
-        out->construction_auto = true;
+    if (strcmp(item->valuestring, "home") == 0) {
+        *out = FORM_SPEC_HOME;
         return true;
     }
-    if (!cJSON_IsObject(item)) {
-        return fail(reader, path, "must be \"auto\" or {\"ideas\": {...}, \"extensions\": [...]}");
+    int region = form_spec_region_find(form, item->valuestring);
+    if (region < 0) {
+        return fail(reader, at, "unknown region \"%s\"", item->valuestring);
     }
-    if (!members(reader, item, path, ALLOWED, 2)) {
-        return false;
-    }
-    PlanConstruction *construction = &out->construction;
-    memset(construction, 0, sizeof(*construction));
-    construction->reason = PLAN_CONSTRUCTION_GIVEN;
-    const cJSON *ideas = member_of(reader, item, path, "ideas", true);
-    if (!ideas) {
-        return false;
-    }
-    join(at, sizeof(at), path, "ideas");
-    if (!cJSON_IsObject(ideas)) {
-        return fail(reader, at, "must be an object of idea names and bars, for example {\"basic idea\": 2}");
-    }
-    for (const cJSON *member = ideas->child; member; member = member->next) {
-        char idea_at[128];
-        join(idea_at, sizeof(idea_at), at, member->string ? member->string : "");
-        const ThemeShapeIdea *row = member->string ? theme_shape_idea_find(member->string) : NULL;
-        if (!row) {
-            return fail(reader, idea_at, "unknown idea");
-        }
-        if (!cJSON_IsNumber(member) || member->valuedouble != (double)(int)member->valuedouble || member->valuedouble < 0 ||
-            member->valuedouble > 16) {
-            return fail(reader, idea_at, "must be a whole number of bars from 0 to 16");
-        }
-        construction->idea_bars[row->idea] = (unsigned char)member->valuedouble;
-    }
-    const cJSON *extensions = cJSON_GetObjectItemCaseSensitive(item, "extensions");
-    if (extensions) {
-        join(at, sizeof(at), path, "extensions");
-        if (!cJSON_IsArray(extensions)) {
-            return fail(reader, at, "must be a list");
-        }
-        if (cJSON_GetArraySize(extensions) > PLAN_CONSTRUCTION_EXTENSIONS) {
-            return fail(reader, at, "at most %d extensions", PLAN_CONSTRUCTION_EXTENSIONS);
-        }
-        for (int k = 0; k < cJSON_GetArraySize(extensions); k++) {
-            char extension_at[128];
-            join_index(extension_at, sizeof(extension_at), at, (size_t)k);
-            if (!read_extension(reader, cJSON_GetArrayItem(extensions, k), extension_at, &construction->extensions[k])) {
-                return false;
-            }
-            construction->extension_count = (size_t)k + 1;
-        }
-    }
+    *out = region;
     return true;
+}
+
+/* ------------------------------------------------------------- a section */
+
+/* The member's path under the section's. */
+static const char *member_at(char *out, size_t cap, const char *path, const char *member) {
+    join(out, cap, path, member);
+    return out;
 }
 
 /* Whether two sections' constructions are the same: both none, both "auto", or both the same ideas and extensions. */
-static bool same_construction(const FormSectionSpec *a, const FormSectionSpec *b) {
+static bool same_construction(const SectionDescription *a, const SectionDescription *b) {
     if (a->has_construction != b->has_construction || a->construction_auto != b->construction_auto) {
         return false;
     }
@@ -565,8 +371,8 @@ static bool same_construction(const FormSectionSpec *a, const FormSectionSpec *b
         return false;
     }
     for (size_t k = 0; k < a->construction.extension_count; k++) {
-        const PlanExtension *x = &a->construction.extensions[k];
-        const PlanExtension *y = &b->construction.extensions[k];
+        const SectionExtension *x = &a->construction.extensions[k];
+        const SectionExtension *y = &b->construction.extensions[k];
         if (x->kind != y->kind || x->idea != y->idea || x->bars != y->bars || x->varied != y->varied) {
             return false;
         }
@@ -575,462 +381,101 @@ static bool same_construction(const FormSectionSpec *a, const FormSectionSpec *b
 }
 
 /*
- * A figure (R-497, R-498): {"kind", "rhythm", "harmony", "change_at", "climax"}. kind and rhythm are required; harmony is
- * "kept" (default; "reharmonized" in the parallel mode, which refuses "kept", R-499) or "reharmonized"; change_at is a bar of the section from 1, before its last, and needs the harmony
- * reharmonized; climax is a bool, false by default.
+ * The rules about a section that need the Composer: the form's regions, the sections before it in its size, the motive
+ * grammar, the lengths and cadences each role has, and the construction's bars. The library codec has read the section
+ * and checked what is about the section itself (R-605). `path` is the section's, "/sizes/0/sections/1".
  */
-static bool read_figure(Reader *reader, const cJSON *figure, const char *path, size_t bars, bool parallel,
-                        PlanFigure *out) {
-    static const char *const MEMBERS[] = {"kind", "rhythm", "harmony", "change_at", "climax"};
-    static const char *const KIND_NAMES[] = {"neighbor", "scale", "broken-chord"};
-    static const char *const RHYTHM_NAMES[] = {"eighths", "sixteenths"};
-    static const char *const HARMONY_NAMES[] = {"kept", "reharmonized"};
-    int kind = -1;
-    int rhythm = -1;
-    int harmony = parallel ? 1 : 0;
-    char at[64];
-    memset(out, 0, sizeof(*out));
-    if (!cJSON_IsObject(figure)) {
-        return fail(reader, path, "must be an object");
-    }
-    if (!members(reader, figure, path, MEMBERS, sizeof(MEMBERS) / sizeof(MEMBERS[0])) ||
-        !member_of(reader, figure, path, "kind", true) || !member_of(reader, figure, path, "rhythm", true) ||
-        !read_choice(reader, figure, path, "kind", KIND_NAMES, 3, &kind) ||
-        !read_choice(reader, figure, path, "rhythm", RHYTHM_NAMES, 2, &rhythm) ||
-        !read_choice(reader, figure, path, "harmony", HARMONY_NAMES, 2, &harmony) ||
-        !read_bool(reader, figure, path, "climax", &out->climax)) {
-        return false;
-    }
-    out->kind = (PlanFigureKind)kind;
-    out->rhythm = (PlanFigureRhythm)rhythm;
-    out->reharmonize = harmony == 1;
-    if (parallel && !out->reharmonize) {
-        join(at, sizeof(at), path, "harmony");
-        return fail(reader, at, "a variation in the other mode is reharmonized");
-    }
-    const cJSON *change_at = member_of(reader, figure, path, "change_at", false);
-    if (change_at) {
-        long bar;
-        join(at, sizeof(at), path, "change_at");
-        if (!whole(reader, change_at, at, -4096, 4096, &bar)) {
-            return false;
-        }
-        if (!out->reharmonize) {
-            return fail(reader, at, "a root change needs the harmony reharmonized");
-        }
-        if (bar < 1 || (size_t)bar >= bars) {
-            return fail(reader, at, "change_at must be a bar of the section before its last");
-        }
-        out->change_at = (unsigned)bar;
-    }
-    return true;
-}
-
-static bool read_section(Reader *reader, const FormSpec *form, const FormSpecSize *size, const cJSON *json,
-                         const char *path, FormSectionSpec *out) {
-    static const char *const ALLOWED[] = {"name",    "letter",  "role",   "bars",   "beats",   "beginning", "ending",
-                                          "cadence", "closed",  "keys",   "motive", "returns", "variation", "layers",
-                                          "pedal",   "construction", "leads_in", "connective", "figure", "mode",
-                                          "independent", "lyric", "setting"};
-    char text[FORM_SPEC_CADENCE_NAME_MAX];
-    char at[64];
-    if (!cJSON_IsObject(json)) {
-        return fail(reader, path, "must be an object");
-    }
-    memset(out, 0, sizeof(*out));
-    out->returns = FORM_SPEC_NO_RETURN;
-    out->variation = PLAN_RETURN_EXACT;
-    out->key_start = FORM_SPEC_HOME;
-    out->key_end = FORM_SPEC_HOME;
-    if (!members(reader, json, path, ALLOWED, sizeof(ALLOWED) / sizeof(ALLOWED[0])) ||
-        !read_text(reader, json, path, "name", true, out->name, sizeof(out->name), NULL) ||
-        !read_text(reader, json, path, "letter", true, out->letter, sizeof(out->letter), NULL)) {
-        return false;
-    }
-    /* A name is unique in its size. */
-    for (size_t i = 0; i < size->section_count; i++) {
-        if (strcmp(size->sections[i].name, out->name) == 0) {
-            join(at, sizeof(at), path, "name");
-            return fail(reader, at, "section name \"%s\" repeated in the size", out->name);
+static bool form_section_check(Reader *reader, const FormSpec *form, const FormSpecSize *size, const SectionDescription *d,
+                               size_t index, const char *path) {
+    char at[96];
+    const bool liquidation = d->role == SECTION_ROLE_LIQUIDATION;
+    const bool retransition = d->role == SECTION_ROLE_RETRANSITION;
+    const bool coda = d->role == SECTION_ROLE_CODA;
+    const bool transition = d->role == SECTION_ROLE_TRANSITION;
+    /* a name is unique in its size */
+    for (size_t i = 0; i < index; i++) {
+        if (strcmp(size->sections[i].name, d->name) == 0) {
+            return fail(reader, member_at(at, sizeof(at), path, "name"), "section name \"%s\" repeated in the size", d->name);
         }
     }
-    /* role */
-    if (!read_text(reader, json, path, "role", true, text, sizeof(text), NULL)) {
-        return false;
+    /* a liquidation (R-494), a retransition (R-505) and a coda (R-509) have the length of their operator */
+    if ((liquidation || retransition) && d->bars != 4) {
+        return fail(reader, member_at(at, sizeof(at), path, "bars"), "a %s is 4 bars", liquidation ? "liquidation" : "retransition");
     }
-    if (!form_role_find(text, &out->role)) {
-        join(at, sizeof(at), path, "role");
-        return fail(reader, at, "unknown role \"%s\"", text);
+    if (coda && d->bars != 8) {
+        return fail(reader, member_at(at, sizeof(at), path, "bars"), "a coda is 8 bars");
     }
-    /* a liquidation (R-494) is the pattern liquidated over a dominant pedal, a retransition (R-505) and a coda (R-509) are
-     * grown by an operator of their own: their shape is the operator's, not the form's */
-    const bool liquidation = out->role == FORM_ROLE_LIQUIDATION;
-    const bool retransition = out->role == FORM_ROLE_RETRANSITION;
-    const bool coda = out->role == FORM_ROLE_CODA;
-    const bool operator_section = liquidation || retransition || coda;
-    const bool transition = out->role == FORM_ROLE_TRANSITION;
-    if (liquidation) {
-        static const char *const REFUSED[] = {"beginning", "ending",  "construction", "motive", "returns", "variation",
-                                              "pedal",     "leads_in", "connective",   "layers", "beats",
-                                              "figure"};
-        for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
-            if (cJSON_GetObjectItemCaseSensitive(json, REFUSED[i])) {
-                join(at, sizeof(at), path, REFUSED[i]);
-                return i < 2 ? fail(reader, at, "a liquidation has no beginning or ending")
-                             : fail(reader, at, "a liquidation has no %s", REFUSED[i]);
-            }
-        }
+    if (transition && d->pairing.beginning != SECTION_BEGINNING_PRESENTATION &&
+        d->pairing.beginning != SECTION_BEGINNING_COMPOUND_BASIC_IDEA) {
+        return fail(reader, member_at(at, sizeof(at), path, "beginning"), "a transition begins with a presentation or a compound basic idea");
     }
-    if (retransition || coda) {
-        static const char *const REFUSED[] = {"beginning", "ending",  "construction", "motive", "returns", "variation",
-                                              "pedal",     "leads_in", "connective",   "layers", "beats",
-                                              "figure",    "mode",     "keys",         "independent", "lyric"};
-        const char *noun = retransition ? "retransition" : "coda";
-        for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
-            if (cJSON_GetObjectItemCaseSensitive(json, REFUSED[i])) {
-                join(at, sizeof(at), path, REFUSED[i]);
-                return i < 2 ? fail(reader, at, "a %s has no beginning or ending", noun)
-                             : fail(reader, at, "a %s has no %s", noun, REFUSED[i]);
-            }
-        }
-    }
-    if (transition) {
-        static const char *const REFUSED[] = {"returns", "variation", "figure", "mode", "pedal"};
-        for (size_t i = 0; i < sizeof(REFUSED) / sizeof(REFUSED[0]); i++) {
-            if (cJSON_GetObjectItemCaseSensitive(json, REFUSED[i])) {
-                join(at, sizeof(at), path, REFUSED[i]);
-                return fail(reader, at, "a transition has no %s", REFUSED[i]);
-            }
-        }
-    }
-    /* independent (R-504) and lyric (R-506) */
-    if (!transition && cJSON_GetObjectItemCaseSensitive(json, "independent")) {
-        join(at, sizeof(at), path, "independent");
-        return fail(reader, at, "only a transition is independent");
-    }
-    if (out->role != FORM_ROLE_SUBORDINATE && cJSON_GetObjectItemCaseSensitive(json, "lyric")) {
-        join(at, sizeof(at), path, "lyric");
-        return fail(reader, at, "only a subordinate theme is lyric");
-    }
-    if (!read_bool(reader, json, path, "independent", &out->independent) || !read_bool(reader, json, path, "lyric", &out->lyric)) {
-        return false;
-    }
-    if (out->independent && cJSON_GetObjectItemCaseSensitive(json, "motive")) {
-        join(at, sizeof(at), path, "motive");
-        return fail(reader, at, "an independent transition has its own motive");
-    }
-    if (out->lyric) {
-        if (cJSON_GetObjectItemCaseSensitive(json, "motive")) {
-            join(at, sizeof(at), path, "motive");
-            return fail(reader, at, "a lyric theme's motive is m0 augmented");
-        }
-        if (cJSON_GetObjectItemCaseSensitive(json, "returns")) {
-            join(at, sizeof(at), path, "returns");
-            return fail(reader, at, "a lyric theme returns nothing");
-        }
-    }
-    /* bars or beats, exactly one */
-    const cJSON *bars = cJSON_GetObjectItemCaseSensitive(json, "bars");
-    const cJSON *beats = cJSON_GetObjectItemCaseSensitive(json, "beats");
-    if ((bars != NULL) == (beats != NULL)) {
-        return fail(reader, path, bars ? "give bars or beats, not both" : "give bars or beats");
-    }
-    long length;
-    join(at, sizeof(at), path, bars ? "bars" : "beats");
-    if (!whole(reader, bars ? bars : beats, at, 1, 4096, &length)) {
-        return false;
-    }
-    if (bars) {
-        out->bars = (size_t)length;
-    } else {
-        out->beats = (size_t)length;
-    }
-    if (liquidation && out->bars != 4) {
-        join(at, sizeof(at), path, "bars");
-        return fail(reader, at, "a liquidation is 4 bars");
-    }
-    if (retransition && out->bars != 4) {
-        join(at, sizeof(at), path, "bars");
-        return fail(reader, at, "a retransition is 4 bars");
-    }
-    if (coda && out->bars != 8) {
-        join(at, sizeof(at), path, "bars");
-        return fail(reader, at, "a coda is 8 bars");
-    }
-    /* beginning and ending: the theme shape's plan names (a liquidation, retransition or coda has none: its pairing stays zero) */
-    if (!operator_section) {
-        const ThemeShapeHalf *beginning;
-        const ThemeShapeHalf *ending;
-        if (!read_text(reader, json, path, "beginning", true, text, sizeof(text), NULL)) {
-            return false;
-        }
-        beginning = theme_shape_half_find(true, text);
-        if (!beginning) {
-            join(at, sizeof(at), path, "beginning");
-            return fail(reader, at, "unknown beginning \"%s\"", text);
-        }
-        if (!read_text(reader, json, path, "ending", true, text, sizeof(text), NULL)) {
-            return false;
-        }
-        ending = theme_shape_half_find(false, text);
-        if (!ending) {
-            join(at, sizeof(at), path, "ending");
-            return fail(reader, at, "unknown ending \"%s\"", text);
-        }
-        out->pairing.beginning = (PlanThemeBeginning)beginning->value;
-        out->pairing.ending = (PlanThemeEnding)ending->value;
-        if (transition && out->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION &&
-            out->pairing.beginning != PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA) {
-            join(at, sizeof(at), path, "beginning");
-            return fail(reader, at, "a transition begins with a presentation or a compound basic idea");
-        }
-        if (transition && out->pairing.ending != PLAN_THEME_ENDING_CONTINUATION) {
-            join(at, sizeof(at), path, "ending");
-            return fail(reader, at, "a transition ends with a continuation");
-        }
-        if (out->lyric && (out->pairing.beginning != PLAN_THEME_BEGINNING_ANTECEDENT ||
-                           out->pairing.ending != PLAN_THEME_ENDING_CONSEQUENT)) {
-            join(at, sizeof(at), path, "beginning");
-            return fail(reader, at, "a lyric theme is a period");
-        }
+    if (transition && d->pairing.ending != SECTION_ENDING_CONTINUATION) {
+        return fail(reader, member_at(at, sizeof(at), path, "ending"), "a transition ends with a continuation");
     }
     /* construction: a theme of any whole bars from 3 to 16 (R-468); a theme-like section of other bars than 4 or 8 needs it */
-    const cJSON *construction = member_of(reader, json, path, "construction", false);
-    if (construction) {
-        join(at, sizeof(at), path, "construction");
-        if (!form_role_is_theme(out->role)) {
-            return fail(reader, at, "only a theme-like section has a construction");
+    if (d->has_construction) {
+        if (d->bars < 3 || d->bars > 16) {
+            return fail(reader, member_at(at, sizeof(at), path, "bars"), "a section with a construction is 3 to 16 bars");
         }
-        if (!bars) {
-            return fail(reader, at, "a construction needs bars, not beats");
-        }
-        if (!read_construction(reader, construction, at, out)) {
-            return false;
-        }
-        if (out->bars < 3 || out->bars > 16) {
-            join(at, sizeof(at), path, "bars");
-            return fail(reader, at, "a section with a construction is 3 to 16 bars");
-        }
-        if (!out->construction_auto) {
-            size_t total = grow_construction_extra_bars(&out->pairing, &out->construction);
-            for (int idea = 0; idea < PLAN_CONSTRUCTION_IDEAS; idea++) {
-                total += out->construction.idea_bars[idea];
+        if (!d->construction_auto) {
+            size_t total = grow_construction_extra_bars(&d->pairing, &d->construction);
+            for (int idea = 0; idea < SECTION_CONSTRUCTION_IDEAS; idea++) {
+                total += d->construction.idea_bars[idea];
             }
-            if (total != out->bars) {
-                join(at, sizeof(at), path, "construction");
-                return fail(reader, at, "the construction adds up to %zu bars but the section is %zu", total, out->bars);
+            if (total != d->bars) {
+                return fail(reader, member_at(at, sizeof(at), path, "construction"),
+                            "the construction adds up to %zu bars but the section is %zu", total, d->bars);
             }
         }
-    } else if (bars && form_role_is_theme(out->role) && out->bars != 4 && out->bars != 8) {
-        join(at, sizeof(at), path, "bars");
-        return fail(reader, at, "a theme-like section of %zu bars needs a construction; only 4 or 8 bars have none", out->bars);
+    } else if (d->bars > 0 && section_role_is_theme(d->role) && d->bars != 4 && d->bars != 8) {
+        return fail(reader, member_at(at, sizeof(at), path, "bars"),
+                    "a theme-like section of %zu bars needs a construction; only 4 or 8 bars have none", d->bars);
     }
-    /* cadence: a name of the standard-harmony vocabulary whose core is PAC, IAC or HC */
-    if (!read_cadence(reader, json, path, "cadence", true, &out->cadence, out->cadence_name, sizeof(out->cadence_name))) {
-        return false;
+    /* cadence: a section ends in a perfect authentic, imperfect authentic or half cadence; the roles have their own */
+    if (d->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC && d->cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
+        d->cadence != CADENCE_TYPE_HALF) {
+        return fail(reader, member_at(at, sizeof(at), path, "cadence"),
+                    "a section ends in a perfect authentic, imperfect authentic or half cadence");
     }
-    if (liquidation && out->cadence != CADENCE_TYPE_HALF) {
-        join(at, sizeof(at), path, "cadence");
-        return fail(reader, at, "a liquidation ends in a half cadence");
+    if ((liquidation || retransition || transition) && d->cadence != CADENCE_TYPE_HALF) {
+        return fail(reader, member_at(at, sizeof(at), path, "cadence"), "a %s ends in a half cadence",
+                    liquidation ? "liquidation" : retransition ? "retransition" : "transition");
     }
-    if ((retransition || transition) && out->cadence != CADENCE_TYPE_HALF) {
-        join(at, sizeof(at), path, "cadence");
-        return fail(reader, at, retransition ? "a retransition ends in a half cadence" : "a transition ends in a half cadence");
+    if (coda && d->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC) {
+        return fail(reader, member_at(at, sizeof(at), path, "cadence"), "a coda ends in a perfect authentic cadence");
     }
-    if (coda && out->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC) {
-        join(at, sizeof(at), path, "cadence");
-        return fail(reader, at, "a coda ends in a perfect authentic cadence");
-    }
-    if (!read_bool(reader, json, path, "closed", &out->closed)) {
-        return false;
-    }
-    /* keys */
-    const cJSON *keys = member_of(reader, json, path, "keys", false);
-    if (keys) {
-        static const char *const KEY_MEMBERS[] = {"start", "end"};
-        char keys_at[64];
-        join(keys_at, sizeof(keys_at), path, "keys");
-        if (!cJSON_IsObject(keys)) {
-            return fail(reader, keys_at, "must be an object");
-        }
-        if (!members(reader, keys, keys_at, KEY_MEMBERS, 2) ||
-            !read_key(reader, form, keys, keys_at, "start", &out->key_start) ||
-            !read_key(reader, form, keys, keys_at, "end", &out->key_end)) {
-            return false;
+    /* keys name regions of the form */
+    const SectionRegion *keys[2] = {&d->key_start, &d->key_end};
+    const char *key_names[2] = {"start", "end"};
+    for (int k = 0; k < 2; k++) {
+        if (keys[k]->kind == SECTION_REGION_FORM && form_spec_region_find(form, keys[k]->form_region) < 0) {
+            char keys_at[64];
+            join(keys_at, sizeof(keys_at), path, "keys");
+            return fail(reader, member_at(at, sizeof(at), keys_at, key_names[k]), "unknown region \"%s\"", keys[k]->form_region);
         }
     }
-    if (transition && out->key_end != out->key_start && out->bars != 8) {
-        join(at, sizeof(at), path, "bars");
-        return fail(reader, at, "a transition that modulates is 8 bars");
+    if (transition && form_spec_region_of(form, &d->key_end) != form_spec_region_of(form, &d->key_start) && d->bars != 8) {
+        return fail(reader, member_at(at, sizeof(at), path, "bars"), "a transition that modulates is 8 bars");
     }
     /* motive: as motive_relation_step_text writes it */
-    const cJSON *motive = member_of(reader, json, path, "motive", false);
-    if (motive) {
-        join(at, sizeof(at), path, "motive");
-        if (!cJSON_IsString(motive) || !motive->valuestring) {
-            return fail(reader, at, "must be a motive relation such as \"invert tonal=1\"");
-        }
-        if (!motive_relation_step_parse(motive->valuestring, &out->motive)) {
-            return fail(reader, at, "not a motive relation: \"%s\"", motive->valuestring);
-        }
-        out->has_motive = true;
-    }
-    /* a lyric theme's motive is m0 augmented, the open ratio the builder fills (R-506) */
-    if (out->lyric) {
-        out->motive.kind = MOTIVE_RELATION_AUGMENT;
-        out->has_motive = true;
-    }
-    /* returns and variation */
-    const cJSON *returns = member_of(reader, json, path, "returns", false);
-    bool has_variation = cJSON_GetObjectItemCaseSensitive(json, "variation") != NULL;
-    if (returns) {
-        join(at, sizeof(at), path, "returns");
-        if (!cJSON_IsString(returns) || !returns->valuestring) {
-            return fail(reader, at, "must be the name of an earlier section");
-        }
-        bool found = false;
-        for (size_t i = 0; i < size->section_count; i++) {
-            if (strcmp(size->sections[i].name, returns->valuestring) == 0) {
-                out->returns = i;
-                found = true;
-            }
-        }
-        if (!found) {
-            return fail(reader, at, "\"%s\" is not an earlier section of the size", returns->valuestring);
-        }
-        /* A return copies its source, so it keeps the source's construction. */
-        if (!same_construction(out, &size->sections[out->returns])) {
-            join(at, sizeof(at), path, "construction");
-            return fail(reader, at, "a return keeps the construction of %s", size->sections[out->returns].name);
+    if (d->motive[0] != '\0') {
+        MotiveRelationStep step;
+        if (!motive_relation_step_parse(d->motive, &step)) {
+            return fail(reader, member_at(at, sizeof(at), path, "motive"), "not a motive relation: \"%s\"", d->motive);
         }
     }
-    if (has_variation) {
-        const cJSON *variation = cJSON_GetObjectItemCaseSensitive(json, "variation");
-        join(at, sizeof(at), path, "variation");
-        if (!returns) {
-            return fail(reader, at, "a variation needs returns");
+    /* returns: an earlier section of the size, whose construction it keeps */
+    if (d->returns[0] != '\0') {
+        size_t source = form_spec_section_index(size, d->returns);
+        if (source == FORM_SPEC_NO_RETURN || source >= index) {
+            return fail(reader, member_at(at, sizeof(at), path, "returns"), "\"%s\" is not an earlier section of the size", d->returns);
         }
-        if (!cJSON_IsString(variation) || !variation->valuestring) {
-            return fail(reader, at, "must be a string");
-        }
-        if (!plan_return_variation_from_name(variation->valuestring, &out->variation)) {
-            return fail(reader, at, "unknown variation \"%s\"", variation->valuestring);
+        if (!same_construction(d, &size->sections[source])) {
+            return fail(reader, member_at(at, sizeof(at), path, "construction"), "a return keeps the construction of %s",
+                        size->sections[source].name);
         }
     }
-    /* setting (R-518): the pattern of a setting return's new accompaniment, required by that variation and only for it */
-    const bool setting_return = returns && out->variation == PLAN_RETURN_SETTING;
-    if (cJSON_GetObjectItemCaseSensitive(json, "setting")) {
-        static const char *const SETTING_NAMES[] = {"block", "arpeggiated", "alberti", "oom-pah"};
-        int setting = -1;
-        join(at, sizeof(at), path, "setting");
-        if (!read_choice(reader, json, path, "setting", SETTING_NAMES, 4, &setting)) {
-            return false;
-        }
-        if (!setting_return) {
-            return fail(reader, at, "only a setting return has a setting");
-        }
-        out->setting = (PlanAccompanimentPattern)(PLAN_ACCOMPANIMENT_BLOCK + setting);
-    } else if (setting_return) {
-        join(at, sizeof(at), path, "variation");
-        return fail(reader, at, "a setting return names its setting");
-    }
-    /* mode: "parallel" (R-499), the section is in the home key's parallel key, only a figurate variation, with no keys;
-     * "major" (R-517), the section is in the home tonic's major key, only a return, with no keys, not figurate;
-     * "home" (R-524), the section is at home in the home mode, its source copied across modes when it is in the other,
-     * only a reharmonize return, with no keys */
-    const cJSON *mode = member_of(reader, json, path, "mode", false);
-    const bool figurate = returns && out->variation == PLAN_RETURN_FIGURATE;
-    if (mode) {
-        static const char *const MODE_NAMES[] = {"parallel", "major", "home"};
-        int value = -1;
-        join(at, sizeof(at), path, "mode");
-        if (!read_choice(reader, json, path, "mode", MODE_NAMES, 3, &value)) {
-            return false;
-        }
-        if (value == 2) {
-            if (keys) {
-                return fail(reader, at, "a section in the home mode has no keys");
-            }
-            if (!returns) {
-                return fail(reader, at, "the home mode is for a returning section");
-            }
-            if (out->variation != PLAN_RETURN_REHARMONIZE) {
-                return fail(reader, at, "a return in the home mode is reharmonized");
-            }
-            out->home_mode = true;
-        } else if (value == 0) {
-            if (keys) {
-                return fail(reader, at, "a section in the parallel mode has no keys");
-            }
-            if (!figurate) {
-                return fail(reader, at, "the parallel mode needs a figurate variation");
-            }
-            out->parallel = true;
-        } else {
-            if (keys) {
-                return fail(reader, at, "a section in the tonic major has no keys");
-            }
-            if (!returns) {
-                return fail(reader, at, "the tonic major is for a returning section");
-            }
-            if (figurate) {
-                return fail(reader, at, "a figurate variation takes the parallel mode, not the tonic major");
-            }
-            out->tonic_major = true;
-        }
-    }
-    /* figure (R-497): the motive of a figurate return, and only of one */
-    const cJSON *figure = member_of(reader, json, path, "figure", false);
-    if (figure) {
-        join(at, sizeof(at), path, "figure");
-        if (!figurate) {
-            return fail(reader, at, "a figure needs the variation figurate");
-        }
-        if (!bars) {
-            return fail(reader, at, "a figure needs bars");
-        }
-        if (!read_figure(reader, figure, at, out->bars, out->parallel, &out->figure)) {
-            return false;
-        }
-        out->has_figure = true;
-    } else if (figurate) {
-        join(at, sizeof(at), path, "variation");
-        return fail(reader, at, "a figurate variation needs a figure");
-    }
-    /* pedal: only "dominant", and only under a presentation */
-    if (cJSON_GetObjectItemCaseSensitive(json, "pedal")) {
-        static const char *const PEDAL_NAMES[] = {"dominant"};
-        int pedal = -1;
-        join(at, sizeof(at), path, "pedal");
-        if (!read_choice(reader, json, path, "pedal", PEDAL_NAMES, 1, &pedal)) {
-            return false;
-        }
-        if (out->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
-            return fail(reader, at, "a pedal needs a presentation beginning");
-        }
-        out->pedal = 5;
-    }
-    /* leads_in and connective (R-486): the rules that look at other sections are checked once the size is read */
-    if (!read_bool(reader, json, path, "leads_in", &out->leads_in)) {
-        return false;
-    }
-    if (out->leads_in && out->returns != FORM_SPEC_NO_RETURN) {
-        join(at, sizeof(at), path, "leads_in");
-        return fail(reader, at, "a section that returns another cannot lead in");
-    }
-    if (cJSON_GetObjectItemCaseSensitive(json, "connective")) {
-        static const char *const CONNECTIVE_NAMES[] = {"sometimes", "always"};
-        int choice = -1;
-        join(at, sizeof(at), path, "connective");
-        if (!read_choice(reader, json, path, "connective", CONNECTIVE_NAMES, 2, &choice)) {
-            return false;
-        }
-        if (!out->leads_in) {
-            return fail(reader, at, "a connective needs leads_in");
-        }
-        out->connective = choice == 0 ? FORM_CONNECTIVE_SOMETIMES : FORM_CONNECTIVE_ALWAYS;
-    }
-    return read_layers(reader, json, path, &out->layers);
+    return true;
 }
 
 /* leads_in across the sections of a size: not on the last, not on two in a row, not on one another section returns. */
@@ -1050,7 +495,7 @@ static bool check_lead_ins(Reader *reader, const FormSpecSize *size, const char 
             return fail(reader, at, "the next section also leads in");
         }
         for (size_t other = 0; other < size->section_count; other++) {
-            if (size->sections[other].returns == s) {
+            if (strcmp(size->sections[other].returns, size->sections[s].name) == 0) {
                 return fail(reader, at, "a section that another section returns cannot lead in");
             }
         }
@@ -1268,7 +713,7 @@ bool form_spec_performed(const FormSpec *form) {
 
 /* ------------------------------------------------------------- a form whose sections the request gives */
 
-bool form_spec_has_role(const FormSpec *form, FormRole role) {
+bool form_spec_has_role(const FormSpec *form, SectionRole role) {
     for (size_t i = 0; form && i < form->role_count; i++) {
         if (form->roles[i] == role) {
             return true;
@@ -1277,7 +722,7 @@ bool form_spec_has_role(const FormSpec *form, FormRole role) {
     return false;
 }
 
-bool form_spec_role_in_loop(const FormSpec *form, FormRole role) {
+bool form_spec_role_in_loop(const FormSpec *form, SectionRole role) {
     for (size_t i = 0; form && i < form->loop_role_count; i++) {
         if (form->loop_roles[i] == role) {
             return true;
@@ -1286,8 +731,8 @@ bool form_spec_role_in_loop(const FormSpec *form, FormRole role) {
     return false;
 }
 
-static bool is_part_role(FormRole role) {
-    return role >= FORM_ROLE_INTRO && role <= FORM_ROLE_ENDING;
+static bool is_part_role(SectionRole role) {
+    return role >= SECTION_ROLE_INTRO && role <= SECTION_ROLE_ENDING;
 }
 
 /*
@@ -1295,7 +740,7 @@ static bool is_part_role(FormRole role) {
  * turnaround, ending, none twice. With a form it is a list of roles the form has (the loop's, a cadence rule's).
  */
 static bool read_role_list(Reader *reader, const cJSON *parent, const char *path, const char *key, const FormSpec *form,
-                           FormRole *out, size_t *count) {
+                           SectionRole *out, size_t *count) {
     char at[64];
     const cJSON *list = array_member(reader, parent, path, key, true, at, sizeof(at));
     if (!list) {
@@ -1308,12 +753,12 @@ static bool read_role_list(Reader *reader, const cJSON *parent, const char *path
     for (size_t i = 0; i < n; i++) {
         char item[64];
         const cJSON *entry = cJSON_GetArrayItem(list, (int)i);
-        FormRole role;
+        SectionRole role;
         join_index(item, sizeof(item), at, i);
         if (!cJSON_IsString(entry) || !entry->valuestring) {
             return fail(reader, item, "must be a role name");
         }
-        if (!form_role_find(entry->valuestring, &role)) {
+        if (!section_role_find(entry->valuestring, &role)) {
             return fail(reader, item, "unknown role \"%s\"", entry->valuestring);
         }
         if (form && !form_spec_has_role(form, role)) {
@@ -1377,7 +822,7 @@ static bool read_default_ending(Reader *reader, const cJSON *root, FormSpec *for
         !read_text(reader, ending, "/default_ending", "role", true, text, sizeof(text), NULL)) {
         return false;
     }
-    if (!form_role_find(text, &out->role) || out->role != FORM_ROLE_ENDING || !form_spec_has_role(form, out->role)) {
+    if (!section_role_find(text, &out->role) || out->role != SECTION_ROLE_ENDING || !form_spec_has_role(form, out->role)) {
         return fail(reader, "/default_ending/role", "must be the form's ending role");
     }
     const cJSON *bars = member_of(reader, ending, "/default_ending", "bars", true);
@@ -1401,7 +846,7 @@ static bool read_request_members(Reader *reader, const cJSON *root, FormSpec *fo
     if (!read_role_list(reader, root, "", "roles", NULL, form->roles, &form->role_count)) {
         return false;
     }
-    if (!form_spec_has_role(form, FORM_ROLE_BODY)) {
+    if (!form_spec_has_role(form, SECTION_ROLE_BODY)) {
         return fail(reader, "/roles", "a form whose sections the request gives has a body role");
     }
     const cJSON *loop = member_of(reader, root, "", "loop", true);
@@ -1516,7 +961,18 @@ static bool read_sizes(Reader *reader, const cJSON *root, FormSpec *form, bool c
         for (size_t s = 0; s < section_count; s++) {
             char section_at[64];
             join_index(section_at, sizeof(section_at), sections_at, s);
-            if (!read_section(reader, form, size, cJSON_GetArrayItem(sections, (int)s), section_at, &size->sections[s])) {
+            SectionError section_error;
+            if (!section_from_json(cJSON_GetArrayItem(sections, (int)s), SECTION_USE_FORM, NULL, 0, &size->sections[s],
+                                   &section_error)) {
+                char at_member[192];
+                snprintf(at_member, sizeof(at_member), "%s%s", section_at, section_error.path);
+                return fail(reader, at_member, "%s", section_error.message);
+            }
+            if (size->sections[s].cadence_name[0] == '\0') {
+                const HarmonyCadenceKind *kind = harmony_cadence_kind_of(size->sections[s].cadence);
+                snprintf(size->sections[s].cadence_name, sizeof(size->sections[s].cadence_name), "%s", kind ? kind->name : "");
+            }
+            if (!form_section_check(reader, form, size, &size->sections[s], s, section_at)) {
                 return false;
             }
             size->section_count = s + 1;
@@ -1667,7 +1123,10 @@ static bool read_document(Reader *reader, const cJSON *root, FormSpec *form) {
         return false;
     }
     long number;
-    if (!whole(reader, version, "/version", 1, 1, &number)) {
+    if (cJSON_IsNumber(version) && version->valuedouble == 1) {
+        return fail(reader, "/version", "form documents are version 2");
+    }
+    if (!whole(reader, version, "/version", 2, 2, &number)) {
         return false;
     }
     if (!read_name(reader, root, "", "name", true, form->name, sizeof(form->name), NULL) ||

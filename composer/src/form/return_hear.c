@@ -23,6 +23,7 @@
 #include <ursatz_composer/lanes.h>
 
 #include "form/form_internal.h"
+#include "util/plan_util.h"
 
 /* The most themes read across a plan: nine sections, each with a few themes. */
 #define MAX_THEMES 64
@@ -238,17 +239,9 @@ static ReturnHearResult read_section(ComposerHearing *hearing, const PiecePlan *
 
 /* The section a section with a FIGURE returns (R-497); false for a section with no FIGURE or no RETURN. */
 static bool figured_return(const PiecePlan *plan, NodeId section, NodeId *source) {
-    bool figure = false;
-    bool found = false;
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        figure = figure || constraint->kind == PLAN_CONSTRAINT_FIGURE;
-        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            *source = constraint->params.section_return.section;
-            found = true;
-        }
-    }
-    return figure && found && plan_has_node(plan, *source) && plan_node_kind(plan, *source) == PLAN_NODE_SECTION;
+    const SectionDescription *described = plan_section_or_empty(plan, section);
+    *source = described->returns[0] != '\0' ? plan_section_named(plan, described->returns) : PLAN_NODE_NONE;
+    return described->has_figure && *source != PLAN_NODE_NONE;
 }
 
 /* A melody note: where it starts and ends, from the start of the plan, and its pitch. */
@@ -415,8 +408,8 @@ ReturnHearResult return_hear_in(ComposerHearing *hearing, const PiecePlan *plan,
     ReturnHearResult status = themes && entries && entry_theme ? RETURN_HEAR_OK : RETURN_HEAR_ERR_ALLOC;
 
     for (NodeId id = 1; status == RETURN_HEAR_OK && id <= plan_node_count(plan); id++) {
-        if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL) &&
-            !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
+        if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && !plan_section_has_role(plan, id, SECTION_ROLE_MATERIAL) &&
+            !plan_section_has_role(plan, id, SECTION_ROLE_SEAM)) {
             status = read_section(hearing, plan, id, themes, &theme_count);
         }
     }

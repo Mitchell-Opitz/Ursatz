@@ -61,6 +61,25 @@ typedef enum {
 const char *plan_analyzer_version(const PiecePlan *plan);
 PlanResult plan_set_analyzer_version(PiecePlan *plan, const char *version);
 
+/*
+ * The form a plan was built from (R-608): the name and version of its document, the hash of the built-in document it was built
+ * from ("" for a form that is not built in), the checks the form runs (FormCheck bits, 31 at most) and whether it closes with a
+ * cadence. A plan composes and checks its cadences from this and its section descriptions, not from a form found by name.
+ * plan_set_form_record fails with PLAN_ERR_BAD_PAYLOAD for an empty name, a name of 32 or more characters, a hash that is not
+ * "" or 16 lowercase hexadecimal digits, or checks above 31. plan_form_record is NULL for a plan that has none.
+ */
+#define PLAN_FORM_NAME_MAX 32
+#define PLAN_FORM_HASH_LEN 16
+typedef struct {
+    char name[PLAN_FORM_NAME_MAX];
+    unsigned version;
+    char hash[PLAN_FORM_HASH_LEN + 1];
+    unsigned checks;
+    bool closing;
+} PlanFormRecord;
+PlanResult plan_set_form_record(PiecePlan *plan, const PlanFormRecord *record);
+const PlanFormRecord *plan_form_record(const PiecePlan *plan);
+
 /* The span's end time: start plus length. */
 PlanResult plan_span_end(PlanSpan span, Rational *out);
 /* True when inner lies entirely inside outer. */

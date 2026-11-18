@@ -32,10 +32,10 @@ typedef struct {
     CadenceType cadences[2];
     size_t cadence_count;
     bool has_pairing;
-    PlanThemePairing pairing;
+    SectionPairing pairing;
     bool returns;
     char returns_letter[PLAN_SECTION_LETTER_MAX];
-    PlanReturnVariation variation;
+    SectionReturnVariation variation;
 } ApiSection;
 
 /* The sections of the piece in order, material left out; returns how many there are (at most capacity are written). */

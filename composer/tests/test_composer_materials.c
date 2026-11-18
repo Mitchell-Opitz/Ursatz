@@ -104,6 +104,15 @@ static void test_context_required(void) {
 
 /* The key of a region's degree is what the relation entry resolves: the closely related key standard-harmony names, for every
    home key and degree, or both refuse (the diminished triads make no key). Degree 1 is the parallel key. */
+static const char *const DEGREE_RELATIONS[8] = {NULL,
+                                                "omt.relation.parallel",
+                                                "omt.relation.supertonic",
+                                                "omt.relation.mediant",
+                                                "omt.relation.subdominant",
+                                                "omt.relation.dominant",
+                                                "omt.relation.submediant",
+                                                "omt.relation.subtonic"};
+
 static void test_region_keys_equal_the_related_keys(void) {
     FillRng rng;
     fill_rng_seed(&rng, 1);
@@ -115,9 +124,9 @@ static void test_region_keys_equal_the_related_keys(void) {
             for (int degree = 1; degree <= 7; degree++) {
                 FormRegion one;
                 memset(&one, 0, sizeof(one));
-                one.major[0] = degree;
+                snprintf(one.major[0], sizeof(one.major[0]), "%s", DEGREE_RELATIONS[degree]);
                 one.major_count = 1;
-                one.minor[0] = degree;
+                snprintf(one.minor[0], sizeof(one.minor[0]), "%s", DEGREE_RELATIONS[degree]);
                 one.minor_count = 1;
                 AnalysisKey key;
                 bool made = piece_region_key(test_knowledge(), home, &one, &rng, &key);
@@ -142,13 +151,13 @@ static void test_region_keys_equal_the_related_keys(void) {
     /* A degree no relation names is refused, and a home key with no material resolves nothing. */
     FormRegion none;
     memset(&none, 0, sizeof(none));
-    none.major[0] = 8;
+    snprintf(none.major[0], sizeof(none.major[0]), "omt.relation.none");
     none.major_count = 1;
     AnalysisKey key;
     assert(!piece_region_key(test_knowledge(), test_key(0, "major"), &none, &rng, &key));
     FormRegion fifth;
     memset(&fifth, 0, sizeof(fifth));
-    fifth.major[0] = 5;
+    snprintf(fifth.major[0], sizeof(fifth.major[0]), "omt.relation.dominant");
     fifth.major_count = 1;
     AnalysisKey zero = plan_key_of_pitch_class(0, NULL);
     assert(!piece_region_key(test_knowledge(), zero, &fifth, &rng, &key));

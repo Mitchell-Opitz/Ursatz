@@ -95,8 +95,8 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, GivenChord *
     request.meter.beats_per_bar = 6;
     request.meter.beat_unit = 8;
     request.bars = 8;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     request.chords = chords;
     request.chord_count = CHORDS;

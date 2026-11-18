@@ -521,10 +521,10 @@ static void test_regenerate(void) {
     size_t toned_before = 0;
     size_t toned_after = 0;
     for (NodeId node = 1; node <= plan_node_count(before); node++) {
-        toned_before += plan_node_has_constraint(before, node, PLAN_CONSTRAINT_MOTIVE_TONES);
+        toned_before += (plan_node_find_constraint(before, node, PLAN_CONSTRAINT_MOTIVE_TONES) != NULL);
     }
     for (NodeId node = 1; node <= plan_node_count(after); node++) {
-        toned_after += plan_node_has_constraint(after, node, PLAN_CONSTRAINT_MOTIVE_TONES);
+        toned_after += (plan_node_find_constraint(after, node, PLAN_CONSTRAINT_MOTIVE_TONES) != NULL);
     }
     assert(toned_before > 0 && toned_after == toned_before);
     char *old_melody = dump_lane(before, PLAN_LANE_MELODY, 0, 2, 10);
@@ -705,7 +705,7 @@ static void test_errors(void) {
              "\"fill\":{\"kind\":\"empty\"}}]}",
              HEAD);
     test_write_text("bad_pickup.json", text);
-    expect_failure("bad_pickup.json --seed 1", 1, "pickup 'half' is not a number of beats");
+    expect_failure("bad_pickup.json --seed 1", 1, "section 'a': must be a whole number or a fraction");
     snprintf(text, sizeof(text),
              "%s\"sections\":[{\"id\":\"a\",\"part\":\"body\",\"letter\":\"A\",\"beats\":16,\"pickup\":\"0\",\"cadence\":null,"
              "\"fill\":{\"kind\":\"wobble\"}}]}",
@@ -717,7 +717,7 @@ static void test_errors(void) {
              "\"fill\":{\"kind\":\"empty\"}}]}",
              HEAD);
     test_write_text("bad_part.json", text);
-    expect_failure("bad_part.json --seed 1", 1, "the part must be intro, body, turnaround or ending");
+    expect_failure("bad_part.json --seed 1", 1, "a request names intro, body, turnaround or ending");
     test_write_text("not_json.json", "[1, 2");
     expect_failure("not_json.json", 1, "is not a JSON object");
     test_write_text("wrong_schema.json", "{\"schema\":\"ursatz-theme-request\",\"schema_version\":1}");

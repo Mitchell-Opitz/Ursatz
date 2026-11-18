@@ -6,7 +6,7 @@ against a Given copy of that first bar, and four soft rules say how well it lead
 
 ## The hold
 
-`form_build_plan` marks the loop's end `hold` (`PLAN_CONSTRAINT_HOLD`, no fields): the last section of the
+`form_build_plan` marks the loop's end held (`leads_in` in its section description): the last section of the
 turnaround, or the last body section when there is no turnaround. The stages from structure to texture leave a held
 section alone, as they leave a section that returns an earlier one alone, so it has no nodes and no lane spans until the
 seam stage.
@@ -19,7 +19,7 @@ A section is not held when
   cannot be filled against itself. A body of one section has no held end; its seam is copied after the stages and heard,
   but nothing steers toward it.
 
-After the loop's end the plan has the seam section (`seam`, `PLAN_CONSTRAINT_SEAM`, no fields): a node named `seam`, one
+After the loop's end the plan has the seam section (the role `seam` in its section description): a node named `seam`, one
 bar long, that starts where the loop ends and is empty and open. The material section starts on the first barline at or
 after its end. The seam is not a theme section, so no stage targets it; it has the `key` constraint and nothing else.
 

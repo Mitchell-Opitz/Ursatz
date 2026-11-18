@@ -84,8 +84,8 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, const Grow
     request.key = motive_key(motive);
     request.meter = motive_meter(motive);
     request.bars = 8;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
@@ -335,8 +335,8 @@ static void test_cut_departs(void) {
         setup.knowledge = test_knowledge();
         setup.text = &text;
         setup.into = GROW_INTO_SENTENCE;
-        setup.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-        setup.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+        setup.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+        setup.pairing.ending = SECTION_ENDING_CONTINUATION;
         setup.key = motive_key(&FIXTURES[f].motive);
         setup.meter = motive_meter(&FIXTURES[f].motive);
         setup.bars = 8;
@@ -529,8 +529,8 @@ static void test_rates(void) {
                 setup.knowledge = test_knowledge();
                 setup.text = &text;
                 setup.into = GROW_INTO_SENTENCE;
-                setup.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-                setup.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+                setup.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+                setup.pairing.ending = SECTION_ENDING_CONTINUATION;
                 setup.key = motive_key(motive);
                 setup.meter = motive_meter(motive);
                 setup.bars = 8;

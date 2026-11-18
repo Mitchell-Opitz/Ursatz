@@ -1,6 +1,6 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "game-loop",
   "label": "Game loop",
   "plan_name": "structure",

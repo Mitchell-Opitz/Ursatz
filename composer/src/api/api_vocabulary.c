@@ -6,6 +6,7 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
+#include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_random.h>
 #include <ursatz_composer/motive_tones.h>
@@ -114,7 +115,7 @@ static const char *const MOTIVE_FORM_LABELS[] = {"Full", "Rhythm only", "Contour
 static const char *const ROLE_LABELS[] = {"Melodic", "Accompaniment"};
 static const char *const RANDOM_STRATEGY_LABELS[] = {"Segments", "Drawn"};
 static const char *const PART_LABELS[PIECE_PART_COUNT] = {"Intro", "Loop body", "Turnaround", "Ending"};
-static const char *const FILL_LABELS[] = {"Empty", "Motif", "Theme", "Progression"};
+static const char *const FILL_LABELS[] = {"Empty", "Motif", "Theme"};
 
 typedef struct {
     NonChordTone type;
@@ -352,7 +353,7 @@ static bool add_library_lists(cJSON *root) {
             return false;
         }
     }
-    for (int fill = PIECE_FILL_EMPTY; fill <= PIECE_FILL_PROGRESSION; fill++) {
+    for (int fill = PIECE_FILL_EMPTY; fill <= PIECE_FILL_THEME; fill++) {
         if (!add_choice(fills, piece_fill_name((PieceFillKind)fill), FILL_LABELS[fill])) {
             return false;
         }
@@ -399,10 +400,10 @@ static bool add_piece_intos(cJSON *root) {
     for (int into = 0; list && API_PIECE_INTOS[into].value; into++) {
         cJSON *entry = add_choice(list, API_PIECE_INTOS[into].value, API_PIECE_INTOS[into].label);
         int found = 0;
-        PlanThemePairing pairing = {0};
+        SectionPairing pairing = {0};
         for (int b = 0; b < 3; b++) {
             for (int e = 0; e < 3; e++) {
-                PlanThemePairing candidate = {(PlanThemeBeginning)b, (PlanThemeEnding)e};
+                SectionPairing candidate = {(SectionBeginning)b, (SectionEnding)e};
                 if (grow_pairing_archetype(&candidate) == into) {
                     pairing = candidate;
                     found++;
@@ -461,13 +462,13 @@ static bool add_regular_bars(cJSON *root) {
 }
 
 /* Whether some pairing has the idea and takes an extension of the kind on it. */
-static bool extension_on_idea(PlanExtensionKind kind, GrowIdea idea) {
-    for (int beginning = PLAN_THEME_BEGINNING_PRESENTATION; beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA; beginning++) {
-        for (int ending = PLAN_THEME_ENDING_CONTINUATION; ending <= PLAN_THEME_ENDING_CADENTIAL; ending++) {
-            PlanThemePairing pairing;
+static bool extension_on_idea(SectionExtensionKind kind, GrowIdea idea) {
+    for (int beginning = SECTION_BEGINNING_PRESENTATION; beginning <= SECTION_BEGINNING_COMPOUND_BASIC_IDEA; beginning++) {
+        for (int ending = SECTION_ENDING_CONTINUATION; ending <= SECTION_ENDING_CADENTIAL; ending++) {
+            SectionPairing pairing;
             memset(&pairing, 0, sizeof(pairing));
-            pairing.beginning = (PlanThemeBeginning)beginning;
-            pairing.ending = (PlanThemeEnding)ending;
+            pairing.beginning = (SectionBeginning)beginning;
+            pairing.ending = (SectionEnding)ending;
             if (grow_extension_allowed(&pairing, kind, idea)) {
                 return true;
             }
@@ -481,12 +482,12 @@ static bool add_theme_extensions(cJSON *root) {
     static const struct {
         const char *value;
         const char *label;
-        PlanExtensionKind kind;
+        SectionExtensionKind kind;
         bool names_idea;
-    } KINDS[] = {{"repeat", "Internal repetition", PLAN_EXTENSION_REPEAT, true},
-                 {"stretch", "Stretched cadence", PLAN_EXTENSION_STRETCH, true},
-                 {"addition", "Addition after the cadence", PLAN_EXTENSION_ADDITION, false},
-                 {"evaded", "Evaded cadence", PLAN_EXTENSION_EVADED, false}};
+    } KINDS[] = {{"repeat", "Internal repetition", SECTION_EXTENSION_REPEAT, true},
+                 {"stretch", "Stretched cadence", SECTION_EXTENSION_STRETCH, true},
+                 {"addition", "Addition after the cadence", SECTION_EXTENSION_ADDITION, false},
+                 {"evaded", "Evaded cadence", SECTION_EXTENSION_EVADED, false}};
     cJSON *list = add_list(root, "theme_extensions");
     for (size_t i = 0; list && i < sizeof(KINDS) / sizeof(KINDS[0]); i++) {
         cJSON *entry = add_choice(list, KINDS[i].value, KINDS[i].label);
@@ -500,7 +501,7 @@ static bool add_theme_extensions(cJSON *root) {
                 return false;
             }
         }
-        if (KINDS[i].kind == PLAN_EXTENSION_REPEAT && !cJSON_AddBoolToObject(entry, "varied", true)) {
+        if (KINDS[i].kind == SECTION_EXTENSION_REPEAT && !cJSON_AddBoolToObject(entry, "varied", true)) {
             return false;
         }
     }
@@ -608,6 +609,41 @@ bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials)
            add_preferences(root) && add_limits(root);
 }
 
+/* The schemas a section's harmony may be (R-610): the galant prototypes that make a chord of each stage in the major and in the natural minor. */
+static bool add_schemas(cJSON *root, const CommonPracticeMaterials *materials) {
+    cJSON *list = add_list(root, "schemas");
+    for (int id = 0; list && id < GALANT_SCHEMA_COUNT; id++) {
+        if (!harmony_schema_available((GalantSchemaId)id, materials->major) && !harmony_schema_available((GalantSchemaId)id, materials->natural_minor)) {
+            continue;
+        }
+        const char *name = galant_schema_name((GalantSchemaId)id);
+        if (!add_choice(list, name, name)) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
+/* The relations of the snapshot (K6), by id: a section's region may be one, taken from an anchor (R-610). */
+static bool add_relations(cJSON *root, const KnowledgeSnapshot *knowledge) {
+    static const char *const FAMILIES[] = {"tonal", "modal", "neo-riemannian", "set", "serial"};
+    cJSON *list = add_list(root, "relations");
+    for (size_t i = 0; list && i < knowledge_snapshot_entry_count(knowledge); i++) {
+        const KnowledgeEntry *entry = knowledge_snapshot_entry_at(knowledge, i);
+        const Relation *relation = entry && strcmp(entry->kind, "relation") == 0 ? knowledge_snapshot_relation(knowledge, entry->id) : NULL;
+        if (!relation) {
+            continue;
+        }
+        cJSON *item = cJSON_CreateObject();
+        if (!item || !cJSON_AddStringToObject(item, "id", relation->id) || !cJSON_AddStringToObject(item, "name", relation->name) ||
+            !cJSON_AddStringToObject(item, "family", FAMILIES[relation->family]) || !cJSON_AddItemToArray(list, item)) {
+            cJSON_Delete(item);
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
@@ -616,7 +652,7 @@ ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerR
         return context_status;
     }
     cJSON *root = cJSON_CreateObject();
-    if (!root || !api_vocabulary_build(root, &materials)) {
+    if (!root || !api_vocabulary_build(root, &materials) || !add_relations(root, context->knowledge) || !add_schemas(root, &materials)) {
         cJSON_Delete(root);
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }

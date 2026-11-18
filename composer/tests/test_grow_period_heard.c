@@ -51,34 +51,34 @@ typedef struct {
     size_t nothing;
 } Share;
 
-static PhraseBeginning beginning_of(PlanThemeBeginning beginning) {
+static PhraseBeginning beginning_of(SectionBeginning beginning) {
     switch (beginning) {
-    case PLAN_THEME_BEGINNING_ANTECEDENT:
+    case SECTION_BEGINNING_ANTECEDENT:
         return PHRASE_BEGINNING_ANTECEDENT;
-    case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
+    case SECTION_BEGINNING_COMPOUND_BASIC_IDEA:
         return PHRASE_BEGINNING_COMPOUND_BASIC_IDEA;
-    case PLAN_THEME_BEGINNING_PRESENTATION:
+    case SECTION_BEGINNING_PRESENTATION:
         return PHRASE_BEGINNING_PRESENTATION;
     }
     assert(0);
     return PHRASE_BEGINNING_COUNT;
 }
 
-static PhraseEnding ending_of(PlanThemeEnding ending) {
+static PhraseEnding ending_of(SectionEnding ending) {
     switch (ending) {
-    case PLAN_THEME_ENDING_CONTINUATION:
+    case SECTION_ENDING_CONTINUATION:
         return PHRASE_ENDING_CONTINUATION;
-    case PLAN_THEME_ENDING_CONSEQUENT:
+    case SECTION_ENDING_CONSEQUENT:
         return PHRASE_ENDING_CONSEQUENT;
-    case PLAN_THEME_ENDING_CADENTIAL:
+    case SECTION_ENDING_CADENTIAL:
         return PHRASE_ENDING_CADENTIAL;
     }
     assert(0);
     return PHRASE_ENDING_COUNT;
 }
 
-static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, PlanThemeBeginning beginning,
-                     PlanThemeEnding ending, Share *share) {
+static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, SectionBeginning beginning,
+                     SectionEnding ending, Share *share) {
     Motive motive;
     MotiveOptions options;
     GrowRequest request;
@@ -107,8 +107,8 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
 
     PhraseLevelForm wanted;
-    bool period = beginning == PLAN_THEME_BEGINNING_ANTECEDENT && ending == PLAN_THEME_ENDING_CONSEQUENT;
-    bool sentence = beginning == PLAN_THEME_BEGINNING_PRESENTATION && ending == PLAN_THEME_ENDING_CONTINUATION;
+    bool period = beginning == SECTION_BEGINNING_ANTECEDENT && ending == SECTION_ENDING_CONSEQUENT;
+    bool sentence = beginning == SECTION_BEGINNING_PRESENTATION && ending == SECTION_ENDING_CONTINUATION;
     wanted = period ? PHRASE_LEVEL_FORM_PERIOD : (sentence ? PHRASE_LEVEL_FORM_SENTENCE : PHRASE_LEVEL_FORM_HYBRID);
 
     PlanSpan theme = plan_node_span(plan, test_find_node(plan, "theme"));
@@ -141,10 +141,10 @@ int main(int argc, char **argv) {
         fputs("usage: test_grow_period_heard <beginning 0-2> <ending 0-2>\n", stderr);
         return 2;
     }
-    PlanThemeBeginning beginning = (PlanThemeBeginning)atoi(argv[1]);
-    PlanThemeEnding ending = (PlanThemeEnding)atoi(argv[2]);
-    assert(beginning >= PLAN_THEME_BEGINNING_PRESENTATION && beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA);
-    assert(ending >= PLAN_THEME_ENDING_CONTINUATION && ending <= PLAN_THEME_ENDING_CADENTIAL);
+    SectionBeginning beginning = (SectionBeginning)atoi(argv[1]);
+    SectionEnding ending = (SectionEnding)atoi(argv[2]);
+    assert(beginning >= SECTION_BEGINNING_PRESENTATION && beginning <= SECTION_BEGINNING_COMPOUND_BASIC_IDEA);
+    assert(ending >= SECTION_ENDING_CONTINUATION && ending <= SECTION_ENDING_CADENTIAL);
 
     Share share[2];
     memset(share, 0, sizeof(share));

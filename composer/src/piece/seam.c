@@ -7,6 +7,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "piece/piece_internal.h"
+#include "util/plan_util.h"
 
 /*
  * The seam (R-171): the bar the loop leads into, a Given copy of the body's first bar. The copy is made through
@@ -20,7 +21,7 @@
 bool piece_is_structure_plan(const PiecePlan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
-            plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_PIECE_PART)) {
+            plan_section_part_of(plan, id, NULL)) {
             return true;
         }
     }
@@ -30,7 +31,7 @@ bool piece_is_structure_plan(const PiecePlan *plan) {
 NodeId piece_seam_find(const PiecePlan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
-            plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
+            plan_section_has_role(plan, id, SECTION_ROLE_SEAM)) {
             return id;
         }
     }
@@ -43,14 +44,11 @@ bool piece_seam_body_start(const PiecePlan *plan, Rational *out) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
             continue;
         }
-        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            Rational start = plan_node_span(plan, id).start;
-            if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART && constraint->params.piece_part.part == 1 &&
-                (!found || rational_cmp(start, *out) < 0)) {
-                *out = start;
-                found = true;
-            }
+        int part;
+        Rational start = plan_node_span(plan, id).start;
+        if (plan_section_part_of(plan, id, &part) && part == 1 && (!found || rational_cmp(start, *out) < 0)) {
+            *out = start;
+            found = true;
         }
     }
     return found;

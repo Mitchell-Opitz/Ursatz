@@ -41,12 +41,24 @@ endif()
 # The schema tests need python3 with jsonschema (cmake/UrsatzTools.cmake).
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_plan_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v4.schema.json
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v5.schema.json
+                     -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
                      -DSNAPSHOT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_plan_schema.cmake
         LABELS schema
         PROPERTIES FIXTURES_REQUIRED plan_files_written RESOURCE_LOCK plan_json_files)
+endif()
+
+# Every built-in form validates against the form schema, which references the section fragment of the plan group.
+if(URSATZ_JSONSCHEMA_PYTHON)
+    ursatz_test(test_form_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/form.v2.schema.json
+                     -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
+                     -DFORMS_DIR=${PROJECT_SOURCE_DIR}/forms
+                     -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_form_schema.cmake
+        LABELS schema)
 endif()
 
 ursatz_test(test_render_plan LIBS ursatz_composer DEFINITIONS COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
@@ -134,7 +146,7 @@ ursatz_test_executable(test_grow_extensions LIBS ursatz_composer composer_test_s
 ursatz_test(test_grow_extensions_fast TARGET test_grow_extensions ARGS fast)
 ursatz_test(test_grow_extensions TARGET test_grow_extensions LABELS slow)
 ursatz_test_executable(test_grow_period LIBS ursatz_composer composer_test_support)
-# One test for each of the nine pairings of a beginning and an ending (the order of PlanThemeBeginning and PlanThemeEnding).
+# One test for each of the nine pairings of a beginning and an ending (the order of SectionBeginning and SectionEnding).
 set(GROW_BEGINNINGS presentation antecedent compound_basic_idea)
 set(GROW_ENDINGS continuation consequent cadential)
 foreach(beginning RANGE 2)
@@ -582,6 +594,16 @@ ursatz_test(test_api_validate LIBS ursatz_composer composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+# Per-section controls in a piece request (R-610, R-611): regions, own motives and theme fills of a sized form's overlays, a game loop's
+# region, and the refusals. It composes four pieces at one seed each, so it stays in the fast set.
+# A section's harmony in a piece request (R-610): the old progression fill as harmony, a schema, chords at bars, and the refusals.
+ursatz_test(test_piece_harmony LIBS ursatz_composer composer_test_support cjson
+    INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+ursatz_test(test_piece_sections LIBS ursatz_composer composer_test_support cjson
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 ursatz_test(test_api_piece LIBS ursatz_composer composer_test_support cjson
     DEFINITIONS COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -645,9 +667,10 @@ if(URSATZ_JSONSCHEMA_PYTHON)
     set(API_FILE_LOCKS api_core_files api_motive_files api_variants_files api_theme_files api_piece_files api_parts_files
         api_plan_workflow_files api_material_files api_vocabulary_files)
     ursatz_test(test_api_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate
                      -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                     -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_api_schema.cmake
         LABELS schema
         PROPERTIES FIXTURES_REQUIRED api_responses_written)

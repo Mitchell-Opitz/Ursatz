@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <analysis/notes/analysis_key.h>
+#include <plan/section.h>
 #include <theory/harmony/harmonic_function.h>
 
 #include <ursatz_composer/piece_plan.h>
@@ -27,6 +28,14 @@ typedef enum {
     PLAN_LANE_MELODY,
     PLAN_LANE_INNER_VOICE
 } PlanLaneKind;
+
+/* The lanes are the section description's (plan/section.h): the same values in the same order. */
+_Static_assert((int)PLAN_LANE_METER == (int)SECTION_LANE_METER, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_KEY == (int)SECTION_LANE_KEY, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_HARMONY == (int)SECTION_LANE_HARMONY, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_BASS == (int)SECTION_LANE_BASS, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_MELODY == (int)SECTION_LANE_MELODY, "PlanLaneKind follows SectionLane");
+_Static_assert((int)PLAN_LANE_INNER_VOICE == (int)SECTION_LANE_INNER_VOICE, "PlanLaneKind follows SectionLane");
 
 /* beat_unit is the note value of one beat (4 for a quarter); bars_per_hyperbar is 0 when there is none. */
 typedef struct {
@@ -105,14 +114,17 @@ typedef struct {
  */
 typedef enum {
     PLAN_KEY_ANCHOR_HOME,
-    PLAN_KEY_ANCHOR_PREVIOUS
+    PLAN_KEY_ANCHOR_PREVIOUS,
+    PLAN_KEY_ANCHOR_SECTION /* the key an earlier section is in: the key span at that section's start, named in anchor_section */
 } PlanKeyAnchor;
 
 #define PLAN_KEY_RELATION_MAX 64
+#define PLAN_KEY_ANCHOR_SECTION_MAX 32
 
 typedef struct {
     char relation[PLAN_KEY_RELATION_MAX]; /* the K6 id; "" for a span with no relation */
     PlanKeyAnchor anchor;
+    char anchor_section[PLAN_KEY_ANCHOR_SECTION_MAX]; /* the node name of the anchor section; "" unless anchor is PLAN_KEY_ANCHOR_SECTION */
     bool resolved; /* false while the span's payload holds no key yet */
 } PlanKeyRelation;
 
@@ -181,8 +193,11 @@ size_t plan_lane_find(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
  * Names a key span by a relation and an anchor (see PlanKeyRelation); `resolved` says its payload holds the key the relation reaches.
  * Fails with PLAN_ERR_NOT_FOUND for an unknown id, PLAN_ERR_BAD_PAYLOAD for a span of another lane or a relation id that is empty
  * or does not fit PLAN_KEY_RELATION_MAX, and PLAN_ERR_NULL for a NULL relation. A Given span takes it too (it is a name, not a key).
+ * anchor_section names the section node of a PLAN_KEY_ANCHOR_SECTION anchor (1 to PLAN_KEY_ANCHOR_SECTION_MAX - 1 characters) and is NULL
+ * for any other, else PLAN_ERR_BAD_PAYLOAD.
  */
-PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor, bool resolved);
+PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor,
+                                           const char *anchor_section, bool resolved);
 
 /* The relation a key span is named by, or NULL for a span with none (or an unknown id). */
 const PlanKeyRelation *plan_lane_span_key_relation(const PiecePlan *plan, LaneSpanId id);

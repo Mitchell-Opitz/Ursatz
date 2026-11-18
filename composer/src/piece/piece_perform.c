@@ -28,7 +28,7 @@ static size_t composed_sections(const PiecePlan *plan, NodeId *out, size_t capac
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (plan_node_kind(plan, child) == PLAN_NODE_SECTION && !plan_node_has_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_kind(plan, child) == PLAN_NODE_SECTION && !plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             if (count < capacity) {
                 out[count] = child;
             }
@@ -88,17 +88,21 @@ static PieceResult copy_keys(PiecePlan *performed, NodeId form, const PiecePlan 
 
 /* The constraints a performed section holds: the source's letter, cadences and key. */
 static PieceResult copy_constraints(PiecePlan *performed, NodeId node, const PiecePlan *plan, NodeId source) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, source); i++) {
+    const SectionDescription *from = plan_section_or_empty(plan, source);
+    SectionDescription description = *plan_node_section(performed, node);
+    snprintf(description.letter, sizeof(description.letter), "%s", from->letter);
+    description.has_cadence = from->has_cadence;
+    description.cadence = from->cadence;
+    description.has_first_cadence = from->has_first_cadence;
+    description.first_cadence = from->first_cadence;
+    PieceResult result = piece_result_of_plan(plan_node_set_section(performed, node, &description));
+    for (size_t i = 0; result == PIECE_OK && i < plan_node_constraint_count(plan, source); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, source, i);
-        if (constraint->kind == PLAN_CONSTRAINT_SECTION_LETTER || constraint->kind == PLAN_CONSTRAINT_CADENCE ||
-            constraint->kind == PLAN_CONSTRAINT_KEY) {
-            PieceResult result = piece_add_constraint(performed, node, constraint);
-            if (result != PIECE_OK) {
-                return result;
-            }
+        if (constraint->kind == PLAN_CONSTRAINT_KEY) {
+            result = piece_add_constraint(performed, node, constraint);
         }
     }
-    return PIECE_OK;
+    return result;
 }
 
 /* Whether the section at `index` of a part's size is the first or the last of a repeated group, and whether it is in one. */
@@ -228,7 +232,8 @@ PieceResult piece_compose_parts(const FormSpec *form, const PieceRequest *reques
     return result;
 }
 
-static PieceResult perform(const PiecePerformPart *parts, size_t part_count, const char *plan_name, PiecePerformance *out) {
+static PieceResult perform(const PiecePerformPart *parts, size_t part_count, const FormSpec *record_form, const char *plan_name,
+                           PiecePerformance *out) {
     if (!parts || part_count == 0 || !out) {
         return PIECE_ERR_NULL;
     }
@@ -280,7 +285,7 @@ static PieceResult perform(const PiecePerformPart *parts, size_t part_count, con
     for (size_t i = 0; result == PIECE_OK && i < step_count; i++) {
         const PiecePerformPart *part = &parts[steps[i].part];
         NodeId source = sources[steps[i].part][steps[i].index];
-        const FormSectionSpec *spec = &part->size->sections[steps[i].index];
+        const SectionDescription *spec = &part->size->sections[steps[i].index];
         PiecePerformedSection *section = &out->sections[i];
         PlanSpan source_span = plan_node_span(part->plan, source);
         PlanSpan span = {start, source_span.length};
@@ -306,6 +311,7 @@ static PieceResult perform(const PiecePerformPart *parts, size_t part_count, con
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_node_set_state(performed, form_id, PLAN_STATE_GIVEN));
     }
+    result = result == PIECE_OK && record_form ? piece_set_form_record(performed, record_form) : result;
     if (result != PIECE_OK) {
         plan_destroy(performed);
         memset(out, 0, sizeof(*out));
@@ -316,7 +322,8 @@ static PieceResult perform(const PiecePerformPart *parts, size_t part_count, con
 }
 
 PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, PiecePerformance *out) {
-    return perform(parts, part_count, parts && part_count > 0 && parts[0].form ? parts[0].form->plan_name : NULL, out);
+    const FormSpec *form = parts && part_count > 0 ? parts[0].form : NULL;
+    return perform(parts, part_count, form, form ? form->plan_name : NULL, out);
 }
 
 size_t piece_parts_source(const FormSpec *form, size_t index) {
@@ -345,5 +352,5 @@ PieceResult piece_perform_compound(const FormSpec *form, size_t bars, size_t cou
         performed[i].repeats = form->parts[i].repeats;
         performed[i].name = form->parts[i].name;
     }
-    return perform(performed, form->part_count, form->plan_name, out);
+    return perform(performed, form->part_count, form, form->plan_name, out);
 }

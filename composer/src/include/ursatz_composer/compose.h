@@ -115,8 +115,8 @@ typedef struct {
      * The form whose checks the run makes (form_spec.h: its `checks` name which of hearing each theme section as its
      * shape, hearing the returns, checking the keys, checking the cadences and hearing the seam run; a check not named
      * is not made, and no check changes what is written: the key check only rejects a finished run). NULL is the
-     * built-in form the plan's root is named for; a plan of no built-in form, such as a theme or a fill plan, runs every
-     * check it has the parts for. Must outlive compose_run.
+     * form the plan records (plan_form_record); a plan with no record, such as a theme or a fill plan, runs every check it has the
+     * parts for. Must outlive compose_run.
      */
     const FormSpec *form;
     /* The knowledge the run's hearings and texture checks read (the call context's snapshot); required, must outlive compose_run. */

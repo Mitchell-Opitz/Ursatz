@@ -9,6 +9,7 @@
 #include <theory/knowledge/relation.h>
 #include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/region_relation.h>
+#include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 
 #include "plan/plan_internal.h"
@@ -85,10 +86,31 @@ PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *know
         }
         if (i == 0) {
             result = refuse(error, plan, ids[i], "anchor", "the first key span has no %s key to take '%s' from",
-                            named->anchor == PLAN_KEY_ANCHOR_HOME ? "home" : "previous", named->relation);
+                            named->anchor == PLAN_KEY_ANCHOR_HOME ? "home" : named->anchor == PLAN_KEY_ANCHOR_PREVIOUS ? "previous" : "section",
+                            named->relation);
             continue;
         }
-        const AnalysisKey *anchor_key = named->anchor == PLAN_KEY_ANCHOR_HOME ? &keys[0] : &keys[i - 1];
+        size_t anchor_at = named->anchor == PLAN_KEY_ANCHOR_HOME ? 0 : i - 1;
+        if (named->anchor == PLAN_KEY_ANCHOR_SECTION) {
+            /* the key span at the start of the named section, which must come before this span */
+            NodeId section = plan_section_named(plan, named->anchor_section);
+            size_t found = count;
+            for (size_t k = 0; section != PLAN_NODE_NONE && k < i; k++) {
+                PlanSpan span = plan_lane_span_span(plan, ids[k]);
+                PlanSpan at = plan_node_span(plan, section);
+                Rational end;
+                if (rational_cmp(span.start, at.start) <= 0 && plan_span_end(span, &end) == PLAN_OK && rational_cmp(at.start, end) < 0) {
+                    found = k;
+                }
+            }
+            if (found == count) {
+                result = refuse(error, plan, ids[i], "anchor", "'%s' is not an earlier section to take '%s' from", named->anchor_section,
+                                named->relation);
+                continue;
+            }
+            anchor_at = found;
+        }
+        const AnalysisKey *anchor_key = &keys[anchor_at];
         const Relation *relation = knowledge_snapshot_relation(knowledge, named->relation);
         if (!relation) {
             result = refuse(error, plan, ids[i], "relation", "no relation has the id '%s'", named->relation);

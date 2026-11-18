@@ -5,6 +5,7 @@
 
 #include <cJSON.h>
 #include <theory/knowledge/knowledge_snapshot.h>
+#include <analysis/notes/analysis_key.h>
 #include <theory/tonality/common_practice_materials.h>
 #include <ursatz_composer/plan_json.h>
 
@@ -46,5 +47,18 @@ bool json_read_int_member(JsonReader *reader, const cJSON *object, const char *p
                           long max, long *out);
 /* Reads the "span" member, {"start", "end"}, into a start and a positive length. */
 bool json_read_span(JsonReader *reader, const cJSON *object, const char *path, PlanSpan *out);
+
+#define JSON_ACCOMPANIMENT_COUNT 6
+extern const char *const JSON_ACCOMPANIMENT_NAMES[JSON_ACCOMPANIMENT_COUNT];
+
+/* The members of a key as a constraint and a key span write them ("tonic", "material"), and read them. */
+bool json_key_members(cJSON *object, const AnalysisKey *key);
+bool json_read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out);
+/* A member that names one of `count` names: its index in *out; the path of the member is reported on a refusal. */
+bool json_read_enum(JsonReader *reader, const cJSON *item, const char *path, const char *const *names, size_t count, int *out);
+bool json_read_enum_member(JsonReader *reader, const cJSON *object, const char *path, const char *key, const char *const *names,
+                           size_t count, int *out);
+/* An optional boolean member: *out is left as it was when the member is absent. */
+bool json_read_optional_bool(JsonReader *reader, const cJSON *object, const char *path, const char *key, bool *out);
 
 #endif

@@ -74,7 +74,7 @@ const char *grow_slot_name(GrowSlot slot);
 /* "basic idea", "repetition", "contrasting idea", ... as the plan's idea nodes are named. */
 const char *grow_idea_name(GrowIdea idea);
 /* Whether a theme of the pairing has the idea. */
-bool grow_idea_in_pairing(const PlanThemePairing *pairing, GrowIdea idea);
+bool grow_idea_in_pairing(const SectionPairing *pairing, GrowIdea idea);
 
 /* How far a contrasting idea strays from the basic idea's rhythm (R-475): a similar contrast or a distant one. */
 typedef enum { GROW_CONTRAST_SIMILAR, GROW_CONTRAST_DISTANT, GROW_CONTRAST_DISTANCE_COUNT } GrowContrastDistance;
@@ -98,14 +98,14 @@ typedef struct {
     AnalysisKey key;
     PlanMeter meter;
     size_t bars;              /* 4 or 8; 3 to 16 with a construction */
-    PlanThemePairing pairing; /* any of the nine beginning and ending pairings */
+    SectionPairing pairing; /* any of the nine beginning and ending pairings */
     /*
      * The bars of each idea of the theme (R-468), NULL for none: the theme is then 4 or 8 bars, its ideas fixed fractions
      * of it. It is added to the theme section as a CONSTRUCTION constraint; with it the theme is `bars` bars, 3 to 16,
      * and its ideas are the bars it gives with its extensions (grow_layout_of). Refused (GROW_ERR_BAD_REQUEST) when the
      * ideas and the extensions do not fit the pairing, the cadence and the bars. Must outlive grow_build_plan_checked only.
      */
-    const PlanConstruction *construction;
+    const SectionConstruction *construction;
     CadenceType cadence;  /* PAC, IAC or HC: the cadence the theme ends in */
     /*
      * The contrast weights grow_run will be given (GrowContext.contrast): with a distant weight the material has the bars the
@@ -205,8 +205,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
  * cannot take, a construction grow_build_plan_checked would refuse. `cadence` is the theme's. A NULL motive is one still to be
  * invented, of one bar.
  */
-bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
-                              CadenceType cadence, PlanConstruction *out);
+bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size_t bars, const SectionPairing *pairing,
+                              CadenceType cadence, SectionConstruction *out);
 
 /*
  * One sentence that says why a theme has its construction (R-469), by its reason: from the motif ("5+5 period: the motif
@@ -214,7 +214,7 @@ bool grow_construction_choose(const Motive *motive, const PlanMeter *meter, size
  * 7)."), or as given, with the halves and each extension named. Bars are counted from 1. Writes at most size - 1 characters
  * and a terminator; returns the length written, 0 for no construction or no room.
  */
-size_t grow_construction_describe(const PlanConstruction *construction, const PlanThemePairing *pairing, char *text,
+size_t grow_construction_describe(const SectionConstruction *construction, const SectionPairing *pairing, char *text,
                                   size_t size);
 
 /* --- the structure operator -------------------------------------------- */

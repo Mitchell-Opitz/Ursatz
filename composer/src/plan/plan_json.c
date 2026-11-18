@@ -15,10 +15,13 @@
 #include <analysis/texture/texture_rules.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
+#include <plan/section_json.h>
 #include <ursatz_composer/theme_shape.h>
 
+#include "plan/constraint_kinds.h"
 #include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"
 #include "util/plan_util.h"
@@ -39,17 +42,11 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const KEY_ANCHOR_NAMES[] = {"home", "previous"};
 /* A version 1 file wrote a chord with no function as "unknown". */
 #define LEGACY_FUNCTION_NONE "unknown"
-static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
-                                                  "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones", "pedal", "construction", "connective", "liquidation", "figure", "section_function"};
-static const char *const EXTENSION_KIND_NAMES[] = {"repeat", "stretch", "addition", "evaded"};
-static const char *const CONSTRUCTION_REASON_NAMES[] = {"given", "motive", "length"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
 /* The parts of a game loop, in PiecePart order (piece.h). */
 static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "ending"};
-static const char *const SHAPE_KIND_NAMES[] = {"prolongation", "phrase_model", "cadential"};
-static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant", "pivot"};
-static const char *const ACCOMPANIMENT_NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
+/* The accompaniment patterns by name, in PlanAccompanimentPattern order (a setting return and an accompaniment constraint). */
+const char *const JSON_ACCOMPANIMENT_NAMES[JSON_ACCOMPANIMENT_COUNT] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
 
@@ -108,7 +105,7 @@ static cJSON *span_json(PlanSpan span) {
 #define STEP_TEXT_MAX 160
 
 /* A key's "tonic", spelled as the library spells it (F#, Bb), and its "material", the id of the key's pitch material. */
-static bool key_members_json(cJSON *object, const AnalysisKey *key) {
+bool json_key_members(cJSON *object, const AnalysisKey *key) {
     char tonic[8];
     return pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic)) &&
            plan_json_add(object, "tonic", cJSON_CreateString(tonic)) &&
@@ -116,270 +113,27 @@ static bool key_members_json(cJSON *object, const AnalysisKey *key) {
 }
 
 /* A key span's payload: the key, with the relation it is named by beside it (R-597); a span not yet resolved is only the relation. */
+static const char *key_anchor_text(const PlanKeyRelation *relation) {
+    return relation->anchor == PLAN_KEY_ANCHOR_SECTION ? relation->anchor_section : KEY_ANCHOR_NAMES[relation->anchor];
+}
+
 static bool key_payload_json(cJSON *object, const AnalysisKey *key, const PlanKeyRelation *relation) {
     if (relation && !relation->resolved) {
         return plan_json_add(object, "relation", cJSON_CreateString(relation->relation)) &&
-               plan_json_add(object, "anchor", cJSON_CreateString(KEY_ANCHOR_NAMES[relation->anchor]));
+               plan_json_add(object, "anchor", cJSON_CreateString(key_anchor_text(relation)));
     }
-    return key_members_json(object, key) &&
+    return json_key_members(object, key) &&
            (!relation || (plan_json_add(object, "relation", cJSON_CreateString(relation->relation)) &&
-                          plan_json_add(object, "anchor", cJSON_CreateString(KEY_ANCHOR_NAMES[relation->anchor]))));
+                          plan_json_add(object, "anchor", cJSON_CreateString(key_anchor_text(relation)))));
 }
 
 static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *constraint) {
-    cJSON *object = cJSON_CreateObject();
+    const ConstraintKindRow *row = constraint_kind_row(constraint->kind);
+    cJSON *object = row ? cJSON_CreateObject() : NULL;
     if (!object) {
         return NULL;
     }
-    bool ok = plan_json_add(object, "kind", cJSON_CreateString(CONSTRAINT_KINDS[constraint->kind]));
-    switch (constraint->kind) {
-    case PLAN_CONSTRAINT_LENGTH_BARS:
-        ok = ok && plan_json_add(object, "bars", json_number(constraint->params.bars));
-        break;
-    case PLAN_CONSTRAINT_CADENCE: {
-        size_t cadence_index = 0;
-        ok = ok && plan_cadence_index(constraint->params.cadence, &cadence_index) &&
-             plan_json_add(object, "type", cJSON_CreateString(plan_cadence_file_names[cadence_index]));
-        break;
-    }
-    case PLAN_CONSTRAINT_MOTIVE_REF:
-        ok = ok && plan_json_add(object, "motive", json_number((long)plan_node_rank(plan, constraint->params.motive.motive)));
-        if (ok && constraint->params.motive.has_step) {
-            char text[STEP_TEXT_MAX];
-            ok = motive_relation_step_text(&constraint->params.motive.step, text, sizeof(text)) &&
-                 plan_json_add(object, "step", cJSON_CreateString(text));
-        }
-        if (ok && constraint->params.motive.segment[0] != '\0') {
-            ok = plan_json_add(object, "segment", cJSON_CreateString(constraint->params.motive.segment));
-        }
-        if (ok && constraint->params.motive.steps > 0) {
-            ok = plan_json_add(object, "steps", json_number((long)constraint->params.motive.steps));
-        }
-        break;
-    case PLAN_CONSTRAINT_KEY:
-        ok = ok && key_members_json(object, &constraint->params.key);
-        break;
-    case PLAN_CONSTRAINT_ARCHETYPE:
-        ok = ok && plan_json_add(object, "type", cJSON_CreateString(ARCHETYPE_NAMES[constraint->params.archetype]));
-        break;
-    case PLAN_CONSTRAINT_EMBELLISH:
-        break;
-    case PLAN_CONSTRAINT_SCHEMA:
-        ok = ok && plan_json_add(object, "schema", cJSON_CreateString(galant_schema_name(
-                                                    (GalantSchemaId)constraint->params.schema.schema))) &&
-             plan_json_add(object, "stage", json_number(constraint->params.schema.stage));
-        break;
-    case PLAN_CONSTRAINT_MATERIAL:
-        break;
-    case PLAN_CONSTRAINT_HARMONY_SHAPE: {
-        const PlanHarmonyShape *shape = &constraint->params.harmony_shape;
-        ok = ok && plan_json_add(object, "shape", cJSON_CreateString(SHAPE_KIND_NAMES[shape->kind])) &&
-             plan_json_add(object, "starts_on", cJSON_CreateString(ANCHOR_NAMES[shape->starts_on])) &&
-             plan_json_add(object, "ends_on", cJSON_CreateString(ANCHOR_NAMES[shape->ends_on])) &&
-             plan_json_add(object, "max_cells_per_chord", json_number(shape->max_cells_per_chord)) &&
-             plan_json_add(object, "split_at_bars", cJSON_CreateBool(shape->split_at_bars));
-        if (ok && shape->pedal) {
-            ok = plan_json_add(object, "pedal", cJSON_CreateBool(true));
-        }
-        break;
-    }
-    case PLAN_CONSTRAINT_THEME_PAIRING:
-        ok = ok && plan_json_add(object, "beginning",
-                            cJSON_CreateString(theme_shape_beginning(constraint->params.theme_pairing.beginning)->plan_name)) &&
-             plan_json_add(object, "ending",
-                           cJSON_CreateString(theme_shape_ending(constraint->params.theme_pairing.ending)->plan_name));
-        break;
-    case PLAN_CONSTRAINT_ACCOMPANIMENT: {
-        const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
-        ok = ok && plan_json_add(object, "pattern", cJSON_CreateString(ACCOMPANIMENT_NAMES[accompaniment->pattern]));
-        if (accompaniment->texture >= 0) {
-            ok = ok && plan_json_add(object, "texture",
-                                cJSON_CreateString(standard_texture_name((StandardTexture)accompaniment->texture)));
-        }
-        if (accompaniment->low != 0) {
-            ok = ok && plan_json_add(object, "low", json_number(accompaniment->low));
-        }
-        if (accompaniment->high != 0) {
-            ok = ok && plan_json_add(object, "high", json_number(accompaniment->high));
-        }
-        if (accompaniment->motive_node[0] != '\0') {
-            ok = ok && plan_json_add(object, "motive_node", cJSON_CreateString(accompaniment->motive_node));
-        }
-        break;
-    }
-    case PLAN_CONSTRAINT_VOICING:
-        ok = ok && plan_json_add(object, "write_soprano", cJSON_CreateBool(constraint->params.voicing.write_soprano));
-        break;
-    case PLAN_CONSTRAINT_COUNTERPOINT:
-        ok = ok && plan_json_add(object, "species", json_number(constraint->params.counterpoint.species)) &&
-             plan_json_add(object, "above", cJSON_CreateBool(constraint->params.counterpoint.above));
-        break;
-    case PLAN_CONSTRAINT_RETURN:
-        ok = ok && plan_json_add(object, "section", json_number((long)plan_node_rank(plan, constraint->params.section_return.section))) &&
-             plan_json_add(object, "variation",
-                      cJSON_CreateString(plan_return_variation_name(constraint->params.section_return.variation)));
-        if (ok && constraint->params.section_return.variation == PLAN_RETURN_SETTING) {
-            ok = plan_json_add(object, "setting",
-                               cJSON_CreateString(ACCOMPANIMENT_NAMES[constraint->params.section_return.setting]));
-        }
-        if (ok && constraint->params.section_return.across_modes) {
-            ok = plan_json_add(object, "across_modes", cJSON_CreateBool(true));
-        }
-        break;
-    case PLAN_CONSTRAINT_LAYERS: {
-        cJSON *lanes = cJSON_CreateArray();
-        ok = ok && plan_json_add(object, "lanes", lanes);
-        for (size_t lane = 0; ok && lane < PLAN_LANE_NAME_COUNT; lane++) {
-            if (constraint->params.layers.lanes & PLAN_LAYER_BIT(lane)) {
-                ok = plan_json_append(lanes, cJSON_CreateString(plan_lane_names[lane]));
-            }
-        }
-        break;
-    }
-    case PLAN_CONSTRAINT_SECTION_LETTER: {
-        char letter[PLAN_SECTION_LETTER_MAX];
-        snprintf(letter, sizeof(letter), "%s", constraint->params.letter);
-        ok = ok && plan_json_add(object, "letter", cJSON_CreateString(letter));
-        break;
-    }
-    case PLAN_CONSTRAINT_INVENT_MOTIVE:
-        break;
-    case PLAN_CONSTRAINT_STYLE: {
-        const PlanStyle *style = &constraint->params.style;
-        char weight[64];
-        ok = ok && plan_json_add(object, "path", cJSON_CreateString(style->path));
-        snprintf(weight, sizeof(weight), "%lu/%lu", style->weight_numerator, style->weight_denominator);
-        ok = ok && plan_json_add(object, "weight", cJSON_CreateString(weight));
-        if (ok && style->without_count > 0) {
-            cJSON *without = cJSON_CreateArray();
-            ok = without != NULL;
-            for (size_t i = 0; ok && i < style->without_count; i++) {
-                ok = plan_json_append(without, cJSON_CreateString(style->without[i]));
-            }
-            if (ok) {
-                ok = plan_json_add(object, "without", without);
-            } else {
-                cJSON_Delete(without);
-            }
-        }
-        if (ok && style->blend_path[0]) {
-            static const char *const DIMENSIONS[4] = {"harmony", "rhythm", "melody", "form"};
-            cJSON *blend = cJSON_CreateObject();
-            cJSON *weights = cJSON_CreateObject();
-            bool built = blend && weights && plan_json_add(blend, "path", cJSON_CreateString(style->blend_path));
-            for (int d = 0; built && d < 4; d++) {
-                snprintf(weight, sizeof(weight), "%lu/%lu", style->blend_numerator[d], style->blend_denominator[d]);
-                built = plan_json_add(weights, DIMENSIONS[d], cJSON_CreateString(weight));
-            }
-            if (built) {
-                built = plan_json_add(blend, "weights", weights);
-                weights = NULL;
-            }
-            cJSON_Delete(weights);
-            if (built) {
-                built = plan_json_add(object, "blend", blend);
-            } else {
-                cJSON_Delete(blend);
-            }
-            ok = built;
-        }
-        break;
-    }
-    case PLAN_CONSTRAINT_SOURCE: {
-        const PlanSource *source = &constraint->params.source;
-        char score[64];
-        snprintf(score, sizeof(score), "%lu/%lu", source->score_numerator, source->score_denominator);
-        ok = ok && plan_json_add(object, "piece", cJSON_CreateString(source->piece)) &&
-             plan_json_add(object, "start_measure", cJSON_CreateNumber(source->start_measure)) &&
-             plan_json_add(object, "start_beat", cJSON_CreateNumber(source->start_beat)) &&
-             plan_json_add(object, "end_measure", cJSON_CreateNumber(source->end_measure)) &&
-             plan_json_add(object, "end_beat", cJSON_CreateNumber(source->end_beat)) &&
-             plan_json_add(object, "score", cJSON_CreateString(score));
-        break;
-    }
-    case PLAN_CONSTRAINT_PICKUP: {
-        char length[64];
-        snprintf(length, sizeof(length), "%lld/%lld", constraint->params.pickup.num, constraint->params.pickup.den);
-        ok = ok && plan_json_add(object, "length", cJSON_CreateString(length));
-        break;
-    }
-    case PLAN_CONSTRAINT_PEDAL:
-        ok = ok && plan_json_add(object, "degree", json_number(constraint->params.pedal.degree));
-        break;
-    case PLAN_CONSTRAINT_CONSTRUCTION: {
-        const PlanConstruction *construction = &constraint->params.construction;
-        cJSON *ideas = cJSON_CreateObject();
-        cJSON *extensions = cJSON_CreateArray();
-        ok = ok && plan_json_add(object, "ideas", ideas) && plan_json_add(object, "extensions", extensions);
-        for (int idea = 0; ok && idea < PLAN_CONSTRUCTION_IDEAS; idea++) {
-            if (construction->idea_bars[idea] != 0) {
-                ok = plan_json_add(ideas, theme_shape_idea_name((GrowIdea)idea),
-                                   json_number(construction->idea_bars[idea]));
-            }
-        }
-        for (size_t i = 0; ok && i < construction->extension_count; i++) {
-            const PlanExtension *extension = &construction->extensions[i];
-            cJSON *item = cJSON_CreateObject();
-            ok = plan_json_append(extensions, item) &&
-                 plan_json_add(item, "kind", cJSON_CreateString(EXTENSION_KIND_NAMES[extension->kind])) &&
-                 plan_json_add(item, "idea", cJSON_CreateString(theme_shape_idea_name((GrowIdea)extension->idea))) &&
-                 plan_json_add(item, "bars", json_number(extension->bars)) &&
-                 plan_json_add(item, "varied", cJSON_CreateBool(extension->varied));
-        }
-        ok = ok && plan_json_add(object, "reason", cJSON_CreateString(CONSTRUCTION_REASON_NAMES[construction->reason]));
-        break;
-    }
-    case PLAN_CONSTRAINT_PIECE_PART:
-        ok = ok && plan_json_add(object, "part", cJSON_CreateString(PIECE_PART_NAMES[constraint->params.piece_part.part])) &&
-             plan_json_add(object, "id", cJSON_CreateString(constraint->params.piece_part.id));
-        break;
-    case PLAN_CONSTRAINT_MOTIVE_TONES: {
-        const PlanMotiveTones *tones = &constraint->params.motive_tones;
-        cJSON *harmony = cJSON_CreateArray();
-        cJSON *labels = cJSON_CreateArray();
-        ok = ok && plan_json_add(object, "harmony", harmony) && plan_json_add(object, "tones", labels);
-        for (size_t i = 0; ok && i < tones->chord_count; i++) {
-            const PlanToneChord *chord = &tones->chords[i];
-            char onset[64];
-            char length[64];
-            snprintf(onset, sizeof(onset), "%lld/%lld", chord->onset.num, chord->onset.den);
-            snprintf(length, sizeof(length), "%lld/%lld", chord->length.num, chord->length.den);
-            cJSON *item = cJSON_CreateObject();
-            ok = plan_json_append(harmony, item) && plan_json_add(item, "numeral", cJSON_CreateString(chord->numeral)) &&
-                 plan_json_add(item, "onset", cJSON_CreateString(onset)) &&
-                 plan_json_add(item, "length", cJSON_CreateString(length));
-        }
-        for (size_t i = 0; ok && i < tones->label_count; i++) {
-            ok = plan_json_append(labels, cJSON_CreateString(tones->labels[i]));
-        }
-        break;
-    }
-    case PLAN_CONSTRAINT_CONNECTIVE:
-        ok = ok && plan_json_add(object, "written", cJSON_CreateBool(constraint->params.connective.written));
-        break;
-    case PLAN_CONSTRAINT_FIGURE: {
-        const PlanFigure *figure = &constraint->params.figure;
-        ok = ok && plan_json_add(object, "figure", cJSON_CreateString(plan_figure_kind_name(figure->kind))) &&
-             plan_json_add(object, "rhythm", cJSON_CreateString(plan_figure_rhythm_name(figure->rhythm))) &&
-             plan_json_add(object, "harmony", cJSON_CreateString(figure->reharmonize ? "reharmonized" : "kept")) &&
-             plan_json_add(object, "change_at", figure->change_at ? json_number((long)figure->change_at) : cJSON_CreateNull()) &&
-             plan_json_add(object, "climax", cJSON_CreateBool(figure->climax));
-        break;
-    }
-    case PLAN_CONSTRAINT_SECTION_FUNCTION: {
-        const PlanSectionFunction *function = &constraint->params.section_function;
-        ok = ok && plan_json_add(object, "function", cJSON_CreateString(plan_function_kind_name(function->function))) &&
-             plan_json_add(object, "independent", cJSON_CreateBool(function->independent)) &&
-             plan_json_add(object, "lyric", cJSON_CreateBool(function->lyric));
-        break;
-    }
-    case PLAN_CONSTRAINT_FREE_PHRASE:
-    case PLAN_CONSTRAINT_HOLD:
-    case PLAN_CONSTRAINT_SEAM:
-    case PLAN_CONSTRAINT_LIQUIDATION:
-        break;
-    }
-    if (!ok) {
+    if (!plan_json_add(object, "kind", cJSON_CreateString(row->name)) || !row->write(object, plan, constraint)) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -408,6 +162,31 @@ static cJSON *span_constraints_json(const PiecePlan *plan, LaneSpanId id) {
     return array;
 }
 
+/* The checks a form runs, by name, in FormCheck bit order. */
+static const char *const FORM_CHECK_NAMES[] = {"sections", "returns", "keys", "cadences", "seam"};
+
+static cJSON *form_record_json(const PlanFormRecord *record) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *checks = cJSON_CreateArray();
+    bool ok = object && checks;
+    for (size_t i = 0; ok && i < COUNT_OF(FORM_CHECK_NAMES); i++) {
+        ok = (record->checks & (1u << i)) == 0 || plan_json_append(checks, cJSON_CreateString(FORM_CHECK_NAMES[i]));
+    }
+    ok = ok && plan_json_add(object, "name", cJSON_CreateString(record->name)) &&
+         plan_json_add(object, "version", json_number((long)record->version)) &&
+         plan_json_add(object, "hash", cJSON_CreateString(record->hash)) && plan_json_add(object, "checks", checks);
+    if (ok) {
+        checks = NULL;
+        ok = plan_json_add(object, "closing", cJSON_CreateBool(record->closing));
+    }
+    if (!ok) {
+        cJSON_Delete(object);
+        cJSON_Delete(checks);
+        return NULL;
+    }
+    return object;
+}
+
 static cJSON *node_json(const PiecePlan *plan, NodeId id) {
     cJSON *object = cJSON_CreateObject();
     cJSON *composer = cJSON_CreateObject();
@@ -417,6 +196,12 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
     ok = ok && plan_json_add(composer, "id", json_number((long)plan_node_rank(plan, id))) &&
          plan_json_add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_node_state(plan, id)])) &&
          plan_json_add(composer, "constraints", node_constraints_json(plan, id));
+    if (ok && plan_node_kind(plan, id) == PLAN_NODE_SECTION) {
+        ok = plan_json_add(composer, "section", section_to_json(plan_node_section(plan, id), SECTION_USE_PLAN));
+    }
+    if (ok && id == plan_root(plan) && plan_form_record(plan)) {
+        ok = plan_json_add(composer, "form", form_record_json(plan_form_record(plan)));
+    }
     ok = ok && plan_json_add(object, "kind", cJSON_CreateString(NODE_KINDS[plan_node_kind(plan, id)])) &&
          plan_json_add(object, "label", name ? cJSON_CreateString(name) : cJSON_CreateNull()) &&
          plan_json_add(object, "span", span_json(plan_node_span(plan, id)));
@@ -780,7 +565,7 @@ bool json_read_int_member(JsonReader *reader, const cJSON *object, const char *p
     return json_read_long(reader, item, at, min, max, out);
 }
 
-static bool read_enum(JsonReader *reader, const cJSON *item, const char *path, const char *const *names, size_t count,
+bool json_read_enum(JsonReader *reader, const cJSON *item, const char *path, const char *const *names, size_t count,
                       int *out) {
     if (!cJSON_IsString(item)) {
         return json_bad_format(reader, path, "expected a string");
@@ -794,7 +579,7 @@ static bool read_enum(JsonReader *reader, const cJSON *item, const char *path, c
     return json_fail(reader, PLAN_ERR_FORMAT, path, "unknown value '%.40s'", item->valuestring);
 }
 
-static bool read_enum_member(JsonReader *reader, const cJSON *object, const char *path, const char *key,
+bool json_read_enum_member(JsonReader *reader, const cJSON *object, const char *path, const char *key,
                              const char *const *names, size_t count, int *out) {
     const cJSON *item = plan_json_member(reader, object, path, key, true);
     if (!item) {
@@ -802,12 +587,12 @@ static bool read_enum_member(JsonReader *reader, const cJSON *object, const char
     }
     char at[PLAN_JSON_PATH_MAX];
     json_child_path(at, path, key);
-    return read_enum(reader, item, at, names, count, out);
+    return json_read_enum(reader, item, at, names, count, out);
 }
 
 /* A return constraint's variation, by the name the one table holds. */
 static bool read_return_variation(JsonReader *reader, const cJSON *object, const char *path,
-                                  PlanReturnVariation *out) {
+                                  SectionReturnVariation *out) {
     const cJSON *item = plan_json_member(reader, object, path, "variation", true);
     if (!item) {
         return false;
@@ -817,29 +602,37 @@ static bool read_return_variation(JsonReader *reader, const cJSON *object, const
     if (!cJSON_IsString(item)) {
         return json_bad_format(reader, at, "expected a string");
     }
-    if (!plan_return_variation_from_name(item->valuestring, out)) {
+    if (!section_return_variation_find(item->valuestring, out)) {
         return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", item->valuestring);
     }
     return true;
 }
 
 /* A return's setting (R-518): required for a setting return, refused for any other. */
-static bool read_return_setting(JsonReader *reader, const cJSON *object, const char *path, PlanReturn *out) {
+/* A return as plan formats 1 to 4 wrote it: the section it returns by id, how it varies it, the setting and whether it crosses modes. */
+typedef struct {
+    NodeId section;
+    SectionReturnVariation variation;
+    PlanAccompanimentPattern setting;
+    bool across_modes;
+} LegacyReturn;
+
+static bool read_return_setting(JsonReader *reader, const cJSON *object, const char *path, LegacyReturn *out) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, "setting");
     char at[PLAN_JSON_PATH_MAX];
     json_child_path(at, path, "setting");
-    if (out->variation != PLAN_RETURN_SETTING) {
+    if (out->variation != SECTION_RETURN_SETTING) {
         return item ? json_bad_format(reader, at, "only a setting return has a setting") : true;
     }
     int value;
     if (!item) {
         return json_bad_format(reader, at, "a setting return names its setting");
     }
-    if (!read_enum_member(reader, object, path, "setting", ACCOMPANIMENT_NAMES, COUNT_OF(ACCOMPANIMENT_NAMES), &value)) {
+    if (!json_read_enum_member(reader, object, path, "setting", JSON_ACCOMPANIMENT_NAMES, COUNT_OF(JSON_ACCOMPANIMENT_NAMES), &value)) {
         return false;
     }
     if (value < (int)PLAN_ACCOMPANIMENT_BLOCK || value > (int)PLAN_ACCOMPANIMENT_OOM_PAH) {
-        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", ACCOMPANIMENT_NAMES[value]);
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", JSON_ACCOMPANIMENT_NAMES[value]);
     }
     out->setting = (PlanAccompanimentPattern)value;
     return true;
@@ -879,7 +672,7 @@ static bool read_idea_name(JsonReader *reader, const cJSON *item, const char *at
 }
 
 /* A construction constraint's ideas, extensions and reason. */
-static bool read_construction(JsonReader *reader, const cJSON *item, const char *path, PlanConstruction *out) {
+static bool read_construction(JsonReader *reader, const cJSON *item, const char *path, SectionConstruction *out) {
     char at[PLAN_JSON_PATH_MAX];
     int value;
     long number;
@@ -911,8 +704,8 @@ static bool read_construction(JsonReader *reader, const cJSON *item, const char 
     if (!cJSON_IsArray(extensions)) {
         return json_bad_format(reader, at, "expected an array");
     }
-    if ((size_t)cJSON_GetArraySize(extensions) > PLAN_CONSTRUCTION_EXTENSIONS) {
-        return json_fail(reader, PLAN_ERR_FORMAT, at, "at most %d extensions", PLAN_CONSTRUCTION_EXTENSIONS);
+    if ((size_t)cJSON_GetArraySize(extensions) > SECTION_CONSTRUCTION_EXTENSIONS) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "at most %d extensions", SECTION_CONSTRUCTION_EXTENSIONS);
     }
     size_t index = 0;
     for (const cJSON *extension = extensions->child; extension; extension = extension->next, index++) {
@@ -921,14 +714,17 @@ static bool read_construction(JsonReader *reader, const cJSON *item, const char 
         if (!cJSON_IsObject(extension)) {
             return json_bad_format(reader, extension_at, "expected an object");
         }
-        PlanExtension *target = &out->extensions[index];
+        SectionExtension *target = &out->extensions[index];
         const cJSON *idea;
         const cJSON *varied;
-        if (!read_enum_member(reader, extension, extension_at, "kind", EXTENSION_KIND_NAMES, COUNT_OF(EXTENSION_KIND_NAMES),
-                              &value)) {
+        const char *kind_names[] = {section_extension_kind_name(SECTION_EXTENSION_REPEAT),
+                                    section_extension_kind_name(SECTION_EXTENSION_STRETCH),
+                                    section_extension_kind_name(SECTION_EXTENSION_ADDITION),
+                                    section_extension_kind_name(SECTION_EXTENSION_EVADED)};
+        if (!json_read_enum_member(reader, extension, extension_at, "kind", kind_names, COUNT_OF(kind_names), &value)) {
             return false;
         }
-        target->kind = (PlanExtensionKind)value;
+        target->kind = (SectionExtensionKind)value;
         if (!(idea = plan_json_member(reader, extension, extension_at, "idea", true))) {
             return false;
         }
@@ -953,11 +749,13 @@ static bool read_construction(JsonReader *reader, const cJSON *item, const char 
         target->varied = cJSON_IsTrue(varied);
         out->extension_count = index + 1;
     }
-    if (!read_enum_member(reader, item, path, "reason", CONSTRUCTION_REASON_NAMES, COUNT_OF(CONSTRUCTION_REASON_NAMES),
-                          &value)) {
+    const char *reason_names[] = {section_construction_reason_name(SECTION_CONSTRUCTION_GIVEN),
+                                  section_construction_reason_name(SECTION_CONSTRUCTION_FROM_MOTIVE),
+                                  section_construction_reason_name(SECTION_CONSTRUCTION_FROM_LENGTH)};
+    if (!json_read_enum_member(reader, item, path, "reason", reason_names, COUNT_OF(reason_names), &value)) {
         return false;
     }
-    out->reason = (PlanConstructionReason)value;
+    out->reason = (SectionConstructionReason)value;
     return true;
 }
 
@@ -1011,7 +809,7 @@ bool json_read_span(JsonReader *reader, const cJSON *object, const char *path, P
 }
 
 /* An optional boolean member; absent is false. */
-static bool read_optional_bool(JsonReader *reader, const cJSON *object, const char *path, const char *key, bool *out) {
+bool json_read_optional_bool(JsonReader *reader, const cJSON *object, const char *path, const char *key, bool *out) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
     *out = false;
     if (!item) {
@@ -1027,11 +825,11 @@ static bool read_optional_bool(JsonReader *reader, const cJSON *object, const ch
 }
 
 /* The optional across_modes of a reharmonized return (R-524); true on any other variation is refused. */
-static bool read_return_across_modes(JsonReader *reader, const cJSON *object, const char *path, PlanReturn *out) {
-    if (!read_optional_bool(reader, object, path, "across_modes", &out->across_modes)) {
+static bool read_return_across_modes(JsonReader *reader, const cJSON *object, const char *path, LegacyReturn *out) {
+    if (!json_read_optional_bool(reader, object, path, "across_modes", &out->across_modes)) {
         return false;
     }
-    if (out->across_modes && out->variation != PLAN_RETURN_REHARMONIZE) {
+    if (out->across_modes && out->variation != SECTION_RETURN_REHARMONIZE) {
         char at[PLAN_JSON_PATH_MAX];
         json_child_path(at, path, "across_modes");
         return json_bad_format(reader, at, "only a reharmonized return crosses modes");
@@ -1039,267 +837,9 @@ static bool read_return_across_modes(JsonReader *reader, const cJSON *object, co
     return true;
 }
 
-/* An optional integer member; absent is 0. */
-static bool read_optional_int(JsonReader *reader, const cJSON *object, const char *path, const char *key, long min,
-                              long max, int *out) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    *out = 0;
-    if (!item) {
-        return true;
-    }
-    char at[PLAN_JSON_PATH_MAX];
-    long value;
-    json_child_path(at, path, key);
-    if (!json_read_long(reader, item, at, min, max, &value)) {
-        return false;
-    }
-    *out = (int)value;
-    return true;
-}
 
-/*
- * Plan files saved before relation steps write a motive ref as "transform" and the members it uses. This is the only
- * mapping of those names: it is read-only, and nothing writes them. The table (docs/modules/motive-relations.md, Composer
- * fields to relation parameters):
- *   none             no step
- *   restated         exact
- *   transposed       transpose: tonal, by = steps when tonal, else semitones
- *   inverted         invert: axis (-1 without one), tonal
- *   retrograde       retrograde
- *   augmented        augment: ratio_num:ratio_den
- *   diminished       diminish: ratio_num:ratio_den
- *   fragmented       fragment: position, length
- *   interval_changed interval-change: interval, amount, keep_contour
- *   liquidated       liquidate: drop, keep_rhythm
- */
-enum {
-    LEGACY_NONE,
-    LEGACY_TRANSPOSED,
-    LEGACY_INVERTED,
-    LEGACY_RETROGRADE,
-    LEGACY_AUGMENTED,
-    LEGACY_DIMINISHED,
-    LEGACY_FRAGMENTED,
-    LEGACY_RESTATED,
-    LEGACY_INTERVAL_CHANGED,
-    LEGACY_LIQUIDATED
-};
-static const char *const LEGACY_TRANSFORM_NAMES[] = {"none",       "transposed",       "inverted",   "retrograde",
-                                                     "augmented",  "diminished",       "fragmented", "restated",
-                                                     "interval_changed", "liquidated"};
-static const char *const LEGACY_POSITION_NAMES[] = {"any", "leading", "trailing", "middle"};
 
-static bool plan_motive_ref_from_transform(JsonReader *reader, const cJSON *item, const char *path, const char *name,
-                                           PlanMotiveRef *ref) {
-    int transform = -1;
-    for (size_t i = 0; i < COUNT_OF(LEGACY_TRANSFORM_NAMES); i++) {
-        if (strcmp(name, LEGACY_TRANSFORM_NAMES[i]) == 0) {
-            transform = (int)i;
-        }
-    }
-    if (transform < 0) {
-        char message[PLAN_JSON_PATH_MAX + 64];
-        snprintf(message, sizeof(message), "unknown motive transform \"%.64s\"", name);
-        return json_bad_format(reader, path, message);
-    }
-    int semitones, steps, axis, interval, amount, length, drop, ratio_num, ratio_den;
-    bool tonal, keep_contour, keep_rhythm;
-    int position = 0;
-    const cJSON *position_item = cJSON_GetObjectItemCaseSensitive(item, "position");
-    if (position_item) {
-        char at[PLAN_JSON_PATH_MAX];
-        json_child_path(at, path, "position");
-        if (!read_enum(reader, position_item, at, LEGACY_POSITION_NAMES, COUNT_OF(LEGACY_POSITION_NAMES), &position)) {
-            return false;
-        }
-    }
-    bool has_axis = cJSON_GetObjectItemCaseSensitive(item, "axis") != NULL;
-    if (!read_optional_int(reader, item, path, "semitones", -127, 127, &semitones) ||
-        !read_optional_int(reader, item, path, "axis", 0, 127, &axis) ||
-        !read_optional_bool(reader, item, path, "tonal", &tonal) ||
-        !read_optional_bool(reader, item, path, "keep_contour", &keep_contour) ||
-        !read_optional_bool(reader, item, path, "keep_rhythm", &keep_rhythm) ||
-        !read_optional_int(reader, item, path, "steps", -127, 127, &steps) ||
-        !read_optional_int(reader, item, path, "interval", 0, 127, &interval) ||
-        !read_optional_int(reader, item, path, "amount", -127, 127, &amount) ||
-        !read_optional_int(reader, item, path, "length", 0, 127, &length) ||
-        !read_optional_int(reader, item, path, "drop", 0, 127, &drop) ||
-        !read_optional_int(reader, item, path, "ratio_num", 0, 64, &ratio_num) ||
-        !read_optional_int(reader, item, path, "ratio_den", 0, 64, &ratio_den)) {
-        return false;
-    }
-    if ((ratio_num == 0) != (ratio_den == 0)) {
-        return json_bad_format(reader, path, "ratio_num and ratio_den go together");
-    }
-    MotiveRelationStep *step = &ref->step;
-    memset(step, 0, sizeof(*step));
-    ref->has_step = transform != LEGACY_NONE;
-    switch (transform) {
-    case LEGACY_RESTATED:
-        step->kind = MOTIVE_RELATION_EXACT;
-        break;
-    case LEGACY_TRANSPOSED:
-        step->kind = MOTIVE_RELATION_TRANSPOSE;
-        step->value[0] = tonal ? 1 : 0;
-        step->value[1] = tonal ? steps : semitones;
-        break;
-    case LEGACY_INVERTED:
-        step->kind = MOTIVE_RELATION_INVERT;
-        step->value[0] = has_axis ? axis : -1;
-        step->value[1] = tonal ? 1 : 0;
-        break;
-    case LEGACY_RETROGRADE:
-        step->kind = MOTIVE_RELATION_RETROGRADE;
-        break;
-    case LEGACY_AUGMENTED:
-    case LEGACY_DIMINISHED:
-        step->kind = transform == LEGACY_AUGMENTED ? MOTIVE_RELATION_AUGMENT : MOTIVE_RELATION_DIMINISH;
-        step->value[0] = ratio_num;
-        step->den[0] = ratio_den;
-        break;
-    case LEGACY_FRAGMENTED:
-        step->kind = MOTIVE_RELATION_FRAGMENT;
-        step->value[0] = position;
-        step->value[1] = length;
-        break;
-    case LEGACY_INTERVAL_CHANGED:
-        step->kind = MOTIVE_RELATION_INTERVAL_CHANGE;
-        step->value[0] = interval;
-        step->value[1] = amount;
-        step->value[2] = keep_contour ? 1 : 0;
-        break;
-    case LEGACY_LIQUIDATED:
-        step->kind = MOTIVE_RELATION_LIQUIDATE;
-        step->value[0] = drop;
-        step->value[1] = keep_rhythm ? 1 : 0;
-        break;
-    default:
-        break;
-    }
-    return true;
-}
 
-/* A motive ref: "step" through motive_relation_step_parse, else a "transform" of an older file, else no step. */
-static bool read_motive_ref(JsonReader *reader, const cJSON *item, const char *path, PlanMotiveRef *ref) {
-    long number_value;
-    if (!json_read_int_member(reader, item, path, "motive", 1, TIME_LIMIT, &number_value)) {
-        return false;
-    }
-    ref->motive = (NodeId)number_value;
-    /* The segment and the liquidation steps the motive is made from, both optional (ch. VIII). */
-    const cJSON *segment = cJSON_GetObjectItemCaseSensitive(item, "segment");
-    /* An older file's "transform" has a "steps" of its own (plan_motive_ref_from_transform), which this is not. */
-    const cJSON *steps = cJSON_GetObjectItemCaseSensitive(item, "transform")
-                             ? NULL
-                             : cJSON_GetObjectItemCaseSensitive(item, "steps");
-    char at[PLAN_JSON_PATH_MAX];
-    if (segment) {
-        json_child_path(at, path, "segment");
-        if (!cJSON_IsString(segment) || segment->valuestring[0] == '\0' ||
-            strlen(segment->valuestring) > PLAN_SEGMENT_LABEL_MAX) {
-            return json_bad_format(reader, at, "expected a segment label of 1 to 8 characters");
-        }
-        strcpy(ref->segment, segment->valuestring);
-    }
-    if (steps) {
-        long count;
-        json_child_path(at, path, "steps");
-        if (!json_read_long(reader, steps, at, 1, 8, &count)) {
-            return false;
-        }
-        ref->steps = (size_t)count;
-    }
-    const cJSON *step = cJSON_GetObjectItemCaseSensitive(item, "step");
-    const cJSON *transform = cJSON_GetObjectItemCaseSensitive(item, "transform");
-    if (step) {
-        json_child_path(at, path, "step");
-        if (!cJSON_IsString(step)) {
-            return json_bad_format(reader, at, "expected a relation step like \"transpose tonal=1 by=2\"");
-        }
-        if (!motive_relation_step_parse(step->valuestring, &ref->step)) {
-            char message[PLAN_JSON_PATH_MAX + 64];
-            snprintf(message, sizeof(message), "not a relation step \"%.64s\"", step->valuestring);
-            return json_bad_format(reader, at, message);
-        }
-        ref->has_step = true;
-        return true;
-    }
-    if (transform) {
-        json_child_path(at, path, "transform");
-        if (!cJSON_IsString(transform)) {
-            return json_bad_format(reader, at, "expected a string");
-        }
-        return plan_motive_ref_from_transform(reader, item, path, transform->valuestring, ref);
-    }
-    return true;
-}
-
-/* A time like "1/4" in whole notes: the numerator not below `least`. */
-static bool read_tones_time(JsonReader *reader, const cJSON *item, const char *path, const char *name, long least,
-                            Rational *out) {
-    const cJSON *text = plan_json_member(reader, item, path, name, true);
-    if (!text) {
-        return false;
-    }
-    char at[PLAN_JSON_PATH_MAX];
-    json_child_path(at, path, name);
-    long numerator;
-    unsigned long denominator;
-    char rest;
-    if (!cJSON_IsString(text) || sscanf(text->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
-        denominator == 0 || numerator < least || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
-        rational_make(numerator, denominator, out) != RATIONAL_OK) {
-        return json_bad_format(reader, at, "expected a time in whole notes like \"1/4\"");
-    }
-    return true;
-}
-
-static bool read_motive_tones(JsonReader *reader, const cJSON *item, const char *path, PlanMotiveTones *out) {
-    const cJSON *harmony = plan_json_member(reader, item, path, "harmony", true);
-    const cJSON *tones = harmony ? plan_json_member(reader, item, path, "tones", true) : NULL;
-    char at[PLAN_JSON_PATH_MAX];
-    if (!tones) {
-        return false;
-    }
-    json_child_path(at, path, "harmony");
-    if (!cJSON_IsArray(harmony) || cJSON_GetArraySize(harmony) < 1 || cJSON_GetArraySize(harmony) > PLAN_TONES_MAX_CHORDS) {
-        return json_bad_format(reader, at, "expected one to eight chords");
-    }
-    const cJSON *chord;
-    cJSON_ArrayForEach(chord, harmony) {
-        char chord_path[PLAN_JSON_PATH_MAX];
-        json_index_path(chord_path, at, out->chord_count);
-        const cJSON *numeral = plan_json_member(reader, chord, chord_path, "numeral", true);
-        PlanToneChord *slot = &out->chords[out->chord_count];
-        if (!numeral) {
-            return false;
-        }
-        if (!cJSON_IsString(numeral) || numeral->valuestring[0] == '\0' ||
-            strlen(numeral->valuestring) >= PLAN_ROMAN_NUMERAL_MAX) {
-            return json_bad_format(reader, chord_path, "expected a Roman numeral of fewer than sixteen characters");
-        }
-        snprintf(slot->numeral, sizeof(slot->numeral), "%s", numeral->valuestring);
-        if (!read_tones_time(reader, chord, chord_path, "onset", 0, &slot->onset) ||
-            !read_tones_time(reader, chord, chord_path, "length", 1, &slot->length)) {
-            return false;
-        }
-        out->chord_count++;
-    }
-    json_child_path(at, path, "tones");
-    if (!cJSON_IsArray(tones) || cJSON_GetArraySize(tones) < 1 || cJSON_GetArraySize(tones) > PLAN_TONES_MAX_NOTES) {
-        return json_bad_format(reader, at, "expected one to sixty-four labels");
-    }
-    const cJSON *label;
-    cJSON_ArrayForEach(label, tones) {
-        if (!cJSON_IsString(label) || label->valuestring[0] == '\0' || strlen(label->valuestring) >= PLAN_TONE_LABEL_MAX) {
-            char label_path[PLAN_JSON_PATH_MAX];
-            json_index_path(label_path, at, out->label_count);
-            return json_bad_format(reader, label_path, "expected a tone label like \"chord\" or \"passing\"");
-        }
-        snprintf(out->labels[out->label_count++], PLAN_TONE_LABEL_MAX, "%s", label->valuestring);
-    }
-    return true;
-}
 
 /*
  * Plan formats 1 and 2 name a key's mode, "major" or "minor", where format 3 names a material (R-597). The migration reads them as
@@ -1308,7 +848,7 @@ static bool read_motive_tones(JsonReader *reader, const cJSON *item, const char 
  */
 static bool read_legacy_material(JsonReader *reader, const cJSON *object, const char *path, const PitchMaterial **out) {
     int mode;
-    if (!read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &mode)) {
+    if (!json_read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &mode)) {
         return false;
     }
     *out = knowledge_snapshot_material(reader->knowledge, mode == 1 ? MATERIAL_ID_MINOR : MATERIAL_ID_MAJOR);
@@ -1400,7 +940,7 @@ static bool read_key_v2(JsonReader *reader, const cJSON *object, const char *pat
 }
 
 /* A key's members, by the version of the file: see read_key_v1, read_key_v2 and read_key_v3. */
-static bool read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+bool json_read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
     switch (reader->version) {
     case 1:
         return read_key_v1(reader, object, path, out);
@@ -1429,20 +969,24 @@ static bool read_key_relation(JsonReader *reader, const cJSON *object, const cha
         return json_bad_format(reader, at, "expected a relation id like \"omt.relation.dominant\"");
     }
     json_child_path(at, path, "anchor");
-    if (!cJSON_IsString(anchor)) {
-        return json_bad_format(reader, at, "expected \"home\" or \"previous\"");
+    if (!cJSON_IsString(anchor) || anchor->valuestring[0] == '\0' || strlen(anchor->valuestring) >= PLAN_KEY_ANCHOR_SECTION_MAX) {
+        return json_bad_format(reader, at, "expected \"home\", \"previous\" or the name of an earlier section");
     }
-    int found = -1;
+    /* "home" and "previous" are the plan's own; any other name is a section (format 5). */
+    int found = PLAN_KEY_ANCHOR_SECTION;
     for (int i = 0; i < (int)COUNT_OF(KEY_ANCHOR_NAMES); i++) {
         if (strcmp(anchor->valuestring, KEY_ANCHOR_NAMES[i]) == 0) {
             found = i;
         }
     }
-    if (found < 0) {
+    if (found == PLAN_KEY_ANCHOR_SECTION && reader->version < 5) {
         return json_bad_format(reader, at, "expected \"home\" or \"previous\"");
     }
     snprintf(relation->relation, PLAN_KEY_RELATION_MAX, "%s", id->valuestring);
     relation->anchor = (PlanKeyAnchor)found;
+    if (found == PLAN_KEY_ANCHOR_SECTION) {
+        snprintf(relation->anchor_section, PLAN_KEY_ANCHOR_SECTION_MAX, "%s", anchor->valuestring);
+    }
     relation->resolved = true;
     return true;
 }
@@ -1464,7 +1008,7 @@ static bool read_key_span(JsonReader *reader, const cJSON *object, const char *p
         relation->resolved = false;
         return true;
     }
-    return read_key_members(reader, object, path, key) &&
+    return json_read_key_members(reader, object, path, key) &&
            (reader->version < 3 || read_key_relation(reader, object, path, relation));
 }
 
@@ -1495,7 +1039,7 @@ static bool read_function(JsonReader *reader, const cJSON *object, const char *p
 }
 
 /* A figure constraint: every member required; change_at is a bar from 1 or null for none. */
-static bool read_figure(JsonReader *reader, const cJSON *item, const char *path, PlanFigure *out) {
+static bool read_figure(JsonReader *reader, const cJSON *item, const char *path, SectionFigure *out) {
     const cJSON *kind = plan_json_member(reader, item, path, "figure", true);
     const cJSON *rhythm = kind ? plan_json_member(reader, item, path, "rhythm", true) : NULL;
     const cJSON *harmony = rhythm ? plan_json_member(reader, item, path, "harmony", true) : NULL;
@@ -1509,14 +1053,14 @@ static bool read_figure(JsonReader *reader, const cJSON *item, const char *path,
     if (!cJSON_IsString(kind)) {
         return json_bad_format(reader, at, "expected a string");
     }
-    if (!plan_figure_kind_from_name(kind->valuestring, &out->kind)) {
+    if (!section_figure_kind_find(kind->valuestring, &out->kind)) {
         return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", kind->valuestring);
     }
     json_child_path(at, path, "rhythm");
     if (!cJSON_IsString(rhythm)) {
         return json_bad_format(reader, at, "expected a string");
     }
-    if (!plan_figure_rhythm_from_name(rhythm->valuestring, &out->rhythm)) {
+    if (!section_figure_rhythm_find(rhythm->valuestring, &out->rhythm)) {
         return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", rhythm->valuestring);
     }
     json_child_path(at, path, "harmony");
@@ -1548,7 +1092,7 @@ static bool read_figure(JsonReader *reader, const cJSON *item, const char *path,
 }
 
 /* A section function constraint: function, independent and lyric, all required. */
-static bool read_section_function(JsonReader *reader, const cJSON *item, const char *path, PlanSectionFunction *out) {
+static bool read_section_function(JsonReader *reader, const cJSON *item, const char *path, SectionFunction *out) {
     const cJSON *function = plan_json_member(reader, item, path, "function", true);
     const cJSON *independent = function ? plan_json_member(reader, item, path, "independent", true) : NULL;
     const cJSON *lyric = independent ? plan_json_member(reader, item, path, "lyric", true) : NULL;
@@ -1560,7 +1104,7 @@ static bool read_section_function(JsonReader *reader, const cJSON *item, const c
     if (!cJSON_IsString(function)) {
         return json_bad_format(reader, at, "expected a string");
     }
-    if (!plan_function_kind_from_name(function->valuestring, &out->function)) {
+    if (!section_function_kind_find(function->valuestring, &out->function)) {
         return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", function->valuestring);
     }
     json_child_path(at, path, "independent");
@@ -1576,163 +1120,76 @@ static bool read_section_function(JsonReader *reader, const cJSON *item, const c
     return true;
 }
 
-static bool read_constraint(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
-    if (!cJSON_IsObject(item)) {
-        return json_bad_format(reader, path, "expected an object");
+/*
+ * The constraints plan formats 1 to 4 wrote on a section node, which are the members of its description from format 5 on (R-607):
+ * archetype (derived from the pairing), material, theme_pairing, return, layers, section_letter, piece_part, free_phrase, hold,
+ * seam, pedal, construction, connective, liquidation, figure and section_function; a section's cadence constraints are its cadence
+ * and, second, its first cadence. section_from_old_constraints is the one place that reads them: apply_old_constraint takes
+ * one into the description, and the reader sets the description once the node's constraints are read.
+ */
+static const char *const LEGACY_KINDS[] = {"archetype", "material", "theme_pairing", "return", "layers", "section_letter",
+                                              "piece_part", "free_phrase", "hold", "seam", "pedal", "construction", "connective",
+                                              "liquidation", "figure", "section_function"};
+#define LEGACY_COUNT COUNT_OF(LEGACY_KINDS)
+
+/* The index of the kind a constraint object names in LEGACY_KINDS, or -1 for any other kind. */
+static int old_constraint_kind(const cJSON *item) {
+    const cJSON *kind = cJSON_IsObject(item) ? cJSON_GetObjectItemCaseSensitive(item, "kind") : NULL;
+    for (size_t i = 0; cJSON_IsString(kind) && i < LEGACY_COUNT; i++) {
+        if (strcmp(kind->valuestring, LEGACY_KINDS[i]) == 0) {
+            return (int)i;
+        }
     }
-    int kind;
+    return -1;
+}
+
+static const char *result_name(PlanResult result);
+
+static bool apply_old_constraint(JsonReader *reader, const PiecePlan *plan, const cJSON *item, const char *path, int legacy,
+                                 SectionDescription *d) {
     int value;
-    long number_value;
-    memset(out, 0, sizeof(*out));
-    if (!read_enum_member(reader, item, path, "kind", CONSTRAINT_KINDS, COUNT_OF(CONSTRAINT_KINDS), &kind)) {
-        return false;
-    }
-    out->kind = (PlanConstraintKind)kind;
-    switch (out->kind) {
-    case PLAN_CONSTRAINT_LENGTH_BARS:
-        if (!json_read_int_member(reader, item, path, "bars", 1, TIME_LIMIT, &number_value)) {
-            return false;
-        }
-        out->params.bars = (int)number_value;
+    long number;
+    char at[PLAN_JSON_PATH_MAX];
+    switch (legacy) {
+    case 0: /* archetype: the pairing says it */
+        return json_read_enum_member(reader, item, path, "type", ARCHETYPE_NAMES, COUNT_OF(ARCHETYPE_NAMES), &value);
+    case 1: /* material */
+        d->has_role = true;
+        d->role = SECTION_ROLE_MATERIAL;
         return true;
-    case PLAN_CONSTRAINT_CADENCE:
-        if (!read_enum_member(reader, item, path, "type", plan_cadence_file_names, PLAN_CADENCE_COUNT, &value)) {
-            return false;
-        }
-        out->params.cadence = plan_cadence_types[value];
-        return true;
-    case PLAN_CONSTRAINT_MOTIVE_REF:
-        return read_motive_ref(reader, item, path, &out->params.motive);
-    case PLAN_CONSTRAINT_KEY:
-        return read_key_members(reader, item, path, &out->params.key);
-    case PLAN_CONSTRAINT_ARCHETYPE:
-        if (!read_enum_member(reader, item, path, "type", ARCHETYPE_NAMES, COUNT_OF(ARCHETYPE_NAMES), &value)) {
-            return false;
-        }
-        out->params.archetype = (PlanArchetype)value;
-        return true;
-    case PLAN_CONSTRAINT_EMBELLISH:
-        return true;
-    case PLAN_CONSTRAINT_SCHEMA: {
-        const cJSON *name = plan_json_member(reader, item, path, "schema", true);
-        if (!name) {
-            return false;
-        }
-        char at[PLAN_JSON_PATH_MAX];
-        json_child_path(at, path, "schema");
-        if (!cJSON_IsString(name)) {
-            return json_bad_format(reader, at, "expected a schema name");
-        }
-        int schema = -1;
-        for (int id = 0; id < GALANT_SCHEMA_COUNT; id++) {
-            if (strcmp(galant_schema_name((GalantSchemaId)id), name->valuestring) == 0) {
-                schema = id;
-            }
-        }
-        if (schema < 0) {
-            return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown schema '%.40s'", name->valuestring);
-        }
-        const GalantPrototype *prototype = galant_prototype((GalantSchemaId)schema);
-        if (!json_read_int_member(reader, item, path, "stage", 0, (long)prototype->stage_count - 1,
-                                  &number_value)) {
-            return false;
-        }
-        out->params.schema.schema = schema;
-        out->params.schema.stage = (int)number_value;
-        return true;
-    }
-    case PLAN_CONSTRAINT_MATERIAL:
-        return true;
-    case PLAN_CONSTRAINT_HARMONY_SHAPE: {
-        PlanHarmonyShape *shape = &out->params.harmony_shape;
-        int anchor;
-        if (!read_enum_member(reader, item, path, "shape", SHAPE_KIND_NAMES, COUNT_OF(SHAPE_KIND_NAMES), &value)) {
-            return false;
-        }
-        shape->kind = (PlanHarmonyShapeKind)value;
-        const cJSON *starts = cJSON_GetObjectItemCaseSensitive(item, "starts_on");
-        const cJSON *ends = cJSON_GetObjectItemCaseSensitive(item, "ends_on");
-        char at[PLAN_JSON_PATH_MAX];
-        if (starts) {
-            json_child_path(at, path, "starts_on");
-            if (!read_enum(reader, starts, at, ANCHOR_NAMES, COUNT_OF(ANCHOR_NAMES), &anchor)) {
-                return false;
-            }
-            shape->starts_on = (PlanHarmonyAnchor)anchor;
-        }
-        if (ends) {
-            json_child_path(at, path, "ends_on");
-            if (!read_enum(reader, ends, at, ANCHOR_NAMES, COUNT_OF(ANCHOR_NAMES), &anchor)) {
-                return false;
-            }
-            shape->ends_on = (PlanHarmonyAnchor)anchor;
-        }
-        return read_optional_int(reader, item, path, "max_cells_per_chord", 0, 64, &shape->max_cells_per_chord) &&
-               read_optional_bool(reader, item, path, "split_at_bars", &shape->split_at_bars) &&
-               read_optional_bool(reader, item, path, "pedal", &shape->pedal);
-    }
-    case PLAN_CONSTRAINT_THEME_PAIRING: {
+    case 2: { /* theme_pairing */
         int ending;
         if (!read_theme_half(reader, item, path, "beginning", true, &value) ||
             !read_theme_half(reader, item, path, "ending", false, &ending)) {
             return false;
         }
-        out->params.theme_pairing.beginning = (PlanThemeBeginning)value;
-        out->params.theme_pairing.ending = (PlanThemeEnding)ending;
+        d->has_pairing = true;
+        d->pairing.beginning = (SectionBeginning)value;
+        d->pairing.ending = (SectionEnding)ending;
         return true;
     }
-    case PLAN_CONSTRAINT_ACCOMPANIMENT: {
-        PlanAccompaniment *accompaniment = &out->params.accompaniment;
-        const cJSON *texture = cJSON_GetObjectItemCaseSensitive(item, "texture");
-        accompaniment->texture = -1;
-        if (!read_enum_member(reader, item, path, "pattern", ACCOMPANIMENT_NAMES, COUNT_OF(ACCOMPANIMENT_NAMES), &value)) {
+    case 3: { /* return */
+        LegacyReturn ret;
+        memset(&ret, 0, sizeof(ret));
+        if (!json_read_int_member(reader, item, path, "section", 1, TIME_LIMIT, &number) ||
+            !read_return_variation(reader, item, path, &ret.variation)) {
             return false;
         }
-        accompaniment->pattern = (PlanAccompanimentPattern)value;
-        if (texture) {
-            char at[PLAN_JSON_PATH_MAX];
-            StandardTexture named;
-            json_child_path(at, path, "texture");
-            if (!cJSON_IsString(texture)) {
-                return json_bad_format(reader, at, "expected a texture name");
-            }
-            if (!standard_texture_from_name(texture->valuestring, &named)) {
-                return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown texture '%.40s'", texture->valuestring);
-            }
-            accompaniment->texture = (int)named;
+        ret.section = (NodeId)number;
+        if (!read_return_setting(reader, item, path, &ret) || !read_return_across_modes(reader, item, path, &ret)) {
+            return false;
         }
-        const cJSON *node = cJSON_GetObjectItemCaseSensitive(item, "motive_node");
-        if (node) {
-            char at[PLAN_JSON_PATH_MAX];
-            json_child_path(at, path, "motive_node");
-            if (!cJSON_IsString(node) || node->valuestring[0] == '\0' ||
-                strlen(node->valuestring) >= sizeof(accompaniment->motive_node)) {
-                return json_bad_format(reader, at, "expected a node name");
-            }
-            memcpy(accompaniment->motive_node, node->valuestring, strlen(node->valuestring) + 1);
+        if (!plan_has_node(plan, ret.section) || plan_node_kind(plan, ret.section) != PLAN_NODE_SECTION) {
+            return json_fail(reader, PLAN_ERR_FORMAT, path, "constraint %s", result_name(PLAN_ERR_BAD_PAYLOAD));
         }
-        return read_optional_int(reader, item, path, "low", 0, 127, &accompaniment->low) &&
-               read_optional_int(reader, item, path, "high", 0, 127, &accompaniment->high);
+        const char *name = plan_node_name(plan, ret.section);
+        snprintf(d->returns, sizeof(d->returns), "%s", name ? name : "");
+        d->variation = ret.variation;
+        d->setting = (SectionSetting)ret.setting;
+        d->mode = ret.across_modes ? SECTION_MODE_HOME : SECTION_MODE_NONE;
+        return true;
     }
-    case PLAN_CONSTRAINT_VOICING:
-        return read_optional_bool(reader, item, path, "write_soprano", &out->params.voicing.write_soprano);
-    case PLAN_CONSTRAINT_COUNTERPOINT:
-        if (!cJSON_GetObjectItemCaseSensitive(item, "species")) {
-            char at[PLAN_JSON_PATH_MAX];
-            json_child_path(at, path, "species");
-            return json_bad_format(reader, at, "missing species");
-        }
-        return read_optional_int(reader, item, path, "species", 1, 4, &out->params.counterpoint.species) &&
-               read_optional_bool(reader, item, path, "above", &out->params.counterpoint.above);
-    case PLAN_CONSTRAINT_RETURN:
-        if (!json_read_int_member(reader, item, path, "section", 1, TIME_LIMIT, &number_value) ||
-            !read_return_variation(reader, item, path, &out->params.section_return.variation)) {
-            return false;
-        }
-        out->params.section_return.section = (NodeId)number_value;
-        return read_return_setting(reader, item, path, &out->params.section_return) &&
-               read_return_across_modes(reader, item, path, &out->params.section_return);
-    case PLAN_CONSTRAINT_LAYERS: {
+    case 4: { /* layers */
         const cJSON *lanes = plan_json_member(reader, item, path, "lanes", true);
         if (!lanes) {
             return false;
@@ -1744,216 +1201,112 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         }
         size_t index = 0;
         const cJSON *lane;
+        d->layers = 0;
         cJSON_ArrayForEach(lane, lanes) {
-            char at[PLAN_JSON_PATH_MAX];
             json_index_path(at, lanes_path, index++);
-            if (!read_enum(reader, lane, at, plan_lane_names, PLAN_LANE_NAME_COUNT, &value)) {
+            if (!json_read_enum(reader, lane, at, plan_lane_names, PLAN_LANE_NAME_COUNT, &value)) {
                 return false;
             }
-            out->params.layers.lanes |= PLAN_LAYER_BIT(value);
+            d->layers |= PLAN_LAYER_BIT(value);
         }
-        if (out->params.layers.lanes == 0) {
-            return json_bad_format(reader, lanes_path, "a layer sounds at least one lane");
-        }
-        return true;
+        return d->layers != 0 ? true : json_bad_format(reader, lanes_path, "a layer sounds at least one lane");
     }
-    case PLAN_CONSTRAINT_SECTION_LETTER: {
+    case 5: { /* section_letter */
         const cJSON *letter = plan_json_member(reader, item, path, "letter", true);
         if (!letter) {
             return false;
         }
-        char at[PLAN_JSON_PATH_MAX];
         json_child_path(at, path, "letter");
-        if (!cJSON_IsString(letter) || letter->valuestring[0] == '\0' ||
-            strlen(letter->valuestring) >= PLAN_SECTION_LETTER_MAX) {
+        if (!cJSON_IsString(letter) || letter->valuestring[0] == '\0' || strlen(letter->valuestring) >= SECTION_LETTER_MAX) {
             return json_bad_format(reader, at, "expected one to three characters");
         }
-        snprintf(out->params.letter, PLAN_SECTION_LETTER_MAX, "%s", letter->valuestring);
+        snprintf(d->letter, sizeof(d->letter), "%s", letter->valuestring);
         return true;
     }
-    case PLAN_CONSTRAINT_INVENT_MOTIVE:
-        return true;
-    case PLAN_CONSTRAINT_STYLE: {
-        const cJSON *file = plan_json_member(reader, item, path, "path", true);
-        const cJSON *weight = file ? plan_json_member(reader, item, path, "weight", true) : NULL;
-        if (!file || !weight) {
-            return false;
-        }
-        char at[PLAN_JSON_PATH_MAX];
-        json_child_path(at, path, "path");
-        if (!cJSON_IsString(file) || file->valuestring[0] == '\0' || strlen(file->valuestring) >= PLAN_STYLE_PATH_MAX) {
-            return json_bad_format(reader, at, "expected a file path");
-        }
-        json_child_path(at, path, "weight");
-        unsigned long numerator, denominator;
-        char rest;
-        if (!cJSON_IsString(weight) || sscanf(weight->valuestring, "%lu/%lu%c", &numerator, &denominator, &rest) != 2 ||
-            (denominator == 0 && numerator != 0)) {
-            return json_bad_format(reader, at, "expected a fraction like \"1/1\"");
-        }
-        snprintf(out->params.style.path, PLAN_STYLE_PATH_MAX, "%s", file->valuestring);
-        out->params.style.weight_numerator = numerator;
-        out->params.style.weight_denominator = denominator;
-        const cJSON *without = cJSON_GetObjectItemCaseSensitive(item, "without");
-        if (without) {
-            json_child_path(at, path, "without");
-            int listed = cJSON_IsArray(without) ? cJSON_GetArraySize(without) : -1;
-            if (listed < 0 || listed > PLAN_STYLE_WITHOUT_MAX) {
-                return json_bad_format(reader, at, "expected a list of at most 8 category names");
-            }
-            const cJSON *name;
-            cJSON_ArrayForEach(name, without) {
-                if (!cJSON_IsString(name) || name->valuestring[0] == '\0' ||
-                    strlen(name->valuestring) >= PLAN_STYLE_WITHOUT_NAME_MAX) {
-                    return json_bad_format(reader, at, "expected a list of at most 8 category names");
-                }
-                snprintf(out->params.style.without[out->params.style.without_count++], PLAN_STYLE_WITHOUT_NAME_MAX, "%s",
-                         name->valuestring);
-            }
-        }
-        const cJSON *blend = cJSON_GetObjectItemCaseSensitive(item, "blend");
-        if (!blend) {
-            return true;
-        }
-        char blend_at[PLAN_JSON_PATH_MAX];
-        json_child_path(blend_at, path, "blend");
-        if (!cJSON_IsObject(blend)) {
-            return json_bad_format(reader, blend_at, "expected an object with a path and weights");
-        }
-        const cJSON *blend_file = plan_json_member(reader, blend, blend_at, "path", true);
-        const cJSON *blend_weights = blend_file ? plan_json_member(reader, blend, blend_at, "weights", true) : NULL;
-        if (!blend_file || !blend_weights) {
-            return false;
-        }
-        if (!cJSON_IsObject(blend_weights)) {
-            json_child_path(at, blend_at, "weights");
-            return json_bad_format(reader, at, "expected an object with a weight for each dimension");
-        }
-        json_child_path(at, blend_at, "path");
-        if (!cJSON_IsString(blend_file) || blend_file->valuestring[0] == '\0' ||
-            strlen(blend_file->valuestring) >= PLAN_STYLE_PATH_MAX) {
-            return json_bad_format(reader, at, "expected a file path");
-        }
-        static const char *const DIMENSIONS[4] = {"harmony", "rhythm", "melody", "form"};
-        for (int d = 0; d < 4; d++) {
-            const cJSON *w = plan_json_member(reader, blend_weights, blend_at, DIMENSIONS[d], true);
-            if (!w) {
-                return false;
-            }
-            char w_at[PLAN_JSON_PATH_MAX];
-            json_child_path(w_at, blend_at, DIMENSIONS[d]);
-            if (!cJSON_IsString(w) || sscanf(w->valuestring, "%lu/%lu%c", &numerator, &denominator, &rest) != 2 ||
-                denominator == 0 || numerator > denominator) {
-                return json_bad_format(reader, w_at, "expected a fraction from 0 to 1 like \"1/2\"");
-            }
-            out->params.style.blend_numerator[d] = numerator;
-            out->params.style.blend_denominator[d] = denominator;
-        }
-        snprintf(out->params.style.blend_path, PLAN_STYLE_PATH_MAX, "%s", blend_file->valuestring);
-        return true;
-    }
-    case PLAN_CONSTRAINT_SOURCE: {
-        const cJSON *piece = plan_json_member(reader, item, path, "piece", true);
-        const cJSON *start_measure = piece ? plan_json_member(reader, item, path, "start_measure", true) : NULL;
-        const cJSON *start_beat = start_measure ? plan_json_member(reader, item, path, "start_beat", true) : NULL;
-        const cJSON *end_measure = start_beat ? plan_json_member(reader, item, path, "end_measure", true) : NULL;
-        const cJSON *end_beat = end_measure ? plan_json_member(reader, item, path, "end_beat", true) : NULL;
-        const cJSON *score = end_beat ? plan_json_member(reader, item, path, "score", true) : NULL;
-        if (!score) {
-            return false;
-        }
-        char at[PLAN_JSON_PATH_MAX];
-        json_child_path(at, path, "piece");
-        if (!cJSON_IsString(piece) || piece->valuestring[0] == '\0' ||
-            strlen(piece->valuestring) >= PLAN_SOURCE_PIECE_MAX) {
-            return json_bad_format(reader, at, "expected the piece's path in the corpus");
-        }
-        if (!cJSON_IsNumber(start_measure) || !cJSON_IsNumber(start_beat) || !cJSON_IsNumber(end_measure) ||
-            !cJSON_IsNumber(end_beat)) {
-            return json_bad_format(reader, path, "expected the measures and beats of the passage as numbers");
-        }
-        unsigned long numerator, denominator;
-        char rest;
-        json_child_path(at, path, "score");
-        if (!cJSON_IsString(score) || sscanf(score->valuestring, "%lu/%lu%c", &numerator, &denominator, &rest) != 2 ||
-            denominator == 0 || numerator > denominator) {
-            return json_bad_format(reader, at, "expected a fraction from 0 to 1 like \"3/4\"");
-        }
-        snprintf(out->params.source.piece, PLAN_SOURCE_PIECE_MAX, "%s", piece->valuestring);
-        out->params.source.start_measure = (int)start_measure->valuedouble;
-        out->params.source.start_beat = start_beat->valuedouble;
-        out->params.source.end_measure = (int)end_measure->valuedouble;
-        out->params.source.end_beat = end_beat->valuedouble;
-        out->params.source.score_numerator = numerator;
-        out->params.source.score_denominator = denominator;
-        return true;
-    }
-    case PLAN_CONSTRAINT_PICKUP: {
-        const cJSON *length = plan_json_member(reader, item, path, "length", true);
-        long numerator;
-        unsigned long denominator;
-        char rest;
-        if (!length) {
-            return false;
-        }
-        char at[PLAN_JSON_PATH_MAX];
-        json_child_path(at, path, "length");
-        if (!cJSON_IsString(length) || sscanf(length->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
-            denominator == 0 || numerator <= 0 || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
-            rational_make(numerator, denominator, &out->params.pickup) != RATIONAL_OK) {
-            return json_bad_format(reader, at, "expected a length in whole notes like \"1/4\"");
-        }
-        return true;
-    }
-    case PLAN_CONSTRAINT_PIECE_PART: {
+    case 6: { /* piece_part */
         const cJSON *id = NULL;
-        char at[PLAN_JSON_PATH_MAX];
-        if (!read_enum_member(reader, item, path, "part", PIECE_PART_NAMES, COUNT_OF(PIECE_PART_NAMES), &value) ||
+        if (!json_read_enum_member(reader, item, path, "part", PIECE_PART_NAMES, COUNT_OF(PIECE_PART_NAMES), &value) ||
             !(id = plan_json_member(reader, item, path, "id", true))) {
             return false;
         }
         json_child_path(at, path, "id");
-        if (!cJSON_IsString(id) || id->valuestring[0] == '\0' || strlen(id->valuestring) >= PLAN_PIECE_ID_MAX) {
+        if (!cJSON_IsString(id) || id->valuestring[0] == '\0' || strlen(id->valuestring) >= SECTION_ID_MAX) {
             return json_bad_format(reader, at, "expected one to fifteen characters");
         }
-        out->params.piece_part.part = value;
-        snprintf(out->params.piece_part.id, PLAN_PIECE_ID_MAX, "%s", id->valuestring);
+        d->has_role = true;
+        d->role = (SectionRole)(SECTION_ROLE_INTRO + value);
+        snprintf(d->id, sizeof(d->id), "%s", id->valuestring);
         return true;
     }
-    case PLAN_CONSTRAINT_MOTIVE_TONES:
-        return read_motive_tones(reader, item, path, &out->params.motive_tones);
-    case PLAN_CONSTRAINT_PEDAL:
-        if (!json_read_int_member(reader, item, path, "degree", 1, 7, &number_value)) {
+    case 7: /* free_phrase */
+        d->free_phrase = true;
+        return true;
+    case 8: /* hold */
+        d->leads_in = true;
+        return true;
+    case 9: /* seam */
+        d->has_role = true;
+        d->role = SECTION_ROLE_SEAM;
+        return true;
+    case 10: /* pedal */
+        if (!json_read_int_member(reader, item, path, "degree", 1, 7, &number)) {
             return false;
         }
-        out->params.pedal.degree = (int)number_value;
+        if (number != 5) {
+            return json_fail(reader, PLAN_ERR_FORMAT, path, "constraint %s", result_name(PLAN_ERR_BAD_PAYLOAD));
+        }
+        d->pedal = 5;
         return true;
-    case PLAN_CONSTRAINT_CONSTRUCTION:
-        return read_construction(reader, item, path, &out->params.construction);
-    case PLAN_CONSTRAINT_CONNECTIVE: {
+    case 11: /* construction */
+        d->has_construction = true;
+        return read_construction(reader, item, path, &d->construction);
+    case 12: { /* connective */
         const cJSON *written = plan_json_member(reader, item, path, "written", true);
         if (!written) {
             return false;
         }
         if (!cJSON_IsBool(written)) {
-            char at[PLAN_JSON_PATH_MAX];
             json_child_path(at, path, "written");
             return json_bad_format(reader, at, "expected true or false");
         }
-        out->params.connective.written = cJSON_IsTrue(written);
+        d->connective = SECTION_CONNECTIVE_ALWAYS; /* the plan holds that it was asked for; sometimes was drawn at build */
+        d->connective_written = cJSON_IsTrue(written);
         return true;
     }
-    case PLAN_CONSTRAINT_FIGURE:
-        return read_figure(reader, item, path, &out->params.figure);
-    case PLAN_CONSTRAINT_SECTION_FUNCTION:
-        return read_section_function(reader, item, path, &out->params.section_function);
-    case PLAN_CONSTRAINT_FREE_PHRASE:
-    case PLAN_CONSTRAINT_HOLD:
-    case PLAN_CONSTRAINT_SEAM:
-    case PLAN_CONSTRAINT_LIQUIDATION:
+    case 13: /* liquidation */
+        d->has_role = true;
+        d->role = SECTION_ROLE_LIQUIDATION;
         return true;
+    case 14: /* figure */
+        d->has_figure = true;
+        return read_figure(reader, item, path, &d->figure);
+    case 15: /* section_function */
+        d->has_function = true;
+        return read_section_function(reader, item, path, &d->function);
     }
     return false;
+}
+
+static bool read_constraint(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
+    if (!cJSON_IsObject(item)) {
+        return json_bad_format(reader, path, "expected an object");
+    }
+    memset(out, 0, sizeof(*out));
+    const cJSON *named = plan_json_member(reader, item, path, "kind", true);
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, "kind");
+    if (!named) {
+        return false;
+    }
+    if (!cJSON_IsString(named)) {
+        return json_bad_format(reader, at, "expected a string");
+    }
+    const ConstraintKindRow *row = constraint_kind_named(named->valuestring);
+    if (!row) {
+        return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", named->valuestring);
+    }
+    out->kind = row->kind;
+    return row->read(reader, item, path, out);
 }
 
 static const char *result_name(PlanResult result) {
@@ -2001,11 +1354,43 @@ static bool read_constraints(JsonReader *reader, PiecePlan *plan, const cJSON *c
     if (!cJSON_IsArray(list)) {
         return json_bad_format(reader, list_path, "expected an array");
     }
+    /* Formats 1 to 4 wrote a section's attributes as constraints: they are read into its description. */
+    const bool old_section = add_constraint == add_node_constraint && reader->version < 5 &&
+                             plan_node_kind(plan, (NodeId)id) == PLAN_NODE_SECTION;
+    SectionDescription description;
+    section_description_init(&description);
+    size_t cadences = 0;
     size_t index = 0;
     const cJSON *item;
     cJSON_ArrayForEach(item, list) {
         char at[PLAN_JSON_PATH_MAX];
         json_index_path(at, list_path, index++);
+        if (old_section) {
+            const cJSON *kind = cJSON_IsObject(item) ? cJSON_GetObjectItemCaseSensitive(item, "kind") : NULL;
+            int legacy = old_constraint_kind(item);
+            if (legacy >= 0) {
+                if (!apply_old_constraint(reader, plan, item, at, legacy, &description)) {
+                    return false;
+                }
+                continue;
+            }
+            if (cJSON_IsString(kind) && strcmp(kind->valuestring, "cadence") == 0) {
+                PlanConstraint cadence;
+                if (!read_constraint(reader, item, at, &cadence)) {
+                    return false;
+                }
+                /* The first is the section's, a second the weak one an antecedent ends in. */
+                if (cadences == 0) {
+                    description.has_cadence = true;
+                    description.cadence = cadence.params.cadence;
+                } else if (cadences == 1) {
+                    description.has_first_cadence = true;
+                    description.first_cadence = cadence.params.cadence;
+                }
+                cadences++;
+                continue;
+            }
+        }
         PlanConstraint constraint;
         if (!read_constraint(reader, item, at, &constraint)) {
             return false;
@@ -2029,6 +1414,98 @@ static bool read_constraints(JsonReader *reader, PiecePlan *plan, const cJSON *c
         if (result != PLAN_OK) {
             return json_fail(reader, PLAN_ERR_FORMAT, at, "constraint %s", result_name(result));
         }
+    }
+    if (old_section) {
+        PlanResult result = plan_node_set_section(plan, (NodeId)id, &description);
+        if (result != PLAN_OK) {
+            return json_fail(reader, result == PLAN_ERR_ALLOC ? PLAN_ERR_ALLOC : PLAN_ERR_FORMAT, list_path, "section %s",
+                             result_name(result));
+        }
+    }
+    return true;
+}
+
+/* Format 5: a section node's "section" member is its description. */
+static bool read_section_member(JsonReader *reader, PiecePlan *plan, const cJSON *composer, const char *composer_path, size_t id) {
+    const cJSON *item = plan_json_member(reader, composer, composer_path, "section", true);
+    if (!item) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, composer_path, "section");
+    SectionDescription description;
+    SectionError error;
+    if (!section_from_json(item, SECTION_USE_PLAN, NULL, 0, &description, &error)) {
+        char member[PLAN_JSON_PATH_MAX + 128];
+        snprintf(member, sizeof(member), "%s%s", at, error.path);
+        return json_fail(reader, PLAN_ERR_FORMAT, member, "%s", error.message);
+    }
+    PlanResult result = plan_node_set_section(plan, (NodeId)id, &description);
+    if (result != PLAN_OK) {
+        return json_fail(reader, result == PLAN_ERR_ALLOC ? PLAN_ERR_ALLOC : PLAN_ERR_FORMAT, at, "section %s", result_name(result));
+    }
+    return true;
+}
+
+/* Format 5: the form node's optional "form" member is the record of the form the plan was built from. */
+static bool read_form_record(JsonReader *reader, PiecePlan *plan, const cJSON *composer, const char *composer_path) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(composer, "form");
+    if (!item) {
+        return true;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, composer_path, "form");
+    if (!cJSON_IsObject(item)) {
+        return json_bad_format(reader, at, "expected an object");
+    }
+    PlanFormRecord record;
+    memset(&record, 0, sizeof(record));
+    const cJSON *name = plan_json_member(reader, item, at, "name", true);
+    const cJSON *hash = name ? plan_json_member(reader, item, at, "hash", true) : NULL;
+    const cJSON *checks = hash ? plan_json_member(reader, item, at, "checks", true) : NULL;
+    const cJSON *closing = checks ? plan_json_member(reader, item, at, "closing", true) : NULL;
+    long version;
+    char member[PLAN_JSON_PATH_MAX];
+    if (!closing || !json_read_int_member(reader, item, at, "version", 1, 1000, &version)) {
+        return false;
+    }
+    json_child_path(member, at, "name");
+    if (!cJSON_IsString(name) || name->valuestring[0] == '\0' || strlen(name->valuestring) >= PLAN_FORM_NAME_MAX) {
+        return json_bad_format(reader, member, "expected a form name of 1 to 31 characters");
+    }
+    json_child_path(member, at, "hash");
+    if (!cJSON_IsString(hash) || strlen(hash->valuestring) > PLAN_FORM_HASH_LEN) {
+        return json_bad_format(reader, member, "expected a hash of 16 lowercase hexadecimal digits or none");
+    }
+    json_child_path(member, at, "closing");
+    if (!cJSON_IsBool(closing)) {
+        return json_bad_format(reader, member, "expected true or false");
+    }
+    json_child_path(member, at, "checks");
+    if (!cJSON_IsArray(checks)) {
+        return json_bad_format(reader, member, "expected an array of check names");
+    }
+    size_t index = 0;
+    const cJSON *check;
+    cJSON_ArrayForEach(check, checks) {
+        char entry[PLAN_JSON_PATH_MAX];
+        int bit;
+        json_index_path(entry, member, index++);
+        if (!json_read_enum(reader, check, entry, FORM_CHECK_NAMES, COUNT_OF(FORM_CHECK_NAMES), &bit)) {
+            return false;
+        }
+        if ((record.checks & (1u << bit)) != 0) {
+            return json_bad_format(reader, entry, "a check is named twice");
+        }
+        record.checks |= 1u << bit;
+    }
+    snprintf(record.name, sizeof(record.name), "%s", name->valuestring);
+    snprintf(record.hash, sizeof(record.hash), "%s", hash->valuestring);
+    record.version = (unsigned)version;
+    record.closing = cJSON_IsTrue(closing);
+    PlanResult result = plan_set_form_record(plan, &record);
+    if (result != PLAN_OK) {
+        return json_fail(reader, result == PLAN_ERR_ALLOC ? PLAN_ERR_ALLOC : PLAN_ERR_FORMAT, at, "form %s", result_name(result));
     }
     return true;
 }
@@ -2120,7 +1597,7 @@ static bool build_nodes(JsonReader *reader, PiecePlan *plan, const cJSON *form) 
         int kind;
         PlanSpan span;
         char at[PLAN_JSON_PATH_MAX];
-        ok = read_enum_member(reader, parsed->json, parsed->path, "kind", NODE_KINDS, COUNT_OF(NODE_KINDS), &kind) &&
+        ok = json_read_enum_member(reader, parsed->json, parsed->path, "kind", NODE_KINDS, COUNT_OF(NODE_KINDS), &kind) &&
              json_read_span(reader, parsed->json, parsed->path, &span);
         const cJSON *label = ok ? plan_json_member(reader, parsed->json, parsed->path, "label", false) : NULL;
         if (ok && label && !cJSON_IsNull(label) && !cJSON_IsString(label)) {
@@ -2286,7 +1763,7 @@ static bool read_note_identity(JsonReader *reader, const cJSON *item, const char
         char operation_path[PLAN_JSON_PATH_MAX];
         json_child_path(operation_path, at, "operation");
         int value;
-        if (!read_enum(reader, operation, operation_path, plan_note_operation_names + 1, PLAN_NOTE_OPERATION_COUNT - 1, &value)) {
+        if (!json_read_enum(reader, operation, operation_path, plan_note_operation_names + 1, PLAN_NOTE_OPERATION_COUNT - 1, &value)) {
             return false;
         }
         note->operation = (PlanNoteOperation)(value + 1);
@@ -2407,7 +1884,7 @@ static bool build_lane_span(JsonReader *reader, PiecePlan *plan, const ParsedLan
     long owner;
     long voice;
     PlanSpan span;
-    if (!read_enum_member(reader, composer, composer_path, "lane", plan_lane_names, PLAN_LANE_NAME_COUNT, &lane) ||
+    if (!json_read_enum_member(reader, composer, composer_path, "lane", plan_lane_names, PLAN_LANE_NAME_COUNT, &lane) ||
         !json_read_int_member(reader, composer, composer_path, "owner", 1, TIME_LIMIT, &owner) ||
         !json_read_int_member(reader, composer, composer_path, "voice", 0, 1000, &voice) ||
         !json_read_span(reader, parsed->json, parsed->path, &span)) {
@@ -2435,7 +1912,9 @@ static bool build_lane_span(JsonReader *reader, PiecePlan *plan, const ParsedLan
         } else if (id != expected_id) {
             ok = json_bad_format(reader, parsed->path, "lane span ids must run from 1 without gaps");
         } else if (relation.relation[0] != '\0' &&
-                   plan_lane_span_set_key_relation(plan, id, relation.relation, relation.anchor, relation.resolved) != PLAN_OK) {
+                   plan_lane_span_set_key_relation(plan, id, relation.relation, relation.anchor,
+                                                   relation.anchor == PLAN_KEY_ANCHOR_SECTION ? relation.anchor_section : NULL,
+                                                   relation.resolved) != PLAN_OK) {
             ok = json_bad_format(reader, parsed->path, "a key span names its relation badly");
         }
     }
@@ -2502,9 +1981,22 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
         const cJSON *composer = cJSON_GetObjectItemCaseSensitive(table[i].json, "composer");
         char composer_path[PLAN_JSON_PATH_MAX];
         json_child_path(composer_path, table[i].path, "composer");
-        int state;
         ok = read_constraints(reader, plan, composer, composer_path, i + 1, add_node_constraint) &&
-             read_enum_member(reader, composer, composer_path, "state", STATE_NAMES, COUNT_OF(STATE_NAMES), &state);
+             (reader->version < 5 || plan_node_kind(plan, (NodeId)(i + 1)) != PLAN_NODE_SECTION ||
+              read_section_member(reader, plan, composer, composer_path, i + 1)) &&
+             (reader->version < 5 || (NodeId)(i + 1) != plan_root(plan) || read_form_record(reader, plan, composer, composer_path));
+    }
+    /* A plan before format 5 knows its form by the name of its form node: its record and the closed sections come from the built-in
+       form of that name, before any node is Given. */
+    if (ok && reader->version < 5 && !piece_form_record_migrate(plan)) {
+        ok = json_fail(reader, PLAN_ERR_ALLOC, "form", "out of memory");
+    }
+    for (size_t i = 0; ok && i < node_count; i++) {
+        const cJSON *composer = cJSON_GetObjectItemCaseSensitive(table[i].json, "composer");
+        char composer_path[PLAN_JSON_PATH_MAX];
+        json_child_path(composer_path, table[i].path, "composer");
+        int state;
+        ok = json_read_enum_member(reader, composer, composer_path, "state", STATE_NAMES, COUNT_OF(STATE_NAMES), &state);
         if (ok) {
             plan_node_set_state(plan, (NodeId)(i + 1), (PlanState)state);
         }
@@ -2528,7 +2020,7 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
             char at[PLAN_JSON_PATH_MAX];
             snprintf(at, sizeof(at), "%s[%d].composer.state", SECTIONS[s], 0);
             int state;
-            if (!read_enum(reader, state_item, at, STATE_NAMES, COUNT_OF(STATE_NAMES), &state)) {
+            if (!json_read_enum(reader, state_item, at, STATE_NAMES, COUNT_OF(STATE_NAMES), &state)) {
                 return false;
             }
             plan_lane_span_set_state(plan, (LaneSpanId)id->valueint, (PlanState)state);

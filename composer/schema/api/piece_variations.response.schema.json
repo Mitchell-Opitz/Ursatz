@@ -441,6 +441,20 @@
         "construction_text": {
           "type": "string",
           "description": "Present for a theme section with a construction: why it is as long as it is (R-469)."
+        },
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The region the section is in as the request asked for it: home, a key, or \"<relation> of <anchor>\"; null for none (R-610)."
+        },
+        "harmony": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The harmony the request gave the section, as asked: its numerals, \"schema <name>\" or the chord bars; null for none (R-610)."
         }
       },
       "description": "A section of a form whose sections the request gives (the game loop)."
@@ -480,6 +494,16 @@
             "return",
             "variation",
             "layer",
+            "pattern",
+            "sequence",
+            "episode",
+            "codetta",
+            "liquidation",
+            "transition",
+            "retransition",
+            "subordinate",
+            "coda",
+            "elaboration",
             "intro",
             "body",
             "turnaround",
@@ -631,6 +655,20 @@
         "construction_text": {
           "type": "string",
           "description": "Present for a theme section with a construction: why it is as long as it is (R-469)."
+        },
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The region the section is in as the request asked for it or the form names it: home, a form region, a key, or \"<relation> of <anchor>\"; null for none (R-610)."
+        },
+        "harmony": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The harmony the request gave the section, as asked: its numerals, \"schema <name>\" or the chord bars; null for none (R-610)."
         }
       },
       "description": "A section of the size of a form with sizes."

@@ -8,6 +8,7 @@
 #include <model/core/rational.h>
 #include <model/identity/entity_id.h>
 #include <model/pitch/pitch_numeric_value.h>
+#include <model/pitch/region.h>
 #include <model/pitch/pitch_spelling.h>
 #include <model/time/musical_time.h>
 #include <model/time/tempo_map.h>
@@ -190,6 +191,11 @@ PlanExportResult rendered_plan_work(const RenderedPlan *rendered, const PlanExpo
     }
     if (result == REALIZATION_OK) {
         result = movement_create("m1", rendered->form_name ? rendered->form_name : "piece", &movement);
+    }
+    /* The movement's home region is the plan's first key (R-610): a tonal region of its tonic and material. */
+    if (result == REALIZATION_OK && rendered->key_count > 0 && rendered->keys[0].material && rendered->keys[0].tonic >= 0 &&
+        rendered->keys[0].tonic <= 11) {
+        result = movement_set_home(movement, region_tonal(rendered->keys[0].tonic, rendered->keys[0].material));
     }
     if (result != REALIZATION_OK) {
         work_destroy(work);

@@ -9,6 +9,7 @@
 #include "melody/melody_internal.h"
 #include "piece/form_return_internal.h"
 #include "util/util.h"
+#include "util/plan_util.h"
 #include <ursatz_composer/constraint.h>
 
 /* The most key spans a section is read across: a section holds at most two keys, with a few to spare. */
@@ -368,15 +369,18 @@ void return_payload_destroy(void *payload) {
 
 /* ------------------------------------------------------------- the target */
 
-static bool find_return(const PiecePlan *plan, NodeId section, PlanReturn *out) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            *out = constraint->params.section_return;
-            return true;
-        }
+static bool find_return(const PiecePlan *plan, NodeId section, ReturnRef *out) {
+    const SectionDescription *description = plan_section_or_empty(plan, section);
+    NodeId source = description->returns[0] != '\0' ? plan_section_named(plan, description->returns) : PLAN_NODE_NONE;
+    if (source == PLAN_NODE_NONE) {
+        return false;
     }
-    return false;
+    memset(out, 0, sizeof(*out));
+    out->section = source;
+    out->variation = description->variation;
+    out->setting = (PlanAccompanimentPattern)description->setting;
+    out->across_modes = description->mode == SECTION_MODE_HOME;
+    return true;
 }
 
 bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out) {
@@ -476,14 +480,14 @@ bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const Piec
 }
 
 /* The variations the operator makes: all of them (figurate keeps the melody here; compose_run writes its figure, R-497). */
-static bool variation_offered(PlanReturnVariation variation) {
-    return variation == PLAN_RETURN_EXACT || variation == PLAN_RETURN_ORNAMENT ||
-           variation == PLAN_RETURN_REHARMONIZE || variation == PLAN_RETURN_REREGISTER || variation == PLAN_RETURN_VARIED ||
-           variation == PLAN_RETURN_FIGURATE || variation == PLAN_RETURN_EMBELLISH || variation == PLAN_RETURN_SETTING;
+static bool variation_offered(SectionReturnVariation variation) {
+    return variation == SECTION_RETURN_EXACT || variation == SECTION_RETURN_ORNAMENT ||
+           variation == SECTION_RETURN_REHARMONIZE || variation == SECTION_RETURN_REREGISTER || variation == SECTION_RETURN_VARIED ||
+           variation == SECTION_RETURN_FIGURATE || variation == SECTION_RETURN_EMBELLISH || variation == SECTION_RETURN_SETTING;
 }
 
 /* Whether the section's RETURN names another section of the piece that is as long, in the same meter and in keys of the same shape. */
-static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
+static bool return_geometry(const PiecePlan *plan, NodeId section, ReturnRef *ret) {
     PlanMeter source_meter;
     PlanMeter target_meter;
     int shift;
@@ -492,7 +496,7 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *r
     }
     if (ret->section == section || !plan_has_node(plan, ret->section) ||
         plan_node_kind(plan, ret->section) != PLAN_NODE_SECTION ||
-        plan_node_has_constraint(plan, ret->section, PLAN_CONSTRAINT_MATERIAL)) {
+        plan_section_has_role(plan, ret->section, SECTION_ROLE_MATERIAL)) {
         return false;
     }
     PlanSpan from = plan_node_span(plan, ret->section);
@@ -502,23 +506,23 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *r
            return_meter_over(plan, to, &target_meter) && source_meter.beats_per_bar == target_meter.beats_per_bar &&
            source_meter.beat_unit == target_meter.beat_unit &&
            (return_key_shift(plan, from, plan, to, &shift) ||
-            (ret->variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, to, &to_material)) ||
+            (ret->variation == SECTION_RETURN_FIGURATE && return_mode_shift(plan, from, plan, to, &to_material)) ||
             /* A reharmonized return in the home mode (R-524): moved by the tonic step and mapped into the target's mode. */
-            (ret->variation == PLAN_RETURN_REHARMONIZE && ret->across_modes &&
+            (ret->variation == SECTION_RETURN_REHARMONIZE && ret->across_modes &&
              return_mode_shift_by(plan, from, plan, to, &shift, &to_material)));
 }
 
-bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret) {
+bool return_target(const PiecePlan *plan, NodeId section, ReturnRef *ret) {
     return return_geometry(plan, section, ret);
 }
 
 bool form_return_copies(const PiecePlan *plan, NodeId section) {
-    PlanReturn ret;
+    ReturnRef ret;
     return return_geometry(plan, section, &ret);
 }
 
 bool form_return_mode_change(const PiecePlan *plan, NodeId section, const PitchMaterial **to) {
-    PlanReturn ret;
+    ReturnRef ret;
     int shift;
     const PitchMaterial *to_material = NULL;
     if (!return_geometry(plan, section, &ret)) {
@@ -533,12 +537,11 @@ bool form_return_mode_change(const PiecePlan *plan, NodeId section, const PitchM
     return true;
 }
 
-bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, PlanReturnVariation *variation) {
-    PlanReturn ret;
+bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, SectionReturnVariation *variation) {
+    ReturnRef ret;
     if (!plan_has_node(plan, section) || plan_node_kind(plan, section) != PLAN_NODE_SECTION ||
         plan_node_state(plan, section) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, section) != 0 ||
-        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_ARCHETYPE) ||
-        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_THEME_PAIRING) || !return_geometry(plan, section, &ret) ||
+        !plan_section_or_empty(plan, section)->has_pairing || !return_geometry(plan, section, &ret) ||
         !variation_offered(ret.variation)) {
         return false;
     }
@@ -699,7 +702,7 @@ static bool chord_in_source(const ChordAt *chord, const ChordAt *source, size_t 
 }
 
 bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *changed, size_t *total) {
-    PlanReturn ret;
+    ReturnRef ret;
     size_t count;
     size_t source_count;
     if (!plan_has_node(plan, section) || !find_return(plan, section, &ret) || !plan_has_node(plan, ret.section)) {
@@ -722,7 +725,7 @@ bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *c
 }
 
 bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *changed) {
-    PlanReturn ret;
+    ReturnRef ret;
     size_t count;
     size_t source_count;
     if (!plan_has_node(plan, section) || !find_return(plan, section, &ret) || !plan_has_node(plan, ret.section)) {
@@ -750,7 +753,7 @@ bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *ch
 }
 
 bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar, bool *changed) {
-    PlanReturn ret;
+    ReturnRef ret;
     PlanMeter meter;
     size_t count;
     size_t source_count;
@@ -804,7 +807,7 @@ static bool cadence_numerals(const PiecePlan *plan, NodeId section, char *out, s
 }
 
 bool form_return_cadence_numerals(const PiecePlan *plan, NodeId section, char *from, char *to, size_t size) {
-    PlanReturn ret;
+    ReturnRef ret;
     return plan_has_node(plan, section) && find_return(plan, section, &ret) && plan_has_node(plan, ret.section) &&
            cadence_numerals(plan, ret.section, from, size) && cadence_numerals(plan, section, to, size);
 }
@@ -832,7 +835,7 @@ static bool return_applies(const PiecePlan *plan, FillTarget target, void *conte
 }
 
 /* Builds the payload of a return of the target: the returned section moved onto it, before the variation. */
-static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId source, PlanReturnVariation variation) {
+static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId source, SectionReturnVariation variation) {
     KeyPiece pieces[MAX_KEY_PIECES];
     size_t count;
     ReturnPayload *payload = calloc(1, sizeof(*payload));
@@ -842,7 +845,7 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     PlanSpan from = plan_node_span(plan, source);
     payload->magic = RETURN_PAYLOAD_MAGIC;
     payload->variation = variation;
-    PlanReturn ret = {0};
+    ReturnRef ret = {0};
     if (find_return(plan, target, &ret)) {
         payload->setting = ret.setting;
     }
@@ -856,9 +859,9 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     if (!return_key_shift(plan, from, plan, payload->span, &payload->transpose)) {
         /* A figurate return in the other mode of the same tonic (R-499): moved by 0, mapped, always reharmonized. A
          * reharmonized return with across_modes (R-524): moved by the tonic step, then mapped into the target's mode. */
-        if (variation == PLAN_RETURN_FIGURATE && return_mode_shift(plan, from, plan, payload->span, &to_material)) {
+        if (variation == SECTION_RETURN_FIGURATE && return_mode_shift(plan, from, plan, payload->span, &to_material)) {
             payload->transpose = 0;
-        } else if (variation != PLAN_RETURN_REHARMONIZE || !ret.across_modes ||
+        } else if (variation != SECTION_RETURN_REHARMONIZE || !ret.across_modes ||
                    !return_mode_shift_by(plan, from, plan, payload->span, &payload->transpose, &to_material)) {
             free(payload);
             return NULL;
@@ -867,11 +870,9 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
         payload->to_material = to_material;
     }
     payload->key = pieces[0].key;
-    if (variation == PLAN_RETURN_FIGURATE) {
-        for (size_t i = 0; i < plan_node_constraint_count(plan, target); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, target, i);
-            payload->reharmonize = payload->reharmonize || (constraint->kind == PLAN_CONSTRAINT_FIGURE && constraint->params.figure.reharmonize);
-        }
+    if (variation == SECTION_RETURN_FIGURATE) {
+        const SectionDescription *described = plan_section_or_empty(plan, target);
+        payload->reharmonize = payload->reharmonize || (described->has_figure && described->figure.reharmonize);
         payload->reharmonize = payload->reharmonize || payload->mode_change;
     }
     if (!return_copy_read(plan, source, &payload->source) || !return_copy_clone(&payload->source, &payload->result) ||
@@ -895,14 +896,14 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     const MelodyFillParams *range = context;
     MelodyFillParams defaults = melody_fill_params_default();
     NodeId source;
-    PlanReturnVariation variation;
+    SectionReturnVariation variation;
     if (target.kind != FILL_TARGET_NODE || !form_return_source(plan, target.id, &source, &variation)) {
         return false;
     }
     if (!range) {
         range = &defaults;
     }
-    if (variation == PLAN_RETURN_ORNAMENT || variation == PLAN_RETURN_VARIED || variation == PLAN_RETURN_EMBELLISH) {
+    if (variation == SECTION_RETURN_ORNAMENT || variation == SECTION_RETURN_VARIED || variation == SECTION_RETURN_EMBELLISH) {
         ReturnPayload *kept[ORNAMENT_CANDIDATES];
         size_t kept_count = 0;
         for (size_t draw = 0; draw < 2 * ORNAMENT_CANDIDATES && kept_count < ORNAMENT_CANDIDATES; draw++) {
@@ -919,7 +920,7 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
                 continue;
             }
             kept[kept_count++] = payload;
-            if (!add_payload(out, variation == PLAN_RETURN_VARIED ? "varied" : (variation == PLAN_RETURN_EMBELLISH ? "embellish" : "ornament"), payload)) {
+            if (!add_payload(out, variation == SECTION_RETURN_VARIED ? "varied" : (variation == SECTION_RETURN_EMBELLISH ? "embellish" : "ornament"), payload)) {
                 return false;
             }
         }
@@ -927,22 +928,22 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     }
     /* A re-registration is proposed up and down; the one that leaves the range is not made. */
     int octaves[2] = {12, -12};
-    for (size_t i = 0; i < (variation == PLAN_RETURN_REREGISTER ? 2u : 1u); i++) {
+    for (size_t i = 0; i < (variation == SECTION_RETURN_REREGISTER ? 2u : 1u); i++) {
         ReturnPayload *payload = make_payload(plan, target.id, source, variation);
         if (!payload) {
             return false;
         }
-        payload->octave = variation == PLAN_RETURN_REREGISTER ? octaves[i] : 0;
+        payload->octave = variation == SECTION_RETURN_REREGISTER ? octaves[i] : 0;
         payload->range_low = range->range_low;
         payload->range_high = range->range_high;
         if (!return_vary(payload, rng)) {
             return_payload_destroy(payload);
             continue;
         }
-        const char *label = variation == PLAN_RETURN_EXACT       ? "exact"
-                            : variation == PLAN_RETURN_REHARMONIZE ? "reharmonize"
-                            : variation == PLAN_RETURN_FIGURATE    ? "figurate"
-                            : variation == PLAN_RETURN_SETTING     ? "setting"
+        const char *label = variation == SECTION_RETURN_EXACT       ? "exact"
+                            : variation == SECTION_RETURN_REHARMONIZE ? "reharmonize"
+                            : variation == SECTION_RETURN_FIGURATE    ? "figurate"
+                            : variation == SECTION_RETURN_SETTING     ? "setting"
                             : i == 0                              ? "octave up"
                                                                   : "octave down";
         if (!add_payload(out, label, payload)) {
@@ -1068,7 +1069,7 @@ bool form_return_checker(const PiecePlan *plan, FillTarget target, const FillOpe
         return fill_default_checker(plan, target, operator_, candidate, context, out);
     }
     const ReturnPayload *payload = candidate->payload;
-    PlanReturn ret;
+    ReturnRef ret;
     if (!payload || payload->magic != RETURN_PAYLOAD_MAGIC || target.kind != FILL_TARGET_NODE) {
         return false;
     }
@@ -1078,7 +1079,7 @@ bool form_return_checker(const PiecePlan *plan, FillTarget target, const FillOpe
         reject(out, "variation is not the one asked for");
         return true;
     }
-    if (payload->variation == PLAN_RETURN_EXACT) {
+    if (payload->variation == SECTION_RETURN_EXACT) {
         if (!return_result_matches(payload, NULL)) {
             reject(out, "exact return is not the returned section");
             return true;

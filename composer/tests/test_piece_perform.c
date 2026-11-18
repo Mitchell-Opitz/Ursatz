@@ -118,7 +118,7 @@ static size_t composed_sections(const PiecePlan *plan, NodeId *out) {
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (!plan_node_has_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             out[count++] = child;
         }
     }
@@ -158,12 +158,9 @@ static void check_performance(const FormSpec *form, const PiecePlan *plan) {
             same_lane(plan, section->source, performance.plan, section->node, PLAN_LANE_INNER_VOICE, voice);
         }
         /* The letter, the cadences and the key are the source's. */
-        for (size_t c = 0; c < plan_node_constraint_count(plan, section->source); c++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, section->source, c);
-            if (constraint->kind == PLAN_CONSTRAINT_SECTION_LETTER) {
-                const PlanConstraint *copied = plan_node_find_constraint(performance.plan, section->node, PLAN_CONSTRAINT_SECTION_LETTER);
-                assert(copied && strcmp(copied->params.letter, constraint->params.letter) == 0);
-            }
+        if (plan_section_or_empty(plan, section->source)->letter[0] != '\0') {
+            assert(strcmp(plan_section_or_empty(performance.plan, section->node)->letter,
+                          plan_section_or_empty(plan, section->source)->letter) == 0);
         }
     }
     /* The performed plan renders 24 bars and twice the notes of the composed one (each section is played twice). */
@@ -267,9 +264,9 @@ static void check_parts_performance(const FormSpec *form, unsigned long seed, co
 static void check_region_keys(void) {
     FormRegion parallel;
     memset(&parallel, 0, sizeof(parallel));
-    parallel.major[0] = 1;
+    snprintf(parallel.major[0], sizeof(parallel.major[0]), "omt.relation.parallel");
     parallel.major_count = 1;
-    parallel.minor[0] = 1;
+    snprintf(parallel.minor[0], sizeof(parallel.minor[0]), "omt.relation.parallel");
     parallel.minor_count = 1;
     FillRng rng;
     AnalysisKey key;
@@ -283,9 +280,9 @@ static void check_region_keys(void) {
     /* Any other degree is the closely related key, as before: 6 of C major is A minor, 3 of A minor is C major. */
     FormRegion other;
     memset(&other, 0, sizeof(other));
-    other.major[0] = 6;
+    snprintf(other.major[0], sizeof(other.major[0]), "omt.relation.submediant");
     other.major_count = 1;
-    other.minor[0] = 3;
+    snprintf(other.minor[0], sizeof(other.minor[0]), "omt.relation.mediant");
     other.minor_count = 1;
     assert(piece_region_key(test_knowledge(), c_major, &other, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
            harmony_key_mode(&key) == HARMONY_MODE_MINOR);
@@ -294,7 +291,7 @@ static void check_region_keys(void) {
     /* A degree that is no closely related key is refused. */
     FormRegion none;
     memset(&none, 0, sizeof(none));
-    none.major[0] = 7;
+    snprintf(none.major[0], sizeof(none.major[0]), "omt.relation.subtonic");
     none.major_count = 1;
     assert(!piece_region_key(test_knowledge(), c_major, &none, &rng, &key));
 }

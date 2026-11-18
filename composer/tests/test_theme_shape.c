@@ -11,7 +11,7 @@
  * The theme shape table (R-416) against what the switch code of grow_request.c said before the table replaced it: for
  * each of the nine pairings, the ideas it has and their places, the slot, first flag and length of each place, and the
  * slots it uses. The expected values below are written out from that old code, not read from the table. Indexed by the
- * PlanThemeBeginning (presentation, antecedent, compound basic idea), the PlanThemeEnding (continuation, consequent,
+ * SectionBeginning (presentation, antecedent, compound basic idea), the SectionEnding (continuation, consequent,
  * cadential) and then the GrowIdea, the GrowPlace (basic, repetition, fragment 1, fragment 2, cadential) or the GrowSlot.
  * The units of a slot are only checked for a slot the pairing uses.
  */
@@ -81,7 +81,7 @@ static const char *const SLOT_FUNCTIONS[GROW_SLOT_COUNT] = {"beginning", "contra
 static const char *const SLOT_NODES[GROW_SLOT_COUNT] = {NULL, "s1", "s2", "s3"};
 
 static void check_pairing(int beginning, int ending) {
-    PlanThemePairing pairing = {(PlanThemeBeginning)beginning, (PlanThemeEnding)ending};
+    SectionPairing pairing = {(SectionBeginning)beginning, (SectionEnding)ending};
     for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
         GrowPlace place = GROW_PLACE_COUNT;
         bool has = grow_idea_place(&pairing, (GrowIdea)idea, &place);
@@ -140,8 +140,8 @@ int main(void) {
     static const char *const BEGINNING_LIBRARY[3] = {"presentation", "antecedent", "compound-basic-idea"};
     static const char *const ENDING_NAMES[3] = {"continuation", "consequent", "cadential"};
     for (int i = 0; i < 3; i++) {
-        const ThemeShapeHalf *beginning = theme_shape_beginning((PlanThemeBeginning)i);
-        const ThemeShapeHalf *ending = theme_shape_ending((PlanThemeEnding)i);
+        const ThemeShapeHalf *beginning = theme_shape_beginning((SectionBeginning)i);
+        const ThemeShapeHalf *ending = theme_shape_ending((SectionEnding)i);
         assert(beginning && beginning->beginning && beginning->value == i);
         assert(strcmp(beginning->plan_name, BEGINNING_PLAN[i]) == 0);
         assert(strcmp(beginning->library_name, BEGINNING_LIBRARY[i]) == 0);
@@ -151,8 +151,8 @@ int main(void) {
         assert(strcmp(ending->library_name, ENDING_NAMES[i]) == 0);
         assert(theme_shape_half_find(false, ENDING_NAMES[i]) == ending);
     }
-    assert(theme_shape_beginning((PlanThemeBeginning)3) == NULL);
-    assert(theme_shape_ending((PlanThemeEnding)-1) == NULL);
+    assert(theme_shape_beginning((SectionBeginning)3) == NULL);
+    assert(theme_shape_ending((SectionEnding)-1) == NULL);
     assert(theme_shape_half_find(true, "continuation") == NULL);
     assert(theme_shape_half_find(false, "presentation") == NULL);
     assert(theme_shape_half_find(true, NULL) == NULL);

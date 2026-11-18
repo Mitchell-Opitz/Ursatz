@@ -7,6 +7,7 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
+#include "piece/piece_internal.h"
 #include "util/plan_util.h"
 
 #define MAX_CADENCES 2
@@ -17,11 +18,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *sections) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        bool material = false;
-        for (size_t c = 0; c < plan_node_constraint_count(plan, child); c++) {
-            PlanConstraintKind kind = plan_node_constraint_at(plan, child, c)->kind;
-            material = material || kind == PLAN_CONSTRAINT_MATERIAL || kind == PLAN_CONSTRAINT_SEAM;
-        }
+        bool material = plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL) || plan_section_has_role(plan, child, SECTION_ROLE_SEAM);
         if (!material && count < FORM_SPEC_MAX_SECTIONS) {
             sections[count++] = child;
         }
@@ -56,12 +53,13 @@ static const FormSpecSize *size_of_plan(const FormSpec *form, const PiecePlan *p
 
 /* The cadences of the section in order: the one it ends in, then an antecedent's weak one. Returns how many. */
 static size_t section_cadences(const PiecePlan *plan, NodeId section, CadenceType *out) {
+    const SectionDescription *described = plan_section_or_empty(plan, section);
     size_t count = 0;
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section) && count < MAX_CADENCES; i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
-            out[count++] = constraint->params.cadence;
-        }
+    if (described->has_cadence) {
+        out[count++] = described->cadence;
+    }
+    if (described->has_first_cadence && count < MAX_CADENCES) {
+        out[count++] = described->first_cadence;
     }
     return count;
 }
@@ -80,31 +78,18 @@ static bool section_key(const PiecePlan *plan, NodeId section, AnalysisKey *out)
 
 /* Whether the section is a transition: it ends on the new key's V in a half cadence, not a PAC (R-503, R-512). */
 static bool is_transition(const PiecePlan *plan, NodeId section) {
-    PlanSectionFunction function;
-    return plan_section_function_of(plan, section, &function) && function.function == PLAN_FUNCTION_TRANSITION;
+    SectionFunction function;
+    return plan_section_function_of(plan, section, &function) && function.function == SECTION_FUNCTION_TRANSITION;
 }
 
-/* The CADENCE constraints of the section, replaced by these. */
+/* The cadences of the section, replaced by these: the one it ends in, then an antecedent's weak one. */
 static PieceResult set_section_cadences(PiecePlan *plan, NodeId section, const CadenceType *cadences, size_t count) {
-    for (size_t i = plan_node_constraint_count(plan, section); i > 0; i--) {
-        if (plan_node_constraint_at(plan, section, i - 1)->kind == PLAN_CONSTRAINT_CADENCE) {
-            PieceResult result = piece_result_of_plan(plan_node_remove_constraint(plan, section, i - 1));
-            if (result != PIECE_OK) {
-                return result;
-            }
-        }
-    }
-    for (size_t i = 0; i < count; i++) {
-        PlanConstraint constraint;
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = cadences[i];
-        PieceResult result = piece_result_of_plan(plan_node_add_constraint(plan, section, &constraint));
-        if (result != PIECE_OK) {
-            return result;
-        }
-    }
-    return PIECE_OK;
+    SectionDescription description = *plan_section_or_empty(plan, section);
+    description.has_cadence = count > 0;
+    description.cadence = count > 0 ? cadences[0] : CADENCE_TYPE_PERFECT_AUTHENTIC;
+    description.has_first_cadence = count > 1;
+    description.first_cadence = count > 1 ? cadences[1] : CADENCE_TYPE_PERFECT_AUTHENTIC;
+    return piece_result_of_plan(plan_node_set_section(plan, section, &description));
 }
 
 PieceResult piece_plan_cadences(PiecePlan *plan, const FormSpec *form, const FormSpecSize *size, const PieceKeyPlan *keys) {
@@ -146,42 +131,51 @@ PieceResult piece_plan_cadences(PiecePlan *plan, const FormSpec *form, const For
     return PIECE_OK;
 }
 
-static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out);
+bool piece_form_record_migrate(PiecePlan *plan) {
+    NodeId root = plan_root(plan);
+    const char *root_name = root == PLAN_NODE_NONE ? NULL : plan_node_name(plan, root);
+    for (size_t i = 0; root_name && !plan_form_record(plan) && i < form_spec_builtin_count(); i++) {
+        if (strcmp(root_name, form_spec_builtin_plan_name(i)) != 0) {
+            continue;
+        }
+        FormSpec *form = NULL;
+        FormSpecResult parsed = form_spec_builtin(form_spec_builtin_name(i), &form);
+        if (parsed != FORM_SPEC_OK) {
+            return parsed != FORM_SPEC_ERR_ALLOC;
+        }
+        bool ok = piece_set_form_record(plan, form) == PIECE_OK;
+        NodeId sections[FORM_SPEC_MAX_SECTIONS];
+        size_t count = sections_of(plan, sections);
+        const FormSpecSize *size = ok && form->closing && count > 0 ? size_of_plan(form, plan, sections, count) : NULL;
+        for (size_t s = 0; ok && size && s < count; s++) {
+            SectionDescription described = *plan_section_or_empty(plan, sections[s]);
+            described.closed = size->sections[s].closed;
+            ok = plan_node_set_section(plan, sections[s], &described) == PLAN_OK;
+        }
+        form_spec_destroy(form);
+        return ok;
+    }
+    return true;
+}
 
 static void fail(PieceCadenceCheck *out, const char *what, size_t section) {
     out->ok = false;
     snprintf(out->reason, sizeof(out->reason), "%s (section %zu)", what, section);
 }
 
-bool piece_check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out) {
+bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out) {
     if (!plan || !out) {
         return false;
     }
     memset(out, 0, sizeof(*out));
     out->ok = true;
-    FormSpec *owned = NULL;
-    if (!form) {
-        if (form_spec_builtin_for_plan(plan, &owned) != FORM_SPEC_OK) {
-            return false;
-        }
-        form = owned;
+    const PlanFormRecord *record = plan_form_record(plan);
+    if (!record || !record->closing) {
+        return true; /* nothing to check: a plan of no form, or a form that does not close (loop, layered, game loop) */
     }
-    bool read = check_cadences(plan, form, out);
-    form_spec_destroy(owned);
-    return read;
-}
-
-static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out) {
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     size_t count = sections_of(plan, sections);
     if (count == 0) {
-        return false;
-    }
-    if (!form->closing) {
-        return true;
-    }
-    const FormSpecSize *size = size_of_plan(form, plan, sections, count);
-    if (!size) {
         return false;
     }
     LaneSpanId first_key;
@@ -200,7 +194,7 @@ static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCad
         if (away && cadences[0] != CADENCE_TYPE_PERFECT_AUTHENTIC && cadences[0] != CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
             !is_transition(plan, sections[i])) {
             fail(out, "a section ends in another key without an authentic cadence", i);
-        } else if (!away && i + 1 < count && cadences[0] == CADENCE_TYPE_PERFECT_AUTHENTIC && !size->sections[i].closed) {
+        } else if (!away && i + 1 < count && cadences[0] == CADENCE_TYPE_PERFECT_AUTHENTIC && !plan_section_or_empty(plan, sections[i])->closed) {
             fail(out, "a section closes in the home key before the piece ends", i);
         }
         if (i + 1 == count) {

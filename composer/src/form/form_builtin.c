@@ -1,10 +1,12 @@
 #include <ursatz_composer/form_spec.h>
 
+#include <stdio.h>
 #include <string.h>
 
 /* form/form_builtin_data.c, generated at build time from the files in forms/ by cmake/EmbedForms.cmake. */
 extern const char *const COMPOSER_FORM_DOCUMENTS[];
 extern const char *const COMPOSER_FORM_NAMES[];
+extern const char *const COMPOSER_FORM_PLAN_NAMES[];
 extern const size_t COMPOSER_FORM_DOCUMENT_COUNT;
 
 size_t form_spec_builtin_count(void) {
@@ -19,6 +21,26 @@ const char *form_spec_builtin_name(size_t index) {
     return index < COMPOSER_FORM_DOCUMENT_COUNT ? COMPOSER_FORM_NAMES[index] : NULL;
 }
 
+const char *form_spec_builtin_plan_name(size_t index) {
+    return index < COMPOSER_FORM_DOCUMENT_COUNT ? COMPOSER_FORM_PLAN_NAMES[index] : NULL;
+}
+
+/* FNV-1a 64 of the document's bytes as embedded, 16 lowercase hexadecimal digits; the text is one buffer per call. */
+const char *form_spec_builtin_hash(size_t index) {
+    static char hashes[FORM_SPEC_BUILTIN_MAX][FORM_SPEC_HASH_LEN + 1];
+    if (index >= COMPOSER_FORM_DOCUMENT_COUNT || index >= FORM_SPEC_BUILTIN_MAX) {
+        return NULL;
+    }
+    if (hashes[index][0] == '\0') {
+        unsigned long long hash = 14695981039346656037ULL;
+        for (const unsigned char *byte = (const unsigned char *)COMPOSER_FORM_DOCUMENTS[index]; *byte; byte++) {
+            hash = (hash ^ *byte) * 1099511628211ULL;
+        }
+        snprintf(hashes[index], sizeof(hashes[index]), "%016llx", hash);
+    }
+    return hashes[index];
+}
+
 FormSpecResult form_spec_builtin(const char *name, FormSpec **out) {
     if (out) {
         *out = NULL;
@@ -30,30 +52,6 @@ FormSpecResult form_spec_builtin(const char *name, FormSpec **out) {
         if (strcmp(name, COMPOSER_FORM_NAMES[i]) == 0) {
             return form_spec_parse(COMPOSER_FORM_DOCUMENTS[i], out, NULL);
         }
-    }
-    return FORM_SPEC_ERR_UNKNOWN;
-}
-
-FormSpecResult form_spec_builtin_for_plan(const PiecePlan *plan, FormSpec **out) {
-    if (out) {
-        *out = NULL;
-    }
-    if (!plan || !out) {
-        return FORM_SPEC_ERR_NULL;
-    }
-    NodeId root = plan_root(plan);
-    const char *root_name = root == PLAN_NODE_NONE ? NULL : plan_node_name(plan, root);
-    for (size_t i = 0; root_name && i < COMPOSER_FORM_DOCUMENT_COUNT; i++) {
-        FormSpec *form = NULL;
-        FormSpecResult parsed = form_spec_parse(COMPOSER_FORM_DOCUMENTS[i], &form, NULL);
-        if (parsed != FORM_SPEC_OK) {
-            return parsed;
-        }
-        if (strcmp(root_name, form->plan_name) == 0) {
-            *out = form;
-            return FORM_SPEC_OK;
-        }
-        form_spec_destroy(form);
     }
     return FORM_SPEC_ERR_UNKNOWN;
 }

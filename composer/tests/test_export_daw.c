@@ -189,10 +189,7 @@ static void test_midi(const RenderedPlan *rendered, const PiecePlan *plan) {
     assert(tracks[0].marker_count == 3);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId node = plan_node_child_at(plan, root, i);
-        bool material = false;
-        for (size_t k = 0; k < plan_node_constraint_count(plan, node); k++) {
-            material = material || plan_node_constraint_at(plan, node, k)->kind == PLAN_CONSTRAINT_MATERIAL;
-        }
+        bool material = plan_section_has_role(plan, node, SECTION_ROLE_MATERIAL);
         if (plan_node_kind(plan, node) != PLAN_NODE_SECTION || material) {
             continue;
         }

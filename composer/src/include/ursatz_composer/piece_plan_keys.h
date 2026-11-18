@@ -40,6 +40,8 @@ typedef struct {
     AnalysisKey end;
     const char *start_relation;
     const char *end_relation;
+    PlanKeyAnchor anchor;      /* what the relations are taken from: home for a drawn region, else a request's region (R-610) */
+    const char *anchor_section; /* the anchor section's name for PLAN_KEY_ANCHOR_SECTION, else NULL */
 } PieceSectionKeys;
 
 typedef struct {
@@ -63,10 +65,12 @@ bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, cons
  * form, over the sections and the material, and sets the KEY constraint of a section that ends in another key to the
  * key it ends in. The home key is the KEY constraint of the first section. rng NULL plans no modulation (one span, the
  * home key); otherwise every choice is drawn from rng. knowledge resolves the regions and the parallel mode (piece_region_key); it may
- * be NULL for a form with no section in the parallel mode that stays home. *out is the plan made.
+ * be NULL for a form with no section in the parallel mode that stays home. *out is the plan made. regions (NULL for none) is one
+ * entry for each section of the size, the keys a request's overlays ask for (R-610): after the draws, a section with a region
+ * starts and ends in it, so the draws and every other section's key are as they were.
  */
 PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size,
-                            FillRng *rng, PieceKeyPlan *out);
+                            FillRng *rng, const PieceRegion *regions, PieceKeyPlan *out);
 
 typedef struct {
     bool ok;
@@ -108,9 +112,16 @@ typedef struct {
  * the sections' CADENCE and KEY constraints and the key lane: the last section's cadence is a PAC, so the strongest of
  * the piece; a section that ends in another key ends in a PAC or IAC; and no section before the last closes in the home
  * key with a PAC unless the form marks it closed (its sections' "closed": ternary A, every variation and the theme, rounded binary A).
- * True when the plan could be read; the result is in out. A form that does not close (loop, layered) has nothing to check. form NULL means the built-in form the plan's root is named for
- * (form_spec_builtin_for_plan); a plan of no built-in form cannot be read.
+ * True when the plan could be read; the result is in out. A form that does not close (loop, layered), and a plan that records no form (plan_form_record), have nothing to
+ * check: `closing` is read from the record and each section's `closed` from its description.
  */
-bool piece_check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out);
+bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out);
+
+/*
+ * A plan of a format before 5 has no form record: this gives it the record of the built-in form whose plan name is its root node's
+ * name, and each section's `closed` from that form's size (the first size with the plan's sections in its proportions). A plan of
+ * no built-in form is left as it is. False only when out of memory; nothing is Given yet when the plan reader calls it.
+ */
+bool piece_form_record_migrate(PiecePlan *plan);
 
 #endif

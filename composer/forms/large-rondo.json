@@ -1,12 +1,12 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "large-rondo",
   "label": "Large rondo (ABA-C-ABA)",
   "closing": true,
   "modulates": true,
   "tempo": 132,
-  "regions": [{"name": "subordinate", "major": [5], "minor": [3]}, {"name": "trio", "major": [6, 4], "minor": [6, 4]}],
+  "regions": [{"name": "subordinate", "major": ["omt.relation.dominant"], "minor": ["omt.relation.mediant"]}, {"name": "trio", "major": ["omt.relation.submediant", "omt.relation.subdominant"], "minor": ["omt.relation.submediant", "omt.relation.subdominant"]}],
   "sizes": [
     {"bars": 88, "default": true, "sections": [
       {"name": "A", "letter": "A", "role": "theme", "bars": 8, "beginning": "presentation", "ending": "continuation", "cadence": "perfect-authentic", "closed": true},

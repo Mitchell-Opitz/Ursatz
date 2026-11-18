@@ -27,7 +27,7 @@
  * functions, worked out from the nodes and the lanes and not from the operator; the same seed gives the same plan and
  * the same records.
  *
- * With two arguments, a beginning and an ending (0 to 2 each, the order of PlanThemeBeginning and PlanThemeEnding),
+ * With two arguments, a beginning and an ending (0 to 2 each, the order of SectionBeginning and SectionEnding),
  * it runs that pairing alone; with none, all nine.
  */
 
@@ -63,8 +63,8 @@ static Motive make_motive(const Scenario *scenario) {
     return motive;
 }
 
-static GrowRequest make_request(const Scenario *scenario, const Motive *motive, size_t bars, PlanThemeBeginning beginning,
-                                PlanThemeEnding ending) {
+static GrowRequest make_request(const Scenario *scenario, const Motive *motive, size_t bars, SectionBeginning beginning,
+                                SectionEnding ending) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
@@ -98,26 +98,26 @@ static size_t tiling(const PiecePlan *plan, PlanLaneKind lane, PlanSpan within, 
     return count;
 }
 
-static PhraseBeginning beginning_of(PlanThemeBeginning beginning) {
+static PhraseBeginning beginning_of(SectionBeginning beginning) {
     switch (beginning) {
-    case PLAN_THEME_BEGINNING_ANTECEDENT:
+    case SECTION_BEGINNING_ANTECEDENT:
         return PHRASE_BEGINNING_ANTECEDENT;
-    case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
+    case SECTION_BEGINNING_COMPOUND_BASIC_IDEA:
         return PHRASE_BEGINNING_COMPOUND_BASIC_IDEA;
-    case PLAN_THEME_BEGINNING_PRESENTATION:
+    case SECTION_BEGINNING_PRESENTATION:
         return PHRASE_BEGINNING_PRESENTATION;
     }
     assert(0);
     return PHRASE_BEGINNING_COUNT;
 }
 
-static PhraseEnding ending_of(PlanThemeEnding ending) {
+static PhraseEnding ending_of(SectionEnding ending) {
     switch (ending) {
-    case PLAN_THEME_ENDING_CONTINUATION:
+    case SECTION_ENDING_CONTINUATION:
         return PHRASE_ENDING_CONTINUATION;
-    case PLAN_THEME_ENDING_CONSEQUENT:
+    case SECTION_ENDING_CONSEQUENT:
         return PHRASE_ENDING_CONSEQUENT;
-    case PLAN_THEME_ENDING_CADENTIAL:
+    case SECTION_ENDING_CADENTIAL:
         return PHRASE_ENDING_CADENTIAL;
     }
     assert(0);
@@ -133,38 +133,38 @@ typedef struct {
     long units;
 } Expected;
 
-static size_t expected_nodes(PlanThemeBeginning beginning, PlanThemeEnding ending, Expected *out) {
+static size_t expected_nodes(SectionBeginning beginning, SectionEnding ending, Expected *out) {
     size_t count = 0;
-    bool antecedent = beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    bool antecedent = beginning == SECTION_BEGINNING_ANTECEDENT;
     out[count++] = antecedent ? (Expected){"antecedent", PLAN_NODE_PHRASE, 0, 4}
                               : (Expected){"phrase", PLAN_NODE_PHRASE, 0, 8};
-    if (beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
+    if (beginning == SECTION_BEGINNING_PRESENTATION) {
         out[count++] = (Expected){"presentation", PLAN_NODE_SUBPHRASE, 0, 4};
-    } else if (beginning == PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA) {
+    } else if (beginning == SECTION_BEGINNING_COMPOUND_BASIC_IDEA) {
         out[count++] = (Expected){"compound basic idea", PLAN_NODE_SUBPHRASE, 0, 4};
     }
     out[count++] = (Expected){"basic idea", PLAN_NODE_IDEA, 0, 2};
-    out[count++] = beginning == PLAN_THEME_BEGINNING_PRESENTATION ? (Expected){"repetition", PLAN_NODE_IDEA, 2, 2}
+    out[count++] = beginning == SECTION_BEGINNING_PRESENTATION ? (Expected){"repetition", PLAN_NODE_IDEA, 2, 2}
                                                                   : (Expected){"contrasting idea", PLAN_NODE_IDEA, 2, 2};
     if (antecedent) {
-        out[count++] = ending == PLAN_THEME_ENDING_CONSEQUENT ? (Expected){"consequent", PLAN_NODE_PHRASE, 4, 4}
+        out[count++] = ending == SECTION_ENDING_CONSEQUENT ? (Expected){"consequent", PLAN_NODE_PHRASE, 4, 4}
                                                               : (Expected){"second phrase", PLAN_NODE_PHRASE, 4, 4};
     }
     switch (ending) {
-    case PLAN_THEME_ENDING_CONTINUATION:
+    case SECTION_ENDING_CONTINUATION:
         out[count++] = (Expected){"continuation", PLAN_NODE_SUBPHRASE, 4, 4};
         out[count++] = (Expected){"fragment 1", PLAN_NODE_IDEA, 4, 1};
         out[count++] = (Expected){"fragment 2", PLAN_NODE_IDEA, 5, 1};
         out[count++] = (Expected){"cadential", PLAN_NODE_IDEA, 6, 2};
         break;
-    case PLAN_THEME_ENDING_CONSEQUENT:
+    case SECTION_ENDING_CONSEQUENT:
         if (!antecedent) {
             out[count++] = (Expected){"consequent", PLAN_NODE_SUBPHRASE, 4, 4};
         }
         out[count++] = (Expected){"consequent basic idea", PLAN_NODE_IDEA, 4, 2};
         out[count++] = (Expected){"consequent contrasting idea", PLAN_NODE_IDEA, 6, 2};
         break;
-    case PLAN_THEME_ENDING_CADENTIAL:
+    case SECTION_ENDING_CADENTIAL:
         out[count++] = (Expected){"cadential", PLAN_NODE_SUBPHRASE, 4, 4};
         out[count++] = (Expected){"cadential 1", PLAN_NODE_IDEA, 4, 2};
         out[count++] = (Expected){"cadential 2", PLAN_NODE_IDEA, 6, 2};
@@ -174,21 +174,19 @@ static size_t expected_nodes(PlanThemeBeginning beginning, PlanThemeEnding endin
     return count;
 }
 
-static PlanThemePairing theme_pairing(const PiecePlan *plan, NodeId theme) {
-    PlanThemePairing pairing = {PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION};
-    bool found = false;
-    for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
-        if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
-            pairing = constraint->params.theme_pairing;
-            found = true;
-        }
-    }
-    assert(found);
+static SectionPairing theme_pairing(const PiecePlan *plan, NodeId theme) {
+    SectionPairing pairing = {SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION};
+    const SectionDescription *section = plan_node_section(plan, theme);
+    assert(section && section->has_pairing);
+    pairing = section->pairing;
     return pairing;
 }
 
 static bool node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out) {
+    if (plan_node_section(plan, node) && plan_node_section(plan, node)->has_cadence) {
+        *out = plan_node_section(plan, node)->cadence;
+        return true;
+    }
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
@@ -260,8 +258,8 @@ static long motive_length(const PiecePlan *plan, const char *name) {
 
 /* ------------------------------------------------------------------ checks */
 
-static void check_structure(const PiecePlan *plan, const Scenario *scenario, size_t bars, PlanThemeBeginning beginning,
-                            PlanThemeEnding ending) {
+static void check_structure(const PiecePlan *plan, const Scenario *scenario, size_t bars, SectionBeginning beginning,
+                            SectionEnding ending) {
     Rational bar;
     assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
@@ -288,23 +286,13 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
         }
     }
     /* A theme with an antecedent has two phrases; any other has one. */
-    assert(phrases == (beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? 2u : 1u));
+    assert(phrases == (beginning == SECTION_BEGINNING_ANTECEDENT ? 2u : 1u));
 
     /* The pairing is the one asked for, and the form is the one the pairing makes. */
-    PlanThemePairing pairing = theme_pairing(plan, theme);
+    SectionPairing pairing = theme_pairing(plan, theme);
     assert(pairing.beginning == beginning && pairing.ending == ending);
     PhraseLevelForm form;
     assert(standard_form_pairing_form(beginning_of(beginning), ending_of(ending), &form));
-    PlanArchetype archetype = PLAN_ARCHETYPE_SENTENCE;
-    for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE) {
-            archetype = constraint->params.archetype;
-        }
-    }
-    assert((form == PHRASE_LEVEL_FORM_SENTENCE) == (archetype == PLAN_ARCHETYPE_SENTENCE));
-    assert((form == PHRASE_LEVEL_FORM_PERIOD) == (archetype == PLAN_ARCHETYPE_PERIOD));
-    assert((form == PHRASE_LEVEL_FORM_HYBRID) == (archetype == PLAN_ARCHETYPE_HYBRID));
     if (form == PHRASE_LEVEL_FORM_HYBRID) {
         assert(standard_form_pairing_is_hybrid(beginning_of(beginning), ending_of(ending)));
     }
@@ -314,11 +302,11 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
 
     /* The motives: m0 is the source; a contrasting idea does not read as a repetition of it. */
     const PlanNotes *m0 = motive_notes(plan, "m0");
-    if (beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
+    if (beginning != SECTION_BEGINNING_PRESENTATION) {
         const PlanNotes *contrast = motive_notes(plan, "m1");
         assert(!standard_form_idea_reads_as_repetition(same_contour(m0, contrast)));
     }
-    if (ending == PLAN_THEME_ENDING_CONTINUATION) {
+    if (ending == SECTION_ENDING_CONTINUATION) {
         for (const char *const *fragment = (const char *const[]){"fragment 1", "fragment 2", NULL}; *fragment;
              fragment++) {
             long length = ticks(plan_node_span(plan, test_find_node(plan, *fragment)).length);
@@ -329,17 +317,17 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
             assert(standard_form_is_fragmentation((size_t)motive_length(plan, "m0"), (size_t)motive_length(plan, *name)));
         }
     }
-    if (ending == PLAN_THEME_ENDING_CONSEQUENT) {
+    if (ending == SECTION_ENDING_CONSEQUENT) {
         /* The consequent restates the basic idea in its motive: the same notes, in a transposition if the restated
            family chose one, so the same contour. */
         assert(same_contour(m0, motive_notes(plan, "m2")));
-        if (beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+        if (beginning == SECTION_BEGINNING_ANTECEDENT) {
             /* ... and ends with a contrasting idea that is not the antecedent's. */
             assert(!same_pitches(motive_notes(plan, "m1"), motive_notes(plan, "m3")));
         }
         assert(!standard_form_idea_reads_as_repetition(same_contour(m0, motive_notes(plan, "m3"))));
     }
-    if (ending == PLAN_THEME_ENDING_CADENTIAL) {
+    if (ending == SECTION_ENDING_CADENTIAL) {
         /* Two ideas liquidated from m0, each a residue that keeps a segment (R-345, R-350), the second at least as far as
            the first; no residue has more notes than m0. */
         const PlanMotiveRef *first = motive_ref(plan, "m2");
@@ -365,10 +353,10 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
         assert(standard_form_antecedent_length_usual(bars / 2) == (bars == 8));
         assert(standard_form_consequent_length_usual(bars / 2, bars / 2));
     }
-    if (beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+    if (beginning == SECTION_BEGINNING_ANTECEDENT) {
         CadenceType weak;
         CadenceType strong;
-        NodeId second = test_find_node(plan, ending == PLAN_THEME_ENDING_CONSEQUENT ? "consequent" : "second phrase");
+        NodeId second = test_find_node(plan, ending == SECTION_ENDING_CONSEQUENT ? "consequent" : "second phrase");
         assert(node_cadence(plan, test_find_node(plan, "antecedent"), &weak) && node_cadence(plan, second, &strong));
         assert(harmony_cadence_strength(weak) <
                harmony_cadence_strength(strong));
@@ -397,8 +385,8 @@ static LaneSpanId last_in(const LaneSpanId *ids, size_t count, const PiecePlan *
     return last;
 }
 
-static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t bars, PlanThemeBeginning beginning,
-                        PlanThemeEnding ending) {
+static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t bars, SectionBeginning beginning,
+                        SectionEnding ending) {
     LaneSpanId ids[96];
     NodeId theme_node = test_find_node(plan, "theme");
     PlanSpan theme = plan_node_span(plan, theme_node);
@@ -408,7 +396,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     size_t cells_per_bar = scenario->unit == 8 || (scenario->beats == 4 && scenario->unit == 4) ? 2 : 1;
     long cell_ticks = bar_ticks / (long)cells_per_bar;
     long half = (long)bars * bar_ticks / 2;
-    bool antecedent = beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    bool antecedent = beginning == SECTION_BEGINNING_ANTECEDENT;
 
     /* Harmony: chords on cells, tiling the theme, starting on the tonic. */
     size_t chords = tiling(plan, PLAN_LANE_HARMONY, theme, ids, 96);
@@ -420,7 +408,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     }
     /* The cadence is on the last chord of the theme. */
     CadenceType final_cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    assert(node_cadence(plan, test_find_node(plan, antecedent ? (ending == PLAN_THEME_ENDING_CONSEQUENT ? "consequent" : "second phrase") : "phrase"),
+    assert(node_cadence(plan, test_find_node(plan, antecedent ? (ending == SECTION_ENDING_CONSEQUENT ? "consequent" : "second phrase") : "phrase"),
                         &final_cadence));
     assert(final_cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     const PlanConstraint *cadence = plan_lane_span_constraint_count(plan, ids[chords - 1]) > 0
@@ -534,8 +522,8 @@ static char *records_text(const GrowOutcome *outcome) {
     return all;
 }
 
-static void run_scenario(const Scenario *scenario, size_t bars, unsigned long seed, PlanThemeBeginning beginning,
-                         PlanThemeEnding ending) {
+static void run_scenario(const Scenario *scenario, size_t bars, unsigned long seed, SectionBeginning beginning,
+                         SectionEnding ending) {
     Motive motive = make_motive(scenario);
     GrowRequest request = make_request(scenario, &motive, bars, beginning, ending);
     GrowConfig config;
@@ -580,7 +568,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     }
 }
 
-static void test_pairing(PlanThemeBeginning beginning, PlanThemeEnding ending) {
+static void test_pairing(SectionBeginning beginning, SectionEnding ending) {
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         for (size_t bars = 8; bars >= 4; bars -= 4) {
             for (unsigned long seed = 1; seed <= 10; seed++) {
@@ -594,8 +582,8 @@ static void test_pairing(PlanThemeBeginning beginning, PlanThemeEnding ending) {
 static void test_first_cadence(void) {
     const Scenario *scenario = &SCENARIOS[0];
     Motive motive = make_motive(scenario);
-    GrowRequest request = make_request(scenario, &motive, 8, PLAN_THEME_BEGINNING_ANTECEDENT,
-                                       PLAN_THEME_ENDING_CONSEQUENT);
+    GrowRequest request = make_request(scenario, &motive, 8, SECTION_BEGINNING_ANTECEDENT,
+                                       SECTION_ENDING_CONSEQUENT);
     request.first_cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
     for (unsigned long seed = 1; seed <= 3; seed++) {
         PiecePlan *plan = NULL;
@@ -628,8 +616,8 @@ static void test_bad_requests(void) {
     const Scenario *scenario = &SCENARIOS[0];
     Motive motive = make_motive(scenario);
     PiecePlan *plan = NULL;
-    GrowRequest period = make_request(scenario, &motive, 8, PLAN_THEME_BEGINNING_ANTECEDENT,
-                                      PLAN_THEME_ENDING_CONSEQUENT);
+    GrowRequest period = make_request(scenario, &motive, 8, SECTION_BEGINNING_ANTECEDENT,
+                                      SECTION_ENDING_CONSEQUENT);
     GrowRequest changed = period;
     assert(grow_build_plan_checked(&period, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
@@ -647,34 +635,34 @@ static void test_bad_requests(void) {
     changed.first_cadence = CADENCE_TYPE_PLAGAL;
     assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     /* The weak cadence is read only for an antecedent: a presentation ignores it. */
-    changed = make_request(scenario, &motive, 8, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONSEQUENT);
+    changed = make_request(scenario, &motive, 8, SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONSEQUENT);
     changed.first_cadence = CADENCE_TYPE_DECEPTIVE;
     assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
     /* A pairing that is none of the nine. */
     changed = period;
-    changed.pairing.ending = (PlanThemeEnding)9;
+    changed.pairing.ending = (SectionEnding)9;
     assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
 }
 
 int main(int argc, char **argv) {
     if (argc == 3) {
-        PlanThemeBeginning beginning = (PlanThemeBeginning)atoi(argv[1]);
-        PlanThemeEnding ending = (PlanThemeEnding)atoi(argv[2]);
-        assert(beginning >= PLAN_THEME_BEGINNING_PRESENTATION && beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA);
-        assert(ending >= PLAN_THEME_ENDING_CONTINUATION && ending <= PLAN_THEME_ENDING_CADENTIAL);
+        SectionBeginning beginning = (SectionBeginning)atoi(argv[1]);
+        SectionEnding ending = (SectionEnding)atoi(argv[2]);
+        assert(beginning >= SECTION_BEGINNING_PRESENTATION && beginning <= SECTION_BEGINNING_COMPOUND_BASIC_IDEA);
+        assert(ending >= SECTION_ENDING_CONTINUATION && ending <= SECTION_ENDING_CADENTIAL);
         test_pairing(beginning, ending);
-        if (beginning == PLAN_THEME_BEGINNING_ANTECEDENT && ending == PLAN_THEME_ENDING_CONSEQUENT) {
+        if (beginning == SECTION_BEGINNING_ANTECEDENT && ending == SECTION_ENDING_CONSEQUENT) {
             test_first_cadence();
             test_bad_requests();
         }
         printf("test_grow_period %d %d: ok\n", (int)beginning, (int)ending);
         return 0;
     }
-    for (int beginning = PLAN_THEME_BEGINNING_PRESENTATION; beginning <= PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA;
+    for (int beginning = SECTION_BEGINNING_PRESENTATION; beginning <= SECTION_BEGINNING_COMPOUND_BASIC_IDEA;
          beginning++) {
-        for (int ending = PLAN_THEME_ENDING_CONTINUATION; ending <= PLAN_THEME_ENDING_CADENTIAL; ending++) {
-            test_pairing((PlanThemeBeginning)beginning, (PlanThemeEnding)ending);
+        for (int ending = SECTION_ENDING_CONTINUATION; ending <= SECTION_ENDING_CADENTIAL; ending++) {
+            test_pairing((SectionBeginning)beginning, (SectionEnding)ending);
         }
     }
     test_first_cadence();

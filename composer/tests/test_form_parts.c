@@ -74,8 +74,8 @@ static const Row ROWS[] = {{"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4}, {"A min
 
 /* The 32-bar form; the transition's line is the member that differs between cases. */
 static const char *const FORM_HEAD =
-    "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"form-parts\", \"label\": \"Form parts\", \"modulates\": true,"
-    " \"regions\": [{\"name\": \"subordinate\", \"major\": [5], \"minor\": [3]}],"
+    "{\"schema\": \"ursatz-form\", \"version\": 2, \"name\": \"form-parts\", \"label\": \"Form parts\", \"modulates\": true,"
+    " \"regions\": [{\"name\": \"subordinate\", \"major\": [\"omt.relation.dominant\"], \"minor\": [\"omt.relation.mediant\"]}],"
     " \"sizes\": [{\"bars\": 32, \"default\": true, \"sections\": ["
     "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"presentation\","
     " \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"closed\": true},";
@@ -175,7 +175,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (!plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             sections[count++] = child;
         }
     }
@@ -212,8 +212,8 @@ static void check_transition(const PiecePlan *plan, const Row *row, unsigned lon
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 4);
     NodeId t = sections[1];
-    PlanSectionFunction function;
-    assert(plan_section_function_of(plan, t, &function) && function.function == PLAN_FUNCTION_TRANSITION);
+    SectionFunction function;
+    assert(plan_section_function_of(plan, t, &function) && function.function == SECTION_FUNCTION_TRANSITION);
     PlanSpan span = plan_node_span(plan, t);
     Rational bar = {row->beats, row->unit};
     Rational half = {0, 1};
@@ -374,9 +374,9 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 7);
     NodeId r = sections[4];
-    PlanSectionFunction function;
-    assert(plan_section_function_of(plan, r, &function) && function.function == PLAN_FUNCTION_RETRANSITION);
-    assert(!plan_node_find_constraint(plan, r, PLAN_CONSTRAINT_ARCHETYPE));
+    SectionFunction function;
+    assert(plan_section_function_of(plan, r, &function) && function.function == SECTION_FUNCTION_RETRANSITION);
+    assert(!plan_section_or_empty(plan, r)->has_pairing);
     PlanSpan span = plan_node_span(plan, r);
 
     /* In the home key, from its first bar: every key span that touches R is the home key's. */
@@ -488,9 +488,9 @@ static void check_coda(const PiecePlan *plan, const Row *row, unsigned long seed
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(piece_sections(plan, sections) == 7);
     NodeId k = sections[6];
-    PlanSectionFunction function;
-    assert(plan_section_function_of(plan, k, &function) && function.function == PLAN_FUNCTION_CODA);
-    assert(!plan_node_find_constraint(plan, k, PLAN_CONSTRAINT_ARCHETYPE));
+    SectionFunction function;
+    assert(plan_section_function_of(plan, k, &function) && function.function == SECTION_FUNCTION_CODA);
+    assert(!plan_section_or_empty(plan, k)->has_pairing);
 
     /* Three phrases of 4, 2 and 2 bars. */
     PlanSpan whole = plan_node_span(plan, k);
@@ -559,8 +559,8 @@ static PiecePlan *plan_only(const FormSpec *form, const Motive *motive, PieceRes
 }
 
 static const char *const CODA_AFTER_REGION =
-    "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"coda-after-region\", \"label\": \"Coda after a region\","
-    " \"modulates\": true, \"regions\": [{\"name\": \"subordinate\", \"major\": [5], \"minor\": [3]}],"
+    "{\"schema\": \"ursatz-form\", \"version\": 2, \"name\": \"coda-after-region\", \"label\": \"Coda after a region\","
+    " \"modulates\": true, \"regions\": [{\"name\": \"subordinate\", \"major\": [\"omt.relation.dominant\"], \"minor\": [\"omt.relation.mediant\"]}],"
     " \"sizes\": [{\"bars\": 32, \"default\": true, \"sections\": ["
     "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"presentation\","
     " \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"closed\": true},"
@@ -573,7 +573,7 @@ static const char *const CODA_AFTER_REGION =
 
 /* A theme and a coda, every section 8 bars: a motive of 2 bars fits it. */
 static const char *const THEME_AND_CODA =
-    "{\"schema\": \"ursatz-form\", \"version\": 1, \"name\": \"theme-and-coda\", \"label\": \"Theme and coda\","
+    "{\"schema\": \"ursatz-form\", \"version\": 2, \"name\": \"theme-and-coda\", \"label\": \"Theme and coda\","
     " \"sizes\": [{\"bars\": 16, \"default\": true, \"sections\": ["
     "{\"name\": \"A\", \"letter\": \"A\", \"role\": \"theme\", \"bars\": 8, \"beginning\": \"presentation\","
     " \"ending\": \"continuation\", \"cadence\": \"perfect-authentic\", \"closed\": true},"
@@ -607,7 +607,8 @@ static void test_applies(void) {
     PlanSpan span = plan_node_span(plan, sections[6]);
     PlanConstraint constraints[16];
     size_t count = plan_node_constraint_count(plan, sections[6]);
-    assert(count > 0 && count <= 16);
+    assert(count <= 16);
+    const SectionDescription coda_description = *plan_node_section(plan, sections[6]);
     for (size_t i = 0; i < count; i++) {
         constraints[i] = *plan_node_constraint_at(plan, sections[6], i);
     }
@@ -619,6 +620,7 @@ static void test_applies(void) {
         assert(rational_div(length, (Rational){8, 1}, &edited.length) == RATIONAL_OK);
         NodeId node;
         assert(plan_add_node(plan, plan_root(plan), PLAN_NODE_SECTION, edited, "K", &node) == PLAN_OK);
+        assert(plan_node_set_section(plan, node, &coda_description) == PLAN_OK);
         for (size_t i = 0; i < count; i++) {
             assert(plan_node_add_constraint(plan, node, &constraints[i]) == PLAN_OK);
         }

@@ -21,7 +21,15 @@ static PlanResult time_scaled(Rational time, size_t count, Rational *out) {
 bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanConstraintKind kind,
                              PlanConstraint *out) {
     const PlanConstraint *found = plan_lane_span_find_constraint(plan, id, kind);
-    if (!found) {
+    CadenceType cadence;
+    if (!found && kind == PLAN_CONSTRAINT_CADENCE && plan_node_cadence(plan, owner, &cadence)) {
+        /* the owner's cadence: a section's description gives it, any other node its first cadence constraint */
+        memset(out, 0, sizeof(*out));
+        out->kind = PLAN_CONSTRAINT_CADENCE;
+        out->params.cadence = cadence;
+        return true;
+    }
+    if (!found && kind != PLAN_CONSTRAINT_CADENCE) {
         found = plan_node_find_constraint(plan, owner, kind);
     }
     if (found) {

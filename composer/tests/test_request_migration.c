@@ -387,7 +387,7 @@ static void test_plan_formats(void) {
         PlanJsonError error;
         assert(plan_from_json(test_knowledge(), v1, &read, &error) == PLAN_OK);
         char *v4 = plan_to_json(read, &error);
-        assert(v4 && strstr(v4, "\"format_version\": 4") && strstr(v4, "\"mode\"") == NULL && strstr(v4, "omt.material.") != NULL);
+        assert(v4 && strstr(v4, "\"format_version\": 5") && strstr(v4, "\"mode\"") == NULL && strstr(v4, "omt.material.") != NULL);
         /* format 3 is the same text without the note ids */
         char *v3 = test_plan_text_as_format_three(v4);
         assert(v3 && strstr(v3, "\"format_version\": 3") && strstr(v3, "next_note_id") == NULL);

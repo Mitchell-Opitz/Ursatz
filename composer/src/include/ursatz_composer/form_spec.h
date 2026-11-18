@@ -4,13 +4,15 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <plan/section.h>
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/piece_plan.h>
 
 /*
  * A form as a document (R-416): the sections of a short form in order, at each size it comes in, with the keys a piece
  * may move to, the cadences, the returns and the checks that apply. The document is JSON ("schema" "ursatz-form",
- * "version" 1, schema/form.v1.schema.json, docs/forms.md); form_spec_parse reads it and refuses anything it does not
+ * "version" 2, schema/form.v2.schema.json, docs/forms.md); form_spec_parse reads it and refuses anything it does not
  * know, naming the member. A form is built into the library from forms/<name>.json (form_builtin.h) and one builder,
  * form_build_plan (piece.h), makes the plan of every form from its document.
  */
@@ -39,47 +41,6 @@
 /* The most meters a form lists. */
 #define FORM_SPEC_MAX_METERS 4
 
-/*
- * What a section is in the form. The theme-like rows of the role table (theme, contrast, return, variation, layer,
- * pattern, sequence, episode, codetta, liquidation, transition, retransition, subordinate, coda, elaboration) are the sections grow-theme builds; the others
- * (intro, body, turnaround, ending) are for forms whose sections are free phrases (P46 to P53 add rows). The transition, retransition, subordinate
- * theme and coda are the parts of a larger form (R-503); the elaboration is the sonata-allegro's middle section (R-523), a theme-like role with no rules of its own.
- */
-typedef enum {
-    FORM_ROLE_THEME,
-    FORM_ROLE_CONTRAST,
-    FORM_ROLE_RETURN,
-    FORM_ROLE_VARIATION,
-    FORM_ROLE_LAYER,
-    FORM_ROLE_PATTERN,
-    FORM_ROLE_SEQUENCE,
-    FORM_ROLE_EPISODE,
-    FORM_ROLE_CODETTA,
-    FORM_ROLE_LIQUIDATION,
-    FORM_ROLE_TRANSITION,
-    FORM_ROLE_RETRANSITION,
-    FORM_ROLE_SUBORDINATE,
-    FORM_ROLE_CODA,
-    FORM_ROLE_ELABORATION,
-    FORM_ROLE_INTRO,
-    FORM_ROLE_BODY,
-    FORM_ROLE_TURNAROUND,
-    FORM_ROLE_ENDING
-} FormRole;
-
-#define FORM_ROLE_COUNT 19
-
-/* "theme", "contrast", "return", "variation", "layer", "pattern", "sequence", "episode", "codetta", "liquidation", "transition",
- * "retransition", "subordinate", "coda", "elaboration", "intro", "body", "turnaround", "ending"; NULL for an invalid role. */
-const char *form_role_name(FormRole role);
-/* The label of a role: "Theme", "Contrast", "Return", "Variation", "Layer", "Pattern", "Sequence", "Episode", "Codetta",
- * "Liquidation", "Transition", "Retransition", "Subordinate theme", "Coda", "Elaboration", "Intro", "Loop body", "Turnaround", "Ending" (the four parts as the API vocabulary's piece_parts label them); NULL for an invalid role. */
-const char *form_role_label(FormRole role);
-/* False for a name that is none of these. */
-bool form_role_find(const char *name, FormRole *out);
-/* True for the roles of a section grow-theme builds (the theme-like rows of the role table). */
-bool form_role_is_theme(FormRole role);
-
 /* The checks of a compose run a form may switch off; a form that names none runs every one. */
 typedef enum {
     FORM_CHECK_SECTIONS = 1u << 0, /* each theme section is heard as its shape */
@@ -92,66 +53,30 @@ typedef enum {
 #define FORM_CHECK_ALL (FORM_CHECK_SECTIONS | FORM_CHECK_RETURNS | FORM_CHECK_KEYS | FORM_CHECK_CADENCES | FORM_CHECK_SEAM)
 
 
-/* A key a piece may move to: the degrees of the home key it is drawn from in a major and in a minor home key. */
+/*
+ * A key a piece may move to: the relations of the knowledge snapshot (K6, `omt.relation.*`) it is reached by from the home key,
+ * one list for a major and one for a minor home key; one is drawn from the list (R-606).
+ */
 typedef struct {
     char name[FORM_SPEC_NAME_MAX];
-    int major[FORM_SPEC_MAX_DEGREES];
+    char major[FORM_SPEC_MAX_DEGREES][SECTION_WORD_MAX];
     size_t major_count;
-    int minor[FORM_SPEC_MAX_DEGREES];
+    char minor[FORM_SPEC_MAX_DEGREES][SECTION_WORD_MAX];
     size_t minor_count;
 } FormRegion;
-
-/* Whether a section that leads into the next ends with a connective (R-486): never, on some seeds, or on every seed. */
-#define FORM_CONNECTIVE_NONE 0
-#define FORM_CONNECTIVE_SOMETIMES 1
-#define FORM_CONNECTIVE_ALWAYS 2
-
-/* One section of one size. */
-typedef struct {
-    char name[FORM_SPEC_SECTION_NAME_MAX]; /* the section node's name: "A", "theme", "variation 1", "layer 1" */
-    char letter[PLAN_SECTION_LETTER_MAX];  /* "A", "B", "A'", "T", "V1", "L1" */
-    FormRole role;
-    size_t bars;                           /* its length in whole bars; 0 when it is given in beats */
-    size_t beats;                          /* its length in whole beats of the meter; 0 when it is given in bars */
-    PlanThemePairing pairing;
-    CadenceType cadence;                   /* the core type of the cadence it ends in: PAC, IAC or HC */
-    char cadence_name[FORM_SPEC_CADENCE_NAME_MAX]; /* the cadence's name in the standard-harmony vocabulary */
-    bool closed;                           /* it may close in the home key with a PAC before the piece ends */
-    int key_start;                         /* FORM_SPEC_HOME, or the index of the region it starts in */
-    int key_end;                           /* FORM_SPEC_HOME, or the index of the region it ends in */
-    size_t returns;                        /* the index of the section it returns, or FORM_SPEC_NO_RETURN */
-    PlanReturnVariation variation;         /* how it varies the section it returns; read only when it returns one */
-    PlanAccompanimentPattern setting;      /* the pattern of a setting return's new accompaniment (R-518): block, arpeggiated, alberti or oom-pah */
-    bool has_motive;                       /* its motive is made from m0 by `motive`; false for m0 itself */
-    MotiveRelationStep motive;             /* how its motive is made from m0 (open parameters are drawn) */
-    unsigned layers;                       /* the LAYERS mask (PlanLayers) in a layered form; 0 for none */
-    int pedal;                             /* the degree its presentation sits over in the bass: 0 none, 5 dominant (R-446) */
-    bool leads_in;                         /* it is held until the sections after it are written, then filled against them (R-486) */
-    int connective;                        /* FORM_CONNECTIVE_*: a stepwise link in its last bar; only with leads_in */
-    bool has_construction;                /* the section is a theme of `bars` bars of any length, 3 to 16, with a construction (R-468) */
-    bool construction_auto;                /* the construction is chosen at build from the bars and the motive (R-469); else `construction` */
-    PlanConstruction construction;         /* the bars of each idea and the extensions, reason GIVEN; read when has_construction and not auto */
-    bool has_figure;                       /* the motive of variation of a figurate return (R-497) */
-    PlanFigure figure;                     /* read when has_figure */
-    bool parallel;                         /* the section is in the home key's parallel key (R-499); only a figurate variation */
-    bool tonic_major;                      /* the section is in the home tonic's major key (R-517): home in a major piece, its parallel key in a minor one; only a return */
-    bool home_mode;                        /* the section is at home in the home mode, its source copied across modes when it is in the other (R-524); only a reharmonize return */
-    bool independent;                      /* a transition made from a motive of its own (R-504); only a transition */
-    bool lyric;                            /* a subordinate theme whose motive is m0 augmented (R-506); only a subordinate theme */
-} FormSectionSpec;
 
 /* One size of a form. */
 typedef struct {
     size_t bars;      /* the sum of its sections' bars */
     size_t count;     /* the variations or layers it has; 0 for a form with no count */
     bool is_default;  /* the size a request gets when it asks for none */
-    FormSectionSpec sections[FORM_SPEC_MAX_SECTIONS];
+    SectionDescription sections[FORM_SPEC_MAX_SECTIONS]; /* a form's section use of the description (library plan/section.h) */
     size_t section_count;
 } FormSpecSize;
 
 /* A cadence rule of a form whose sections the request gives: the last section whose role is one of `roles` ends in `cadence`. */
 typedef struct {
-    FormRole roles[FORM_SPEC_MAX_PARTS];
+    SectionRole roles[FORM_SPEC_MAX_PARTS];
     size_t role_count;
     CadenceType cadence;                           /* the core type: PAC, IAC or HC */
     char cadence_name[FORM_SPEC_CADENCE_NAME_MAX]; /* its name in the standard-harmony vocabulary */
@@ -161,7 +86,7 @@ typedef struct {
 typedef struct {
     char id[FORM_SPEC_ID_MAX];
     char letter[PLAN_SECTION_LETTER_MAX];
-    FormRole role;
+    SectionRole role;
     size_t bars;
     CadenceType cadence;
     char cadence_name[FORM_SPEC_CADENCE_NAME_MAX];
@@ -220,9 +145,9 @@ typedef struct {
      * else the first rule of last_cadences whose roles hold the last section of that role; the section a request with no
      * ending gets.
      */
-    FormRole roles[FORM_SPEC_MAX_PARTS];
+    SectionRole roles[FORM_SPEC_MAX_PARTS];
     size_t role_count;
-    FormRole loop_roles[FORM_SPEC_MAX_PARTS];
+    SectionRole loop_roles[FORM_SPEC_MAX_PARTS];
     size_t loop_role_count;
     CadenceType default_cadence;
     char default_cadence_name[FORM_SPEC_CADENCE_NAME_MAX];
@@ -264,9 +189,9 @@ const FormSpecSize *form_spec_size(const FormSpec *form, size_t bars, size_t cou
 const FormSpecSize *form_spec_default_size(const FormSpec *form);
 
 /* Whether the role is one of the form's `roles` (a form whose sections the request gives). */
-bool form_spec_has_role(const FormSpec *form, FormRole role);
+bool form_spec_has_role(const FormSpec *form, SectionRole role);
 /* Whether the role is one of the form's loop roles. */
-bool form_spec_role_in_loop(const FormSpec *form, FormRole role);
+bool form_spec_role_in_loop(const FormSpec *form, SectionRole role);
 
 /* Whether a piece of the form may be in the meter: true when the form lists no meters or lists this one. */
 bool form_spec_meter_allowed(const FormSpec *form, const PlanMeter *meter);
@@ -276,6 +201,12 @@ bool form_spec_performed(const FormSpec *form);
 
 /* The index of the region with that name, or -1. */
 int form_spec_region_find(const FormSpec *form, const char *name);
+/* FORM_SPEC_HOME, or the index of the region a section's key region names (a region that is none or home is home). */
+int form_spec_region_of(const FormSpec *form, const SectionRegion *region);
+/* The index in the size of the section with that name ("" or an unknown name: FORM_SPEC_NO_RETURN). */
+size_t form_spec_section_index(const FormSpecSize *size, const char *name);
+/* The step a section's motive makes from m0: false when it has none; a lyric theme's is m0 augmented, its open ratio left for the builder. */
+bool form_spec_section_motive(const SectionDescription *section, MotiveRelationStep *out);
 
 /*
  * The forms built into the library, one per file in forms/ in the order COMPOSER_FORMS in src/CMakeLists.txt lists
@@ -286,9 +217,14 @@ size_t form_spec_builtin_count(void);
 /* The document text of the form at index (NUL-terminated), and the name its file goes by; NULL past the end. */
 const char *form_spec_builtin_document(size_t index);
 const char *form_spec_builtin_name(size_t index);
+/* The name the plan's form node of the form at index has (its plan_name, else its name), and the hash of its document: FNV-1a 64
+   of the embedded bytes, 16 lowercase hexadecimal digits. NULL past the end. The hash is kept in static storage. */
+#define FORM_SPEC_BUILTIN_MAX 32
+#define FORM_SPEC_HASH_LEN 16
+#define FORM_SPEC_VERSION 2 /* the version of the form documents this library reads and writes */
+const char *form_spec_builtin_plan_name(size_t index);
+const char *form_spec_builtin_hash(size_t index);
 /* Parses the built-in form with this name into *out (on every call: no state is kept); FORM_SPEC_ERR_UNKNOWN for none. */
 FormSpecResult form_spec_builtin(const char *name, FormSpec **out);
-/* The built-in form the plan's root node is named for (a form's plan_name); FORM_SPEC_ERR_UNKNOWN when none is. */
-FormSpecResult form_spec_builtin_for_plan(const PiecePlan *plan, FormSpec **out);
 
 #endif

@@ -1,6 +1,6 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "pedal-form",
   "label": "Pedal form",
   "sizes": [

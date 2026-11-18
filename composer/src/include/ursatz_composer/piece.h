@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
+#include <plan/section.h>
 #include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_spec.h>
@@ -45,24 +47,20 @@ typedef enum { PIECE_PART_INTRO, PIECE_PART_BODY, PIECE_PART_TURNAROUND, PIECE_P
 
 /* "intro", "body", "turnaround", "ending"; "unknown" for a value that is none of them. */
 const char *piece_part_name(PiecePart part);
-/* False for a name that is none of these. */
-bool piece_part_from_name(const char *name, PiecePart *out);
 
 /* The part of a larger form a section is, when it is one (R-508): a transition (any body section but the ending) or a coda (the ending's). */
 typedef enum { PIECE_FUNCTION_NONE, PIECE_FUNCTION_TRANSITION, PIECE_FUNCTION_CODA } PieceFunction;
 
 /* "none", "transition", "coda"; "unknown" for a value that is none of them. */
 const char *piece_function_name(PieceFunction function);
-/* False for a name that is none of "transition" and "coda"; "none" is not a name a request gives. */
-bool piece_function_from_name(const char *name, PieceFunction *out);
 
 /*
  * What fills a section (R-170): nothing of its own (empty, made from the piece's basic motive), a motive (a theme
- * section at 4 or 8 bars or with a construction, else a free phrase), a composed theme's realized lanes (Given), or a progression.
+ * section at 4 or 8 bars or with a construction, else a free phrase), or a composed theme's realized lanes (Given). A section's harmony is its description's.
  */
-typedef enum { PIECE_FILL_EMPTY, PIECE_FILL_MOTIF, PIECE_FILL_THEME, PIECE_FILL_PROGRESSION } PieceFillKind;
+typedef enum { PIECE_FILL_EMPTY, PIECE_FILL_MOTIF, PIECE_FILL_THEME } PieceFillKind;
 
-/* "empty", "motif", "theme", "progression"; "unknown" for a value that is none of them. */
+/* "empty", "motif", "theme"; "unknown" for a value that is none of them. */
 const char *piece_fill_name(PieceFillKind fill);
 /* False for a name that is none of these. */
 bool piece_fill_from_name(const char *name, PieceFillKind *out);
@@ -71,30 +69,58 @@ bool piece_fill_from_name(const char *name, PieceFillKind *out);
 #define PIECE_STRUCTURE_MAX_SECTIONS 32
 #define PIECE_STRUCTURE_MAX_BARS 512
 
+/*
+ * A game loop section as the request gives it: its description (the section description of library/plan, R-605: `id`, `letter`, a
+ * `role` that is a part (intro, body, turnaround or ending), a `function` of a transition or a coda (R-508), `beats` (at least 1), the
+ * `pickup` before it (0 for none) and its `cadence`, which `has_cadence` false leaves to piece_default_cadences), then what fills it.
+ * piece_section_init zeroes it; the accessors read and set the part and the function in the description's terms.
+ */
 typedef struct {
-    char id[PIECE_SECTION_ID_MAX];
-    char letter[PLAN_SECTION_LETTER_MAX];
-    PiecePart part;
-    PieceFunction function;      /* none by default; a transition or a coda (R-508) */
-    size_t beats;                /* the length, in beats of the meter; at least 1 */
-    Rational pickup;             /* the anacrusis before the section; 0 for none */
-    bool has_cadence;            /* false: piece_default_cadences decides */
-    CadenceType cadence;
+    SectionDescription description;
     PieceFillKind fill;
     const Motive *motive;        /* motif: the section's own motive, else the piece's basic motive */
     bool has_into;               /* motif: a theme section's archetype */
     PlanArchetype into;          /* sentence by default; PLAN_ARCHETYPE_HYBRID reads `hybrid` */
-    PlanThemePairing hybrid;
+    SectionPairing hybrid;
     bool has_construction;       /* motif: a theme of the section's whole bars, 3 to 16, with a construction (R-468); no pickup */
     bool construction_auto;      /* the construction is chosen from the bars and the motive (R-469); else `construction` */
-    PlanConstruction construction; /* reason GIVEN; read when has_construction and not construction_auto */
+    SectionConstruction construction; /* reason GIVEN; read when has_construction and not construction_auto */
     const struct GrowPoolForm *pool; /* the motive forms the section's motives stage offers (B6) */
     size_t pool_count;
     const PiecePlan *theme_plan; /* theme: the composed theme to take the realized lanes from; must outlive the build */
-    const char *const *numerals; /* progression: the numerals, one per chord; must outlive the build */
-    size_t numeral_count;
-    size_t cells_per_chord;      /* progression: harmony cells each chord lasts; 0 for a bar */
 } PieceSection;
+
+/* A section with nothing set: an empty fill, no pickup. */
+static inline void piece_section_init(PieceSection *section) {
+    memset(section, 0, sizeof(*section));
+    section_description_init(&section->description);
+    section->description.pickup = (Rational){0, 1};
+}
+
+/* The part of a section: the description's role, which is one of intro, body, turnaround and ending. */
+static inline PiecePart piece_section_part(const PieceSection *section) {
+    return (PiecePart)(section->description.role - SECTION_ROLE_INTRO);
+}
+
+static inline void piece_section_set_part(PieceSection *section, PiecePart part) {
+    section->description.has_role = true;
+    section->description.role = (SectionRole)(SECTION_ROLE_INTRO + (int)part);
+}
+
+/* The function of a section: a transition or a coda, else none. */
+static inline PieceFunction piece_section_function(const PieceSection *section) {
+    if (!section->description.has_function) {
+        return PIECE_FUNCTION_NONE;
+    }
+    return section->description.function.function == SECTION_FUNCTION_TRANSITION ? PIECE_FUNCTION_TRANSITION
+           : section->description.function.function == SECTION_FUNCTION_CODA     ? PIECE_FUNCTION_CODA
+                                                                                  : PIECE_FUNCTION_NONE;
+}
+
+static inline void piece_section_set_function(PieceSection *section, PieceFunction function) {
+    section->description.has_function = function != PIECE_FUNCTION_NONE;
+    section->description.function.function = function == PIECE_FUNCTION_CODA ? SECTION_FUNCTION_CODA : SECTION_FUNCTION_TRANSITION;
+}
 
 typedef struct {
     const char *form;      /* the name of a built-in form: "binary", "rounded-binary", ... (form_spec.h) */
@@ -137,6 +163,13 @@ typedef struct {
      */
     PieceSection *sections;
     size_t section_count;
+    /*
+     * The overlays of a form that takes its sections from its size (R-610): for each one the section of the size it names (its
+     * description's `name`), the key it asks for (`region`) and what fills it (a motif with a motive of its own, or a composed
+     * theme). A section no overlay names is as the form has it. The game loop ignores them.
+     */
+    const PieceSection *overlays;
+    size_t overlay_count;
     bool has_voicing;
     PlanVoicing voicing;
 } PieceRequest;
@@ -187,8 +220,8 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
  *     (plan_give_section): its realized lanes are Given, moved and transposed to the section, and its archetype,
  *     pairing and cadences replace the request's. The section ends Realized and no stage targets it; the theme must be
  *     as long as the section, in the same meter and mode (PIECE_ERR_BAD_REQUEST otherwise);
- *   - a progression fill has its numerals Given from the section's start (plan_give_progression), cells_per_chord
- *     cells each (a bar when 0); the harmony stage fills the rest of the section.
+ *   - a section's harmony (its description's `harmony`: a progression, a schema or chords) is Given before it is composed
+ *     (piece_give_harmony); the harmony stage fills what is left of the section.
  * piece_request_check's refusals are PIECE_ERR_BAD_REQUEST.
  */
 PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, PiecePlan **out);
@@ -215,6 +248,48 @@ PieceResult piece_build_ending(const PiecePlan *loop_plan, const PieceRequest *r
  * bar; a meter or key not supported; an accompaniment and a voicing both.
  */
 PieceResult piece_request_check(const PieceRequest *request);
+
+/*
+ * The key a section of the request asks for with `region` (R-610): `has_region` is false for a section that gives none (it is in the
+ * home key), else `key` is the key, `relation`, `anchor` and `anchor_section` say what it was reached by when it is a relation (the
+ * K6 id, "" for a key given as a tonic and a material or as home) and `text` is the region as the reply shows it ("home", "Eb major",
+ * "mediant of A").
+ */
+typedef struct {
+    bool has_region;
+    bool changes_key; /* the key differs from the section before's (home for the first): the plan has a key change here */
+    AnalysisKey key;
+    char relation[PLAN_KEY_RELATION_MAX];
+    PlanKeyAnchor anchor;
+    char anchor_section[PLAN_KEY_ANCHOR_SECTION_MAX];
+    char text[128];
+} PieceRegion;
+
+/*
+ * Resolves the regions of the request's sections, in time order, into out (one entry per section). `home` is the request's key; a
+ * relation is taken from home, from the section before (`previous`) or from an earlier section (`anchor_section`). PIECE_ERR_BAD_REQUEST
+ * when one refuses: *refused is its section's index and message says why (the first section has no previous region; an anchor must be
+ * an earlier section; a region that is not a tonal or modal region in major or natural minor is refused naming P69, R-611).
+ */
+PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSnapshot *knowledge, PieceRegion *out, size_t *refused,
+                                  char *message, size_t message_size);
+
+/* The regions of a form that takes its sections from its size, from the request's overlays: an entry for each section of the size. */
+PieceResult piece_resolve_overlay_regions(const PieceRequest *request, const FormSpecSize *size, const KnowledgeSnapshot *knowledge,
+                                          PieceRegion *regions, bool *regional, size_t *refused, char *message, size_t message_size);
+
+/*
+ * Gives a section its harmony before it is composed (R-610): a progression (plan_give_progression, `cells` each or a bar), a schema
+ * (one stage a cell from the section's start, derived in the key) or chords at bars (plan_give_chords), in the section's key and
+ * the plan's meter. PIECE_ERR_BAD_REQUEST with the reason in message when the plan or the schema refuses it. The key must be the one the section
+ * is in; a section that modulates takes no schema.
+ */
+PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
+                               const AnalysisKey *key, char *message, size_t message_size);
+
+/* Whether the harmony can be given to a section of this length in this key and meter, tried on a scratch plan; message says why not. */
+bool piece_check_harmony(const PlanMeter *meter, const AnalysisKey *key, Rational length, const SectionHarmony *harmony, char *message,
+                         size_t message_size);
 
 /*
  * The cadences the form document gives, on every section of the request without has_cadence (the document's `cadences`:

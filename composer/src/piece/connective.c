@@ -61,8 +61,8 @@ static NodeId next_section(const PiecePlan *plan, NodeId section) {
     Rational end = position_add(span.start, span.length);
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (id != section && plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
-            !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL) &&
-            !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM) &&
+            !plan_section_has_role(plan, id, SECTION_ROLE_MATERIAL) &&
+            !plan_section_has_role(plan, id, SECTION_ROLE_SEAM) &&
             rational_cmp(plan_node_span(plan, id).start, end) == 0) {
             return id;
         }
@@ -115,23 +115,18 @@ static bool melody_range(const PiecePlan *plan, NodeId section, Rational bar_sta
     return found;
 }
 
-/* The constraint's written flag, set: the constraint is replaced, as a constraint is not changed in place. */
+/* The connective's written flag, set on the section's description. */
 static PieceResult mark_written(PiecePlan *plan, NodeId section) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_CONNECTIVE) {
-            PlanConstraint constraint;
-            memset(&constraint, 0, sizeof(constraint));
-            constraint.kind = PLAN_CONSTRAINT_CONNECTIVE;
-            constraint.params.connective.written = true;
-            PieceResult result = piece_result_of_plan(plan_node_remove_constraint(plan, section, i));
-            return result == PIECE_OK ? piece_add_constraint(plan, section, &constraint) : result;
-        }
+    if (plan_section_or_empty(plan, section)->connective == SECTION_CONNECTIVE_NONE) {
+        return PIECE_OK;
     }
-    return PIECE_OK;
+    SectionDescription description = *plan_node_section(plan, section);
+    description.connective_written = true;
+    return piece_result_of_plan(plan_node_set_section(plan, section, &description));
 }
 
 PieceResult piece_connective_write(PiecePlan *plan, NodeId section) {
-    if (!plan || !plan_has_node(plan, section) || !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_CONNECTIVE)) {
+    if (!plan || !plan_has_node(plan, section) || plan_section_or_empty(plan, section)->connective == SECTION_CONNECTIVE_NONE) {
         return PIECE_ERR_NULL;
     }
     PlanSpan span = plan_node_span(plan, section);

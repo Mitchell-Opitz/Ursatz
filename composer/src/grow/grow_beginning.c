@@ -75,7 +75,7 @@ static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng,
 
 bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     switch (spec->pairing.beginning) {
-    case PLAN_THEME_BEGINNING_PRESENTATION: {
+    case SECTION_BEGINNING_PRESENTATION: {
         /* A key opens on a phrase model's pivot chord; a presentation's prolongations have none. */
         if (request->has_start_change) {
             return false;
@@ -96,14 +96,14 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
         spec->has_developed[GROW_PLACE_REPETITION] = true;
         return true;
     }
-    case PLAN_THEME_BEGINNING_ANTECEDENT:
+    case SECTION_BEGINNING_ANTECEDENT:
         spec->beginning_shape = shape_for(request, spec, spec->first_cadence);
         spec->beginning_split = grow_split_possible(request, spec->layout.beginning_bars, spec->beginning_shape, spec->first_cadence);
         if (request->has_start_change && spec->beginning_shape != PLAN_HARMONY_SHAPE_PHRASE_MODEL) {
             return false;
         }
         return spec->part_whole || draw_contrasting_idea(request, rng, spec);
-    case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
+    case SECTION_BEGINNING_COMPOUND_BASIC_IDEA:
         if (request->has_start_change) {
             return false;
         }
@@ -171,10 +171,10 @@ static PlanResult build_presentation(GrowBuild *build) {
                                build->layout.length[GROW_PLACE_REPETITION], "repetition", &ideas[1]);
     }
     /* A repeat of the repetition follows it (R-468). */
-    NodeId repeats[PLAN_CONSTRUCTION_EXTENSIONS];
-    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+    NodeId repeats[SECTION_CONSTRUCTION_EXTENSIONS];
+    for (size_t k = 0; k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         repeats[k] = PLAN_NODE_NONE;
-        if (result == PLAN_OK && k < build->layout.extension_count && build->layout.extensions[k].kind == PLAN_EXTENSION_REPEAT &&
+        if (result == PLAN_OK && k < build->layout.extension_count && build->layout.extensions[k].kind == SECTION_EXTENSION_REPEAT &&
             build->layout.extensions[k].place == GROW_PLACE_REPETITION) {
             result = grow_add_repeat_node(build, presentation, k, &repeats[k]);
         }
@@ -233,7 +233,7 @@ static PlanResult build_presentation(GrowBuild *build) {
         }
     }
     /* A repeat has the repetition's shape of chords. */
-    for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+    for (size_t k = 0; result == PLAN_OK && k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         if (repeats[k] != PLAN_NODE_NONE) {
             result = grow_add_chord_targets(build, repeats[k], &repetition_shape, NULL);
         }
@@ -248,7 +248,7 @@ static PlanResult build_presentation(GrowBuild *build) {
         refs[GROW_PLACE_REPETITION].motive = motive;
         result = grow_add_melody_target(build, ideas[1], &refs[GROW_PLACE_REPETITION], NULL);
     }
-    for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+    for (size_t k = 0; result == PLAN_OK && k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         if (repeats[k] != PLAN_NODE_NONE) {
             PlanMotiveRef ref;
             grow_extension_ref(build, k, &ref);
@@ -266,7 +266,7 @@ static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanCons
     const GrowThemeSpec *spec = build->spec;
     PlanMotiveRef refs[2];
     NodeId motive;
-    NodeId repeats[PLAN_CONSTRUCTION_EXTENSIONS];
+    NodeId repeats[SECTION_CONSTRUCTION_EXTENSIONS];
     bool repeated = false;
 
     PlanResult result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.start[GROW_PLACE_BASIC],
@@ -275,9 +275,9 @@ static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanCons
         result = grow_add_node(build, container, PLAN_NODE_IDEA, build->layout.start[GROW_PLACE_CONTRAST],
                                build->layout.length[GROW_PLACE_CONTRAST], "contrasting idea", &ideas[1]);
     }
-    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+    for (size_t k = 0; k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         repeats[k] = PLAN_NODE_NONE;
-        if (result == PLAN_OK && k < build->layout.extension_count && build->layout.extensions[k].kind == PLAN_EXTENSION_REPEAT &&
+        if (result == PLAN_OK && k < build->layout.extension_count && build->layout.extensions[k].kind == SECTION_EXTENSION_REPEAT &&
             build->layout.extensions[k].place == GROW_PLACE_CONTRAST) {
             result = grow_add_repeat_node(build, container, k, &repeats[k]);
             repeated = true;
@@ -296,7 +296,7 @@ static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanCons
         refs[GROW_PLACE_CONTRAST].motive = motive;
         result = grow_add_melody_target(build, ideas[1], &refs[GROW_PLACE_CONTRAST], repeated ? NULL : cadence);
     }
-    for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+    for (size_t k = 0; result == PLAN_OK && k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         if (repeats[k] != PLAN_NODE_NONE) {
             PlanMotiveRef ref;
             grow_extension_ref(build, k, &ref);
@@ -359,11 +359,11 @@ static PlanResult build_compound_basic_idea(GrowBuild *build) {
 
 PlanResult grow_beginning_build(GrowBuild *build) {
     switch (build->spec->pairing.beginning) {
-    case PLAN_THEME_BEGINNING_PRESENTATION:
+    case SECTION_BEGINNING_PRESENTATION:
         return build_presentation(build);
-    case PLAN_THEME_BEGINNING_ANTECEDENT:
+    case SECTION_BEGINNING_ANTECEDENT:
         return build_antecedent(build);
-    case PLAN_THEME_BEGINNING_COMPOUND_BASIC_IDEA:
+    case SECTION_BEGINNING_COMPOUND_BASIC_IDEA:
         return build_compound_basic_idea(build);
     }
     return PLAN_ERR_BAD_PAYLOAD;

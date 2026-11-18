@@ -52,10 +52,7 @@ static NodeId theme_section(const PiecePlan *plan) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        bool material = false;
-        for (size_t c = 0; c < plan_node_constraint_count(plan, child); c++) {
-            material = material || plan_node_constraint_at(plan, child, c)->kind == PLAN_CONSTRAINT_MATERIAL;
-        }
+        bool material = plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL);
         if (plan_node_kind(plan, child) == PLAN_NODE_SECTION && !material) {
             return child;
         }
@@ -95,11 +92,11 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
                                  PieceFillKind fill) {
     PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
-    snprintf(section->id, sizeof(section->id), "%s", id);
-    snprintf(section->letter, sizeof(section->letter), "%s", letter);
-    section->part = part;
-    section->beats = beats;
-    section->pickup = (Rational){0, 1};
+    snprintf(section->description.id, sizeof(section->description.id), "%s", id);
+    snprintf(section->description.letter, sizeof(section->description.letter), "%s", letter);
+    piece_section_set_part(section, part);
+    section->description.beats = beats;
+    section->description.pickup = (Rational){0, 1};
     section->fill = fill;
     return section;
 }
@@ -110,11 +107,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *out, size_t max) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form) && count < max; i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        bool material = false;
-        for (size_t c = 0; c < plan_node_constraint_count(plan, child); c++) {
-            PlanConstraintKind kind = plan_node_constraint_at(plan, child, c)->kind;
-            material = material || kind == PLAN_CONSTRAINT_MATERIAL || kind == PLAN_CONSTRAINT_SEAM;
-        }
+        bool material = plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL) || plan_section_has_role(plan, child, SECTION_ROLE_SEAM);
         if (!material) {
             out[count++] = child;
         }
@@ -294,7 +287,7 @@ static void test_refused(void) {
     assert(plan_node_lane_spans(plan, sections[0], NULL, 0) == 0);
     plan_destroy(plan);
     theme_structure(&fixture, theme);
-    fixture.sections[0].beats = 16;
+    fixture.sections[0].description.beats = 16;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST);
 
     /* A plan whose section is not realized yet. */
@@ -346,14 +339,14 @@ static void test_progression(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         fixture_init(&fixture, 0, HARMONY_MODE_MAJOR);
-        PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 16, PIECE_FILL_PROGRESSION);
-        body->numerals = NUMERALS;
-        body->numeral_count = 4;
-        body->cells_per_chord = 2;
+        PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
+        body->description.harmony.kind = SECTION_HARMONY_PROGRESSION;
+        snprintf(body->description.harmony.numerals, sizeof(body->description.harmony.numerals), "I vi IV V");
+        body->description.harmony.cells = 2;
         /* The progression ends on V, so the section ends in a half cadence: the default for a section that is not the
            loop's last would be an imperfect authentic cadence, which no melody can make over a final V. */
-        body->has_cadence = true;
-        body->cadence = CADENCE_TYPE_HALF;
+        body->description.has_cadence = true;
+        body->description.cadence = CADENCE_TYPE_HALF;
         add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 16, PIECE_FILL_EMPTY);
         assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         NodeId sections[4];
@@ -416,7 +409,6 @@ static void test_progression(void) {
 
 /* A progression that ends before the section does: `I IV V I` in 8 bars; the harmony stage writes the other 4. */
 static void test_partial(void) {
-    static const char *const CHORDS[4] = {"I", "IV", "V", "I"};
     size_t stuck = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         Fixture fixture;
@@ -424,10 +416,10 @@ static void test_partial(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         fixture_init(&fixture, 0, HARMONY_MODE_MAJOR);
-        PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 32, PIECE_FILL_PROGRESSION);
-        body->numerals = CHORDS;
-        body->numeral_count = 4;
-        body->cells_per_chord = 2;
+        PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 32, PIECE_FILL_EMPTY);
+        body->description.harmony.kind = SECTION_HARMONY_PROGRESSION;
+        snprintf(body->description.harmony.numerals, sizeof(body->description.harmony.numerals), "I IV V I");
+        body->description.harmony.cells = 2;
         assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         NodeId section;
         assert(piece_sections(plan, &section, 1) == 1);

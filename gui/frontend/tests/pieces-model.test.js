@@ -25,7 +25,7 @@ function filled() {
     section("s1", "body", "A", 32, { kind: "motif", item_id: "mot-1", version: 2, into: "sentence", hybrid: "" }),
     section("s2", "body", "B", 16, { kind: "motif", item_id: "mot-2", version: 1, into: "sentence", hybrid: "" }),
     section("s3", "turnaround", "T", 8),
-    section("s4", "ending", "E", 8, { kind: "progression", numerals: "I  IV V I", cells: "2" }),
+    section("s4", "ending", "E", 8, null, { harmony: { kind: "progression", numerals: "I  IV V I", cells: "2", schema: "", chords: [] } }),
   ];
   return state;
 }
@@ -51,7 +51,7 @@ check(body.piece.structure.sections[2].fill.into === "sentence", "a motif of 4 b
 const freeState = filled();
 freeState.sections[2].beats = 14;
 check(P.bodyFromState(freeState).piece.structure.sections[2].fill.into === undefined, "a motif of any other length is a free phrase and has no theme form");
-check(same(body.piece.structure.sections[4].fill, { kind: "progression", numerals: "I IV V I", cells: 2 }), "numerals are tidied and cells are a number");
+check(same(body.piece.structure.sections[4].harmony, { progression: "I IV V I", cells: 2 }), "numerals are tidied and cells are a number");
 check(same(body.piece.motive, { item_id: "mot-9", version: 3 }) && body.piece.pool === "approved", "motive and pool are in the body");
 check(same(body.piece.accompaniment, { pattern: "alberti" }), "the accompaniment is a pattern");
 check(body.piece.brief.scopes.length === 1 && body.piece.brief.style_ids[0] === "sty-1", "the brief comes from the picks");
@@ -71,9 +71,9 @@ for (const placeholder of [{ uses: [], piece: { structure: null } }, { uses: [],
 const unfinished = filled();
 unfinished.sections[1].fill = { kind: "motif", item_id: "", version: 0, into: "sentence" };
 unfinished.sections[2].fill = { kind: "theme", item_id: "", version: 0 };
-unfinished.sections[4].fill = { kind: "progression", numerals: "  ", cells: "" };
+unfinished.sections[4].harmony = { kind: "progression", numerals: "  ", cells: "", schema: "", chords: [] };
 const unfinishedBody = P.bodyFromState(unfinished);
-check(unfinishedBody.piece.structure.sections.every((entry) => entry.fill.kind === "empty"), "a fill that names nothing is saved empty");
+check(unfinishedBody.piece.structure.sections.every((entry) => entry.fill.kind === "empty" && entry.harmony === undefined), "a fill that names nothing is saved empty, and so is a harmony");
 check(P.formProblems(unfinished).length === 0, "an unfinished fill is no problem");
 const old = P.stateFromBody({ uses: [], piece: { structure: { key: "F", mode: "minor", meter: "3/4", sections: [{ id: "s0", part: "body", letter: "A", beats: 6, pickup: "1", cadence: "HC", fill: { kind: "motif", item_id: "m", version: 1, into: null, hybrid: null } }] } } }, "x");
 check(old.meter === "3/4" && old.sections[0].cadence === "HC" && old.sections[0].pickup === "1", "meter, pickup and cadence are read");
@@ -484,5 +484,56 @@ check(
   sonatinaRows[11].letter === "B" && sonatinaRows[11].returns === "B" && sonatinaRows[11].changes.includes("mode: mapped into minor") && !sonatinaRows[5].changes.includes("mode:"),
   "the home mode return of B in a sonatina says it was mapped into minor and the elaboration says no mode",
 );
+
+/* Regions, harmony and overlays (P60, R-610, R-612). */
+const placed = filled();
+placed.sections[1].region = { kind: "relation", relation: "omt.relation.dominant", anchor: "home", tonic: "", material: "" };
+placed.sections[2].region = { kind: "key", tonic: "Eb", material: "omt.material.major", relation: "", anchor: "home" };
+placed.sections[3].region = { kind: "home", tonic: "", material: "", relation: "", anchor: "home" };
+placed.sections[1].harmony = { kind: "schema", numerals: "", cells: "", schema: "prinner", chords: [] };
+placed.sections[2].harmony = { kind: "chords", numerals: "", cells: "", schema: "", chords: [{ bar: "2", text: "V" }, { bar: "", text: "I" }, { bar: "3", text: "" }] };
+const placedBody = P.bodyFromState(placed).piece.structure.sections;
+check(same(placedBody[1].region, { relation: "omt.relation.dominant", anchor: "home" }) && same(placedBody[2].region, { tonic: "Eb", material: "omt.material.major" }) && placedBody[3].region === "home", "a section's region is null, home, a key or a relation");
+check(placedBody[0].region === undefined && placedBody[0].harmony === undefined, "a section without a region or harmony has no member");
+check(same(placedBody[1].harmony, { schema: "prinner" }) && same(placedBody[2].harmony, { chords: [{ bar: 2, text: "V" }] }), "a schema is a name and chords with no bar or no text are left out");
+const placedBack = P.stateFromBody({ uses: [], piece: { structure: { key: "D", material: "omt.material.natural-minor", meter: "4/4", sections: placedBody } } }, "pce-3");
+check(placedBack.sections[1].region.kind === "relation" && placedBack.sections[2].region.tonic === "Eb" && placedBack.sections[3].region.kind === "home", "a region round trips through the state");
+check(placedBack.sections[1].harmony.schema === "prinner" && placedBack.sections[2].harmony.chords[0].bar === "2", "a harmony round trips through the state");
+const unfinishedPlace = filled();
+unfinishedPlace.sections[1].region = { kind: "key", tonic: "", material: "", relation: "", anchor: "home" };
+unfinishedPlace.sections[2].harmony = { kind: "progression", numerals: " ", cells: "", schema: "", chords: [] };
+check(P.bodyFromState(unfinishedPlace).piece.structure.sections.every((entry) => entry.region === undefined), "a region that names nothing is saved as none");
+
+/* a stored progression fill is the section's harmony */
+const stored = { uses: [], piece: { structure: { key: "D", material: "omt.material.natural-minor", meter: "4/4", sections: [
+  { id: "s0", part: "body", letter: "A", beats: 16, pickup: "0", cadence: null, fill: { kind: "progression", numerals: "i iv V i", cells: 2 } },
+  { id: "s1", part: "ending", letter: "E", beats: 8, pickup: "0", cadence: null, fill: { kind: "progression", numerals: "I V" }, harmony: { schema: "prinner" } },
+] } } };
+const migrated = P.stateFromBody(stored, "pce-4");
+check(migrated.sections[0].fill.kind === "empty" && migrated.sections[0].harmony.kind === "progression" && migrated.sections[0].harmony.numerals === "i iv V i" && migrated.sections[0].harmony.cells === "2", "a stored progression fill reads as harmony");
+check(migrated.sections[1].harmony.kind === "schema", "a stored harmony wins over a stored progression fill");
+check(same(P.bodyFromState(migrated).piece.structure.sections[0].harmony, { progression: "i iv V i", cells: 2 }) && P.bodyFromState(migrated).piece.structure.sections[0].fill.kind === "empty", "and it is saved as harmony");
+
+/* the overlays of a sized form */
+const ternaryState = P.emptyState("pce-5");
+ternaryState.form = "ternary";
+ternaryState.overlays = [
+  { name: "B", region: { kind: "relation", relation: "omt.relation.mediant", anchor: "A", tonic: "", material: "" }, harmony: P.emptyHarmony(), fill: { kind: "theme", item_id: "th-1", version: 2 } },
+  { name: "A", region: P.emptyRegion(), harmony: P.emptyHarmony(), fill: P.emptyFill() },
+  { name: "A return", region: P.emptyRegion(), harmony: { kind: "schema", numerals: "", cells: "", schema: "prinner", chords: [] }, fill: P.emptyFill() },
+];
+const ternaryBody = P.bodyFromState(ternaryState).piece.structure;
+check(ternaryBody.sections.length === 2 && ternaryBody.sections[0].name === "B" && same(ternaryBody.sections[0].fill, { kind: "theme", item_id: "th-1", version: 2 }) && same(ternaryBody.sections[1], { name: "A return", harmony: { schema: "prinner" } }), "a sized form's sections are the overlays that have something");
+const ternaryBack = P.stateFromBody({ uses: [], piece: { structure: { form: "ternary", key: "C", material: "omt.material.major", meter: "4/4", bars: 0, count: 0, modulate: false, sections: ternaryBody.sections } } }, "pce-5");
+check(ternaryBack.overlays.length === 2 && ternaryBack.overlays[0].region.anchor === "A" && ternaryBack.overlays[0].fill.item_id === "th-1" && ternaryBack.overlays[1].harmony.schema === "prinner", "the overlays round trip through the state");
+const bare = P.bodyFromState(Object.assign(P.emptyState("pce-6"), { form: "ternary" })).piece.structure;
+check(bare.sections === undefined && P.stateFromBody({ uses: [], piece: { structure: { form: "ternary", key: "C", material: "omt.material.major", meter: "4/4", bars: 0, count: 0 } } }, "pce-6").overlays.length === 0, "a sized form with no overlay has no sections member, and a body saved before reads the same");
+
+/* the rows of a result show the region and the harmony */
+const placedRows = P.resultView({ summary: { versions: { loop: { sections: [
+  { id: "a", part: "body", letter: "A", start: "0/1", beats: 8, region: "dominant of home", harmony: "i iv V i (2 cells each)", fill: "empty", source: "basic motive" },
+  { id: "b", part: "body", letter: "B", start: "2/1", beats: 8, region: null, harmony: null, fill: "empty", source: "basic motive" },
+] } } } }).versions[0].view.rows;
+check(placedRows[0].region === "dominant of home" && placedRows[0].harmony === "i iv V i (2 cells each)" && placedRows[1].region === "" && placedRows[1].harmony === "", "the rows show the region and the harmony the request gave");
 
 finish();

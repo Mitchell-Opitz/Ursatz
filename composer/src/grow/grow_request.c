@@ -65,7 +65,7 @@ const char *grow_idea_name(GrowIdea idea) {
     return theme_shape_idea_name(idea);
 }
 
-bool grow_idea_place(const PlanThemePairing *pairing, GrowIdea idea, GrowPlace *place) {
+bool grow_idea_place(const SectionPairing *pairing, GrowIdea idea, GrowPlace *place) {
     const ThemeShapeIdea *row = theme_shape_idea_in(pairing, idea);
     if (row && place) {
         *place = (GrowPlace)row->place;
@@ -73,11 +73,11 @@ bool grow_idea_place(const PlanThemePairing *pairing, GrowIdea idea, GrowPlace *
     return row != NULL;
 }
 
-bool grow_idea_in_pairing(const PlanThemePairing *pairing, GrowIdea idea) {
+bool grow_idea_in_pairing(const SectionPairing *pairing, GrowIdea idea) {
     return theme_shape_idea_in(pairing, idea) != NULL;
 }
 
-size_t grow_place_units(const PlanThemePairing *pairing, GrowPlace place) {
+size_t grow_place_units(const SectionPairing *pairing, GrowPlace place) {
     const ThemeShapeIdea *row = theme_shape_place_in(pairing, (unsigned)place);
     return row ? row->units : 2;
 }
@@ -106,7 +106,7 @@ bool grow_idea_own(const GrowThemeSpec *spec, GrowPlace idea) {
            (idea != GROW_PLACE_BASIC && first && spec->has_slot_source[slot]);
 }
 
-GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowPlace idea, bool *first) {
+GrowSlot grow_idea_slot(const SectionPairing *pairing, GrowPlace idea, bool *first) {
     const ThemeShapeIdea *row = theme_shape_place_in(pairing, (unsigned)idea);
     /* The cadential place has a row only under a continuation; the other endings never ask for it, and it was a cadential slot's first. */
     GrowSlot slot = row ? row->slot : idea == GROW_PLACE_CADENTIAL ? GROW_SLOT_CADENTIAL : GROW_SLOT_BASIC;
@@ -116,7 +116,7 @@ GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowPlace idea, bool *f
     return slot;
 }
 
-bool grow_slot_used(const PlanThemePairing *pairing, GrowSlot slot, size_t *units) {
+bool grow_slot_used(const SectionPairing *pairing, GrowSlot slot, size_t *units) {
     size_t room = 0;
     bool used = false;
     for (size_t i = 0; i < theme_shape_idea_count(); i++) {
@@ -165,15 +165,15 @@ bool grow_motive_fits_idea(const Motive *motive, Rational bar, size_t idea_bars)
            rational_mul_int(bar, (long long)idea_bars, &room) == RATIONAL_OK && rational_cmp(motive->length, room) <= 0;
 }
 
-bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t part_bars, PlanThemeBeginning beginning) {
+bool grow_motive_fills_part(const Motive *motive, Rational bar, size_t part_bars, SectionBeginning beginning) {
     Rational room = {0, 1};
-    return (beginning == PLAN_THEME_BEGINNING_PRESENTATION || beginning == PLAN_THEME_BEGINNING_ANTECEDENT) &&
+    return (beginning == SECTION_BEGINNING_PRESENTATION || beginning == SECTION_BEGINNING_ANTECEDENT) &&
            grow_motive_fit(motive, bar, part_bars) == GROW_FIT_WHOLE &&
            rational_mul_int(bar, (long long)part_bars, &room) == RATIONAL_OK && rational_cmp(motive->length, room) <= 0;
 }
 
 bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t part_bars, size_t basic_bars,
-                          PlanThemeBeginning beginning, Motive *basic, MotiveRelationStep *step) {
+                          SectionBeginning beginning, Motive *basic, MotiveRelationStep *step) {
     Rational idea_end = {0, 1};
     size_t leading = 0;
     if (!grow_motive_fills_part(motive, bar, part_bars, beginning) ||
@@ -254,10 +254,10 @@ bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *a
            !(accompaniment->pattern == PLAN_ACCOMPANIMENT_ALBERTI && compound);
 }
 
-bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
+bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const SectionPairing *pairing,
                           CadenceType cadence, CadenceType first) {
     size_t cells_per_bar;
-    bool antecedent = pairing->beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    bool antecedent = pairing->beginning == SECTION_BEGINNING_ANTECEDENT;
     return grow_cells_per_bar(meter, &cells_per_bar) && (bars == 4 || bars == 8) &&
            grow_pairing_archetype(pairing) >= 0 &&
            (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC || cadence == CADENCE_TYPE_HALF) &&
@@ -269,18 +269,18 @@ bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePa
  * The bars of the beginning (or the ending) of a theme with a construction: those of its ideas there with their repeats
  * and stretches; the idea after an evaded cadence is not the ending's (construction_evaded_bars).
  */
-static size_t construction_half_bars(const PlanThemePairing *pairing, bool beginning, const PlanConstruction *construction) {
+static size_t construction_half_bars(const SectionPairing *pairing, bool beginning, const SectionConstruction *construction) {
     GrowConstructionBars bars;
     grow_construction_bars(pairing, construction, &bars);
     return beginning ? bars.beginning : bars.ending;
 }
 
 /* The bars of the idea after an evaded cadence, 0 when the construction does not evade it. */
-static size_t construction_evaded_bars(const PlanThemePairing *pairing, const PlanConstruction *construction) {
+static size_t construction_evaded_bars(const SectionPairing *pairing, const SectionConstruction *construction) {
     GrowConstructionBars bars;
     grow_construction_bars(pairing, construction, &bars);
-    for (size_t k = 0; k < construction->extension_count && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
-        if (construction->extensions[k].kind == PLAN_EXTENSION_EVADED) {
+    for (size_t k = 0; k < construction->extension_count && k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
+        if (construction->extensions[k].kind == SECTION_EXTENSION_EVADED) {
             return bars.evaded;
         }
     }
@@ -288,14 +288,14 @@ static size_t construction_evaded_bars(const PlanThemePairing *pairing, const Pl
 }
 
 /* Whether the idea after an evaded cadence has room for the cadence it ends in (a theme that evades none always does). */
-static bool evaded_fits(const PlanThemePairing *pairing, const PlanConstruction *construction, size_t cells_per_bar,
+static bool evaded_fits(const SectionPairing *pairing, const SectionConstruction *construction, size_t cells_per_bar,
                         CadenceType cadence) {
     size_t evaded = construction_evaded_bars(pairing, construction);
     return evaded == 0 || half_fits(evaded, cells_per_bar, cadence);
 }
 
 /* The bars of the first idea of the slot under the construction; 0 when the pairing has none. */
-static size_t construction_slot_bars(const PlanThemePairing *pairing, GrowSlot slot, const PlanConstruction *construction) {
+static size_t construction_slot_bars(const SectionPairing *pairing, GrowSlot slot, const SectionConstruction *construction) {
     for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
         const ThemeShapeIdea *row = theme_shape_idea_in(pairing, (GrowIdea)idea);
         if (row && row->slot == slot && row->first) {
@@ -306,21 +306,21 @@ static size_t construction_slot_bars(const PlanThemePairing *pairing, GrowSlot s
 }
 
 /* The words for an extension in a refusal. */
-static const char *extension_name(PlanExtensionKind kind) {
+static const char *extension_name(SectionExtensionKind kind) {
     static const char *const NAMES[] = {"repeat", "stretch", "addition", "evaded cadence"};
-    return (int)kind >= 0 && kind <= PLAN_EXTENSION_EVADED ? NAMES[kind] : "extension";
+    return (int)kind >= 0 && kind <= SECTION_EXTENSION_EVADED ? NAMES[kind] : "extension";
 }
 
 /* Why an extension of the construction cannot be built, in `path` and `message`; false when each can. */
-static bool extension_fault(const PlanThemePairing *pairing, CadenceType cadence, const PlanConstruction *construction,
+static bool extension_fault(const SectionPairing *pairing, CadenceType cadence, const SectionConstruction *construction,
                             const char *name, char *path, size_t path_size, char *message, size_t size) {
     bool authentic = cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC;
     bool added = false;
     bool evaded = false;
-    for (size_t k = 0; k < construction->extension_count && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
-        const PlanExtension *extension = &construction->extensions[k];
+    for (size_t k = 0; k < construction->extension_count && k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
+        const SectionExtension *extension = &construction->extensions[k];
         snprintf(path, path_size, "/construction/extensions/%zu", k);
-        if (extension->kind == PLAN_EXTENSION_REPEAT || extension->kind == PLAN_EXTENSION_STRETCH) {
+        if (extension->kind == SECTION_EXTENSION_REPEAT || extension->kind == SECTION_EXTENSION_STRETCH) {
             if (extension->idea >= GROW_IDEA_COUNT || !theme_shape_idea_in(pairing, (GrowIdea)extension->idea)) {
                 snprintf(message, size, "the %s has no %s", name, grow_idea_name((GrowIdea)extension->idea));
                 return true;
@@ -330,7 +330,7 @@ static bool extension_fault(const PlanThemePairing *pairing, CadenceType cadence
                          grow_idea_name((GrowIdea)extension->idea));
                 return true;
             }
-        } else if (extension->kind == PLAN_EXTENSION_EVADED) {
+        } else if (extension->kind == SECTION_EXTENSION_EVADED) {
             if (!authentic) {
                 snprintf(message, size, "an HC cannot be evaded");
                 return true;
@@ -360,8 +360,8 @@ static bool extension_fault(const PlanThemePairing *pairing, CadenceType cadence
  * it has with no bar, an extension that cannot be built, ideas and extensions that do not add up to the theme, a
  * fragment as long as the basic idea. The field to blame goes in `path`, the message in `message`.
  */
-static bool construction_fault(const PlanThemePairing *pairing, size_t bars, CadenceType cadence,
-                               const PlanConstruction *construction, char *path, size_t path_size, char *message,
+static bool construction_fault(const SectionPairing *pairing, size_t bars, CadenceType cadence,
+                               const SectionConstruction *construction, char *path, size_t path_size, char *message,
                                size_t size) {
     size_t total = 0;
     const ThemeShapeHalf *beginning = theme_shape_beginning(pairing->beginning);
@@ -392,7 +392,7 @@ static bool construction_fault(const PlanThemePairing *pairing, size_t bars, Cad
         return true;
     }
     /* A continuation fragments the basic idea (standard-form's rule): each fragment is shorter than it. */
-    if (pairing->ending == PLAN_THEME_ENDING_CONTINUATION) {
+    if (pairing->ending == SECTION_ENDING_CONTINUATION) {
         for (int idea = GROW_IDEA_FRAGMENT_1; idea <= GROW_IDEA_FRAGMENT_2; idea++) {
             if (construction->idea_bars[idea] >= construction->idea_bars[GROW_IDEA_BASIC]) {
                 snprintf(message, size, "the %s needs fewer bars than the basic idea", grow_idea_name((GrowIdea)idea));
@@ -403,12 +403,12 @@ static bool construction_fault(const PlanThemePairing *pairing, size_t bars, Cad
     return false;
 }
 
-bool grow_construction_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
-                                 CadenceType cadence, CadenceType first, const PlanConstruction *construction) {
+bool grow_construction_buildable(const PlanMeter *meter, size_t bars, const SectionPairing *pairing,
+                                 CadenceType cadence, CadenceType first, const SectionConstruction *construction) {
     size_t cells_per_bar;
     char message[96];
     char path[64];
-    bool antecedent = pairing->beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    bool antecedent = pairing->beginning == SECTION_BEGINNING_ANTECEDENT;
     return construction && grow_cells_per_bar(meter, &cells_per_bar) && bars >= 3 && bars <= 16 &&
            grow_pairing_archetype(pairing) >= 0 &&
            (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC || cadence == CADENCE_TYPE_HALF) &&
@@ -491,9 +491,9 @@ static GrowResult idea_motive_valid(const GrowRequest *request, GrowIdea idea, R
 /* Why the pairing, the bars, the cadences or the key cannot be built, with the field to blame. */
 static GrowResult theme_refusal(const GrowRequest *request, CadenceType first, GrowRefusal *refusal) {
     size_t cells_per_bar;
-    bool antecedent = request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    bool antecedent = request->pairing.beginning == SECTION_BEGINNING_ANTECEDENT;
     CadenceType cadence = request->cadence;
-    const PlanConstruction *construction = request->construction;
+    const SectionConstruction *construction = request->construction;
     if (construction ? (request->bars < 3 || request->bars > 16) : (request->bars != 4 && request->bars != 8)) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/bars", "a theme has 4 or 8 bars, or 3 to 16 with a construction, not %zu",
                       request->bars);
@@ -608,7 +608,7 @@ GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType fir
         grow_construction_bars(&request->pairing, request->construction, &bars_of);
     }
     GrowResult result = check_cadence_bar(request, bar, (long)(request->bars - bars_of.addition) - 1, request->cadence, refusal);
-    if (result == GROW_OK && request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
+    if (result == GROW_OK && request->pairing.beginning == SECTION_BEGINNING_ANTECEDENT) {
         size_t beginning_bars =
             request->construction ? construction_half_bars(&request->pairing, true, request->construction) : request->bars / 2;
         result = check_cadence_bar(request, bar, (long)beginning_bars - 1, first, refusal);
@@ -626,7 +626,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     *out = NULL;
     /* A theme of any length but 4 or 8 bars with no construction given gets the one its motif or its length makes (R-469). */
     GrowRequest chosen;
-    PlanConstruction construction;
+    SectionConstruction construction;
     if (!request->construction && request->bars != 4 && request->bars != 8) {
         if (!grow_construction_choose(request->motive, &request->meter, request->bars, &request->pairing, request->cadence,
                                       &construction)) {
@@ -640,9 +640,8 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         request = &chosen;
     }
     /* An antecedent ends in a weak cadence, HC unless the request says IAC, and the theme in a stronger one. */
-    bool antecedent = request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
+    bool antecedent = request->pairing.beginning == SECTION_BEGINNING_ANTECEDENT;
     CadenceType first = request->first_cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? CADENCE_TYPE_HALF : request->first_cadence;
-    int archetype = grow_pairing_archetype(&request->pairing);
     /* An accompaniment motive makes the accompaniment: pattern MOTIVE, naming the node "acc". */
     const Motive *accompaniment_motive = request->accompaniment_motive;
     PlanAccompaniment accompaniment = request->accompaniment;
@@ -763,9 +762,9 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     extra_bars += GROW_PLACE_COUNT * (longest - 1);
     /* The fragments' segments and the liquidated ideas of the ending are motives of their own in the material
        (grow_ending.c): three at most for a continuation, two for a cadential ending. */
-    size_t segment_bars = request->pairing.ending == PLAN_THEME_ENDING_CONTINUATION
+    size_t segment_bars = request->pairing.ending == SECTION_ENDING_CONTINUATION
                               ? 3
-                              : (request->pairing.ending == PLAN_THEME_ENDING_CADENTIAL ? 2 : 0);
+                              : (request->pairing.ending == SECTION_ENDING_CADENTIAL ? 2 : 0);
     /* A construction's contrasting ideas shorter than their source are made from shortened copies of it (R-471). */
     segment_bars += request->construction ? 2 * longest : 0;
     /* The motives of a construction's repeats and addition (R-468). */
@@ -819,41 +818,28 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     if (result == GROW_OK) {
         result = from_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, theme, GROW_THEME_NAME, &theme_id));
     }
-    memset(&constraint, 0, sizeof(constraint));
     if (result == GROW_OK) {
-        constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
-        constraint.params.archetype = (PlanArchetype)archetype;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
-    }
-    if (result == GROW_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_THEME_PAIRING;
-        constraint.params.theme_pairing = request->pairing;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
-    }
-    if (result == GROW_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = request->cadence;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
-    }
-    if (result == GROW_OK && antecedent) {
-        /* The second cadence of the theme is the antecedent's. */
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CADENCE;
-        constraint.params.cadence = first;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
+        SectionDescription description;
+        section_description_init(&description);
+        description.has_pairing = true;
+        description.pairing = request->pairing;
+        description.has_cadence = true;
+        description.cadence = request->cadence;
+        if (antecedent) {
+            /* The second cadence of the theme is the antecedent's. */
+            description.has_first_cadence = true;
+            description.first_cadence = first;
+        }
+        if (request->construction) {
+            description.has_construction = true;
+            description.construction = *request->construction;
+        }
+        result = from_plan(plan_node_set_section(plan, theme_id, &description));
     }
     if (result == GROW_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_KEY;
         constraint.params.key = request->key;
-        result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
-    }
-    if (result == GROW_OK && request->construction) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_CONSTRUCTION;
-        constraint.params.construction = *request->construction;
         result = from_plan(plan_node_add_constraint(plan, theme_id, &constraint));
     }
 
@@ -876,9 +862,11 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
         result = from_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, material, GROW_MATERIAL_NAME, &section));
     }
     if (result == GROW_OK) {
-        memset(&constraint, 0, sizeof(constraint));
-        constraint.kind = PLAN_CONSTRAINT_MATERIAL;
-        result = from_plan(plan_node_add_constraint(plan, section, &constraint));
+        SectionDescription description;
+        section_description_init(&description);
+        description.has_role = true;
+        description.role = SECTION_ROLE_MATERIAL;
+        result = from_plan(plan_node_set_section(plan, section, &description));
     }
     if (result == GROW_OK) {
         result = from_plan(plan_add_node(plan, section, PLAN_NODE_PHRASE, material, GROW_MATERIAL_NAME, &phrase));
@@ -989,18 +977,11 @@ bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter
 
 NodeId grow_find_theme(const PiecePlan *plan, bool open_only) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        bool archetype = false;
-        bool pairing = false;
         if (plan_node_kind(plan, id) != PLAN_NODE_SECTION ||
             (open_only && plan_node_state(plan, id) != PLAN_STATE_CONSTRAINED)) {
             continue;
         }
-        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-            PlanConstraintKind kind = plan_node_constraint_at(plan, id, i)->kind;
-            archetype = archetype || kind == PLAN_CONSTRAINT_ARCHETYPE;
-            pairing = pairing || kind == PLAN_CONSTRAINT_THEME_PAIRING;
-        }
-        if (archetype && pairing) {
+        if (plan_node_section(plan, id)->has_pairing) {
             return id;
         }
     }

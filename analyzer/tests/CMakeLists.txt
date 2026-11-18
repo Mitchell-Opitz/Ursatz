@@ -27,7 +27,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_analysis_document_schema_smoke COMMAND ${CMAKE_COMMAND}
                      -DCLI=$<TARGET_FILE:ursatz-analyzer>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
                      -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/framework-v1-corpus
                      "-DONLY=Bach 114.mid"
@@ -38,7 +38,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_analysis_document_schema COMMAND ${CMAKE_COMMAND}
                      -DCLI=$<TARGET_FILE:ursatz-analyzer>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
                      -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/framework-v1-corpus
                      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
@@ -228,7 +228,7 @@ ursatz_test(test_cli_notation_reading COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
                  -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                  -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v13.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_notation_reading
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_notation_reading.cmake)
@@ -283,7 +283,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_corpus_index_schema COMMAND ${CMAKE_COMMAND}
                      -DCLI=$<TARGET_FILE:ursatz-analyzer>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/corpus-index.v2.schema.json
                      -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/corpus_index_schema
@@ -305,7 +305,7 @@ ursatz_test(test_cli_style_profile_smoke COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                  -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/style-model.v1.schema.json
                  -DSMOKE=1
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_style_profile_smoke
@@ -323,7 +323,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_style_model_schema COMMAND ${CMAKE_COMMAND}
                      -DCLI=$<TARGET_FILE:ursatz-analyzer>
                      -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/style-model.v1.schema.json
                      -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                      -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/style_model_schema
@@ -349,7 +349,7 @@ ursatz_test(test_cli_similar_smoke COMMAND ${CMAKE_COMMAND}
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DMOTIVE=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                  -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/similar-material.v1.schema.json
                  -DSMOKE=1
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_smoke
@@ -361,7 +361,7 @@ ursatz_test(test_cli_similar COMMAND ${CMAKE_COMMAND}
                  -DCORPORA_DIR=${URSATZ_CORPORA_DIR}
                  -DMOTIVE=${CMAKE_CURRENT_BINARY_DIR}/cli_similar_motive.mid
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                  -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/similar-material.v1.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake
@@ -409,7 +409,7 @@ ursatz_test(test_cli_link_motives COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
                  -DFIXTURE_DIR=${URSATZ_FIXTURES_DIR}/links
                  -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                  -DLINKS_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-links.v1.schema.json
                  -DCACHE_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-link-cache.v2.schema.json
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_link_motives

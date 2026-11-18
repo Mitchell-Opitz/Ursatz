@@ -168,7 +168,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (!find(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             out[count++] = child;
         }
     }
@@ -200,7 +200,7 @@ static void check_plan(const PiecePlan *plan, const Scenario *scenario, const ch
         assert(key && same_key(key->params.key, key_at(&lane, last_bar)));
     }
     PieceCadenceCheck cadences;
-    assert(piece_check_cadences(plan, NULL, &cadences) && cadences.ok);
+    assert(piece_check_cadences(plan, &cadences) && cadences.ok);
     if (strcmp(kind, "loop") == 0 || strcmp(kind, "layered") == 0) {
         assert(lane.count == 1);
     }
@@ -232,7 +232,7 @@ static size_t parallel_sections(const char *name) {
     const FormSpecSize *size = form_spec_default_size(form);
     size_t parallel = 0;
     for (size_t i = 0; size && i < size->section_count; i++) {
-        parallel += size->sections[i].parallel;
+        parallel += size->sections[i].mode == SECTION_MODE_PARALLEL;
     }
     form_spec_destroy(form);
     return parallel;
@@ -371,8 +371,8 @@ static bool authentic_inside(const PiecePlan *plan, const KeyLane *lane, const N
    pivot chord (R-505); V is one in the main and subordinate themes' V region and none in the small rondo's IV or vi. */
 static bool opens_retransition(const PiecePlan *plan, const NodeId *sections, size_t count, Rational at) {
     for (size_t s = 0; s < count; s++) {
-        const PlanConstraint *function = find(plan, sections[s], PLAN_CONSTRAINT_SECTION_FUNCTION);
-        if (function && function->params.section_function.function == PLAN_FUNCTION_RETRANSITION &&
+        const SectionDescription *function = plan_section_or_empty(plan, sections[s]);
+        if (function->has_function && function->function.function == SECTION_FUNCTION_RETRANSITION &&
             rational_cmp(plan_node_span(plan, sections[s]).start, at) == 0) {
             return true;
         }
@@ -384,10 +384,10 @@ static bool opens_retransition(const PiecePlan *plan, const NodeId *sections, si
    with its pattern's own first chord and no pivot (the sonata rondo's S after P, vi to ii, R-520). */
 static bool opens_sequence(const PiecePlan *plan, const NodeId *sections, size_t count, Rational at) {
     for (size_t s = 0; s < count; s++) {
-        const PlanConstraint *back = find(plan, sections[s], PLAN_CONSTRAINT_RETURN);
+        NodeId back = plan_section_named(plan, plan_section_or_empty(plan, sections[s])->returns);
         Rational source_end;
-        if (back && rational_cmp(plan_node_span(plan, sections[s]).start, at) == 0 &&
-            plan_span_end(plan_node_span(plan, back->params.section_return.section), &source_end) == PLAN_OK &&
+        if (back != PLAN_NODE_NONE && rational_cmp(plan_node_span(plan, sections[s]).start, at) == 0 &&
+            plan_span_end(plan_node_span(plan, back), &source_end) == PLAN_OK &&
             rational_cmp(source_end, at) == 0) {
             return true;
         }
@@ -432,14 +432,15 @@ static void check_piece(const PiecePlan *plan, const char *kind) {
         int last = -1;
         int strongest = -1;
         for (size_t s = 0; s < count; s++) {
-            const PlanConstraint *cadence = find(plan, sections[s], PLAN_CONSTRAINT_CADENCE);
-            int strength = harmony_cadence_strength(cadence->params.cadence);
+            const SectionDescription *cadence = plan_node_section(plan, sections[s]);
+            assert(cadence->has_cadence);
+            int strength = harmony_cadence_strength(cadence->cadence);
             strongest = strength > strongest ? strength : strongest;
             last = strength;
         }
         assert(last == strongest);
         PieceCadenceCheck cadences;
-        assert(piece_check_cadences(plan, NULL, &cadences) && cadences.ok);
+        assert(piece_check_cadences(plan, &cadences) && cadences.ok);
     }
 }
 
@@ -552,8 +553,8 @@ static int test_smoke_always(void) {
 
 /* The stand-in form of R-517: A, T, B, R, A1, T1, B1 and K, 56 bars, B1 returning B exact in the tonic major. */
 static const char TONIC_MAJOR_FORM[] =
-    "{\"schema\":\"ursatz-form\",\"version\":1,\"name\":\"tonic-major-form\",\"label\":\"Tonic major form\",\"modulates\":true,"
-    "\"regions\":[{\"name\":\"subordinate\",\"major\":[5],\"minor\":[3]}],"
+    "{\"schema\":\"ursatz-form\",\"version\":2,\"name\":\"tonic-major-form\",\"label\":\"Tonic major form\",\"modulates\":true,"
+    "\"regions\":[{\"name\":\"subordinate\",\"major\":[\"omt.relation.dominant\"],\"minor\":[\"omt.relation.mediant\"]}],"
     "\"sizes\":[{\"bars\":56,\"default\":true,\"sections\":["
     "{\"name\":\"A\",\"letter\":\"A\",\"role\":\"theme\",\"bars\":8,\"beginning\":\"presentation\",\"ending\":\"continuation\","
     "\"cadence\":\"perfect-authentic\",\"closed\":true},"

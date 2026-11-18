@@ -121,31 +121,37 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         return false;
     }
     /* A section that returns an earlier one is form-return's, not grown afresh; a held one is the seam stage's. */
-    if (form_return_handles(plan, target.id) || plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_HOLD)) {
+    if (form_return_handles(plan, target.id) || plan_section_or_empty(plan, target.id)->leads_in) {
         return false;
     }
     request.section = target.id;
     request.span = plan_node_span(plan, target.id);
-    bool archetype = false;
-    bool pairing = false;
-    bool cadence = false;
+    const SectionDescription *section = plan_section_or_empty(plan, target.id);
+    const bool archetype = section->has_pairing;
+    const bool pairing = section->has_pairing;
+    const bool cadence = section->has_cadence;
     PlanArchetype requested = PLAN_ARCHETYPE_SENTENCE;
+    if (pairing) {
+        request.pairing = section->pairing;
+        requested = (PlanArchetype)grow_pairing_archetype(&section->pairing);
+    }
+    if (cadence) {
+        request.cadence = section->cadence;
+    }
+    if (section->has_first_cadence) {
+        /* The first cadence is the theme's; the second is the weak one an antecedent ends in. */
+        request.has_first = true;
+        request.first_cadence = section->first_cadence;
+    }
+    request.pedal = section->pedal != 0;
+    request.transition = section->has_function && section->function.function == SECTION_FUNCTION_TRANSITION;
+    if (section->has_construction) {
+        request.has_construction = true;
+        request.construction = section->construction;
+    }
     for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE) {
-            archetype = true;
-            requested = constraint->params.archetype;
-        } else if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
-            pairing = true;
-            request.pairing = constraint->params.theme_pairing;
-        } else if (constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence) {
-            /* The first cadence is the theme's; a second is the weak one an antecedent ends in. */
-            cadence = true;
-            request.cadence = constraint->params.cadence;
-        } else if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
-            request.has_first = true;
-            request.first_cadence = constraint->params.cadence;
-        } else if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
+        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
             request.has_accompaniment = true;
             request.accompaniment = constraint->params.accompaniment;
         } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
@@ -154,19 +160,11 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         } else if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && !request.has_motive_ref) {
             request.has_motive_ref = true;
             request.motive_ref = constraint->params.motive;
-        } else if (constraint->kind == PLAN_CONSTRAINT_PEDAL) {
-            request.pedal = true;
-        } else if (constraint->kind == PLAN_CONSTRAINT_SECTION_FUNCTION &&
-                   constraint->params.section_function.function == PLAN_FUNCTION_TRANSITION) {
-            request.transition = true;
-        } else if (constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION && !request.has_construction) {
-            request.has_construction = true;
-            request.construction = constraint->params.construction;
         }
     }
     LaneSpanId lane[2];
     if (!archetype || !pairing || !cadence || grow_pairing_archetype(&request.pairing) != (int)requested ||
-        (request.pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) != request.has_first ||
+        (request.pairing.beginning == SECTION_BEGINNING_ANTECEDENT) != request.has_first ||
         plan_lane_find(plan, PLAN_LANE_METER, 0, request.span, lane, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, lane[0]), request.span)) {
         return false;
@@ -236,7 +234,7 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         }
     }
     /* A pedal is kept only under a presentation that opens in the home key, with no Given material in its first half. */
-    request.pedal = request.pedal && request.pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
+    request.pedal = request.pedal && request.pairing.beginning == SECTION_BEGINNING_PRESENTATION &&
                     !request.has_start_change && !request.given_first_half && starts_in_home_key(plan, &request);
     *out = request;
     return true;
@@ -286,19 +284,19 @@ bool grow_same_contour(const Motive *a, const Motive *b) {
     return true;
 }
 
-int grow_phrase_beginning(PlanThemeBeginning beginning) {
+int grow_phrase_beginning(SectionBeginning beginning) {
     const ThemeShapeHalf *half = theme_shape_beginning(beginning);
     PhraseBeginning found;
     return half && phrase_beginning_from_name(half->library_name, &found) ? (int)found : PHRASE_BEGINNING_COUNT;
 }
 
-int grow_phrase_ending(PlanThemeEnding ending) {
+int grow_phrase_ending(SectionEnding ending) {
     const ThemeShapeHalf *half = theme_shape_ending(ending);
     PhraseEnding found;
     return half && phrase_ending_from_name(half->library_name, &found) ? (int)found : PHRASE_ENDING_COUNT;
 }
 
-int grow_pairing_archetype(const PlanThemePairing *pairing) {
+int grow_pairing_archetype(const SectionPairing *pairing) {
     PhraseLevelForm form;
     if (!standard_form_pairing_form(grow_phrase_beginning(pairing->beginning), grow_phrase_ending(pairing->ending),
                                     &form)) {
@@ -325,7 +323,7 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
     }
     switch (idea) {
     case GROW_PLACE_REPETITION: /* also the contrasting idea of the other beginnings */
-        if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
+        if (spec->pairing.beginning != SECTION_BEGINNING_PRESENTATION) {
             *dev = spec->contrast;
         } else if (spec->repetition == GROW_REPEAT_DOMINANT_FORM) {
             dev->kind = MOTIVE_RELATION_DOMINANT_FORM;
@@ -363,13 +361,13 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
             }
             return true;
         }
-        if (spec->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT) {
+        if (spec->pairing.ending == SECTION_ENDING_CONSEQUENT) {
             if (second) {
                 *dev = spec->consequent_contrast;
             } else {
                 dev->kind = MOTIVE_RELATION_EXACT;
             }
-        } else if (spec->pairing.ending == PLAN_THEME_ENDING_CADENTIAL) {
+        } else if (spec->pairing.ending == SECTION_ENDING_CADENTIAL) {
             /* A cadential idea is its liquidated residue (has_liquidated above) or its own motive: no note liquidation. */
             return false;
         } else {
@@ -409,7 +407,7 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, Pla
 }
 
 bool grow_idea_segment(const GrowThemeSpec *spec, GrowPlace idea, const MotiveSketchFeature **segment) {
-    if (spec->pairing.ending != PLAN_THEME_ENDING_CONTINUATION ||
+    if (spec->pairing.ending != SECTION_ENDING_CONTINUATION ||
         (idea != GROW_PLACE_FRAGMENT_1 && idea != GROW_PLACE_FRAGMENT_2)) {
         return false;
     }
@@ -980,7 +978,7 @@ static bool material_has_room(const PiecePlan *plan, const ThemeRequest *request
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + GROW_MADE_NODES;
     /* An extension that is a repeat or an addition has a motive of its own, a bar of the material at least (R-468). */
     for (size_t k = 0; k < spec->layout.extension_count; k++) {
-        wanted += spec->layout.extensions[k].kind == PLAN_EXTENSION_REPEAT || spec->layout.extensions[k].kind == PLAN_EXTENSION_ADDITION;
+        wanted += spec->layout.extensions[k].kind == SECTION_EXTENSION_REPEAT || spec->layout.extensions[k].kind == SECTION_EXTENSION_ADDITION;
     }
     return grow_first_free_bar(plan, material, span, request->bar, wanted) + wanted <= count_bars(span, request->bar);
 }
@@ -1139,7 +1137,7 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const 
 
 /* Whether two specs make the same motives for their extensions. */
 static bool same_extended(const GrowThemeSpec *a, const GrowThemeSpec *b) {
-    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+    for (size_t k = 0; k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         if (a->has_extended[k] != b->has_extended[k] || (a->has_extended[k] && !motive_equal(&a->extended[k], &b->extended[k]))) {
             return false;
         }
@@ -1237,8 +1235,8 @@ static void base_label(const GrowThemeSpec *spec, char *label, size_t size) {
     static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
     char bars[24];
     bars_text(spec, bars, sizeof(bars));
-    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION &&
-        spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
+    if (spec->pairing.beginning == SECTION_BEGINNING_PRESENTATION &&
+        spec->pairing.ending == SECTION_ENDING_CONTINUATION) {
         char continuation[96];
         continuation_label(spec, continuation, sizeof(continuation));
         snprintf(label, size, "sentence %s bars %s %s", bars, repetition_name(spec->repetition), continuation);
@@ -1246,16 +1244,16 @@ static void base_label(const GrowThemeSpec *spec, char *label, size_t size) {
     }
     size_t used = (size_t)snprintf(label, size, "%s + %s %s bars", BEGINNINGS[spec->pairing.beginning],
                                    ENDINGS[spec->pairing.ending], bars);
-    if (used < size && spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
+    if (used < size && spec->pairing.beginning == SECTION_BEGINNING_PRESENTATION) {
         used += (size_t)snprintf(label + used, size - used, " %s", repetition_name(spec->repetition));
     } else if (used < size) {
         used += (size_t)snprintf(label + used, size - used, " contrast %s", dev_name(&spec->contrast));
     }
-    if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
+    if (used < size && spec->pairing.ending == SECTION_ENDING_CONTINUATION) {
         char continuation[96];
         continuation_label(spec, continuation, sizeof(continuation));
         snprintf(label + used, size - used, " %s", continuation);
-    } else if (used < size && spec->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT) {
+    } else if (used < size && spec->pairing.ending == SECTION_ENDING_CONSEQUENT) {
         snprintf(label + used, size - used, " consequent contrast %s", dev_name(&spec->consequent_contrast));
     } else if (used < size) {
         char first[32];
@@ -1275,16 +1273,16 @@ static void extension_label(const GrowThemeSpec *spec, char *out, size_t size) {
         const ThemeShapeIdea *row = theme_shape_place_in(&spec->pairing, (unsigned)extension->place);
         const char *idea = row ? row->name : "idea";
         switch (extension->kind) {
-        case PLAN_EXTENSION_REPEAT:
+        case SECTION_EXTENSION_REPEAT:
             used += (size_t)snprintf(out + used, size - used, " repeated %s", idea);
             break;
-        case PLAN_EXTENSION_STRETCH:
+        case SECTION_EXTENSION_STRETCH:
             used += (size_t)snprintf(out + used, size - used, " stretched %s", idea);
             break;
-        case PLAN_EXTENSION_ADDITION:
+        case SECTION_EXTENSION_ADDITION:
             used += (size_t)snprintf(out + used, size - used, " addition");
             break;
-        case PLAN_EXTENSION_EVADED:
+        case SECTION_EXTENSION_EVADED:
             used += (size_t)snprintf(out + used, size - used, " evaded cadence");
             break;
         }
@@ -1892,7 +1890,7 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
                           : 0;
     shortened_bars += new_bars;
     size_t extended_bars = grow_extended_bars(spec, request.bar);
-    for (size_t k = 0; k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+    for (size_t k = 0; k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         build.extension_node[k] = PLAN_NODE_NONE;
     }
     build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.bar,
@@ -1950,7 +1948,7 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
         short_at += new_bars;
     }
     /* The motives of the extensions follow, each at its own bars (R-468): the repeats' and the addition's. */
-    for (size_t k = 0; result == PLAN_OK && k < PLAN_CONSTRUCTION_EXTENSIONS; k++) {
+    for (size_t k = 0; result == PLAN_OK && k < SECTION_CONSTRUCTION_EXTENSIONS; k++) {
         if (!spec->has_extended[k]) {
             continue;
         }

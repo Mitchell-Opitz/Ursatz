@@ -1,12 +1,12 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "scherzo-and-trio",
   "label": "Scherzo and trio",
   "closing": true,
   "meters": ["3/4"],
   "tempo": 176,
-  "regions": [{"name": "trio", "major": [1, 4, 6], "minor": [1, 3, 6]}],
+  "regions": [{"name": "trio", "major": ["omt.relation.parallel", "omt.relation.subdominant", "omt.relation.submediant"], "minor": ["omt.relation.parallel", "omt.relation.mediant", "omt.relation.submediant"]}],
   "parts": [
     {"name": "Scherzo", "form": "scherzo"},
     {"name": "Trio", "form": "trio", "key": "trio", "motive": "new", "bars": 24},

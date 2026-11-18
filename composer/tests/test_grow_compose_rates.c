@@ -104,8 +104,8 @@ int main(int argc, char **argv) {
                     setup.knowledge = test_knowledge();
                     setup.text = &text;
                     setup.into = b == 1 ? GROW_INTO_PERIOD : GROW_INTO_HYBRID;
-                    setup.pairing.beginning = (PlanThemeBeginning)b;
-                    setup.pairing.ending = (PlanThemeEnding)e;
+                    setup.pairing.beginning = (SectionBeginning)b;
+                    setup.pairing.ending = (SectionEnding)e;
                     setup.key = motive_key(&motive);
                     setup.meter = motive_meter(&motive);
                     setup.bars = bars;

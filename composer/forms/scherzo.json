@@ -1,13 +1,13 @@
 {
   "schema": "ursatz-form",
-  "version": 1,
+  "version": 2,
   "name": "scherzo",
   "label": "Scherzo",
   "closing": true,
   "modulates": true,
   "meters": ["3/4", "2/4", "6/8"],
   "tempo": 176,
-  "regions": [{"name": "pattern", "major": [5], "minor": [5]}, {"name": "sequence", "major": [4], "minor": [4]}, {"name": "episode", "major": [4], "minor": [4]}],
+  "regions": [{"name": "pattern", "major": ["omt.relation.dominant"], "minor": ["omt.relation.dominant"]}, {"name": "sequence", "major": ["omt.relation.subdominant"], "minor": ["omt.relation.subdominant"]}, {"name": "episode", "major": ["omt.relation.subdominant"], "minor": ["omt.relation.subdominant"]}],
   "repeats": [["A"], ["P", "S1", "S2", "L", "A return"]],
   "sizes": [
     {"bars": 44, "default": true, "sections": [

@@ -154,8 +154,7 @@ builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
   fill picks a composed theme version (a theme with no composed version asks
   to be composed first), shows its form and key and sets the section's length
   from the theme; a section whose length differs from the theme's is a
-  problem. A progression fill is numerals (such as `I vi IV V`) and cells per
-  chord; it does not change the section's cadence.
+  problem. Region, harmony and the sections of a sized form: piece-sections.md.
 - Basic motive (optional), Pool, Accompaniment (none or a pattern; a piece has
   no accompaniment motif) and Brief (chips, the four motive switches, weight,
   seed, Check with the Analyzer) are the Themes view's.

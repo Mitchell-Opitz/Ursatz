@@ -449,7 +449,7 @@ static Motive notes_motive(const char *text) {
     return motive;
 }
 
-static GrowRequest library_request(const Motive *basic, PlanThemeBeginning beginning, PlanThemeEnding ending) {
+static GrowRequest library_request(const Motive *basic, SectionBeginning beginning, SectionEnding ending) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = basic;
@@ -505,7 +505,7 @@ static void test_library_slots_and_pool(void) {
 
     /* A period with a contrasting motive: the node s1 holds it, the antecedent's contrasting idea m1 restates it and the
        consequent's contrasting idea m3 is made from it, not from the basic motive. */
-    GrowRequest request = library_request(&basic, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
+    GrowRequest request = library_request(&basic, SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &contrast;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId s1 = library_find(plan, "s1");
@@ -524,7 +524,7 @@ static void test_library_slots_and_pool(void) {
     plan_destroy(plan);
 
     /* A sentence with a continuation motive and a cadential one: fragment 1 and the cadential idea restate them. */
-    request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
+    request = library_request(&basic, SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION);
     request.slot_motives[GROW_SLOT_CONTINUATION] = &continuation;
     request.slot_motives[GROW_SLOT_CADENTIAL] = &cadential;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
@@ -549,7 +549,7 @@ static void test_library_slots_and_pool(void) {
     pool.approved = true;
     snprintf(pool.item, sizeof(pool.item), "mot-form");
     snprintf(pool.chain, sizeof(pool.chain), "transpose tonal=1 by=1");
-    request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
+    request = library_request(&basic, SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION);
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
@@ -583,11 +583,11 @@ static void test_library_bad_slots(void) {
     Motive basic = notes_motive("D4:q F4:e A4:e D5:h");
     Motive fits = notes_motive("A4:e G4:e F4:e E4:e D4:h");
     PiecePlan *plan = NULL;
-    GrowRequest request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
+    GrowRequest request = library_request(&basic, SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION);
     /* A slot the pairing has no idea for: no contrasting idea in a sentence, no continuation in a period. */
     request.slot_motives[GROW_SLOT_CONTRASTING] = &fits;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST && plan == NULL);
-    request = library_request(&basic, PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT);
+    request = library_request(&basic, SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT);
     request.slot_motives[GROW_SLOT_CONTINUATION] = &fits;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     request.slot_motives[GROW_SLOT_CONTINUATION] = NULL;

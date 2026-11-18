@@ -88,8 +88,8 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
     request.key = key;
     request.meter = meter;
     request.bars = 8;
-    request.pairing.beginning = shape == PERIOD ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = shape == PERIOD ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = shape == PERIOD ? SECTION_BEGINNING_ANTECEDENT : SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = shape == PERIOD ? SECTION_ENDING_CONSEQUENT : SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;
@@ -140,16 +140,11 @@ static int test_contradiction(void) {
         }
 
         /* The cadence is now planned as a half cadence while an authentic one is written: a contradiction. */
-        for (size_t i = plan_node_constraint_count(plan, theme); i > 0; i--) {
-            if (plan_node_constraint_at(plan, theme, i - 1)->kind == PLAN_CONSTRAINT_CADENCE) {
-                assert(plan_node_remove_constraint(plan, theme, i - 1) == PLAN_OK);
-            }
-        }
-        PlanConstraint half;
-        memset(&half, 0, sizeof(half));
-        half.kind = PLAN_CONSTRAINT_CADENCE;
-        half.params.cadence = CADENCE_TYPE_HALF;
-        assert(plan_node_add_constraint(plan, theme, &half) == PLAN_OK);
+        SectionDescription half = *plan_node_section(plan, theme);
+        half.has_cadence = true;
+        half.cadence = CADENCE_TYPE_HALF;
+        half.has_first_cadence = false;
+        assert(plan_node_set_section(plan, theme, &half) == PLAN_OK);
         assert(analyzer_check_section(plan, test_knowledge(), theme, &check) == ANALYZER_CHECK_OK);
         item = cadence_item(&check);
         assert(item && strcmp(item->planned, "half") == 0 && !item->agreed);
@@ -338,11 +333,11 @@ typedef struct {
 static void piece_section(PieceFixture *fixture, const char *id, PiecePart part, size_t beats, PieceFillKind fill) {
     PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
-    snprintf(section->id, sizeof(section->id), "%s", id);
-    snprintf(section->letter, sizeof(section->letter), "%c", id[0] - 32);
-    section->part = part;
-    section->beats = beats;
-    section->pickup = (Rational){0, 1};
+    snprintf(section->description.id, sizeof(section->description.id), "%s", id);
+    snprintf(section->description.letter, sizeof(section->description.letter), "%c", id[0] - 32);
+    piece_section_set_part(section, part);
+    section->description.beats = beats;
+    section->description.pickup = (Rational){0, 1};
     section->fill = fill;
 }
 

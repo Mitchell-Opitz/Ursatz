@@ -32,15 +32,15 @@ typedef struct {
     const char *key;
     const char *meter;
     GrowInto into;
-    PlanThemeBeginning beginning;
-    PlanThemeEnding ending;
+    SectionBeginning beginning;
+    SectionEnding ending;
 } Case;
 
 static const Case CASES[] = {
     {COMPOSER_FIXTURE_DIR "/motifs/test-motif-6-8.json", "C major", "6/8", GROW_INTO_SENTENCE,
-     PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION},
-    {COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json", "A minor", "3/4", GROW_INTO_PERIOD, PLAN_THEME_BEGINNING_ANTECEDENT,
-     PLAN_THEME_ENDING_CONSEQUENT}};
+     SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION},
+    {COMPOSER_FIXTURE_DIR "/rates/two-bar-3-4.json", "A minor", "3/4", GROW_INTO_PERIOD, SECTION_BEGINNING_ANTECEDENT,
+     SECTION_ENDING_CONSEQUENT}};
 
 static Motive load_motive(const char *path) {
     char *text = test_must_read_file(path, NULL);

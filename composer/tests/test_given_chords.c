@@ -28,11 +28,9 @@ static NodeId section_a(const PiecePlan *plan) {
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId node = plan_node_child_at(plan, root, i);
-        for (size_t c = 0; c < plan_node_constraint_count(plan, node); c++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, node, c);
-            if (constraint->kind == PLAN_CONSTRAINT_SECTION_LETTER && strcmp(constraint->params.letter, "A") == 0) {
-                return node;
-            }
+        const SectionDescription *section = plan_node_section(plan, node);
+        if (section && strcmp(section->letter, "A") == 0) {
+            return node;
         }
     }
     return PLAN_NODE_NONE;

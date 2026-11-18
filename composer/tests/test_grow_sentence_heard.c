@@ -60,8 +60,8 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter = options.meter;
     request.bars = bars;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();

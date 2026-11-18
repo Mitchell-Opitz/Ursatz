@@ -129,9 +129,9 @@ bool form_figure_cell_bounds(const FigureReading *reading, size_t cell, Rational
 }
 
 FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section) {
-    PlanReturn ret;
+    ReturnRef ret;
     int shift;
-    if (!plan || !return_target(plan, section, &ret) || ret.variation != PLAN_RETURN_FIGURATE) {
+    if (!plan || !return_target(plan, section, &ret) || ret.variation != SECTION_RETURN_FIGURATE) {
         return NULL;
     }
     FigureReading *reading = calloc(1, sizeof(*reading));
@@ -238,21 +238,18 @@ bool form_figure_skeleton(const PiecePlan *plan, NodeId section, FormSkeleton *o
 
 /* ------------------------------------------------------------- the figure */
 
-bool form_figure_find(const PiecePlan *plan, NodeId section, PlanFigure *out) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_FIGURE) {
-            *out = constraint->params.figure;
-            return true;
-        }
+bool form_figure_find(const PiecePlan *plan, NodeId section, SectionFigure *out) {
+    const SectionDescription *described = plan_section_or_empty(plan, section);
+    if (described->has_figure) {
+        *out = described->figure;
     }
-    return false;
+    return described->has_figure;
 }
 
 /* The notes a figure has per cell: the cell over the note length; 0 when it is not a whole number from 2 to 8. */
-size_t form_figure_notes_per_cell(const FigureReading *reading, PlanFigureRhythm rhythm, Rational *length) {
+size_t form_figure_notes_per_cell(const FigureReading *reading, SectionFigureRhythm rhythm, Rational *length) {
     Rational per;
-    if (rational_make(1, rhythm == PLAN_FIGURE_EIGHTHS ? 8 : 16, length) != RATIONAL_OK ||
+    if (rational_make(1, rhythm == SECTION_FIGURE_EIGHTHS ? 8 : 16, length) != RATIONAL_OK ||
         rational_div(reading->cell_length, *length, &per) != RATIONAL_OK || per.den != 1 || per.num < 2 || per.num > 8) {
         return 0;
     }
@@ -398,16 +395,16 @@ static int next_cell_pitch(const FigureReading *reading, size_t cell) {
 }
 
 /* The pitches of one figured cell, made as the figure asks, else the other way; false when both leave the range. */
-static bool figure_cell(const FigureReading *reading, size_t cell, const PlanFigure *figure, int draw, size_t figured, size_t per,
+static bool figure_cell(const FigureReading *reading, size_t cell, const SectionFigure *figure, int draw, size_t figured, size_t per,
                         const MelodyFillParams *range, int *out) {
     int tone = reading->skeleton.pitch[cell];
     unsigned scale = scale_pitch_classes(&reading->key, reading->mask[cell]);
     for (int attempt = 0; attempt < 2; attempt++) {
         int turn = attempt == 0 ? 1 : -1;
         bool made = false;
-        if (figure->kind == PLAN_FIGURE_NEIGHBOR) {
+        if (figure->kind == SECTION_FIGURE_NEIGHBOR) {
             made = neighbor_cell(scale, tone, draw * (figured % 2 == 0 ? 1 : -1) * turn, per, out);
-        } else if (figure->kind == PLAN_FIGURE_SCALE) {
+        } else if (figure->kind == SECTION_FIGURE_SCALE) {
             int target = next_cell_pitch(reading, cell);
             if (target != tone) {
                 if (attempt == 0) {
@@ -431,7 +428,7 @@ static bool figure_cell(const FigureReading *reading, size_t cell, const PlanFig
 }
 
 /* The melody of a section, from its skeleton and figure: the notes in order of onset. */
-static bool build_melody(const FigureReading *reading, const PlanFigure *figure, const MelodyFillParams *range, FillRng *rng,
+static bool build_melody(const FigureReading *reading, const SectionFigure *figure, const MelodyFillParams *range, FillRng *rng,
                          FigureNote *list, size_t *count) {
     const FormSkeleton *skeleton = &reading->skeleton;
     Rational length;
@@ -515,7 +512,7 @@ static bool write_spans(PiecePlan *plan, NodeId section, const FigureNote *list,
 
 bool form_figure_write(PiecePlan *plan, NodeId section, const MelodyFillParams *range, FillRng *rng) {
     MelodyFillParams defaults = melody_fill_params_default();
-    PlanFigure figure;
+    SectionFigure figure;
     if (!plan || !rng || !form_figure_find(plan, section, &figure)) {
         return false;
     }

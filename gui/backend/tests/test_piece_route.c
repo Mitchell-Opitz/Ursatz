@@ -686,9 +686,10 @@ static void test_compose(const Items *m) {
         "a theme fill names the copy of the plan by an absolute path in the version folder");
   check(is_theme_plan(plan, m->theme, 2), "the copy is the plan of the theme version");
   const cJSON *s3 = section_named(request, "s3");
-  check(strcmp(string_of(member(s3, "fill"), "kind"), "progression") == 0 &&
-            strcmp(string_of(member(s3, "fill"), "numerals"), "i iv V i") == 0 && number_of(member(s3, "fill"), "cells") == 2,
-        "a progression fill passes its numerals and cells");
+  /* A stored progression fill is the section's harmony on an empty fill (R-610). */
+  check(strcmp(string_of(member(s3, "fill"), "kind"), "empty") == 0 &&
+            strcmp(string_of(member(s3, "harmony"), "progression"), "i iv V i") == 0 && number_of(member(s3, "harmony"), "cells") == 2,
+        "a progression fill is read as harmony: its numerals and cells");
   check(strcmp(string_of(member(section_named(request, "end"), "fill"), "kind"), "empty") == 0 &&
             strcmp(string_of(section_named(request, "end"), "part"), "ending") == 0,
         "the ending is a section like the others");
@@ -1414,6 +1415,71 @@ static void check_sized_version(const char *id, int number) {
 
 /* A piece of any form (R-430): compose, play, regenerate, vary and choose a rounded binary, compose a theme with
    variations, and the refusals of a structure the form does not have. */
+/* A section's region and harmony: overlays of a sized form, and a game loop's sections. */
+static void test_section_controls(const Items *m) {
+  int status = 0;
+  char theme[300];
+  char body[4000];
+  theme_fill_of(theme, sizeof(theme), m->theme, 2);
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"piece\":{\"structure\":{\"form\":\"ternary\",\"key\":\"D\",\"mode\":\"minor\",\"meter\":\"4/4\","
+           "\"sections\":[{\"name\":\"A\",\"region\":\"home\"},"
+           "{\"name\":\"B\",\"region\":{\"relation\":\"omt.relation.dominant\",\"anchor\":\"A\"},\"fill\":%s}]}}}",
+           theme);
+  char *piece = create_item("piece", "Placed", body, &status);
+  check(status == 200 && piece, "a ternary with a region on each overlay is saved");
+  if (piece) {
+    cJSON *answer = compose(piece, "{\"seed\":1}", &status);
+    check(status == 200 && ok_true(answer), "a ternary with overlays is composed");
+    cJSON_Delete(answer);
+    cJSON *request = last_request();
+    const cJSON *sections = member(request, "sections");
+    const cJSON *a = cJSON_GetArrayItem(sections, 0);
+    const cJSON *b = cJSON_GetArrayItem(sections, 1);
+    check(cJSON_GetArraySize(sections) == 2 && strcmp(string_of(a, "name"), "A") == 0 && strcmp(string_of(a, "region"), "home") == 0 &&
+              strcmp(string_of(b, "name"), "B") == 0 && strcmp(string_of(member(b, "region"), "relation"), "omt.relation.dominant") == 0 &&
+              strcmp(string_of(member(b, "region"), "anchor"), "A") == 0,
+          "the request holds the overlays with their regions");
+    const char *plan_b = string_of(member(b, "fill"), "plan");
+    check(strcmp(string_of(member(b, "fill"), "kind"), "theme") == 0 && strstr(plan_b, "/theme-B.plan.json") != NULL &&
+              !member(a, "fill"),
+          "an overlay's theme fill names the copy of its plan, by the section's name, and an overlay without a fill has none");
+    cJSON_Delete(request);
+    free(piece);
+  }
+
+  char sections_text[5000];
+  char more[300];
+  full_sections(m, sections_text, sizeof(sections_text));
+  char *at = strstr(sections_text, "\"id\":\"s1\"");
+  char *turn = strstr(sections_text, "\"id\":\"s4\"");
+  check(at && turn && at < turn, "the section list to place regions on is the full list");
+  if (!at || !turn) {
+    return;
+  }
+  char placed[5600];
+  snprintf(placed, sizeof(placed), "%.*s\"id\":\"s1\",\"region\":\"home\",%s", (int)(at - sections_text), sections_text, at + strlen("\"id\":\"s1\","));
+  turn = strstr(placed, "\"id\":\"s4\"");
+  char final[5800];
+  snprintf(final, sizeof(final), "%.*s\"id\":\"s4\",\"region\":\"home\",\"harmony\":{\"progression\":\"i V\",\"cells\":1},%s",
+           (int)(turn - placed), placed, turn + strlen("\"id\":\"s4\","));
+  snprintf(more, sizeof(more), ",\"motive\":{\"item_id\":\"%s\",\"version\":1},\"tempo\":96", m->a);
+  char *loop = NULL;
+  check(create_piece("Placed loop", final, more, &loop) == 200 && loop, "a game loop with a region and harmony is saved");
+  if (loop) {
+    cJSON *answer = compose(loop, "{\"seed\":1}", &status);
+    cJSON_Delete(answer);
+    cJSON *request = last_request();
+    const cJSON *s1 = section_named(request, "s1");
+    const cJSON *s2 = section_named(request, "s4");
+    check(strcmp(string_of(s1, "region"), "home") == 0 && strcmp(string_of(s2, "region"), "home") == 0 &&
+              strcmp(string_of(member(s2, "harmony"), "progression"), "i V") == 0 && number_of(member(s2, "harmony"), "cells") == 1,
+          "a loop section's region and harmony are in the request");
+    cJSON_Delete(request);
+    free(loop);
+  }
+}
+
 static void test_any_form(const Items *m) {
   int status = 0;
   char more[200];
@@ -1523,7 +1589,8 @@ static void test_any_form(const Items *m) {
 
   /* What a form does not have is refused. */
   check(create_sized("Bad", "waltz", "", more, NULL) == 400, "a form the Composer does not build is refused");
-  check(create_sized("Bad", "rounded-binary", ",\"sections\":[]", more, NULL) == 400, "sections on a rounded binary are refused");
+  check(create_sized("Bad", "rounded-binary", ",\"sections\":[{\"name\":\"Z\",\"region\":\"home\"}]", more, NULL) == 400,
+        "an overlay that names no section of a rounded binary is refused");
   check(create_sized("Bad", "rounded-binary", ",\"bars\":20", more, NULL) == 400, "a rounded binary of 20 bars is refused");
   char *loop_piece = NULL;
   char sections[5000];
@@ -1790,6 +1857,7 @@ int main(int argc, char **argv) {
     test_update_uses(&items);
     test_regenerate(&items);
     test_any_form(&items);
+    test_section_controls(&items);
     test_materials(&items);
     test_old_game_loop_piece(&items);
     test_failures(&items);

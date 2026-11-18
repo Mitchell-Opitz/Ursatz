@@ -1,5 +1,6 @@
 #include <ursatz_composer/piece_plan_keys.h>
 
+#include <stdarg.h>
 #include <string.h>
 
 #include <stdio.h>
@@ -18,6 +19,7 @@
 #include "check/hearing.h"
 #include "form/form_internal.h"
 #include "util/plan_util.h"
+#include "util/request_parse.h"
 #include "util/util.h"
 
 /* A key lane span before it is added: its key, the relation that reached it from home (NULL for home) and where it lies. */
@@ -25,26 +27,22 @@ typedef struct {
     PlanSpan span;
     AnalysisKey key;
     const char *relation;
+    PlanKeyAnchor anchor;
+    const char *anchor_section;
 } KeySegment;
 
 #define MAX_SEGMENTS (2 * FORM_SPEC_MAX_SECTIONS + 1)
 
-/* The relation entry each degree of a region names (R-596); index 0 is unused. */
-static const char *const DEGREE_RELATIONS[8] = {NULL,
-                                                "omt.relation.parallel",
-                                                "omt.relation.supertonic",
-                                                "omt.relation.mediant",
-                                                "omt.relation.subdominant",
-                                                "omt.relation.dominant",
-                                                "omt.relation.submediant",
-                                                "omt.relation.subtonic"};
+/* The relation that reaches the home key's parallel key: the other mode on the same tonic (R-596). */
+#define PARALLEL_RELATION "omt.relation.parallel"
 
-/* The key the relation of a degree (1 to 7) reaches from the home key, resolved by the snapshot against the home key's region. */
-static bool resolve_degree(const KnowledgeSnapshot *knowledge, AnalysisKey home, int degree, AnalysisKey *out, const char **relation_id) {
-    if (!knowledge || degree < 1 || degree > 7 || home.material == NULL) {
+/* The key a relation of the snapshot reaches from the home key, resolved against the home key's region. */
+static bool resolve_relation(const KnowledgeSnapshot *knowledge, AnalysisKey home, const char *relation_id, AnalysisKey *out,
+                             const char **resolved_id) {
+    if (!knowledge || !relation_id || home.material == NULL) {
         return false;
     }
-    const Relation *relation = knowledge_snapshot_relation(knowledge, DEGREE_RELATIONS[degree]);
+    const Relation *relation = knowledge_snapshot_relation(knowledge, relation_id);
     Region anchor = region_tonal(analysis_key_tonic_pitch_class(&home), home.material);
     Region found;
     if (!relation || region_resolve(knowledge, relation, &anchor, &found, NULL, 0) != REGION_RELATION_OK ||
@@ -52,23 +50,22 @@ static bool resolve_degree(const KnowledgeSnapshot *knowledge, AnalysisKey home,
         return false;
     }
     *out = plan_key_of_pitch_class(found.center, found.material);
-    *relation_id = DEGREE_RELATIONS[degree];
+    *resolved_id = relation->id;
     return true;
 }
 
 /*
- * The key of a region of the home key (R-485): one of the region's degrees for the home key's mode, drawn from the list
- * (one draw of rng whatever the degree is), resolved through the degree's relation entry (R-596). Degree 1 is the home key's
- * parallel key, the other mode on the same tonic; any other is the key the triad on that degree makes, closely related for the
- * degrees the forms list. False when the relation refuses the degree.
+ * The key of a region of the home key (R-485): one of the region's relations for the home key's mode, drawn from the list
+ * (one draw of rng whatever the relation is), resolved through its entry in the snapshot (R-596). The parallel relation is
+ * the home key's parallel key, the other mode on the same tonic; any other is the key the relation reaches, closely related
+ * for the relations the forms list. False when the relation refuses.
  */
 static bool region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out,
                        const char **relation_id) {
     bool is_minor = composer_key_is_minor(&home);
-    const int *degrees = is_minor ? region->minor : region->major;
+    const char(*relations)[SECTION_WORD_MAX] = is_minor ? region->minor : region->major;
     size_t count = is_minor ? region->minor_count : region->major_count;
-    int degree = degrees[fill_rng_below(rng, count)];
-    return resolve_degree(knowledge, home, degree, out, relation_id);
+    return resolve_relation(knowledge, home, relations[fill_rng_below(rng, count)], out, relation_id);
 }
 
 bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
@@ -76,12 +73,12 @@ bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, cons
     return region_key(knowledge, home, region, rng, out, &relation_id);
 }
 
-/* A region a section's keys name has no degree 1: the parallel key is for the parts of a compound form. */
-static bool region_has_degree_one(const FormRegion *region, bool is_minor) {
-    const int *degrees = is_minor ? region->minor : region->major;
+/* A region a section's keys name has no parallel relation: the parallel key is for the parts of a compound form. */
+static bool region_has_parallel(const FormRegion *region, bool is_minor) {
+    const char(*relations)[SECTION_WORD_MAX] = is_minor ? region->minor : region->major;
     size_t count = is_minor ? region->minor_count : region->major_count;
     for (size_t i = 0; i < count; i++) {
-        if (degrees[i] == 1) {
+        if (strcmp(relations[i], PARALLEL_RELATION) == 0) {
             return true;
         }
     }
@@ -106,10 +103,11 @@ static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, 
         keys[i].end = home;
         keys[i].start_relation = NULL;
         keys[i].end_relation = NULL;
-        can = can || size->sections[i].key_start != FORM_SPEC_HOME || size->sections[i].key_end != FORM_SPEC_HOME;
+        can = can || form_spec_region_of(form, &size->sections[i].key_start) != FORM_SPEC_HOME ||
+              form_spec_region_of(form, &size->sections[i].key_end) != FORM_SPEC_HOME;
         /* A section in the parallel mode (R-499) is on the home tonic in the other mode: no draw, and modulates stays as it is. */
-        if (size->sections[i].parallel) {
-            if (!resolve_degree(knowledge, home, 1, &keys[i].start, &keys[i].start_relation)) {
+        if (size->sections[i].mode == SECTION_MODE_PARALLEL) {
+            if (!resolve_relation(knowledge, home, PARALLEL_RELATION, &keys[i].start, &keys[i].start_relation)) {
                 return false;
             }
             keys[i].end = keys[i].start;
@@ -117,8 +115,8 @@ static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, 
         }
         /* A section in the tonic major (R-517) is on the home tonic in its major key: home in a major piece, the parallel major in a
          * minor one. No draw, so the draws after it are unchanged. */
-        if (size->sections[i].tonic_major && composer_key_is_minor(&home)) {
-            if (!resolve_degree(knowledge, home, 1, &keys[i].start, &keys[i].start_relation)) {
+        if (size->sections[i].mode == SECTION_MODE_TONIC_MAJOR && composer_key_is_minor(&home)) {
+            if (!resolve_relation(knowledge, home, PARALLEL_RELATION, &keys[i].start, &keys[i].start_relation)) {
                 return false;
             }
             keys[i].end = keys[i].start;
@@ -135,18 +133,20 @@ static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, 
     }
     for (size_t r = 0; r < form->region_count; r++) {
         const FormRegion *region = &form->regions[r];
-        if (region_has_degree_one(region, composer_key_is_minor(&home)) || !region_key(knowledge, home, region, rng, &away[r], &away_relation[r])) {
+        if (region_has_parallel(region, composer_key_is_minor(&home)) || !region_key(knowledge, home, region, rng, &away[r], &away_relation[r])) {
             return false;
         }
     }
     for (size_t i = 0; i < size->section_count; i++) {
-        if (size->sections[i].key_start != FORM_SPEC_HOME) {
-            keys[i].start = away[size->sections[i].key_start];
-            keys[i].start_relation = away_relation[size->sections[i].key_start];
+        int start = form_spec_region_of(form, &size->sections[i].key_start);
+        int end = form_spec_region_of(form, &size->sections[i].key_end);
+        if (start != FORM_SPEC_HOME) {
+            keys[i].start = away[start];
+            keys[i].start_relation = away_relation[start];
         }
-        if (size->sections[i].key_end != FORM_SPEC_HOME) {
-            keys[i].end = away[size->sections[i].key_end];
-            keys[i].end_relation = away_relation[size->sections[i].key_end];
+        if (end != FORM_SPEC_HOME) {
+            keys[i].end = away[end];
+            keys[i].end_relation = away_relation[end];
         }
     }
     *modulates = true;
@@ -154,7 +154,8 @@ static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, 
 }
 
 /* Adds a segment, joined to the one before it when that is in the same key and ends where this one starts. */
-static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, AnalysisKey key, const char *relation) {
+static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, AnalysisKey key, const char *relation,
+                                PlanKeyAnchor anchor, const char *anchor_section) {
     if (*count > 0 && analysis_key_equals(&segments[*count - 1].key, &key)) {
         Rational end;
         PieceResult result = piece_result_of_plan(plan_span_end(segments[*count - 1].span, &end));
@@ -170,6 +171,8 @@ static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan sp
     segments[*count].span = span;
     segments[*count].key = key;
     segments[*count].relation = relation;
+    segments[*count].anchor = anchor;
+    segments[*count].anchor_section = anchor_section;
     (*count)++;
     return PIECE_OK;
 }
@@ -177,7 +180,7 @@ static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan sp
 /* A section whose key changes halfway has its first half in the key it starts in and its second in the key it ends in. */
 static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpan span, const PieceSectionKeys *keys) {
     if (analysis_key_equals(&keys->start, &keys->end)) {
-        return push_segment(segments, count, span, keys->start, keys->start_relation);
+        return push_segment(segments, count, span, keys->start, keys->start_relation, keys->anchor, keys->anchor_section);
     }
     PlanSpan first;
     PlanSpan second;
@@ -189,9 +192,9 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
     second.length = first.length;
     result = piece_result_of_plan(plan_result_of_rational(rational_add(span.start, first.length, &second.start)));
     if (result == PIECE_OK) {
-        result = push_segment(segments, count, first, keys->start, keys->start_relation);
+        result = push_segment(segments, count, first, keys->start, keys->start_relation, keys->anchor, keys->anchor_section);
     }
-    return result == PIECE_OK ? push_segment(segments, count, second, keys->end, keys->end_relation) : result;
+    return result == PIECE_OK ? push_segment(segments, count, second, keys->end, keys->end_relation, keys->anchor, keys->anchor_section) : result;
 }
 
 /* The KEY constraint of the section, replaced by the key it ends in. */
@@ -210,7 +213,7 @@ static PieceResult set_section_key(PiecePlan *plan, NodeId section, AnalysisKey 
 }
 
 PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *spec, const FormSpecSize *size,
-                            FillRng *rng, PieceKeyPlan *out) {
+                            FillRng *rng, const PieceRegion *regions, PieceKeyPlan *out) {
     if (!plan || !spec || !size || !out) {
         return PIECE_ERR_NULL;
     }
@@ -224,9 +227,9 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             material = child;
-        } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+        } else if (plan_section_has_role(plan, child, SECTION_ROLE_SEAM)) {
             continue; /* the seam is not a section of the piece */
         } else if (count < FORM_SPEC_MAX_SECTIONS) {
             sections[count++] = child;
@@ -243,6 +246,19 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
     if (!draw_keys(knowledge, spec, size, home, rng, out->sections, &out->modulates)) {
         return PIECE_ERR_BAD_REQUEST;
     }
+    for (size_t i = 0; regions && i < count; i++) {
+        if (!regions[i].has_region) {
+            continue;
+        }
+        PieceSectionKeys *keys = &out->sections[i];
+        keys->start = regions[i].key;
+        keys->end = regions[i].key;
+        keys->start_relation = regions[i].relation[0] ? regions[i].relation : NULL;
+        keys->end_relation = keys->start_relation;
+        keys->anchor = regions[i].anchor;
+        keys->anchor_section = regions[i].anchor == PLAN_KEY_ANCHOR_SECTION ? regions[i].anchor_section : NULL;
+        out->modulates = out->modulates || !analysis_key_equals(&regions[i].key, &home);
+    }
 
     KeySegment segments[MAX_SEGMENTS];
     size_t segment_count = 0;
@@ -251,7 +267,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
         result = section_segments(segments, &segment_count, plan_node_span(plan, sections[i]), &out->sections[i]);
     }
     if (result == PIECE_OK) {
-        result = push_segment(segments, &segment_count, plan_node_span(plan, material), home, NULL);
+        result = push_segment(segments, &segment_count, plan_node_span(plan, material), home, NULL, PLAN_KEY_ANCHOR_HOME, NULL);
     }
     for (size_t i = 0; result == PIECE_OK && i < segment_count; i++) {
         PlanLanePayload payload;
@@ -261,7 +277,8 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
         result = piece_result_of_plan(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, segments[i].span, &payload, &id));
         if (result == PIECE_OK && segments[i].relation) {
             result = piece_result_of_plan(
-                plan_lane_span_set_key_relation(plan, id, segments[i].relation, PLAN_KEY_ANCHOR_HOME, true));
+                plan_lane_span_set_key_relation(plan, id, segments[i].relation, segments[i].anchor,
+                                                segments[i].anchor == PLAN_KEY_ANCHOR_SECTION ? segments[i].anchor_section : NULL, true));
         }
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
     }
@@ -271,6 +288,161 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
         }
     }
     return result;
+}
+
+
+/* ------------------------------------------------------------- the regions a request names */
+
+static PieceResult refuse_region(size_t index, size_t *refused, char *message, size_t size, const char *format, ...) {
+    va_list args;
+    if (refused) {
+        *refused = index;
+    }
+    if (message && size > 0) {
+        va_start(args, format);
+        vsnprintf(message, size, format, args);
+        va_end(args);
+    }
+    return PIECE_ERR_BAD_REQUEST;
+}
+
+/* The words of a refusal for a region the Composer does not write: its material, until P69 (R-611). */
+static PieceResult refuse_material(size_t index, const char *section, int center, const PitchMaterial *material, size_t *refused,
+                                   char *message, size_t size) {
+    static const char *const NAMES[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
+    return refuse_region(index, refused, message, size,
+                         "section '%s' is in %s %s: the Composer writes major and natural minor keys until P69", section,
+                         center >= 0 && center < 12 ? NAMES[center] : "?", material && material->name ? material->name : "no material");
+}
+
+PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSnapshot *knowledge, PieceRegion *out, size_t *refused,
+                                  char *message, size_t message_size) {
+    CommonPracticeMaterials materials;
+    if (!request || !out || !knowledge || !common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
+        return PIECE_ERR_NULL;
+    }
+    AnalysisKey keys[PIECE_STRUCTURE_MAX_SECTIONS];
+    size_t count = request->section_count < PIECE_STRUCTURE_MAX_SECTIONS ? request->section_count : PIECE_STRUCTURE_MAX_SECTIONS;
+    for (size_t i = 0; i < count; i++) {
+        const SectionDescription *section = &request->sections[i].description;
+        const SectionRegion *region = &section->key_end;
+        PieceRegion *entry = &out[i];
+        memset(entry, 0, sizeof(*entry));
+        entry->key = request->key;
+        keys[i] = request->key;
+        snprintf(entry->text, sizeof(entry->text), "home");
+        if (region->kind == SECTION_REGION_NONE) {
+            continue;
+        }
+        entry->has_region = true;
+        if (region->kind == SECTION_REGION_HOME) {
+            entry->changes_key = i > 0 && !analysis_key_equals(&keys[i - 1], &request->key);
+            continue;
+        }
+        if (region->kind == SECTION_REGION_KEY) {
+            char text[SECTION_TONIC_MAX + SECTION_WORD_MAX + 2];
+            snprintf(text, sizeof(text), "%s %s", region->tonic, region->material);
+            const PitchMaterial *material = knowledge_snapshot_material_named(knowledge, region->material);
+            AnalysisKey key;
+            if (!material) {
+                return refuse_region(i, refused, message, message_size, "section '%s': no material is named '%s'", section->id, region->material);
+            }
+            if (!composer_material_supported(&materials, material)) {
+                char tonic[SECTION_TONIC_MAX + 8];
+                snprintf(tonic, sizeof(tonic), "%s major", region->tonic);
+                AnalysisKey center;
+                int pc = request_parse_key(tonic, knowledge, &center) ? analysis_key_tonic_pitch_class(&center) : -1;
+                return refuse_material(i, section->id, pc, material, refused, message, message_size);
+            }
+            if (!request_parse_key(text, knowledge, &key)) {
+                return refuse_region(i, refused, message, message_size, "section '%s': '%s' is not a tonic", section->id, region->tonic);
+            }
+            entry->key = key;
+            keys[i] = key;
+            entry->changes_key = !analysis_key_equals(i > 0 ? &keys[i - 1] : &request->key, &key);
+            snprintf(entry->text, sizeof(entry->text), "%s", text);
+            continue;
+        }
+        /* a relation from an anchor: home, the section before, or an earlier section */
+        const AnalysisKey *anchor_key = &request->key;
+        const char *anchor_name = "home";
+        if (region->anchor == SECTION_ANCHOR_PREVIOUS) {
+            if (i == 0) {
+                return refuse_region(i, refused, message, message_size, "the first section has no previous region");
+            }
+            anchor_key = &keys[i - 1];
+            anchor_name = "previous";
+        } else if (region->anchor == SECTION_ANCHOR_SECTION) {
+            size_t found = i;
+            for (size_t k = 0; k < i; k++) {
+                if (strcmp(request->sections[k].description.id, region->anchor_section) == 0) {
+                    found = k;
+                }
+            }
+            if (found == i) {
+                return refuse_region(i, refused, message, message_size, "anchor '%s' must be an earlier section", region->anchor_section);
+            }
+            anchor_key = &keys[found];
+            anchor_name = region->anchor_section;
+        }
+        const Relation *relation = knowledge_snapshot_relation_named(knowledge, region->relation);
+        Region from = region_tonal(analysis_key_tonic_pitch_class(anchor_key), anchor_key->material);
+        Region reached;
+        char why[256];
+        if (!relation) {
+            return refuse_region(i, refused, message, message_size, "section '%s': no relation is named '%s'", section->id, region->relation);
+        }
+        if (region_resolve_named(knowledge, region->relation, &from, &reached, why, sizeof(why)) != REGION_RELATION_OK) {
+            return refuse_region(i, refused, message, message_size, "section '%s': %s", section->id, why);
+        }
+        if (reached.kind != REGION_TONAL_MODAL || !composer_material_supported(&materials, reached.material)) {
+            return refuse_material(i, section->id, reached.center, reached.material, refused, message, message_size);
+        }
+        entry->key = plan_key_of_pitch_class(reached.center, reached.material);
+        keys[i] = entry->key;
+        /* A region equal to the section before's (home for the first) asks for no key change. */
+        const AnalysisKey *before = i > 0 ? &keys[i - 1] : &request->key;
+        Region before_region = region_tonal(analysis_key_tonic_pitch_class(before), before->material);
+        entry->changes_key = !region_equals(&reached, &before_region);
+        snprintf(entry->relation, sizeof(entry->relation), "%s", relation->id);
+        entry->anchor = region->anchor == SECTION_ANCHOR_PREVIOUS  ? PLAN_KEY_ANCHOR_PREVIOUS
+                        : region->anchor == SECTION_ANCHOR_SECTION ? PLAN_KEY_ANCHOR_SECTION
+                                                                   : PLAN_KEY_ANCHOR_HOME;
+        if (entry->anchor == PLAN_KEY_ANCHOR_SECTION) {
+            snprintf(entry->anchor_section, sizeof(entry->anchor_section), "%s", region->anchor_section);
+        }
+        snprintf(entry->text, sizeof(entry->text), "%s of %s", region->relation, anchor_name);
+    }
+    return PIECE_OK;
+}
+
+/*
+ * The regions of a form that takes its sections from its size, from the request's overlays: one entry for each section of the size, a
+ * section no overlay names having none. *regional says some overlay asks for a key other than home. A refusal is as
+ * piece_resolve_regions', *refused the index of the section of the size it is about.
+ */
+PieceResult piece_resolve_overlay_regions(const PieceRequest *request, const FormSpecSize *size, const KnowledgeSnapshot *knowledge,
+                                          PieceRegion *regions, bool *regional, size_t *refused, char *message, size_t message_size) {
+    PieceSection views[FORM_SPEC_MAX_SECTIONS];
+    *regional = false;
+    for (size_t i = 0; i < size->section_count; i++) {
+        piece_section_init(&views[i]);
+        for (size_t o = 0; o < request->overlay_count; o++) {
+            if (strcmp(request->overlays[o].description.name, size->sections[i].name) == 0) {
+                views[i].description = request->overlays[o].description;
+            }
+        }
+        snprintf(views[i].description.id, sizeof(views[i].description.id), "%.15s", size->sections[i].name);
+        *regional = *regional || (views[i].description.key_end.kind != SECTION_REGION_NONE &&
+                                  views[i].description.key_end.kind != SECTION_REGION_HOME);
+    }
+    if (!*regional) {
+        return PIECE_OK;
+    }
+    PieceRequest view = *request;
+    view.sections = views;
+    view.section_count = size->section_count;
+    return piece_resolve_regions(&view, knowledge, regions, refused, message, message_size);
 }
 
 /* ------------------------------------------------------------- the check */
@@ -395,9 +567,9 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
     Rational piece_end = {0, 1};
     for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             piece_end = plan_node_span(plan, child).start;
-        } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+        } else if (plan_section_has_role(plan, child, SECTION_ROLE_SEAM)) {
             continue;
         } else if (section_count < FORM_SPEC_MAX_SECTIONS) {
             sections[section_count++] = child;

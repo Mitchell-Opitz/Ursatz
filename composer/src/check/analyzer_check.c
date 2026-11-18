@@ -163,11 +163,12 @@ static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars,
                              const AnalysisReport *report, Items *items) {
     CadenceType planned[MAX_CADENCES];
     size_t count = 0;
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section) && count < MAX_CADENCES; i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
-            planned[count++] = constraint->params.cadence;
-        }
+    const SectionDescription *described = plan_section_or_empty(plan, section);
+    if (described->has_cadence) {
+        planned[count++] = described->cadence;
+    }
+    if (described->has_first_cadence && count < MAX_CADENCES) {
+        planned[count++] = described->first_cadence;
     }
     /* The first cadence closes the section; the second, when there is one, closes its antecedent halfway. */
     for (size_t i = 0; i < count; i++) {
@@ -349,8 +350,8 @@ static bool within_a_beat(Rational a, Rational b, const PlanMeter *meter) {
 /* The section a node is, as the structure plan builds them: one with a piece part, which is not the seam. */
 static bool is_part_section(const PiecePlan *plan, NodeId id) {
     return plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
-           plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_PIECE_PART) &&
-           !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM);
+           plan_section_part_of(plan, id, NULL) &&
+           !plan_section_has_role(plan, id, SECTION_ROLE_SEAM);
 }
 
 /* Where the Analyzer heard a cadence end: the start of the chord after its arrival, else the end of the fragment. */
@@ -395,11 +396,8 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
         if (!is_part_section(plan, id)) {
             continue;
         }
-        const PlanConstraint *planned = NULL;
-        for (size_t i = 0; !planned && i < plan_node_constraint_count(plan, id); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            planned = constraint->kind == PLAN_CONSTRAINT_CADENCE ? constraint : NULL;
-        }
+        CadenceType planned_cadence;
+        const bool planned = plan_node_cadence(plan, id, &planned_cadence);
         Rational end;
         PlanSpan span = plan_node_span(plan, id);
         if (!planned || plan_span_end(span, &end) != PLAN_OK) {
@@ -417,7 +415,7 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
             if (!cadence_at(report, cadence, end, fragment_end, meter)) {
                 continue;
             }
-            bool matches = cadence_agrees(planned->params.cadence, cadence->type);
+            bool matches = cadence_agrees(planned_cadence, cadence->type);
             if (matches || !agreed) {
                 heard = cadence->type;
                 agreed = matches;
@@ -432,7 +430,7 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
             heard = "none (the piece ends)";
             agreed = true;
         }
-        if (planned->params.cadence == CADENCE_TYPE_HALF && !agreed) {
+        if (planned_cadence == CADENCE_TYPE_HALF && !agreed) {
             bool last = at_end;
             bool resolved = false;
             for (size_t c = 0; c < report->cadence_count && !resolved; c++) {
@@ -448,7 +446,7 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
                 agreed = true;
             }
         }
-        add_item(items, ANALYZER_CHECK_CADENCE, bar, cadence_type_name(planned->params.cadence), heard,
+        add_item(items, ANALYZER_CHECK_CADENCE, bar, cadence_type_name(planned_cadence), heard,
                  agreed);
     }
 }

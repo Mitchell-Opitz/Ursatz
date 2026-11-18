@@ -22,11 +22,8 @@ NodeId piece_section_find(const PiecePlan *plan, const char *id) {
         if (!plan_has_node(plan, node) || plan_node_kind(plan, node) != PLAN_NODE_SECTION) {
             continue;
         }
-        for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
-            if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART && strcmp(constraint->params.piece_part.id, id) == 0) {
-                return node;
-            }
+        if (plan_section_part_of(plan, node, NULL) && strcmp(plan_node_section(plan, node)->id, id) == 0) {
+            return node;
         }
     }
     return PLAN_NODE_NONE;
@@ -36,7 +33,7 @@ size_t piece_held_sections(const PiecePlan *plan, NodeId *out, size_t capacity) 
     size_t count = 0;
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
         if (plan_has_node(plan, node) && plan_node_kind(plan, node) == PLAN_NODE_SECTION &&
-            plan_node_has_constraint(plan, node, PLAN_CONSTRAINT_HOLD)) {
+            plan_section_or_empty(plan, node)->leads_in) {
             if (out && count < capacity) {
                 out[count] = node;
             }
@@ -51,14 +48,9 @@ bool piece_section_holds_body_start(const PiecePlan *plan, NodeId section) {
     if (!plan_has_node(plan, section) || !piece_seam_body_start(plan, &body_start)) {
         return false;
     }
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART && constraint->params.piece_part.part == (int)PIECE_PART_BODY &&
-            rational_cmp(plan_node_span(plan, section).start, body_start) == 0) {
-            return true;
-        }
-    }
-    return false;
+    int part;
+    return plan_section_part_of(plan, section, &part) && part == (int)PIECE_PART_BODY &&
+           rational_cmp(plan_node_span(plan, section).start, body_start) == 0;
 }
 
 PieceResult piece_seam_reset(PiecePlan *plan) {

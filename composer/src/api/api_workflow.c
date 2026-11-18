@@ -45,7 +45,7 @@ size_t api_plan_sections(const PiecePlan *plan, ApiSection *out, size_t capacity
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId node = plan_node_child_at(plan, root, i);
-        if (plan_node_kind(plan, node) != PLAN_NODE_SECTION || plan_node_has_constraint(plan, node, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_kind(plan, node) != PLAN_NODE_SECTION || plan_section_has_role(plan, node, SECTION_ROLE_MATERIAL)) {
             continue;
         }
         if (count < capacity) {
@@ -56,42 +56,36 @@ size_t api_plan_sections(const PiecePlan *plan, ApiSection *out, size_t capacity
             snprintf(section->name, sizeof(section->name), "%s", name ? name : "");
             snprintf(section->letter, sizeof(section->letter), "%.*s", (int)sizeof(section->letter) - 1, section->name);
             section->bars = api_bars_in(plan, plan_node_span(plan, node).length);
+            const SectionDescription *described = plan_node_section(plan, node);
+            if (described->letter[0] != '\0') {
+                snprintf(section->letter, sizeof(section->letter), "%s", described->letter);
+            }
             for (size_t c = 0; c < plan_node_constraint_count(plan, node); c++) {
                 const PlanConstraint *constraint = plan_node_constraint_at(plan, node, c);
-                switch (constraint->kind) {
-                case PLAN_CONSTRAINT_SECTION_LETTER:
-                    memcpy(section->letter, constraint->params.letter, sizeof(section->letter));
-                    break;
-                case PLAN_CONSTRAINT_KEY:
+                if (constraint->kind == PLAN_CONSTRAINT_KEY) {
                     section->has_key = true;
                     section->key = constraint->params.key;
-                    break;
-                case PLAN_CONSTRAINT_CADENCE:
-                    if (section->cadence_count < 2) {
-                        section->cadences[section->cadence_count++] = constraint->params.cadence;
-                    }
-                    break;
-                case PLAN_CONSTRAINT_THEME_PAIRING:
-                    section->has_pairing = true;
-                    section->pairing = constraint->params.theme_pairing;
-                    break;
-                case PLAN_CONSTRAINT_RETURN: {
-                    section->returns = true;
-                    section->variation = constraint->params.section_return.variation;
-                    const char *source = plan_node_name(plan, constraint->params.section_return.section);
-                    snprintf(section->returns_letter, sizeof(section->returns_letter), "%.*s",
-                             (int)sizeof(section->returns_letter) - 1, source ? source : "");
-                    for (size_t c2 = 0; c2 < plan_node_constraint_count(plan, constraint->params.section_return.section); c2++) {
-                        const PlanConstraint *letter =
-                            plan_node_constraint_at(plan, constraint->params.section_return.section, c2);
-                        if (letter->kind == PLAN_CONSTRAINT_SECTION_LETTER) {
-                            memcpy(section->returns_letter, letter->params.letter, sizeof(section->returns_letter));
-                        }
-                    }
-                    break;
                 }
-                default:
-                    break;
+            }
+            if (described->has_cadence) {
+                section->cadences[section->cadence_count++] = described->cadence;
+            }
+            if (described->has_first_cadence) {
+                section->cadences[section->cadence_count++] = described->first_cadence;
+            }
+            if (described->has_pairing) {
+                section->has_pairing = true;
+                section->pairing = described->pairing;
+            }
+            NodeId source_node = plan_section_named(plan, described->returns);
+            if (source_node != PLAN_NODE_NONE) {
+                const SectionDescription *source = plan_node_section(plan, source_node);
+                section->returns = true;
+                section->variation = described->variation;
+                snprintf(section->returns_letter, sizeof(section->returns_letter), "%.*s",
+                         (int)sizeof(section->returns_letter) - 1, described->returns);
+                if (source->letter[0] != '\0') {
+                    snprintf(section->returns_letter, sizeof(section->returns_letter), "%s", source->letter);
                 }
             }
         }
@@ -125,7 +119,7 @@ cJSON *api_section_json(const ApiSection *section) {
     if (ok && section->returns) {
         cJSON *returns = cJSON_CreateObject();
         ok = returns && cJSON_AddStringToObject(returns, "section", section->returns_letter) &&
-             cJSON_AddStringToObject(returns, "variation", plan_return_variation_name(section->variation)) &&
+             cJSON_AddStringToObject(returns, "variation", section_return_variation_name(section->variation)) &&
              api_add(object, "returns", returns);
     } else {
         ok = ok && cJSON_AddNullToObject(object, "returns");

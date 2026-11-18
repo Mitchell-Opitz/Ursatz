@@ -65,8 +65,8 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = bars;
-    request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
-    request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
+    request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     return request;
 }
@@ -117,14 +117,11 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
     assert(plan_node_kind(plan, test_find_node(plan, "cadential")) == PLAN_NODE_IDEA);
 
     /* standard-form's hard rules, asked of what is in the plan. */
-    PlanThemePairing pairing = {PLAN_THEME_BEGINNING_ANTECEDENT, PLAN_THEME_ENDING_CONSEQUENT};
-    for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, theme, i);
-        if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
-            pairing = constraint->params.theme_pairing;
-        }
+    SectionPairing pairing = {SECTION_BEGINNING_ANTECEDENT, SECTION_ENDING_CONSEQUENT};
+    if (plan_node_section(plan, theme)->has_pairing) {
+        pairing = plan_node_section(plan, theme)->pairing;
     }
-    assert(pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION && pairing.ending == PLAN_THEME_ENDING_CONTINUATION);
+    assert(pairing.beginning == SECTION_BEGINNING_PRESENTATION && pairing.ending == SECTION_ENDING_CONTINUATION);
     PhraseLevelForm form;
     assert(standard_form_pairing_form(PHRASE_BEGINNING_PRESENTATION, PHRASE_ENDING_CONTINUATION, &form));
     assert(form == PHRASE_LEVEL_FORM_SENTENCE);
@@ -346,11 +343,11 @@ static void test_bad_requests(void) {
     assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     /* An antecedent ends in a cadence weaker than the theme's, and no cadence is weaker than a half cadence. */
     changed = request;
-    changed.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
-    changed.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
+    changed.pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
+    changed.pairing.ending = SECTION_ENDING_CONSEQUENT;
     changed.cadence = CADENCE_TYPE_HALF;
     assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
-    changed.pairing.beginning = (PlanThemeBeginning)7;
+    changed.pairing.beginning = (SectionBeginning)7;
     assert(grow_build_plan_checked(&changed, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     changed = request;
     changed.cadence = CADENCE_TYPE_DECEPTIVE;
@@ -397,20 +394,12 @@ static void test_built_plan(void) {
     NodeId material = test_find_node(plan, "material");
     assert(theme != PLAN_NODE_NONE && material != PLAN_NODE_NONE);
     assert(plan_node_state(plan, theme) == PLAN_STATE_CONSTRAINED && plan_node_child_count(plan, theme) == 0);
-    bool archetype = false;
-    bool pairing = false;
-    bool cadence = false;
     bool key = false;
     for (size_t i = 0; i < plan_node_constraint_count(plan, theme); i++) {
-        PlanConstraintKind kind = plan_node_constraint_at(plan, theme, i)->kind;
-        archetype = archetype || kind == PLAN_CONSTRAINT_ARCHETYPE;
-        pairing = pairing || kind == PLAN_CONSTRAINT_THEME_PAIRING;
-        cadence = cadence || kind == PLAN_CONSTRAINT_CADENCE;
-        key = key || kind == PLAN_CONSTRAINT_KEY;
+        key = key || plan_node_constraint_at(plan, theme, i)->kind == PLAN_CONSTRAINT_KEY;
     }
-    assert(archetype && pairing && cadence && key);
-    assert(plan_node_constraint_count(plan, material) == 1 &&
-           plan_node_constraint_at(plan, material, 0)->kind == PLAN_CONSTRAINT_MATERIAL);
+    assert(plan_node_section(plan, theme)->has_pairing && plan_node_section(plan, theme)->has_cadence && key);
+    assert(plan_node_constraint_count(plan, material) == 0 && plan_section_has_role(plan, material, SECTION_ROLE_MATERIAL));
     NodeId m0 = test_find_node(plan, "m0");
     assert(m0 != PLAN_NODE_NONE && plan_node_state(plan, m0) == PLAN_STATE_GIVEN);
     LaneSpanId span = PLAN_LANE_SPAN_NONE;

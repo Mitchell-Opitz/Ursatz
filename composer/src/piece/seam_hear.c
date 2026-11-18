@@ -13,6 +13,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "util/util.h"
+#include "util/plan_util.h"
 
 /* The leap, in semitones, that a step the other way must follow. */
 #define SEAM_LEAP 7
@@ -21,7 +22,7 @@ NodeId seam_section_at(const PiecePlan *plan, Rational time) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
             rational_cmp(plan_node_span(plan, id).start, time) == 0 &&
-            plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
+            plan_section_has_role(plan, id, SECTION_ROLE_SEAM)) {
             return id;
         }
     }
@@ -224,7 +225,7 @@ SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out) {
     if (!plan || !out) {
         return SEAM_HEAR_ERR_NULL;
     }
-    if (!plan_has_node(plan, seam) || !plan_node_has_constraint(plan, seam, PLAN_CONSTRAINT_SEAM)) {
+    if (!plan_has_node(plan, seam) || !plan_section_has_role(plan, seam, SECTION_ROLE_SEAM)) {
         return SEAM_HEAR_ERR_NOT_SEAM;
     }
     Rational start = plan_node_span(plan, seam).start;

@@ -576,16 +576,16 @@ static void test_refused(char *plan) {
     free(text);
 
     text = with_section_member(plan, 0, "beats", "\"8\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/beats", "whole number of beats");
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/beats", "must be a whole number");
     free(text);
     text = with_section_member(plan, 0, "cadence", "\"XX\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/cadence", "the cadence must be");
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/cadence", "unknown cadence");
     free(text);
     text = with_section_member(plan, 2, "part", "\"coda\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/2/part", "the part must be");
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/2/part", "a request names intro, body, turnaround or ending");
     free(text);
     text = with_section_member(plan, 0, "pickup", "\"half\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/pickup", "not a number of beats");
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/pickup", "must be a whole number or a fraction");
     free(text);
     text = with_piece_member(plan, "meter", "\"5/4\"");
     expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/meter", "is not supported");
@@ -990,7 +990,7 @@ static void test_refused_forms(const char *plan) {
     static const char *const NO_FORM[][2] = {{"form", NULL}};
     static const char *const UNKNOWN[][2] = {{"form", "\"sonata\""}};
     static const char *const VERSION_ONE[][2] = {{"schema_version", "1"}};
-    static const char *const SECTIONS[][2] = {{"sections", "[]"}};
+    static const char *const SECTIONS[][2] = {{"sections", "[{\"name\":\"Z\"}]"}};
     static const char *const VOICING[][2] = {{"voicing", "\"satb\""}};
     static const char *const BARS[][2] = {{"bars", "20"}};
     static const char *const COUNT[][2] = {{"count", "9"}};
@@ -999,7 +999,7 @@ static void test_refused_forms(const char *plan) {
     expect_form_refusal("rounded-binary.json", NULL, NO_FORM, 1, "/request/form", "the request needs \"form\"");
     expect_form_refusal("rounded-binary.json", NULL, UNKNOWN, 1, "/request/form", "unknown form 'sonata'");
     expect_form_refusal("rounded-binary.json", NULL, VERSION_ONE, 1, "/request/form", "schema_version 1 is the game loop");
-    expect_form_refusal("rounded-binary.json", NULL, SECTIONS, 1, "/request/sections", "takes its sections from its form");
+    expect_form_refusal("rounded-binary.json", NULL, SECTIONS, 1, "/request/sections/0/name", "no section 'Z' in the rounded-binary form");
     expect_form_refusal("rounded-binary.json", NULL, VOICING, 1, "/request/voicing", "no voicing");
     expect_form_refusal("rounded-binary.json", NULL, BARS, 1, "/request/bars", "has no size of 20 bars; it has 16, 24 bars");
     expect_form_refusal("rounded-binary.json", NULL, COUNT, 1, "/request/count", "has no size of count 9");

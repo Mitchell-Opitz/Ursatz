@@ -165,7 +165,7 @@ static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
     if (!standard_form_pairing_is_hybrid(beginning, ending)) {
         return "pairing is not a hybrid";
     }
-    const char *hard = spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION ? judge_continuation(spec) : NULL;
+    const char *hard = spec->pairing.ending == SECTION_ENDING_CONTINUATION ? judge_continuation(spec) : NULL;
     if (hard) {
         return hard;
     }
@@ -179,13 +179,13 @@ static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
     for (int step = 0; step < STANDARD_FORM_COMMONALITY_COUNT - 1; step++) {
         ask(soft, step < STANDARD_FORM_COMMONALITY_COUNT - 1 - (int)commonality);
     }
-    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
+    if (spec->pairing.beginning == SECTION_BEGINNING_PRESENTATION) {
         ask(soft, standard_form_presentation_length_usual(first));
         if (!spec->part_whole) {
             ask(soft, spec->has_developed[GROW_PLACE_REPETITION] && reads_as_repetition(spec, GROW_PLACE_REPETITION));
         }
     }
-    if (spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
+    if (spec->pairing.ending == SECTION_ENDING_CONTINUATION) {
         ask(soft, standard_form_continuation_balanced(first, second));
     }
     return NULL;
@@ -207,13 +207,13 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
         return basic;
     }
     /* A contrasting idea that keeps m0's contour would read as its repetition. */
-    if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION && !spec->part_whole &&
+    if (spec->pairing.beginning != SECTION_BEGINNING_PRESENTATION && !spec->part_whole &&
         (!spec->has_developed[GROW_PLACE_CONTRAST] ||
          (!grow_idea_own(spec, GROW_PLACE_CONTRAST) && reads_as_repetition(spec, GROW_PLACE_CONTRAST)))) {
         return "contrasting idea reads as a repetition";
     }
     /* A theme with an antecedent ends in a cadence stronger than the antecedent's. */
-    if (spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
+    if (spec->pairing.beginning == SECTION_BEGINNING_ANTECEDENT &&
         harmony_cadence_strength(spec->first_cadence) >= harmony_cadence_strength(spec->cadence)) {
         return "ending cadence not stronger than the antecedent's";
     }
