@@ -817,8 +817,6 @@ static void make_reregister(PiecePlan *plan) {
     assert(described.returns[0] != '\0');
     described.variation = SECTION_RETURN_REREGISTER;
     assert(plan_node_set_section(plan, section, &described) == PLAN_OK);
-
-    assert(!"a return to edit");
 }
 
 /* The melody of the return is an octave from the theme's, all of it the same way, and inside the range. */
