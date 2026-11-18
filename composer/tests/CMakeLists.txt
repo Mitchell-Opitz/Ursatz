@@ -41,7 +41,7 @@ endif()
 # The schema tests need python3 with jsonschema (cmake/UrsatzTools.cmake).
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_plan_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v4.schema.json
                      -DSNAPSHOT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_plan_schema.cmake
@@ -645,7 +645,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
     set(API_FILE_LOCKS api_core_files api_motive_files api_variants_files api_theme_files api_piece_files api_parts_files
         api_plan_workflow_files api_material_files api_vocabulary_files)
     ursatz_test(test_api_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
-                     -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                     -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate
                      -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_api_schema.cmake
