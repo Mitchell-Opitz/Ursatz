@@ -276,6 +276,30 @@ static void test_override_and_sniff(void) {
     free(path);
 }
 
+/* The Analyzer's thin import entries: the library's import, the message of a failure, the status of the Analyzer API. */
+static void test_thin_entries(void) {
+    ImportedScore notes;
+    char message[256] = "";
+    assert(analyzer_import_file(musicxml("pickup.musicxml"), IMPORTED_FORMAT_AUTO, &notes, message, sizeof message) ==
+           ANALYZER_OK);
+    assert(notes.source.format == IMPORTED_FORMAT_MUSICXML && message[0] == '\0');
+    imported_score_destroy(&notes);
+
+    assert(analyzer_import_file("/nowhere/missing.musicxml", IMPORTED_FORMAT_AUTO, &notes, message, sizeof message) ==
+           ANALYZER_ERR_LIBRARY);
+    assert(strcmp(message, "Error: cannot read file '/nowhere/missing.musicxml'") == 0);
+    assert(analyzer_import_file(musicxml("malformed.musicxml"), IMPORTED_FORMAT_AUTO, &notes, NULL, 0) ==
+           ANALYZER_ERR_LIBRARY);
+    assert(analyzer_import_file(NULL, IMPORTED_FORMAT_AUTO, &notes, message, sizeof message) == ANALYZER_ERR_ARGUMENT);
+
+    const char *text = "<?xml version=\"1.0\"?><score-partwise version=\"3.1\"/>";
+    assert(analyzer_import_buffer((const unsigned char *)text, strlen(text), IMPORTED_FORMAT_AUTO, &notes, message,
+                                  sizeof message) == ANALYZER_ERR_LIBRARY);
+    assert(strstr(message, "the score contains no notes") != NULL || strstr(message, "failed to import") != NULL);
+    assert(analyzer_import_buffer(NULL, 3, IMPORTED_FORMAT_AUTO, &notes, message, sizeof message) ==
+           ANALYZER_ERR_ARGUMENT);
+}
+
 int main(void) {
     test_format_names();
     test_format_detection();
@@ -285,5 +309,6 @@ int main(void) {
     test_midi_keeps_rule_spelling();
     test_errors();
     test_override_and_sniff();
+    test_thin_entries();
     return 0;
 }
