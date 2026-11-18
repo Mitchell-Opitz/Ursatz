@@ -1171,6 +1171,202 @@ static void test_relation_refusals(void) {
                           &half, &error) == PLAN_ERR_FORMAT);
 }
 
+/* ------------------------------------------------------------------ plan format 5: the section description */
+
+/* A plan of a form with the sections a and b, each with the description given (NULL for none); *a and *b are their ids. */
+static PiecePlan *two_section_plan(const SectionDescription *first, const SectionDescription *second, NodeId *a, NodeId *b) {
+    PiecePlan *plan = plan_create();
+    assert(plan != NULL);
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "form");
+    *a = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "a");
+    *b = add(plan, form, PLAN_NODE_SECTION, bars(4, 4), "b");
+    assert(!first || plan_node_set_section(plan, *a, first) == PLAN_OK);
+    assert(!second || plan_node_set_section(plan, *b, second) == PLAN_OK);
+    return plan;
+}
+
+/* The text of a plan as format 4: the "section" object of each section node is replaced by the old constraints, which are
+   JSON texts in `first` and `second`, the constraint lists of a and b. */
+static char *as_format_four(const char *v5, const char *first, const char *second) {
+    cJSON *document = cJSON_Parse(v5);
+    assert(document != NULL);
+    cJSON *version = cJSON_GetObjectItemCaseSensitive(document, "format_version");
+    assert(cJSON_IsNumber(version));
+    cJSON_SetNumberHelper(version, 4);
+    cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "form"), "children");
+    const char *lists[2] = {first, second};
+    size_t index = 0;
+    cJSON *node;
+    cJSON_ArrayForEach(node, sections) {
+        cJSON *composer = cJSON_GetObjectItemCaseSensitive(node, "composer");
+        assert(composer != NULL && index < 2);
+        cJSON_DeleteItemFromObjectCaseSensitive(composer, "section");
+        cJSON *constraints = cJSON_Parse(lists[index++]);
+        assert(cJSON_IsArray(constraints));
+        cJSON_ReplaceItemInObjectCaseSensitive(composer, "constraints", constraints);
+    }
+    char *text = cJSON_Print(document);
+    cJSON_Delete(document);
+    assert(text != NULL);
+    return text;
+}
+
+/* A plan of format 4 reads the constraints that moved into the description and writes format 5 with the same description. */
+static void test_format_four_reads_into_descriptions(void) {
+    SectionDescription expected_a;
+    section_description_init(&expected_a);
+    snprintf(expected_a.letter, sizeof(expected_a.letter), "A");
+    expected_a.has_role = true;
+    expected_a.role = SECTION_ROLE_BODY;
+    snprintf(expected_a.id, sizeof(expected_a.id), "a");
+    expected_a.free_phrase = true;
+    expected_a.leads_in = true;
+    expected_a.has_pairing = true;
+    expected_a.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
+    expected_a.pairing.ending = SECTION_ENDING_CONTINUATION;
+    expected_a.has_cadence = true;
+    expected_a.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    expected_a.has_first_cadence = true;
+    expected_a.first_cadence = CADENCE_TYPE_HALF;
+    expected_a.pedal = 5;
+    expected_a.connective = SECTION_CONNECTIVE_ALWAYS;
+    expected_a.connective_written = true;
+    SectionDescription expected_b;
+    section_description_init(&expected_b);
+    snprintf(expected_b.returns, sizeof(expected_b.returns), "a");
+    expected_b.variation = SECTION_RETURN_REHARMONIZE;
+    expected_b.mode = SECTION_MODE_HOME;
+    expected_b.layers = SECTION_LAYER_BIT(SECTION_LANE_MELODY) | SECTION_LAYER_BIT(SECTION_LANE_HARMONY);
+
+    NodeId a, b;
+    PiecePlan *expected = two_section_plan(&expected_a, &expected_b, &a, &b);
+    PiecePlan *bare = two_section_plan(NULL, NULL, &a, &b);
+    PlanJsonError error;
+    char *v5 = plan_to_json(bare, &error);
+    assert(v5 != NULL && strstr(v5, "\"format_version\": 5") != NULL);
+    const char *first =
+        "[{\"kind\":\"section_letter\",\"letter\":\"A\"},{\"kind\":\"piece_part\",\"part\":\"body\",\"id\":\"a\"},"
+        "{\"kind\":\"free_phrase\"},{\"kind\":\"hold\"},{\"kind\":\"archetype\",\"type\":\"sentence\"},"
+        "{\"kind\":\"theme_pairing\",\"beginning\":\"presentation\",\"ending\":\"continuation\"},"
+        "{\"kind\":\"cadence\",\"type\":\"pac\"},{\"kind\":\"cadence\",\"type\":\"hc\"},{\"kind\":\"pedal\",\"degree\":5},"
+        "{\"kind\":\"connective\",\"written\":true}]";
+    char *second = NULL;
+    assert(asprintf(&second,
+                    "[{\"kind\":\"return\",\"section\":%u,\"variation\":\"reharmonize\",\"across_modes\":true},"
+                    "{\"kind\":\"layers\",\"lanes\":[\"harmony\",\"melody\"]}]",
+                    (unsigned)a) > 0);
+    char *v4 = as_format_four(v5, first, second);
+    PiecePlan *read = NULL;
+    assert(plan_from_json(test_knowledge(), v4, &read, &error) == PLAN_OK);
+    assert(plans_equal(expected, read));
+    assert(plan_node_constraint_count(read, a) == 0 && plan_node_constraint_count(read, b) == 0);
+    /* it writes format 5 with the description and none of the old kinds, and that reads back the same */
+    char *written = plan_to_json(read, &error);
+    assert(written != NULL && strstr(written, "\"format_version\": 5") != NULL && strstr(written, "\"section\"") != NULL);
+    assert(strstr(written, "section_letter") == NULL && strstr(written, "theme_pairing") == NULL && strstr(written, "\"hold\"") == NULL);
+    char *direct = plan_to_json(expected, &error);
+    assert(direct != NULL && strcmp(direct, written) == 0);
+    PiecePlan *again = NULL;
+    assert(plan_from_json(test_knowledge(), written, &again, &error) == PLAN_OK && plans_equal(expected, again));
+    plan_destroy(again);
+    /* an old kind in a format 5 plan is refused */
+    cJSON *five = cJSON_Parse(v4);
+    assert(five != NULL);
+    cJSON_SetNumberHelper(cJSON_GetObjectItemCaseSensitive(five, "format_version"), 5);
+    char *as_five = cJSON_Print(five);
+    cJSON_Delete(five);
+    assert(as_five != NULL);
+    PiecePlan *refused = NULL;
+    assert(plan_from_json(test_knowledge(), as_five, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+    /* a return that names a section the plan lacks is refused at the constraint */
+    char *no_such = NULL;
+    assert(asprintf(&no_such, "[{\"kind\":\"return\",\"section\":99,\"variation\":\"exact\"}]") > 0);
+    char *missing_text = as_format_four(v5, "[]", no_such);
+    assert(plan_from_json(test_knowledge(), missing_text, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+    free(missing_text);
+    free(no_such);
+    /* the old kinds that mark a section's role read as the role */
+    char *marks = as_format_four(v5, "[{\"kind\":\"liquidation\"}]", "[{\"kind\":\"seam\"}]");
+    PiecePlan *marked = NULL;
+    assert(plan_from_json(test_knowledge(), marks, &marked, &error) == PLAN_OK);
+    assert(plan_node_section(marked, a)->has_role && plan_node_section(marked, a)->role == SECTION_ROLE_LIQUIDATION);
+    assert(plan_node_section(marked, b)->has_role && plan_node_section(marked, b)->role == SECTION_ROLE_SEAM);
+    plan_destroy(marked);
+    free(marks);
+    free(as_five);
+    free(direct);
+    free(written);
+    free(v4);
+    free(second);
+    free(v5);
+    plan_destroy(read);
+    plan_destroy(bare);
+    plan_destroy(expected);
+}
+
+/* A plan of format 5 round-trips every member of a description, and the plan refuses a description that does not hold. */
+static void test_section_description_stored(void) {
+    SectionDescription full;
+    section_description_init(&full);
+    snprintf(full.letter, sizeof(full.letter), "B");
+    full.has_role = true;
+    full.role = SECTION_ROLE_THEME;
+    full.has_pairing = true;
+    full.pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
+    full.pairing.ending = SECTION_ENDING_CONSEQUENT;
+    full.has_cadence = true;
+    full.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    full.has_first_cadence = true;
+    full.first_cadence = CADENCE_TYPE_HALF;
+    NodeId a, b;
+    PiecePlan *plan = two_section_plan(&full, NULL, &a, &b);
+    PlanJsonError error;
+    char *text = plan_to_json(plan, &error);
+    assert(text != NULL);
+    PiecePlan *read = NULL;
+    assert(plan_from_json(test_knowledge(), text, &read, &error) == PLAN_OK && plans_equal(plan, read));
+    assert(plan_node_section(read, a)->has_first_cadence && plan_node_section(read, b) != NULL);
+    char *again = plan_to_json(read, &error);
+    assert(again != NULL && strcmp(again, text) == 0);
+    /* the refusals of the store */
+    SectionDescription bad = full;
+    bad.pairing.beginning = (SectionBeginning)9;
+    assert(plan_node_set_section(plan, b, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    bad = full;
+    snprintf(bad.returns, sizeof(bad.returns), "nowhere");
+    assert(plan_node_set_section(plan, b, &bad) == PLAN_ERR_BAD_PAYLOAD);
+    bad.returns[0] = '\0';
+    assert(plan_node_set_section(plan, plan_root(plan), &bad) == PLAN_ERR_BAD_KIND);
+    assert(plan_node_set_state(plan, b, PLAN_STATE_GIVEN) == PLAN_OK);
+    assert(plan_node_set_section(plan, b, &full) == PLAN_ERR_GIVEN_LOCKED);
+    assert(plan_node_section(plan, plan_root(plan)) == NULL);
+    free(again);
+    free(text);
+    plan_destroy(read);
+    plan_destroy(plan);
+}
+
+/* A span a section owns reads the section's cadence, and a node that is not a section reads its cadence constraint. */
+static void test_section_cadence_read(void) {
+    SectionDescription described;
+    section_description_init(&described);
+    described.has_cadence = true;
+    described.cadence = CADENCE_TYPE_HALF;
+    NodeId a, b;
+    PiecePlan *plan = two_section_plan(&described, NULL, &a, &b);
+    NodeId phrase = add(plan, b, PLAN_NODE_PHRASE, bars(4, 4), "phrase");
+    PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
+    cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    assert(plan_node_add_constraint(plan, phrase, &cadence) == PLAN_OK);
+    /* a section holds its cadence in the description, and refuses it as a constraint */
+    assert(plan_node_add_constraint(plan, a, &cadence) == PLAN_ERR_BAD_PAYLOAD);
+    CadenceType read = CADENCE_TYPE_DECEPTIVE;
+    assert(plan_node_cadence(plan, a, &read) && read == CADENCE_TYPE_HALF);
+    assert(plan_node_cadence(plan, phrase, &read) && read == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    assert(!plan_node_cadence(plan, b, &read));
+    plan_destroy(plan);
+}
+
 int main(void) {
     test_round_trip();
     test_old_transforms();
@@ -1185,5 +1381,8 @@ int main(void) {
     test_relation_refusals();
     test_spelling_round_trip();
     test_format_errors();
+    test_format_four_reads_into_descriptions();
+    test_section_description_stored();
+    test_section_cadence_read();
     return 0;
 }
