@@ -220,7 +220,7 @@ ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs 
     return api_read_tempo(request, &out->export_options, error);
 }
 
-ComposerStatus api_render_outputs(const PiecePlan *plan, const ApiOutputs *outputs, ComposerResponse *out) {
+ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const PiecePlan *plan, const ApiOutputs *outputs, ComposerResponse *out) {
     PlanJsonError plan_error;
     out->plan_json = plan_to_json(plan, &plan_error);
     if (!out->plan_json) {
@@ -236,11 +236,11 @@ ComposerStatus api_render_outputs(const PiecePlan *plan, const ApiOutputs *outpu
     }
     ComposerStatus status = COMPOSER_OK;
     if (outputs->midi &&
-        rendered_plan_midi_bytes(&rendered, &outputs->export_options, &out->midi, &out->midi_size, &detail) != PLAN_EXPORT_OK) {
+        rendered_plan_midi_bytes(knowledge, &rendered, &outputs->export_options, &out->midi, &out->midi_size, &detail) != PLAN_EXPORT_OK) {
         status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "/midi", "cannot write the MIDI file: %s", detail.message);
     }
     if (status == COMPOSER_OK && outputs->musicxml &&
-        rendered_plan_musicxml_text(&rendered, &outputs->export_options, &out->musicxml, &detail) != PLAN_EXPORT_OK) {
+        rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, &out->musicxml, &detail) != PLAN_EXPORT_OK) {
         status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s",
                           detail.message);
     }

@@ -37,7 +37,7 @@ static void variations_destroy(Variation *items, size_t count) {
  * <version, its "plan" the plan object>, "loop_markers": {"start", "end"}}], "kept", "requested", "seeds_tried"}. The first
  * version is "loop" for the game loop and "piece" for a form with sizes, which has no loop markers.
  */
-static ComposerStatus variations_document(const PieceSpec *request, const PieceEdit *edit, const Variation *items, size_t kept,
+static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceEdit *edit, const Variation *items, size_t kept,
                                   size_t tried, unsigned long requested, bool musicxml, cJSON **result, ComposerError *error) {
     char lanes[64];
     GrowBrief brief;
@@ -73,7 +73,7 @@ static ComposerStatus variations_document(const PieceSpec *request, const PieceE
         }
         if (ok && musicxml) {
             char *text = NULL;
-            ComposerStatus rendered = api_piece_musicxml(request, variation->version.plan, &text, error);
+            ComposerStatus rendered = api_piece_musicxml(knowledge, request, variation->version.plan, &text, error);
             if (rendered != COMPOSER_OK) {
                 cJSON_Delete(entry);
                 cJSON_Delete(document);
@@ -222,7 +222,7 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
     }
     if (status == COMPOSER_OK) {
         cJSON *document = NULL;
-        status = variations_document(request, &edit, items, kept, tried, requested, musicxml, &document, &out->error);
+        status = variations_document(context->knowledge, request, &edit, items, kept, tried, requested, musicxml, &document, &out->error);
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);
         }

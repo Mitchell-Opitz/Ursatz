@@ -20,6 +20,7 @@ ursatz_public_headers(ursatz_io
         io/midi_importer.h
         io/midi_key_signature.h
         io/midi_renderer.h
+        io/movement_export.h
         io/musicxml_export.h
         io/musicxml_importer.h
         io/score_quantize.h

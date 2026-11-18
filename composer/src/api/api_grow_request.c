@@ -375,7 +375,7 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
 /* --- the outputs ----------------------------------------------------------------------------------------- */
 
 /* Adds, to each theme of the document, its plan (with "plans"), its explanation and its MusicXML (when asked). */
-static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, const ApiOutputOptions *outputs, ComposerError *error) {
+static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON *document, const GrowRun *run, const ApiOutputOptions *outputs, ComposerError *error) {
     cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     for (size_t k = 0; k < run->made; k++) {
         cJSON *item = cJSON_GetArrayItem(themes, (int)k);
@@ -410,7 +410,7 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, con
             if (plan_export_render(theme->plan, &rendered, &detail) != PLAN_EXPORT_OK) {
                 return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
             }
-            PlanExportResult written = rendered_plan_musicxml_text(&rendered, &outputs->export_options, &text, &detail);
+            PlanExportResult written = rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, &text, &detail);
             rendered_plan_destroy(&rendered);
             if (written != PLAN_EXPORT_OK) {
                 return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
@@ -426,13 +426,13 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, con
 }
 
 /* The plan, the MIDI file and the MusicXML of the first theme. */
-static ComposerStatus render_first(const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
+static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
     ApiOutputs files;
     memset(&files, 0, sizeof(files));
     files.midi = outputs->midi;
     files.musicxml = outputs->musicxml;
     files.export_options = outputs->export_options;
-    return api_render_outputs(theme->plan, &files, out);
+    return api_render_outputs(knowledge, theme->plan, &files, out);
 }
 
 static ComposerStatus add_notices(cJSON *document, const State *state, const ApiOutputOptions *outputs, ComposerError *error) {
@@ -479,12 +479,12 @@ ComposerStatus composer_api_grow(const ComposerContext *context, const char *req
     }
     if (status == COMPOSER_OK) {
         cJSON *document = api_grow_result_json(&state.setup, &state.run, NULL);
-        status = document ? add_theme_members(document, &state.run, &outputs, &out->error) : api_fail_alloc(&out->error);
+        status = document ? add_theme_members(context->knowledge, document, &state.run, &outputs, &out->error) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK) {
             status = add_notices(document, &state, &outputs, &out->error);
         }
         if (status == COMPOSER_OK) {
-            status = render_first(&state.run.themes[0], &outputs, out);
+            status = render_first(context->knowledge, &state.run.themes[0], &outputs, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);

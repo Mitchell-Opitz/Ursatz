@@ -245,7 +245,7 @@ ComposerStatus composer_api_lock(const ComposerContext *context, const char *req
             cJSON_Delete(document);
             status = api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
         } else {
-            status = api_render_outputs(plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, plan, &outputs, out);
             if (status == COMPOSER_OK) {
                 status = api_respond_json(out, document);
             } else {

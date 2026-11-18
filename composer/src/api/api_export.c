@@ -167,13 +167,13 @@ ComposerStatus composer_api_export(const ComposerContext *context, const char *r
     }
 
     if (want_midi) {
-        result = rendered_plan_midi_bytes(&rendered, &options, &out->midi, &out->midi_size, &detail);
+        result = rendered_plan_midi_bytes(context->knowledge, &rendered, &options, &out->midi, &out->midi_size, &detail);
         if (result != PLAN_EXPORT_OK) {
             status = export_failure(&out->error, result, "MIDI export failed", &detail);
         }
     }
     if (status == COMPOSER_OK && want_musicxml) {
-        result = rendered_plan_musicxml_text(&rendered, &options, &out->musicxml, &detail);
+        result = rendered_plan_musicxml_text(context->knowledge, &rendered, &options, &out->musicxml, &detail);
         if (result != PLAN_EXPORT_OK) {
             status = export_failure(&out->error, result, "MusicXML export failed", &detail);
         }

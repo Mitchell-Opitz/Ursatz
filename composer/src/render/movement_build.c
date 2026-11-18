@@ -181,13 +181,6 @@ PlanExportResult rendered_plan_work(const RenderedPlan *rendered, const PlanExpo
         set_message(error, "the plan has no Given or Realized notes to write");
         return PLAN_EXPORT_ERR_NO_CONTENT;
     }
-    const EnsembleTemplate *ensemble = knowledge_snapshot_ensemble(knowledge, SOLO_PIANO_ENSEMBLE);
-    const Instrument *piano = ensemble && ensemble->slot_count > 0 ? knowledge_snapshot_instrument(knowledge, ensemble->slots[0].instrument) : NULL;
-    if (!piano) {
-        set_message(error, "the knowledge snapshot has no " SOLO_PIANO_ENSEMBLE " ensemble with a piano");
-        return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
-    }
-
     Work *work = NULL;
     Movement *movement = NULL;
     PlanExportResult status = PLAN_EXPORT_OK;
@@ -238,6 +231,14 @@ PlanExportResult rendered_plan_work(const RenderedPlan *rendered, const PlanExpo
             line_destroy(line);
             status = realization_failed(result, "lines", error);
         }
+    }
+    /* The movement is scored for the ensemble it names, else the work's: the solo piano, whose first slot is the piano. */
+    const char *ensemble_id = work_movement_ensemble(work, movement);
+    const EnsembleTemplate *ensemble = ensemble_id ? knowledge_snapshot_ensemble(knowledge, ensemble_id) : NULL;
+    const Instrument *piano = ensemble && ensemble->slot_count > 0 ? knowledge_snapshot_instrument(knowledge, ensemble->slots[0].instrument) : NULL;
+    if (status == PLAN_EXPORT_OK && !piano) {
+        set_message(error, "the knowledge snapshot has no " SOLO_PIANO_ENSEMBLE " ensemble with a piano");
+        status = PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
     }
     if (status == PLAN_EXPORT_OK && (result = movement_reduce_to_piano(movement, piano, "")) != REALIZATION_OK) {
         status = realization_failed(result, "lines for the piano", error);

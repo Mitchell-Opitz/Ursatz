@@ -580,7 +580,7 @@ static const char *heard_name(const Options *options, const Built *built) {
 }
 
 /* Adds "heard", "chords" and, when asked, "plan" and "musicxml" of one progression to object. */
-static ComposerStatus add_progression(cJSON *object, const Options *options, const Built *built, const ApiOutputs *outputs,
+static ComposerStatus add_progression(const KnowledgeSnapshot *knowledge, cJSON *object, const Options *options, const Built *built, const ApiOutputs *outputs,
                                       ComposerError *error) {
     Row rows[MAX_CHORDS];
     size_t count = collect_rows(options, built, rows);
@@ -615,7 +615,7 @@ static ComposerStatus add_progression(cJSON *object, const Options *options, con
         if (plan_export_render(built->plan, &rendered, &detail) != PLAN_EXPORT_OK) {
             return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
         }
-        PlanExportResult result = rendered_plan_musicxml_text(&rendered, &outputs->export_options, &text, &detail);
+        PlanExportResult result = rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, &text, &detail);
         rendered_plan_destroy(&rendered);
         if (result != PLAN_EXPORT_OK) {
             return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
@@ -629,7 +629,7 @@ static ComposerStatus add_progression(cJSON *object, const Options *options, con
     return COMPOSER_OK;
 }
 
-static ComposerStatus build_document(const Options *options, const Built *built, size_t made, unsigned long seed,
+static ComposerStatus build_document(const KnowledgeSnapshot *knowledge, const Options *options, const Built *built, size_t made, unsigned long seed,
                                      const ApiOutputs *outputs, cJSON **result, ComposerError *error) {
     char key[24];
     char meter[16];
@@ -650,7 +650,7 @@ static ComposerStatus build_document(const Options *options, const Built *built,
                 status = api_fail_alloc(error);
                 break;
             }
-            status = add_progression(entry, options, &built[k], outputs, error);
+            status = add_progression(knowledge, entry, options, &built[k], outputs, error);
         }
         if (!list) {
             status = api_fail_alloc(error);
@@ -664,7 +664,7 @@ static ComposerStatus build_document(const Options *options, const Built *built,
             }
         }
     } else if (status == COMPOSER_OK) {
-        status = add_progression(document, options, &built[0], outputs, error);
+        status = add_progression(knowledge, document, options, &built[0], outputs, error);
     }
     if (status != COMPOSER_OK) {
         cJSON_Delete(document);
@@ -798,10 +798,10 @@ ComposerStatus composer_api_progression(const ComposerContext *context, const ch
     }
     if (status == COMPOSER_OK) {
         cJSON *document = NULL;
-        status = build_document(&options, built, made, seed, &outputs, &document, &out->error);
+        status = build_document(context->knowledge, &options, built, made, seed, &outputs, &document, &out->error);
         if (status == COMPOSER_OK) {
             /* The first progression's own files. */
-            status = api_render_outputs(built[0].plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, built[0].plan, &outputs, out);
             if (status != COMPOSER_OK) {
                 cJSON_Delete(document);
             } else {

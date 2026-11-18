@@ -1366,7 +1366,7 @@ static unsigned char *midi_of(const PiecePlan *plan, size_t *size) {
         return NULL;
     }
     PlanExportOptions options = plan_export_options_default();
-    PlanExportResult exported = rendered_plan_midi_bytes(&rendered, &options, &data, size, NULL);
+    PlanExportResult exported = rendered_plan_midi_bytes(test_knowledge(), &rendered, &options, &data, size, NULL);
     rendered_plan_destroy(&rendered);
     assert(exported == PLAN_EXPORT_OK);
     return data;

@@ -594,7 +594,7 @@ static ComposerStatus add_theme_members(cJSON *document, const GrowRun *run, Gro
 }
 
 /* The plan, the MIDI file and the MusicXML of the first theme. */
-static ComposerStatus render_first(const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
+static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, ComposerResponse *out) {
     PlanJsonError json_error;
     out->plan_json = plan_to_json(theme->plan, &json_error);
     if (!out->plan_json) {
@@ -610,11 +610,11 @@ static ComposerStatus render_first(const GrowTheme *theme, const ApiOutputOption
     }
     ComposerStatus status = COMPOSER_OK;
     if (outputs->midi &&
-        rendered_plan_midi_bytes(&rendered, &outputs->export_options, &out->midi, &out->midi_size, &detail) != PLAN_EXPORT_OK) {
+        rendered_plan_midi_bytes(knowledge, &rendered, &outputs->export_options, &out->midi, &out->midi_size, &detail) != PLAN_EXPORT_OK) {
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/midi", "cannot write the MIDI file: %s", detail.message);
     }
     if (status == COMPOSER_OK && outputs->musicxml &&
-        rendered_plan_musicxml_text(&rendered, &outputs->export_options, &out->musicxml, &detail) != PLAN_EXPORT_OK) {
+        rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, &out->musicxml, &detail) != PLAN_EXPORT_OK) {
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/musicxml", "cannot write the MusicXML: %s", detail.message);
     }
     rendered_plan_destroy(&rendered);
@@ -795,7 +795,7 @@ ComposerStatus composer_api_theme(const ComposerContext *context, const char *re
             status = api_fail_alloc(&out->error);
         }
         if (status == COMPOSER_OK) {
-            status = render_first(&state.run.themes[0], &outputs, out);
+            status = render_first(context->knowledge, &state.run.themes[0], &outputs, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);
