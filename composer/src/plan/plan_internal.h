@@ -47,7 +47,15 @@ struct PiecePlan {
     size_t removed_node_count;
     size_t removed_lane_span_count;
     char analyzer_version[PLAN_ANALYZER_VERSION_MAX]; /* "" unless the plan was loaded from an Analyzer result */
+    PlanNoteId next_note_id;                          /* the id the next new note gets: 1 in a new plan, only rises */
 };
+
+/*
+ * Gives the ids of a span's notes as the plan's rules say (lanes.h, "Note ids"): `notes` is the stored copy that is about to be, or
+ * has just been, the payload of the span; `replacing` is the span it replaces (PLAN_LANE_SPAN_NONE for a new span), whose old
+ * notes do not count as holders of an id.
+ */
+void plan_note_ids_assign(PiecePlan *plan, PlanNote *notes, size_t count, LaneSpanId replacing);
 
 void constraint_list_free(ConstraintList *list);
 

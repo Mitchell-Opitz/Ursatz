@@ -53,6 +53,22 @@ typedef struct {
 } PlanHarmony;
 
 /*
+ * A note's identity (R-601): the plan gives a note an id when it enters a lane span, and never gives the same id twice (the next id
+ * only rises, so an id of a removed note is not reused). 0 is "none yet": a note the operators write has id 0 and gets its id when
+ * it is written into the plan. `source` is the id of the note this one was made from and `operation` how (copy within the plan, a
+ * motive carried, a section returned); a note made from nothing has source 0 and operation PLAN_NOTE_FROM_NONE.
+ */
+typedef size_t PlanNoteId;
+#define PLAN_NOTE_NONE ((PlanNoteId)0)
+
+typedef enum {
+    PLAN_NOTE_FROM_NONE,
+    PLAN_NOTE_FROM_COPY,
+    PLAN_NOTE_FROM_MOTIVE,
+    PLAN_NOTE_FROM_RETURN
+} PlanNoteOperation;
+
+/*
  * A note is a MIDI number and an optional spelling (R-242): the letter and accidental the note was written with. Only
  * notes read from MusicXML are spelled; the operators write unspelled notes, and render spells those in the key under
  * them. offset is measured from the start of the owning lane span.
@@ -64,11 +80,14 @@ typedef struct {
     bool spelled;
     PitchLetter letter;  /* meaningful only when spelled */
     int accidental;      /* meaningful only when spelled */
+    PlanNoteId id;       /* 0 until the plan gives one */
+    PlanNoteId source;   /* the id of the note this was made from, 0 for none */
+    PlanNoteOperation operation;
 } PlanNote;
 
-/* A note the operators write: a MIDI number, unspelled. */
+/* A note the operators write: a MIDI number, unspelled, with no id yet. */
 static inline PlanNote plan_note(int midi, Rational offset, Rational duration) {
-    PlanNote note = {midi, offset, duration, false, PITCH_LETTER_C, 0};
+    PlanNote note = {midi, offset, duration, false, PITCH_LETTER_C, 0, PLAN_NOTE_NONE, PLAN_NOTE_NONE, PLAN_NOTE_FROM_NONE};
     return note;
 }
 
@@ -135,6 +154,20 @@ int plan_lane_span_voice(const PiecePlan *plan, LaneSpanId id);
 NodeId plan_lane_span_owner(const PiecePlan *plan, LaneSpanId id);
 PlanSpan plan_lane_span_span(const PiecePlan *plan, LaneSpanId id);
 const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId id);
+
+/*
+ * Note ids (R-601). plan_next_note_id is the id the next new note gets (1 in a new plan; it only rises). plan_note_by_id finds the
+ * note with an id among the live note spans of the plan, and writes the span that holds it to *span_out when that is not NULL; NULL
+ * for an unknown id (0 included). The pointer stays valid until the span is rewritten or the plan is destroyed.
+ *
+ * The plan gives ids when a span is added (plan_add_lane_span) or written (plan_lane_span_write): a note with id 0 gets the next id;
+ * a note whose id another note of a live span holds (the span being rewritten does not count, nor does the rest of its own old
+ * notes) gets the next id too, with the old id as its source and operation PLAN_NOTE_FROM_COPY when it has no source; any other
+ * note keeps its id, and the next id stays above it. So a rewrite keeps the ids of the notes it passes through, a copy within the
+ * plan gets fresh ones, and an id is never held by two live notes.
+ */
+PlanNoteId plan_next_note_id(const PiecePlan *plan);
+const PlanNote *plan_note_by_id(const PiecePlan *plan, PlanNoteId id, LaneSpanId *span_out);
 
 /*
  * Finds the spans of one lane and voice that overlap range, ordered by start.

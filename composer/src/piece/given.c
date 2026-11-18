@@ -429,7 +429,7 @@ GivenResult plan_give_section(PiecePlan *plan, NodeId section, const PiecePlan *
     } else {
         result = copy_fits(plan, section, &copy);
     }
-    if (result == GIVEN_OK && (return_copy_write(plan, section, &copy) != PLAN_OK ||
+    if (result == GIVEN_OK && (return_copy_write(plan, section, &copy, PLAN_NOTE_FROM_NONE) != PLAN_OK ||
                                plan_node_set_state(plan, section, PLAN_STATE_REALIZED) != PLAN_OK)) {
         result = GIVEN_ERR_PLAN;
     }

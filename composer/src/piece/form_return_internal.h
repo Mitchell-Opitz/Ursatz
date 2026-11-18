@@ -88,7 +88,13 @@ int return_map_pitch(int tonic, const PitchMaterial *to, int pitch);
 /* The pitch a source pitch (after the move) has in the result: mapped by the mode change of the payload, else as it is. */
 int return_mode_pitch(const ReturnPayload *payload, int pitch);
 /* Adds the copy to the plan under section: its nodes, then its lane spans. */
-PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy);
+/*
+ * Writes the copy into the plan under `section`. operation says what the written notes are made from (R-601): with
+ * PLAN_NOTE_FROM_RETURN each note gets source = its id in the copy, a fresh id and operation RETURN (a return inside its own plan);
+ * with PLAN_NOTE_FROM_NONE its id, source and operation are cleared (a copy from another plan has no source here, so the plan
+ * gives it a fresh id).
+ */
+PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy, PlanNoteOperation operation);
 
 void return_payload_destroy(void *payload);
 

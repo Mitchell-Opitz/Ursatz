@@ -129,6 +129,71 @@ bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePaylo
     return false;
 }
 
+/* True when a note of a live note span other than `except` has this id. */
+static bool id_held_elsewhere(const PiecePlan *plan, PlanNoteId id, LaneSpanId except) {
+    for (size_t i = 0; i < plan->lane_span_count; i++) {
+        const LaneSpan *span = &plan->lane_spans[i];
+        if (i + 1 == except || span->removed || !plan_is_note_lane(span->lane)) {
+            continue;
+        }
+        for (size_t n = 0; n < span->payload.notes.note_count; n++) {
+            if (span->payload.notes.notes[n].id == id) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void plan_note_ids_assign(PiecePlan *plan, PlanNote *notes, size_t count, LaneSpanId replacing) {
+    for (size_t i = 0; i < count; i++) {
+        PlanNote *note = &notes[i];
+        if (note->id == PLAN_NOTE_NONE) {
+            note->id = plan->next_note_id++;
+            continue;
+        }
+        bool taken = id_held_elsewhere(plan, note->id, replacing);
+        for (size_t j = 0; j < i && !taken; j++) {
+            taken = notes[j].id == note->id;
+        }
+        if (taken) {
+            PlanNoteId old = note->id;
+            note->id = plan->next_note_id++;
+            if (note->source == PLAN_NOTE_NONE) {
+                note->source = old;
+                note->operation = PLAN_NOTE_FROM_COPY;
+            }
+        } else if (note->id >= plan->next_note_id) {
+            plan->next_note_id = note->id + 1;
+        }
+    }
+}
+
+PlanNoteId plan_next_note_id(const PiecePlan *plan) {
+    return plan ? plan->next_note_id : 0;
+}
+
+const PlanNote *plan_note_by_id(const PiecePlan *plan, PlanNoteId id, LaneSpanId *span_out) {
+    if (!plan || id == PLAN_NOTE_NONE) {
+        return NULL;
+    }
+    for (size_t i = 0; i < plan->lane_span_count; i++) {
+        const LaneSpan *span = &plan->lane_spans[i];
+        if (span->removed || !plan_is_note_lane(span->lane)) {
+            continue;
+        }
+        for (size_t n = 0; n < span->payload.notes.note_count; n++) {
+            if (span->payload.notes.notes[n].id == id) {
+                if (span_out) {
+                    *span_out = (LaneSpanId)(i + 1);
+                }
+                return &span->payload.notes.notes[n];
+            }
+        }
+    }
+    return NULL;
+}
+
 PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
                               const PlanLanePayload *payload, LaneSpanId *out_id) {
     if (!plan || !payload || !out_id) {
@@ -164,6 +229,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
         }
         if (bytes) {
             memcpy(copy, payload->notes.notes, bytes);
+            plan_note_ids_assign(plan, copy, payload->notes.note_count, PLAN_LANE_SPAN_NONE);
         }
         stored.notes.notes = copy;
     }
