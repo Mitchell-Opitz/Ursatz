@@ -10,6 +10,7 @@ library/analysis/harmony/chord_reading.c mask_above_root  # helper of chord_read
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
 library/chain/analysis_chain.c analysis_chain_chord_reading  # no app reads a chord reading until P62's reading layer; its tests call it
 library/chain/analysis_chain.c segment_pitch_classes  # helper of analysis_chain_chord_reading, which no app calls until P62; its tests call it
+library/io/musicxml_importer.c musicxml_import_file  # the imported score reads a file into a buffer and calls musicxml_import_buffer (R-614); its tests call it
 library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P69 (composing in modes tests pitches against materials); its tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
 library/model/time/meter_arithmetic.c meter_map_time_of  # the inverse of meter_map_position_of has no app caller until P61 reads the performer parts' local maps (import into performer parts); its tests call it

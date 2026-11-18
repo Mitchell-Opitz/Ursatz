@@ -6,7 +6,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -43,18 +43,18 @@
 /* --- the analysis of a file --- */
 
 typedef struct {
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
     cJSON *document;
 } Analysis;
 
 static bool analyze(const char *path, Analysis *analysis) {
     memset(analysis, 0, sizeof(*analysis));
-    if (midi_pipeline_import_file(path, &analysis->notes) != MIDI_PIPELINE_OK) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &analysis->notes, NULL) != IMPORTED_SCORE_OK) {
         return false;
     }
     if (!run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report)) {
-        imported_notes_destroy(&analysis->notes);
+        imported_score_destroy(&analysis->notes);
         return false;
     }
     char *json = test_render_document(path, &analysis->notes, &analysis->report);
@@ -66,7 +66,7 @@ static bool analyze(const char *path, Analysis *analysis) {
 static void analysis_destroy(Analysis *analysis) {
     cJSON_Delete(analysis->document);
     analysis_report_destroy(&analysis->report);
-    imported_notes_destroy(&analysis->notes);
+    imported_score_destroy(&analysis->notes);
 }
 
 /* The rhythm claims with the label, in document order. */

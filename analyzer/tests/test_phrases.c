@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -161,7 +161,7 @@ static int first_chord_at(const cJSON *chords, double time) {
     return i;
 }
 
-static void check_phrases(const Piece *piece, const ImportedNotes *notes, const cJSON *document) {
+static void check_phrases(const Piece *piece, const ImportedScore *notes, const cJSON *document) {
     const cJSON *phrases = test_json_member(document, "phrases");
     const cJSON *cadences = test_json_member(document, "cadences");
     const cJSON *chords = test_json_member(document, "chords");
@@ -259,9 +259,9 @@ static void check_phrases(const Piece *piece, const ImportedNotes *notes, const 
 static void run_piece(const Piece *piece) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return;
@@ -276,7 +276,7 @@ static void run_piece(const Piece *piece) {
         cJSON_Delete(document);
     }
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

@@ -1,52 +1,7 @@
 #ifndef URSATZ_ANALYZER_INPUT_PIPELINE_H
 #define URSATZ_ANALYZER_INPUT_PIPELINE_H
 
-#include <stdbool.h>
-#include <stddef.h>
-
-#include <ursatz_analyzer/imported_notes.h>
-
-typedef enum {
-    INPUT_PIPELINE_OK = 0,
-    INPUT_PIPELINE_ERR_CANNOT_READ_FILE,
-    INPUT_PIPELINE_ERR_UNKNOWN_FORMAT,
-    INPUT_PIPELINE_ERR_IMPORT_FAILED
-} InputPipelineResult;
-
-/*
- * Parses the --input-format value ("midi" or "musicxml"). Returns false
- * for anything else and leaves *out untouched.
- */
-bool input_format_parse(const char *name, InputFormat *out);
-
-/*
- * The concrete format of the file at path: by extension (.mid, .midi;
- * .musicxml, .xml, .mxl), and when the extension says nothing, by the
- * file's first bytes (an "MThd" header is MIDI; a zip signature or an
- * XML document is MusicXML). INPUT_FORMAT_AUTO is returned when neither
- * identifies the file, and also when the file cannot be read.
- */
-InputFormat input_format_detect(const char *path);
-
-/*
- * Reads the file at path in the given format (INPUT_FORMAT_AUTO detects
- * it) and fills *out with the same ImportedNotes whatever the input, so
- * every later stage is independent of the format. On INPUT_PIPELINE_OK,
- * *out is owned by the caller (imported_notes_destroy). On any other
- * result, a human-readable message has already been written to stderr,
- * nothing was written to disk and *out is left untouched.
- */
-InputPipelineResult input_pipeline_import_file(const char *path, InputFormat format, ImportedNotes *out);
-
-/*
- * Reads a MIDI or MusicXML document held in memory (INPUT_FORMAT_AUTO
- * detects the format from the first bytes, as input_format_detect does for
- * a file). The bytes go through a private temporary file made with mkstemp
- * under TMPDIR (or /tmp) that is removed before returning, so the result is
- * the same as input_pipeline_import_file. Results and ownership are as for
- * input_pipeline_import_file; a NULL pointer or empty input is
- * INPUT_PIPELINE_ERR_IMPORT_FAILED.
- */
-InputPipelineResult input_pipeline_import_memory(const char *bytes, size_t size, InputFormat format, ImportedNotes *out);
+/* The imported score and its import moved to the library (io/imported_score.h, R-614). */
+#include <io/imported_score.h>
 
 #endif

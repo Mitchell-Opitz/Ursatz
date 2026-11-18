@@ -1,11 +1,5 @@
 add_library(ursatz_analyzer STATIC
     version.c
-    pipeline/imported_notes.c
-    pipeline/notation_reading.c
-    pipeline/midi_pipeline.c
-    pipeline/gm_names.c
-    pipeline/musicxml_pipeline.c
-    pipeline/input_pipeline.c
     pipeline/chain_input.c
     pipeline/pitch_class_util.c
     pipeline/spelling_util.c

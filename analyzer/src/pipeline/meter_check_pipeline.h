@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 /*
  * The meter checked against the harmonic rhythm and the cadences (R-110). A file's meter can be wrong for its music (a
@@ -38,10 +38,10 @@
 
 /* Fills *out from the chord segments and the cadences (indices into entries). present is false when there are no
    segments. Returns false only on allocation failure. */
-bool meter_check_run(const ImportedNotes *notes, const AnalysisReportEntry *entries, size_t entry_count,
+bool meter_check_run(const ImportedScore *notes, const AnalysisReportEntry *entries, size_t entry_count,
                      const AnalysisCadence *cadences, size_t cadence_count, AnalysisMeterCheck *out);
 
 /* Fills report->meter_check from report->entries and report->cadences; run after the harmonic rhythm stage. */
-bool meter_check_stage_collect(const ImportedNotes *notes, AnalysisReport *report);
+bool meter_check_stage_collect(const ImportedScore *notes, AnalysisReport *report);
 
 #endif

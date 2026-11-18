@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "model/events/note_event.h"
 #include "model/time/duration.h"
@@ -68,7 +68,7 @@ static bool is_unclassified_tone(const AnalysisReport *report, size_t chord_inde
     return false;
 }
 
-static double coverage(const ImportedNotes *notes, const AnalysisReport *report, size_t *matched_chords) {
+static double coverage(const ImportedScore *notes, const AnalysisReport *report, size_t *matched_chords) {
     double total = 0.0;
     double covered = 0.0;
     *matched_chords = 0;
@@ -100,8 +100,8 @@ int main(int argc, char **argv) {
         char path[512];
         snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, PIECES[i].file);
 
-        ImportedNotes notes;
-        assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
+        ImportedScore notes;
+        assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
         AnalysisReport report;
         assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
 
@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
         }
 
         analysis_report_destroy(&report);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
     }
 
     printf("test_chord_coverage: ok\n");

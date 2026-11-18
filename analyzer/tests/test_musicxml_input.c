@@ -40,9 +40,9 @@ static long number(const cJSON *object, const char *key) {
 }
 
 /* Analyzes path and returns the parsed analysis document; *notes_out, if given, receives the imported notes. */
-static cJSON *analyze(const char *path, ImportedNotes *notes_out) {
-    ImportedNotes notes;
-    assert(input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK);
+static cJSON *analyze(const char *path, ImportedScore *notes_out) {
+    ImportedScore notes;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) == IMPORTED_SCORE_OK);
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     char *json = test_render_document(path, &notes, &report);
@@ -51,7 +51,7 @@ static cJSON *analyze(const char *path, ImportedNotes *notes_out) {
     if (notes_out) {
         *notes_out = notes;
     } else {
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
     }
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
@@ -77,46 +77,46 @@ static void copy_file(const char *from, const char *to) {
 }
 
 static void test_format_names(void) {
-    InputFormat format = INPUT_FORMAT_AUTO;
-    assert(input_format_parse("midi", &format) && format == INPUT_FORMAT_MIDI);
-    assert(input_format_parse("musicxml", &format) && format == INPUT_FORMAT_MUSICXML);
-    assert(!input_format_parse("mxl", &format) && format == INPUT_FORMAT_MUSICXML);
-    assert(!input_format_parse("", &format));
+    ImportedFormat format = IMPORTED_FORMAT_AUTO;
+    assert(imported_format_parse("midi", &format) && format == IMPORTED_FORMAT_MIDI);
+    assert(imported_format_parse("musicxml", &format) && format == IMPORTED_FORMAT_MUSICXML);
+    assert(!imported_format_parse("mxl", &format) && format == IMPORTED_FORMAT_MUSICXML);
+    assert(!imported_format_parse("", &format));
 }
 
 static void test_format_detection(void) {
     /* By extension, whatever the content, and whatever the case. */
-    assert(input_format_detect("/nowhere/piece.mid") == INPUT_FORMAT_MIDI);
-    assert(input_format_detect("/nowhere/piece.MIDI") == INPUT_FORMAT_MIDI);
-    assert(input_format_detect("/nowhere/piece.musicxml") == INPUT_FORMAT_MUSICXML);
-    assert(input_format_detect("/nowhere/piece.xml") == INPUT_FORMAT_MUSICXML);
-    assert(input_format_detect("/nowhere/piece.mxl") == INPUT_FORMAT_MUSICXML);
-    assert(input_format_detect("/nowhere/piece") == INPUT_FORMAT_AUTO);
-    assert(input_format_detect("/nowhere/dir.mid/piece") == INPUT_FORMAT_AUTO);
+    assert(imported_format_detect("/nowhere/piece.mid") == IMPORTED_FORMAT_MIDI);
+    assert(imported_format_detect("/nowhere/piece.MIDI") == IMPORTED_FORMAT_MIDI);
+    assert(imported_format_detect("/nowhere/piece.musicxml") == IMPORTED_FORMAT_MUSICXML);
+    assert(imported_format_detect("/nowhere/piece.xml") == IMPORTED_FORMAT_MUSICXML);
+    assert(imported_format_detect("/nowhere/piece.mxl") == IMPORTED_FORMAT_MUSICXML);
+    assert(imported_format_detect("/nowhere/piece") == IMPORTED_FORMAT_AUTO);
+    assert(imported_format_detect("/nowhere/dir.mid/piece") == IMPORTED_FORMAT_AUTO);
 
     /* By content when the extension says nothing. */
     char *path = test_temp_path("sniff.dat");
     write_bytes(path, "MThd\0\0\0\6", 8);
-    assert(input_format_detect(path) == INPUT_FORMAT_MIDI);
+    assert(imported_format_detect(path) == IMPORTED_FORMAT_MIDI);
     write_bytes(path, "\xEF\xBB\xBF  \n<?xml version=\"1.0\"?>", 29);
-    assert(input_format_detect(path) == INPUT_FORMAT_MUSICXML);
+    assert(imported_format_detect(path) == IMPORTED_FORMAT_MUSICXML);
     write_bytes(path, "PK\x03\x04zip", 7);
-    assert(input_format_detect(path) == INPUT_FORMAT_MUSICXML);
+    assert(imported_format_detect(path) == IMPORTED_FORMAT_MUSICXML);
     write_bytes(path, "plain text", 10);
-    assert(input_format_detect(path) == INPUT_FORMAT_AUTO);
+    assert(imported_format_detect(path) == IMPORTED_FORMAT_AUTO);
     remove(path);
     free(path);
 }
 
 static void test_notated_metadata_and_pickup(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
     cJSON *document = analyze(musicxml("pickup.musicxml"), &notes);
 
-    assert(notes.source.format == INPUT_FORMAT_MUSICXML);
+    assert(notes.source.format == IMPORTED_FORMAT_MUSICXML);
     assert(notes.source.meter_notated && notes.source.key_notated && notes.source.spelling_notated);
     assert(notes.key_signature.found && notes.key_signature.sharps_flats == 0 && !notes.key_signature.is_minor);
     assert(notes.key_signature_events.count == 1);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     const cJSON *input = test_json_require(test_json_require(document, "metadata"), "input");
     assert(number(document, "schema_version") == URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
@@ -142,7 +142,7 @@ static void test_notated_metadata_and_pickup(void) {
 }
 
 static void test_multi_part_score(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
     cJSON *document = analyze(musicxml("two-parts.musicxml"), &notes);
 
     /* Every part is analyzed, merged into one texture, and its label stays on its notes. */
@@ -157,7 +157,7 @@ static void test_multi_part_score(void) {
     assert(per_part[0] == 4 && per_part[1] == 4 && per_part[2] == 4);
     assert(strcmp(notes.source.parts[0].id, "P1") == 0 && strcmp(notes.source.parts[0].name, "Soprano") == 0);
     assert(strcmp(notes.source.parts[2].id, "P3") == 0 && strcmp(notes.source.parts[2].name, "Bass") == 0);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     const cJSON *metadata = test_json_require(document, "metadata");
     assert(number(metadata, "note_count") == 12);
@@ -206,9 +206,9 @@ static void test_enharmonic_spelling(void) {
 static void test_midi_keeps_rule_spelling(void) {
     char path[512];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
-    ImportedNotes notes;
+    ImportedScore notes;
     cJSON *document = analyze(path, &notes);
-    assert(notes.source.format == INPUT_FORMAT_MIDI);
+    assert(notes.source.format == IMPORTED_FORMAT_MIDI);
     assert(!notes.source.spelling_notated && !notes.source.meter_notated && !notes.source.key_notated);
     /* The file's one named track is one part on two staves, its notes all in it. */
     assert(notes.source.part_count == 1);
@@ -217,7 +217,7 @@ static void test_midi_keeps_rule_spelling(void) {
     for (size_t i = 0; i < notes.count; i++) {
         assert(notes.streams[i] == 0 && notes.source.part_index[i] == 0);
     }
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     const cJSON *input = test_json_require(test_json_require(document, "metadata"), "input");
     assert(strcmp(string(input, "format"), "midi") == 0);
     assert(strcmp(string(input, "source_type"), "performance") == 0);
@@ -226,10 +226,10 @@ static void test_midi_keeps_rule_spelling(void) {
     cJSON_Delete(document);
 }
 
-static void expect_failure(const char *path, InputFormat format, InputPipelineResult expected) {
-    ImportedNotes notes;
+static void expect_failure(const char *path, ImportedFormat format, ImportedScoreResult expected) {
+    ImportedScore notes;
     memset(&notes, 0xA5, sizeof(notes));
-    assert(input_pipeline_import_file(path, format, &notes) == expected);
+    assert(imported_score_import_file(path, format, &notes, NULL) == expected);
     /* An error leaves the output untouched: nothing to destroy. */
     unsigned char *bytes = (unsigned char *)&notes;
     for (size_t i = 0; i < sizeof(notes); i++) {
@@ -238,40 +238,40 @@ static void expect_failure(const char *path, InputFormat format, InputPipelineRe
 }
 
 static void test_errors(void) {
-    expect_failure(musicxml("malformed.musicxml"), INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_IMPORT_FAILED);
-    expect_failure(musicxml("not-music.xml"), INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_IMPORT_FAILED);
-    expect_failure(musicxml("timewise.musicxml"), INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_IMPORT_FAILED);
-    expect_failure(musicxml("empty-score.musicxml"), INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_IMPORT_FAILED);
-    expect_failure(musicxml("pickup.mxl"), INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_IMPORT_FAILED);
-    expect_failure(musicxml("README.md"), INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_UNKNOWN_FORMAT);
-    expect_failure("/nowhere/missing.musicxml", INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_CANNOT_READ_FILE);
-    expect_failure("/nowhere/missing.mid", INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_CANNOT_READ_FILE);
+    expect_failure(musicxml("malformed.musicxml"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_FORMAT);
+    expect_failure(musicxml("not-music.xml"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_FORMAT);
+    expect_failure(musicxml("timewise.musicxml"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_FORMAT);
+    expect_failure(musicxml("empty-score.musicxml"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_EMPTY_SCORE);
+    expect_failure(musicxml("pickup.mxl"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_COMPRESSED);
+    expect_failure(musicxml("README.md"), IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_UNKNOWN_FORMAT);
+    expect_failure("/nowhere/missing.musicxml", IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_IO);
+    expect_failure("/nowhere/missing.mid", IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_IO);
 
     /* A format forced against the content fails cleanly. */
-    expect_failure(musicxml("pickup.musicxml"), INPUT_FORMAT_MIDI, INPUT_PIPELINE_ERR_IMPORT_FAILED);
+    expect_failure(musicxml("pickup.musicxml"), IMPORTED_FORMAT_MIDI, IMPORTED_SCORE_ERR_FORMAT);
     char midi[512];
     snprintf(midi, sizeof(midi), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
-    expect_failure(midi, INPUT_FORMAT_MUSICXML, INPUT_PIPELINE_ERR_IMPORT_FAILED);
+    expect_failure(midi, IMPORTED_FORMAT_MUSICXML, IMPORTED_SCORE_ERR_FORMAT);
 }
 
 static void test_override_and_sniff(void) {
     /* A score named .mid is read as MusicXML only when the format is forced. */
     char *path = test_temp_path("forced.mid");
     copy_file(musicxml("pickup.musicxml"), path);
-    expect_failure(path, INPUT_FORMAT_AUTO, INPUT_PIPELINE_ERR_IMPORT_FAILED);
-    ImportedNotes notes;
-    assert(input_pipeline_import_file(path, INPUT_FORMAT_MUSICXML, &notes) == INPUT_PIPELINE_OK);
-    assert(notes.source.format == INPUT_FORMAT_MUSICXML);
-    imported_notes_destroy(&notes);
+    expect_failure(path, IMPORTED_FORMAT_AUTO, IMPORTED_SCORE_ERR_FORMAT);
+    ImportedScore notes;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) == IMPORTED_SCORE_OK);
+    assert(notes.source.format == IMPORTED_FORMAT_MUSICXML);
+    imported_score_destroy(&notes);
     remove(path);
 
     /* With no extension to go on, the content decides. */
     free(path);
     path = test_temp_path("sniffed");
     copy_file(musicxml("pickup.musicxml"), path);
-    assert(input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK);
-    assert(notes.source.format == INPUT_FORMAT_MUSICXML);
-    imported_notes_destroy(&notes);
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) == IMPORTED_SCORE_OK);
+    assert(notes.source.format == IMPORTED_FORMAT_MUSICXML);
+    imported_score_destroy(&notes);
     remove(path);
     free(path);
 }

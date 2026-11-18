@@ -8,7 +8,7 @@
 /* Library-private views of an AnalyzerResult for the exports and the CLI. */
 
 /* The notes the result borrows. */
-const ImportedNotes *analyzer_result_notes(const AnalyzerResult *result);
+const ImportedScore *analyzer_result_notes(const AnalyzerResult *result);
 
 /* The snapshot the analysis read its materials from (the options knowledge). */
 const KnowledgeSnapshot *analyzer_result_knowledge(const AnalyzerResult *result);

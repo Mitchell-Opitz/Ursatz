@@ -1,4 +1,4 @@
-#include "pipeline/gm_names.h"
+#include "io/general_midi.h"
 
 #include <stddef.h>
 
@@ -37,7 +37,7 @@ static const char *const gm_names[128] = {
     "Telephone Ring", "Helicopter", "Applause", "Gunshot",
 };
 
-const char *gm_instrument_name(int program) {
+const char *general_midi_instrument_name(int program) {
     if (program < 0 || (size_t)program >= sizeof gm_names / sizeof gm_names[0]) {
         return NULL;
     }

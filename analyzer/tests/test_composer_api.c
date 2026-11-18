@@ -16,7 +16,7 @@
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 #include <ursatz_analyzer/style_profile.h>
 
 #include "ursatz_test.h"
@@ -64,7 +64,7 @@ static char *fingerprint(const NoteEvent *const *events, size_t count) {
     return text;
 }
 
-static int tonic_of(const ImportedNotes *notes) {
+static int tonic_of(const ImportedScore *notes) {
     int fifths = notes->key_signature.sharps_flats;
     int major = (((fifths * 7) % 12) + 12) % 12;
     return notes->key_signature.is_minor ? (major + 9) % 12 : major;
@@ -109,7 +109,7 @@ static NoteEvent *make_event(TuningSystem *tuning, size_t number, int midi, long
 }
 
 /* The MIDI note numbers of imported notes, for AnalyzerHearing. The caller frees them. */
-static int *midi_of(const ImportedNotes *notes) {
+static int *midi_of(const ImportedScore *notes) {
     int *midi = malloc((notes->count ? notes->count : 1) * sizeof *midi);
     for (size_t i = 0; midi && i < notes->count; i++) {
         midi[i] = (int)pitch_numeric_value_position_numerator(notes->pitch_values[i]);
@@ -291,8 +291,8 @@ static void test_style_distance(void) {
     StyleModel *chorales_cut = corpus_model_without("chorales", 10, motive_categories, MOTIVE_COUNT);
     char path[1024];
     piece_path(path, sizeof(path), "Mozart 545.mid");
-    ImportedNotes notes;
-    CHECKF(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK, "cannot import %s", path);
+    ImportedScore notes;
+    CHECKF(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK, "cannot import %s", path);
     int *midi = midi_of(&notes);
     AnalyzerHearing hearing = {(const NoteEvent *const *)notes.events,
                                notes.count,
@@ -334,7 +334,7 @@ static void test_style_distance(void) {
     }
     analyzer_result_destroy(analysis);
     free(midi);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     /* A fragment too short for most categories lists them as missing and leaves them out of the means. */
     EntityID *tuning_id = NULL;

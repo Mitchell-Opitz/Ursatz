@@ -9,7 +9,7 @@
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/motive_links.h>
-#include <ursatz_analyzer/notation_reading.h>
+#include <io/imported_score.h>
 #include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/style_profile.h>
@@ -552,13 +552,13 @@ static bool parse_measure_range(const char *text, int *first, int *last) {
    standard output; nothing is written next to the input. */
 static int run_export(int argc, char *argv[], const KnowledgeSnapshot *knowledge) {
     const char *path = NULL;
-    InputFormat input_format = INPUT_FORMAT_AUTO;
+    ImportedFormat input_format = IMPORTED_FORMAT_AUTO;
     AnalyzerTextExportOptions options = analyzer_text_export_options_default();
     bool measures_set = false;
     for (int i = 2; i < argc; i++) {
         const char *arg = argv[i];
         if (strcmp(arg, "--input-format") == 0) {
-            if (i + 1 >= argc || !input_format_parse(argv[++i], &input_format)) {
+            if (i + 1 >= argc || !imported_format_parse(argv[++i], &input_format)) {
                 print_usage(argv[0]);
                 return 1;
             }
@@ -587,7 +587,7 @@ static int run_export(int argc, char *argv[], const KnowledgeSnapshot *knowledge
         return 1;
     }
 
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalyzerResult *result = NULL;
     switch (analyzer_run_file(path, input_format, NULL, knowledge, &notes, &result, NULL, NULL)) {
     case RUN_FILE_OK:
@@ -605,14 +605,14 @@ static int run_export(int argc, char *argv[], const KnowledgeSnapshot *knowledge
     analyzer_result_destroy(result);
     if (!json) {
         fprintf(stderr, "Error: out of memory while building the analysis document for '%s'\n", path);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
         return 1;
     }
 
     char *text = NULL;
     AnalyzerStatus status = analyzer_text_export_piece(&notes, json, &options, &text);
     free(json);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     if (status != ANALYZER_OK) {
         if (status == ANALYZER_ERR_ARGUMENT) {
             fprintf(stderr, "Error: no measure of '%s' falls in the range given to --measures\n", path);
@@ -646,7 +646,7 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     bool corpus_resume = false;
     bool input_format_set = false;
     bool want_json = false;
-    InputFormat input_format = INPUT_FORMAT_AUTO;
+    ImportedFormat input_format = IMPORTED_FORMAT_AUTO;
     const char *similar_dir = NULL;
     const char *motive_file = NULL;
     const char *progression = NULL;
@@ -656,14 +656,14 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     size_t link_candidates = 0; /* 0: not given */
     bool similar_flags = false; /* --min or --max given */
     SimilarOptions similar_options = similar_options_default();
-    NotationReading reading = notation_reading_none();
+    ImportedReading reading = imported_reading_none();
     bool reading_set = false; /* --meter, --value-scale or --pickup given */
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         if (strcmp(arg, "--json") == 0) {
             want_json = true;
         } else if (strcmp(arg, "--input-format") == 0) {
-            if (i + 1 >= argc || !input_format_parse(argv[++i], &input_format)) {
+            if (i + 1 >= argc || !imported_format_parse(argv[++i], &input_format)) {
                 print_usage(argv[0]);
                 return 1;
             }
@@ -744,11 +744,11 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
         } else if (strcmp(arg, "--resume") == 0) {
             corpus_resume = true;
         } else if (strcmp(arg, "--meter") == 0 || strcmp(arg, "--value-scale") == 0 || strcmp(arg, "--pickup") == 0) {
-            bool (*parse)(const char *, NotationReading *) = strcmp(arg, "--meter") == 0
-                                                                 ? notation_reading_parse_meter
+            bool (*parse)(const char *, ImportedReading *) = strcmp(arg, "--meter") == 0
+                                                                 ? imported_reading_parse_meter
                                                                  : (strcmp(arg, "--value-scale") == 0
-                                                                        ? notation_reading_parse_scale
-                                                                        : notation_reading_parse_pickup);
+                                                                        ? imported_reading_parse_scale
+                                                                        : imported_reading_parse_pickup);
             if (i + 1 >= argc || !parse(argv[i + 1], &reading)) {
                 print_usage(argv[0]);
                 return 1;
@@ -819,10 +819,10 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
         print_usage(argv[0]);
         return 1;
     }
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalyzerResult *result = NULL;
-    InputPipelineResult import_status;
-    NotationReadingResult reading_status = NOTATION_READING_OK;
+    ImportedScoreResult import_status;
+    ImportedReadingResult reading_status = IMPORTED_READING_OK;
     switch (analyzer_run_file(path, input_format, reading_set ? &reading : NULL, knowledge, &notes, &result, &import_status,
                               &reading_status)) {
     case RUN_FILE_OK:
@@ -831,9 +831,9 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
         return 1;
     case RUN_FILE_ERR_READING:
         fprintf(stderr, "Error: cannot apply the notation reading to '%s': %s\n", path,
-                reading_status == NOTATION_READING_ERR_INVALID
+                reading_status == IMPORTED_READING_ERR_INVALID
                     ? "the pickup must be shorter than one measure of the meter"
-                    : (reading_status == NOTATION_READING_ERR_OVERFLOW ? "a scaled time is too large" : "out of memory"));
+                    : (reading_status == IMPORTED_READING_ERR_OVERFLOW ? "a scaled time is too large" : "out of memory"));
         return 1;
     case RUN_FILE_ERR_ALLOC:
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);

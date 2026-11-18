@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include <chain/analysis_chain.h>
 
@@ -25,6 +25,6 @@
  * A piece without phrases, or without a melody line, has none; that is not an error.
  */
 /* Returns false only on allocation failure. segmentation is the chain's chord segments. */
-bool melody_stage_collect(const ImportedNotes *notes, const ChainInput *input, const AnalysisChain *library,
+bool melody_stage_collect(const ImportedScore *notes, const ChainInput *input, const AnalysisChain *library,
                           const Segmentation *segmentation, AnalysisReport *report);
 #endif

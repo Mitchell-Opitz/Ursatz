@@ -23,7 +23,7 @@
 
 #define CADENCE_ID_PREFIX "chain-"
 
-bool form_stage_read(FormStage *stage, const ImportedNotes *notes, const ChainInput *input,
+bool form_stage_read(FormStage *stage, const ImportedScore *notes, const ChainInput *input,
                      const AnalysisChain *library) {
     memset(stage, 0, sizeof(*stage));
     const StandardFormPhrases *phrases = analysis_chain_phrases(library);
@@ -116,7 +116,7 @@ static void clip_to_phrase(const AnalysisPhrase *phrase, long *start_numerator, 
     }
 }
 
-/* The ImportedNotes indices of the input's soprano notes [first, end), owned. NULL with *count 0 when empty. */
+/* The ImportedScore indices of the input's soprano notes [first, end), owned. NULL with *count 0 when empty. */
 static size_t *note_ids_of(const FormStage *stage, int first, int end, size_t *count) {
     *count = 0;
     if (first < 0 || end <= first || (size_t)end > stage->note_index_count) {
@@ -218,7 +218,7 @@ static bool collect_subphrases(const FormStage *stage, AnalysisReport *report) {
     return true;
 }
 
-/* The ImportedNotes indices of the input's soprano notes that start in [start, end), owned. NULL with *count 0 when
+/* The ImportedScore indices of the input's soprano notes that start in [start, end), owned. NULL with *count 0 when
    none. */
 static size_t *note_ids_between(const FormStage *stage, long start_numerator, unsigned long start_denominator,
                                 long end_numerator, unsigned long end_denominator, size_t *count) {

@@ -32,106 +32,27 @@
 
 #define MIDI_NOTE_COUNT 128
 
-/* A copy of the meter map, or a defaulted 4/4 map for NULL or a defaulted one. NULL on allocation failure. */
-static MeterMap *copy_meter_map(const MeterMap *map) {
-    EntityID *id = NULL;
-    MeterMap *copy = NULL;
-    if (!map || meter_map_is_defaulted(map)) {
-        if (entity_id_create("fragment-meter", &id) != ENTITY_ID_OK) {
-            return NULL;
-        }
-        if (meter_map_create_defaulted(id, &copy) != METER_MAP_OK) {
-            entity_id_destroy(id);
-            return NULL;
-        }
-        return copy;
-    }
-    size_t count = meter_map_region_count(map);
-    MeterMapChangePoint *points = calloc(count > 0 ? count : 1, sizeof *points);
-    TimeSignature **signatures = calloc(count > 0 ? count : 1, sizeof *signatures);
-    if (!points || !signatures) {
-        free(points);
-        free(signatures);
-        return NULL;
-    }
-    bool ok = true;
-    for (size_t i = 0; ok && i < count; i++) {
-        const MeterMapRegion *region = meter_map_region(map, i);
-        const TimeSignature *source = meter_map_region_time_signature(region);
-        ok = time_signature_copy(source, &signatures[i]) == TIME_SIGNATURE_OK;
-        points[i].time_signature = signatures[i];
-        points[i].start = meter_map_region_start(region);
-    }
-    ok = ok && entity_id_create("fragment-meter", &id) == ENTITY_ID_OK;
-    if (ok && meter_map_create(id, points, count, &copy) != METER_MAP_OK) {
-        entity_id_destroy(id);
-        copy = NULL;
-    }
-    for (size_t i = 0; i < count; i++) {
-        time_signature_destroy(signatures[i]);
-    }
-    free(points);
-    free(signatures);
-    return copy;
-}
-
-/* The key signature event at time 0 from a tonic and a material, shaped as the MIDI scan gives them (the mode byte follows the
-   material's third). */
-static bool add_key_signature(ImportedNotes *notes, int tonic, const PitchMaterial *material) {
+/* The key signature (sharps or flats and the mode) of a tonic pitch class and a material; false when the material has none. */
+static bool key_signature_of(int tonic, const PitchMaterial *material, int *fifths, bool *is_minor) {
     PitchLetter letter;
     int accidental;
-    int fifths;
     if (!material || !standard_tonality_key_tonic_of_pitch_class_material(tonic, material, &letter, &accidental) ||
-        !standard_tonality_key_fifths_of(letter, accidental, material, &fifths)) {
+        !standard_tonality_key_fifths_of(letter, accidental, material, fifths)) {
         return false;
     }
     CommonPracticeKeyMode mode;
-    bool is_minor = common_practice_key_mode_of(material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
-    MidiKeySignatureEvent *event = calloc(1, sizeof *event);
-    if (!event) {
-        return false;
-    }
-    if (midi_key_signature_build(fifths, &event->key_signature) != MIDI_KEY_SIGNATURE_BUILD_OK) {
-        free(event);
-        return false;
-    }
-    event->position = musical_time_of(rational_ratio(0, 1));
-    event->mode_hint = is_minor ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
-    event->tick = 0;
-    event->track_index = 0;
-    event->sharps_flats = (int8_t)fifths;
-    event->mode_byte = is_minor ? 1 : 0;
-    notes->key_signature_events.events = event;
-    notes->key_signature_events.count = 1;
-    notes->key_signature = (MidiKeySignature){true, (int8_t)fifths, is_minor};
+    *is_minor = common_practice_key_mode_of(material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
     return true;
 }
 
-/* ---- the hearing entry ---- */
-
-/* What a hearing builds for the pass: an ImportedNotes whose events are the caller's. */
-typedef struct {
-    ImportedNotes notes;
-    bool owns_meter;
-} HearingNotes;
-
-static void hearing_notes_destroy(void *owner) {
-    HearingNotes *hearing = owner;
-    if (!hearing) {
+/* What a hearing builds for the pass: an ImportedScore whose events are the caller's (imported_score_view). */
+static void hearing_score_destroy(void *owner) {
+    ImportedScore *score = owner;
+    if (!score) {
         return;
     }
-    ImportedNotes *notes = &hearing->notes;
-    for (size_t i = 0; i < notes->count; i++) {
-        pitch_numeric_value_destroy(notes->pitch_values[i]); /* the events stay the caller's */
-    }
-    if (!hearing->owns_meter) {
-        notes->meter.meter_map = NULL;
-    }
-    notes->count = 0;
-    free(notes->events);
-    notes->events = NULL;
-    imported_notes_destroy(notes);
-    free(hearing);
+    imported_score_destroy(score);
+    free(score);
 }
 
 static bool hearing_valid(const AnalyzerHearing *hearing) {
@@ -147,44 +68,26 @@ static bool hearing_valid(const AnalyzerHearing *hearing) {
     return true;
 }
 
-/* The notes of a hearing: the arrays are the hearing's, the events the caller's. NULL on allocation failure. */
-static HearingNotes *hearing_notes_build(const AnalyzerHearing *hearing) {
-    HearingNotes *built = calloc(1, sizeof *built);
+/* The score of a hearing: the arrays are the score's, the events the caller's. NULL on allocation failure. */
+static ImportedScore *hearing_score_build(const AnalyzerHearing *hearing) {
+    ImportedScoreView view = {.events = hearing->events,
+                              .count = hearing->count,
+                              .midi = hearing->midi,
+                              .meter = hearing->meter,
+                              .streams = hearing->streams};
+    if (hearing->has_key) {
+        view.has_key = key_signature_of(hearing->key_tonic_pitch_class, hearing->key_material, &view.key_fifths,
+                                        &view.key_minor);
+        if (!view.has_key) {
+            return NULL;
+        }
+    }
+    ImportedScore *built = calloc(1, sizeof *built);
     if (!built) {
         return NULL;
     }
-    ImportedNotes *notes = &built->notes;
-    notes->source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
-    size_t slots = hearing->count > 0 ? hearing->count : 1;
-    notes->events = calloc(slots, sizeof *notes->events);
-    notes->pitch_values = calloc(slots, sizeof *notes->pitch_values);
-    notes->streams = calloc(slots, sizeof *notes->streams);
-    EntityID *tuning_id = NULL;
-    TuningSystem *tuning = NULL;
-    bool ok = notes->events && notes->pitch_values && notes->streams &&
-              entity_id_create("midi-note-number", &tuning_id) == ENTITY_ID_OK;
-    if (ok && tuning_system_create(tuning_id, "MIDI note number", &tuning) != TUNING_SYSTEM_OK) {
-        entity_id_destroy(tuning_id);
-        ok = false;
-    }
-    for (size_t i = 0; ok && i < hearing->count; i++) {
-        ok = pitch_numeric_value_create(tuning, hearing->midi[i], 1, &notes->pitch_values[i]) ==
-             PITCH_NUMERIC_VALUE_OK;
-        notes->events[i] = (NoteEvent *)hearing->events[i];
-        notes->streams[i] = hearing->streams ? hearing->streams[i] : 0;
-        notes->count = i + 1;
-    }
-    tuning_system_destroy(tuning);
-    if (ok) {
-        built->owns_meter = !hearing->meter || meter_map_is_defaulted(hearing->meter);
-        notes->meter.meter_map = built->owns_meter ? copy_meter_map(NULL) : (MeterMap *)hearing->meter;
-        ok = notes_last_end(hearing->events, hearing->count, &notes->meter.end_time) && notes->meter.meter_map;
-    }
-    if (ok && hearing->has_key) {
-        ok = add_key_signature(notes, hearing->key_tonic_pitch_class, hearing->key_material);
-    }
-    if (!ok) {
-        hearing_notes_destroy(built);
+    if (imported_score_view(&view, built) != IMPORTED_SCORE_OK) {
+        free(built);
         return NULL;
     }
     return built;
@@ -205,17 +108,17 @@ AnalyzerStatus analyzer_hear(const AnalyzerHearing *hearing, const AnalyzerHeari
     if (!hearing_valid(hearing)) {
         return ANALYZER_ERR_ARGUMENT;
     }
-    HearingNotes *built = hearing_notes_build(hearing);
+    ImportedScore *built = hearing_score_build(hearing);
     if (!built) {
         return ANALYZER_ERR_ALLOC;
     }
     AnalyzerResult *result = NULL;
-    AnalyzerStatus status = analyzer_analyze(&built->notes, &used.analysis, &result);
+    AnalyzerStatus status = analyzer_analyze(built, &used.analysis, &result);
     if (status != ANALYZER_OK) {
-        hearing_notes_destroy(built);
+        hearing_score_destroy(built);
         return status;
     }
-    analyzer_result_set_owner(result, built, hearing_notes_destroy);
+    analyzer_result_set_owner(result, built, hearing_score_destroy);
     *out = result;
     return ANALYZER_OK;
 }
@@ -294,7 +197,7 @@ AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, Analyzer
     *out = NULL;
     *count = 0;
     const AnalysisReport *report = analyzer_result_report(result);
-    const ImportedNotes *notes = analyzer_result_notes(result);
+    const ImportedScore *notes = analyzer_result_notes(result);
     if (!report || !notes) {
         return ANALYZER_ERR_ARGUMENT;
     }

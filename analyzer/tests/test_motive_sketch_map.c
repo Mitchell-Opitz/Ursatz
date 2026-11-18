@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 #include <ursatz_analyzer/motive_links.h>
 
 #include "model/core/rational.h"
@@ -63,9 +63,9 @@ static bool scope_sketch(const MotiveLinkScope *scope, const char *piece_id, siz
 int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }
@@ -96,6 +96,6 @@ int main(void) {
     motive_link_scope_destroy(scope);
     free(json);
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     return test_finish("test_motive_sketch_map");
 }

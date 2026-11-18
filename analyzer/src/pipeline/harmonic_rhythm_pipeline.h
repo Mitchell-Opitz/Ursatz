@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 /*
  * Harmonic rhythm, counted over the library's Roman numerals and key regions (counting is not theory, R-018). A chord
@@ -19,7 +19,7 @@
  * measures before the arrival's measure against those in the two measures before them. Returns false only on
  * allocation failure.
  */
-bool harmonic_rhythm_stage_collect(const ImportedNotes *notes, AnalysisReport *report);
+bool harmonic_rhythm_stage_collect(const ImportedScore *notes, AnalysisReport *report);
 
 /* Marks in *flags (one per entry, owned by the caller, free) the entries that start different harmony from the entry
    before: another base numeral or key region (a segment with no numeral differs from one that has one), and the first

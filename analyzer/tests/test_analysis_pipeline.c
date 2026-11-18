@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -69,8 +69,8 @@ int main(void) {
     assert(fwrite(buf, 1, size, file) == size);
     fclose(file);
 
-    ImportedNotes notes;
-    assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
+    ImportedScore notes;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     assert(notes.count == 11);
 
     AnalysisReport report;
@@ -95,7 +95,7 @@ int main(void) {
     assert(strcmp(report.entries[2].key_label, "C major") == 0);
 
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     remove(path);
     free(path);
 

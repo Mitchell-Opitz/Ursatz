@@ -192,9 +192,9 @@ SimilarResult similar_query_from_file(const char *path, const KnowledgeSnapshot 
     if (!path || !knowledge || !query) {
         return SIMILAR_ERR_ARGUMENT;
     }
-    ImportedNotes imported;
+    ImportedScore imported;
     AnalyzerResult *result = NULL;
-    RunFileResult ran = analyzer_run_file(path, INPUT_FORMAT_AUTO, NULL, knowledge, &imported, &result, NULL, NULL);
+    RunFileResult ran = analyzer_run_file(path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &imported, &result, NULL, NULL);
     if (ran != RUN_FILE_OK) {
         return ran == RUN_FILE_ERR_IMPORT ? SIMILAR_ERR_IO : SIMILAR_ERR_ALLOC;
     }

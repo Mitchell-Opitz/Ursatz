@@ -38,7 +38,7 @@
 #define LINE_BASS 1
 #define LINE_OTHER 2
 
-/* An id of the input and the ImportedNotes index of its note. */
+/* An id of the input and the ImportedScore index of its note. */
 typedef struct {
     const char *id;
     size_t note;
@@ -51,7 +51,7 @@ typedef struct {
     size_t note_count;
     IdIndex *ids; /* sorted by id; one per input note */
     size_t id_count;
-    int *lines;   /* per ImportedNotes index: its line, or -1 for a note left out of the input */
+    int *lines;   /* per ImportedScore index: its line, or -1 for a note left out of the input */
 } RhythmBuild;
 
 static void build_destroy(RhythmBuild *build) {
@@ -93,7 +93,7 @@ static int compare_id_index(const void *a, const void *b) {
 
 /* The input's notes: every imported note with a length, in import order. A note the library refuses as invalid is left
    out (its line stays -1). */
-static bool build_notes(RhythmBuild *build, const ImportedNotes *notes, const OuterVoiceLines *lines) {
+static bool build_notes(RhythmBuild *build, const ImportedScore *notes, const OuterVoiceLines *lines) {
     const MeterMap *map = notes->meter.meter_map;
     size_t soprano_count = 0;
     size_t bass_count = 0;
@@ -150,7 +150,7 @@ static bool build_notes(RhythmBuild *build, const ImportedNotes *notes, const Ou
     return true;
 }
 
-/* The ImportedNotes index of the input note with the id, or SIZE_MAX with none. */
+/* The ImportedScore index of the input note with the id, or SIZE_MAX with none. */
 static size_t note_of_id(const RhythmBuild *build, const char *id) {
     IdIndex key = {id, 0};
     const IdIndex *found = bsearch(&key, build->ids, build->id_count, sizeof(IdIndex), compare_id_index);
@@ -226,7 +226,7 @@ static bool build_phrases(RhythmBuild *build, const FormStage *form) {
 
 /* The notes of phrase p on the line (-1: all), in time order: the notes whose onset, snapped as the library snaps it,
    is in the phrase's span. */
-static size_t *phrase_notes(const RhythmBuild *build, const ImportedNotes *notes, size_t phrase, int line, size_t *count) {
+static size_t *phrase_notes(const RhythmBuild *build, const ImportedScore *notes, size_t phrase, int line, size_t *count) {
     StandardMeterConfig config = standard_meter_config_default();
     Rational start = build->input.phrases[phrase].span.start.value;
     Rational end = build->input.phrases[phrase].span.end.value;
@@ -254,7 +254,7 @@ static size_t *phrase_notes(const RhythmBuild *build, const ImportedNotes *notes
     return ids;
 }
 
-static bool collect_densities(const RhythmBuild *build, const ImportedNotes *notes, AnalysisReport *report) {
+static bool collect_densities(const RhythmBuild *build, const ImportedScore *notes, AnalysisReport *report) {
     StandardMeterDensities densities = {NULL, 0};
     if (standard_meter_find_densities(&build->input, NULL, &densities) != STANDARD_METER_ANALYSIS_OK) {
         return false;
@@ -421,7 +421,7 @@ static void free_hypermeters(AnalysisHypermeter *items, size_t count) {
     free(items);
 }
 
-static bool collect_hypermeter(const RhythmBuild *build, const ImportedNotes *notes, AnalysisReport *report) {
+static bool collect_hypermeter(const RhythmBuild *build, const ImportedScore *notes, AnalysisReport *report) {
     StandardMeterHypermeter found;
     memset(&found, 0, sizeof(found));
     if (standard_meter_find_hypermeter(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
@@ -488,7 +488,7 @@ static const char *tuplet_level_name(TupletLevel level) {
    library orders the notes of equal onset itself and does not need the set sorted; import order keeps the order of
    the notes of a tuplet that the report has always had. It reads all notes as one stream: a tuplet is a figure of the
    music, not of a line. */
-static bool collect_tuplets(const RhythmBuild *build, const ImportedNotes *notes, AnalysisReport *report) {
+static bool collect_tuplets(const RhythmBuild *build, const ImportedScore *notes, AnalysisReport *report) {
     (void)notes;
     size_t count = build->input.note_count;
     const AnalysisNote *set_notes = build->input.notes;
@@ -541,7 +541,7 @@ static bool collect_tuplets(const RhythmBuild *build, const ImportedNotes *notes
     return true;
 }
 
-bool rhythm_stage_collect(const ImportedNotes *notes, const OuterVoiceLines *lines, const FormStage *form,
+bool rhythm_stage_collect(const ImportedScore *notes, const OuterVoiceLines *lines, const FormStage *form,
                           AnalysisReport *report) {
     const MeterMap *map = notes->meter.meter_map;
     if (!map || notes->count == 0 || !form->have_input || form->phrases.count == 0 ||

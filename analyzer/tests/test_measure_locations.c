@@ -7,7 +7,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -156,8 +156,8 @@ static double position_key_of(const cJSON *position) {
 }
 
 static void check_piece(const char *path, const char *display_name, const Expectation *expected) {
-    ImportedNotes notes;
-    assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
+    ImportedScore notes;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     AnalysisDocument *built = analysis_document_build(display_name, &notes, &report, test_knowledge());
@@ -166,7 +166,7 @@ static void check_piece(const char *path, const char *display_name, const Expect
     assert(json != NULL);
     analysis_document_destroy(built);
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);

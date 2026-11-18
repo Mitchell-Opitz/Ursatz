@@ -6,8 +6,7 @@
 
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/imported_notes.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
@@ -229,13 +228,13 @@ static bool load_planted(const char *path, PlantedList *list) {
 /* --- the report --- */
 
 typedef struct {
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
 } Analysis;
 
 static bool analyze(const char *path, Analysis *analysis) {
     memset(analysis, 0, sizeof(*analysis));
-    if (midi_pipeline_import_file(path, &analysis->notes) != MIDI_PIPELINE_OK ||
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &analysis->notes, NULL) != IMPORTED_SCORE_OK ||
         !run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
@@ -246,7 +245,7 @@ static bool analyze(const char *path, Analysis *analysis) {
 
 static void analysis_destroy(Analysis *analysis) {
     analysis_report_destroy(&analysis->report);
-    imported_notes_destroy(&analysis->notes);
+    imported_score_destroy(&analysis->notes);
 }
 
 /* The start of an entry's chord and the end of another's, in beats (quarter notes) from the start of the piece. */

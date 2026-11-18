@@ -5,8 +5,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
-#include <ursatz_analyzer/musicxml_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -350,10 +349,10 @@ static void check_repeats(const Piece *piece, const cJSON *document, const Analy
 static void run_piece(const Piece *piece, const char *midi_dir, const char *musicxml_dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", piece->midi ? midi_dir : musicxml_dir, piece->file);
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
-    bool imported = piece->midi ? midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK
-                                : musicxml_pipeline_import_file(path, &notes) == MUSICXML_PIPELINE_OK;
+    bool imported = piece->midi ? imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK
+                                : imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) == IMPORTED_SCORE_OK;
     if (!imported || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
@@ -391,7 +390,7 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
         cJSON_Delete(document);
     }
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

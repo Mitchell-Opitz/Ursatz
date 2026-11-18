@@ -167,7 +167,7 @@ static bool order_development(AnalysisMotive *motive) {
 }
 
 /* A note's start and duration in whole notes, and its MIDI pitch. */
-static bool note_timing(const ImportedNotes *notes, size_t index, Rational *start, Rational *duration,
+static bool note_timing(const ImportedScore *notes, size_t index, Rational *start, Rational *duration,
                         int *pitch) {
     if (index >= notes->count) {
         return false;
@@ -184,7 +184,7 @@ static bool note_timing(const ImportedNotes *notes, size_t index, Rational *star
 }
 
 /* Each note of an occurrence as a degree of the tonic of the key region it starts in. */
-static bool collect_occurrence_degrees(const ImportedNotes *notes, const AnalysisReport *report,
+static bool collect_occurrence_degrees(const ImportedScore *notes, const AnalysisReport *report,
                                        AnalysisMotiveOccurrence *occurrence) {
     occurrence->degrees = calloc(occurrence->note_id_count > 0 ? occurrence->note_id_count : 1, sizeof(char *));
     if (!occurrence->degrees) {
@@ -277,7 +277,7 @@ static char *note_nct(const AnalysisReport *report, size_t note_id, Rational sta
 
 /* Describes the family by its prototype. Leaves has_features false for a family whose first note has no key region
    or meter, or whose sketch the library would refuse. false only on allocation failure. */
-static bool collect_features(const MotiveStage *stage, const ImportedNotes *notes, const AnalysisReport *report,
+static bool collect_features(const MotiveStage *stage, const ImportedScore *notes, const AnalysisReport *report,
                              AnalysisMotive *motive) {
     const AnalysisMotiveOccurrence *prototype = &motive->occurrences[0];
     size_t count = prototype->note_id_count;
@@ -357,7 +357,7 @@ skip:
     return true;
 }
 
-bool motive_stage_collect(const MotiveStage *stage, const ImportedNotes *notes, AnalysisReport *report) {
+bool motive_stage_collect(const MotiveStage *stage, const ImportedScore *notes, AnalysisReport *report) {
     size_t count = stage->motives.family_count;
     if (count == 0) {
         return true;

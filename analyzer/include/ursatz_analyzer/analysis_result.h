@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/imported_notes.h>
+#include <io/imported_score.h>
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
@@ -60,7 +60,7 @@ AnalyzerOptions analyzer_options_default(void);
  * nothing is kept: ANALYZER_ERR_ARGUMENT for a NULL notes, options with no stages, no knowledge or out, ANALYZER_ERR_ALLOC,
  * ANALYZER_ERR_LIBRARY when the chain refuses the notes.
  */
-AnalyzerStatus analyzer_analyze(const ImportedNotes *notes, const AnalyzerOptions *options, AnalyzerResult **out);
+AnalyzerStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOptions *options, AnalyzerResult **out);
 
 /* NULL is a no-op. */
 void analyzer_result_destroy(AnalyzerResult *result);

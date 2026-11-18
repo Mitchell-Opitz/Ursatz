@@ -821,7 +821,7 @@ bool text_export_write_measures(Text *out, const cJSON *document, const ScoreTex
     return !out->failed;
 }
 
-AnalyzerStatus analyzer_text_export_piece(const ImportedNotes *notes, const char *document_json,
+AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
                                           const AnalyzerTextExportOptions *options, char **text) {
     if (text) {
         *text = NULL;

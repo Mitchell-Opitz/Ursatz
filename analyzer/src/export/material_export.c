@@ -126,9 +126,9 @@ static AnalyzerStatus write_section(Text *out, const AnalyzerTextExportSection *
         return ANALYZER_OK;
     }
 
-    ImportedNotes notes;
-    if (input_pipeline_import_memory(section->musicxml, strlen(section->musicxml), INPUT_FORMAT_AUTO, &notes) !=
-        INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_buffer((const unsigned char *)section->musicxml, strlen(section->musicxml), IMPORTED_FORMAT_AUTO, &notes, NULL) !=
+        IMPORTED_SCORE_OK) {
         return ANALYZER_ERR_LIBRARY;
     }
     AnalyzerOptions options = analyzer_options_default();
@@ -175,7 +175,7 @@ static AnalyzerStatus write_section(Text *out, const AnalyzerTextExportSection *
     free(musicxml);
     free(document_json);
     analyzer_result_destroy(result);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     return status;
 }
 

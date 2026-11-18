@@ -14,7 +14,7 @@ static int find_slot(const void *key, const void *entry) {
     return strcmp((const char *)key, ((const ChainInputSlot *)entry)->id);
 }
 
-static bool build_key_events(const ImportedNotes *notes, const CommonPracticeMaterials *materials, ChainInput *out) {
+static bool build_key_events(const ImportedScore *notes, const CommonPracticeMaterials *materials, ChainInput *out) {
     size_t count = notes->key_signature_events.count;
     out->key_events = calloc(count > 0 ? count : 1, sizeof(AnalysisKeyEvent));
     if (!out->key_events) {
@@ -33,7 +33,7 @@ static bool build_key_events(const ImportedNotes *notes, const CommonPracticeMat
     return true;
 }
 
-bool chain_input_build(const ImportedNotes *notes, const CommonPracticeMaterials *materials, ChainInput *out) {
+bool chain_input_build(const ImportedScore *notes, const CommonPracticeMaterials *materials, ChainInput *out) {
     memset(out, 0, sizeof(*out));
     AnalysisNoteSource source = {
         .events = (const NoteEvent *const *)notes->events,

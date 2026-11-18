@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_report.h>
 #include <chain/analysis_chain.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 /*
  * The galant schemas and harmonic sequences of the piece, from the library chain (analysis_chain_schemas and
@@ -21,6 +21,6 @@
  * Fills report->schemas and report->sequences from report->entries. A piece with no chords or no key region has none of
  * either; that is not an error. Returns false only on allocation or library failure.
  */
-bool schema_stage_collect(const ImportedNotes *notes, const AnalysisChain *library, AnalysisReport *report);
+bool schema_stage_collect(const ImportedScore *notes, const AnalysisChain *library, AnalysisReport *report);
 
 #endif

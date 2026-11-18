@@ -11,7 +11,7 @@ struct UrsatzGuiImportEntry {
     struct UrsatzGuiImportEntry *next;
     char *piece_id;
     char *version;
-    ImportedNotes notes;
+    ImportedScore notes;
     char *xml;
     bool meter_defaulted;
     unsigned long used;
@@ -26,7 +26,7 @@ static unsigned long g_tick = 0;
 static unsigned g_imports = 0;
 
 static void entry_free(UrsatzGuiImportEntry *entry) {
-    imported_notes_destroy(&entry->notes);
+    imported_score_destroy(&entry->notes);
     free(entry->piece_id);
     free(entry->version);
     free(entry->xml);
@@ -151,7 +151,7 @@ void ursatz_gui_import_cache_release(UrsatzGuiImportEntry *entry) {
     }
 }
 
-const ImportedNotes *ursatz_gui_import_entry_notes(const UrsatzGuiImportEntry *entry) {
+const ImportedScore *ursatz_gui_import_entry_notes(const UrsatzGuiImportEntry *entry) {
     return &entry->notes;
 }
 

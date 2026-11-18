@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/imported_notes.h>
+#include <io/imported_score.h>
 
 #include "pipeline/segmentation.h"
 #include "model/pitch/pitch_spelling.h"
@@ -34,6 +34,6 @@ int spelling_from_name(const char *name, PitchSpelling **out);
  * that has its pitch class. A name with no spelled note to follow stays as it
  * is. False on allocation failure.
  */
-bool respell_chord_reading(AnalysisChordReading *reading, const ImportedNotes *notes, const Segment *segment);
+bool respell_chord_reading(AnalysisChordReading *reading, const ImportedScore *notes, const Segment *segment);
 
 #endif

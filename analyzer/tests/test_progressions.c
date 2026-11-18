@@ -6,7 +6,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 #include "pipeline/progression_pipeline.h"
@@ -251,10 +251,10 @@ static void check_progressions(const cJSON *document, const AnalysisReport *repo
     }
 }
 
-static cJSON *analyze(const Piece *piece, AnalysisReport *report, ImportedNotes *notes) {
+static cJSON *analyze(const Piece *piece, AnalysisReport *report, ImportedScore *notes) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
-    if (midi_pipeline_import_file(path, notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(notes, test_knowledge(), report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(notes, test_knowledge(), report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return NULL;
@@ -267,7 +267,7 @@ static cJSON *analyze(const Piece *piece, AnalysisReport *report, ImportedNotes 
 }
 
 static void run_piece(const Piece *piece) {
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
     cJSON *document = analyze(piece, &report, &notes);
     if (document) {
@@ -275,13 +275,13 @@ static void run_piece(const Piece *piece) {
         printf("%s: %zu progressions\n", piece->name, report.progression_count);
         cJSON_Delete(document);
         analysis_report_destroy(&report);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
     }
 }
 
 /* Bach 114's most common progression ends on the tonic. */
 static void check_bach_top(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
     cJSON *document = analyze(&PIECES[0], &report, &notes);
     if (!document) {
@@ -297,7 +297,7 @@ static void check_bach_top(void) {
     }
     cJSON_Delete(document);
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

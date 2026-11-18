@@ -35,18 +35,18 @@ static char *render_piece(const char *fixture) {
     char path[512];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
 
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         return NULL;
     }
     AnalysisReport report;
     if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
         return NULL;
     }
     char *json = test_render_document(fixture, &notes, &report);
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     if (!json) {
         return NULL;
     }

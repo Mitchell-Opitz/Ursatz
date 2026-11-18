@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include <chain/analysis_chain.h>
 
@@ -29,7 +29,7 @@
 
 /* Fills report->voice_leading. harmony is the harmony stage, whose segments the doubling and spacing read; it may be
    empty. Returns false only on allocation failure. */
-bool voice_leading_stage_collect(const ImportedNotes *notes, const ChainInput *input, const AnalysisChain *library,
+bool voice_leading_stage_collect(const ImportedScore *notes, const ChainInput *input, const AnalysisChain *library,
                                  const HarmonyStage *harmony, AnalysisReport *report);
 
 #endif

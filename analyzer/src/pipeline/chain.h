@@ -6,7 +6,7 @@
 
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include <chain/analysis_chain.h>
 
@@ -32,7 +32,7 @@
  * failure; on false the pass still holds what was built and analyzer_pass_destroy releases it.
  */
 typedef struct AnalyzerPass {
-    const ImportedNotes *notes;
+    const ImportedScore *notes;
     AnalyzerOptions options;         /* the stages of this run */
     CommonPracticeMaterials materials; /* the four common-practice materials of options.knowledge, resolved once per pass */
     ChainInput input;                /* the library chain's neutral notes and key events */
@@ -52,7 +52,7 @@ typedef struct AnalyzerPass {
 } AnalyzerPass;
 
 /* Runs the pass over notes with the stages of options (NULL: all stages). */
-bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes, const AnalyzerOptions *options);
+bool analyzer_pass_run(AnalyzerPass *pass, const ImportedScore *notes, const AnalyzerOptions *options);
 
 /* Releases the pass and the report it still holds. */
 void analyzer_pass_destroy(AnalyzerPass *pass);

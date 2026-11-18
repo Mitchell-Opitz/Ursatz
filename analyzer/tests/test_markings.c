@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/musicxml_pipeline.h>
+#include <io/imported_score.h>
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
@@ -23,10 +23,10 @@ static bool starts_measure(long numerator, unsigned long denominator, int measur
     return numerator == (long)(measure - 1) * (long)denominator;
 }
 
-static bool analyze(const char *dir, const char *name, ImportedNotes *notes, AnalysisReport *report) {
+static bool analyze(const char *dir, const char *name, ImportedScore *notes, AnalysisReport *report) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", dir, name);
-    if (musicxml_pipeline_import_file(path, notes) != MUSICXML_PIPELINE_OK || !run_analysis_pipeline(notes, test_knowledge(), report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(notes, test_knowledge(), report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return false;
@@ -35,7 +35,7 @@ static bool analyze(const char *dir, const char *name, ImportedNotes *notes, Ana
 }
 
 static void check_markings(const char *dir) {
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
     if (!analyze(dir, "markings.musicxml", &notes, &report)) {
         return;
@@ -75,11 +75,11 @@ static void check_markings(const char *dir) {
     }
 
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 static void check_no_markings(const char *dir) {
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
     if (!analyze(dir, "two-parts.musicxml", &notes, &report)) {
         return;
@@ -87,7 +87,7 @@ static void check_no_markings(const char *dir) {
     CHECK(report.tempo_marking_count == 0);
     CHECK(report.dynamic_count == 0);
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(void) {

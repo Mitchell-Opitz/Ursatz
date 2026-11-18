@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/imported_notes.h>
+#include <io/imported_score.h>
 
 /*
  * The tempo and dynamics markings of a notated score, read with Ursatz's standard-markings rules. The analyzer adds no
@@ -17,6 +17,6 @@
  */
 
 /* Fills the report's tempo markings and dynamics. Returns false only on allocation failure. */
-bool markings_stage_collect(const ImportedNotes *notes, AnalysisReport *report);
+bool markings_stage_collect(const ImportedScore *notes, AnalysisReport *report);
 
 #endif

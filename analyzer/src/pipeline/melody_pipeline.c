@@ -26,7 +26,7 @@
 
 _Static_assert(NON_CHORD_TONE_COUNT == ANALYSIS_MELODY_NCT_TYPES, "the report counts every NonChordTone");
 
-/* A phrase's line: the library's line and, per entry, the ImportedNotes index of its note (SIZE_MAX for a rest). */
+/* A phrase's line: the library's line and, per entry, the ImportedScore index of its note (SIZE_MAX for a rest). */
 typedef struct {
     StandardCounterpointMelodyLine line;
     size_t *note;
@@ -56,7 +56,7 @@ static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long lon
 
 /* The note's name as the outer voice lines name it: as the input spells it when it does, else by the key region's
    flats or sharps. */
-static void name_note(const ImportedNotes *notes, size_t note, long pitch, const AnalysisKeyRegion *region,
+static void name_note(const ImportedScore *notes, size_t note, long pitch, const AnalysisKeyRegion *region,
                       char out[16]) {
     if (notes->source.spelling_notated && spelled_note_name(notes->events[note], pitch, true, out)) {
         return;
@@ -91,7 +91,7 @@ static const AnalysisKeyRegion *home_region_of(const AnalysisReport *report, int
    key, with the beat strength of each attack and the non-chord-tone result of each note's first chord segment; a phrase
    takes its part of it. Leading and trailing rests are not part of a phrase's line. False on allocation failure or a
    note the input does not know. */
-static bool build_phrase_line(const ImportedNotes *notes, const ChainInput *input, const AnalysisChainMelody *melody,
+static bool build_phrase_line(const ImportedScore *notes, const ChainInput *input, const AnalysisChainMelody *melody,
                               const Segmentation *segmentation, const AnalysisReport *report,
                               const AnalysisKeyRegion *home, const AnalysisPhrase *phrase, PhraseLine *built) {
     memset(built, 0, sizeof(*built));
@@ -396,7 +396,7 @@ done:
     return result;
 }
 
-bool melody_stage_collect(const ImportedNotes *notes, const ChainInput *input, const AnalysisChain *library,
+bool melody_stage_collect(const ImportedScore *notes, const ChainInput *input, const AnalysisChain *library,
                           const Segmentation *segmentation, AnalysisReport *report) {
     const AnalysisChainMelody *melody = analysis_chain_melody(library);
     if (report->phrase_count == 0 || !melody || melody->line.line.count == 0 ||

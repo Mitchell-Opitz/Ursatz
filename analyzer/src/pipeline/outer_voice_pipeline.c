@@ -30,7 +30,7 @@ static char *pitch_name_create(int midi, bool prefer_flats) {
 }
 
 /* Fills one outer note from the library's entry for the segment. False on allocation failure. */
-static bool fill_note(const ImportedNotes *notes, const Segment *segment, const OuterVoiceEntry *entry, const AnalysisKeyRegion *region,
+static bool fill_note(const ImportedScore *notes, const Segment *segment, const OuterVoiceEntry *entry, const AnalysisKeyRegion *region,
                       const CommonPracticeMaterials *materials, AnalysisOuterNote *out) {
     if (!entry->present) {
         out->status = entry->bridged ? ANALYSIS_OUTER_BRIDGED
@@ -105,7 +105,7 @@ static size_t chord_at(const Segmentation *segmentation, const Segment *voice, s
 }
 
 /* Fills report->outer_lines: one entry per voice segment. False on allocation failure. */
-static bool collect_outer_lines(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
+static bool collect_outer_lines(const ImportedScore *notes, const Segmentation *voices, const Segmentation *segmentation,
                                 const ChordEstimate *chords, const AnalysisKeyRegion *regions,
                                 const OuterVoiceLines *lines, const CommonPracticeMaterials *materials,
                                 AnalysisReport *report) {
@@ -135,7 +135,7 @@ static bool collect_outer_lines(const ImportedNotes *notes, const Segmentation *
     return true;
 }
 
-bool collect_outer_voices(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
+bool collect_outer_voices(const ImportedScore *notes, const Segmentation *voices, const Segmentation *segmentation,
                           const ChordEstimate *chords, const AnalysisKeyRegion *regions, const OuterVoiceLines *lines,
                           const CommonPracticeMaterials *materials, AnalysisReport *report) {
     AnalysisReportEntry *entries = report->entries;

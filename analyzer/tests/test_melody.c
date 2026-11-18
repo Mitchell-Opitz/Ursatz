@@ -6,7 +6,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 #include "model/pitch/pitch_numeric_value.h"
@@ -48,12 +48,12 @@
 #define TIME_TOLERANCE 1e-6
 
 /* A note's onset in whole notes and its pitch as a MIDI note number. */
-static double onset_of(const ImportedNotes *notes, size_t index) {
+static double onset_of(const ImportedScore *notes, size_t index) {
     const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(notes->events[index]));
     return (double)start->value.num / (double)start->value.den;
 }
 
-static long pitch_of(const ImportedNotes *notes, size_t index) {
+static long pitch_of(const ImportedScore *notes, size_t index) {
     return pitch_numeric_value_position_numerator(notes->pitch_values[index]);
 }
 
@@ -68,7 +68,7 @@ static bool known_status(const char *status) {
 
 /* --- the structure of the report and the document --- */
 
-static void check_melody(const ImportedNotes *notes, const AnalysisReport *report, const cJSON *document) {
+static void check_melody(const ImportedScore *notes, const AnalysisReport *report, const cJSON *document) {
     const cJSON *melody = test_json_member(document, "melody");
     const cJSON *phrases = test_json_member(document, "phrases");
     CHECK(report->melody_count > 0);
@@ -278,7 +278,7 @@ static double tick_time(int measure, long offset) {
 
 /* The climaxes and ranges: among the soprano notes of the report that start in the annotated span, the highest pitch, the
    first note at it, how many are at it, and the lowest. Counts the climaxes right and the ranges right. */
-static void check_spans(const ImportedNotes *notes, const AnalysisReport *report, const Annotation *annotation,
+static void check_spans(const ImportedScore *notes, const AnalysisReport *report, const Annotation *annotation,
                         size_t *climaxes_right, size_t *ranges_right) {
     *climaxes_right = 0;
     *ranges_right = 0;
@@ -321,7 +321,7 @@ static void check_spans(const ImportedNotes *notes, const AnalysisReport *report
 
 /* The leaps: the report has a leap arriving on the annotated note, between the annotated pitches, with the annotated
    status. Returns how many are right. */
-static size_t check_leaps(const ImportedNotes *notes, const AnalysisReport *report, const Annotation *annotation) {
+static size_t check_leaps(const ImportedScore *notes, const AnalysisReport *report, const Annotation *annotation) {
     size_t right = 0;
     for (size_t i = 0; i < annotation->leap_count; i++) {
         const AnnotatedLeap *want = &annotation->leaps[i];
@@ -347,7 +347,7 @@ static size_t check_leaps(const ImportedNotes *notes, const AnalysisReport *repo
 }
 
 /* The annotation against the report: the floors in the default run, the target when target is set. */
-static void check_annotation(const ImportedNotes *notes, const AnalysisReport *report, const char *annotation_path,
+static void check_annotation(const ImportedScore *notes, const AnalysisReport *report, const char *annotation_path,
                              bool target) {
     Annotation annotation;
     CHECK(load_annotation(annotation_path, &annotation));
@@ -374,9 +374,9 @@ int main(int argc, char **argv) {
     bool target = argc > 1 && strcmp(argv[1], "bach-114-target") == 0;
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }
@@ -394,6 +394,6 @@ int main(int argc, char **argv) {
     }
     cJSON_Delete(document);
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     return test_finish("test_melody");
 }

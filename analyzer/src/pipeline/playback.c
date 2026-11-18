@@ -71,20 +71,15 @@ static AnalyzerStatus score_tempo(const ImportedSource *source, AnalyzerTempoReg
     size_t used = 1;
     for (size_t i = 0; i < source->tempo_marking_count; i++) {
         const ImportedTempoMarking *marking = &source->tempo_markings[i];
-        if (!marking->has_metronome || marking->bpm_denominator == 0 || marking->beat_unit_denominator == 0 ||
-            marking->position_numerator < 0) {
+        if (!marking->has_metronome || marking->bpm.den <= 0 || marking->beat_unit.den <= 0 ||
+            marking->position.num < 0) {
             continue;
         }
-        double qpm = ((double)marking->bpm_numerator / (double)marking->bpm_denominator) *
-                     ((double)marking->beat_unit_numerator / (double)marking->beat_unit_denominator) * 4.0;
+        double qpm = rational_to_double(marking->bpm) * rational_to_double(marking->beat_unit) * 4.0;
         if (!(qpm > 0.0)) {
             continue;
         }
-        Rational at;
-        if (!rational_at(marking->position_numerator, marking->position_denominator, &at)) {
-            free(regions);
-            return ANALYZER_ERR_LIBRARY;
-        }
+        Rational at = marking->position;
         size_t slot = 0;
         while (slot < used && rational_cmp(regions[slot].at, at) < 0) {
             slot++;
@@ -125,7 +120,7 @@ static AnalyzerStatus scale_tempo(AnalyzerTempoRegion *regions, size_t count, lo
 
 /* ---- notes ---- */
 
-static AnalyzerStatus build_notes(const ImportedNotes *imported, AnalyzerPlayback *out) {
+static AnalyzerStatus build_notes(const ImportedScore *imported, AnalyzerPlayback *out) {
     out->end = rational_ratio(0, 1);
     if (imported->count == 0) {
         return ANALYZER_OK;
@@ -163,7 +158,7 @@ static AnalyzerStatus build_notes(const ImportedNotes *imported, AnalyzerPlaybac
     return ANALYZER_OK;
 }
 
-AnalyzerStatus analyzer_playback_build(const ImportedNotes *notes, AnalyzerPlayback *out) {
+AnalyzerStatus analyzer_playback_build(const ImportedScore *notes, AnalyzerPlayback *out) {
     if (!out) {
         return ANALYZER_ERR_ARGUMENT;
     }
@@ -171,7 +166,7 @@ AnalyzerStatus analyzer_playback_build(const ImportedNotes *notes, AnalyzerPlayb
     if (!notes || (notes->count > 0 && (!notes->events || !notes->pitch_values))) {
         return ANALYZER_ERR_ARGUMENT;
     }
-    bool is_midi = notes->source.format == INPUT_FORMAT_MIDI;
+    bool is_midi = notes->source.format == IMPORTED_FORMAT_MIDI;
     if (is_midi && !notes->tempo_map) {
         return ANALYZER_ERR_ARGUMENT;
     }
@@ -179,8 +174,8 @@ AnalyzerStatus analyzer_playback_build(const ImportedNotes *notes, AnalyzerPlayb
     AnalyzerStatus status = is_midi ? midi_tempo(notes->tempo_map, &out->tempo, &out->tempo_count, &defaulted)
                                     : score_tempo(&notes->source, &out->tempo, &out->tempo_count, &defaulted);
     if (status == ANALYZER_OK && notes->source.reading_applied) {
-        status = scale_tempo(out->tempo, out->tempo_count, notes->source.reading.scale_numerator,
-                             notes->source.reading.scale_denominator, is_midi);
+        status = scale_tempo(out->tempo, out->tempo_count, (long)notes->source.reading.scale.num,
+                             (unsigned long)notes->source.reading.scale.den, is_midi);
     }
     if (status == ANALYZER_OK) {
         status = build_notes(notes, out);
@@ -236,7 +231,7 @@ static bool add_tempo(cJSON *root, const AnalyzerPlayback *playback) {
     return json_add(root, "tempo", array);
 }
 
-static bool add_parts(cJSON *root, const AnalyzerPlayback *playback, const ImportedNotes *imported) {
+static bool add_parts(cJSON *root, const AnalyzerPlayback *playback, const ImportedScore *imported) {
     cJSON *array = cJSON_CreateArray();
     size_t *ids = playback->note_count > 0 ? malloc(playback->note_count * sizeof(size_t)) : NULL;
     if (!array || (playback->note_count > 0 && !ids)) {
@@ -250,7 +245,7 @@ static bool add_parts(cJSON *root, const AnalyzerPlayback *playback, const Impor
     if (playback->note_count > 0) {
         qsort(ids, playback->note_count, sizeof(size_t), compare_size_t);
     }
-    bool is_midi = imported->source.format == INPUT_FORMAT_MIDI;
+    bool is_midi = imported->source.format == IMPORTED_FORMAT_MIDI;
     for (size_t i = 0; i < playback->note_count; i++) {
         if (i > 0 && ids[i] == ids[i - 1]) {
             continue;
@@ -291,7 +286,7 @@ static bool add_notes(cJSON *root, const AnalyzerPlayback *playback) {
     return json_add(root, "notes", array);
 }
 
-AnalyzerStatus analyzer_playback_to_json(const AnalyzerPlayback *playback, const ImportedNotes *notes, char **out) {
+AnalyzerStatus analyzer_playback_to_json(const AnalyzerPlayback *playback, const ImportedScore *notes, char **out) {
     if (!out) {
         return ANALYZER_ERR_ARGUMENT;
     }

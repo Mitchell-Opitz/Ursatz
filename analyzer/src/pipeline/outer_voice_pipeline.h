@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "pipeline/chord_pipeline.h"
 #include "analysis/voices/outer_voice.h"
@@ -32,7 +32,7 @@
  * one per voice segment) leave every entry's lines absent and report->outer_lines empty. Returns false only on
  * allocation failure.
  */
-bool collect_outer_voices(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
+bool collect_outer_voices(const ImportedScore *notes, const Segmentation *voices, const Segmentation *segmentation,
                           const ChordEstimate *chords, const AnalysisKeyRegion *regions, const OuterVoiceLines *lines,
                           const CommonPracticeMaterials *materials, AnalysisReport *report);
 

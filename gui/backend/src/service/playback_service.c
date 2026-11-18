@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/imported_notes.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/playback.h>
 
@@ -16,8 +15,8 @@ UrsatzGuiPlaybackResult ursatz_gui_playback_of_midi(const char *path, char **jso
         return URSATZ_GUI_PLAYBACK_ERR_ARGUMENT;
     }
     *json = NULL;
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_MIDI, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK) {
         return URSATZ_GUI_PLAYBACK_ERR_IMPORT;
     }
     AnalyzerPlayback playback;
@@ -26,7 +25,7 @@ UrsatzGuiPlaybackResult ursatz_gui_playback_of_midi(const char *path, char **jso
         status = analyzer_playback_to_json(&playback, &notes, json);
         analyzer_playback_destroy(&playback);
     }
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     if (status == ANALYZER_ERR_ALLOC) {
         return URSATZ_GUI_PLAYBACK_ERR_ALLOC;
     }

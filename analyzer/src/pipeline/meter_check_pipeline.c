@@ -34,7 +34,7 @@ static bool entry_time(const AnalysisReportEntry *entry, Rational *time) {
            rational_make((long long)entry->time_numerator, (long long)entry->time_denominator, time) == RATIONAL_OK;
 }
 
-static bool evidence_collect(const ImportedNotes *notes, const AnalysisReportEntry *entries, size_t entry_count,
+static bool evidence_collect(const ImportedScore *notes, const AnalysisReportEntry *entries, size_t entry_count,
                              const AnalysisCadence *cadences, size_t cadence_count, Evidence *evidence) {
     memset(evidence, 0, sizeof(*evidence));
     bool *is_change = NULL;
@@ -77,7 +77,7 @@ static AnalysisMeterReading reading_of(const StandardMeterReading *reading) {
     return out;
 }
 
-bool meter_check_run(const ImportedNotes *notes, const AnalysisReportEntry *entries, size_t entry_count,
+bool meter_check_run(const ImportedScore *notes, const AnalysisReportEntry *entries, size_t entry_count,
                      const AnalysisCadence *cadences, size_t cadence_count, AnalysisMeterCheck *out) {
     memset(out, 0, sizeof(*out));
     const MeterMap *map = notes->meter.meter_map;
@@ -110,7 +110,7 @@ bool meter_check_run(const ImportedNotes *notes, const AnalysisReportEntry *entr
     return true;
 }
 
-bool meter_check_stage_collect(const ImportedNotes *notes, AnalysisReport *report) {
+bool meter_check_stage_collect(const ImportedScore *notes, AnalysisReport *report) {
     return meter_check_run(notes, report->entries, report->entry_count, report->cadences, report->cadence_count,
                            &report->meter_check);
 }

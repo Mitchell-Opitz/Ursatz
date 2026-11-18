@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "analysis/notes/analysis_key.h"
 #include "analysis/notes/analysis_note.h"
@@ -20,7 +20,7 @@
  * the key signature positions. Built here: each note's span, the notes and the key events. The spelling is the
  * score's only when source.spelling_notated; a MIDI file's notes carry none. track is the note's stream (the part).
  *
- * The chain names notes by id, the stages by ImportedNotes index: order and chain_input_import_index map one to
+ * The chain names notes by id, the stages by ImportedScore index: order and chain_input_import_index map one to
  * the other.
  */
 typedef struct ChainInputSlot {
@@ -29,7 +29,7 @@ typedef struct ChainInputSlot {
 } ChainInputSlot;
 
 typedef struct {
-    size_t *order;  /* sorted position -> ImportedNotes index */
+    size_t *order;  /* sorted position -> ImportedScore index */
     ChainInputSlot *by_id; /* (note id, import index) ordered by id, for chain_input_import_index */
     size_t count;                 /* notes */
     AnalysisNoteSet set;
@@ -39,10 +39,10 @@ typedef struct {
 
 /* The key events are made with the major material of `materials` (the file's mode hint never reached the chain). False on allocation failure or a note the library cannot take (a zero-length span, a pitch outside 0 to 127);
    *out is then empty. A piece with no notes gives a valid empty input. */
-bool chain_input_build(const ImportedNotes *notes, const CommonPracticeMaterials *materials, ChainInput *out);
+bool chain_input_build(const ImportedScore *notes, const CommonPracticeMaterials *materials, ChainInput *out);
 void chain_input_destroy(ChainInput *input);
 
-/* The ImportedNotes index of the note with this id, or (size_t)-1. */
+/* The ImportedScore index of the note with this id, or (size_t)-1. */
 size_t chain_input_import_index(const ChainInput *input, const char *note_id);
 
 #endif

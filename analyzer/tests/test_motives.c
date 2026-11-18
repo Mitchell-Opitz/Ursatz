@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -304,15 +304,15 @@ static void check_mozart_features(const cJSON *motives, const AnalysisReport *re
 int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }
-    ImportedNotes notes_again;
+    ImportedScore notes_again;
     AnalysisReport report_again;
-    if (midi_pipeline_import_file(path, &notes_again) != MIDI_PIPELINE_OK ||
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes_again, NULL) != IMPORTED_SCORE_OK ||
         !run_analysis_pipeline(&notes_again, test_knowledge(), &report_again)) {
         fprintf(stderr, "cannot analyze %s again\n", path);
         return 1;
@@ -341,7 +341,7 @@ int main(void) {
     }
     analysis_report_destroy(&report);
     analysis_report_destroy(&report_again);
-    imported_notes_destroy(&notes);
-    imported_notes_destroy(&notes_again);
+    imported_score_destroy(&notes);
+    imported_score_destroy(&notes_again);
     return test_finish("test_motives");
 }

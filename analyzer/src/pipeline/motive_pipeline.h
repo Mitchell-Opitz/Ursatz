@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include <chain/analysis_chain.h>
 #include <chain/chain_inputs.h>
@@ -35,7 +35,7 @@
 typedef struct {
     ChainFormInput built;       /* borrowed from the chain; the note-level input, for the indices the occurrences use */
     bool have_input;            /* built holds an input */
-    size_t *note_indices;       /* owned; per input note, the ImportedNotes index of the note */
+    size_t *note_indices;       /* owned; per input note, the ImportedScore index of the note */
     size_t note_index_count;
     StandardFormMotives motives; /* borrowed from the chain */
 } MotiveStage;
@@ -46,7 +46,7 @@ bool motive_stage_read(MotiveStage *stage, const ChainInput *input, const Analys
 /* Copies the stage's families and occurrences into the report, each family with its features (motive_features.h) read
    from its prototype, and each occurrence with its degrees. Needs the report's entries, non-chord tones and key
    regions. Returns false only on allocation failure. */
-bool motive_stage_collect(const MotiveStage *stage, const ImportedNotes *notes, AnalysisReport *report);
+bool motive_stage_collect(const MotiveStage *stage, const ImportedScore *notes, AnalysisReport *report);
 
 void motive_stage_destroy(MotiveStage *stage);
 

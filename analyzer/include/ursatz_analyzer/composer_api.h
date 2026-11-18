@@ -9,12 +9,12 @@
 
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/imported_notes.h>
+#include <io/imported_score.h>
 #include <ursatz_analyzer/style_profile.h>
 
 /*
  * The in-memory API the Composer calls to analyze a fragment it generated. The fragment never touches a file: its
- * events are borrowed into an ImportedNotes and the same pipeline the command line runs analyzes them.
+ * events are borrowed into an ImportedScore and the same pipeline the command line runs analyzes them.
  */
 
 /*

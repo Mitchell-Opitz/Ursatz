@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "analysis/voices/outer_voice.h"
 /* Prefixed: standard-harmony has headers of the same names (analysis_input.h, analysis_phrase.h). */
@@ -34,7 +34,7 @@
 typedef struct {
     ChainFormInput built;                  /* borrowed from the chain; the form input, for the indices the results use */
     bool have_input;                       /* built holds an input */
-    size_t *note_indices;                  /* owned; per input note, the ImportedNotes index of its first constituent note */
+    size_t *note_indices;                  /* owned; per input note, the ImportedScore index of its first constituent note */
     size_t note_index_count;
     StandardFormPhrases phrases;           /* borrowed from the chain */
     StandardFormSegmentation segmentation; /* borrowed */
@@ -45,7 +45,7 @@ typedef struct {
 
 /* Takes the chain's phrases, ideas, themes and expansions, and the input they index. Returns false only on
    allocation failure. */
-bool form_stage_read(FormStage *stage, const ImportedNotes *notes, const ChainInput *input,
+bool form_stage_read(FormStage *stage, const ImportedScore *notes, const ChainInput *input,
                      const AnalysisChain *library);
 
 /* The index into the harmony stage's cadences of phrase i's cadence, or -1 when it has none. */

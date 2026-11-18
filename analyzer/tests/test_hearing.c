@@ -51,7 +51,7 @@ static const PitchMaterial *key_material_of(bool has_key, bool is_minor) {
                    : NULL;
 }
 
-static int tonic_of(const ImportedNotes *notes) {
+static int tonic_of(const ImportedScore *notes) {
     int fifths = notes->key_signature.sharps_flats;
     int major = (((fifths * 7) % 12) + 12) % 12;
     return notes->key_signature.is_minor ? (major + 9) % 12 : major;
@@ -107,7 +107,7 @@ static StyleModel *model_of_document(const char *json, const char *file) {
     return model;
 }
 
-static int *midi_of(const ImportedNotes *notes) {
+static int *midi_of(const ImportedScore *notes) {
     int *midi = malloc((notes->count ? notes->count : 1) * sizeof *midi);
     for (size_t i = 0; midi && i < notes->count; i++) {
         midi[i] = (int)pitch_numeric_value_position_numerator(notes->pitch_values[i]);
@@ -178,8 +178,8 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     const char *fixture = PIECES[piece];
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         CHECKF(false, "cannot import %s", path);
         return;
     }
@@ -217,10 +217,10 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     CHECKF(analyzer_analyze(&notes, test_analyzer_defaults(), &direct) == ANALYZER_OK && direct, "%s: analyze", fixture);
     if (!heard || !direct) {
         free(midi);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
         return;
     }
-    const ImportedNotes *borrowed = analyzer_result_notes(heard);
+    const ImportedScore *borrowed = analyzer_result_notes(heard);
     bool same_events = borrowed && borrowed->count == notes.count;
     for (size_t i = 0; same_events && i < notes.count; i++) {
         same_events = borrowed->events[i] == notes.events[i];
@@ -276,7 +276,7 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     analyzer_result_destroy(direct);
     analyzer_result_destroy(heard);
     free(midi);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {
@@ -285,10 +285,10 @@ int main(int argc, char **argv) {
     char path[1024], file[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, "Bach 114.mid");
     snprintf(file, sizeof(file), "%s/hearing-reference.style.json", URSATZ_HEARING_WORK_DIR);
-    ImportedNotes notes;
+    ImportedScore notes;
     StyleModel *model = NULL;
     AnalyzerResult *result = NULL;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK &&
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) == IMPORTED_SCORE_OK &&
         analyzer_analyze(&notes, test_analyzer_defaults(), &result) == ANALYZER_OK) {
         char *json = analysis_document_render_result("<fragment>", result);
         model = json ? model_of_document(json, file) : NULL;
@@ -296,7 +296,7 @@ int main(int argc, char **argv) {
     }
     CHECKF(model != NULL, "reference model");
     analyzer_result_destroy(result);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     for (size_t i = 0; model && i < (smoke ? 1 : sizeof PIECES / sizeof PIECES[0]); i++) {
         check_piece(i, model);
     }

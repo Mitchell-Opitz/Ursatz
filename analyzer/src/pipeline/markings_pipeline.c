@@ -70,7 +70,7 @@ static bool text_group(const char *text, TempoGroup *group) {
     return true;
 }
 
-static bool collect_tempo(const ImportedNotes *notes, const char *framework, AnalysisReport *report) {
+static bool collect_tempo(const ImportedScore *notes, const char *framework, AnalysisReport *report) {
     const ImportedSource *source = &notes->source;
     if (source->tempo_marking_count == 0) {
         return true;
@@ -86,15 +86,15 @@ static bool collect_tempo(const ImportedNotes *notes, const char *framework, Ana
         report->tempo_marking_count = i + 1;
         out->framework = framework;
         out->has_metronome = in->has_metronome;
-        out->beat_unit_numerator = in->beat_unit_numerator;
-        out->beat_unit_denominator = in->beat_unit_denominator;
-        out->bpm_numerator = in->bpm_numerator;
-        out->bpm_denominator = in->bpm_denominator;
-        out->start_numerator = in->position_numerator;
-        out->start_denominator = in->position_denominator;
+        out->beat_unit_numerator = (unsigned long)in->beat_unit.num;
+        out->beat_unit_denominator = (unsigned long)in->beat_unit.den;
+        out->bpm_numerator = (unsigned long)in->bpm.num;
+        out->bpm_denominator = (unsigned long)in->bpm.den;
+        out->start_numerator = (long)in->position.num;
+        out->start_denominator = (unsigned long)in->position.den;
         if (i + 1 < source->tempo_marking_count) {
-            out->end_numerator = source->tempo_markings[i + 1].position_numerator;
-            out->end_denominator = source->tempo_markings[i + 1].position_denominator;
+            out->end_numerator = (long)source->tempo_markings[i + 1].position.num;
+            out->end_denominator = (unsigned long)source->tempo_markings[i + 1].position.den;
         } else {
             out->end_numerator = (long)piece_end.value.num;
             out->end_denominator = (unsigned long)piece_end.value.den;
@@ -137,10 +137,10 @@ static bool collect_dynamics(const ImportedSource *source, const char *framework
         if (!(out->marking = strdup(in->marking))) {
             return false;
         }
-        out->start_numerator = in->start_numerator;
-        out->start_denominator = in->start_denominator;
-        out->end_numerator = in->end_numerator;
-        out->end_denominator = in->end_denominator;
+        out->start_numerator = (long)in->start.num;
+        out->start_denominator = (unsigned long)in->start.den;
+        out->end_numerator = (long)in->end.num;
+        out->end_denominator = (unsigned long)in->end.den;
         out->part = in->part;
         out->staff = in->staff;
         out->has_rank = standard_markings_dynamic_rank(in->marking, &out->rank);
@@ -162,8 +162,8 @@ static bool collect_dynamics(const ImportedSource *source, const char *framework
     return true;
 }
 
-bool markings_stage_collect(const ImportedNotes *notes, AnalysisReport *report) {
-    if (notes->source.format != INPUT_FORMAT_MUSICXML) {
+bool markings_stage_collect(const ImportedScore *notes, AnalysisReport *report) {
+    if (notes->source.format != IMPORTED_FORMAT_MUSICXML) {
         return true;
     }
     const char *framework = framework_name(standard_markings_framework());

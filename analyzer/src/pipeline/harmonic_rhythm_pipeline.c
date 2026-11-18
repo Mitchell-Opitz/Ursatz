@@ -104,7 +104,7 @@ static bool collect_approaches(const int *measures, AnalysisReport *report) {
     return true;
 }
 
-bool harmonic_rhythm_stage_collect(const ImportedNotes *notes, AnalysisReport *report) {
+bool harmonic_rhythm_stage_collect(const ImportedScore *notes, AnalysisReport *report) {
     size_t count = report->entry_count;
     if (count == 0) {
         return true;

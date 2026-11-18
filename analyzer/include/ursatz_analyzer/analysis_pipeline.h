@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_report.h>
 #include <theory/knowledge/knowledge_snapshot.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 /*
  * Cuts the imported notes into sonority segments, finds the local key
@@ -18,6 +18,6 @@
  * `knowledge`, which must outlive the report's use of them. Returns false
  * on allocation failure or when `knowledge` is NULL.
  */
-bool run_analysis_pipeline(const ImportedNotes *notes, const KnowledgeSnapshot *knowledge, AnalysisReport *report);
+bool run_analysis_pipeline(const ImportedScore *notes, const KnowledgeSnapshot *knowledge, AnalysisReport *report);
 
 #endif

@@ -91,8 +91,8 @@ static void check_snapshots(const char *slug, const char *fixture, const Analyze
 static void check_piece(const char *fixture, const char *slug) {
     char path[512];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         CHECKF(false, "%s: cannot import %s", slug, path);
         return;
     }
@@ -116,14 +116,14 @@ static void check_piece(const char *fixture, const char *slug) {
         check_snapshots(slug, fixture, result);
     }
     analyzer_result_destroy(result);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 static void check_options(const char *fixture) {
     char path[512];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         CHECKF(false, "cannot import %s", path);
         return;
     }
@@ -161,7 +161,7 @@ static void check_options(const char *fixture) {
         CHECKF(analysis_document_build_from_result(fixture, result) == NULL, "a document from a partial chain");
     }
     analyzer_result_destroy(result);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

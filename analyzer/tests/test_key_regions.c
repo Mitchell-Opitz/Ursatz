@@ -6,7 +6,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 #include "test_support.h"
@@ -107,15 +107,15 @@ static void check_regions_are_gap_free(const AnalysisReport *report) {
 }
 
 static int run_reference_piece(const ReferencePiece *piece) {
-    ImportedNotes notes;
-    if (midi_pipeline_import_file(piece->path, &notes) != MIDI_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(piece->path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK) {
         fprintf(stderr, "%s: cannot import\n", piece->path);
         return 1;
     }
     AnalysisReport report;
     if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "%s: pipeline failed\n", piece->path);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
         return 1;
     }
     check_regions_are_gap_free(&report);
@@ -199,7 +199,7 @@ static int run_reference_piece(const ReferencePiece *piece) {
     }
 
     analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     return test_failure_count == 0 ? 0 : 1;
 }
 
@@ -293,13 +293,13 @@ static void write_piece(const char *path, const Stretch *stretches, size_t stret
 }
 
 typedef struct {
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalysisReport report;
     cJSON *document;
 } Analyzed;
 
 static void analyze(const char *path, Analyzed *out) {
-    if (midi_pipeline_import_file(path, &out->notes) != MIDI_PIPELINE_OK ||
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &out->notes, NULL) != IMPORTED_SCORE_OK ||
         !run_analysis_pipeline(&out->notes, test_knowledge(), &out->report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         exit(1);
@@ -316,7 +316,7 @@ static void analyze(const char *path, Analyzed *out) {
 static void release(Analyzed *analyzed) {
     cJSON_Delete(analyzed->document);
     analysis_report_destroy(&analyzed->report);
-    imported_notes_destroy(&analyzed->notes);
+    imported_score_destroy(&analyzed->notes);
 }
 
 static int list_size(const Analyzed *analyzed, const char *section) {

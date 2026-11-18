@@ -53,7 +53,7 @@ static int pitch_class_of_name(const char *name) {
 }
 
 /* The spelling of the lowest note of the segment that has pitch_class; false when none is spelled. */
-static bool lowest_spelling(const ImportedNotes *notes, const Segment *segment, int pitch_class, char out[16]) {
+static bool lowest_spelling(const ImportedScore *notes, const Segment *segment, int pitch_class, char out[16]) {
     size_t found = segment->member_count;
     for (size_t i = 0; i < segment->member_count; i++) {
         if (pitch_class_of(segment->members[i].pitch) == pitch_class &&
@@ -78,7 +78,7 @@ static bool rename_to(char **name, const char *spelled) {
     return true;
 }
 
-bool respell_chord_reading(AnalysisChordReading *reading, const ImportedNotes *notes, const Segment *segment) {
+bool respell_chord_reading(AnalysisChordReading *reading, const ImportedScore *notes, const Segment *segment) {
     if (!reading->label || !reading->root || !reading->bass || segment->member_count == 0) {
         return true;
     }

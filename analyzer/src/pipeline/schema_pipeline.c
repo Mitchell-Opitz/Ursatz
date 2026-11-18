@@ -197,7 +197,7 @@ static bool copy_sequence(const SchemaBuild *build, const ScaleSequenceMatch *ma
     return true;
 }
 
-bool schema_stage_collect(const ImportedNotes *notes, const AnalysisChain *library, AnalysisReport *report) {
+bool schema_stage_collect(const ImportedScore *notes, const AnalysisChain *library, AnalysisReport *report) {
     size_t count = analysis_chain_segment_count(library);
     const GalantSchemaMatches *schemas = analysis_chain_schemas(library);
     const ScaleSequenceMatches *sequences = analysis_chain_sequences(library);

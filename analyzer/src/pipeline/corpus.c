@@ -182,11 +182,11 @@ static bool walk_directory(const char *dir, const char *relative, const struct s
     return ok;
 }
 
-static const char *import_error_text(InputPipelineResult result) {
+static const char *import_error_text(ImportedScoreResult result) {
     switch (result) {
-    case INPUT_PIPELINE_ERR_CANNOT_READ_FILE:
+    case IMPORTED_SCORE_ERR_IO:
         return "cannot read file";
-    case INPUT_PIPELINE_ERR_UNKNOWN_FORMAT:
+    case IMPORTED_SCORE_ERR_UNKNOWN_FORMAT:
         return "unknown format";
     default:
         return "import failed";
@@ -255,10 +255,10 @@ static CorpusRunResult analyze_piece(const char *output_dir, const char *relativ
     record->home_key[0] = '\0';
     record->content_hash = fnv1a_file(input_path);
 
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalyzerResult *result = NULL;
-    InputPipelineResult imported = INPUT_PIPELINE_OK;
-    RunFileResult ran = analyzer_run_file(input_path, INPUT_FORMAT_AUTO, NULL, knowledge, &notes, &result, &imported, NULL);
+    ImportedScoreResult imported = IMPORTED_SCORE_OK;
+    RunFileResult ran = analyzer_run_file(input_path, IMPORTED_FORMAT_AUTO, NULL, knowledge, &notes, &result, &imported, NULL);
     if (ran == RUN_FILE_ERR_IMPORT) {
         record->error = import_error_text(imported);
         return CORPUS_RUN_OK;

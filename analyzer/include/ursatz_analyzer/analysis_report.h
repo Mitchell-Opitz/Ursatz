@@ -39,7 +39,7 @@ typedef enum {
 
 typedef struct {
     AnalysisOuterStatus status;
-    size_t note_id;     /* ImportedNotes index; valid only when status is PRESENT */
+    size_t note_id;     /* ImportedScore index; valid only when status is PRESENT */
     int pitch;          /* MIDI note number; valid only when PRESENT */
     bool held;          /* the note was attacked before the segment began; valid only when PRESENT */
     char *pitch_name;   /* owned; e.g. "E5", spelled in the key of the segment's region; NULL unless PRESENT */
@@ -87,7 +87,7 @@ typedef struct {
     unsigned long end_denominator;
     char *chord_label; /* owned; "no match" when nothing was identified */
     char *key_label;   /* owned; "no match" when nothing was identified */
-    size_t *note_ids;  /* owned; ImportedNotes indices (Ursatz "midi-note-N") sounding in this segment, attacked or held */
+    size_t *note_ids;  /* owned; ImportedScore indices (Ursatz "midi-note-N") sounding in this segment, attacked or held */
     size_t note_id_count;
     AnalysisConfidence chord_confidence;
     AnalysisChordReading chord;     /* best chord; label NULL when "no match" */
@@ -136,7 +136,7 @@ void analysis_chord_reading_destroy(AnalysisChordReading *reading);
    figure (non_chord_tone_name, e.g. "passing", "escape-tone"), or NULL
    when the library left the tone unclassified. */
 typedef struct {
-    size_t note_id; /* ImportedNotes index (Ursatz "midi-note-N") */
+    size_t note_id; /* ImportedScore index (Ursatz "midi-note-N") */
     size_t chord_index;
     char *type; /* owned; NULL when unclassified */
 } AnalysisNonChordTone;
@@ -314,7 +314,7 @@ typedef struct {
     const char *label;      /* the library's IdeaLabel name: "basic-idea", "contrasting-idea", "fragment", "unit" */
     bool compared;          /* the idea was compared with the phrase's first idea (false for the first) */
     double similarity;      /* the share of matching intervals; valid only when compared */
-    size_t *note_ids;       /* owned; ImportedNotes indices of the soprano notes of the idea */
+    size_t *note_ids;       /* owned; ImportedScore indices of the soprano notes of the idea */
     size_t note_id_count;
     double uncertainty;     /* the library's, in [0, 1] */
 } AnalysisIdea;
@@ -332,7 +332,7 @@ typedef struct {
     int first_measure;
     int last_measure;
     int length_measures;
-    size_t *note_ids;       /* owned; ImportedNotes indices of the soprano notes of the subphrase */
+    size_t *note_ids;       /* owned; ImportedScore indices of the soprano notes of the subphrase */
     size_t note_id_count;
     double uncertainty;
 } AnalysisSubphrase;
@@ -351,7 +351,7 @@ typedef struct {
     unsigned long start_denominator;
     long end_numerator;
     unsigned long end_denominator;
-    size_t *note_ids;    /* owned; ImportedNotes indices of the soprano notes that start in the later span */
+    size_t *note_ids;    /* owned; ImportedScore indices of the soprano notes that start in the later span */
     size_t note_id_count;
 } AnalysisRepeat;
 
@@ -405,7 +405,7 @@ typedef struct {
     bool has_halves;         /* a compound period: its two halves are themes */
     size_t halves[2];        /* indices into themes of the two sentences; valid only when has_halves */
     AnalysisThemePart parts[2];
-    size_t *note_ids;        /* owned; ImportedNotes indices of the soprano notes in the span */
+    size_t *note_ids;        /* owned; ImportedScore indices of the soprano notes in the span */
     size_t note_id_count;
     double uncertainty;      /* the library's, in [0, 1]; higher is LESS certain */
 } AnalysisTheme;
@@ -439,7 +439,7 @@ typedef struct {
     const char *external_kind; /* the library's ExternalExpansionKind name; NULL unless external */
     bool suffix_length_typical;       /* external only: the extension's length is typical for its kind */
     bool suffix_agrees_with_location; /* external only: its length agrees with its location */
-    size_t *note_ids;          /* owned; ImportedNotes indices of the soprano notes in the span */
+    size_t *note_ids;          /* owned; ImportedScore indices of the soprano notes in the span */
     size_t note_id_count;
     double uncertainty;        /* the library's, in [0, 1]; higher is LESS certain */
 } AnalysisExpansion;
@@ -492,7 +492,7 @@ typedef struct {
     size_t window_length;      /* notes compared */
 } AnalysisThematicReturn;
 
-/* One note of a motive family's prototype: the soprano note (ImportedNotes index), its MIDI pitch, and its onset (from
+/* One note of a motive family's prototype: the soprano note (ImportedScore index), its MIDI pitch, and its onset (from
    the first note) and duration as exact whole-note fractions. */
 typedef struct {
     size_t note_id;
@@ -537,7 +537,7 @@ typedef struct {
     int first_measure;       /* the library's measure numbers (a pickup is 0) */
     int last_measure;        /* the measure the last note starts in */
     double first_beat;       /* 1-based, in beats of the first measure */
-    size_t *note_ids;        /* owned; ImportedNotes indices of the occurrence's soprano notes */
+    size_t *note_ids;        /* owned; ImportedScore indices of the occurrence's soprano notes */
     size_t note_id_count;
     const char *kind;        /* the library's MotiveOccurrenceKind name, relative to the family's prototype: "exact",
                                 "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented",
@@ -575,7 +575,7 @@ typedef struct {
    (analysis_melody_leaps.h, the cantus firmus rule LEAP_RECOVERY): a leap of a fourth or larger should be followed by a
    step in the opposite direction. */
 typedef struct {
-    size_t from_note;          /* ImportedNotes indices of the two notes */
+    size_t from_note;          /* ImportedScore indices of the two notes */
     size_t to_note;
     long semitones;            /* signed */
     const char *direction;     /* "up" or "down" */
@@ -589,7 +589,7 @@ typedef struct {
 /* Two leaps in a row that the library's rule CONSECUTIVE_LEAPS finds fault with: the second starts where the first
    ends. */
 typedef struct {
-    size_t first_note;         /* ImportedNotes indices: the first leap is first to middle, the second middle to last */
+    size_t first_note;         /* ImportedScore indices: the first leap is first to middle, the second middle to last */
     size_t middle_note;
     size_t last_note;
     bool same_direction;       /* the two go the same way and are not two thirds outlining a perfect fifth */
@@ -603,7 +603,7 @@ typedef struct {
 /* A melody note the library's chord identification found not to be a tone of its chord, with the type it gave
    (analysis_melody_nct.h attaches that result to the note; the melody adapter labels nothing itself). */
 typedef struct {
-    size_t note;               /* ImportedNotes index */
+    size_t note;               /* ImportedScore index */
     const char *type;          /* the library's NonChordTone name, e.g. "passing" or "escape-tone" */
     double uncertainty;        /* the library's: 1 minus the note's confidence */
 } AnalysisMelodyNct;
@@ -614,7 +614,7 @@ typedef struct {
 
 /* A seventh degree the library's rule LEADING_TONE finds the melody not to follow: the note, and the note after it. */
 typedef struct {
-    size_t note;               /* ImportedNotes indices */
+    size_t note;               /* ImportedScore indices */
     size_t next_note;
     double uncertainty;        /* the key region's, in [0, 1]: the degree is read in its key */
 } AnalysisMelodyBreak;
@@ -632,17 +632,17 @@ typedef struct {
     unsigned long end_denominator;
     int first_measure;       /* the phrase's, as the library numbers them (a pickup is 0) */
     int last_measure;
-    size_t *note_ids;        /* owned; ImportedNotes indices of the melody notes, in time order */
+    size_t *note_ids;        /* owned; ImportedScore indices of the melody notes, in time order */
     size_t note_id_count;
     long lowest_pitch;       /* MIDI note numbers: the first note at the lowest and at the highest pitch */
-    size_t lowest_note;      /* ImportedNotes indices */
+    size_t lowest_note;      /* ImportedScore indices */
     char lowest_name[16];    /* e.g. "E5", spelled as the outer voice lines spell it */
     long highest_pitch;
     size_t highest_note;
     char highest_name[16];
     long range_semitones;    /* highest minus lowest */
     /* The climax (analysis_melody_climax.h): the highest pitch, and the first note at it. */
-    size_t climax_note;      /* ImportedNotes index of the first note at the highest pitch */
+    size_t climax_note;      /* ImportedScore index of the first note at the highest pitch */
     int climax_occurrences;  /* notes at the highest pitch */
     bool climax_unique;
     double climax_relative_position; /* the first occurrence's rank among the notes over (notes - 1), by note order */
@@ -707,7 +707,7 @@ typedef struct {
     size_t phrase;           /* index into phrases */
     int line;                /* -1 all notes, 0 the outer-voice soprano, 1 the bass, 2 any other note */
     const char *framework;   /* the library's framework name for the claim */
-    size_t *note_ids;        /* owned; ImportedNotes indices of the notes counted, in time order */
+    size_t *note_ids;        /* owned; ImportedScore indices of the notes counted, in time order */
     size_t note_id_count;
     unsigned notes;          /* the library's counts: notes, and the distinct onsets among them */
     unsigned attacks;
@@ -767,7 +767,7 @@ typedef struct {
     const char *category;    /* the texture's category: homorhythm and melody and accompaniment are homophony */
     int windows;             /* measures in the passage, and those that took their neighbour's texture */
     int unclassified_windows;
-    size_t *note_ids;        /* owned; ImportedNotes indices of the notes attacked in the passage, in time order */
+    size_t *note_ids;        /* owned; ImportedScore indices of the notes attacked in the passage, in time order */
     size_t note_id_count;
     double confidence;       /* the library's: of the texture, of the voice separation, and both together */
     double texture_confidence;
@@ -953,7 +953,7 @@ typedef struct {
     size_t entry_from;
     size_t entry_to;
     int arrival_interval;     /* the simple size arrived at: 5, 8 or 1 */
-    size_t note_ids[4];       /* ImportedNotes indices: upper at from, upper at to, lower at from, lower at to */
+    size_t note_ids[4];       /* ImportedScore indices: upper at from, upper at to, lower at from, lower at to */
     double uncertainty;       /* the library's: 1 less the least confidence of the voice separation, in [0, 1] */
 } AnalysisVoiceViolation;
 
@@ -965,7 +965,7 @@ typedef struct {
     size_t voice;
     size_t entry_from;
     size_t entry_to;
-    size_t note_ids[2];       /* ImportedNotes indices: the tone and the note it moved to */
+    size_t note_ids[2];       /* ImportedScore indices: the tone and the note it moved to */
     double uncertainty;       /* the library's: the voice's and the chord's confidence together, in [0, 1] */
 } AnalysisVoiceResolution;
 
@@ -988,7 +988,7 @@ typedef struct {
     bool spacing_judged;                  /* the library's spacing rule was applied (four voices, all sounding) */
     int wide_voice;                       /* when judged: -1 within the limits, else the upper voice (0, 1 or 2) of the
                                              first pair that is too wide */
-    size_t note_ids[ANALYSIS_VOICE_LEADING_MAX_VOICES]; /* ImportedNotes indices, top voice first */
+    size_t note_ids[ANALYSIS_VOICE_LEADING_MAX_VOICES]; /* ImportedScore indices, top voice first */
     size_t note_id_count;
     double uncertainty;                   /* 1 less the least confidence of the voice separation, in [0, 1] */
 } AnalysisVoiceChord;
@@ -1017,7 +1017,7 @@ typedef struct {
    difference of the two (1 to 4). */
 typedef struct {
     const char *framework;   /* the library's framework name for the claim */
-    size_t note;             /* ImportedNotes index of the syncopated note */
+    size_t note;             /* ImportedScore index of the syncopated note */
     int line;                /* 0 the outer-voice soprano, 1 the bass, 2 any other note */
     int measure;             /* where it is attacked, as the library numbers them (a pickup is 0) */
     double beat;             /* 1-based, fractional */
@@ -1041,7 +1041,7 @@ typedef struct {
     int accent_evidence;
     unsigned agreeing;
     unsigned available;
-    size_t *note_ids;        /* owned; ImportedNotes indices of the notes attacked on the window's pulses */
+    size_t *note_ids;        /* owned; ImportedScore indices of the notes attacked on the window's pulses */
     size_t note_id_count;
     double uncertainty;      /* the library's: 1 - agreeing / 3 */
 } AnalysisHemiola;
@@ -1077,7 +1077,7 @@ typedef struct {
     int arrival_measure;     /* valid only when has_arrival */
     AnalysisHypermeasure *hypermeasures; /* owned; in time order */
     size_t hypermeasure_count;
-    size_t *note_ids;        /* owned; ImportedNotes indices of the notes in the phrase */
+    size_t *note_ids;        /* owned; ImportedScore indices of the notes in the phrase */
     size_t note_id_count;
 } AnalysisHypermeter;
 
@@ -1100,7 +1100,7 @@ typedef struct {
     int measure;             /* of the first note */
     double beat;
     unsigned attacks;        /* distinct attacks in the run, at least 2 */
-    size_t *note_ids;        /* owned; ImportedNotes indices, in time order */
+    size_t *note_ids;        /* owned; ImportedScore indices, in time order */
     size_t note_id_count;
 } AnalysisTuplet;
 

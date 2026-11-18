@@ -23,33 +23,33 @@
  */
 
 typedef struct {
-    ImportedNotes notes;
+    ImportedScore notes;
     char *document;
     bool ok;
 } Piece;
 
 static bool piece_load(Piece *piece, const char *path, const char *name) {
     memset(piece, 0, sizeof(*piece));
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &piece->notes) != INPUT_PIPELINE_OK) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &piece->notes, NULL) != IMPORTED_SCORE_OK) {
         return false;
     }
     AnalyzerResult *result = NULL;
     if (analyzer_analyze(&piece->notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
-        imported_notes_destroy(&piece->notes);
+        imported_score_destroy(&piece->notes);
         return false;
     }
     piece->document = analysis_document_render_result(name, result);
     analyzer_result_destroy(result);
     piece->ok = piece->document != NULL;
     if (!piece->ok) {
-        imported_notes_destroy(&piece->notes);
+        imported_score_destroy(&piece->notes);
     }
     return piece->ok;
 }
 
 static void piece_release(Piece *piece) {
     if (piece->ok) {
-        imported_notes_destroy(&piece->notes);
+        imported_score_destroy(&piece->notes);
     }
     free(piece->document);
 }

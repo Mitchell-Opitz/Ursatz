@@ -34,7 +34,7 @@ void analyzer_result_destroy(AnalyzerResult *result) {
     free(result);
 }
 
-AnalyzerStatus analyzer_analyze(const ImportedNotes *notes, const AnalyzerOptions *options, AnalyzerResult **out) {
+AnalyzerStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOptions *options, AnalyzerResult **out) {
     if (!out) {
         return ANALYZER_ERR_ARGUMENT;
     }
@@ -64,7 +64,7 @@ const AnalysisReport *analyzer_result_report(const AnalyzerResult *result) {
     return result ? &result->pass.report : NULL;
 }
 
-const ImportedNotes *analyzer_result_notes(const AnalyzerResult *result) {
+const ImportedScore *analyzer_result_notes(const AnalyzerResult *result) {
     return result ? result->pass.notes : NULL;
 }
 

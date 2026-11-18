@@ -3,7 +3,7 @@
 
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 /*
  * The analysis document: the structured, versioned output described by
@@ -30,7 +30,7 @@ typedef struct AnalysisDocument AnalysisDocument;
  * or NULL on allocation failure or a NULL or incomplete snapshot. It does not reference notes, report or knowledge
  * after returning.
  */
-AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report,
+AnalysisDocument *analysis_document_build(const char *input_path, const ImportedScore *notes, const AnalysisReport *report,
                                           const KnowledgeSnapshot *knowledge);
 
 /*

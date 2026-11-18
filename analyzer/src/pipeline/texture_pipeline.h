@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 #include <chain/analysis_chain.h>
 
 /*
@@ -18,6 +18,6 @@
  */
 
 /* Fills the report's texture passages and changes. Returns false only on allocation failure. */
-bool texture_stage_collect(const ImportedNotes *notes, const AnalysisChain *library, AnalysisReport *report);
+bool texture_stage_collect(const ImportedScore *notes, const AnalysisChain *library, AnalysisReport *report);
 
 #endif

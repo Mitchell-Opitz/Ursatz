@@ -37,7 +37,7 @@ typedef enum {
 
 /*
  * A piece's notation override (R-110): how its notes are to be read as notation.
- * Each member is the text the Analyzer's notation_reading_parse_* reads, or ""
+ * Each member is the text the Analyzer's imported_reading_parse_* reads, or ""
  * for "not set": meter "3/4", value_scale "2" (1/4, 1/2, 1, 2 or 4), pickup
  * "1/4" (whole notes, after scaling).
  */

@@ -24,7 +24,7 @@
 static const AnalysisChordReading NO_READING = {NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
 
 /* A Segmentation that views the chain's segments: the exact windows from the library's sonorities and the members' notes
-   as ImportedNotes indices. The library's segments, ids and sonorities are borrowed; the voice segments carry no
+   as ImportedScore indices. The library's segments, ids and sonorities are borrowed; the voice segments carry no
    members in the chain, so theirs are built here from the sonority's events. */
 static bool segmentation_view(const AnalyzerPass *pass, const ChainSegments *source, bool with_members,
                               Segmentation *out) {
@@ -199,7 +199,7 @@ static bool collect_non_chord_tones(AnalyzerPass *chain) {
 static bool collect_pass(AnalyzerPass *pass) {
     const Segmentation *segmentation = &pass->segmentation;
     AnalysisReport *report = &pass->report;
-    const ImportedNotes *notes = pass->notes;
+    const ImportedScore *notes = pass->notes;
     if (segmentation->segment_count == 0) {
         return true;
     }
@@ -266,7 +266,7 @@ static bool collect_pass(AnalyzerPass *pass) {
     return true;
 }
 
-bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes, const AnalyzerOptions *options) {
+bool analyzer_pass_run(AnalyzerPass *pass, const ImportedScore *notes, const AnalyzerOptions *options) {
     memset(pass, 0, sizeof(*pass));
     pass->notes = notes;
     pass->options = options ? *options : analyzer_options_default();

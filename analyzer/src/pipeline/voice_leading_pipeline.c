@@ -36,7 +36,7 @@ typedef struct {
     size_t voice_count;
     size_t row_count;
     ChainVoiceGrid grid;
-    size_t *note_of_cell; /* ImportedNotes index of each cell's note, NO_NOTE where the voice rests */
+    size_t *note_of_cell; /* ImportedScore index of each cell's note, NO_NOTE where the voice rests */
     StandardCounterpointPreparedGrid prepared;
     bool prepared_ok;
 } VoiceGrid;
@@ -55,7 +55,7 @@ static const AnalysisVoiceCell *cell_of(const VoiceGrid *build, size_t row, size
 
 /* Takes the chain's grid and finds the note of each cell. false only on allocation failure; *declined is set when the
    library cannot take the piece. */
-static bool grid_build(const ImportedNotes *notes, const ChainInput *input, const AnalysisChain *library,
+static bool grid_build(const ImportedScore *notes, const ChainInput *input, const AnalysisChain *library,
                        VoiceGrid *build, bool *declined) {
     *declined = false;
     const ChainVoiceGrid *grid = analysis_chain_voice_grid(library);
@@ -255,7 +255,7 @@ static bool collect_chords(const VoiceGrid *build, const HarmonyStage *harmony, 
     return true;
 }
 
-bool voice_leading_stage_collect(const ImportedNotes *notes, const ChainInput *input, const AnalysisChain *library,
+bool voice_leading_stage_collect(const ImportedScore *notes, const ChainInput *input, const AnalysisChain *library,
                                  const HarmonyStage *harmony, AnalysisReport *report) {
     const AnalysisChainVoiceLeading *found = analysis_chain_voice_leading(library);
     if (notes->count == 0 || report->entry_count == 0 || !notes->meter.meter_map || !found ||

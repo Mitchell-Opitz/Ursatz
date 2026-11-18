@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 #include "test_knowledge.h"
 
 /*
@@ -32,9 +32,9 @@ static const CorpusCase CASES[] = {
 
 int main(void) {
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++) {
-        ImportedNotes notes;
-        MidiPipelineResult import_result = midi_pipeline_import_file(CASES[i].path, &notes);
-        assert(import_result == MIDI_PIPELINE_OK);
+        ImportedScore notes;
+        ImportedScoreResult import_result = imported_score_import_file(CASES[i].path, IMPORTED_FORMAT_MIDI, &notes, NULL);
+        assert(import_result == IMPORTED_SCORE_OK);
 
         AnalysisReport report;
         assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
@@ -49,7 +49,7 @@ int main(void) {
         }
 
         analysis_report_destroy(&report);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
     }
 
     printf("test_corpus_key_estimation: ok\n");

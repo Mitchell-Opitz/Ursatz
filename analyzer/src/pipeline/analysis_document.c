@@ -101,7 +101,7 @@ static Rational note_end(DocBuild *build, const NoteEvent *event) {
 
 /* Earliest onset to latest note end over the given notes (ids NULL means
    every imported note). */
-static void notes_span(DocBuild *build, const ImportedNotes *notes, const size_t *ids, size_t id_count, Rational *start, Rational *end) {
+static void notes_span(DocBuild *build, const ImportedScore *notes, const size_t *ids, size_t id_count, Rational *start, Rational *end) {
     *start = (Rational){0, 1};
     *end = (Rational){0, 1};
     for (size_t i = 0; i < id_count; i++) {
@@ -210,7 +210,7 @@ static cJSON *location_json(DocBuild *build, const MeterMap *map, Rational start
 
 /* The shared claim fields, in schema order, with the uncertainty as built by the caller (taken over, freed on
    failure). ids NULL means every imported note. */
-static cJSON *claim_json_with(DocBuild *build, const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
+static cJSON *claim_json_with(DocBuild *build, const char *framework, const ImportedScore *notes, const size_t *ids, size_t id_count,
                               Rational start, Rational end, const char *label, cJSON *uncertainty) {
     cJSON *claim = cJSON_CreateObject();
     bool consumed = false; /* json_add() takes the uncertainty over, and frees it itself when it fails */
@@ -232,12 +232,12 @@ static cJSON *claim_json_with(DocBuild *build, const char *framework, const Impo
     return claim;
 }
 
-static cJSON *claim_json_at(DocBuild *build, const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
+static cJSON *claim_json_at(DocBuild *build, const char *framework, const ImportedScore *notes, const size_t *ids, size_t id_count,
                             Rational start, Rational end, const char *label, AnalysisConfidence confidence) {
     return claim_json_with(build, framework, notes, ids, id_count, start, end, label, uncertainty_json(confidence));
 }
 
-static cJSON *claim_json(DocBuild *build, const char *framework, const ImportedNotes *notes, const size_t *ids, size_t id_count,
+static cJSON *claim_json(DocBuild *build, const char *framework, const ImportedScore *notes, const size_t *ids, size_t id_count,
                          const char *label, AnalysisConfidence confidence) {
     Rational start;
     Rational end;
@@ -316,14 +316,14 @@ static cJSON *meter_changes_json(DocBuild *build, const MeterMap *map, size_t fi
 }
 
 /* The notation reading applied to the notes: {"scale", "meter_overridden"}, null when none was. */
-static cJSON *reading_json(DocBuild *build, const ImportedNotes *notes) {
+static cJSON *reading_json(DocBuild *build, const ImportedScore *notes) {
     if (!notes->source.reading_applied) {
         return cJSON_CreateNull();
     }
-    const NotationReading *reading = &notes->source.reading;
+    const ImportedReading *reading = &notes->source.reading;
     cJSON *object = cJSON_CreateObject();
     if (object && !(json_add(object, "scale",
-                             rational_json(doc_rational(build, reading->scale_numerator, reading->scale_denominator))) &&
+                             rational_json(doc_rational(build, (long)reading->scale.num, (unsigned long)reading->scale.den))) &&
                     json_add(object, "meter_overridden", cJSON_CreateBool(reading->has_meter)))) {
         cJSON_Delete(object);
         return NULL;
@@ -336,7 +336,7 @@ static cJSON *reading_json(DocBuild *build, const ImportedNotes *notes) {
    changes under "changes". A file without a time signature gets the
    library's 4/4 default, reported with source "inferred"; a meter set by a
    notation reading is "override". */
-static cJSON *meter_json(DocBuild *build, const ImportedNotes *notes) {
+static cJSON *meter_json(DocBuild *build, const ImportedScore *notes) {
     const MeterMap *map = notes->meter.meter_map;
     bool inferred = meter_map_is_defaulted(map);
     bool has_pickup = meter_map_has_pickup(map);
@@ -393,7 +393,7 @@ static const char *mode_hint_name(MidiModeHint hint) {
 
 /* The notated key signatures, as the file declares them: where each sits, its sharps/flats count, the raw
    major/minor hint (unreliable, never used to decide a key), and the major key and relative minor it allows. */
-static cJSON *key_signatures_json(DocBuild *build, const ImportedNotes *notes) {
+static cJSON *key_signatures_json(DocBuild *build, const ImportedScore *notes) {
     cJSON *signatures = cJSON_CreateArray();
     if (!signatures) {
         return NULL;
@@ -431,7 +431,7 @@ static const char *knowledge_name(bool present, bool notated) {
     return !present ? "inferred" : (notated ? "notated" : "embedded");
 }
 
-static cJSON *input_parts_json(const ImportedNotes *notes) {
+static cJSON *input_parts_json(const ImportedScore *notes) {
     cJSON *parts = cJSON_CreateArray();
     if (!parts) {
         return NULL;
@@ -471,9 +471,9 @@ static cJSON *input_tempo_json(const ImportedSource *source) {
 /* Where the input came from and what it says about itself: the format, whether it is a score or a performance,
    and for each of meter, key and pitch spelling whether the input states it or the pipeline supplied it. The
    score's parts are merged into one texture; the tempo and dynamics markings are carried, not analyzed. */
-static cJSON *input_json(const ImportedNotes *notes) {
+static cJSON *input_json(const ImportedScore *notes) {
     const ImportedSource *source = &notes->source;
-    bool score = source->format == INPUT_FORMAT_MUSICXML;
+    bool score = source->format == IMPORTED_FORMAT_MUSICXML;
     bool meter_stated = !meter_map_is_defaulted(notes->meter.meter_map);
     cJSON *input = cJSON_CreateObject();
     if (input &&
@@ -492,7 +492,7 @@ static cJSON *input_json(const ImportedNotes *notes) {
     return input;
 }
 
-static cJSON *metadata_json(DocBuild *build, const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *metadata_json(DocBuild *build, const char *input_path, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *metadata = cJSON_CreateObject();
     if (metadata &&
         !(json_add(metadata, "source_file", cJSON_CreateString(path_basename(input_path))) &&
@@ -521,7 +521,7 @@ static Rational region_end(DocBuild *build, const AnalysisKeyRegion *region) {
 
 /* The imported notes that start in [start, end), as indices; *count may be 0, and the result is then still a
    valid pointer. NULL on allocation failure. */
-static size_t *notes_starting_in(DocBuild *build, const ImportedNotes *notes, Rational start, Rational end, size_t *count) {
+static size_t *notes_starting_in(DocBuild *build, const ImportedScore *notes, Rational start, Rational end, size_t *count) {
     size_t *ids = malloc(sizeof(size_t) * (notes->count > 0 ? notes->count : 1));
     if (!ids) {
         return NULL;
@@ -538,7 +538,7 @@ static size_t *notes_starting_in(DocBuild *build, const ImportedNotes *notes, Ra
 
 /* A claim over one key region's span: the notes that start in it, its label, and the library's uncertainty
    for the region (in [0, 1], higher is LESS certain, unlike a chord's confidence). */
-static cJSON *region_span_claim(DocBuild *build, const ImportedNotes *notes, const AnalysisKeyRegion *region, const char *label,
+static cJSON *region_span_claim(DocBuild *build, const ImportedScore *notes, const AnalysisKeyRegion *region, const char *label,
                                 cJSON *uncertainty) {
     size_t id_count = 0;
     size_t *ids = notes_starting_in(build, notes, region_start(build, region), region_end(build, region), &id_count);
@@ -566,7 +566,7 @@ static cJSON *measures_json(int first, int last) {
 }
 
 /* One key region: the shared claim (its span runs barline to barline) and the key's fields. */
-static cJSON *key_region_json(DocBuild *build, const ImportedNotes *notes, const AnalysisKeyRegion *region, size_t index) {
+static cJSON *key_region_json(DocBuild *build, const ImportedScore *notes, const AnalysisKeyRegion *region, size_t index) {
     cJSON *claim = region_span_claim(build, notes, region, region->label, cJSON_CreateNumber(region->uncertainty));
     if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)index)) &&
           json_add(claim, "tonic", cJSON_CreateString(pitch_class_name(region->tonic_pitch_class, region->prefer_flats))) &&
@@ -611,7 +611,7 @@ static cJSON *home_key_json(DocBuild *build, const AnalysisReport *report) {
 
 /* The keys section: the key regions in time order, the home key derived from them, and the indices of the
    opening and closing regions. With no key found the regions are empty and the rest null. */
-static cJSON *keys_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *keys_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *keys = cJSON_CreateObject();
     cJSON *regions = cJSON_CreateArray();
     if (!keys || !regions) {
@@ -688,7 +688,7 @@ static bool add_change_fields(cJSON *claim, const AnalysisReport *report, const 
 /* One claim per tonicization: a brief excursion to another key that returns to the one before it. Its span is
    the excursion (the region the library puts the new key in), its target the key of that region. The change
    back out of the excursion is not listed again. */
-static cJSON *tonicizations_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *tonicizations_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -724,7 +724,7 @@ static bool change_has_pivot_reading(const AnalysisKeyChange *change) {
    so location.start is where the new key arrives. type is "pivot" when the library found a pivot chord and
    "direct" when it did not; pivot_chord_index points into pivot_chords. is_return marks the change back to the
    key before an excursion. */
-static cJSON *modulations_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *modulations_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -762,7 +762,7 @@ static cJSON *modulations_json(DocBuild *build, const ImportedNotes *notes, cons
 /* One claim per pivot chord: the chord that is diatonic in both the old and the new key at a modulation,
    identified without a Roman numeral (root, quality, bass, inversion), read in the old key. The claim is the
    chord's segment. */
-static cJSON *pivot_chords_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *pivot_chords_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -875,7 +875,7 @@ static cJSON *disagreement_json(const DocBuild *build, const char *scope, long s
    minor (the library restricts it to those, so a mismatch means the restriction did not hold); and the home
    key should be the major key or relative minor of at least one signature. Inside a signature any key may
    come and go, so the other regions are not compared. */
-static cJSON *notes_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *notes_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -967,7 +967,7 @@ static const char *chord_context_name(AnalysisChordContext context) {
 
 /* The chord fields beyond the shared claim: root, quality, bass, inversion, duration, score, runner-up and the
    context the reading came from. */
-static bool add_chord_fields(DocBuild *build, cJSON *claim, const ImportedNotes *notes, const AnalysisReportEntry *entry, Rational start,
+static bool add_chord_fields(DocBuild *build, cJSON *claim, const ImportedScore *notes, const AnalysisReportEntry *entry, Rational start,
                              Rational end) {
     const AnalysisChordReading *chord = &entry->chord;
     bool matched = chord->label != NULL;
@@ -1167,7 +1167,7 @@ static bool add_function(cJSON *claim, const AnalysisReportEntry *entry) {
 }
 
 /* One chord claim per report entry, in time order. */
-static cJSON *chords_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *chords_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *chords = cJSON_CreateArray();
     if (!chords) {
         return NULL;
@@ -1198,7 +1198,7 @@ static cJSON *chords_json(DocBuild *build, const ImportedNotes *notes, const Ana
 
 /* One claim per non-chord tone, in time order. Each is located where the note sounds against the chord:
    that chord's segment. */
-static cJSON *non_chord_tones_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *non_chord_tones_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *tones = cJSON_CreateArray();
     if (!tones) {
         return NULL;
@@ -1273,7 +1273,7 @@ static cJSON *span_only_json(Rational start, Rational end) {
     return object;
 }
 
-static cJSON *span_and_location_json(DocBuild *build, const ImportedNotes *notes, Rational start, Rational end) {
+static cJSON *span_and_location_json(DocBuild *build, const ImportedScore *notes, Rational start, Rational end) {
     cJSON *object = span_only_json(start, end);
     if (object && !json_add(object, "location", location_json(build, notes->meter.meter_map, start, end))) {
         cJSON_Delete(object);
@@ -1284,7 +1284,7 @@ static cJSON *span_and_location_json(DocBuild *build, const ImportedNotes *notes
 
 /* The competing reading of a cadence: {"reading", "type" (null for a prolongation), "measure", "beat" (where its
    arrival begins; null when the meter cannot place it), "share", "note_ids" (the notes of its arrival)}. */
-static cJSON *cadence_alternative_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *cadence_alternative_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                                        const AnalysisCadenceAlternative *alternative) {
     size_t id_count = 0;
     size_t *ids = entry_range_note_ids(report, alternative->arrival_first, alternative->arrival_last, &id_count);
@@ -1317,7 +1317,7 @@ static cJSON *cadence_alternative_json(DocBuild *build, const ImportedNotes *not
    cadence the boundary step added before a section start. share is the thousandths of this reading (1000 with no
    other); alternative, present only for a cadence with a competing reading, is the other one. Everything else is the
    library's: the type, the beat strength, the uncertainty. */
-static cJSON *cadences_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *cadences_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -1365,7 +1365,7 @@ static cJSON *cadences_json(DocBuild *build, const ImportedNotes *notes, const A
    to the end of the closing chord's first segment; first_chord and last_chord are the indices of those chords in
    "chords" and numeral is the prolonged chord's Roman numeral (null when the library gave it none). reasons has one
    library reason name per interior chord. Everything else is the library's: the function, the reasons. */
-static cJSON *prolongations_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *prolongations_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -1415,7 +1415,7 @@ static cJSON *prolongations_json(DocBuild *build, const ImportedNotes *notes, co
 
 /* An idea of a phrase: the claim over its soprano notes (label the library's IdeaLabel name) with its place in the
    phrase, its measures and length, and the similarity to the phrase's first idea (null for the first idea). */
-static cJSON *idea_json(DocBuild *build, const ImportedNotes *notes, const char *framework, const AnalysisIdea *idea) {
+static cJSON *idea_json(DocBuild *build, const ImportedScore *notes, const char *framework, const AnalysisIdea *idea) {
     Rational start = doc_rational(build, idea->start_numerator, idea->start_denominator);
     Rational end = doc_rational(build, idea->end_numerator, idea->end_denominator);
     cJSON *claim = claim_json_with(build, framework, notes, idea->note_ids, idea->note_id_count, start, end, idea->label,
@@ -1432,7 +1432,7 @@ static cJSON *idea_json(DocBuild *build, const ImportedNotes *notes, const char 
 
 /* A subphrase: the claim over its soprano notes, labelled "subphrase" (the library gives subphrases no name), with its
    index (0 or 1), the ideas it holds (first_idea within the phrase's ideas), measures and length. */
-static cJSON *subphrase_json(DocBuild *build, const ImportedNotes *notes, const char *framework, const AnalysisReport *report,
+static cJSON *subphrase_json(DocBuild *build, const ImportedScore *notes, const char *framework, const AnalysisReport *report,
                              const AnalysisPhrase *phrase, const AnalysisSubphrase *subphrase) {
     Rational start = doc_rational(build, subphrase->start_numerator, subphrase->start_denominator);
     Rational end = doc_rational(build, subphrase->end_numerator, subphrase->end_denominator);
@@ -1470,7 +1470,7 @@ static cJSON *phrase_model_json(const AnalysisReport *report, const AnalysisPhra
     return list;
 }
 
-static bool add_ideas_and_subphrases(DocBuild *build, cJSON *claim, const ImportedNotes *notes, const char *framework,
+static bool add_ideas_and_subphrases(DocBuild *build, cJSON *claim, const ImportedScore *notes, const char *framework,
                                      const AnalysisReport *report, const AnalysisPhrase *phrase) {
     cJSON *subphrases = cJSON_CreateArray();
     cJSON *ideas = cJSON_CreateArray();
@@ -1509,7 +1509,7 @@ static cJSON *expansion_techniques_json(const AnalysisExpansion *expansion) {
    "contraction"), with the change ("expansion" or "contraction"), the theme it concerns (null for an external
    expansion of a phrase in no theme), the expected and actual lengths and the measures changed, its measures, and the
    techniques the library finds evidence for. An external one adds external_kind and the two judgements of its length. */
-static cJSON *expansion_json(DocBuild *build, const ImportedNotes *notes, const char *framework, const AnalysisExpansion *expansion) {
+static cJSON *expansion_json(DocBuild *build, const ImportedScore *notes, const char *framework, const AnalysisExpansion *expansion) {
     Rational start = doc_rational(build, expansion->start_numerator, expansion->start_denominator);
     Rational end = doc_rational(build, expansion->end_numerator, expansion->end_denominator);
     cJSON *claim = claim_json_with(build, framework, notes, expansion->note_ids, expansion->note_id_count, start, end,
@@ -1533,7 +1533,7 @@ static cJSON *expansion_json(DocBuild *build, const ImportedNotes *notes, const 
 }
 
 /* The phrase's expansions and contractions as "expansions", in the library's order; absent when it has none. */
-static bool add_expansions(DocBuild *build, cJSON *claim, const ImportedNotes *notes, const char *framework, const AnalysisReport *report,
+static bool add_expansions(DocBuild *build, cJSON *claim, const ImportedScore *notes, const char *framework, const AnalysisReport *report,
                            size_t phrase) {
     cJSON *list = NULL;
     for (size_t e = 0; e < report->expansion_count; e++) {
@@ -1560,7 +1560,7 @@ static bool add_expansions(DocBuild *build, cJSON *claim, const ImportedNotes *n
    between (the library names no role for a phrase, so this is position alone). subphrases and ideas are claims inside
    it, in time order. expansions (absent with none) are the claims about its length: an expansion or contraction of its
    ending against its beginning, or an extension after its cadence. phrase_model lists the chords the library labelled for the phrase model, in order. */
-static cJSON *phrases_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *phrases_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -1676,7 +1676,7 @@ static cJSON *theme_halves_json(const AnalysisTheme *theme) {
    indices into "themes" of its two sentences. traits are the library's names for what its claim finds in the
    continuation ("fragmentation"; the claim gives no other); archetypal, cadences_usual and lengths_usual are the
    claim's own judgements of the pairing. */
-static cJSON *themes_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *themes_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -1836,7 +1836,7 @@ static bool add_section_fields(cJSON *claim, const AnalysisReport *report, const
    phrases after the last one), cadence the cadence that ends its last phrase, returns_from the earlier section whose
    material its opening theme returns (null for a section with a new letter) and return the index into the form's
    "returns" of that return. */
-static cJSON *section_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, size_t index) {
+static cJSON *section_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report, size_t index) {
     const AnalysisSection *section = &report->sections[index];
     Rational start = doc_rational(build, section->start_numerator, section->start_denominator);
     Rational end = doc_rational(build, section->end_numerator, section->end_denominator);
@@ -1877,7 +1877,7 @@ static cJSON *return_similarity_json(const AnalysisThematicReturn *item) {
    two themes, and similarity the kernel's scores for the best stretch pair (value is the lower of contour and
    rhythm; window the notes compared, the offsets where the stretches begin inside each theme). The uncertainty is
    1 minus the similarity. */
-static cJSON *return_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *return_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                           const AnalysisThematicReturn *item) {
     const AnalysisTheme *earlier = &report->themes[item->earlier_theme];
     const AnalysisTheme *later = &report->themes[item->later_theme];
@@ -1902,7 +1902,7 @@ static cJSON *return_json(DocBuild *build, const ImportedNotes *notes, const Ana
 /* The form: a tree of sections, each holding its phrases, subphrases and ideas, and the thematic returns between
    its themes. null when the library found no phrases to group. The root has no span of its own; its measures run
    from the first section's first measure to the last section's last. */
-static cJSON *form_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *form_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     if (report->section_count == 0) {
         return cJSON_CreateNull();
     }
@@ -1942,7 +1942,7 @@ static cJSON *form_json(DocBuild *build, const ImportedNotes *notes, const Analy
    soprano notes), kind and label are "repeat" or "return", earlier and later the measures of the two runs, and
    transposition the semitones from the earlier run to the later (0 for a repeat). The uncertainty is 0: the library
    finds repeats by exact match. */
-static cJSON *repeat_json(DocBuild *build, const ImportedNotes *notes, const AnalysisRepeat *repeat) {
+static cJSON *repeat_json(DocBuild *build, const ImportedScore *notes, const AnalysisRepeat *repeat) {
     const char *kind = repeat->is_return ? "return" : "repeat";
     Rational start = doc_rational(build, repeat->start_numerator, repeat->start_denominator);
     Rational end = doc_rational(build, repeat->end_numerator, repeat->end_denominator);
@@ -1959,7 +1959,7 @@ static cJSON *repeat_json(DocBuild *build, const ImportedNotes *notes, const Ana
 }
 
 /* The repeats and returns as "repeats", in the library's order; an empty array when there are none. */
-static cJSON *repeats_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *repeats_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < report->repeat_count; i++) {
         if (!json_append(list, repeat_json(build, notes, &report->repeats[i]))) {
@@ -2000,7 +2000,7 @@ static cJSON *chord_range_json(size_t first, size_t last) {
    chord's start to the last chord's end, note_ids are the notes sounding in them, the label is the pattern's, and
    the uncertainty is the least certain Roman numeral in the run (higher is less certain). region is the key region
    all the chords lie in; chords are their indices in "chords". */
-static cJSON *progression_occurrence_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, const char *label,
+static cJSON *progression_occurrence_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report, const char *label,
                                           const AnalysisProgressionOccurrence *occurrence) {
     double uncertainty = 0.0;
     for (size_t i = occurrence->first_entry; i <= occurrence->last_entry; i++) {
@@ -2027,7 +2027,7 @@ static cJSON *progression_occurrence_json(DocBuild *build, const ImportedNotes *
 /* One entry per recurring progression, in rank order (most occurrences, then longest, then earliest): pattern (the
    base numerals), label ("I > IV > V > I"), length, count and its occurrences in time order. The progressions are
    the analyzer's count over the library's Roman numerals; nothing here is a claim of its own. */
-static cJSON *progressions_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *progressions_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -2162,7 +2162,7 @@ static cJSON *harmonic_rhythm_json(DocBuild *build, const AnalysisReport *report
 /* The note's own timing, apart from the chord segment it sounds in: where it is attacked, as a time and a
    measure and beat, and how long it lasts in whole notes and in beats of the signature it is attacked in.
    Null members when no note sounds as the line. */
-static bool add_outer_note_timing(DocBuild *build, cJSON *claim, const ImportedNotes *notes, const AnalysisOuterNote *voice) {
+static bool add_outer_note_timing(DocBuild *build, cJSON *claim, const ImportedScore *notes, const AnalysisOuterNote *voice) {
     if (voice->status != ANALYSIS_OUTER_PRESENT) {
         return json_add(claim, "onset", cJSON_CreateNull()) && json_add(claim, "duration", cJSON_CreateNull());
     }
@@ -2205,7 +2205,7 @@ static cJSON *outer_pitch_json(const AnalysisOuterNote *voice) {
    pitch, its scale degree in that chord's local key, and its timing. The label is the degree; failing that the
    pitch name (the segment lies in no key region), or the status when no note sounds. held is relative to the
    voice segment. */
-static cJSON *outer_voice_note_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *outer_voice_note_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                                     const AnalysisOuterLineEntry *line, const AnalysisOuterNote *voice) {
     const AnalysisReportEntry *entry = &report->entries[line->chord_index];
     bool present = voice->status == ANALYSIS_OUTER_PRESENT;
@@ -2230,7 +2230,7 @@ static cJSON *outer_voice_note_json(DocBuild *build, const ImportedNotes *notes,
 
 /* One line of the outer voices: an entry for every voice segment (one per melody note), in time order. Several
    entries share a chord on a harmonic span, so a line lines up with the chords by chord_index, many to one. */
-static cJSON *outer_line_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, bool soprano) {
+static cJSON *outer_line_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report, bool soprano) {
     cJSON *line = cJSON_CreateArray();
     if (!line) {
         return NULL;
@@ -2247,7 +2247,7 @@ static cJSON *outer_line_json(DocBuild *build, const ImportedNotes *notes, const
 
 /* The outer_voices section: the soprano and the bass, the shared input for voice-leading, melody and schema
    analysis. */
-static cJSON *outer_voices_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *outer_voices_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *outer = cJSON_CreateObject();
     if (outer && !(json_add(outer, "soprano", outer_line_json(build, notes, report, true)) &&
                    json_add(outer, "bass", outer_line_json(build, notes, report, false)))) {
@@ -2524,7 +2524,7 @@ static cJSON *numbers_json(const long *values, size_t count) {
    (in_continuation). phrase is the index into "phrases" of the phrase the whole occurrence lies in, and idea the
    index (within that phrase's "ideas") of the idea it lies in; each is null when the occurrence crosses a boundary.
    Both are placed by span against the report's phrases and ideas. */
-static cJSON *motive_occurrence_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, const char *framework,
+static cJSON *motive_occurrence_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report, const char *framework,
                                      const AnalysisMotiveOccurrence *occurrence) {
     Rational start = doc_rational(build, occurrence->start_numerator, occurrence->start_denominator);
     Rational end = doc_rational(build, occurrence->end_numerator, occurrence->end_denominator);
@@ -2632,7 +2632,7 @@ static cJSON *motive_development_json(const AnalysisMotive *motive) {
    rather than the semitones; uncertainty is the greatest of its occurrences'. occurrences are the claims of every
    occurrence, the prototype first and the rest in the library's order (not always time order); development is the
    family's occurrences in time order as steps. */
-static cJSON *motives_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *motives_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -2680,7 +2680,7 @@ static cJSON *motives_json(DocBuild *build, const ImportedNotes *notes, const An
 
 /* ---- Melody ---- */
 
-/* A pitch and the note it is the pitch of: { "pitch": MIDI note number, "name": "E5", "note_id": ImportedNotes
+/* A pitch and the note it is the pitch of: { "pitch": MIDI note number, "name": "E5", "note_id": ImportedScore
    index }. */
 static cJSON *melody_pitch_json(long pitch, const char *name, size_t note) {
     cJSON *object = cJSON_CreateObject();
@@ -2706,7 +2706,7 @@ static cJSON *melody_range_json(const AnalysisMelody *melody) {
 
 /* The climax as a claim over its first note: the highest pitch, how many notes sound it, and where the first one
    stands (its place among the notes, its beat strength, whether a leap approaches it, whether it ends the phrase). */
-static cJSON *melody_climax_json(DocBuild *build, const ImportedNotes *notes, const AnalysisMelody *melody) {
+static cJSON *melody_climax_json(DocBuild *build, const ImportedScore *notes, const AnalysisMelody *melody) {
     Rational start;
     Rational end;
     notes_span(build, notes, &melody->climax_note, 1, &start, &end);
@@ -2755,7 +2755,7 @@ static cJSON *melody_contour_json(const AnalysisMelody *melody) {
 
 /* One leap as a claim over its two notes: the interval in semitones and in letter names (null when the library has no
    size), whether it was read from the semitones alone, and the library's verdict on its recovery. */
-static cJSON *melody_leap_json(DocBuild *build, const ImportedNotes *notes, const char *framework, const AnalysisMelodyLeap *leap) {
+static cJSON *melody_leap_json(DocBuild *build, const ImportedScore *notes, const char *framework, const AnalysisMelodyLeap *leap) {
     size_t ids[2] = {leap->from_note, leap->to_note};
     Rational start;
     Rational end;
@@ -2774,7 +2774,7 @@ static cJSON *melody_leap_json(DocBuild *build, const ImportedNotes *notes, cons
 
 /* The leaps of a phrase: how many the library finds recovered, unrecovered, not required and not judged, and every
    leap as a claim in time order. */
-static cJSON *melody_leaps_json(DocBuild *build, const ImportedNotes *notes, const AnalysisMelody *melody) {
+static cJSON *melody_leaps_json(DocBuild *build, const ImportedScore *notes, const AnalysisMelody *melody) {
     static const char *const STATUSES[4] = {"recovered", "unrecovered", "not-required", "not-judged"};
     static const char *const KEYS[4] = {"recovered", "unrecovered", "not_required", "not_judged"};
     cJSON *object = cJSON_CreateObject();
@@ -2802,7 +2802,7 @@ static cJSON *melody_leaps_json(DocBuild *build, const ImportedNotes *notes, con
 }
 
 /* The pairs of leaps in a row the library's rule finds fault with, each a claim over its three notes. */
-static cJSON *melody_consecutive_leaps_json(DocBuild *build, const ImportedNotes *notes, const AnalysisMelody *melody) {
+static cJSON *melody_consecutive_leaps_json(DocBuild *build, const ImportedScore *notes, const AnalysisMelody *melody) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < melody->consecutive_leap_count; i++) {
         const AnalysisMelodyConsecutiveLeaps *pair = &melody->consecutive_leaps[i];
@@ -2825,7 +2825,7 @@ static cJSON *melody_consecutive_leaps_json(DocBuild *build, const ImportedNotes
 /* The non-chord tones of a phrase's melody: the library's counts (chord tones, non-chord tones, unclassified notes, and
    the non-chord tones by type, the types that occur in the library's order) and each non-chord tone as a claim over its
    note, labelled with the library's type. */
-static cJSON *melody_non_chord_tones_json(DocBuild *build, const ImportedNotes *notes, const AnalysisMelody *melody) {
+static cJSON *melody_non_chord_tones_json(DocBuild *build, const ImportedScore *notes, const AnalysisMelody *melody) {
     cJSON *object = cJSON_CreateObject();
     cJSON *by_type = cJSON_CreateArray();
     cJSON *items = cJSON_CreateArray();
@@ -2890,7 +2890,7 @@ static cJSON *melody_line_tendencies_json(const AnalysisMelody *melody) {
 /* The seventh degree: the notes the library labels degree 7 that a note follows, judged by its rule LEADING_TONE: how many
    followed it and how many broke it, with each broken one as a claim over the seventh and the note after it. Null when
    the phrase's notes do not spell. */
-static cJSON *melody_seventh_degree_json(DocBuild *build, const ImportedNotes *notes, const AnalysisMelody *melody) {
+static cJSON *melody_seventh_degree_json(DocBuild *build, const ImportedScore *notes, const AnalysisMelody *melody) {
     if (!melody->seventh_rule) {
         return cJSON_CreateNull();
     }
@@ -2924,7 +2924,7 @@ static cJSON *melody_seventh_degree_json(DocBuild *build, const ImportedNotes *n
     return object;
 }
 
-static cJSON *melody_tendencies_json(DocBuild *build, const ImportedNotes *notes, const AnalysisMelody *melody) {
+static cJSON *melody_tendencies_json(DocBuild *build, const ImportedScore *notes, const AnalysisMelody *melody) {
     cJSON *object = cJSON_CreateObject();
     if (object && !(json_add(object, "line", melody_line_tendencies_json(melody)) &&
                     json_add(object, "seventh_degree", melody_seventh_degree_json(build, notes, melody)))) {
@@ -2937,7 +2937,7 @@ static cJSON *melody_tendencies_json(DocBuild *build, const ImportedNotes *notes
 /* One claim per phrase with melody notes, in phrase order: the soprano notes that start in the phrase. index is the
    phrase's, measures its measures; range, climax, contour, leaps, consecutive leaps, non-chord tones and tendencies are
    the melody adapter's and the library's rules' results over the notes. */
-static cJSON *melody_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *melody_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
         return NULL;
@@ -3013,7 +3013,7 @@ static cJSON *density_per_beat_json(const AnalysisDensity *density) {
 }
 
 /* A density claim: the library's profile of a phrase's notes (all of them, or one line's), over the phrase's span. */
-static cJSON *density_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, const AnalysisDensity *density) {
+static cJSON *density_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report, const AnalysisDensity *density) {
     const AnalysisPhrase *phrase = &report->phrases[density->phrase];
     Rational start = doc_rational(build, phrase->start_numerator, phrase->start_denominator);
     Rational end = doc_rational(build, phrase->end_numerator, phrase->end_denominator);
@@ -3050,7 +3050,7 @@ static cJSON *syncopation_through_json(const AnalysisSyncopation *syncopation) {
 
 /* A syncopation claim: one note, attacked at a weaker level and held through a stronger one that no note of its line
    attacks. */
-static cJSON *syncopation_json(DocBuild *build, const ImportedNotes *notes, const AnalysisSyncopation *syncopation) {
+static cJSON *syncopation_json(DocBuild *build, const ImportedScore *notes, const AnalysisSyncopation *syncopation) {
     Rational start;
     Rational end;
     notes_span(build, notes, &syncopation->note, 1, &start, &end);
@@ -3086,7 +3086,7 @@ static cJSON *hemiola_evidence_json(const AnalysisHemiola *hemiola) {
     return object;
 }
 
-static cJSON *hemiola_json(DocBuild *build, const ImportedNotes *notes, const AnalysisHemiola *hemiola) {
+static cJSON *hemiola_json(DocBuild *build, const ImportedScore *notes, const AnalysisHemiola *hemiola) {
     Rational start;
     Rational end;
     notes_span(build, notes, hemiola->note_ids, hemiola->note_id_count, &start, &end);
@@ -3133,7 +3133,7 @@ static cJSON *hyperdownbeats_json(const AnalysisHypermeter *hypermeter) {
 }
 
 /* A hypermeter claim: one phrase read in hypermeasures of two or four measures. */
-static cJSON *hypermeter_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *hypermeter_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                               const AnalysisHypermeter *hypermeter) {
     const AnalysisPhrase *phrase = &report->phrases[hypermeter->phrase];
     Rational start = doc_rational(build, phrase->start_numerator, phrase->start_denominator);
@@ -3167,7 +3167,7 @@ static cJSON *tuplet_ratio_json(const AnalysisTuplet *tuplet) {
 
 /* A tuplet claim: a run of notes that divide the beat the way the meter does not. The library gives it no uncertainty
    (the borrowed-division rules are rules, not a detector), so the claim's is null. */
-static cJSON *tuplet_json(DocBuild *build, const ImportedNotes *notes, const AnalysisTuplet *tuplet) {
+static cJSON *tuplet_json(DocBuild *build, const ImportedScore *notes, const AnalysisTuplet *tuplet) {
     Rational start;
     Rational end;
     notes_span(build, notes, tuplet->note_ids, tuplet->note_id_count, &start, &end);
@@ -3212,7 +3212,7 @@ static cJSON *meter_reading_json(DocBuild *build, const AnalysisMeterReading *re
 
 /* The meter-fit claim: the meter the analysis used against the best other reading, which is null unless it beats the
    effective one by the stage's margin. Over the whole piece, with no notes of its own. */
-static cJSON *meter_fit_json(DocBuild *build, const ImportedNotes *notes, const AnalysisMeterCheck *check) {
+static cJSON *meter_fit_json(DocBuild *build, const ImportedScore *notes, const AnalysisMeterCheck *check) {
     Rational start;
     Rational end;
     notes_span(build, notes, NULL, notes->count, &start, &end);
@@ -3231,7 +3231,7 @@ static cJSON *meter_fit_json(DocBuild *build, const ImportedNotes *notes, const 
    "hemiola", "hypermeter", "tuplet"): the meter fit first, then the densities and each kind in time order. The library's
    results are claims over the notes of a phrase or a measure, so the list is flat and the label says which kind. A
    piece without phrases has only the meter fit, or nothing when it has no chord segments. */
-static cJSON *rhythm_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *rhythm_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (list && report->meter_check.present && !json_append(list, meter_fit_json(build, notes, &report->meter_check))) {
         cJSON_Delete(list);
@@ -3311,7 +3311,7 @@ static Rational texture_passage_end(DocBuild *build, const AnalysisTexturePassag
 }
 
 /* A texture passage claim: a run of measures with the same texture, as the library classifies it. */
-static cJSON *texture_passage_json(DocBuild *build, const ImportedNotes *notes, const AnalysisTexturePassage *passage) {
+static cJSON *texture_passage_json(DocBuild *build, const ImportedScore *notes, const AnalysisTexturePassage *passage) {
     cJSON *claim = claim_json_with(build, passage->framework, notes, passage->note_ids, passage->note_id_count,
                                    texture_passage_start(build, passage), texture_passage_end(build, passage), "passage",
                                    cJSON_CreateNumber(passage->uncertainty));
@@ -3329,7 +3329,7 @@ static cJSON *texture_passage_json(DocBuild *build, const ImportedNotes *notes, 
 }
 
 /* A texture change claim: the boundary between two consecutive passages, spanning the passage changed to. */
-static cJSON *texture_change_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *texture_change_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                                   const AnalysisTextureChange *change) {
     const AnalysisTexturePassage *to = &report->texture_passages[change->to];
     cJSON *claim = claim_json_with(build, change->framework, notes, NULL, 0, texture_passage_start(build, to), texture_passage_end(build, to),
@@ -3348,7 +3348,7 @@ static cJSON *texture_change_json(DocBuild *build, const ImportedNotes *notes, c
 
 /* The texture section: a list of claims, the passages in time order (labelled "passage") and then the changes between
    them (labelled "change"). Empty when the library found no texture. */
-static cJSON *texture_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *texture_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < report->texture_passage_count; i++) {
         if (!json_append(list, texture_passage_json(build, notes, &report->texture_passages[i]))) {
@@ -3385,7 +3385,7 @@ static cJSON *metronome_json(DocBuild *build, const AnalysisTempoMarking *markin
     return object;
 }
 
-static cJSON *tempo_marking_json(DocBuild *build, const ImportedNotes *notes, const AnalysisTempoMarking *marking) {
+static cJSON *tempo_marking_json(DocBuild *build, const ImportedScore *notes, const AnalysisTempoMarking *marking) {
     cJSON *claim = claim_json_with(build, marking->framework, notes, NULL, 0,
                                    doc_rational(build, marking->start_numerator, marking->start_denominator),
                                    doc_rational(build, marking->end_numerator, marking->end_denominator), "tempo",
@@ -3402,7 +3402,7 @@ static cJSON *tempo_marking_json(DocBuild *build, const ImportedNotes *notes, co
     return claim;
 }
 
-static cJSON *dynamic_json(DocBuild *build, const ImportedNotes *notes, const AnalysisDynamic *dynamic) {
+static cJSON *dynamic_json(DocBuild *build, const ImportedScore *notes, const AnalysisDynamic *dynamic) {
     cJSON *claim = claim_json_with(build, dynamic->framework, notes, NULL, 0,
                                    doc_rational(build, dynamic->start_numerator, dynamic->start_denominator),
                                    doc_rational(build, dynamic->end_numerator, dynamic->end_denominator), "dynamic",
@@ -3421,8 +3421,8 @@ static cJSON *dynamic_json(DocBuild *build, const ImportedNotes *notes, const An
 
 /* The markings section: what the notated input carries, read with standard-markings' rules. MIDI input has none
    ("none"). The importer reads no articulations (R-056), so they are null and say so. */
-static cJSON *markings_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
-    bool notated = notes->source.format == INPUT_FORMAT_MUSICXML;
+static cJSON *markings_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
+    bool notated = notes->source.format == IMPORTED_FORMAT_MUSICXML;
     cJSON *object = cJSON_CreateObject();
     cJSON *tempo = cJSON_CreateArray();
     cJSON *dynamics = cJSON_CreateArray();
@@ -3495,7 +3495,7 @@ static void voice_leading_span(DocBuild *build, const AnalysisReport *report, Ra
 
 /* The motion claim: how the voices move against each other between consecutive chord segments, in total and per pair of
    voices. It covers the whole piece. */
-static cJSON *voice_motions_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *voice_motions_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     const AnalysisVoiceLeading *voice_leading = &report->voice_leading;
     Rational start;
     Rational end;
@@ -3523,7 +3523,7 @@ static void voice_leading_entries_span(DocBuild *build, const AnalysisReport *re
 }
 
 /* A fault of the voices' leading, as the claim for the move between two consecutive chords. */
-static cJSON *voice_violation_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *voice_violation_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                                    const AnalysisVoiceLeading *voice_leading, const AnalysisVoiceViolation *violation) {
     Rational start;
     Rational end;
@@ -3543,7 +3543,7 @@ static cJSON *voice_violation_json(DocBuild *build, const ImportedNotes *notes, 
 }
 
 /* A tendency tone left unresolved when its chord changes. */
-static cJSON *voice_resolution_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *voice_resolution_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                                     const AnalysisVoiceLeading *voice_leading,
                                     const AnalysisVoiceResolution *resolution) {
     Rational start;
@@ -3603,7 +3603,7 @@ static cJSON *chord_doubled_json(const AnalysisVoiceChord *chord) {
 }
 
 /* One chord's doubling and spacing, on the chord's own span. */
-static cJSON *voice_chord_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *voice_chord_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                                const AnalysisVoiceLeading *voice_leading, const AnalysisVoiceChord *chord) {
     Rational start;
     Rational end;
@@ -3623,7 +3623,7 @@ static cJSON *voice_chord_json(DocBuild *build, const ImportedNotes *notes, cons
 
 /* The voice leading section: a list of claims, each labelled by the result it is. Empty when the library declined the
    voices. */
-static cJSON *voice_leading_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *voice_leading_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     const AnalysisVoiceLeading *voice_leading = &report->voice_leading;
     if (!list || !voice_leading->present) {
@@ -3673,7 +3673,7 @@ static cJSON *galant_degree_json(int degree, int alteration) {
 }
 
 /* The first and last measure of the chords entries[first..last] start in. */
-static cJSON *entry_measures_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, size_t first, size_t last) {
+static cJSON *entry_measures_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report, size_t first, size_t last) {
     const MeterMap *map = notes->meter.meter_map;
     return measures_json(measure_of_time(map, entry_start_time(build, &report->entries[first])),
                          measure_of_time(map, entry_start_time(build, &report->entries[last])));
@@ -3682,7 +3682,7 @@ static cJSON *entry_measures_json(DocBuild *build, const ImportedNotes *notes, c
 /* One stage of a schema: where it sits (span, location and the measure it starts in), the soprano degree the library
    matched (null for a bass-only stage), a two-note stage's second soprano degree (otherwise null), the bass degree and
    the stage's credit. */
-static cJSON *schema_stage_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *schema_stage_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                                 const AnalysisSchemaStage *stage) {
     Rational start = entry_start_time(build, &report->entries[stage->first_entry]);
     Rational end = entry_end_time(build, &report->entries[stage->last_entry]);
@@ -3705,7 +3705,7 @@ static cJSON *schema_stage_json(DocBuild *build, const ImportedNotes *notes, con
     return object;
 }
 
-static cJSON *schema_stages_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, const AnalysisSchema *schema) {
+static cJSON *schema_stages_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report, const AnalysisSchema *schema) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < schema->stage_count; i++) {
         if (!json_append(list, schema_stage_json(build, notes, report, &schema->stages[i]))) {
@@ -3720,7 +3720,7 @@ static cJSON *schema_stages_json(DocBuild *build, const ImportedNotes *notes, co
    chord the stages use. frame is the key the stages were read in, as a degree of the home key; confidence holds the
    library's parts (pair share, metric fit, mean uncertainty) and the whole. Everything else is the library's: the name,
    function, stages and degrees. */
-static cJSON *schema_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, const AnalysisSchema *schema) {
+static cJSON *schema_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report, const AnalysisSchema *schema) {
     size_t id_count = 0;
     size_t *ids = entry_range_note_ids(report, schema->first_entry, schema->last_entry, &id_count);
     cJSON *claim = ids ? claim_json_with(build, schema->framework, notes, ids, id_count,
@@ -3753,7 +3753,7 @@ static cJSON *schema_json(DocBuild *build, const ImportedNotes *notes, const Ana
 
 /* One stage of a sequence: where it sits and the bass, soprano and chord root degrees the library read there in the home
    key (soprano and root null where the segment has none). */
-static cJSON *sequence_stage_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *sequence_stage_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                                   const AnalysisSequenceStage *stage) {
     Rational start = entry_start_time(build, &report->entries[stage->first_entry]);
     Rational end = entry_end_time(build, &report->entries[stage->last_entry]);
@@ -3773,7 +3773,7 @@ static cJSON *sequence_stage_json(DocBuild *build, const ImportedNotes *notes, c
     return object;
 }
 
-static cJSON *sequence_stages_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report,
+static cJSON *sequence_stages_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report,
                                    const AnalysisSequence *sequence) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < sequence->stage_count; i++) {
@@ -3788,7 +3788,7 @@ static cJSON *sequence_stages_json(DocBuild *build, const ImportedNotes *notes, 
 /* One claim per sequence, in order of the first segment. The claim's span runs from the first segment to the end of
    the last; the label is "sequence". kind is the library's name for what repeats; pattern and direction are null where
    the library encodes none (the cycle of fifths has no rule, so rule_backed is false). */
-static cJSON *sequence_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report, const AnalysisSequence *sequence) {
+static cJSON *sequence_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report, const AnalysisSequence *sequence) {
     size_t id_count = 0;
     size_t *ids = entry_range_note_ids(report, sequence->first_entry, sequence->last_entry, &id_count);
     cJSON *claim = ids ? claim_json_with(build, sequence->framework, notes, ids, id_count,
@@ -3824,7 +3824,7 @@ static cJSON *sequence_json(DocBuild *build, const ImportedNotes *notes, const A
 
 /* The schemas section: one flat list of claims, the schemas (labelled "schema") in order of their first stage and then
    the sequences (labelled "sequence") in order of their first segment. */
-static cJSON *schemas_json(DocBuild *build, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *schemas_json(DocBuild *build, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     for (size_t i = 0; list && i < report->schema_count; i++) {
         if (!json_append(list, schema_json(build, notes, report, &report->schemas[i]))) {
@@ -3841,7 +3841,7 @@ static cJSON *schemas_json(DocBuild *build, const ImportedNotes *notes, const An
     return list;
 }
 
-static cJSON *document_json(DocBuild *build, const char *input_path, const ImportedNotes *notes, const AnalysisReport *report) {
+static cJSON *document_json(DocBuild *build, const char *input_path, const ImportedScore *notes, const AnalysisReport *report) {
     cJSON *document = cJSON_CreateObject();
     if (document &&
         !(json_add(document, "schema_version", cJSON_CreateNumber(URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION)) &&
@@ -3972,7 +3972,7 @@ static bool print_value(Buffer *buffer, const cJSON *item, int depth) {
     return buffer_indent(buffer, depth) && buffer_append(buffer, close);
 }
 
-AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report,
+AnalysisDocument *analysis_document_build(const char *input_path, const ImportedScore *notes, const AnalysisReport *report,
                                           const KnowledgeSnapshot *knowledge) {
     DocBuild build = {false, {NULL, NULL, NULL, NULL}};
     if (!common_practice_materials_resolve(knowledge, &build.materials, NULL, 0)) {

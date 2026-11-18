@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "pipeline/pitch_class_util.h"
 #include "analysis/notes/sonority_segmentation.h"
@@ -17,9 +17,9 @@
  * segmentation on the beat grid of the file's MeterMap): every note sounding in its time window, those attacked in it
  * and those held over from earlier.
  *
- * note_indices are ImportedNotes indices, parallel to members. The members are the plain per-note view Ursatz's
+ * note_indices are ImportedScore indices, parallel to members. The members are the plain per-note view Ursatz's
  * weighted chord identification reads (pitch, duration inside the segment, held flag, beat strength of the attack,
- * voice, onset); their note_id and voice_id borrow from the ImportedNotes. A Segmentation is a view onto the chain's
+ * voice, onset); their note_id and voice_id borrow from the ImportedScore. A Segmentation is a view onto the chain's
  * segments: the chain must outlive it.
  */
 typedef struct {

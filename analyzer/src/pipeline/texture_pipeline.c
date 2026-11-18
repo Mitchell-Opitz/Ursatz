@@ -17,7 +17,7 @@ static bool before(long long na, long long da, long long nb, long long db) {
 }
 
 /* The notes attacked in [start, end), in time order. NULL with *count 0 on allocation failure or when there are none. */
-static size_t *notes_attacked_in(const ImportedNotes *notes, const StandardTexturePassageClaim *claim, size_t *count) {
+static size_t *notes_attacked_in(const ImportedScore *notes, const StandardTexturePassageClaim *claim, size_t *count) {
     size_t *ids = malloc((notes->count > 0 ? notes->count : 1) * sizeof(size_t));
     *count = 0;
     if (!ids) {
@@ -34,7 +34,7 @@ static size_t *notes_attacked_in(const ImportedNotes *notes, const StandardTextu
     return ids;
 }
 
-static bool copy_passage(const ImportedNotes *notes, const StandardTexturePassage *source, const char *framework,
+static bool copy_passage(const ImportedScore *notes, const StandardTexturePassage *source, const char *framework,
                          AnalysisTexturePassage *out) {
     const StandardTexturePassageClaim *claim = &source->claim;
     out->framework = framework;
@@ -69,7 +69,7 @@ static bool copy_passage(const ImportedNotes *notes, const StandardTexturePassag
     return true;
 }
 
-bool texture_stage_collect(const ImportedNotes *notes, const AnalysisChain *library, AnalysisReport *report) {
+bool texture_stage_collect(const ImportedScore *notes, const AnalysisChain *library, AnalysisReport *report) {
     const StandardTextureAnalysis *analysis = analysis_chain_texture(library);
     if (notes->count == 0 || !analysis) {
         return true;

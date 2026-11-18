@@ -37,7 +37,7 @@ static AnalyzerStatus status_of(MusicXmlExportResult result) {
     }
 }
 
-AnalyzerStatus analyzer_score_export_musicxml(const ImportedNotes *notes, char **xml) {
+AnalyzerStatus analyzer_score_export_musicxml(const ImportedScore *notes, char **xml) {
     if (!xml) {
         return ANALYZER_ERR_ARGUMENT;
     }
@@ -96,7 +96,7 @@ AnalyzerStatus analyzer_score_export_musicxml(const ImportedNotes *notes, char *
     return ANALYZER_OK;
 }
 
-AnalyzerStatus analyzer_score_note_xml_ids(const ImportedNotes *notes, char ***ids, size_t *count) {
+AnalyzerStatus analyzer_score_note_xml_ids(const ImportedScore *notes, char ***ids, size_t *count) {
     if (!ids || !count) {
         return ANALYZER_ERR_ARGUMENT;
     }
@@ -151,7 +151,7 @@ void analyzer_score_note_xml_ids_destroy(char **ids, size_t count) {
     free(ids);
 }
 
-bool analyzer_imported_meter_defaulted(const ImportedNotes *notes) {
+bool analyzer_imported_meter_defaulted(const ImportedScore *notes) {
     if (!notes) {
         return false;
     }
