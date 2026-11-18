@@ -175,13 +175,13 @@ target_include_directories(ursatz_composer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(ursatz_composer
-    PRIVATE ursatz_io ursatz_realization ursatz_plan ursatz_analysis ursatz_analyzer ursatz_analyzer::chain cjson
+    PRIVATE ursatz_io ursatz_realization ursatz_plan ursatz_analysis ursatz_analyzer ursatz_analyzer::chain ursatz_chain cjson
 )
 # The tests reach the internal headers and the libraries the sources use; no consumer does.
 add_library(ursatz_composer_internal INTERFACE)
 target_include_directories(ursatz_composer_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ursatz_composer_internal INTERFACE
-    ursatz_io ursatz_realization ursatz_plan ursatz_analysis ursatz_analyzer ursatz_analyzer::chain cjson
+    ursatz_io ursatz_realization ursatz_plan ursatz_analysis ursatz_analyzer ursatz_analyzer::chain ursatz_chain cjson
 )
 target_compile_definitions(ursatz_composer PRIVATE
     URSATZ_COMPOSER_VERSION="${PROJECT_VERSION}"

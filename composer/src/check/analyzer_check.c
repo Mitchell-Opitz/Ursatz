@@ -10,9 +10,6 @@
 #include <theory/harmony/harmony_cadence_rules.h>
 #include <theory/tonality/common_practice_materials.h>
 
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/composer_api.h>
-
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
@@ -230,19 +227,19 @@ static AnalyzerCheckResult result_of(HearingResult status) {
 }
 
 /* The hard faults the plan's own notes take part in, added to the items; first_bar is the heard span's first bar. */
-static bool add_violations(ComposerHearing *hearing, const AnalyzerResult *result, size_t first_bar, Items *items,
+static bool add_violations(ComposerHearing *hearing, const AnalysisChain *chain, size_t first_bar, Items *items,
                            bool *contradicts) {
     const PiecePlan *plan = hearing_plan(hearing);
     const RenderedPlan *rendered = hearing_rendered(hearing);
-    AnalyzerViolation *violations = NULL;
+    ChainVoiceFault *violations = NULL;
     size_t violation_count = 0;
-    if (analyzer_result_violations(result, &violations, &violation_count) != ANALYZER_OK) {
+    if (!chain_result_voice_faults(chain, &violations, &violation_count)) {
         return false;
     }
     for (size_t i = 0; i < violation_count; i++) {
         bool writes = false;
         for (size_t n = 0; n < violations[i].note_id_count && !writes; n++) {
-            size_t event = hearing_source_event(hearing, result, violations[i].note_ids[n]);
+            size_t event = hearing_source_event(hearing, chain, violations[i].note_ids[n]);
             writes = event < rendered->count && plan_lane_span_state(plan, rendered->spans[event]) != PLAN_STATE_GIVEN;
         }
         if (violations[i].hard && writes) {
@@ -252,7 +249,7 @@ static bool add_violations(ComposerHearing *hearing, const AnalyzerResult *resul
             *contradicts = true;
         }
     }
-    analyzer_violations_free(violations, violation_count);
+    chain_voice_faults_free(violations, violation_count);
     return true;
 }
 
@@ -301,12 +298,12 @@ AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId s
     }
     size_t bars = bars_in(span.length.num, span.length.den, &meter);
 
-    const AnalyzerResult *heard = NULL;
+    const AnalysisChain *heard = NULL;
     AnalyzerCheckResult hear_status = result_of(hearing_section(hearing, span, &heard));
     if (hear_status != ANALYZER_CHECK_OK) {
         return hear_status;
     }
-    const ChainResult *report = analyzer_result_report(heard);
+    const ChainResult *report = analysis_chain_result(heard);
     Items items;
     memset(&items, 0, sizeof(items));
     compare_cadences(plan, section, bars, span.start, &meter, report, &items);
@@ -467,12 +464,12 @@ AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCh
     if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0) {
         return ANALYZER_CHECK_ERR_PLAN;
     }
-    const AnalyzerResult *heard = NULL;
+    const AnalysisChain *heard = NULL;
     AnalyzerCheckResult hear_status = result_of(hearing_piece(hearing, &heard));
     if (hear_status != ANALYZER_CHECK_OK) {
         return hear_status;
     }
-    const ChainResult *report = analyzer_result_report(heard);
+    const ChainResult *report = analysis_chain_result(heard);
     Items items;
     memset(&items, 0, sizeof(items));
     compare_piece_cadences(plan, &meter, report, rendered->piece_end, &items);

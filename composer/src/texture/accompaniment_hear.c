@@ -10,18 +10,15 @@
 #include <model/time/note_value.h>
 #include <model/time/time_signature.h>
 
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/composer_api.h>
-#include <ursatz_analyzer/result_chain.h>
 #include <chain/analysis_chain.h>
+#include <io/imported_score.h>
 
-#include "check/hearing_result.h"
 #include "render/render_notes.h"
 #include "texture/texture_internal.h"
 #include "util/position.h"
 
 /*
- * The notes of the melody, the bass and the candidate are heard by the Analyzer's texture stage (analysis_chain_texture),
+ * The notes of the melody, the bass and the candidate are heard by the library chain's texture stage (analysis_chain_texture),
  * as three streams: the melody the first, the bass the second, the accompaniment the third, whose voices the library
  * separates itself. Only the texture stage runs: it reads the notes alone.
  */
@@ -86,7 +83,9 @@ bool accomp_hear(const AccompContext *context, const KnowledgeSnapshot *knowledg
     RenderNote *notes = calloc(capacity ? capacity : 1, sizeof(*notes));
     MeterMap *map = NULL;
     RenderedPlan rendered;
-    AnalyzerResult *result = NULL;
+    ImportedScore score;
+    bool scored = false;
+    AnalysisChain *chain = NULL;
     int *midi = NULL;
     size_t count = 0;
     memset(&rendered, 0, sizeof(rendered));
@@ -113,18 +112,20 @@ bool accomp_hear(const AccompContext *context, const KnowledgeSnapshot *knowledg
         midi[i] = (int)pitch_numeric_value_position_numerator(rendered.pitch_values[i]);
     }
     if (ok) {
-        AnalyzerHearing input;
-        memset(&input, 0, sizeof(input));
-        input.events = (const NoteEvent *const *)rendered.events;
-        input.count = rendered.count;
-        input.midi = midi;
-        input.meter = map;
-        input.streams = rendered.part_index;
-        AnalyzerHearingOptions options = hearing_analyzer_options(knowledge);
-        options.analysis.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
-        ok = ok && knowledge && analyzer_hear(&input, &options, &result) == ANALYZER_OK;
+        ImportedScoreView view = {.events = (const NoteEvent *const *)rendered.events,
+                                  .count = rendered.count,
+                                  .midi = midi,
+                                  .meter = map,
+                                  .streams = rendered.part_index};
+        ok = knowledge && imported_score_view(&view, &score) == IMPORTED_SCORE_OK;
+        scored = ok;
+        AnalysisChainConfig config = analysis_chain_config_default();
+        config.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
+        config.knowledge = knowledge;
+        config.harmonic_spans = false; /* until the next commit aligns the hearing with the Analyzer's settings */
+        ok = ok && analysis_chain_run_score(&score, &config, &chain) == ANALYSIS_CHAIN_OK;
     }
-    const StandardTextureAnalysis *analysis = ok ? analysis_chain_texture(analyzer_result_chain(result)) : NULL;
+    const StandardTextureAnalysis *analysis = ok ? analysis_chain_texture(chain) : NULL;
     ok = ok && analysis;
     if (ok) {
         *heard = analysis->windows.count > 0;
@@ -132,7 +133,10 @@ bool accomp_hear(const AccompContext *context, const KnowledgeSnapshot *knowledg
             *heard = *heard && window_is(analysis->window_texture[w], context->texture);
         }
     }
-    analyzer_result_destroy(result);
+    analysis_chain_destroy(chain);
+    if (scored) {
+        imported_score_destroy(&score);
+    }
     free(midi);
     rendered_plan_destroy(&rendered);
     meter_map_destroy(map);

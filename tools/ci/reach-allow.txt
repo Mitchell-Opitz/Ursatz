@@ -1,5 +1,19 @@
 # Functions the reach scan (tools/ci/check-reach.sh) may list as reached by no application.
 # One "<source path> <function>" per line; the text after # says why it stays (R-559).
+analyzer/src/pipeline/analysis_result.c analyzer_result_chain  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/analysis_result.c analyzer_result_run_chain  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/analysis_result.c analyzer_result_set_owner  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c analyzer_hear  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c analyzer_hearing_options_default  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c analyzer_result_style_distance  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c analyzer_result_violations  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c analyzer_style_reference_create  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c analyzer_style_reference_destroy  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c analyzer_violations_free  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c hearing_score_build  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c hearing_score_destroy  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c hearing_valid  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
+analyzer/src/pipeline/composer_api.c key_signature_of  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
 analyzer/src/pipeline/input_pipeline.c analyzer_import_buffer  # the GUI imports files only; bytes go in through this entry once it reads uploads from memory (R-614); its test calls it
 composer/src/plan/lanes.c plan_note_by_id  # no app finds a note by id until P62 (the edits saved with the realization name notes by id); its tests call it
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_entries  # test hook: test_analyzer_route reads the import counter
