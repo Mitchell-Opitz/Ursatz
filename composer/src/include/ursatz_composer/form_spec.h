@@ -226,7 +226,5 @@ const char *form_spec_builtin_plan_name(size_t index);
 const char *form_spec_builtin_hash(size_t index);
 /* Parses the built-in form with this name into *out (on every call: no state is kept); FORM_SPEC_ERR_UNKNOWN for none. */
 FormSpecResult form_spec_builtin(const char *name, FormSpec **out);
-/* The built-in form the plan's root node is named for (a form's plan_name); FORM_SPEC_ERR_UNKNOWN when none is. */
-FormSpecResult form_spec_builtin_for_plan(const PiecePlan *plan, FormSpec **out);
 
 #endif

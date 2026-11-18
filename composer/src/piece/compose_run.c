@@ -1042,13 +1042,12 @@ static bool has_key_changes(const PiecePlan *plan) {
 }
 
 /* The checks of a plan with several keys; PIECE_ERR_STUCK, marked in the outcome, when it fails them. */
-static PieceResult check_keys(ComposerHearing *hearing, const PiecePlan *plan, const FormSpec *form, unsigned checks,
-                              ComposeOutcome *outcome) {
+static PieceResult check_keys(ComposerHearing *hearing, const PiecePlan *plan, unsigned checks, ComposeOutcome *outcome) {
     /* A check the form does not name is not run: its result stays as the outcome was cleared, ok. */
     outcome->key_check.ok = true;
     outcome->cadence_check.ok = true;
     bool read = (!(checks & FORM_CHECK_KEYS) || piece_check_keys_in(hearing, plan, &outcome->key_check)) &&
-                (!(checks & FORM_CHECK_CADENCES) || piece_check_cadences(plan, form, &outcome->cadence_check));
+                (!(checks & FORM_CHECK_CADENCES) || piece_check_cadences(plan, &outcome->cadence_check));
     if (read && outcome->key_check.ok && outcome->cadence_check.ok) {
         return PIECE_OK;
     }
@@ -1206,14 +1205,10 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
      * it lets fit. The plan as it was given is kept, and a run that is stuck starts again from it with other seeds,
      * a few times; the first run is always the one with the seeds the configuration names.
      */
-    /* The checks the plan's form names (form_spec.h): the config's form, else the built-in the plan is named for; a plan
-       of no known form runs every check it has the parts for. */
-    FormSpec *owned = NULL;
-    const FormSpec *form = config->form;
-    if (!form && form_spec_builtin_for_plan(plan, &owned) == FORM_SPEC_OK) {
-        form = owned;
-    }
-    unsigned checks = form ? form->checks : FORM_CHECK_ALL;
+    /* The checks the plan's form names (form_spec.h): the config's form, else the form the plan records; a plan with no
+       record runs every check it has the parts for. */
+    const PlanFormRecord *recorded = plan_form_record(plan);
+    unsigned checks = config->form ? config->form->checks : recorded ? recorded->checks : FORM_CHECK_ALL;
     char *snapshot = plan_to_json(plan, NULL);
     PieceResult result = PIECE_ERR_ALLOC;
     ComposeRejection *rejections = NULL;
@@ -1230,7 +1225,7 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
         ComposerHearing *hearing = NULL;
         result = run_once(plan, config, checks, COMPOSE_ROUND_STRIDE * (unsigned long)round, outcome, &hearing);
         if (result == PIECE_OK && has_key_changes(plan)) {
-            result = check_keys(hearing, plan, form, checks, outcome);
+            result = check_keys(hearing, plan, checks, outcome);
         }
         if (result == PIECE_OK && config->analyzer_check) {
             result = check_analyzer(hearing, plan, outcome);
@@ -1246,7 +1241,6 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
                       config->seed + COMPOSE_ROUND_STRIDE * (unsigned long)round);
     }
     free(snapshot);
-    form_spec_destroy(owned);
     /* Kept apart until now: each run starts by clearing the outcome. */
     outcome->rejections = rejections;
     outcome->rejection_count = rejection_count;

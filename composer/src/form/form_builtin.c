@@ -55,27 +55,3 @@ FormSpecResult form_spec_builtin(const char *name, FormSpec **out) {
     }
     return FORM_SPEC_ERR_UNKNOWN;
 }
-
-FormSpecResult form_spec_builtin_for_plan(const PiecePlan *plan, FormSpec **out) {
-    if (out) {
-        *out = NULL;
-    }
-    if (!plan || !out) {
-        return FORM_SPEC_ERR_NULL;
-    }
-    NodeId root = plan_root(plan);
-    const char *root_name = root == PLAN_NODE_NONE ? NULL : plan_node_name(plan, root);
-    for (size_t i = 0; root_name && i < COMPOSER_FORM_DOCUMENT_COUNT; i++) {
-        FormSpec *form = NULL;
-        FormSpecResult parsed = form_spec_parse(COMPOSER_FORM_DOCUMENTS[i], &form, NULL);
-        if (parsed != FORM_SPEC_OK) {
-            return parsed;
-        }
-        if (strcmp(root_name, form->plan_name) == 0) {
-            *out = form;
-            return FORM_SPEC_OK;
-        }
-        form_spec_destroy(form);
-    }
-    return FORM_SPEC_ERR_UNKNOWN;
-}

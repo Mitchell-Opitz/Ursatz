@@ -200,7 +200,7 @@ static void check_plan(const PiecePlan *plan, const Scenario *scenario, const ch
         assert(key && same_key(key->params.key, key_at(&lane, last_bar)));
     }
     PieceCadenceCheck cadences;
-    assert(piece_check_cadences(plan, NULL, &cadences) && cadences.ok);
+    assert(piece_check_cadences(plan, &cadences) && cadences.ok);
     if (strcmp(kind, "loop") == 0 || strcmp(kind, "layered") == 0) {
         assert(lane.count == 1);
     }
@@ -440,7 +440,7 @@ static void check_piece(const PiecePlan *plan, const char *kind) {
         }
         assert(last == strongest);
         PieceCadenceCheck cadences;
-        assert(piece_check_cadences(plan, NULL, &cadences) && cadences.ok);
+        assert(piece_check_cadences(plan, &cadences) && cadences.ok);
     }
 }
 

@@ -108,10 +108,10 @@ typedef struct {
  * the sections' CADENCE and KEY constraints and the key lane: the last section's cadence is a PAC, so the strongest of
  * the piece; a section that ends in another key ends in a PAC or IAC; and no section before the last closes in the home
  * key with a PAC unless the form marks it closed (its sections' "closed": ternary A, every variation and the theme, rounded binary A).
- * True when the plan could be read; the result is in out. A form that does not close (loop, layered) has nothing to check. form NULL means the built-in form the plan's root is named for
- * (form_spec_builtin_for_plan); a plan of no built-in form cannot be read.
+ * True when the plan could be read; the result is in out. A form that does not close (loop, layered), and a plan that records no form (plan_form_record), have nothing to
+ * check: `closing` is read from the record and each section's `closed` from its description.
  */
-bool piece_check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out);
+bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out);
 
 /*
  * A plan of a format before 5 has no form record: this gives it the record of the built-in form whose plan name is its root node's

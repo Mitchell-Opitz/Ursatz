@@ -649,14 +649,12 @@ static void test_for_plan(void) {
         request.meter.beat_unit = 4;
         PiecePlan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
-        FormSpec *found = NULL;
-        assert(form_spec_builtin_for_plan(plan, &found) == FORM_SPEC_OK && strcmp(found->name, FORMS[f].name) == 0);
-        form_spec_destroy(found);
+        const PlanFormRecord *record = plan_form_record(plan);
+        assert(record && strcmp(record->name, FORMS[f].name) == 0);
         plan_destroy(plan);
     }
     PiecePlan *plan = plan_create();
-    FormSpec *found = NULL;
-    assert(form_spec_builtin_for_plan(plan, &found) == FORM_SPEC_ERR_UNKNOWN && found == NULL);
+    assert(plan_form_record(plan) == NULL);
     plan_destroy(plan);
 }
 

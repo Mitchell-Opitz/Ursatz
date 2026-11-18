@@ -158,42 +158,24 @@ bool piece_form_record_migrate(PiecePlan *plan) {
     return true;
 }
 
-static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out);
-
 static void fail(PieceCadenceCheck *out, const char *what, size_t section) {
     out->ok = false;
     snprintf(out->reason, sizeof(out->reason), "%s (section %zu)", what, section);
 }
 
-bool piece_check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out) {
+bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out) {
     if (!plan || !out) {
         return false;
     }
     memset(out, 0, sizeof(*out));
     out->ok = true;
-    FormSpec *owned = NULL;
-    if (!form) {
-        if (form_spec_builtin_for_plan(plan, &owned) != FORM_SPEC_OK) {
-            return false;
-        }
-        form = owned;
+    const PlanFormRecord *record = plan_form_record(plan);
+    if (!record || !record->closing) {
+        return true; /* nothing to check: a plan of no form, or a form that does not close (loop, layered, game loop) */
     }
-    bool read = check_cadences(plan, form, out);
-    form_spec_destroy(owned);
-    return read;
-}
-
-static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCadenceCheck *out) {
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     size_t count = sections_of(plan, sections);
     if (count == 0) {
-        return false;
-    }
-    if (!form->closing) {
-        return true;
-    }
-    const FormSpecSize *size = size_of_plan(form, plan, sections, count);
-    if (!size) {
         return false;
     }
     LaneSpanId first_key;
@@ -212,7 +194,7 @@ static bool check_cadences(const PiecePlan *plan, const FormSpec *form, PieceCad
         if (away && cadences[0] != CADENCE_TYPE_PERFECT_AUTHENTIC && cadences[0] != CADENCE_TYPE_IMPERFECT_AUTHENTIC &&
             !is_transition(plan, sections[i])) {
             fail(out, "a section ends in another key without an authentic cadence", i);
-        } else if (!away && i + 1 < count && cadences[0] == CADENCE_TYPE_PERFECT_AUTHENTIC && !size->sections[i].closed) {
+        } else if (!away && i + 1 < count && cadences[0] == CADENCE_TYPE_PERFECT_AUTHENTIC && !plan_section_or_empty(plan, sections[i])->closed) {
             fail(out, "a section closes in the home key before the piece ends", i);
         }
         if (i + 1 == count) {
