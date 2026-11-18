@@ -1,5 +1,6 @@
 # Functions the reach scan (tools/ci/check-reach.sh) may list as reached by no application.
 # One "<source path> <function>" per line; the text after # says why it stays (R-559).
+composer/src/plan/lanes.c plan_note_by_id  # no app finds a note by id until P62 (the edits saved with the realization name notes by id); its tests call it
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_entries  # test hook: test_analyzer_route reads the import counter
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test hook: test_analyzer_route reads the import counter
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_reset  # test hook: test_analyzer_route resets the import counter
