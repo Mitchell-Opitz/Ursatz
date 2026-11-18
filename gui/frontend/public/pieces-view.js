@@ -218,11 +218,158 @@ function pieceNewFill(kind) {
       return { kind, item_id: "", version: 0, into: "sentence", hybrid: "presentation+continuation" };
     case "theme":
       return { kind, item_id: "", version: 0 };
-    case "progression":
-      return { kind, numerals: "", cells: "" };
     default:
       return PiecesModel.emptyFill();
   }
+}
+
+/* A fill of a sized form's section (an overlay, R-610): empty, a motif with a motive of its own, or a theme. */
+function pieceOverlayFill(kind) {
+  return kind === "motif" ? { kind, item_id: "", version: 0 } : pieceNewFill(kind);
+}
+
+/*
+ * The region of a section (R-610): As the form has it, Home, a key (a tonic and a material) or a relation of the Composer's
+ * vocabulary from an anchor (Home, the section before, or an earlier section of `anchors`: [{value, label}]). It edits
+ * owner.region in place and calls onChange after each edit.
+ */
+function pieceRegionControl(owner, anchors, onChange) {
+  const box = materialsElement("div", "upload-controls");
+  if (!owner.region || typeof owner.region !== "object") {
+    owner.region = PiecesModel.emptyRegion();
+  }
+  const region = owner.region;
+  const kinds = [
+    { value: "none", label: "As the form has it" },
+    { value: "home", label: "Home" },
+    { value: "key", label: "A key" },
+    { value: "relation", label: "A relation" },
+  ];
+  const kind = themeField(box, "Key of the section", themeSelect(kinds, region.kind));
+  const tonic = themeField(box, "Tonic", themeInput("Eb", region.tonic));
+  const material = themeField(box, "Material", themeSelect(PiecesModel.MATERIALS, region.material || (PiecesModel.MATERIALS[0] || {}).value));
+  const relation = themeField(
+    box,
+    "Relation",
+    themeSelect(
+      Vocabulary.list("relations").map((entry) => ({ value: entry.id, label: entry.name })),
+      region.relation,
+    ),
+  );
+  const anchor = themeField(
+    box,
+    "From",
+    themeSelect([{ value: "home", label: "Home" }, { value: "previous", label: "The section before" }, ...anchors], region.anchor || "home"),
+  );
+  function sync() {
+    region.kind = kind.value;
+    region.tonic = tonic.value;
+    region.material = material.value;
+    region.relation = relation.value;
+    region.anchor = anchor.value;
+    tonic.parentElement.hidden = region.kind !== "key";
+    material.parentElement.hidden = region.kind !== "key";
+    relation.parentElement.hidden = region.kind !== "relation";
+    anchor.parentElement.hidden = region.kind !== "relation";
+    onChange();
+  }
+  for (const control of [kind, tonic, material, relation, anchor]) {
+    control.addEventListener("input", sync);
+  }
+  region.kind = kind.value;
+  region.material = material.value;
+  region.relation = relation.value;
+  tonic.parentElement.hidden = region.kind !== "key";
+  material.parentElement.hidden = region.kind !== "key";
+  relation.parentElement.hidden = region.kind !== "relation";
+  anchor.parentElement.hidden = region.kind !== "relation";
+  return box;
+}
+
+/*
+ * The harmony of a section (R-610), given before it is composed: none, a progression (numerals and the cells each lasts), a
+ * schema of the Composer's vocabulary, or chords at bars. It edits owner.harmony in place and calls onChange after each edit.
+ */
+function pieceHarmonyControl(owner, onChange) {
+  const box = materialsElement("div");
+  if (!owner.harmony || typeof owner.harmony !== "object") {
+    owner.harmony = PiecesModel.emptyHarmony();
+  }
+  const harmony = owner.harmony;
+  const row = materialsElement("div", "upload-controls");
+  const kinds = [
+    { value: "none", label: "The Composer writes it" },
+    { value: "progression", label: "A progression" },
+    { value: "schema", label: "A schema" },
+    { value: "chords", label: "Chords at bars" },
+  ];
+  const kind = themeField(row, "Harmony", themeSelect(kinds, harmony.kind));
+  const body = materialsElement("div", "upload-controls");
+  box.append(row, body);
+  function draw() {
+    body.innerHTML = "";
+    if (harmony.kind === "progression") {
+      const numerals = themeField(body, "Numerals", themeInput("I vi IV V", harmony.numerals));
+      const cells = themeField(body, "Cells per chord", themeInput("a bar", harmony.cells));
+      for (const control of [numerals, cells]) {
+        control.addEventListener("input", () => {
+          harmony.numerals = numerals.value;
+          harmony.cells = cells.value;
+          onChange();
+        });
+      }
+      body.appendChild(materialsElement("div", "piece-list-status", "The harmony stage fills what the progression leaves of the section."));
+    } else if (harmony.kind === "schema") {
+      const schemas = Vocabulary.list("schemas");
+      const schema = themeField(body, "Schema", themeSelect(schemas, harmony.schema || (schemas[0] || {}).value));
+      harmony.schema = schema.value;
+      schema.addEventListener("input", () => {
+        harmony.schema = schema.value;
+        onChange();
+      });
+    } else if (harmony.kind === "chords") {
+      const list = materialsElement("div");
+      const drawChords = () => {
+        list.innerHTML = "";
+        harmony.chords.forEach((chord, at) => {
+          const line = materialsElement("div", "upload-controls");
+          const bar = themeField(line, "Bar (from 1)", themeInput("1", chord.bar));
+          const text = themeField(line, "Chord", themeInput("I V@3/2", chord.text));
+          for (const control of [bar, text]) {
+            control.addEventListener("input", () => {
+              chord.bar = bar.value;
+              chord.text = text.value;
+              onChange();
+            });
+          }
+          line.appendChild(
+            themeButton("Remove chord", () => {
+              harmony.chords.splice(at, 1);
+              drawChords();
+              onChange();
+            }),
+          );
+          list.appendChild(line);
+        });
+      };
+      drawChords();
+      body.append(
+        list,
+        themeButton("Add chord", () => {
+          harmony.chords.push({ bar: String(harmony.chords.length + 1), text: "" });
+          drawChords();
+          onChange();
+        }),
+      );
+    }
+  }
+  kind.addEventListener("input", () => {
+    harmony.kind = kind.value;
+    draw();
+    onChange();
+  });
+  draw();
+  return box;
 }
 
 /* A table of header cells and rows of text. */
@@ -254,8 +401,23 @@ function pieceVersionTables(view, heading, check, sized, performed, modulating) 
   /* The Function column (P51) is there only when a row has a function: the Composer's sentence. A sized row shows it after the
    * Figure column, a loop row after its fill. */
   const withFunction = view.rows.some((row) => row.function !== "");
-  const extraHead = [...(withFigure ? ["Figure"] : []), ...(withFunction && sized ? ["Function"] : []), ...(withConstruction ? ["Construction"] : [])];
-  const extra = (row) => [...(withFigure ? [row.figure] : []), ...(withFunction && sized ? [row.function] : []), ...(withConstruction ? [row.construction] : [])];
+  /* The Region and Given harmony columns (R-610) are there only when a row has one: the key and the harmony the request gave. */
+  const withRegion = view.rows.some((row) => row.region !== "");
+  const withGiven = view.rows.some((row) => row.harmony !== "");
+  const extraHead = [
+    ...(withFigure ? ["Figure"] : []),
+    ...(withFunction && sized ? ["Function"] : []),
+    ...(withConstruction ? ["Construction"] : []),
+    ...(withRegion ? ["Region"] : []),
+    ...(withGiven ? ["Given harmony"] : []),
+  ];
+  const extra = (row) => [
+    ...(withFigure ? [row.figure] : []),
+    ...(withFunction && sized ? [row.function] : []),
+    ...(withConstruction ? [row.construction] : []),
+    ...(withRegion ? [row.region] : []),
+    ...(withGiven ? [row.harmony] : []),
+  ];
   /* A performed form (R-485) adds its part, what a row plays again, the upbeat chord and the connective. */
   const withPart = performed && view.rows.some((row) => row.partName !== "");
   box.appendChild(
@@ -740,6 +902,7 @@ function buildPieceEditor(ctx) {
     editorEl.innerHTML = "";
     const index = state.sections.findIndex((section) => section.id === selected);
     if (PiecesModel.isSized(PiecesModel.formOf(state.form))) {
+      drawOverlayEditor();
       return;
     }
     if (index < 0) {
@@ -955,21 +1118,6 @@ function buildPieceEditor(ctx) {
         });
         picker.setValue(fill);
         fillBody.appendChild(picker.el);
-      } else if (fill.kind === "progression") {
-        const row = materialsElement("div", "upload-controls");
-        const numerals = themeField(row, "Numerals", themeInput("I vi IV V", fill.numerals));
-        const cells = themeField(row, "Cells per chord", themeInput("default", fill.cells));
-        for (const control of [numerals, cells]) {
-          control.addEventListener("input", () => {
-            fill.numerals = numerals.value;
-            fill.cells = cells.value;
-            problems();
-          });
-        }
-        fillBody.append(
-          row,
-          materialsElement("div", "piece-list-status", "A progression does not change the cadence: end it on the chord the cadence needs."),
-        );
       } else {
         fillBody.appendChild(materialsElement("div", "piece-list-status", "Empty: the Composer invents this section."));
       }
@@ -981,6 +1129,80 @@ function buildPieceEditor(ctx) {
     });
     drawFill();
     editorEl.appendChild(fillBox);
+
+    /* The key and the harmony of the section (R-610): the anchors of a relation are the sections before this one. */
+    const placeBox = materialsElement("div", "piece-fill");
+    placeBox.appendChild(materialsElement("h3", "section-title", "Key and harmony"));
+    const earlier = state.sections
+      .slice(0, index)
+      .map((entry) => ({ value: entry.id, label: `Section ${entry.letter || entry.id}` }));
+    placeBox.append(
+      pieceRegionControl(section, earlier, () => problems()),
+      pieceHarmonyControl(section, () => problems()),
+    );
+    editorEl.appendChild(placeBox);
+  }
+
+  /* The overlays of a sized form (R-610): for each section of the size a region, a harmony and a fill of its own, kept only when
+   * something is set. A section that returns another takes none of them; an operator's section is refused by the Composer, which the checks report. */
+  function drawOverlayEditor() {
+    const form = PiecesModel.formOf(state.form);
+    const sections = PiecesModel.sectionsOf(form, state.bars, state.count);
+    if (PiecesModel.performedParts(form).length > 0 || sections.length === 0) {
+      return;
+    }
+    editorEl.appendChild(materialsElement("h3", "section-title", "Sections"));
+    sections.forEach((planned, at) => {
+      const name = String(planned.name || planned.letter || at);
+      let overlay = state.overlays.find((entry) => entry.name === name);
+      if (!overlay) {
+        overlay = { name, region: PiecesModel.emptyRegion(), harmony: PiecesModel.emptyHarmony(), fill: PiecesModel.emptyFill() };
+        state.overlays.push(overlay);
+      }
+      const details = materialsElement("details", "piece-fill");
+      details.appendChild(materialsElement("summary", "", `${planned.letter || name} · ${name}`));
+      const fixed = Boolean(planned.returns);
+      const earlier = sections.slice(0, at).map((entry) => ({ value: String(entry.name), label: String(entry.name) }));
+      details.appendChild(pieceRegionControl(overlay, earlier, () => problems()));
+      if (fixed) {
+        details.appendChild(
+          materialsElement("div", "piece-list-status", "This section returns another: give its fill and harmony to the section it returns."),
+        );
+      } else {
+        details.appendChild(pieceHarmonyControl(overlay, () => problems()));
+        const fillBody = materialsElement("div");
+        const kind = themeField(details, "Fill with", themeSelect(PiecesModel.FILL_KINDS, overlay.fill.kind));
+        details.appendChild(fillBody);
+        const drawOverlayFill = () => {
+          fillBody.innerHTML = "";
+          const fill = overlay.fill;
+          const pick = (value) => {
+            fill.item_id = value ? value.item_id : "";
+            fill.version = value ? value.version : 0;
+            problems();
+            poolRefresh();
+          };
+          if (fill.kind === "motif") {
+            const picker = buildThemeMotifPicker({ role: "melodic", items: () => ctx.items, onChange: pick });
+            picker.setValue(fill);
+            fillBody.appendChild(picker.el);
+          } else if (fill.kind === "theme") {
+            const picker = buildPieceThemePicker({ items: () => ctx.items, onInfo: () => {}, onChange: pick });
+            picker.setValue(fill);
+            fillBody.appendChild(picker.el);
+          } else {
+            fillBody.appendChild(materialsElement("div", "piece-list-status", "As the form has it."));
+          }
+        };
+        kind.addEventListener("input", () => {
+          overlay.fill = pieceOverlayFill(kind.value);
+          drawOverlayFill();
+          problems();
+        });
+        drawOverlayFill();
+      }
+      editorEl.appendChild(details);
+    });
   }
 
   /* The basic motive */
