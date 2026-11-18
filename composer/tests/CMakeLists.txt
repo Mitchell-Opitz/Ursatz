@@ -19,6 +19,10 @@ ursatz_test(request_migration SOURCES test_request_migration.c LIBS ursatz_compo
 
 ursatz_test(test_piece_plan_sentence LIBS ursatz_composer)
 
+ursatz_test(test_composer_movement LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
+
 ursatz_test(test_plan_note_ids LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
 
