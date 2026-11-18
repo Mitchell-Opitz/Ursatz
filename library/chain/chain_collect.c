@@ -42,7 +42,7 @@ bool chain_collect_map_notes(const ChainScoreInput *input, const ChainFormInput 
     return true;
 }
 
-static const AnalysisChordReading NO_READING = {NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
+static const AnalysisChordReading NO_READING = {NULL, NULL, NULL, NULL, -1, 0.0, {false, {0, 1}}};
 
 /* A Segmentation that views the chain's segments: the exact windows from the library's sonorities and the members' notes
    as ImportedScore indices. The library's segments, ids and sonorities are borrowed; the voice segments carry no
@@ -65,10 +65,8 @@ static bool segmentation_view(const ChainCollect *pass, const ChainSegments *sou
         const AdaptiveSonority *item = &source->sonorities.items[s];
         const TimeSpan *window = sonority_time_window(item->sonority);
         Segment *segment = &out->segments[s];
-        segment->start_numerator = (long)window->start.value.num;
-        segment->start_denominator = (unsigned long)window->start.value.den;
-        segment->end_numerator = (long)window->end.value.num;
-        segment->end_denominator = (unsigned long)window->end.value.den;
+        segment->start = window->start.value;
+        segment->end = window->end.value;
         size_t count = sonority_event_id_count(item->sonority);
         segment->member_count = count;
         segment->note_indices = malloc(sizeof(size_t) * (count > 0 ? count : 1));
@@ -165,10 +163,8 @@ static bool build_entries(ChainCollect *chain) {
         const Segment *segment = &segmentation->segments[i];
         ChordEstimate *chord = &chain->chords[i];
         ChainEntry *entry = &report->entries[i];
-        entry->time_numerator = segment->start_numerator;
-        entry->time_denominator = segment->start_denominator;
-        entry->end_numerator = segment->end_numerator;
-        entry->end_denominator = segment->end_denominator;
+        entry->time = segment->start;
+        entry->end = segment->end;
         entry->key_label = strdup(chord->in_region ? report->key_regions[chord->region].label : "no match");
         entry->chord_label = strdup(chord->found ? chord->best.label : "no match");
         entry->chord_confidence = chord->best.confidence;
@@ -290,7 +286,7 @@ static bool collect_pass(ChainCollect *pass) {
 /* An empty result: no entries, a home duration of 1. */
 static void result_reset(ChainResult *result) {
     memset(result, 0, sizeof(*result));
-    result->home_duration_denominator = 1;
+    result->home_duration.den = 1;
 }
 
 static bool collect_chain(AnalysisChain *chain, ChainCollect *collect) {
@@ -385,7 +381,7 @@ void chain_collect_destroy_input(AnalysisChain *chain) {
 }
 
 const ChainResult *analysis_chain_result(const AnalysisChain *chain) {
-    static const ChainResult EMPTY = {.home_duration_denominator = 1};
+    static const ChainResult EMPTY = {.home_duration.den = 1};
     return chain != NULL ? &chain->result : &EMPTY;
 }
 

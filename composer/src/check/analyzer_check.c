@@ -150,10 +150,8 @@ static size_t bar_of(Rational at, const PlanMeter *meter) {
 
 /* The bar (0-based from the section's start) the chord of a report entry starts in; SIZE_MAX before the section. */
 static size_t entry_bar(const ChainEntry *entry, Rational origin, const PlanMeter *meter) {
-    Rational at;
     Rational from_origin;
-    if (rational_make(entry->time_numerator, entry->time_denominator, &at) != RATIONAL_OK ||
-        rational_sub(at, origin, &from_origin) != RATIONAL_OK || rational_is_negative(from_origin)) {
+    if (rational_sub(entry->time, origin, &from_origin) != RATIONAL_OK || rational_is_negative(from_origin)) {
         return (size_t)-1;
     }
     return bar_of(from_origin, meter);
@@ -359,9 +357,7 @@ static Rational cadence_end(const ChainResult *report, const AnalysisCadence *ca
     Rational out = fragment_end;
     if (cadence->arrival_last + 1 < report->entry_count) {
         const ChainEntry *next = &report->entries[cadence->arrival_last + 1];
-        if (rational_make(next->time_numerator, next->time_denominator, &out) != RATIONAL_OK) {
-            out = fragment_end;
-        }
+        out = next->time;
     }
     return out;
 }
@@ -380,11 +376,10 @@ static bool cadence_at(const ChainResult *report, const AnalysisCadence *cadence
         return false;
     }
     const ChainEntry *arrival = &report->entries[cadence->arrival_first];
-    Rational start;
+    Rational start = arrival->time;
     Rational last_bar;
     Rational bar = {meter->beats_per_bar, (unsigned long)meter->beat_unit};
-    if (rational_make(arrival->time_numerator, arrival->time_denominator, &start) != RATIONAL_OK ||
-        rational_sub(section_end, bar, &last_bar) != RATIONAL_OK) {
+    if (rational_sub(section_end, bar, &last_bar) != RATIONAL_OK) {
         return false;
     }
     return rational_cmp(start, last_bar) >= 0 && rational_cmp(start, section_end) <= 0;
@@ -435,11 +430,8 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
             bool resolved = false;
             for (size_t c = 0; c < report->cadence_count && !resolved; c++) {
                 const AnalysisCadence *cadence = &report->cadences[c];
-                Rational arrival;
                 resolved = cadence->arrival_first < report->entry_count &&
-                           rational_make(report->entries[cadence->arrival_first].time_numerator,
-                                          report->entries[cadence->arrival_first].time_denominator, &arrival) == RATIONAL_OK &&
-                           within_a_beat(arrival, end, meter);
+                           within_a_beat(report->entries[cadence->arrival_first].time, end, meter);
             }
             if (last || resolved) {
                 heard = last ? "none (the piece ends)" : "resolved into the next section";

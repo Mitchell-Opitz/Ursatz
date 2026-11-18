@@ -99,8 +99,8 @@ static void check_claim(const Analysis *analysis) {
 
     const cJSON *declared = test_json_member(claim, "declared");
     assert(reading_is(declared, check->effective.beats, check->effective.beat_type,
-                      (double)check->effective.scale_numerator / (double)check->effective.scale_denominator,
-                      (double)check->effective.pickup_numerator / (double)check->effective.pickup_denominator));
+                      (double)check->effective.scale.num / (double)check->effective.scale.den,
+                      (double)check->effective.pickup.num / (double)check->effective.pickup.den));
     assert(fabs(number(declared, "score") - check->effective.score) < 1e-9);
     assert(check->effective.score >= 0.0 && check->effective.score <= 1.0);
 

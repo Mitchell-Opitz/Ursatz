@@ -38,10 +38,8 @@ static bool copy_region(const CommonPracticeKeyRegion *source, AnalysisKeyRegion
     out->tonic_pitch_class = tonic;
     out->material = material;
     out->prefer_flats = chain_tonic_prefers_flats(tonic, material);
-    out->start_numerator = (long)start.value.num;
-    out->start_denominator = (unsigned long)start.value.den;
-    out->end_numerator = (long)end.value.num;
-    out->end_denominator = (unsigned long)end.value.den;
+    out->start = start.value;
+    out->end = end.value;
     out->first_measure = source->first_measure;
     out->last_measure = source->last_measure;
     out->uncertainty = source->uncertainty;
@@ -58,7 +56,7 @@ static void copy_change(const CommonPracticeKeyChange *source, AnalysisKeyChange
     out->is_return = source->is_return;
     out->has_pivot = source->has_pivot;
     out->pivot_entry = source->has_pivot ? source->pivot_segment : 0;
-    out->pivot = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
+    out->pivot = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, {0, 1}}};
 }
 
 bool key_regions_collect(const CommonPracticeKeyRegions *found, ChainResult *report) {
@@ -85,7 +83,6 @@ bool key_regions_collect(const CommonPracticeKeyRegions *found, ChainResult *rep
     if (!common_practice_home_key_region(found->regions, found->region_count, &report->home_region, &duration)) {
         return false;
     }
-    report->home_duration_numerator = (long)duration.num;
-    report->home_duration_denominator = (unsigned long)duration.den;
+    report->home_duration = duration;
     return true;
 }

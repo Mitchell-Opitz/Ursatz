@@ -30,8 +30,8 @@ static void evidence_destroy(Evidence *evidence) {
 }
 
 static bool entry_time(const ChainEntry *entry, Rational *time) {
-    return entry->time_denominator <= (unsigned long)LLONG_MAX &&
-           rational_make((long long)entry->time_numerator, (long long)entry->time_denominator, time) == RATIONAL_OK;
+    return entry->time.den <= (unsigned long)LLONG_MAX &&
+           rational_make((long long)entry->time.num, (long long)entry->time.den, time) == RATIONAL_OK;
 }
 
 static bool evidence_collect(const ImportedScore *notes, const ChainEntry *entries, size_t entry_count,
@@ -69,10 +69,8 @@ static AnalysisMeterReading reading_of(const StandardMeterReading *reading) {
     memset(&out, 0, sizeof(out));
     out.beats = (int)reading->beats;
     out.beat_type = (int)reading->beat_type;
-    out.scale_numerator = (long)reading->scale.num;
-    out.scale_denominator = (unsigned long)reading->scale.den;
-    out.pickup_numerator = (long)reading->pickup.num;
-    out.pickup_denominator = (unsigned long)reading->pickup.den;
+    out.scale = reading->scale;
+    out.pickup = reading->pickup;
     out.score = reading->score;
     return out;
 }

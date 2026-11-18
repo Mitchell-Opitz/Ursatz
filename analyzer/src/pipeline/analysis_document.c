@@ -152,10 +152,10 @@ static cJSON *note_ids_json(const size_t *ids, size_t id_count) {
 }
 
 static cJSON *uncertainty_json(AnalysisConfidence confidence) {
-    if (!confidence.present || confidence.denominator == 0) {
+    if (!confidence.present || confidence.value.den <= 0) {
         return cJSON_CreateNull();
     }
-    return cJSON_CreateNumber((double)confidence.numerator / (double)confidence.denominator);
+    return cJSON_CreateNumber(rational_to_double(confidence.value));
 }
 
 /* Measure and beat of one time on the piece's measure grid:
@@ -356,7 +356,7 @@ static cJSON *meter_json(DocBuild *build, const ImportedScore *notes) {
                                : inferred  ? DEFAULT_METER_SOURCE
                                : (notated ? NOTATED_TIME_SIGNATURE_SOURCE : TIME_SIGNATURE_SOURCE);
     const char *source_name = overridden ? "override" : (inferred ? "inferred" : (notated ? "notated" : "file"));
-    cJSON *meter = claim_json(build, claim_source, notes, NULL, notes->count, label, (AnalysisConfidence){false, 0, 0});
+    cJSON *meter = claim_json(build, claim_source, notes, NULL, notes->count, label, (AnalysisConfidence){false, {0, 1}});
     if (!(meter && json_add(meter, "source", cJSON_CreateString(source_name)) &&
           json_add(meter, "time_signature", time_signature_json(time_signature)) &&
           json_add(meter, "measure_count", cJSON_CreateNumber((double)measure_count)) &&
@@ -510,11 +510,11 @@ static cJSON *metadata_json(DocBuild *build, const char *input_path, const Impor
 }
 
 static Rational region_start(DocBuild *build, const AnalysisKeyRegion *region) {
-    return doc_rational(build, region->start_numerator, region->start_denominator);
+    return doc_rational(build, region->start.num, region->start.den);
 }
 
 static Rational region_end(DocBuild *build, const AnalysisKeyRegion *region) {
-    return doc_rational(build, region->end_numerator, region->end_denominator);
+    return doc_rational(build, region->end.num, region->end.den);
 }
 
 /* The imported notes that start in [start, end), as indices; *count may be 0, and the result is then still a
@@ -600,7 +600,7 @@ static cJSON *home_key_json(DocBuild *build, const ChainResult *report) {
           json_add(object, "label", cJSON_CreateString(home->label)) &&
           json_add(object, "region_indices", home_region_indices_json(report)) &&
           json_add(object, "duration",
-                   rational_json(doc_rational(build, report->home_duration_numerator, report->home_duration_denominator))))) {
+                   rational_json(doc_rational(build, report->home_duration.num, report->home_duration.den))))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -780,8 +780,8 @@ static cJSON *pivot_chords_json(DocBuild *build, const ImportedScore *notes, con
         char *label = join_labels(pivot->root, " ", pivot->quality);
         cJSON *claim =
             label ? claim_json_at(build, library_framework_name(), notes, entry->note_ids, entry->note_id_count,
-                                  doc_rational(build, entry->time_numerator, entry->time_denominator),
-                                  doc_rational(build, entry->end_numerator, entry->end_denominator), label, pivot->confidence)
+                                  doc_rational(build, entry->time.num, entry->time.den),
+                                  doc_rational(build, entry->end.num, entry->end.den), label, pivot->confidence)
                   : NULL;
         free(label);
         if (!(claim && json_add(claim, "modulation_index", cJSON_CreateNumber((double)this_modulation)) &&
@@ -1064,8 +1064,8 @@ static cJSON *applied_json(DocBuild *build, const ChainResult *report, const Cha
         int semitones = standard_tonality_material_degree_semitone(local->material, roman->target_degree);
         target_tonic = semitones < 0 ? -1 : (local->tonic_pitch_class + semitones) % 12;
     }
-    Rational chord_start = doc_rational(build, entry->time_numerator, entry->time_denominator);
-    Rational chord_end = doc_rational(build, entry->end_numerator, entry->end_denominator);
+    Rational chord_start = doc_rational(build, entry->time.num, entry->time.den);
+    Rational chord_end = doc_rational(build, entry->end.num, entry->end.den);
 
     bool touching = false;
     size_t touching_index = 0;
@@ -1173,8 +1173,8 @@ static cJSON *chords_json(DocBuild *build, const ImportedScore *notes, const Cha
     const char *framework = library_framework_name();
     for (size_t i = 0; i < report->entry_count; i++) {
         const ChainEntry *entry = &report->entries[i];
-        Rational start = doc_rational(build, entry->time_numerator, entry->time_denominator);
-        Rational end = doc_rational(build, entry->end_numerator, entry->end_denominator);
+        Rational start = doc_rational(build, entry->time.num, entry->time.den);
+        Rational end = doc_rational(build, entry->end.num, entry->end.den);
         cJSON *claim = claim_json_at(build, framework, notes, entry->note_ids, entry->note_id_count, start, end,
                                      entry->chord_label, entry->chord_confidence);
         if (!(claim && json_add(claim, "key_label", cJSON_CreateString(entry->key_label)) &&
@@ -1205,10 +1205,10 @@ static cJSON *non_chord_tones_json(DocBuild *build, const ImportedScore *notes, 
     for (size_t i = 0; i < report->non_chord_tone_count; i++) {
         const AnalysisNonChordTone *tone = &report->non_chord_tones[i];
         const ChainEntry *chord = &report->entries[tone->chord_index];
-        AnalysisConfidence none = {false, 0, 0};
+        AnalysisConfidence none = {false, {0, 1}};
         cJSON *claim = claim_json_at(build, 
-            framework, notes, &tone->note_id, 1, doc_rational(build, chord->time_numerator, chord->time_denominator),
-            doc_rational(build, chord->end_numerator, chord->end_denominator), tone->type ? tone->type : "unclassified", none);
+            framework, notes, &tone->note_id, 1, doc_rational(build, chord->time.num, chord->time.den),
+            doc_rational(build, chord->end.num, chord->end.den), tone->type ? tone->type : "unclassified", none);
         if (!(claim && json_add(claim, "type", optional_string_json(tone->type)) &&
               json_add(claim, "classified", cJSON_CreateBool(tone->type != NULL)) &&
               json_add(claim, "chord_index", cJSON_CreateNumber((double)tone->chord_index)) &&
@@ -1254,11 +1254,11 @@ static size_t *entry_range_note_ids(const ChainResult *report, size_t first, siz
 }
 
 static Rational entry_start_time(DocBuild *build, const ChainEntry *entry) {
-    return doc_rational(build, entry->time_numerator, entry->time_denominator);
+    return doc_rational(build, entry->time.num, entry->time.den);
 }
 
 static Rational entry_end_time(DocBuild *build, const ChainEntry *entry) {
-    return doc_rational(build, entry->end_numerator, entry->end_denominator);
+    return doc_rational(build, entry->end.num, entry->end.den);
 }
 
 /* {"span": ...} and {"span": ..., "location": ...} for the parts of a cadence. */
@@ -1414,8 +1414,8 @@ static cJSON *prolongations_json(DocBuild *build, const ImportedScore *notes, co
 /* An idea of a phrase: the claim over its soprano notes (label the library's IdeaLabel name) with its place in the
    phrase, its measures and length, and the similarity to the phrase's first idea (null for the first idea). */
 static cJSON *idea_json(DocBuild *build, const ImportedScore *notes, const char *framework, const AnalysisIdea *idea) {
-    Rational start = doc_rational(build, idea->start_numerator, idea->start_denominator);
-    Rational end = doc_rational(build, idea->end_numerator, idea->end_denominator);
+    Rational start = doc_rational(build, idea->start.num, idea->start.den);
+    Rational end = doc_rational(build, idea->end.num, idea->end.den);
     cJSON *claim = claim_json_with(build, framework, notes, idea->note_ids, idea->note_id_count, start, end, idea->label,
                                    cJSON_CreateNumber(idea->uncertainty));
     if (!(claim && json_add(claim, "index", cJSON_CreateNumber(idea->index)) &&
@@ -1432,8 +1432,8 @@ static cJSON *idea_json(DocBuild *build, const ImportedScore *notes, const char 
    index (0 or 1), the ideas it holds (first_idea within the phrase's ideas), measures and length. */
 static cJSON *subphrase_json(DocBuild *build, const ImportedScore *notes, const char *framework, const ChainResult *report,
                              const AnalysisPhrase *phrase, const AnalysisSubphrase *subphrase) {
-    Rational start = doc_rational(build, subphrase->start_numerator, subphrase->start_denominator);
-    Rational end = doc_rational(build, subphrase->end_numerator, subphrase->end_denominator);
+    Rational start = doc_rational(build, subphrase->start.num, subphrase->start.den);
+    Rational end = doc_rational(build, subphrase->end.num, subphrase->end.den);
     cJSON *claim = claim_json_with(build, framework, notes, subphrase->note_ids, subphrase->note_id_count, start, end,
                                    "subphrase", cJSON_CreateNumber(subphrase->uncertainty));
     if (!(claim && json_add(claim, "index", cJSON_CreateNumber(subphrase->index)) &&
@@ -1508,8 +1508,8 @@ static cJSON *expansion_techniques_json(const AnalysisExpansion *expansion) {
    expansion of a phrase in no theme), the expected and actual lengths and the measures changed, its measures, and the
    techniques the library finds evidence for. An external one adds external_kind and the two judgements of its length. */
 static cJSON *expansion_json(DocBuild *build, const ImportedScore *notes, const char *framework, const AnalysisExpansion *expansion) {
-    Rational start = doc_rational(build, expansion->start_numerator, expansion->start_denominator);
-    Rational end = doc_rational(build, expansion->end_numerator, expansion->end_denominator);
+    Rational start = doc_rational(build, expansion->start.num, expansion->start.den);
+    Rational end = doc_rational(build, expansion->end.num, expansion->end.den);
     cJSON *claim = claim_json_with(build, framework, notes, expansion->note_ids, expansion->note_id_count, start, end,
                                    expansion->kind, cJSON_CreateNumber(expansion->uncertainty));
     if (!(claim && json_add(claim, "index", cJSON_CreateNumber(expansion->index)) &&
@@ -1566,8 +1566,8 @@ static cJSON *phrases_json(DocBuild *build, const ImportedScore *notes, const Ch
     const char *framework = framework_name(standard_form_framework());
     for (size_t i = 0; i < report->phrase_count; i++) {
         const AnalysisPhrase *phrase = &report->phrases[i];
-        Rational start = doc_rational(build, phrase->start_numerator, phrase->start_denominator);
-        Rational end = doc_rational(build, phrase->end_numerator, phrase->end_denominator);
+        Rational start = doc_rational(build, phrase->start.num, phrase->start.den);
+        Rational end = doc_rational(build, phrase->end.num, phrase->end.den);
         size_t id_count = 0;
         size_t *ids = phrase->entry_count > 0
                           ? entry_range_note_ids(report, phrase->first_entry,
@@ -1682,8 +1682,8 @@ static cJSON *themes_json(DocBuild *build, const ImportedScore *notes, const Cha
     const char *framework = framework_name(standard_form_framework());
     for (size_t i = 0; i < report->theme_count; i++) {
         const AnalysisTheme *theme = &report->themes[i];
-        Rational start = doc_rational(build, theme->start_numerator, theme->start_denominator);
-        Rational end = doc_rational(build, theme->end_numerator, theme->end_denominator);
+        Rational start = doc_rational(build, theme->start.num, theme->start.den);
+        Rational end = doc_rational(build, theme->end.num, theme->end.den);
         cJSON *claim = claim_json_with(build, framework, notes, theme->note_ids, theme->note_id_count, start, end,
                                        theme->form, cJSON_CreateNumber(theme->uncertainty));
         if (!(claim && json_add(claim, "index", cJSON_CreateNumber(theme->index)) &&
@@ -1836,8 +1836,8 @@ static bool add_section_fields(cJSON *claim, const ChainResult *report, const An
    "returns" of that return. */
 static cJSON *section_json(DocBuild *build, const ImportedScore *notes, const ChainResult *report, size_t index) {
     const AnalysisSection *section = &report->sections[index];
-    Rational start = doc_rational(build, section->start_numerator, section->start_denominator);
-    Rational end = doc_rational(build, section->end_numerator, section->end_denominator);
+    Rational start = doc_rational(build, section->start.num, section->start.den);
+    Rational end = doc_rational(build, section->end.num, section->end.den);
     size_t id_count = 0;
     size_t *ids = section->entry_count > 0 ? entry_range_note_ids(report, section->first_entry,
                                                                   section->first_entry + section->entry_count - 1,
@@ -1879,8 +1879,8 @@ static cJSON *return_json(DocBuild *build, const ImportedScore *notes, const Cha
                           const AnalysisThematicReturn *item) {
     const AnalysisTheme *earlier = &report->themes[item->earlier_theme];
     const AnalysisTheme *later = &report->themes[item->later_theme];
-    Rational start = doc_rational(build, later->start_numerator, later->start_denominator);
-    Rational end = doc_rational(build, later->end_numerator, later->end_denominator);
+    Rational start = doc_rational(build, later->start.num, later->start.den);
+    Rational end = doc_rational(build, later->end.num, later->end.den);
     cJSON *claim = claim_json_with(build, framework_name(standard_form_framework()), notes, later->note_ids,
                                    later->note_id_count, start, end, "thematic-return",
                                    cJSON_CreateNumber(1.0 - item->similarity));
@@ -1942,8 +1942,8 @@ static cJSON *form_json(DocBuild *build, const ImportedScore *notes, const Chain
    finds repeats by exact match. */
 static cJSON *repeat_json(DocBuild *build, const ImportedScore *notes, const AnalysisRepeat *repeat) {
     const char *kind = repeat->is_return ? "return" : "repeat";
-    Rational start = doc_rational(build, repeat->start_numerator, repeat->start_denominator);
-    Rational end = doc_rational(build, repeat->end_numerator, repeat->end_denominator);
+    Rational start = doc_rational(build, repeat->start.num, repeat->start.den);
+    Rational end = doc_rational(build, repeat->end.num, repeat->end.den);
     cJSON *claim = claim_json_with(build, framework_name(standard_form_framework()), notes, repeat->note_ids,
                                    repeat->note_id_count, start, end, kind, cJSON_CreateNumber(0.0));
     if (!(claim && json_add(claim, "kind", cJSON_CreateString(kind)) &&
@@ -2207,8 +2207,8 @@ static cJSON *outer_voice_note_json(DocBuild *build, const ImportedScore *notes,
                                     const AnalysisOuterLineEntry *line, const AnalysisOuterNote *voice) {
     const ChainEntry *entry = &report->entries[line->chord_index];
     bool present = voice->status == ANALYSIS_OUTER_PRESENT;
-    Rational start = doc_rational(build, line->time_numerator, line->time_denominator);
-    Rational end = doc_rational(build, line->end_numerator, line->end_denominator);
+    Rational start = doc_rational(build, line->time.num, line->time.den);
+    Rational end = doc_rational(build, line->end.num, line->end.den);
     const char *label = voice->degree ? voice->degree
                                        : (present ? voice->pitch_name : outer_status_name(voice->status));
     cJSON *claim = claim_json_with(build, library_framework_name(), notes, present ? &voice->note_id : NULL,
@@ -2524,8 +2524,8 @@ static cJSON *numbers_json(const long *values, size_t count) {
    Both are placed by span against the report's phrases and ideas. */
 static cJSON *motive_occurrence_json(DocBuild *build, const ImportedScore *notes, const ChainResult *report, const char *framework,
                                      const AnalysisMotiveOccurrence *occurrence) {
-    Rational start = doc_rational(build, occurrence->start_numerator, occurrence->start_denominator);
-    Rational end = doc_rational(build, occurrence->end_numerator, occurrence->end_denominator);
+    Rational start = doc_rational(build, occurrence->start.num, occurrence->start.den);
+    Rational end = doc_rational(build, occurrence->end.num, occurrence->end.den);
     cJSON *claim = claim_json_with(build, framework, notes, occurrence->note_ids, occurrence->note_id_count, start, end,
                                    occurrence->kind, cJSON_CreateNumber(occurrence->uncertainty));
     if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)occurrence->index)) &&
@@ -2564,10 +2564,10 @@ static cJSON *motive_features_json(const AnalysisMotiveFeatures *features) {
         cJSON *entry = cJSON_CreateObject();
         ok = entry && json_add(entry, "note_id", cJSON_CreateNumber((double)note->note_id)) &&
              json_add(entry, "pitch", cJSON_CreateNumber(note->pitch)) &&
-             json_add(entry, "onset", fraction_string_json(note->onset_numerator, note->onset_denominator)) &&
-             json_add(entry, "duration", fraction_string_json(note->duration_numerator, note->duration_denominator));
+             json_add(entry, "onset", fraction_string_json(note->onset.num, note->onset.den)) &&
+             json_add(entry, "duration", fraction_string_json(note->duration.num, note->duration.den));
         ok = ok ? json_append(notes, entry) : (cJSON_Delete(entry), false);
-        ok = ok && json_append(rhythm, fraction_string_json(note->duration_numerator, note->duration_denominator));
+        ok = ok && json_append(rhythm, fraction_string_json(note->duration.num, note->duration.den));
         if (ok && k > 0) {
             ok = json_append(intervals, cJSON_CreateNumber(features->intervals[k - 1]));
         }
@@ -2577,9 +2577,9 @@ static cJSON *motive_features_json(const AnalysisMotiveFeatures *features) {
     ok = ok && add_owned(object, "notes", &notes) &&
          json_add(object, "tonic_pc", cJSON_CreateNumber(features->tonic_pc)) &&
          json_add(object, "material", cJSON_CreateString(features->material->id)) &&
-         json_add(object, "bar", fraction_string_json(features->bar_numerator, features->bar_denominator)) &&
-         json_add(object, "beat", fraction_string_json(features->beat_numerator, features->beat_denominator)) &&
-         json_add(object, "pickup", fraction_string_json(features->pickup_numerator, features->pickup_denominator)) &&
+         json_add(object, "bar", fraction_string_json(features->bar.num, features->bar.den)) &&
+         json_add(object, "beat", fraction_string_json(features->beat.num, features->beat.den)) &&
+         json_add(object, "pickup", fraction_string_json(features->pickup.num, features->pickup.den)) &&
          json_add(object, "degrees", strings_json(features->degrees, features->note_count)) &&
          add_owned(object, "intervals", &intervals) && json_add(object, "steps", numbers_json(features->steps, gaps)) &&
          add_owned(object, "rhythm", &rhythm) &&
@@ -2645,8 +2645,8 @@ static cJSON *motives_json(DocBuild *build, const ImportedScore *notes, const Ch
                 uncertainty = motive->occurrences[o].uncertainty;
             }
         }
-        Rational start = doc_rational(build, prototype->start_numerator, prototype->start_denominator);
-        Rational end = doc_rational(build, prototype->end_numerator, prototype->end_denominator);
+        Rational start = doc_rational(build, prototype->start.num, prototype->start.den);
+        Rational end = doc_rational(build, prototype->end.num, prototype->end.den);
         cJSON *claim = claim_json_with(build, framework, notes, prototype->note_ids, prototype->note_id_count, start, end,
                                        "motive", cJSON_CreateNumber(uncertainty));
         cJSON *occurrences = cJSON_CreateArray();
@@ -2942,8 +2942,8 @@ static cJSON *melody_json(DocBuild *build, const ImportedScore *notes, const Cha
     }
     for (size_t i = 0; i < report->melody_count; i++) {
         const AnalysisMelody *melody = &report->melodies[i];
-        Rational start = doc_rational(build, melody->start_numerator, melody->start_denominator);
-        Rational end = doc_rational(build, melody->end_numerator, melody->end_denominator);
+        Rational start = doc_rational(build, melody->start.num, melody->start.den);
+        Rational end = doc_rational(build, melody->end.num, melody->end.den);
         cJSON *claim = claim_json_with(build, melody->framework, notes, melody->note_ids, melody->note_id_count, start, end,
                                        "melody", cJSON_CreateNumber(melody->uncertainty));
         if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)melody->phrase)) &&
@@ -2990,7 +2990,7 @@ static cJSON *density_durations_json(DocBuild *build, const AnalysisDensity *den
         cJSON *bin = cJSON_CreateObject();
         if (!(bin &&
               json_add(bin, "duration",
-                       rational_json(doc_rational(build, density->bins[b].numerator, density->bins[b].denominator))) &&
+                       rational_json(doc_rational(build, (long)density->bins[b].value.num, (unsigned long)density->bins[b].value.den))) &&
               json_add(bin, "count", cJSON_CreateNumber((double)density->bins[b].count)) && json_append(list, bin))) {
             cJSON_Delete(bin);
             cJSON_Delete(list);
@@ -3013,8 +3013,8 @@ static cJSON *density_per_beat_json(const AnalysisDensity *density) {
 /* A density claim: the library's profile of a phrase's notes (all of them, or one line's), over the phrase's span. */
 static cJSON *density_json(DocBuild *build, const ImportedScore *notes, const ChainResult *report, const AnalysisDensity *density) {
     const AnalysisPhrase *phrase = &report->phrases[density->phrase];
-    Rational start = doc_rational(build, phrase->start_numerator, phrase->start_denominator);
-    Rational end = doc_rational(build, phrase->end_numerator, phrase->end_denominator);
+    Rational start = doc_rational(build, phrase->start.num, phrase->start.den);
+    Rational end = doc_rational(build, phrase->end.num, phrase->end.den);
     cJSON *claim = claim_json_with(build, density->framework, notes, density->note_ids, density->note_id_count, start, end,
                                    "density", cJSON_CreateNumber(density->uncertainty));
     if (!(claim && json_add(claim, "phrase", cJSON_CreateNumber((double)density->phrase)) &&
@@ -3134,8 +3134,8 @@ static cJSON *hyperdownbeats_json(const AnalysisHypermeter *hypermeter) {
 static cJSON *hypermeter_json(DocBuild *build, const ImportedScore *notes, const ChainResult *report,
                               const AnalysisHypermeter *hypermeter) {
     const AnalysisPhrase *phrase = &report->phrases[hypermeter->phrase];
-    Rational start = doc_rational(build, phrase->start_numerator, phrase->start_denominator);
-    Rational end = doc_rational(build, phrase->end_numerator, phrase->end_denominator);
+    Rational start = doc_rational(build, phrase->start.num, phrase->start.den);
+    Rational end = doc_rational(build, phrase->end.num, phrase->end.den);
     cJSON *claim = claim_json_with(build, hypermeter->framework, notes, hypermeter->note_ids, hypermeter->note_id_count,
                                    start, end, "hypermeter", cJSON_CreateNumber(1.0 - hypermeter->score));
     if (!(claim && json_add(claim, "phrase", cJSON_CreateNumber((double)hypermeter->phrase)) &&
@@ -3196,9 +3196,9 @@ static cJSON *meter_reading_json(DocBuild *build, const AnalysisMeterReading *re
         meter = NULL;
     }
     ok = ok &&
-         json_add(object, "scale", rational_json(doc_rational(build, reading->scale_numerator, reading->scale_denominator))) &&
+         json_add(object, "scale", rational_json(doc_rational(build, reading->scale.num, reading->scale.den))) &&
          json_add(object, "pickup",
-                  rational_json(doc_rational(build, reading->pickup_numerator, reading->pickup_denominator))) &&
+                  rational_json(doc_rational(build, reading->pickup.num, reading->pickup.den))) &&
          json_add(object, "score", cJSON_CreateNumber(reading->score));
     if (!ok) {
         cJSON_Delete(meter);
@@ -3301,11 +3301,11 @@ static cJSON *texture_confidence_json(const AnalysisTexturePassage *passage) {
 }
 
 static Rational texture_passage_start(DocBuild *build, const AnalysisTexturePassage *passage) {
-    return doc_rational(build, passage->start_numerator, passage->start_denominator);
+    return doc_rational(build, passage->start.num, passage->start.den);
 }
 
 static Rational texture_passage_end(DocBuild *build, const AnalysisTexturePassage *passage) {
-    return doc_rational(build, passage->end_numerator, passage->end_denominator);
+    return doc_rational(build, passage->end.num, passage->end.den);
 }
 
 /* A texture passage claim: a run of measures with the same texture, as the library classifies it. */
@@ -3374,9 +3374,9 @@ static cJSON *metronome_json(DocBuild *build, const AnalysisTempoMarking *markin
     if (object &&
         !(json_add(
               object, "beat_unit",
-              rational_json(doc_rational(build, (long long)marking->beat_unit_numerator, marking->beat_unit_denominator))) &&
+              rational_json(doc_rational(build, (long long)marking->beat_unit.num, marking->beat_unit.den))) &&
           json_add(object, "per_minute",
-                   rational_json(doc_rational(build, (long long)marking->bpm_numerator, marking->bpm_denominator))))) {
+                   rational_json(doc_rational(build, (long long)marking->bpm.num, marking->bpm.den))))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -3385,8 +3385,8 @@ static cJSON *metronome_json(DocBuild *build, const AnalysisTempoMarking *markin
 
 static cJSON *tempo_marking_json(DocBuild *build, const ImportedScore *notes, const AnalysisTempoMarking *marking) {
     cJSON *claim = claim_json_with(build, marking->framework, notes, NULL, 0,
-                                   doc_rational(build, marking->start_numerator, marking->start_denominator),
-                                   doc_rational(build, marking->end_numerator, marking->end_denominator), "tempo",
+                                   doc_rational(build, marking->start.num, marking->start.den),
+                                   doc_rational(build, marking->end.num, marking->end.den), "tempo",
                                    cJSON_CreateNumber(marking->uncertainty));
     if (!(claim && json_add(claim, "text", optional_string_json(marking->text)) &&
           json_add(claim, "metronome", metronome_json(build, marking)) &&
@@ -3402,8 +3402,8 @@ static cJSON *tempo_marking_json(DocBuild *build, const ImportedScore *notes, co
 
 static cJSON *dynamic_json(DocBuild *build, const ImportedScore *notes, const AnalysisDynamic *dynamic) {
     cJSON *claim = claim_json_with(build, dynamic->framework, notes, NULL, 0,
-                                   doc_rational(build, dynamic->start_numerator, dynamic->start_denominator),
-                                   doc_rational(build, dynamic->end_numerator, dynamic->end_denominator), "dynamic",
+                                   doc_rational(build, dynamic->start.num, dynamic->start.den),
+                                   doc_rational(build, dynamic->end.num, dynamic->end.den), "dynamic",
                                    cJSON_CreateNumber(dynamic->uncertainty));
     if (!(claim && json_add(claim, "marking", cJSON_CreateString(dynamic->marking)) &&
           json_add(claim, "part", cJSON_CreateNumber((double)dynamic->part)) &&
@@ -3487,8 +3487,8 @@ static cJSON *motion_pairs_json(const AnalysisVoiceLeading *voice_leading) {
 static void voice_leading_span(DocBuild *build, const ChainResult *report, Rational *start, Rational *end) {
     const ChainEntry *first = &report->entries[0];
     const ChainEntry *last = &report->entries[report->entry_count - 1];
-    *start = doc_rational(build, first->time_numerator, first->time_denominator);
-    *end = doc_rational(build, last->end_numerator, last->end_denominator);
+    *start = doc_rational(build, first->time.num, first->time.den);
+    *end = doc_rational(build, last->end.num, last->end.den);
 }
 
 /* The motion claim: how the voices move against each other between consecutive chord segments, in total and per pair of
@@ -3516,8 +3516,8 @@ static void voice_leading_entries_span(DocBuild *build, const ChainResult *repor
                                        Rational *end) {
     const ChainEntry *first = &report->entries[from];
     const ChainEntry *last = &report->entries[to];
-    *start = doc_rational(build, first->time_numerator, first->time_denominator);
-    *end = doc_rational(build, last->end_numerator, last->end_denominator);
+    *start = doc_rational(build, first->time.num, first->time.den);
+    *end = doc_rational(build, last->end.num, last->end.den);
 }
 
 /* A fault of the voices' leading, as the claim for the move between two consecutive chords. */

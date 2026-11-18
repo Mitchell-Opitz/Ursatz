@@ -326,7 +326,7 @@ static void test_tonicization(const char *path) {
     size_t first_in_g = report->entry_count;
     for (size_t i = 0; i < report->entry_count; i++) {
         const ChainEntry *entry = &report->entries[i];
-        if (entry->time_numerator == 8 && entry->time_denominator == 1) {
+        if (entry->time.num == 8 && entry->time.den == 1) {
             first_in_g = i;
             break;
         }

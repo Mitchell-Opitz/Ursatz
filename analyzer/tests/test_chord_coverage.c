@@ -78,8 +78,8 @@ static double coverage(const ImportedScore *notes, const ChainResult *report, si
         if (matched) {
             (*matched_chords)++;
         }
-        double start = as_double(entry->time_numerator, entry->time_denominator);
-        double end = as_double(entry->end_numerator, entry->end_denominator);
+        double start = as_double(entry->time.num, entry->time.den);
+        double end = as_double(entry->end.num, entry->end.den);
         for (size_t n = 0; n < entry->note_id_count; n++) {
             double sounding = sounding_inside(notes->events[entry->note_ids[n]], start, end);
             total += sounding;

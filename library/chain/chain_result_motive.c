@@ -28,7 +28,7 @@ static const AnalysisKeyRegion *region_at(const ChainResult *report, long long n
     for (size_t r = 0; r < report->key_region_count; r++) {
         const AnalysisKeyRegion *region = &report->key_regions[r];
         if (rational_cmp(rational_ratio(n, d),
-                         rational_ratio(region->end_numerator, (long long)region->end_denominator)) < 0) {
+                         region->end) < 0) {
             return region;
         }
     }
@@ -64,10 +64,10 @@ static void link_occurrence(const ChainResult *report, MusicalTime first_start, 
     long long last_d = last_start.value.den;
     for (size_t p = 0; p < report->phrase_count; p++) {
         const AnalysisPhrase *phrase = &report->phrases[p];
-        long long end_d = (long long)phrase->end_denominator;
-        long long start_d = (long long)phrase->start_denominator;
-        if (rational_cmp(rational_ratio(first_n, first_d), rational_ratio(phrase->start_numerator, start_d)) < 0 ||
-            rational_cmp(rational_ratio(last_n, last_d), rational_ratio(phrase->end_numerator, end_d)) >= 0) {
+        long long end_d = (long long)phrase->end.den;
+        long long start_d = (long long)phrase->start.den;
+        if (rational_cmp(rational_ratio(first_n, first_d), rational_ratio(phrase->start.num, start_d)) < 0 ||
+            rational_cmp(rational_ratio(last_n, last_d), rational_ratio(phrase->end.num, end_d)) >= 0) {
             continue;
         }
         occurrence->has_phrase = true;
@@ -75,9 +75,9 @@ static void link_occurrence(const ChainResult *report, MusicalTime first_start, 
         for (size_t k = 0; k < phrase->idea_count; k++) {
             const AnalysisIdea *idea = &report->ideas[phrase->first_idea + k];
             if (rational_cmp(rational_ratio(first_n, first_d),
-                             rational_ratio(idea->start_numerator, (long long)idea->start_denominator)) >= 0 &&
+                             idea->start) >= 0 &&
                 rational_cmp(rational_ratio(last_n, last_d),
-                             rational_ratio(idea->end_numerator, (long long)idea->end_denominator)) < 0) {
+                             idea->end) < 0) {
                 occurrence->has_idea = true;
                 occurrence->idea = phrase->first_idea + k;
                 break;
@@ -102,10 +102,8 @@ static bool collect_occurrence(const MotiveStage *stage, const ChainResult *repo
     const MusicalTime last_start = form->built.input.notes[last].span.start;
     const MusicalTime end = form->built.input.notes[last].span.end;
     occurrence->index = index;
-    occurrence->start_numerator = (long)start.value.num;
-    occurrence->start_denominator = (unsigned long)start.value.den;
-    occurrence->end_numerator = (long)end.value.num;
-    occurrence->end_denominator = (unsigned long)end.value.den;
+    occurrence->start = start.value;
+    occurrence->end = end.value;
     occurrence->first_measure = claim->first_measure;
     occurrence->first_beat = claim->first_beat;
     link_occurrence(report, start, last_start, occurrence);
@@ -145,8 +143,8 @@ static bool order_development(AnalysisMotive *motive) {
         while (at > 0) {
             const AnalysisMotiveOccurrence *before = &motive->occurrences[motive->development[at - 1]];
             const AnalysisMotiveOccurrence *now = &motive->occurrences[i];
-            if (rational_cmp(rational_ratio(before->start_numerator, (long long)before->start_denominator),
-                             rational_ratio(now->start_numerator, (long long)now->start_denominator)) <= 0) {
+            if (rational_cmp(before->start,
+                             now->start) <= 0) {
                 break;
             }
             motive->development[at] = motive->development[at - 1];
@@ -240,8 +238,8 @@ static bool meter_at(const MeterMap *map, Rational start, Rational *bar, Rationa
 static char *note_nct(const ChainResult *report, size_t note_id, Rational start, bool *failed) {
     for (size_t e = 0; e < report->entry_count; e++) {
         const ChainEntry *entry = &report->entries[e];
-        Rational from = msk_make((unsigned long long)entry->time_numerator, entry->time_denominator);
-        Rational to = msk_make((unsigned long long)entry->end_numerator, entry->end_denominator);
+        Rational from = msk_make((unsigned long long)entry->time.num, entry->time.den);
+        Rational to = msk_make((unsigned long long)entry->end.num, entry->end.den);
         if (msk_cmp(start, from) < 0 || msk_cmp(start, to) >= 0) {
             continue;
         }
@@ -306,10 +304,8 @@ static bool collect_features(const MotiveStage *stage, const ImportedScore *note
         AnalysisMotiveNote *note = &features->notes[k];
         note->note_id = prototype->note_ids[k];
         note->pitch = pitch;
-        note->onset_numerator = onset.num;
-        note->onset_denominator = onset.den;
-        note->duration_numerator = duration.num;
-        note->duration_denominator = duration.den;
+        note->onset = onset;
+        note->duration = duration;
         features->degrees[k] = motive_features_degree_label(pitch % 12, features->tonic_pc);
         bool failed = false;
         features->ncts[k] = note_nct(report, prototype->note_ids[k], start, &failed);
@@ -326,12 +322,9 @@ static bool collect_features(const MotiveStage *stage, const ImportedScore *note
     if (!meter_at(stage->built.input.map, first_start, &bar, &beat, &position)) {
         goto skip;
     }
-    features->bar_numerator = bar.num;
-    features->bar_denominator = bar.den;
-    features->beat_numerator = beat.num;
-    features->beat_denominator = beat.den;
-    features->pickup_numerator = position.num;
-    features->pickup_denominator = position.den;
+    features->bar = bar;
+    features->beat = beat;
+    features->pickup = position;
     MotiveSketch sketch;
     if (!motive_features_to_sketch(features, &sketch)) {
         goto skip;

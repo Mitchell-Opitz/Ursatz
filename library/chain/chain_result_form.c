@@ -73,38 +73,27 @@ static const char *signal_name(int signal) {
     }
 }
 
-/* a/b < c/d for positive denominators. */
-static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
-    return rational_cmp(rational_ratio(a, (long long)b), rational_ratio(c, (long long)d)) < 0;
-}
-
 /* The span from the start of measure `first` to the end of measure `last`. False if the meter does not place them. */
-static bool measures_span(const MeterMap *map, int first, int last, long *start_numerator,
-                          unsigned long *start_denominator, long *end_numerator, unsigned long *end_denominator) {
+static bool measures_span(const MeterMap *map, int first, int last, Rational *start, Rational *end) {
     TimeSpan from;
     TimeSpan to;
     bool ok = meter_map_measure_span(map, first, &from) == METER_MAP_OK &&
               meter_map_measure_span(map, last, &to) == METER_MAP_OK;
     if (ok) {
-        *start_numerator = (long)from.start.value.num;
-        *start_denominator = (unsigned long)from.start.value.den;
-        *end_numerator = (long)to.end.value.num;
-        *end_denominator = (unsigned long)to.end.value.den;
+        *start = from.start.value;
+        *end = to.end.value;
     }
     return ok;
 }
 
 /* Clips [start, end) to the phrase's span: an idea ends with its last measure, a phrase with its cadence's arrival chord
    (snapped to the beat), and the pickup lies before the first barline. */
-static void clip_to_phrase(const AnalysisPhrase *phrase, long *start_numerator, unsigned long *start_denominator,
-                           long *end_numerator, unsigned long *end_denominator) {
-    if (rational_less(*start_numerator, *start_denominator, phrase->start_numerator, phrase->start_denominator)) {
-        *start_numerator = phrase->start_numerator;
-        *start_denominator = phrase->start_denominator;
+static void clip_to_phrase(const AnalysisPhrase *phrase, Rational *start, Rational *end) {
+    if (rational_cmp(*start, phrase->start) < 0) {
+        *start = phrase->start;
     }
-    if (rational_less(phrase->end_numerator, phrase->end_denominator, *end_numerator, *end_denominator)) {
-        *end_numerator = phrase->end_numerator;
-        *end_denominator = phrase->end_denominator;
+    if (rational_cmp(phrase->end, *end) < 0) {
+        *end = phrase->end;
     }
 }
 
@@ -150,8 +139,7 @@ static bool collect_ideas(const FormStage *stage, ChainResult *report) {
             return false;
         }
         if (!idea->label || !measures_span(stage->built.input.map, claim->first_measure, claim->last_measure,
-                                           &idea->start_numerator, &idea->start_denominator, &idea->end_numerator,
-                                           &idea->end_denominator)) {
+                                           &idea->start, &idea->end)) {
             return false;
         }
         idea->note_ids = note_ids_of(stage, claim->note_first, claim->note_end, &idea->note_id_count);
@@ -159,8 +147,7 @@ static bool collect_ideas(const FormStage *stage, ChainResult *report) {
             return false;
         }
         AnalysisPhrase *phrase = &report->phrases[idea->phrase];
-        clip_to_phrase(phrase, &idea->start_numerator, &idea->start_denominator, &idea->end_numerator,
-                       &idea->end_denominator);
+        clip_to_phrase(phrase, &idea->start, &idea->end);
         if (phrase->idea_count == 0) {
             phrase->first_idea = i;
         }
@@ -192,16 +179,14 @@ static bool collect_subphrases(const FormStage *stage, ChainResult *report) {
         subphrase->uncertainty = found->uncertainty;
         AnalysisPhrase *phrase = &report->phrases[subphrase->phrase];
         subphrase->first_idea = phrase->first_idea + (size_t)claim->first_idea;
-        if (!measures_span(stage->built.input.map, claim->first_measure, claim->last_measure, &subphrase->start_numerator,
-                           &subphrase->start_denominator, &subphrase->end_numerator, &subphrase->end_denominator)) {
+        if (!measures_span(stage->built.input.map, claim->first_measure, claim->last_measure, &subphrase->start, &subphrase->end)) {
             return false;
         }
         subphrase->note_ids = note_ids_of(stage, claim->note_first, claim->note_end, &subphrase->note_id_count);
         if (claim->note_end > claim->note_first && !subphrase->note_ids) {
             return false;
         }
-        clip_to_phrase(phrase, &subphrase->start_numerator, &subphrase->start_denominator, &subphrase->end_numerator,
-                       &subphrase->end_denominator);
+        clip_to_phrase(phrase, &subphrase->start, &subphrase->end);
         if (phrase->subphrase_count == 0) {
             phrase->first_subphrase = i;
         }
@@ -212,19 +197,15 @@ static bool collect_subphrases(const FormStage *stage, ChainResult *report) {
 
 /* The ImportedScore indices of the input's soprano notes that start in [start, end), owned. NULL with *count 0 when
    none. */
-static size_t *note_ids_between(const FormStage *stage, long start_numerator, unsigned long start_denominator,
-                                long end_numerator, unsigned long end_denominator, size_t *count) {
+static size_t *note_ids_between(const FormStage *stage, Rational start, Rational end, size_t *count) {
     *count = 0;
     size_t *ids = malloc(sizeof(size_t) * (stage->note_index_count > 0 ? stage->note_index_count : 1));
     if (!ids) {
         return NULL;
     }
     for (size_t n = 0; n < stage->note_index_count && n < stage->built.input.note_count; n++) {
-        const MusicalTime start = stage->built.input.notes[n].span.start;
-        long numerator = (long)start.value.num;
-        unsigned long denominator = (unsigned long)start.value.den;
-        if (!rational_less(numerator, denominator, start_numerator, start_denominator) &&
-            rational_less(numerator, denominator, end_numerator, end_denominator)) {
+        Rational at = stage->built.input.notes[n].span.start.value;
+        if (rational_cmp(at, start) >= 0 && rational_cmp(at, end) < 0) {
             ids[(*count)++] = stage->note_indices[n];
         }
     }
@@ -309,24 +290,18 @@ static bool collect_themes(const FormStage *stage, ChainResult *report) {
         fill_part(&theme->parts[1], theme->ending, claim->second_part_first_measure, claim->second_part_last_measure,
                   claim->second_part_length, second_phrase);
         if (!theme->form || !measures_span(stage->built.input.map, claim->first_measure, claim->last_measure,
-                                           &theme->start_numerator, &theme->start_denominator, &theme->end_numerator,
-                                           &theme->end_denominator)) {
+                                           &theme->start, &theme->end)) {
             return false;
         }
         /* A theme lies inside its phrases: the pickup lies before the first barline and the extension after the last
            phrase's cadence is not part of it. */
-        if (rational_less(theme->start_numerator, theme->start_denominator, first_phrase->start_numerator,
-                          first_phrase->start_denominator)) {
-            theme->start_numerator = first_phrase->start_numerator;
-            theme->start_denominator = first_phrase->start_denominator;
+        if (rational_cmp(theme->start, first_phrase->start) < 0) {
+            theme->start = first_phrase->start;
         }
-        if (rational_less(second_phrase->end_numerator, second_phrase->end_denominator, theme->end_numerator,
-                          theme->end_denominator)) {
-            theme->end_numerator = second_phrase->end_numerator;
-            theme->end_denominator = second_phrase->end_denominator;
+        if (rational_cmp(second_phrase->end, theme->end) < 0) {
+            theme->end = second_phrase->end;
         }
-        theme->note_ids = note_ids_between(stage, theme->start_numerator, theme->start_denominator,
-                                           theme->end_numerator, theme->end_denominator, &theme->note_id_count);
+        theme->note_ids = note_ids_between(stage, theme->start, theme->end, &theme->note_id_count);
     }
     for (size_t i = 0; i < count; i++) {
         if (stage->themes.items[i].claim.form == PHRASE_LEVEL_FORM_COMPOUND_PERIOD) {
@@ -386,14 +361,11 @@ static bool collect_expansions(const FormStage *stage, ChainResult *report) {
             expansion->suffix_agrees_with_location = claim->suffix_agrees_with_location != 0;
         }
         if (!expansion->change || !expansion->kind ||
-            !measures_span(stage->built.input.map, claim->first_measure, claim->last_measure, &expansion->start_numerator,
-                           &expansion->start_denominator, &expansion->end_numerator, &expansion->end_denominator)) {
+            !measures_span(stage->built.input.map, claim->first_measure, claim->last_measure, &expansion->start, &expansion->end)) {
             return false;
         }
-        clip_to_phrase(&report->phrases[expansion->phrase], &expansion->start_numerator,
-                       &expansion->start_denominator, &expansion->end_numerator, &expansion->end_denominator);
-        expansion->note_ids = note_ids_between(stage, expansion->start_numerator, expansion->start_denominator,
-                                               expansion->end_numerator, expansion->end_denominator,
+        clip_to_phrase(&report->phrases[expansion->phrase], &expansion->start, &expansion->end);
+        expansion->note_ids = note_ids_between(stage, expansion->start, expansion->end,
                                                &expansion->note_id_count);
     }
     return true;
@@ -414,20 +386,16 @@ bool form_stage_collect(const FormStage *stage, ChainResult *report) {
         const StandardFormPhrase *found = &stage->phrases.items[i];
         const StandardFormPhraseClaim *claim = &found->claim;
         AnalysisPhrase *phrase = &report->phrases[i];
-        phrase->start_numerator = (long)found->span.start.value.num;
-        phrase->start_denominator = (unsigned long)found->span.start.value.den;
-        phrase->end_numerator = (long)found->span.end.value.num;
-        phrase->end_denominator = (unsigned long)found->span.end.value.den;
+        phrase->start = found->span.start.value;
+        phrase->end = found->span.end.value;
         /* The chords starting inside the span: the entries are in time order and the phrases tile. */
         while (next_entry < report->entry_count &&
-               rational_less(report->entries[next_entry].time_numerator, report->entries[next_entry].time_denominator,
-                             phrase->start_numerator, phrase->start_denominator)) {
+               rational_cmp(report->entries[next_entry].time, phrase->start) < 0) {
             next_entry++;
         }
         phrase->first_entry = next_entry;
         while (next_entry < report->entry_count &&
-               rational_less(report->entries[next_entry].time_numerator, report->entries[next_entry].time_denominator,
-                             phrase->end_numerator, phrase->end_denominator)) {
+               rational_cmp(report->entries[next_entry].time, phrase->end) < 0) {
             next_entry++;
         }
         phrase->entry_count = next_entry - phrase->first_entry;
@@ -466,12 +434,10 @@ bool form_stage_collect_repeats(const FormStage *stage, ChainResult *report) {
         repeat->later_first = found->later_first;
         repeat->later_last = found->later_last;
         repeat->transposition = found->transposition;
-        if (!measures_span(stage->built.input.map, found->later_first, found->later_last, &repeat->start_numerator,
-                           &repeat->start_denominator, &repeat->end_numerator, &repeat->end_denominator)) {
+        if (!measures_span(stage->built.input.map, found->later_first, found->later_last, &repeat->start, &repeat->end)) {
             return false;
         }
-        repeat->note_ids = note_ids_between(stage, repeat->start_numerator, repeat->start_denominator,
-                                            repeat->end_numerator, repeat->end_denominator, &repeat->note_id_count);
+        repeat->note_ids = note_ids_between(stage, repeat->start, repeat->end, &repeat->note_id_count);
     }
     return true;
 }

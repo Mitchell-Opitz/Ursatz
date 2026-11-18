@@ -111,8 +111,8 @@ static void check_structure(const Analysis *analysis) {
         unsigned counted = 0;
         for (unsigned b = 0; b < density->bin_count; b++) {
             counted += density->bins[b].count;
-            CHECK(b == 0 || density->bins[b].numerator * (long)density->bins[b - 1].denominator >
-                                density->bins[b - 1].numerator * (long)density->bins[b].denominator);
+            CHECK(b == 0 || density->bins[b].value.num * (long)density->bins[b - 1].value.den >
+                                density->bins[b - 1].value.num * (long)density->bins[b].value.den);
         }
         CHECK(density->bins_truncated || counted == density->notes);
     }

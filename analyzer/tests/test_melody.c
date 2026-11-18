@@ -91,8 +91,8 @@ static void check_melody(const ImportedScore *notes, const ChainResult *report, 
 
         /* the notes: in time order, inside the phrase's span, and the pitch range they span */
         const AnalysisPhrase *phrase = &report->phrases[entry->phrase];
-        double start = (double)phrase->start_numerator / (double)phrase->start_denominator;
-        double end = (double)phrase->end_numerator / (double)phrase->end_denominator;
+        double start = (double)phrase->start.num / (double)phrase->start.den;
+        double end = (double)phrase->end.num / (double)phrase->end.den;
         long lowest = 1000;
         long highest = -1;
         int at_top = 0;

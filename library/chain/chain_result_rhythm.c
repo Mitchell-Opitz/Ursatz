@@ -178,7 +178,7 @@ static bool build_chord_changes(RhythmBuild *build, const ChainResult *report) {
         MusicalTime time;
         char id[48];
         snprintf(id, sizeof(id), "chord-change-%zu", i);
-        if (musical_time_make(entry->time_numerator, (long long)entry->time_denominator, &time) != MUSICAL_TIME_OK ||
+        if (musical_time_make(entry->time.num, (long long)entry->time.den, &time) != MUSICAL_TIME_OK ||
             standard_meter_input_add_chord_change(&build->input, id, time) != STANDARD_METER_ANALYSIS_OK) {
             free(change);
             return false;
@@ -286,8 +286,7 @@ static bool collect_densities(const RhythmBuild *build, const ImportedScore *not
         item->bin_count = claim->bin_count;
         item->bins_truncated = claim->bins_truncated != 0;
         for (unsigned b = 0; b < claim->bin_count; b++) {
-            item->bins[b].numerator = claim->bins[b].numerator;
-            item->bins[b].denominator = claim->bins[b].denominator;
+            item->bins[b].value = rational_ratio((long long)claim->bins[b].numerator, (long long)claim->bins[b].denominator);
             item->bins[b].count = claim->bins[b].count;
         }
         item->note_ids = phrase_notes(build, notes, item->phrase, item->line, &item->note_id_count);

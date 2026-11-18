@@ -1,5 +1,6 @@
 #include <ursatz_analyzer/motive_links.h>
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,9 +53,11 @@ static bool fraction_value(const cJSON *item, unsigned long long *numerator, uns
     return true;
 }
 
-static bool fraction_member(const cJSON *object, const char *name, unsigned long long *numerator,
-                            unsigned long long *denominator) {
-    return fraction_value(json_member(object, name), numerator, denominator);
+static bool fraction_member(const cJSON *object, const char *name, Rational *out) {
+    unsigned long long numerator;
+    unsigned long long denominator;
+    return fraction_value(json_member(object, name), &numerator, &denominator) && numerator <= LLONG_MAX &&
+           denominator <= LLONG_MAX && rational_make((long long)numerator, (long long)denominator, out) == RATIONAL_OK;
 }
 
 /* The prototype's sketch from a family's "features": the document side of motive_features_to_sketch. */
@@ -76,15 +79,13 @@ static MotiveLinksResult features_sketch(const KnowledgeSnapshot *knowledge, con
         const cJSON *note = cJSON_GetArrayItem(notes, i);
         AnalysisMotiveNote *out = &read.notes[i];
         ok = int_member(note, "pitch", &out->pitch) &&
-             fraction_member(note, "onset", &out->onset_numerator, &out->onset_denominator) &&
-             fraction_member(note, "duration", &out->duration_numerator, &out->duration_denominator);
+             fraction_member(note, "onset", &out->onset) && fraction_member(note, "duration", &out->duration);
     }
     int tonic;
     ok = ok && int_member(features, "tonic_pc", &tonic) && tonic >= 0 && tonic < 12 &&
          cJSON_IsString(json_member(features, "material")) &&
-         fraction_member(features, "bar", &read.bar_numerator, &read.bar_denominator) &&
-         fraction_member(features, "beat", &read.beat_numerator, &read.beat_denominator) &&
-         fraction_member(features, "pickup", &read.pickup_numerator, &read.pickup_denominator);
+         fraction_member(features, "bar", &read.bar) && fraction_member(features, "beat", &read.beat) &&
+         fraction_member(features, "pickup", &read.pickup);
     if (ok) {
         read.tonic_pc = tonic;
         read.material = knowledge_snapshot_material(knowledge, json_member(features, "material")->valuestring);

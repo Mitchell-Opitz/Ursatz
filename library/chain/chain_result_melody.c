@@ -46,7 +46,7 @@ static const AnalysisKeyRegion *region_at(const ChainResult *report, long long n
     for (size_t r = 0; r < report->key_region_count; r++) {
         const AnalysisKeyRegion *region = &report->key_regions[r];
         if (rational_cmp(rational_ratio(n, d),
-                         rational_ratio(region->end_numerator, (long long)region->end_denominator)) < 0) {
+                         region->end) < 0) {
             return region;
         }
     }
@@ -61,11 +61,6 @@ static void name_note(const ImportedScore *notes, size_t note, long pitch, const
         return;
     }
     note_name(pitch, region ? region->prefer_flats : false, out);
-}
-
-/* a/b < c/d for positive denominators. */
-static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
-    return rational_cmp(rational_ratio(a, (long long)b), rational_ratio(c, (long long)d)) < 0;
 }
 
 /* The key region of the chain's home key: the first region in that key, or none. */
@@ -99,12 +94,10 @@ static bool build_phrase_line(const ImportedScore *notes, const ChainScoreInput 
     size_t end = line->count;
     for (size_t i = 0; i < line->count; i++) {
         const Segment *segment = &segmentation->segments[melody->line.segment[i]];
-        if (rational_less(segment->start_numerator, segment->start_denominator, phrase->start_numerator,
-                          phrase->start_denominator)) {
+        if (rational_cmp(segment->start, phrase->start) < 0) {
             continue;
         }
-        if (!rational_less(segment->start_numerator, segment->start_denominator, phrase->end_numerator,
-                           phrase->end_denominator)) {
+        if (rational_cmp(segment->start, phrase->end) >= 0) {
             end = i;
             break;
         }
@@ -141,7 +134,7 @@ static bool build_phrase_line(const ImportedScore *notes, const ChainScoreInput 
         }
         const Segment *segment = &segmentation->segments[melody->line.segment[first + k]];
         const AnalysisKeyRegion *local =
-            region_at(report, segment->start_numerator, (long long)segment->start_denominator);
+            region_at(report, segment->start.num, (long long)segment->start.den);
         built->note[k] = index;
         built->region[k] = home ? home : local;
         name_note(notes, index, pitch_numeric_value_position_numerator(note->pitch), local, built->name[k]);
@@ -285,10 +278,8 @@ static AnalyzeResult analyze_phrase(const PhraseLine *built, size_t phrase_index
 
     out->phrase = phrase_index;
     out->framework = framework_name(standard_counterpoint_framework());
-    out->start_numerator = phrase->start_numerator;
-    out->start_denominator = phrase->start_denominator;
-    out->end_numerator = phrase->end_numerator;
-    out->end_denominator = phrase->end_denominator;
+    out->start = phrase->start;
+    out->end = phrase->end;
     out->first_measure = phrase->first_measure;
     out->last_measure = phrase->last_measure;
     out->note_ids = malloc(sizeof(size_t) * built->note_count);

@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-static Rational fraction(unsigned long long numerator, unsigned long long denominator) {
-    return msk_make(numerator, denominator);
+static Rational fraction(Rational value) {
+    return msk_make((unsigned long long)value.num, (unsigned long long)value.den);
 }
 
 bool motive_features_to_sketch(const AnalysisMotiveFeatures *features, MotiveSketch *sketch) {
@@ -16,8 +16,8 @@ bool motive_features_to_sketch(const AnalysisMotiveFeatures *features, MotiveSke
         const AnalysisMotiveNote *note = &features->notes[i];
         MotiveSketchNote *out = &sketch->notes[i];
         out->pitch = note->pitch;
-        out->onset = fraction(note->onset_numerator, note->onset_denominator);
-        out->duration = fraction(note->duration_numerator, note->duration_denominator);
+        out->onset = fraction(note->onset);
+        out->duration = fraction(note->duration);
     }
     sketch->note_count = features->note_count;
     for (size_t i = 0; i + 1 < sketch->note_count; i++) {
@@ -30,9 +30,9 @@ bool motive_features_to_sketch(const AnalysisMotiveFeatures *features, MotiveSke
     sketch->has_scale = true;
     sketch->tonic_pc = features->tonic_pc;
     sketch->material = features->material;
-    sketch->bar = fraction(features->bar_numerator, features->bar_denominator);
-    sketch->beat = fraction(features->beat_numerator, features->beat_denominator);
-    Rational position = fraction(features->pickup_numerator, features->pickup_denominator);
+    sketch->bar = fraction(features->bar);
+    sketch->beat = fraction(features->beat);
+    Rational position = fraction(features->pickup);
     sketch->pickup = msk_is_zero(position) ? position : msk_sub(sketch->bar, position);
     sketch->length = msk_add(last->onset, last->duration);
     if (!motive_sketch_validate(sketch)) {

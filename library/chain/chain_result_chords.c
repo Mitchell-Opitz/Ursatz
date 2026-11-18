@@ -74,8 +74,7 @@ static bool fill_tones(const Segment *segment, const CommonPracticeWeightedResul
 
 /* Whether the region ends at or before the segment starts. */
 static bool region_ends_by(const AnalysisKeyRegion *region, const Segment *segment) {
-    return rational_cmp_unsigned((unsigned long long)region->end_numerator, region->end_denominator,
-                                 (unsigned long long)segment->start_numerator, segment->start_denominator) <= 0;
+    return rational_cmp(region->end, segment->start) <= 0;
 }
 
 /* Reads segments [first, first + count) from the library's results, filling their estimates. The results stay the

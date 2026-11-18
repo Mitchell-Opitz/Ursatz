@@ -125,7 +125,7 @@ static void test_a_score_with_no_notes(void) {
     AnalysisChain *chain = NULL;
     assert(analysis_chain_run_score(&score, &c, &chain) == ANALYSIS_CHAIN_OK);
     const ChainResult *result = analysis_chain_result(chain);
-    assert(result->entry_count == 0 && result->key_region_count == 0 && result->home_duration_denominator == 1);
+    assert(result->entry_count == 0 && result->key_region_count == 0 && result->home_duration.den == 1);
     assert(analysis_chain_segments(chain) == NULL && analysis_chain_segment_count(chain) == 0);
     ChainResult moved;
     chain_result_take(chain, &moved);

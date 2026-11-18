@@ -251,12 +251,12 @@ static void analysis_destroy(Analysis *analysis) {
 /* The start of an entry's chord and the end of another's, in beats (quarter notes) from the start of the piece. */
 static double beats_start(const ChainResult *report, size_t entry) {
     const ChainEntry *e = &report->entries[entry];
-    return 4.0 * (double)e->time_numerator / (double)e->time_denominator;
+    return 4.0 * (double)e->time.num / (double)e->time.den;
 }
 
 static double beats_end(const ChainResult *report, size_t entry) {
     const ChainEntry *e = &report->entries[entry];
-    return 4.0 * (double)e->end_numerator / (double)e->end_denominator;
+    return 4.0 * (double)e->end.num / (double)e->end.den;
 }
 
 static bool near_planted(const Planted *p, double start, double end) {

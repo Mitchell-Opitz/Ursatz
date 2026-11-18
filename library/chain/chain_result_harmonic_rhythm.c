@@ -27,8 +27,8 @@ static bool measure_at(const MeterMap *map, long numerator, unsigned long denomi
 }
 
 static bool entry_time(const ChainEntry *entry, Rational *time) {
-    return entry->time_denominator <= (unsigned long)LLONG_MAX &&
-           rational_make((long long)entry->time_numerator, (long long)entry->time_denominator, time) == RATIONAL_OK;
+    return entry->time.den <= (unsigned long)LLONG_MAX &&
+           rational_make((long long)entry->time.num, (long long)entry->time.den, time) == RATIONAL_OK;
 }
 
 bool harmonic_rhythm_change_flags(const ChainEntry *entries, size_t count, bool **flags) {
@@ -118,7 +118,7 @@ bool harmonic_rhythm_stage_collect(const ImportedScore *notes, ChainResult *repo
     int last = 0;
     for (size_t i = 0; i < count; i++) {
         const ChainEntry *entry = &report->entries[i];
-        if (!measure_at(map, entry->time_numerator, entry->time_denominator, &measures[i])) {
+        if (!measure_at(map, entry->time.num, entry->time.den, &measures[i])) {
             free(measures);
             return true; /* a segment off the meter: no harmonic rhythm, as with the cadences */
         }

@@ -4,14 +4,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "model/core/rational.h"
 #include "model/pitch/pitch_material.h"
 
 /* A library Interpretation's scalar confidence (numerator/denominator in
    [0, 1]); present is false when the library supplies none. */
 typedef struct {
     bool present;
-    unsigned long numerator;
-    unsigned long denominator;
+    Rational value;
 } AnalysisConfidence;
 
 /* One chord reading from the library's weighted identification: the best
@@ -81,10 +81,8 @@ typedef enum {
 } AnalysisChordContext;
 
 typedef struct {
-    long time_numerator; /* segment start, whole notes */
-    unsigned long time_denominator;
-    long end_numerator; /* segment end (exclusive), whole notes */
-    unsigned long end_denominator;
+    Rational time; /* segment start, whole notes */
+    Rational end; /* segment end (exclusive), whole notes */
     char *chord_label; /* owned; "no match" when nothing was identified */
     char *key_label;   /* owned; "no match" when nothing was identified */
     size_t *note_ids;  /* owned; ImportedScore indices (Ursatz "midi-note-N") sounding in this segment, attacked or held */
@@ -119,10 +117,8 @@ typedef struct {
    notes. */
 typedef struct {
     size_t chord_index;
-    long time_numerator; /* voice segment start, whole notes */
-    unsigned long time_denominator;
-    long end_numerator; /* voice segment end (exclusive), whole notes */
-    unsigned long end_denominator;
+    Rational time; /* voice segment start, whole notes */
+    Rational end; /* voice segment end (exclusive), whole notes */
     AnalysisOuterNote soprano;
     AnalysisOuterNote bass;
 } AnalysisOuterLineEntry;
@@ -155,10 +151,8 @@ typedef struct {
     int tonic_pitch_class; /* 0-11 */
     const PitchMaterial *material; /* borrowed from the knowledge snapshot of the analysis; outlives the report */
     bool prefer_flats; /* the key reads in flats, for naming pitch classes */
-    long start_numerator; /* region start, whole notes */
-    unsigned long start_denominator;
-    long end_numerator; /* region end (exclusive), whole notes */
-    unsigned long end_denominator;
+    Rational start; /* region start, whole notes */
+    Rational end; /* region end (exclusive), whole notes */
     int first_measure; /* measure numbers as the library numbers them (a pickup is 0), inclusive */
     int last_measure;
     double uncertainty; /* the library's, in [0, 1]; higher is LESS certain */
@@ -276,10 +270,8 @@ typedef struct {
    phrase's cadence (a post-cadential extension or a codetta), which the measures and length do not. Measure
    numbers are the library's (a pickup is 0, and is not counted in the length). */
 typedef struct {
-    long start_numerator; /* the phrase's span, whole notes */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start; /* the phrase's span, whole notes */
+    Rational end;
     size_t first_entry;   /* the chord segments that start inside the span: entries[first_entry .. + entry_count) */
     size_t entry_count;
     int first_measure;
@@ -304,10 +296,8 @@ typedef struct {
 typedef struct {
     size_t phrase;          /* index into phrases */
     int index;              /* within the phrase */
-    long start_numerator;   /* whole notes */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start;   /* whole notes */
+    Rational end;
     int first_measure;
     int last_measure;
     int length_measures;    /* counted measures */
@@ -325,10 +315,8 @@ typedef struct {
     int index;              /* 0 or 1 */
     size_t first_idea;      /* index into ideas */
     size_t idea_count;
-    long start_numerator;   /* whole notes */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start;   /* whole notes */
+    Rational end;
     int first_measure;
     int last_measure;
     int length_measures;
@@ -347,10 +335,8 @@ typedef struct {
     int later_first;
     int later_last;
     int transposition;   /* semitones, later minus earlier; 0 for a repeat */
-    long start_numerator; /* whole notes: the later span, from the start of its first measure to the end of its last */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start; /* whole notes: the later span, from the start of its first measure to the end of its last */
+    Rational end;
     size_t *note_ids;    /* owned; ImportedScore indices of the soprano notes that start in the later span */
     size_t note_id_count;
 } AnalysisRepeat;
@@ -381,10 +367,8 @@ typedef struct {
     const char *ending;      /* the library's PhraseEnding name; NULL likewise */
     size_t first_phrase;     /* the phrases it spans: phrases[first_phrase .. + phrase_count) */
     size_t phrase_count;     /* 1 or 2 */
-    long start_numerator;    /* whole notes */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start;    /* whole notes */
+    Rational end;
     int first_measure;
     int last_measure;
     int length_measures;
@@ -429,10 +413,8 @@ typedef struct {
     int measures_changed;      /* added (expansion) or removed (contraction), at least 1 */
     int first_measure;
     int last_measure;
-    long start_numerator;      /* whole notes */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start;      /* whole notes */
+    Rational end;
     const char *techniques[ANALYSIS_EXPANSION_MAX_TECHNIQUES]; /* the library's InternalExpansionTechnique names it
                                   finds evidence for; none when unspecified or not internal */
     size_t technique_count;
@@ -456,10 +438,8 @@ typedef struct {
                                   sections of the letter before it ("A", "A'", "A''") */
     size_t first_phrase;     /* the phrases it holds: phrases[first_phrase .. + phrase_count) */
     size_t phrase_count;
-    long start_numerator;    /* whole notes: the first phrase's start to the last phrase's end */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start;    /* whole notes: the first phrase's start to the last phrase's end */
+    Rational end;
     size_t first_entry;      /* the chord segments that start inside the span: entries[first_entry .. + entry_count) */
     size_t entry_count;
     int first_measure;       /* the library's measure numbers (a pickup is 0) */
@@ -497,10 +477,8 @@ typedef struct {
 typedef struct {
     size_t note_id;
     int pitch;
-    unsigned long long onset_numerator;
-    unsigned long long onset_denominator;
-    unsigned long long duration_numerator;
-    unsigned long long duration_denominator;
+    Rational onset;
+    Rational duration;
 } AnalysisMotiveNote;
 
 /* What a motive family is made of, read from its prototype (occurrence 0) so families of different pieces can be
@@ -511,12 +489,9 @@ typedef struct {
     size_t note_count;
     int tonic_pc;              /* the key region the first note starts in */
     const PitchMaterial *material; /* the material of that key region, borrowed from the analysis snapshot */
-    unsigned long long bar_numerator; /* the meter at the first note, whole notes */
-    unsigned long long bar_denominator;
-    unsigned long long beat_numerator;
-    unsigned long long beat_denominator;
-    unsigned long long pickup_numerator; /* the first note's position in its bar; 0 on a downbeat */
-    unsigned long long pickup_denominator;
+    Rational bar; /* the meter at the first note, whole notes */
+    Rational beat;
+    Rational pickup; /* the first note's position in its bar; 0 on a downbeat */
     const char **degrees;      /* owned array, borrowed static labels; note_count entries */
     int *intervals;            /* owned; signed semitones between neighbours, note_count - 1 entries */
     long *steps;               /* owned; signed scale steps between neighbours, note_count - 1 entries */
@@ -530,10 +505,8 @@ typedef struct {
    note-level soprano: the highest sounding note at each attack. The first occurrence of a family is its prototype. */
 typedef struct {
     size_t index;            /* within the family; 0 is the prototype */
-    long start_numerator;    /* whole notes: the first note's start to the last note's end */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start;    /* whole notes: the first note's start to the last note's end */
+    Rational end;
     int first_measure;       /* the library's measure numbers (a pickup is 0) */
     int last_measure;        /* the measure the last note starts in */
     double first_beat;       /* 1-based, in beats of the first measure */
@@ -626,10 +599,8 @@ typedef struct {
 typedef struct {
     size_t phrase;           /* index into phrases */
     const char *framework;   /* the library's framework name for the claims */
-    long start_numerator;    /* the phrase's span, whole notes */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start;    /* the phrase's span, whole notes */
+    Rational end;
     int first_measure;       /* the phrase's, as the library numbers them (a pickup is 0) */
     int last_measure;
     size_t *note_ids;        /* owned; ImportedScore indices of the melody notes, in time order */
@@ -691,8 +662,7 @@ typedef struct {
 /* One duration of a density profile's histogram: how many notes of the phrase have it, as an exact rational of a
    whole note. */
 typedef struct {
-    long numerator;
-    unsigned long denominator;
+    Rational value;
     unsigned count;
 } AnalysisDurationBin;
 
@@ -729,10 +699,8 @@ typedef struct {
 typedef struct {
     int beats;
     int beat_type;
-    long scale_numerator;
-    unsigned long scale_denominator;
-    long pickup_numerator;
-    unsigned long pickup_denominator;
+    Rational scale;
+    Rational pickup;
     double score; /* [0, 1]: how well the reading's barlines carry the harmonic rhythm and the cadences */
 } AnalysisMeterReading;
 
@@ -758,10 +726,8 @@ typedef struct {
     const char *framework;   /* the library's framework name for the claim */
     int first_measure;       /* as the library numbers them (a pickup is 0) */
     int last_measure;
-    long start_numerator;    /* the passage's span in whole notes: its first measure's start to its last measure's end */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start;    /* the passage's span in whole notes: its first measure's start to its last measure's end */
+    Rational end;
     const char *texture;     /* the library's name: "monophony", "heterophony", "homophony", "homorhythm",
                                 "melody and accompaniment" or "polyphony" */
     const char *category;    /* the texture's category: homorhythm and melody and accompaniment are homophony */
@@ -804,14 +770,10 @@ typedef struct {
     const char *framework;     /* the library's framework name for the claim */
     char *text;                /* owned; NULL when the marking has only a metronome mark */
     bool has_metronome;
-    unsigned long beat_unit_numerator;   /* the metronome mark: the beat unit in whole notes, beats per minute */
-    unsigned long beat_unit_denominator;
-    unsigned long bpm_numerator;
-    unsigned long bpm_denominator;
-    long start_numerator;      /* the span it holds over, in whole notes */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational beat_unit;   /* the metronome mark: the beat unit in whole notes, beats per minute */
+    Rational bpm;
+    Rational start;      /* the span it holds over, in whole notes */
+    Rational end;
     size_t part;               /* index into the input's parts */
     bool has_rank;             /* the text is a tempo word, optionally with modifiers */
     int rank;                  /* the library's rank, 0 (grave) to 9 (presto) */
@@ -826,10 +788,8 @@ typedef struct {
 typedef struct {
     const char *framework;
     char *marking;             /* owned; the score's text */
-    long start_numerator;      /* the span it holds over, in whole notes */
-    unsigned long start_denominator;
-    long end_numerator;
-    unsigned long end_denominator;
+    Rational start;      /* the span it holds over, in whole notes */
+    Rational end;
     size_t part;               /* index into the input's parts */
     int staff;
     bool has_rank;             /* the marking is a level (ppp to fff) */
@@ -1176,8 +1136,7 @@ typedef struct {
     AnalysisDynamic *dynamics; /* owned; in time order; empty for MIDI input */
     size_t dynamic_count;
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
-    long home_duration_numerator; /* total time in the home key across its regions, whole notes */
-    unsigned long home_duration_denominator;
+    Rational home_duration; /* total time in the home key across its regions, whole notes */
 } ChainResult;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the

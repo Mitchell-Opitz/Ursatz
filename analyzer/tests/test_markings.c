@@ -45,15 +45,15 @@ static void check_markings(const char *dir) {
     if (report.tempo_marking_count == 2) {
         const AnalysisTempoMarking *allegro = &report.tempo_markings[0];
         CHECK(allegro->text && strcmp(allegro->text, "Allegro") == 0);
-        CHECK(starts_measure(allegro->start_numerator, allegro->start_denominator, 1));
-        CHECK(starts_measure(allegro->end_numerator, allegro->end_denominator, 4));
-        CHECK(allegro->has_metronome && allegro->beat_unit_numerator == 1 && allegro->beat_unit_denominator == 4);
-        CHECK(allegro->bpm_numerator == 120 && allegro->bpm_denominator == 1);
+        CHECK(starts_measure(allegro->start.num, allegro->start.den, 1));
+        CHECK(starts_measure(allegro->end.num, allegro->end.den, 4));
+        CHECK(allegro->has_metronome && allegro->beat_unit.num == 1 && allegro->beat_unit.den == 4);
+        CHECK(allegro->bpm.num == 120 && allegro->bpm.den == 1);
         CHECK(allegro->has_rank && allegro->group && strcmp(allegro->group, "fast") == 0);
         CHECK(strcmp(allegro->change, "none") == 0);
         const AnalysisTempoMarking *rit = &report.tempo_markings[1];
         CHECK(rit->text && strcmp(rit->text, "rit.") == 0);
-        CHECK(starts_measure(rit->start_numerator, rit->start_denominator, 4));
+        CHECK(starts_measure(rit->start.num, rit->start.den, 4));
         CHECK(!rit->has_metronome);
         CHECK(strcmp(rit->change, "gradually-slower") == 0);
     }
@@ -64,13 +64,13 @@ static void check_markings(const char *dir) {
         const AnalysisDynamic *cresc = &report.dynamics[1];
         const AnalysisDynamic *f = &report.dynamics[2];
         const AnalysisDynamic *mp = &report.dynamics[3];
-        CHECK(strcmp(p->marking, "p") == 0 && starts_measure(p->start_numerator, p->start_denominator, 1));
+        CHECK(strcmp(p->marking, "p") == 0 && starts_measure(p->start.num, p->start.den, 1));
         CHECK(p->has_rank && p->rank < 0 && strcmp(p->change, "none") == 0 && p->relation == NULL);
-        CHECK(strcmp(cresc->marking, "cresc.") == 0 && starts_measure(cresc->start_numerator, cresc->start_denominator, 2));
+        CHECK(strcmp(cresc->marking, "cresc.") == 0 && starts_measure(cresc->start.num, cresc->start.den, 2));
         CHECK(!cresc->has_rank && strcmp(cresc->change, "louder") == 0 && cresc->relation == NULL);
-        CHECK(strcmp(f->marking, "f") == 0 && starts_measure(f->start_numerator, f->start_denominator, 3));
+        CHECK(strcmp(f->marking, "f") == 0 && starts_measure(f->start.num, f->start.den, 3));
         CHECK(f->has_rank && f->rank > 0 && f->relation && strcmp(f->relation, "louder") == 0);
-        CHECK(strcmp(mp->marking, "mp") == 0 && starts_measure(mp->start_numerator, mp->start_denominator, 4));
+        CHECK(strcmp(mp->marking, "mp") == 0 && starts_measure(mp->start.num, mp->start.den, 4));
         CHECK(mp->relation && strcmp(mp->relation, "quieter") == 0);
     }
 

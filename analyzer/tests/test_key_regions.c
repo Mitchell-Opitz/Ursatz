@@ -98,8 +98,8 @@ static void check_regions_are_gap_free(const ChainResult *report) {
     CHECK(report->key_change_count + 1 == report->key_region_count);
     for (size_t i = 1; i < report->key_region_count; i++) {
         CHECK(report->key_regions[i].first_measure == report->key_regions[i - 1].last_measure + 1);
-        CHECK(report->key_regions[i].start_numerator * (long)report->key_regions[i - 1].end_denominator ==
-              report->key_regions[i - 1].end_numerator * (long)report->key_regions[i].start_denominator);
+        CHECK(report->key_regions[i].start.num * (long)report->key_regions[i - 1].end.den ==
+              report->key_regions[i - 1].end.num * (long)report->key_regions[i].start.den);
     }
     for (size_t i = 0; i < report->key_region_count; i++) {
         CHECK(report->key_regions[i].uncertainty >= 0.0 && report->key_regions[i].uncertainty <= 1.0);

@@ -86,18 +86,13 @@ static bool collect_tempo(const ImportedScore *notes, const char *framework, Cha
         report->tempo_marking_count = i + 1;
         out->framework = framework;
         out->has_metronome = in->has_metronome;
-        out->beat_unit_numerator = (unsigned long)in->beat_unit.num;
-        out->beat_unit_denominator = (unsigned long)in->beat_unit.den;
-        out->bpm_numerator = (unsigned long)in->bpm.num;
-        out->bpm_denominator = (unsigned long)in->bpm.den;
-        out->start_numerator = (long)in->position.num;
-        out->start_denominator = (unsigned long)in->position.den;
+        out->beat_unit = in->beat_unit;
+        out->bpm = in->bpm;
+        out->start = in->position;
         if (i + 1 < source->tempo_marking_count) {
-            out->end_numerator = (long)source->tempo_markings[i + 1].position.num;
-            out->end_denominator = (unsigned long)source->tempo_markings[i + 1].position.den;
+            out->end = source->tempo_markings[i + 1].position;
         } else {
-            out->end_numerator = (long)piece_end.value.num;
-            out->end_denominator = (unsigned long)piece_end.value.den;
+            out->end = piece_end.value;
         }
         out->part = in->part;
         out->group = NULL;
@@ -137,10 +132,8 @@ static bool collect_dynamics(const ImportedSource *source, const char *framework
         if (!(out->marking = strdup(in->marking))) {
             return false;
         }
-        out->start_numerator = (long)in->start.num;
-        out->start_denominator = (unsigned long)in->start.den;
-        out->end_numerator = (long)in->end.num;
-        out->end_denominator = (unsigned long)in->end.den;
+        out->start = in->start;
+        out->end = in->end;
         out->part = in->part;
         out->staff = in->staff;
         out->has_rank = standard_markings_dynamic_rank(in->marking, &out->rank);

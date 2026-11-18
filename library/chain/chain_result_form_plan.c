@@ -29,10 +29,8 @@ static void fill_section(AnalysisSection *section, const ChainResult *report, si
     const AnalysisPhrase *last = &report->phrases[first_phrase + phrase_count - 1];
     section->first_phrase = first_phrase;
     section->phrase_count = phrase_count;
-    section->start_numerator = first->start_numerator;
-    section->start_denominator = first->start_denominator;
-    section->end_numerator = last->end_numerator;
-    section->end_denominator = last->end_denominator;
+    section->start = first->start;
+    section->end = last->end;
     section->first_entry = first->first_entry;
     section->entry_count = last->first_entry + last->entry_count - first->first_entry;
     section->first_measure = first->first_measure;

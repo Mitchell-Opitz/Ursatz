@@ -8,7 +8,7 @@
 
 bool run_analysis_pipeline(const ImportedScore *notes, const KnowledgeSnapshot *knowledge, ChainResult *report) {
     memset(report, 0, sizeof(*report));
-    report->home_duration_denominator = 1;
+    report->home_duration.den = 1;
 
     AnalyzerResult *result = NULL;
     AnalyzerOptions options = analyzer_options_default();

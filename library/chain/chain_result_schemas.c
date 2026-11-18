@@ -40,11 +40,6 @@ static void build_destroy(SchemaBuild *build) {
     memset(build, 0, sizeof(*build));
 }
 
-/* a/b < c/d for positive denominators. */
-static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
-    return rational_cmp(rational_ratio(a, (long long)b), rational_ratio(c, (long long)d)) < 0;
-}
-
 /* The chord entries each merged segment covers: those starting inside its span. entries are in time order. */
 static bool entry_ranges(const ChainResult *report, SchemaBuild *build) {
     const GalantSegmentList *list = &build->galant.list;
@@ -56,13 +51,9 @@ static bool entry_ranges(const ChainResult *report, SchemaBuild *build) {
     size_t next = 0;
     for (size_t s = 0; s < list->count; s++) {
         const TimeSpan *span = &list->items[s].segment.span;
-        long start_n = (long)span->start.value.num;
-        unsigned long start_d = (unsigned long)span->start.value.den;
-        long end_n = (long)span->end.value.num;
-        unsigned long end_d = (unsigned long)span->end.value.den;
-        while (next < report->entry_count &&
-               rational_less(report->entries[next].time_numerator, report->entries[next].time_denominator, start_n,
-                             start_d)) {
+        Rational start = span->start.value;
+        Rational end = span->end.value;
+        while (next < report->entry_count && rational_cmp(report->entries[next].time, start) < 0) {
             next++;
         }
         if (next >= report->entry_count) {
@@ -71,8 +62,7 @@ static bool entry_ranges(const ChainResult *report, SchemaBuild *build) {
         build->first_entry[s] = next;
         size_t last = next;
         while (last + 1 < report->entry_count &&
-               rational_less(report->entries[last + 1].time_numerator, report->entries[last + 1].time_denominator,
-                             end_n, end_d)) {
+               rational_cmp(report->entries[last + 1].time, end) < 0) {
             last++;
         }
         build->last_entry[s] = last;

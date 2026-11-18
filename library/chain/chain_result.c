@@ -51,7 +51,7 @@ void analysis_chord_reading_destroy(AnalysisChordReading *reading) {
     free(reading->root);
     free(reading->quality);
     free(reading->bass);
-    *reading = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
+    *reading = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, {0, 1}}};
 }
 
 void chain_result_destroy(ChainResult *report) {
@@ -257,6 +257,6 @@ void chain_result_destroy(ChainResult *report) {
     report->sequences = NULL;
     report->sequence_count = 0;
     report->home_region = 0;
-    report->home_duration_numerator = 0;
-    report->home_duration_denominator = 1;
+    report->home_duration.num = 0;
+    report->home_duration.den = 1;
 }

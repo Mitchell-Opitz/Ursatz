@@ -71,20 +71,13 @@ static bool fill_note(const ImportedScore *notes, const Segment *segment, const 
     return true;
 }
 
-/* a/b < c/d for positive denominators. */
-static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
-    return rational_cmp(rational_ratio(a, (long long)b), rational_ratio(c, (long long)d)) < 0;
-}
-
 /* The voice segment holding the chord segment's start: the line's entry at the chord's onset. voices->segment_count
    when none does. */
 static size_t voice_segment_at(const Segmentation *voices, const Segment *chord, size_t from) {
     for (size_t v = from; v < voices->segment_count; v++) {
         const Segment *voice = &voices->segments[v];
-        if (!rational_less(chord->start_numerator, chord->start_denominator, voice->start_numerator,
-                           voice->start_denominator) &&
-            rational_less(chord->start_numerator, chord->start_denominator, voice->end_numerator,
-                          voice->end_denominator)) {
+        if (rational_cmp(chord->start, voice->start) >= 0 &&
+            rational_cmp(chord->start, voice->end) < 0) {
             return v;
         }
     }
@@ -95,10 +88,8 @@ static size_t voice_segment_at(const Segmentation *voices, const Segment *chord,
 static size_t chord_at(const Segmentation *segmentation, const Segment *voice, size_t from) {
     for (size_t i = from; i < segmentation->segment_count; i++) {
         const Segment *chord = &segmentation->segments[i];
-        if (!rational_less(voice->start_numerator, voice->start_denominator, chord->start_numerator,
-                           chord->start_denominator) &&
-            rational_less(voice->start_numerator, voice->start_denominator, chord->end_numerator,
-                          chord->end_denominator)) {
+        if (rational_cmp(voice->start, chord->start) >= 0 &&
+            rational_cmp(voice->start, chord->end) < 0) {
             return i;
         }
     }
@@ -119,10 +110,8 @@ static bool collect_outer_lines(const ImportedScore *notes, const Segmentation *
     for (size_t v = 0; v < voices->segment_count; v++) {
         const Segment *voice = &voices->segments[v];
         AnalysisOuterLineEntry *out = &report->outer_lines[v];
-        out->time_numerator = voice->start_numerator;
-        out->time_denominator = voice->start_denominator;
-        out->end_numerator = voice->end_numerator;
-        out->end_denominator = voice->end_denominator;
+        out->time = voice->start;
+        out->end = voice->end;
         out->soprano.status = ANALYSIS_OUTER_ABSENT;
         out->bass.status = ANALYSIS_OUTER_ABSENT;
         chord = chord_at(segmentation, voice, chord);

@@ -80,17 +80,17 @@ int main(void) {
        sonority segmentation gave six. */
     assert(report.entry_count == 3);
 
-    assert(report.entries[0].time_numerator == 0);
+    assert(report.entries[0].time.num == 0);
     assert(strcmp(report.entries[0].chord_label, "I") == 0);
     assert(strcmp(report.entries[0].key_label, "C major") == 0);
 
-    assert(report.entries[1].time_numerator == 1);
-    assert(report.entries[1].time_denominator == 4);
+    assert(report.entries[1].time.num == 1);
+    assert(report.entries[1].time.den == 4);
     assert(strcmp(report.entries[1].chord_label, "ii") == 0);
     assert(strcmp(report.entries[1].key_label, "C major") == 0);
 
-    assert(report.entries[2].time_numerator == 1);
-    assert(report.entries[2].time_denominator == 1);
+    assert(report.entries[2].time.num == 1);
+    assert(report.entries[2].time.den == 1);
     assert(strcmp(report.entries[2].chord_label, "iii") == 0);
     assert(strcmp(report.entries[2].key_label, "C major") == 0);
 

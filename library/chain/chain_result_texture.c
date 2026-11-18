@@ -40,10 +40,8 @@ static bool copy_passage(const ImportedScore *notes, const StandardTexturePassag
     out->framework = framework;
     out->first_measure = claim->first_measure;
     out->last_measure = claim->last_measure;
-    out->start_numerator = (long)claim->start_n;
-    out->start_denominator = (unsigned long)claim->start_d;
-    out->end_numerator = (long)claim->end_n;
-    out->end_denominator = (unsigned long)claim->end_d;
+    out->start = rational_ratio((long long)claim->start_n, (long long)claim->start_d);
+    out->end = rational_ratio((long long)claim->end_n, (long long)claim->end_d);
     out->texture = standard_texture_name((StandardTexture)claim->texture);
     out->category = standard_texture_name((StandardTexture)claim->category);
     out->windows = claim->windows;

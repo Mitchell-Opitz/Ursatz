@@ -21,7 +21,7 @@
 /* The entry starts at the beginning of the given measure of the 4/4 piece (measure 1 is time 0). */
 static bool starts_measure(const ChainResult *report, size_t entry, int measure) {
     const ChainEntry *e = &report->entries[entry];
-    return e->time_numerator == (long)(measure - 1) * (long)e->time_denominator;
+    return e->time.num == (long)(measure - 1) * (long)e->time.den;
 }
 
 static void check_chorale(const char *dir) {

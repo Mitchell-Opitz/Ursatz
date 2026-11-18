@@ -210,8 +210,8 @@ AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, Analyzer
         const AnalysisVoiceViolation *fault = &leading->violations[i];
         const ChainEntry *arrival = &report->entries[fault->entry_to];
         bool parallel = fault->rule[0] == 'p';
-        ok = add_violation(map, &list, &used, &capacity, voice_rule_id(fault), parallel, arrival->time_numerator,
-                           arrival->time_denominator, fault->note_ids, 4);
+        ok = add_violation(map, &list, &used, &capacity, voice_rule_id(fault), parallel, arrival->time.num,
+                           arrival->time.den, fault->note_ids, 4);
     }
     for (int pass = 0; ok && pass < 2; pass++) {
         const char *wanted = pass == 0 ? "seventh-resolves-down" : "leading-tone-resolves";
@@ -223,7 +223,7 @@ AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, Analyzer
             const ChainEntry *arrival = &report->entries[fault->entry_to];
             ok = add_violation(map, &list, &used, &capacity,
                                pass == 0 ? "unresolved-seventh" : "unresolved-leading-tone", false,
-                               arrival->time_numerator, arrival->time_denominator, fault->note_ids, 2);
+                               arrival->time.num, arrival->time.den, fault->note_ids, 2);
         }
     }
     if (!ok) {

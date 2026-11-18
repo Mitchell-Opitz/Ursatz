@@ -97,11 +97,10 @@ static FormHearResult copy_cadences(const AnalyzerResult *result, FormHeard *out
     }
     for (size_t i = 0; i < cadences->count; i++) {
         size_t first = cadences->items[i].arrival_first;
-        if (first >= report->entry_count ||
-            rational_make(report->entries[first].time_numerator, report->entries[first].time_denominator,
-                          &out->cadences[i].arrival) != RATIONAL_OK) {
+        if (first >= report->entry_count) {
             return FORM_HEAR_ERR_ANALYSIS;
         }
+        out->cadences[i].arrival = report->entries[first].time;
         out->cadences[i].type = cadences->items[i].type;
     }
     out->cadence_count = cadences->count;

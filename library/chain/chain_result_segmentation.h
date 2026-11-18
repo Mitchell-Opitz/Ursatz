@@ -26,10 +26,8 @@ typedef struct {
     size_t *note_indices;
     CommonPracticeMember *members;
     size_t member_count;
-    long start_numerator; /* window start, whole notes */
-    unsigned long start_denominator;
-    long end_numerator; /* window end (exclusive), whole notes */
-    unsigned long end_denominator;
+    Rational start; /* window start, whole notes */
+    Rational end; /* window end (exclusive), whole notes */
 } Segment;
 
 typedef struct {
