@@ -72,7 +72,7 @@ typedef struct {
 /* "midi", "musicxml", "plain_midi", "tempo" and, with workflow, "record" and "explain" ("text" or "json"). */
 ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs *out, ComposerError *error);
 /* Fills plan_json, and midi and musicxml when asked, from the plan as it is in memory. */
-ComposerStatus api_render_outputs(const PiecePlan *plan, const ApiOutputs *outputs, ComposerResponse *out);
+ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const PiecePlan *plan, const ApiOutputs *outputs, ComposerResponse *out);
 /* Fills record and the "explanation" member of document (a string) when asked; outcome may be NULL. */
 ComposerStatus api_record_outputs(const PiecePlan *plan, const ComposeOutcome *outcome, const ApiOutputs *outputs,
                                   cJSON *document, ComposerResponse *out);

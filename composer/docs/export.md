@@ -1,8 +1,10 @@
 # Export
 
-A plan is written as a MIDI file or a MusicXML file. The Composer renders the plan (`render.h`) and hands the notes,
-meter and key signatures to Ursatz's MIDI renderer (`midi_renderer_render_with_options`) and MusicXML exporter
-(`musicxml_export_write_score`). Every command that writes `--midi` or `--musicxml` (`grow`, `fill`, `regenerate`,
+A plan is written as a MIDI file or a MusicXML file. The Composer renders the plan (`render.h`), makes a work of it (`render/movement_build.h`:
+one movement `m1` whose lines, one for each lane voice, are all assigned to one piano part, R-599) and hands the work to Ursatz's movement
+export (`movement_export_midi`, `movement_export_musicxml`), which writes the file through the MIDI renderer and the MusicXML exporter. The
+piano and its ensemble are the K12 entries `omt.instrument.piano` and `omt.instrument.solo-piano` of the call's knowledge snapshot, so every
+export function takes it first (`rendered_plan_midi_bytes(knowledge, rendered, options, ...)`). Every command that writes `--midi` or `--musicxml` (`grow`, `fill`, `regenerate`,
 `variations`, `harmonize`, `progression`, `counterpoint`, `develop`, `export`) shares these options. Back to the [docs index](README.md).
 
 Notes are spelled in the key in force at their onset: a note of the key's scale takes its signature spelling
@@ -30,11 +32,12 @@ A plan stores no tempo. The tempo is an export option only, so the same plan can
 Format 1, 480 ticks per quarter note when every time lands on a whole tick there and otherwise the smallest division
 that does (section starts included).
 
-- **Tracks.** Track 0 is the conductor: tempo, time signature, key signature and markers. Every part is one further
-  track, in the order its voice first sounds.
+- **Tracks.** Track 0 is the conductor: tempo, time signature, key signature and markers. Track 1 is the piano, one track
+  for every line: each line is a channel, numbered in the order the lines first sound (channel 9 is skipped), and each
+  channel starts with a program change (the piano, program 0). A plan of more than 15 lines is refused
+  (`PLAN_EXPORT_ERR_TOO_MANY_VOICES`). The notes of every channel are those of one track per line, which an export wrote before API 2.1.
 - **Names.** With names on, each track starts with a Sequence/Track Name (`FF 03`) at tick 0: the conductor track is
-  named for the form node (`piece` when the form has no name) and the part tracks for their lane, as the MusicXML parts
-  are: `melody`, `bass`, `inner_voice_<n>`.
+  named for the form node (`piece` when the form has no name) and the piano track `Piano`.
 - **Markers.** With markers on, every section that is not source material gets a Marker (`FF 06`) in the conductor track
   at its start: its form letter (`A`, `B`, `A'`) when it has one, else the node's name. A marker follows the tempo, time
   signature and key signature events at the same tick.
@@ -52,7 +55,10 @@ renderer's limit holds is refused (`PLAN_EXPORT_ERR_NOT_REPRESENTABLE`). MusicXM
 
 ## MusicXML
 
-The parts are named `melody`, `bass`, `inner_voice_<n>`. With a tempo, part 0 carries `<sound tempo="96"/>` at the start.
+One part `piano`, named `Piano`, of two staves (one when no line is on the lower staff; a motive alone is one staff). The melody is on staff 1 and the bass on
+staff 2; an inner voice is on staff 1 when the mean MIDI number of its notes is 60 or more, else on staff 2 (R-599). Each line is a voice of the part
+(`<voice>` 1, 2, ...) and the General MIDI program of the part is the piano's. Every note's `xml:id` is its performer note id, `piano-n<plan note id>`
+(R-601: the id the plan gave the note, which survives saving), so a score read back keeps the ids. With a tempo, the part carries `<sound tempo="96"/>` at the start.
 The value is 60,000,000 divided by the whole microseconds written, so a tempo that is not a whole number of microseconds
 reads back as its nearest value (140 bpm as 140.00014). Names and markers are MIDI only: Ursatz's MusicXML export has no
 rehearsal marks. Each part starts with a clef written by Ursatz's export (export format 2): G on line 2 or F on line 4,

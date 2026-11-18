@@ -320,7 +320,7 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
             status = api_record_outputs(plan, &outcome, &outputs, document, out);
         }
         if (status == COMPOSER_OK) {
-            status = api_render_outputs(plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, plan, &outputs, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);

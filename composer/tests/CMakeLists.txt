@@ -19,6 +19,13 @@ ursatz_test(request_migration SOURCES test_request_migration.c LIBS ursatz_compo
 
 ursatz_test(test_piece_plan_sentence LIBS ursatz_composer)
 
+ursatz_test(test_composer_movement LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
+
+ursatz_test(test_plan_note_ids LIBS ursatz_composer composer_test_support
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures" INCLUDES ${PROJECT_SOURCE_DIR}/src VALGRIND)
+
 ursatz_test(test_plan_json LIBS ursatz_composer composer_test_support
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
@@ -35,7 +42,7 @@ endif()
 if(URSATZ_JSONSCHEMA_PYTHON)
     ursatz_test(test_plan_schema COMMAND ${CMAKE_COMMAND} -DPYTHON=${URSATZ_JSONSCHEMA_PYTHON}
                      -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v3.schema.json
+                     -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v4.schema.json
                      -DSNAPSHOT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_plan_schema.cmake
         LABELS schema

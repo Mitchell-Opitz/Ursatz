@@ -185,7 +185,7 @@ cJSON *api_piece_loop_json(const PiecePlan *plan);
  * The MusicXML of a version's plan, made from the plan in memory (its span ids are the ones the notes' xml:id carry; a plan
  * file renumbers them). The caller frees *out.
  */
-ComposerStatus api_piece_musicxml(const PieceSpec *request, const PiecePlan *plan, char **out, ComposerError *error);
+ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PiecePlan *plan, char **out, ComposerError *error);
 
 /* The plan as a cJSON object, or NULL when it cannot be written. */
 cJSON *api_piece_plan_object(const PiecePlan *plan);

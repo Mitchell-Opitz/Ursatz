@@ -6,6 +6,7 @@ add_library(ursatz_io
     midi_key_signature.c
     smf_reader.c
     midi_renderer.c
+    movement_export.c
     musicxml_importer.c
     musicxml_score.c
     score_clefs.c
@@ -19,13 +20,14 @@ ursatz_public_headers(ursatz_io
         io/midi_importer.h
         io/midi_key_signature.h
         io/midi_renderer.h
+        io/movement_export.h
         io/musicxml_export.h
         io/musicxml_importer.h
         io/score_quantize.h
         io/score_staves.h
 )
 # The XML parser used by io/musicxml_importer.c only (third_party/ezxml); PRIVATE so no consumer sees it.
-target_link_libraries(ursatz_io PUBLIC ursatz_model PRIVATE ursatz_ezxml)
+target_link_libraries(ursatz_io PUBLIC ursatz_model ursatz_realization PRIVATE ursatz_ezxml)
 
 if(URSATZ_TESTS)
     add_subdirectory(tests)

@@ -21,7 +21,11 @@ bool plan_span_contains(PlanSpan outer, PlanSpan inner) {
 }
 
 PiecePlan *plan_create(void) {
-    return calloc(1, sizeof(PiecePlan));
+    PiecePlan *plan = calloc(1, sizeof(PiecePlan));
+    if (plan) {
+        plan->next_note_id = 1;
+    }
+    return plan;
 }
 
 const char *plan_analyzer_version(const PiecePlan *plan) {

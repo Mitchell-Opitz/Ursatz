@@ -12,14 +12,14 @@
 /* `variations` and `harmonize` as composer API entries (docs/cli-variations.md): several distinct versions of a node. */
 
 /* The MusicXML of a version as it is in memory (its ids are the ones a plan file renumbers). */
-static ComposerStatus variation_musicxml(const PiecePlan *plan, const ApiOutputs *outputs, char **text, ComposerError *error) {
+static ComposerStatus variation_musicxml(const KnowledgeSnapshot *knowledge, const PiecePlan *plan, const ApiOutputs *outputs, char **text, ComposerError *error) {
     RenderedPlan rendered;
     PlanExportError detail;
     *text = NULL;
     if (plan_export_render(plan, &rendered, &detail) != PLAN_EXPORT_OK) {
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
     }
-    PlanExportResult result = rendered_plan_musicxml_text(&rendered, &outputs->export_options, text, &detail);
+    PlanExportResult result = rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, text, &detail);
     rendered_plan_destroy(&rendered);
     if (result != PLAN_EXPORT_OK) {
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
@@ -27,7 +27,7 @@ static ComposerStatus variation_musicxml(const PiecePlan *plan, const ApiOutputs
     return COMPOSER_OK;
 }
 
-static ComposerStatus variations_document(const PlanVariations *variations, const ApiOutputs *outputs, unsigned long requested,
+static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, const PlanVariations *variations, const ApiOutputs *outputs, unsigned long requested,
                                           cJSON **result, ComposerError *error) {
     cJSON *document = cJSON_CreateObject();
     cJSON *list = document ? cJSON_AddArrayToObject(document, "variations") : NULL;
@@ -43,7 +43,7 @@ static ComposerStatus variations_document(const PlanVariations *variations, cons
         }
         if (ok && outputs->musicxml) {
             char *text = NULL;
-            ComposerStatus rendered = variation_musicxml(variation->plan, outputs, &text, error);
+            ComposerStatus rendered = variation_musicxml(knowledge, variation->plan, outputs, &text, error);
             if (rendered != COMPOSER_OK) {
                 cJSON_Delete(entry);
                 cJSON_Delete(document);
@@ -165,7 +165,7 @@ static ComposerStatus run_variations(const ComposerContext *context, const char 
     }
     if (status == COMPOSER_OK) {
         cJSON *document = NULL;
-        status = variations_document(&variations, &outputs, count, &document, &out->error);
+        status = variations_document(context->knowledge, &variations, &outputs, count, &document, &out->error);
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);
         }

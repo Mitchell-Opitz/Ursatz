@@ -11,7 +11,7 @@
 
 **Fragment rule.** The base id is the `xml:id` of a note that is written once. A tied note is written as one `<note>` per segment, and each segment's id is the base id, `_`, and a suffix: `a` to `z` for the first 26 segments, then the decimal segment number (`_26`, `_27`). A chord member has its own base id like any other note. So every note's base id appears in the document either as `xml:id="<id>"` or as `xml:id="<id>_<suffix>"`.
 
-`MusicXmlExportScore` takes: events (and optional index-paired `pitch_values`, which are checked for NULL entries and not otherwise read), optional `part_index` and `staff` arrays, optional parts (id, name, staff_count, midi_program), an optional title and composer, an optional `MeterMap` and `TempoMap`, optional `TempoMarking`s (with a part each), optional `Dynamics` (a part and staff each) and optional key signatures (`MusicXmlExportKeySignature`: sharps/flats, mode, position, part). With no parts there is one part `P1` whose staff count is the highest staff used.
+`MusicXmlExportScore` takes: events (and optional index-paired `pitch_values`, which are checked for NULL entries and not otherwise read), optional `part_index` and `staff` arrays, optional parts (id, name, staff_count, midi_program), an optional title and composer, an optional `MeterMap` and `TempoMap`, optional `TempoMarking`s (with a part each), optional `Dynamics` (a part and staff each) and optional key signatures (`MusicXmlExportKeySignature`: sharps/flats, mode, position, part) and optional sustain pedals (`MusicXmlExportPedal`: a span, a part and a staff). With no parts there is one part `P1` whose staff count is the highest staff used.
 
 ## Layout
 
@@ -26,6 +26,7 @@
 - **Pitch** is written from `PitchSpelling`; a note without one is `MUSICXML_EXPORT_ERR_MISSING_SPELLING`.
 - **Key signatures**: `<key><fifths>` and `<mode>` (none for an unknown mode), in the event's part, in the `<attributes>` of the measure that contains it.
 - **Tempo**: `<sound tempo>` (quarter notes per minute, up to 12 decimal places) in part 0 at each `TempoMap` region that is not defaulted; a defaulted map writes none. A `TempoMarking` is a `<direction>` with `<words>` and a `<metronome>` (a beat unit MusicXML names, up to four dots, and an exactly representable per-minute). A marking at a tempo region's position shares one `<direction>` with the `<sound>`, so it comes back as one marking. A marking with text only and no tempo at its position comes back as unclassified text.
+- **Sustain pedal** (`MusicXmlExportScore.pedals`): a `<direction placement="below">` with `<pedal type="start" line="yes"/>` at the span's start and `type="stop"` at its end, with a `<staff>` only in a part of several staves. Like a dynamic, a pedal time is a cut of its part, so a note that sounds across it is split and tied there. A stop on the last measure's end is written at that measure's end and adds no measure. At one time a stop comes before a start. `_UNKNOWN_PART`, `_BAD_STAFF` as for dynamics, `_NOT_REPRESENTABLE` for a span that does not hold or starts below 0.
 - **Dynamics**: `<direction><dynamics>` at the start of the Dynamics' span, or at its event; the names MusicXML has are elements and the rest are `<other-dynamics>`.
 
 ## Notated versus played times

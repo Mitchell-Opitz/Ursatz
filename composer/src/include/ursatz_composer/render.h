@@ -93,6 +93,9 @@ typedef struct {
     size_t count;
     size_t *part_index;               /* owned; parallel to events: an index into parts */
     LaneSpanId *spans;                /* owned; parallel to events: the lane span each note was written in */
+    PlanNoteId *note_ids;             /* owned; parallel to events: the plan note each event is (0 for notes in no plan) */
+    PlanNoteId *note_sources;         /* owned; parallel to events: that note's source, 0 for none */
+    PlanNoteOperation *note_operations; /* owned; parallel to events: how it was made from its source */
     RenderedPart *parts;              /* owned; only parts that have notes */
     size_t part_count;
     MeterMap *meter_map;              /* owned; NULL when no meter span was rendered */

@@ -7,6 +7,10 @@
       "title": "Open Music Theory, version 2"
     },
     {
+      "id": "general-midi",
+      "title": "MIDI Manufacturers Association, General MIDI System Level 1 (sound set)"
+    },
+    {
       "id": "fux",
       "title": "Fux, The Study of Counterpoint (Gradus ad Parnassum)"
     }

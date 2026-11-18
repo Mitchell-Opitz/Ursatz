@@ -66,6 +66,7 @@ PlanResult plan_lane_span_write(PiecePlan *plan, LaneSpanId id, const PlanLanePa
         }
         if (bytes) {
             memcpy(copy, payload->notes.notes, bytes);
+            plan_note_ids_assign(plan, copy, payload->notes.note_count, id);
         }
         stored.notes.notes = copy;
         free((void *)entry->payload.notes.notes);

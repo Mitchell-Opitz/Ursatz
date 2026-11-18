@@ -23,6 +23,11 @@ typedef struct {
     bool has_chord_type;
     Relation relation;
     bool has_relation;
+    Instrument instrument;
+    bool has_instrument;
+    EnsembleTemplate ensemble;
+    bool has_ensemble;
+    EnsembleSlot *ensemble_slots; /* the ensemble's slots: the template points into it */
     const char **aliases; /* the entry's aliases, in file order */
     size_t alias_count;
     const char *variant_target;  /* the ids a material or relation names, resolved once every entry is read */
@@ -65,6 +70,7 @@ static void slot_release(Slot *slot) {
     }
     free(slot->owned);
     free(slot->aliases);
+    free(slot->ensemble_slots);
     free(slot->strings);
 }
 
@@ -571,7 +577,175 @@ static KnowledgeStatus read_relation(Slot *slot, const cJSON *entry, const char 
     return KNOWLEDGE_ERR_FIELD;
 }
 
-/* The fields the loaders read, by kind. Fills the slot's material, chord type or relation. */
+static bool clef_of(const char *text, InstrumentClef *clef) {
+    static const struct {
+        const char *name;
+        InstrumentClef clef;
+    } CLEFS[] = {{"treble", INSTRUMENT_CLEF_TREBLE},
+                 {"bass", INSTRUMENT_CLEF_BASS},
+                 {"alto", INSTRUMENT_CLEF_ALTO},
+                 {"tenor", INSTRUMENT_CLEF_TENOR}};
+    for (size_t i = 0; i < sizeof(CLEFS) / sizeof(CLEFS[0]); i++) {
+        if (strcmp(text, CLEFS[i].name) == 0) {
+            *clef = CLEFS[i].clef;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* A {lowest, highest} object of MIDI numbers: 0 to 127, lowest at most highest. Returns NULL, or the problem. */
+static const char *read_midi_range(const cJSON *object, int *lowest, int *highest) {
+    if (!cJSON_IsObject(object)) {
+        return "not an object with lowest and highest";
+    }
+    const cJSON *low = member(object, "lowest");
+    const cJSON *high = member(object, "highest");
+    if (!in_range(low, 0, 127) || !in_range(high, 0, 127)) {
+        return "lowest and highest are not integers from 0 to 127";
+    }
+    if (low->valueint > high->valueint) {
+        return "lowest is above highest";
+    }
+    *lowest = low->valueint;
+    *highest = high->valueint;
+    return NULL;
+}
+
+static bool instrument_family(const char *text) {
+    static const char *const FAMILIES[] = {"keyboard", "strings", "woodwinds", "brass", "percussion", "voice", "plucked"};
+    for (size_t i = 0; i < sizeof(FAMILIES) / sizeof(FAMILIES[0]); i++) {
+        if (strcmp(text, FAMILIES[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* K12 instrument: family, transposition, clefs, range, comfortable_range, general_midi_program and pedals of content. */
+static KnowledgeStatus read_instrument(Slot *slot, const cJSON *entry, const char *path, char *message, size_t message_size) {
+    const char *id = slot->entry.id;
+    const cJSON *content = member(entry, "content");
+    if (!cJSON_IsObject(content)) {
+        fail(message, message_size, path, id, "content", "not an object");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    Instrument *instrument = &slot->instrument;
+    const char *family = string_of(member(content, "family"));
+    if (family == NULL || !instrument_family(family)) {
+        fail(message, message_size, path, id, "content.family",
+             family == NULL ? "missing" : "not keyboard, strings, woodwinds, brass, percussion, voice or plucked");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    instrument->family = own(slot, family);
+    if (instrument->family == NULL) {
+        return KNOWLEDGE_ERR_ALLOC;
+    }
+    if (!in_range(member(content, "transposition"), -36, 36)) {
+        fail(message, message_size, path, id, "content.transposition", "not an integer from -36 to 36");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    instrument->transposition = member(content, "transposition")->valueint;
+    const cJSON *clefs = member(content, "clefs");
+    int clef_count = cJSON_IsArray(clefs) ? cJSON_GetArraySize(clefs) : -1;
+    if (clef_count < 1 || clef_count > INSTRUMENT_STAVES_MAX) {
+        fail(message, message_size, path, id, "content.clefs", "not 1 to 4 clefs");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    const cJSON *item;
+    cJSON_ArrayForEach(item, clefs) {
+        const char *text = string_of(item);
+        if (text == NULL || !clef_of(text, &instrument->clefs[instrument->staff_count])) {
+            fail(message, message_size, path, id, "content.clefs", "a clef is not treble, bass, alto or tenor");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        instrument->staff_count++;
+    }
+    const char *problem = read_midi_range(member(content, "range"), &instrument->lowest, &instrument->highest);
+    if (problem != NULL) {
+        fail(message, message_size, path, id, "content.range", member(content, "range") == NULL ? "missing" : problem);
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    const cJSON *comfortable = member(content, "comfortable_range");
+    if (comfortable != NULL) {
+        problem = read_midi_range(comfortable, &instrument->comfortable_lowest, &instrument->comfortable_highest);
+        if (problem == NULL && (instrument->comfortable_lowest < instrument->lowest ||
+                                instrument->comfortable_highest > instrument->highest)) {
+            problem = "is not inside the range";
+        }
+        if (problem != NULL) {
+            fail(message, message_size, path, id, "content.comfortable_range", problem);
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        instrument->has_comfortable_range = true;
+    }
+    if (!in_range(member(content, "general_midi_program"), 0, 127)) {
+        fail(message, message_size, path, id, "content.general_midi_program",
+             member(content, "general_midi_program") == NULL ? "missing" : "not an integer from 0 to 127");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    instrument->general_midi_program = member(content, "general_midi_program")->valueint;
+    const cJSON *pedals = member(content, "pedals");
+    if (pedals != NULL) {
+        if (!cJSON_IsArray(pedals)) {
+            fail(message, message_size, path, id, "content.pedals", "not an array");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        cJSON_ArrayForEach(item, pedals) {
+            const char *text = string_of(item);
+            if (text == NULL || strcmp(text, "sustain") != 0 || instrument->sustain_pedal) {
+                fail(message, message_size, path, id, "content.pedals", "not a list of distinct pedals from: sustain");
+                return KNOWLEDGE_ERR_FIELD;
+            }
+            instrument->sustain_pedal = true;
+        }
+    }
+    return KNOWLEDGE_OK;
+}
+
+/* K12 ensemble template: content.slots, each an instrument id, a name and a player count. The ids are resolved later. */
+static KnowledgeStatus read_ensemble(Slot *slot, const cJSON *entry, const char *path, char *message, size_t message_size) {
+    const char *id = slot->entry.id;
+    const cJSON *content = member(entry, "content");
+    const cJSON *slots = cJSON_IsObject(content) ? member(content, "slots") : NULL;
+    int count = cJSON_IsArray(slots) ? cJSON_GetArraySize(slots) : -1;
+    if (count < 1) {
+        fail(message, message_size, path, id, "content.slots", slots == NULL ? "missing" : "not an array of at least one slot");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    slot->ensemble_slots = calloc((size_t)count, sizeof(EnsembleSlot));
+    if (slot->ensemble_slots == NULL) {
+        return KNOWLEDGE_ERR_ALLOC;
+    }
+    const cJSON *item;
+    cJSON_ArrayForEach(item, slots) {
+        const char *instrument = cJSON_IsObject(item) ? string_of(member(item, "instrument")) : NULL;
+        const char *name = cJSON_IsObject(item) ? string_of(member(item, "name")) : NULL;
+        if (instrument == NULL || name == NULL || !in_range(member(item, "players"), 1, INT32_MAX)) {
+            fail(message, message_size, path, id, "content.slots",
+                 "a slot needs an instrument id, a name and players from 1");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        for (size_t i = 0; i < slot->ensemble.slot_count; i++) {
+            if (strcmp(slot->ensemble_slots[i].name, name) == 0) {
+                fail(message, message_size, path, id, "content.slots", "two slots have the same name");
+                return KNOWLEDGE_ERR_FIELD;
+            }
+        }
+        EnsembleSlot *out = &slot->ensemble_slots[slot->ensemble.slot_count];
+        out->instrument = own(slot, instrument);
+        out->name = own(slot, name);
+        if (out->instrument == NULL || out->name == NULL) {
+            return KNOWLEDGE_ERR_ALLOC;
+        }
+        out->players = member(item, "players")->valueint;
+        slot->ensemble.slot_count++;
+    }
+    slot->ensemble.slots = slot->ensemble_slots;
+    return KNOWLEDGE_OK;
+}
+
+/* The fields the loaders read, by kind. Fills the slot's material, chord type, relation, instrument or ensemble. */
 static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *path, char *message, size_t message_size) {
     const char *kind = slot->entry.kind;
     const char *subtype = slot->entry.subtype;
@@ -613,6 +787,19 @@ static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *
         slot->relation.name = slot->entry.name;
         status = read_relation(slot, entry, subtype, path, message, message_size);
         slot->has_relation = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "instrument") == 0 && subtype != NULL && strcmp(subtype, "instrument") == 0) {
+        slot->instrument.id = slot->entry.id;
+        slot->instrument.name = slot->entry.name;
+        status = read_instrument(slot, entry, path, message, message_size);
+        slot->has_instrument = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "instrument") == 0 && subtype != NULL && strcmp(subtype, "ensemble") == 0) {
+        slot->ensemble.id = slot->entry.id;
+        slot->ensemble.name = slot->entry.name;
+        status = read_ensemble(slot, entry, path, message, message_size);
+        slot->has_ensemble = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "instrument") == 0) {
+        fail(message, message_size, path, slot->entry.id, "subtype", "not instrument or ensemble");
+        return KNOWLEDGE_ERR_FIELD;
     }
     return status;
 }
@@ -794,6 +981,13 @@ static KnowledgeStatus resolve_links(KnowledgeSnapshot *snapshot, char *message,
             slot->relation.tonal.material_entry = linked_material(snapshot, slot->material_target, "material", problem, sizeof(problem));
             if (slot->relation.tonal.material_entry == NULL) {
                 fail(message, message_size, slot->path, slot->entry.id, "content.material", problem);
+                return KNOWLEDGE_ERR_FIELD;
+            }
+        }
+        for (size_t s = 0; slot->has_ensemble && s < slot->ensemble.slot_count; s++) {
+            const Slot *found = find_slot(snapshot, slot->ensemble_slots[s].instrument);
+            if (found == NULL || !found->has_instrument) {
+                fail(message, message_size, slot->path, slot->entry.id, "content.slots", "an ensemble slot's instrument is not an instrument entry");
                 return KNOWLEDGE_ERR_FIELD;
             }
         }
@@ -1007,4 +1201,14 @@ const Relation *knowledge_snapshot_relation_named(const KnowledgeSnapshot *snaps
         }
     }
     return NULL;
+}
+
+const Instrument *knowledge_snapshot_instrument(const KnowledgeSnapshot *snapshot, const char *id) {
+    const Slot *slot = find_slot(snapshot, id);
+    return slot != NULL && slot->has_instrument ? &slot->instrument : NULL;
+}
+
+const EnsembleTemplate *knowledge_snapshot_ensemble(const KnowledgeSnapshot *snapshot, const char *id) {
+    const Slot *slot = find_slot(snapshot, id);
+    return slot != NULL && slot->has_ensemble ? &slot->ensemble : NULL;
 }

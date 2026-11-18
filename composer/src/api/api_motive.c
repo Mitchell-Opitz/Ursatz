@@ -120,11 +120,11 @@ static ComposerStatus render_motive(const cJSON *request, const KnowledgeSnapsho
         return export_failure(error, want_midi ? "/midi" : "/musicxml", result, &detail);
     }
     if (want_midi) {
-        result = rendered_plan_midi_bytes(&plan_rendered, &options, &out->midi, &out->midi_size, &detail);
+        result = rendered_plan_midi_bytes(knowledge, &plan_rendered, &options, &out->midi, &out->midi_size, &detail);
         status = result == PLAN_EXPORT_OK ? COMPOSER_OK : export_failure(error, "/midi", result, &detail);
     }
     if (status == COMPOSER_OK && want_musicxml) {
-        result = rendered_plan_musicxml_text(&plan_rendered, &options, &out->musicxml, &detail);
+        result = rendered_plan_musicxml_text(knowledge, &plan_rendered, &options, &out->musicxml, &detail);
         status = result == PLAN_EXPORT_OK ? COMPOSER_OK : export_failure(error, "/musicxml", result, &detail);
     }
     rendered_plan_destroy(&plan_rendered);

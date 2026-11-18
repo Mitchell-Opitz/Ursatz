@@ -5,6 +5,7 @@
 
 #include "model/pitch/chord_type.h"
 #include "model/pitch/pitch_material.h"
+#include "theory/knowledge/instrument.h"
 #include "theory/knowledge/relation.h"
 
 /*
@@ -12,7 +13,8 @@
  * own files, read once and then never changed. Whoever calls the library builds it and passes it on; the library keeps no copy, so
  * two snapshots built in one process are independent. The snapshot holds each entry's common fields and, for the pitch material,
  * chord type and relation kinds, what the entry says (every field the loader reads is checked, and a bad one refuses the build with
- * the file, the id and the field). Entries of other kinds are kept by their common fields until their loaders exist.
+ * the file, the id and the field). The loaded kinds are the pitch material, the chord type, the relation and the instrument (its
+ * two subtypes, instrument and ensemble). Entries of other kinds are kept by their common fields until their loaders exist.
  */
 
 typedef struct KnowledgeSnapshot KnowledgeSnapshot;
@@ -98,5 +100,11 @@ const Relation *knowledge_snapshot_relation(const KnowledgeSnapshot *snapshot, c
 
 /* The relation for a word, matched without regard to case against the id, then the name, then an alias, as for a material. */
 const Relation *knowledge_snapshot_relation_named(const KnowledgeSnapshot *snapshot, const char *word);
+
+/* The instrument (kind instrument, subtype instrument) with this id, or NULL when there is none or the entry is another kind or subtype. */
+const Instrument *knowledge_snapshot_instrument(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The ensemble template (kind instrument, subtype ensemble) with this id, or NULL when there is none or it is another kind or subtype. */
+const EnsembleTemplate *knowledge_snapshot_ensemble(const KnowledgeSnapshot *snapshot, const char *id);
 
 #endif

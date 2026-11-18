@@ -34,8 +34,12 @@
  * carries. An <alter> that is not a whole number is rounded (and warned about).
  *
  * Order. Notes come out in time order (stable by onset, then part, then document order), as the MIDIImporter
- * returns them; they are NOT unfolded for repeats and endings. Note ids are "musicxml-<part id>-<n>", n counting
- * from 0 in document order within the part.
+ * returns them; they are NOT unfolded for repeats and endings. A note's id is its xml:id when it has one, is at most 63
+ * characters and no earlier note of the import (in this order) has it, so a score the export wrote reads back with the
+ * ids it gave; a note that starts a tie loses the "_a" the export puts on a first segment, and a tie continuation merged
+ * into its note adds none. Otherwise the id is positional, "musicxml-<part id>-<n>", n counting from 0 in document
+ * order within the part (a repeated xml:id is warned about, and a positional id an earlier note already has gets "-2",
+ * "-3" and on).
  *
  * Meter. Each <time> gives a TimeSignature at its position, and the MeterMap is built from them (declared, not
  * defaulted); with no <time> anywhere it is the defaulted 4/4 map, as for a MIDI file with no time signature event.

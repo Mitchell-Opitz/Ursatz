@@ -298,7 +298,7 @@ int return_mode_pitch(const ReturnPayload *payload, int pitch) {
     return payload->mode_change ? return_map_pitch(analysis_key_tonic_pitch_class(&payload->key), payload->to_material, pitch) : pitch;
 }
 
-PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy) {
+PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy, PlanNoteOperation operation) {
     NodeId *ids = calloc(copy->node_count + 1, sizeof(NodeId));
     if (!ids) {
         return PLAN_ERR_ALLOC;
@@ -321,13 +321,31 @@ PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *
         PlanLanePayload payload;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
+        PlanNote *written = NULL;
         if (span->lane == PLAN_LANE_HARMONY) {
             payload.harmony = span->harmony;
         } else {
-            payload.notes.notes = span->notes;
+            written = span->note_count ? calloc(span->note_count, sizeof(PlanNote)) : NULL;
+            if (span->note_count && !written) {
+                result = PLAN_ERR_ALLOC;
+                break;
+            }
+            for (size_t n = 0; n < span->note_count; n++) {
+                written[n] = span->notes[n];
+                PlanNoteId from = written[n].id;
+                written[n].id = PLAN_NOTE_NONE;
+                written[n].source = PLAN_NOTE_NONE;
+                written[n].operation = PLAN_NOTE_FROM_NONE;
+                if (operation == PLAN_NOTE_FROM_RETURN && from != PLAN_NOTE_NONE) {
+                    written[n].source = from;
+                    written[n].operation = PLAN_NOTE_FROM_RETURN;
+                }
+            }
+            payload.notes.notes = written;
             payload.notes.note_count = span->note_count;
         }
         result = plan_add_lane_span(plan, owner, span->lane, span->voice, span->span, &payload, &id);
+        free(written);
         for (size_t c = 0; result == PLAN_OK && c < span->constraint_count; c++) {
             result = plan_lane_span_add_constraint(plan, id, &span->constraints[c]);
         }
@@ -941,7 +959,7 @@ static PlanResult return_apply(PiecePlan *plan, FillTarget target, const FillCan
         !form_return_handles(plan, target.id)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
-    return return_copy_write(plan, target.id, &payload->result);
+    return return_copy_write(plan, target.id, &payload->result, PLAN_NOTE_FROM_RETURN);
 }
 
 FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFillParams *melody) {

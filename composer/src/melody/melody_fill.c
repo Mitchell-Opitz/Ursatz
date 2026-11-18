@@ -149,6 +149,16 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     return ok;
 }
 
+/* A note that carries a note of the motive is made from it (R-601): its source is that note's plan id. A developed motive node's own
+   notes, and a motive whose notes have no id, carry no link. */
+static void link_to_motive(PlanNote *out, const MelodyNote *note, const MelodyContext *context) {
+    if (note->motive_index >= 0 && (size_t)note->motive_index < MOTIVE_MAX_NOTES &&
+        context->motive_note_id[note->motive_index] != PLAN_NOTE_NONE) {
+        out->source = context->motive_note_id[note->motive_index];
+        out->operation = PLAN_NOTE_FROM_MOTIVE;
+    }
+}
+
 /* The target keeps its id and takes the notes, as one Realized span over the phrase. */
 static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const MelodyCandidate *melody = candidate ? candidate->payload : NULL;
@@ -182,6 +192,7 @@ static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCan
         notes[i].spelled = false;
         notes[i].offset = position_add(note->onset, melody->context.pickup);
         notes[i].duration = note->duration;
+        link_to_motive(&notes[i], note, &melody->context);
         if (position_is_far(notes[i].offset) || position_is_far(notes[i].duration)) {
             result = PLAN_ERR_BAD_TIME;
         }
@@ -216,6 +227,10 @@ bool melody_candidate_realized(const FillCandidate *candidate, LaneSpanId *targe
         notes[found].spelled = false;
         notes[found].offset = position_add(note->onset, melody->context.pickup);
         notes[found].duration = note->duration;
+        notes[found].id = PLAN_NOTE_NONE;
+        notes[found].source = PLAN_NOTE_NONE;
+        notes[found].operation = PLAN_NOTE_FROM_NONE;
+        link_to_motive(&notes[found], note, &melody->context);
         found++;
     }
     if (found == 0) {

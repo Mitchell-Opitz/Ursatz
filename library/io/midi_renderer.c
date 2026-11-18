@@ -1,5 +1,6 @@
 #include "io/midi_renderer.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -297,11 +298,16 @@ static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *m
 
 /* --- the voice tracks --- */
 
+/* The order of the events of a voice or part track at an equal tick: the name, then the program changes, then the note-offs, the
+   sustain pedal up, the sustain pedal down and the note-ons, then (the sort's last key) the order they were added. */
+enum { TRACK_ORDER_NAME = -2, TRACK_ORDER_PROGRAM = -1, TRACK_ORDER_OFF = 0, TRACK_ORDER_PEDAL_UP = 1, TRACK_ORDER_PEDAL_DOWN = 2, TRACK_ORDER_ON = 3 };
+
 typedef struct {
     const char *voice_id; /* NULL: the notes with no voice */
     uint32_t first_tick;
     size_t first_index;
-    size_t rank; /* position among the tracks, from 0 */
+    size_t rank;    /* position among the voices by first sound, from 0: the channel follows it */
+    size_t part;    /* with parts: the index of the part that holds the voice */
 } Group;
 
 static int same_voice(const char *a, const char *b) {
@@ -333,21 +339,19 @@ static int compare_groups(const void *left, const void *right) {
     return 0;
 }
 
-/* Two notes of one pitch sounding together in one track cannot be told apart by their note-offs. Events are sorted
+/* Two notes of one pitch sounding together on one channel cannot be told apart by their note-offs. Events are sorted
    with note-offs first at an equal tick, so a note ending where another begins is not an overlap. */
 static int overlaps_on_one_pitch(const TrackEvents *events) {
-    unsigned char sounding[128] = {0};
+    unsigned char sounding[16][128] = {{0}};
     for (size_t i = 0; i < events->count; i++) {
         const unsigned char *event = events->items[i].bytes;
-        if (event[0] == 0xFF) {
-            continue; /* a meta-event, such as a track name */
-        }
-        if ((event[0] & 0xF0) == 0x90) {
-            if (sounding[event[1]]++ > 0) {
+        unsigned kind = event[0] & 0xF0;
+        if (kind == 0x90) {
+            if (sounding[event[0] & 0x0F][event[1]]++ > 0) {
                 return 1;
             }
-        } else {
-            sounding[event[1]]--;
+        } else if (kind == 0x80) {
+            sounding[event[0] & 0x0F][event[1]]--;
         }
     }
     return 0;
@@ -363,27 +367,74 @@ static void free_tracks(TrackEvents *tracks, size_t count) {
     free(tracks);
 }
 
+/* The index of the part that lists the voice, or part_count when none does. */
+static size_t part_of_voice(const MidiRenderOptions *options, const char *voice_id) {
+    for (size_t p = 0; voice_id != NULL && p < options->part_count; p++) {
+        for (size_t v = 0; v < options->parts[p].voice_count; v++) {
+            if (strcmp(options->parts[p].voice_ids[v], voice_id) == 0) {
+                return p;
+            }
+        }
+    }
+    return options->part_count;
+}
+
+static unsigned channel_of_rank(size_t rank) {
+    return rank < 9 ? (unsigned)rank : (unsigned)rank + 1; /* skip percussion, channel 9 */
+}
+
+/* Writes the sustain pedal of each part onto every channel of that part. */
+static MidiRenderResult add_pedals(TrackEvents *tracks, const MidiRenderOptions *options, const Group *groups, size_t group_count,
+                                   unsigned division) {
+    for (size_t p = 0; p < options->part_count; p++) {
+        for (size_t k = 0; k < options->parts[p].pedal_count; k++) {
+            uint32_t from, to;
+            const TimeSpan *span = &options->parts[p].pedals[k];
+            if (!to_tick((long)span->start.value.num, (unsigned long)span->start.value.den, division, &from) ||
+                !to_tick((long)span->end.value.num, (unsigned long)span->end.value.den, division, &to) || to <= from) {
+                return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
+            }
+            for (size_t g = 0; g < group_count; g++) {
+                if (groups[g].part != p) {
+                    continue;
+                }
+                unsigned channel = channel_of_rank(groups[g].rank);
+                unsigned char down[3] = {(unsigned char)(0xB0 | channel), 64, 127};
+                unsigned char up[3] = {(unsigned char)(0xB0 | channel), 64, 0};
+                if (!add_event(&tracks[p], from, TRACK_ORDER_PEDAL_DOWN, down, sizeof(down)) ||
+                    !add_event(&tracks[p], to, TRACK_ORDER_PEDAL_UP, up, sizeof(up))) {
+                    return MIDI_RENDER_ERR_ALLOC;
+                }
+            }
+        }
+    }
+    return MIDI_RENDER_OK;
+}
+
 /*
- * Groups the notes by voice, checks every note, and builds each voice track's sorted events. On OK *out_tracks is
- * *out_count tracks in track order (free with free_tracks); otherwise nothing is left allocated.
+ * Groups the notes by voice, checks every note, and builds each track's sorted events: one track per voice, or with
+ * options->parts one track per part holding a channel for each of its voices. On OK *out_tracks is *out_count tracks in track
+ * order (free with free_tracks); otherwise nothing is left allocated.
  */
 static MidiRenderResult collect_voice_tracks(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
                                              size_t count, const MidiRenderOptions *options, unsigned division,
                                              TrackEvents **out_tracks, size_t *out_count) {
     *out_tracks = NULL;
     *out_count = 0;
-    if (count == 0) {
+    bool with_parts = options != NULL && options->part_count > 0;
+    if (count == 0 && !with_parts) {
         return MIDI_RENDER_OK;
     }
 
-    uint32_t *starts = (uint32_t *)malloc(count * sizeof(uint32_t));
-    uint32_t *ends = (uint32_t *)malloc(count * sizeof(uint32_t));
-    unsigned char *pitches = (unsigned char *)malloc(count);
-    size_t *group_of = (size_t *)malloc(count * sizeof(size_t));
+    uint32_t *starts = (uint32_t *)malloc((count + 1) * sizeof(uint32_t));
+    uint32_t *ends = (uint32_t *)malloc((count + 1) * sizeof(uint32_t));
+    unsigned char *pitches = (unsigned char *)malloc(count + 1);
+    size_t *group_of = (size_t *)malloc((count + 1) * sizeof(size_t));
     Group groups[MIDI_RENDER_MAX_VOICE_TRACKS];
     size_t group_count = 0;
     MidiRenderResult status = MIDI_RENDER_OK;
     TrackEvents *tracks = NULL;
+    size_t track_count = with_parts ? options->part_count : 0;
 
     if (starts == NULL || ends == NULL || pitches == NULL || group_of == NULL) {
         status = MIDI_RENDER_ERR_ALLOC;
@@ -422,6 +473,11 @@ static MidiRenderResult collect_voice_tracks(NoteEvent *const *events, PitchNume
             groups[g].voice_id = voice_id;
             groups[g].first_tick = starts[i];
             groups[g].first_index = i;
+            groups[g].part = with_parts ? part_of_voice(options, voice_id) : 0;
+            if (with_parts && groups[g].part == options->part_count) {
+                status = MIDI_RENDER_ERR_NOT_REPRESENTABLE; /* a note with no voice, or a voice no part holds */
+                break;
+            }
             group_count++;
         } else if (starts[i] < groups[g].first_tick) {
             groups[g].first_tick = starts[i];
@@ -431,40 +487,64 @@ static MidiRenderResult collect_voice_tracks(NoteEvent *const *events, PitchNume
     }
 
     if (status == MIDI_RENDER_OK) {
-        /* Tracks follow the order the voices first sound. */
+        /* Channels follow the order the voices first sound. */
         const Group *order[MIDI_RENDER_MAX_VOICE_TRACKS];
         for (size_t g = 0; g < group_count; g++) {
             order[g] = &groups[g];
         }
-        qsort(order, group_count, sizeof(order[0]), compare_groups);
+        if (group_count > 1) {
+            qsort(order, group_count, sizeof(order[0]), compare_groups);
+        }
         for (size_t rank = 0; rank < group_count; rank++) {
             groups[order[rank] - groups].rank = rank;
         }
+        if (!with_parts) {
+            track_count = group_count; /* a voice's track number is its rank */
+        }
 
-        tracks = (TrackEvents *)calloc(group_count, sizeof(TrackEvents));
+        tracks = (TrackEvents *)calloc(track_count > 0 ? track_count : 1, sizeof(TrackEvents));
         if (tracks == NULL) {
             status = MIDI_RENDER_ERR_ALLOC;
         }
         for (size_t i = 0; i < count && status == MIDI_RENDER_OK; i++) {
             size_t rank = groups[group_of[i]].rank;
-            unsigned channel = rank < 9 ? (unsigned)rank : (unsigned)rank + 1; /* skip percussion, channel 9 */
+            size_t track = with_parts ? groups[group_of[i]].part : rank;
+            unsigned channel = channel_of_rank(rank);
             unsigned char on[3] = {(unsigned char)(0x90 | channel), pitches[i], MIDI_RENDER_NOTE_VELOCITY};
             unsigned char off[3] = {(unsigned char)(0x80 | channel), pitches[i], 0};
             /* Note-offs sort before note-ons at an equal tick. */
-            if (!add_event(&tracks[rank], starts[i], 1, on, sizeof(on)) ||
-                !add_event(&tracks[rank], ends[i], 0, off, sizeof(off))) {
+            if (!add_event(&tracks[track], starts[i], TRACK_ORDER_ON, on, sizeof(on)) ||
+                !add_event(&tracks[track], ends[i], TRACK_ORDER_OFF, off, sizeof(off))) {
                 status = MIDI_RENDER_ERR_ALLOC;
             }
         }
-        for (size_t g = 0; g < group_count && status == MIDI_RENDER_OK; g++) {
-            const char *name = track_name_for(options, groups[g].voice_id);
-            if (name != NULL && !add_text_event(&tracks[groups[g].rank], 0, ORDER_NAME, 0x03, name)) {
-                status = MIDI_RENDER_ERR_ALLOC;
+        if (with_parts) {
+            for (size_t p = 0; p < options->part_count && status == MIDI_RENDER_OK; p++) {
+                if (options->parts[p].name != NULL && !add_text_event(&tracks[p], 0, TRACK_ORDER_NAME, 0x03, options->parts[p].name)) {
+                    status = MIDI_RENDER_ERR_ALLOC;
+                }
+            }
+            for (size_t g = 0; g < group_count && status == MIDI_RENDER_OK; g++) {
+                unsigned char change[2] = {(unsigned char)(0xC0 | channel_of_rank(groups[g].rank)),
+                                           (unsigned char)options->parts[groups[g].part].program};
+                if (!add_event(&tracks[groups[g].part], 0, TRACK_ORDER_PROGRAM, change, sizeof(change))) {
+                    status = MIDI_RENDER_ERR_ALLOC;
+                }
+            }
+            if (status == MIDI_RENDER_OK) {
+                status = add_pedals(tracks, options, groups, group_count, division);
+            }
+        } else {
+            for (size_t g = 0; g < group_count && status == MIDI_RENDER_OK; g++) {
+                const char *name = track_name_for(options, groups[g].voice_id);
+                if (name != NULL && !add_text_event(&tracks[groups[g].rank], 0, TRACK_ORDER_NAME, 0x03, name)) {
+                    status = MIDI_RENDER_ERR_ALLOC;
+                }
             }
         }
-        for (size_t rank = 0; rank < group_count && status == MIDI_RENDER_OK; rank++) {
-            sort_events(&tracks[rank]);
-            if (overlaps_on_one_pitch(&tracks[rank])) {
+        for (size_t track = 0; track < track_count && status == MIDI_RENDER_OK; track++) {
+            sort_events(&tracks[track]);
+            if (overlaps_on_one_pitch(&tracks[track])) {
                 status = MIDI_RENDER_ERR_NOT_REPRESENTABLE;
             }
         }
@@ -475,11 +555,11 @@ static MidiRenderResult collect_voice_tracks(NoteEvent *const *events, PitchNume
     free(pitches);
     free(group_of);
     if (status != MIDI_RENDER_OK) {
-        free_tracks(tracks, group_count);
+        free_tracks(tracks, track_count);
         return status;
     }
     *out_tracks = tracks;
-    *out_count = group_count;
+    *out_count = track_count;
     return MIDI_RENDER_OK;
 }
 
@@ -511,6 +591,37 @@ static MidiRenderResult check_options(const MidiRenderOptions *options) {
     }
     if (options->conductor_name != NULL && strlen(options->conductor_name) > MAX_TICK) {
         return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
+    }
+    if (options->part_count > 0 && options->parts == NULL) {
+        return MIDI_RENDER_ERR_NULL_ARG;
+    }
+    for (size_t p = 0; p < options->part_count; p++) {
+        const MidiRenderPart *part = &options->parts[p];
+        if ((part->voice_count > 0 && part->voice_ids == NULL) || (part->pedal_count > 0 && part->pedals == NULL)) {
+            return MIDI_RENDER_ERR_NULL_ARG;
+        }
+        for (size_t v = 0; v < part->voice_count; v++) {
+            if (part->voice_ids[v] == NULL) {
+                return MIDI_RENDER_ERR_NULL_ARG;
+            }
+        }
+    }
+    for (size_t p = 0; p < options->part_count; p++) {
+        const MidiRenderPart *part = &options->parts[p];
+        if (part->program < 0 || part->program > 127 || (part->name != NULL && strlen(part->name) > MAX_TICK)) {
+            return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
+        }
+        /* a voice belongs to one part, once */
+        for (size_t v = 0; v < part->voice_count; v++) {
+            for (size_t q = 0; q <= p; q++) {
+                const MidiRenderPart *other = &options->parts[q];
+                for (size_t w = 0; w < other->voice_count && (q < p || w < v); w++) {
+                    if (strcmp(other->voice_ids[w], part->voice_ids[v]) == 0) {
+                        return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
+                    }
+                }
+            }
+        }
     }
     for (size_t i = 0; i < options->track_name_count; i++) {
         if (strlen(options->track_names[i].name) > MAX_TICK) {

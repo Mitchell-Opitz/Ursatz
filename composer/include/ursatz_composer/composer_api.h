@@ -30,10 +30,13 @@
  * 1.25 adds the home mode and the elaboration role to the forms entry, and the mode of a copy across modes to the rows' changes.
  * 2.0 names materials: the replies hold "material" (a K1 id) where they held "mode", the vocabulary holds "materials" and
  * "piece_materials" and the pitch class names by material, and a request names "api_version" 2.
+ * 2.1 changes the layout of the MIDI and MusicXML files (R-599: every plan is one movement whose lines are all in one piano part: one
+ * MIDI track named "Piano" with a channel per line, one MusicXML part of two staves; the notes are the same) and the replies' plans are
+ * plan format 4 (every note has an id, R-601).
  */
 
 #define COMPOSER_API_VERSION_MAJOR 2
-#define COMPOSER_API_VERSION_MINOR 0
+#define COMPOSER_API_VERSION_MINOR 1
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

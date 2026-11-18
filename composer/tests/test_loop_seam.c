@@ -41,6 +41,7 @@ static void add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, long bar
     PlanNote notes[8];
     PlanLanePayload payload;
     LaneSpanId id;
+    memset(notes, 0, sizeof(notes));
     assert(count > 0 && count <= 8);
     for (size_t i = 0; i < count; i++) {
         notes[i].midi = pitches[i];

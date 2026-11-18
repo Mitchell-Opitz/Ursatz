@@ -180,7 +180,7 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
         if (!document) {
             status = api_fail_alloc(&out->error);
         } else {
-            status = api_render_outputs(plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, plan, &outputs, out);
             if (status == COMPOSER_OK) {
                 status = api_respond_json(out, document);
             } else {

@@ -3,8 +3,9 @@
 
 Validates every entry under the kind folders of the knowledge dir (target architecture 5): the files parse, the envelope and the
 entry anatomy follow entry.schema.json, the content and examples follow the kind's schema, ids are unique and carry their file's
-source and folder's kind, relations point at existing ids, citations name a source of sources.json, and a material's examples
-spell its steps. One line per problem, "knowledge: <file>: <id>: <what>". Exit 0 clean, 1 with problems, 2 on a missing file.
+source and folder's kind, relations point at existing ids, citations name a source of sources.json, a material's examples
+spell its steps, an instrument's range holds its examples, and an ensemble's slots name instruments. One line per problem,
+"knowledge: <file>: <id>: <what>". Exit 0 clean, 1 with problems, 2 on a missing file.
 """
 import json
 import os
@@ -223,6 +224,52 @@ def check_materials(materials, locations):
                 problem(path, material_id, "is not a rotation of %s" % relation["target"])
 
 
+def check_instrument(path, entry):
+    """A range runs low to high, a comfortable range sits inside it, and each example's in_range follows the range."""
+    content = entry.get("content")
+    if not isinstance(content, dict):
+        return
+    full = content.get("range")
+    if not isinstance(full, dict) or not all(isinstance(full.get(k), int) for k in ("lowest", "highest")):
+        return
+    if full["lowest"] > full["highest"]:
+        problem(path, entry["id"], "range lowest %d is above highest %d" % (full["lowest"], full["highest"]))
+    comfortable = content.get("comfortable_range")
+    if isinstance(comfortable, dict) and all(isinstance(comfortable.get(k), int) for k in ("lowest", "highest")):
+        if comfortable["lowest"] > comfortable["highest"]:
+            problem(path, entry["id"], "comfortable range lowest %d is above highest %d" % (
+                comfortable["lowest"], comfortable["highest"]))
+        elif comfortable["lowest"] < full["lowest"] or comfortable["highest"] > full["highest"]:
+            problem(path, entry["id"], "comfortable range is not inside the range")
+    for number, example in enumerate(entry.get("examples", []), 1):
+        if not isinstance(example, dict) or not isinstance(example.get("midi"), int) or not isinstance(example.get("in_range"), bool):
+            continue
+        if example["in_range"] != (full["lowest"] <= example["midi"] <= full["highest"]):
+            problem(path, entry["id"], "example %d: midi %d is %s the range" % (
+                number, example["midi"], "not in" if example["in_range"] else "in"))
+
+
+def check_ensemble(path, entry, instruments):
+    """Each slot names an instrument of the folder, slot names are unique, and each example's performers are the slot names."""
+    content = entry.get("content")
+    slots = content.get("slots") if isinstance(content, dict) else None
+    if not isinstance(slots, list):
+        return
+    names = []
+    for slot in slots:
+        if not isinstance(slot, dict):
+            continue
+        if slot.get("instrument") not in instruments:
+            problem(path, entry["id"], "slot instrument '%s' is not an instrument entry" % slot.get("instrument"))
+        name = slot.get("name")
+        if name in names:
+            problem(path, entry["id"], "slot name '%s' is used twice" % name)
+        names.append(name)
+    for number, example in enumerate(entry.get("examples", []), 1):
+        if isinstance(example, dict) and isinstance(example.get("performers"), list) and example["performers"] != names:
+            problem(path, entry["id"], "example %d: performers do not equal the slot names in order" % number)
+
+
 def main(argv):
     if len(argv) not in (2, 3):
         print("usage: check-knowledge.py <knowledge dir> [<schema dir>]")
@@ -252,6 +299,7 @@ def main(argv):
     ids = {}
     relations = []
     materials, locations, relation_entries = {}, {}, []
+    instrument_ids, ensemble_entries = set(), []
     for folder in sorted(os.listdir(root)):
         folder_path = os.path.join(root, folder)
         if not os.path.isdir(folder_path) or folder == "schema":
@@ -327,9 +375,16 @@ def main(argv):
                         locations[entry_id] = rel
                 if kind == "relation":
                     relation_entries.append((rel, entry))
+                if kind == "instrument" and subtype == "instrument":
+                    instrument_ids.add(entry_id)
+                    check_instrument(rel, entry)
+                if kind == "instrument" and subtype == "ensemble":
+                    ensemble_entries.append((rel, entry))
     for rel, entry_id, target in relations:
         if target not in ids:
             problem(rel, entry_id, "relation target '%s' is not an entry" % target)
+    for rel, entry in ensemble_entries:
+        check_ensemble(rel, entry, instrument_ids)
     check_materials(materials, locations)
     words = material_words(materials)
     for rel, entry in relation_entries:

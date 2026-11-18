@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/plan.v3.schema.json",
-  "title": "Ursatz Composer plan, format version 3",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/plan.v4.schema.json",
+  "title": "Ursatz Composer plan, format version 4",
   "type": "object",
-  "required": ["format", "format_version", "metadata", "form"],
+  "required": ["format", "format_version", "next_note_id", "metadata", "form"],
   "properties": {
     "format": { "const": "ursatz-composer-plan" },
-    "format_version": { "const": 3 },
+    "format_version": { "const": 4 },
+    "next_note_id": { "type": "integer", "minimum": 1, "description": "The id the next new note gets: above every note id of the plan." },
     "metadata": {
       "type": "object",
       "required": ["composer_version", "ursatz_commit"],
@@ -87,7 +88,7 @@
           "properties": {
             "id": { "type": "integer", "minimum": 1 },
             "owner": { "type": "integer", "minimum": 1 },
-            "lane": { "enum": ["meter", "key", "harmony", "bass", "melody", "inner-voice"] },
+            "lane": { "enum": ["meter", "key", "harmony", "bass", "melody", "inner_voice"] },
             "voice": { "type": "integer", "minimum": 0 },
             "state": { "$ref": "#/$defs/state" },
             "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
@@ -143,7 +144,7 @@
               }
             },
             {
-              "if": { "properties": { "lane": { "enum": ["bass", "melody", "inner-voice"] } } },
+              "if": { "properties": { "lane": { "enum": ["bass", "melody", "inner_voice"] } } },
               "then": {
                 "properties": {
                   "payload": {
@@ -160,12 +161,15 @@
     },
     "note": {
       "type": "object",
-      "required": ["midi_pitch", "offset", "duration"],
+      "required": ["midi_pitch", "offset", "duration", "id"],
       "properties": {
         "midi_pitch": { "type": "integer", "minimum": 0, "maximum": 127 },
         "spelling": { "$ref": "#/$defs/tonic" },
         "offset": { "$ref": "#/$defs/rational" },
-        "duration": { "$ref": "#/$defs/rational" }
+        "duration": { "$ref": "#/$defs/rational" },
+        "id": { "type": "integer", "minimum": 1, "description": "The note's identity: unique in the plan, never reused." },
+        "source": { "type": "integer", "minimum": 1, "description": "The id of the note this one was made from." },
+        "operation": { "enum": ["copy", "motive", "return"], "description": "How the note was made from its source." }
       },
       "additionalProperties": false
     },

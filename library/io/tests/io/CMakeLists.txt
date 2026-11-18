@@ -19,5 +19,7 @@ ursatz_test(midi_corpus_tempo LIBS ursatz_io
     DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus" VALGRIND)
 ursatz_test(musicxml_importer LIBS ursatz_io
     DEFINITIONS URSATZ_MUSICXML_DIR="${URSATZ_FIXTURES_DIR}/musicxml" VALGRIND)
+ursatz_test(musicxml_note_ids LIBS ursatz_io VALGRIND)
 ursatz_test(musicxml_roundtrip LIBS ursatz_io ursatz_test_support
     DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus")
+ursatz_test(midi_renderer_parts LIBS ursatz_io VALGRIND)

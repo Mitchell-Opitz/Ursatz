@@ -24,9 +24,10 @@ char *json_indent_with_spaces(const char *printed);
 typedef struct {
     PlanJsonError *error;
     PlanResult result;
-    int version; /* the plan file's format version being read: 1 to 3; 0 where no plan file is read */
+    int version; /* the plan file's format version being read: 1 to 4; 0 where no plan file is read */
     const CommonPracticeMaterials *materials; /* the materials a plan's keys are made of; NULL where no plan file is read */
     const KnowledgeSnapshot *knowledge;       /* finds the material a version 3 key names by id; NULL where no plan file is read */
+    struct NoteIdSet *note_ids;               /* version 4: the note ids read so far, to refuse a repeat; NULL otherwise */
 } JsonReader;
 
 void json_set_error(PlanJsonError *error, long offset, const char *path, const char *format, ...);

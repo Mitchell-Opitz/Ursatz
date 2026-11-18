@@ -57,6 +57,7 @@ typedef struct {
     int staff;       /* the <staff>, 1 when none */
     unsigned tuplet_actual; /* <time-modification>: actual notes in the time of normal, 0 and 0 when none */
     unsigned tuplet_normal;
+    char xml_id[64]; /* the note's xml:id (a tied note's first segment, without the export's "_a"), or "" for none or one too long */
 } XNote;
 
 typedef struct {
@@ -476,6 +477,16 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
         }
     }
     if (!merged) {
+        /* the note's own xml:id; a tied note keeps its first segment's (a merged continuation adds none), without the "_a" the
+           export puts on a first segment */
+        const char *xml_id = ezxml_attr(note, "xml:id");
+        if (xml_id != NULL && xml_id[0] != '\0' && strlen(xml_id) < sizeof(parsed.xml_id)) {
+            snprintf(parsed.xml_id, sizeof(parsed.xml_id), "%s", xml_id);
+            size_t id_length = strlen(parsed.xml_id);
+            if (tie_start && id_length > 2 && strcmp(parsed.xml_id + id_length - 2, "_a") == 0) {
+                parsed.xml_id[id_length - 2] = '\0';
+            }
+        }
         size_t index = 0;
         Rational end = {0, 1};
         if (!add_note(ctx, &parsed, &index) || rational_add(onset, length, &end) != RATIONAL_OK) {
@@ -962,8 +973,62 @@ static int compare_items(const void *a, const void *b) {
     return x->order < y->order ? -1 : (x->order > y->order ? 1 : 0);
 }
 
-static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const TuningSystem *tuning, NoteEvent **out_event,
-                        PitchNumericValue **out_value) {
+/* The ids given to the events so far (by the event index), to find a repeat: open addressing over the id texts. */
+typedef struct {
+    size_t *slots; /* an event index plus 1, 0 for an empty slot */
+    size_t capacity;
+    NoteEvent *const *events;
+} IdSet;
+
+static size_t id_hash(const char *text) {
+    size_t hash = 1469598103934665603ull;
+    for (const unsigned char *p = (const unsigned char *)text; *p != 0; p++) {
+        hash = (hash ^ *p) * 1099511628211ull;
+    }
+    return hash;
+}
+
+static bool id_set_has(const IdSet *set, const char *text) {
+    for (size_t at = id_hash(text) & (set->capacity - 1); set->slots[at] != 0; at = (at + 1) & (set->capacity - 1)) {
+        if (strcmp(entity_id_value(note_event_id(set->events[set->slots[at] - 1])), text) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void id_set_add(IdSet *set, size_t event_index) {
+    const char *text = entity_id_value(note_event_id(set->events[event_index]));
+    size_t at = id_hash(text) & (set->capacity - 1);
+    while (set->slots[at] != 0) {
+        at = (at + 1) & (set->capacity - 1);
+    }
+    set->slots[at] = event_index + 1;
+}
+
+/*
+ * The id of a note's event: its xml:id when it has one, is at most 63 characters and no earlier event of the import (in the sorted
+ * order) has it; otherwise the positional "musicxml-<part id>-<n>" (a repeated xml:id is warned about), and a positional id an earlier
+ * event already has gets "-2", "-3" and on.
+ */
+static void choose_event_id(Ctx *ctx, const IdSet *set, const XNote *note, const char *part_id, char *out, size_t size) {
+    if (note->xml_id[0] != '\0') {
+        if (!id_set_has(set, note->xml_id)) {
+            snprintf(out, size, "%s", note->xml_id);
+            return;
+        }
+        warn(ctx, "repeated xml:id '%s'", note->xml_id);
+    }
+    char base[128];
+    snprintf(base, sizeof(base), "musicxml-%s-%zu", part_id, note->order);
+    snprintf(out, size, "%s", base);
+    for (size_t suffix = 2; id_set_has(set, out); suffix++) {
+        snprintf(out, size, "%s-%zu", base, suffix);
+    }
+}
+
+static bool build_event(Ctx *ctx, const XNote *note, const char *id_text, const char *part_id, const TuningSystem *tuning,
+                        NoteEvent **out_event, PitchNumericValue **out_value) {
     EntityID *id = NULL;
     Duration duration;
     PitchNumericValue *numeric = NULL;
@@ -975,8 +1040,6 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
     VoiceReference *voice = NULL;
     NoteEvent *event = NULL;
 
-    char id_text[128];
-    snprintf(id_text, sizeof(id_text), "musicxml-%s-%zu", part_id, note->order);
     char voice_text[128];
     snprintf(voice_text, sizeof(voice_text), "musicxml-voice-%s-%s", part_id, note->voice);
     bool fits = note->duration.num <= (unsigned long long)LONG_MAX && note->duration.den <= (unsigned long long)ULONG_MAX;
@@ -1550,14 +1613,26 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
                 order[i].index = i;
             }
             qsort(order, count, sizeof(SortItem), compare_items);
+            IdSet ids = {NULL, 16, out->events};
+            while (ids.capacity < 2 * count + 2) {
+                ids.capacity *= 2;
+            }
+            ids.slots = (size_t *)calloc(ids.capacity, sizeof(size_t));
+            if (ids.slots == NULL) {
+                fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory");
+            }
             for (size_t i = 0; i < count && ctx->status == MUSICXML_IMPORT_OK; i++) {
                 const XNote *note = &ctx->notes[order[i].index];
-                if (build_event(ctx, note, part_ids[note->part], tuning, &out->events[i], &out->pitch_values[i])) {
+                char id_text[160];
+                choose_event_id(ctx, &ids, note, part_ids[note->part], id_text, sizeof(id_text));
+                if (build_event(ctx, note, id_text, part_ids[note->part], tuning, &out->events[i], &out->pitch_values[i])) {
                     out->part_index[i] = note->part;
                     out->staff[i] = note->staff;
                     out->count = i + 1;
+                    id_set_add(&ids, i);
                 }
             }
+            free(ids.slots);
         }
         tuning_system_destroy(tuning);
         free(order);

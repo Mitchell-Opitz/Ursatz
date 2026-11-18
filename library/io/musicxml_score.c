@@ -215,7 +215,9 @@ typedef enum {
     DIR_KEY = 0,
     DIR_TEMPO,   /* source: the TempoMap region index */
     DIR_MARKING, /* source: the TempoMarking index */
-    DIR_DYNAMIC  /* source: the Dynamics index */
+    DIR_DYNAMIC, /* source: the Dynamics index */
+    DIR_PEDAL_STOP,  /* source: the MusicXmlExportPedal index; a stop sorts before a start at one tick */
+    DIR_PEDAL_START
 } DirKind;
 
 typedef struct {
@@ -226,6 +228,7 @@ typedef struct {
     unsigned long raw_d;
     long long tick;
     size_t source; /* the index into the input array of its kind */
+    bool written;  /* a pedal stop already written at the end of the last measure */
 } Dir;
 
 /* One voice of one staff of one part: the notes that share a VoiceReference (or have none). */
@@ -263,7 +266,8 @@ typedef struct {
     Dir *dirs;
     size_t dir_count;
     size_t *dir_first;     /* part_count + 1 entries: part p's dirs are dirs[dir_first[p]] up to dirs[dir_first[p+1]] */
-    long long dir_max_tick; /* -1 when there are no dirs */
+    long long dir_max_tick; /* -1 when there are no dirs besides pedal stops */
+    long long dir_stop_tick; /* the last pedal stop, -1 when there is none: a stop on a barline adds no measure after it */
 
     long long **cuts;   /* per part: every barline, ascending, where notes and rests are split */
     size_t *cut_count;
@@ -316,6 +320,7 @@ static MusicXmlExportResult validate_arrays(const MusicXmlExportScore *score) {
     }
     if ((score->tempo_marking_count > 0 && score->tempo_markings == NULL) ||
         (score->dynamics_count > 0 && score->dynamics == NULL) ||
+        (score->pedal_count > 0 && score->pedals == NULL) ||
         (score->key_signature_count > 0 && score->key_signatures == NULL)) {
         return MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT;
     }
@@ -666,9 +671,37 @@ static MusicXmlExportResult gather_dynamics(Prep *prep) {
     return MUSICXML_EXPORT_OK;
 }
 
+/* The sustain pedals: a start at the span's start and a stop at its end, in the staff of the part they name. */
+static MusicXmlExportResult gather_pedals(Prep *prep) {
+    const MusicXmlExportScore *score = prep->score;
+    for (size_t i = 0; i < score->pedal_count; i++) {
+        const MusicXmlExportPedal *pedal = &score->pedals[i];
+        if (pedal->part_index >= prep->part_count) {
+            return MUSICXML_EXPORT_ERR_UNKNOWN_PART;
+        }
+        if (pedal->staff < 1 || pedal->staff > prep->parts[pedal->part_index].staff_count) {
+            return MUSICXML_EXPORT_ERR_BAD_STAFF;
+        }
+        if (!time_span_holds(pedal->span) || pedal->span.start.value.num < 0) {
+            return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+        }
+        for (int end = 0; end < 2; end++) {
+            const MusicalTime *at = end == 0 ? &pedal->span.start : &pedal->span.end;
+            Dir *dir = &prep->dirs[prep->dir_count++];
+            dir->kind = end == 0 ? DIR_PEDAL_START : DIR_PEDAL_STOP;
+            dir->part = pedal->part_index;
+            dir->staff = pedal->staff;
+            dir->raw_n = (long)at->value.num;
+            dir->raw_d = (unsigned long)at->value.den;
+            dir->source = i;
+        }
+    }
+    return MUSICXML_EXPORT_OK;
+}
+
 static MusicXmlExportResult gather_dirs(Prep *prep) {
     const MusicXmlExportScore *score = prep->score;
-    size_t capacity = score->key_signature_count + score->tempo_marking_count + score->dynamics_count;
+    size_t capacity = score->key_signature_count + score->tempo_marking_count + score->dynamics_count + 2 * score->pedal_count;
     if (score->tempo_map != NULL) {
         capacity += tempo_map_region_count(score->tempo_map);
     }
@@ -685,6 +718,9 @@ static MusicXmlExportResult gather_dirs(Prep *prep) {
     }
     if (result == MUSICXML_EXPORT_OK) {
         result = gather_dynamics(prep);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
+        result = gather_pedals(prep);
     }
     return result;
 }
@@ -743,12 +779,17 @@ static MusicXmlExportResult notes_to_ticks(Prep *prep) {
 
 static MusicXmlExportResult dirs_to_ticks(Prep *prep) {
     prep->dir_max_tick = -1;
+    prep->dir_stop_tick = -1;
     for (size_t i = 0; i < prep->dir_count; i++) {
         Dir *dir = &prep->dirs[i];
         if (time_ticks(dir->raw_n, dir->raw_d, prep->divisions, &dir->tick) != TIME_OK) {
             return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
         }
-        if (dir->tick > prep->dir_max_tick) {
+        if (dir->kind == DIR_PEDAL_STOP) {
+            if (dir->tick > prep->dir_stop_tick) {
+                prep->dir_stop_tick = dir->tick;
+            }
+        } else if (dir->tick > prep->dir_max_tick) {
             prep->dir_max_tick = dir->tick;
         }
     }
@@ -774,6 +815,9 @@ static MusicXmlExportResult rescale_ticks(Prep *prep, long long factor) {
     if (prep->dir_max_tick > 0 && __builtin_mul_overflow(prep->dir_max_tick, factor, &prep->dir_max_tick)) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }
+    if (prep->dir_stop_tick > 0 && __builtin_mul_overflow(prep->dir_stop_tick, factor, &prep->dir_stop_tick)) {
+        return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+    }
     return MUSICXML_EXPORT_OK;
 }
 
@@ -790,6 +834,9 @@ static MusicXmlExportResult build_measures(Prep *prep) {
     long long covered = prep->extent;
     if (prep->dir_max_tick >= 0 && prep->dir_max_tick + 1 > covered) {
         covered = prep->dir_max_tick + 1;
+    }
+    if (prep->dir_stop_tick > covered) {
+        covered = prep->dir_stop_tick; /* a pedal stop on a barline ends the measure before it */
     }
     MusicalTime extent_time;
     if (musical_time_make((long)covered, (long long)(4 * prep->divisions), &extent_time) != MUSICAL_TIME_OK) {
@@ -1840,6 +1887,16 @@ static void write_dynamic(const Prep *prep, XmlBuf *buf, const Dir *dir) {
     xmlbuf_append(buf, "      </direction>\n");
 }
 
+/* A sustain pedal marking. */
+static void write_pedal(const Prep *prep, XmlBuf *buf, const Dir *dir) {
+    xmlbuf_append(buf, "      <direction placement=\"below\">\n        <direction-type>\n          <pedal type=\"%s\" line=\"yes\"/>\n        </direction-type>\n",
+                  dir->kind == DIR_PEDAL_START ? "start" : "stop");
+    if (prep->parts[dir->part].staff_count > 1) {
+        xmlbuf_append(buf, "        <staff>%d</staff>\n", dir->staff);
+    }
+    xmlbuf_append(buf, "      </direction>\n");
+}
+
 /* The dirs that share one tick, in kind order. A key at the start of a measure is already in its <attributes>. */
 static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, size_t count, long long measure_start) {
     bool key_written = false;
@@ -1876,6 +1933,11 @@ static void write_dir_group(const Prep *prep, XmlBuf *buf, const Dir *group, siz
             write_dynamic(prep, buf, &group[i]);
         }
     }
+    for (size_t i = 0; i < count; i++) {
+        if ((group[i].kind == DIR_PEDAL_STOP || group[i].kind == DIR_PEDAL_START) && !group[i].written) {
+            write_pedal(prep, buf, &group[i]);
+        }
+    }
 }
 
 /* Writes every dir of the part at or before tick that has not been written. */
@@ -1893,6 +1955,25 @@ static void write_dirs_through(DirCtx *ctx, XmlBuf *buf, long long tick) {
         }
         write_dir_group(prep, buf, &prep->dirs[begin], stop - begin, ctx->measure_start);
         *ctx->pos = stop;
+    }
+}
+
+/*
+ * The last measure's end: a pedal stop on the final barline has no segment after it to be written before, and adds no measure, so
+ * it is written after the measure's first voice, where the writer is at the end of the measure. (Every other time of a marking is
+ * a cut of its part, so a segment starts there.) Marks it written.
+ */
+static void flush_pedals(const DirCtx *ctx, XmlBuf *buf, long long measure_end, bool last_measure) {
+    if (!last_measure) {
+        return;
+    }
+    const Prep *prep = ctx->prep;
+    for (size_t d = *ctx->pos; d < prep->dir_first[ctx->part + 1]; d++) {
+        Dir *dir = &prep->dirs[d];
+        if (dir->kind == DIR_PEDAL_STOP && !dir->written && dir->tick == measure_end) {
+            write_pedal(prep, buf, dir);
+            dir->written = true;
+        }
     }
 }
 
@@ -1964,6 +2045,9 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
             mark_tuplets(prep, &chain);
             mark_beams(prep, &chain);
             write_segments(prep, buf, &chain, part, group->staff, group->voice_number, first ? &dir_ctx : NULL);
+            if (first) {
+                flush_pedals(&dir_ctx, buf, measure_end, m + 1 == prep->measure_count);
+            }
         }
         free(chain.items);
         first = false;
@@ -1973,6 +2057,7 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
         SegmentList rests = {NULL, 0, 0};
         if (rest_pieces(prep, part, &rests, measure_start, measure_end, true)) {
             write_segments(prep, buf, &rests, part, 1, 1, &dir_ctx);
+            flush_pedals(&dir_ctx, buf, measure_end, m + 1 == prep->measure_count);
         } else {
             buf->failed = true;
         }
@@ -1988,6 +2073,9 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
                 head = tick;
             }
             write_dirs_through(&dir_ctx, buf, tick);
+        }
+        if (m + 1 == prep->measure_count) {
+            write_dirs_through(&dir_ctx, buf, measure_end);
         }
     }
 }

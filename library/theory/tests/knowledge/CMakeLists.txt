@@ -1,1 +1,2 @@
 ursatz_test(knowledge_snapshot SOURCES test_knowledge_snapshot.c LIBS ursatz_theory VALGRIND)
+ursatz_test(instrument_entries SOURCES test_instrument_entries.c LIBS ursatz_theory VALGRIND)

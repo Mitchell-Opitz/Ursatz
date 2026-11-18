@@ -1406,7 +1406,7 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
 }
 
 /* The loop version's MIDI file and MusicXML: the MIDI file has the loopStart and loopEnd markers. */
-static ComposerStatus render_loop(const PieceSpec *request, const PieceMade *piece, const PieceOutputs *outputs,
+static ComposerStatus render_loop(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceMade *piece, const PieceOutputs *outputs,
                                   ComposerResponse *out) {
     if (!outputs->midi && !outputs->musicxml) {
         return COMPOSER_OK;
@@ -1427,18 +1427,18 @@ static ComposerStatus render_loop(const PieceSpec *request, const PieceMade *pie
     }
     ComposerStatus status = COMPOSER_OK;
     if (outputs->midi &&
-        rendered_plan_midi_bytes(&rendered, &loop_options, &out->midi, &out->midi_size, &detail) != PLAN_EXPORT_OK) {
+        rendered_plan_midi_bytes(knowledge, &rendered, &loop_options, &out->midi, &out->midi_size, &detail) != PLAN_EXPORT_OK) {
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/midi", "cannot write the MIDI file: %s", detail.message);
     }
     if (status == COMPOSER_OK && outputs->musicxml &&
-        rendered_plan_musicxml_text(&rendered, &request->export_options, &out->musicxml, &detail) != PLAN_EXPORT_OK) {
+        rendered_plan_musicxml_text(knowledge, &rendered, &request->export_options, &out->musicxml, &detail) != PLAN_EXPORT_OK) {
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/musicxml", "cannot write the MusicXML: %s", detail.message);
     }
     rendered_plan_destroy(&rendered);
     return status;
 }
 
-ComposerStatus api_piece_musicxml(const PieceSpec *request, const PiecePlan *plan, char **out, ComposerError *error) {
+ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PiecePlan *plan, char **out, ComposerError *error) {
     RenderedPlan rendered;
     PlanExportError detail;
     *out = NULL;
@@ -1446,7 +1446,7 @@ ComposerStatus api_piece_musicxml(const PieceSpec *request, const PiecePlan *pla
         return api_fail(error, COMPOSER_ERR_REQUEST, "/musicxml", "cannot render the plan");
     }
     ComposerStatus status = COMPOSER_OK;
-    if (rendered_plan_musicxml_text(&rendered, &request->export_options, out, &detail) != PLAN_EXPORT_OK) {
+    if (rendered_plan_musicxml_text(knowledge, &rendered, &request->export_options, out, &detail) != PLAN_EXPORT_OK) {
         status = api_fail(error, COMPOSER_ERR_REQUEST, "/musicxml", "cannot write the MusicXML: %s", detail.message);
     }
     rendered_plan_destroy(&rendered);
@@ -1458,7 +1458,7 @@ ComposerStatus api_piece_musicxml(const PieceSpec *request, const PiecePlan *pla
  * MusicXML as "ending_musicxml", and with musicxml_versions the MusicXML of every version after the first as
  * "musicxml_versions": {<name>: ...} to the document.
  */
-static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, const PieceMade *piece, const PieceOutputs *outputs,
+static ComposerStatus add_outputs(const KnowledgeSnapshot *knowledge, cJSON *document, const PieceSpec *request, const PieceMade *piece, const PieceOutputs *outputs,
                                   ComposerResponse *out) {
     cJSON *plans = cJSON_CreateObject();
     bool plans_ok = plans != NULL;
@@ -1481,7 +1481,7 @@ static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, con
         cJSON *musicxml = cJSON_CreateObject();
         for (size_t i = 1; musicxml && i < piece->version_count; i++) {
             char *text = NULL;
-            ComposerStatus status = api_piece_musicxml(request, api_piece_version_output_plan(&piece->versions[i]), &text, &out->error);
+            ComposerStatus status = api_piece_musicxml(knowledge, request, api_piece_version_output_plan(&piece->versions[i]), &text, &out->error);
             if (status != COMPOSER_OK) {
                 cJSON_Delete(musicxml);
                 return status;
@@ -1499,7 +1499,7 @@ static ComposerStatus add_outputs(cJSON *document, const PieceSpec *request, con
     }
     if (outputs->ending_musicxml) {
         char *text = NULL;
-        ComposerStatus status = api_piece_musicxml(request, api_piece_version_output_plan(&piece->versions[1]), &text, &out->error);
+        ComposerStatus status = api_piece_musicxml(knowledge, request, api_piece_version_output_plan(&piece->versions[1]), &text, &out->error);
         if (status != COMPOSER_OK) {
             return status;
         }
@@ -1704,9 +1704,9 @@ ComposerStatus composer_api_piece(const ComposerContext *context, const char *re
     }
     if (status == COMPOSER_OK) {
         cJSON *document = piece_document(request, &piece, &edit, section, edit.text != NULL);
-        status = document ? add_outputs(document, request, &piece, &outputs, out) : api_fail_alloc(&out->error);
+        status = document ? add_outputs(context->knowledge, document, request, &piece, &outputs, out) : api_fail_alloc(&out->error);
         if (status == COMPOSER_OK) {
-            status = render_loop(request, &piece, &outputs, out);
+            status = render_loop(context->knowledge, request, &piece, &outputs, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);

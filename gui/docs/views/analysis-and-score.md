@@ -175,7 +175,7 @@ instrument and General MIDI program (`midi_program`), `<work-title>` is the
 piece title (the filename without its extension) and the composer from
 `meta.json` is written as the composer credit.
 
-A piano piece is one part drawn as a grand staff: the hands are paired into
+A piece the Composer writes (a theme or a piece, API 2.1, R-599) is one `piano` part on a grand staff too: the melody on staff 1, the bass on staff 2 and an inner voice on the staff its notes sit in, each note with the Composer's note id as its `xml:id` (`piano-n<id>`). The playback of such a file lists a part for each line as before (see [themes and pieces](themes-and-pieces.md)). A piano piece is one part drawn as a grand staff: the hands are paired into
 `<staves>2</staves>`, the right hand on staff 1 and the left hand on staff 2.
 Each staff has a `<clef>` (treble or bass) in its first measure and a later
 `<clef>` where its notes sit better in the other clef, so a left hand that

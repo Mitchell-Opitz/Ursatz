@@ -1414,6 +1414,7 @@ static PlanResult add_accompaniment_targets(GrowBuild *build, NodeId owner, Plan
         PlanNote note;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
+        memset(&note, 0, sizeof(note));
         note.midi = INNER_PLACEHOLDER;
         note.spelled = false;
         note.offset = (Rational){0, 1};
@@ -1445,6 +1446,7 @@ static PlanResult add_voicing_targets(GrowBuild *build, NodeId owner, PlanSpan s
         PlanNote note;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
+        memset(&note, 0, sizeof(note));
         note.midi = INNER_PLACEHOLDER;
         note.spelled = false;
         note.offset = (Rational){0, 1};
@@ -1473,6 +1475,7 @@ static PlanResult add_voicing_targets(GrowBuild *build, NodeId owner, PlanSpan s
             LaneSpanId id;
             Rational gap_end;
             memset(&payload, 0, sizeof(payload));
+            memset(&note, 0, sizeof(note));
             note.midi = MELODY_PLACEHOLDER;
             note.spelled = false;
             note.offset = (Rational){0, 1};
@@ -1567,6 +1570,7 @@ static PlanResult add_chord_targets(GrowBuild *build, NodeId owner, const PlanHa
         PlanNote note;
         LaneSpanId bass;
         memset(&payload, 0, sizeof(payload));
+        memset(&note, 0, sizeof(note));
         note.midi = BASS_PLACEHOLDER;
         note.spelled = false;
         note.offset = (Rational){0, 1};
@@ -1722,6 +1726,7 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
         LaneSpanId melody;
         Rational gap_end;
         memset(&payload, 0, sizeof(payload));
+        memset(&note, 0, sizeof(note));
         note.midi = MELODY_PLACEHOLDER;
         note.spelled = false;
         note.offset = (Rational){0, 1};

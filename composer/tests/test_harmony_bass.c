@@ -58,6 +58,7 @@ static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, const i
     PlanNote notes[8];
     PlanLanePayload payload;
     LaneSpanId id;
+    memset(notes, 0, sizeof(notes));
     Rational length = fraction(span.length.num, span.length.den * (unsigned long)count);
     memset(&payload, 0, sizeof(payload));
     for (int i = 0; i < count; i++) {

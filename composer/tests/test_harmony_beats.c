@@ -141,6 +141,7 @@ static Fixture build(const Scenario *scenario, bool with_bass) {
 
     if (with_bass) {
         PlanNote note;
+        memset(&note, 0, sizeof(note));
         note.midi = 60;
         note.spelled = false;
         note.offset = fraction(0, 1);

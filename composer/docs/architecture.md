@@ -27,7 +27,7 @@ All four are built by the root `CMakeLists.txt`, in that order.
 | `include/ursatz_composer/` | The one public header, `composer_api.h` | [api.md](api.md) |
 | `src/api/` | The composer API behind the header, one file for each request kind | [api.md](api.md) |
 | `src/plan/` | The piece plan, its lanes, states, constraints and JSON | [plan-format.md](plan-format.md) |
-| `src/render/` | Rendering a plan to NoteEvents, MIDI and MusicXML | [export.md](export.md) |
+| `src/render/` | Rendering a plan to NoteEvents, making a work of one movement and one piano part from the render (`movement_build.h`), and writing MIDI and MusicXML through the library's movement export | [export.md](export.md) |
 | `src/fill/` | The fill loop, its operators, seeds and records | [fill-loop.md](fill-loop.md) |
 | `src/harmony/` | The harmony operators and hearing cadences | [grow-harmony.md](grow-harmony.md) |
 | `src/melody/` | The melody operator | [melody-fill.md](melody-fill.md) |
@@ -66,10 +66,10 @@ All entries are in `include/ursatz_composer/composer_api.h`; the entry index is 
 | Name | File | Current value | Doc |
 |---|---|---|---|
 | Composer version | `CMakeLists.txt` (`project(UrsatzComposer VERSION ...)`) | 0.4.1 | [changelog.md](changelog.md) |
-| API version | `include/ursatz_composer/composer_api.h` (`COMPOSER_API_VERSION_MAJOR`, `_MINOR`) | 1.19 | [api.md](api.md#versioning) |
-| Plan format version | `src/include/ursatz_composer/plan_json.h` (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`) | 2 | [plan-format.md](plan-format.md#format-versions) |
-| Plan schema | `schema/plan.v3.schema.json` | plan format 3 | [plan-format.md](plan-format.md) |
-| API schemas | `schema/api/*.schema.json` | API 1.19 | [api.md](api.md) |
+| API version | `include/ursatz_composer/composer_api.h` (`COMPOSER_API_VERSION_MAJOR`, `_MINOR`) | 2.1 | [api.md](api.md#versioning) |
+| Plan format version | `src/include/ursatz_composer/plan_json.h` (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`) | 4 | [plan-format.md](plan-format.md#format-versions) |
+| Plan schema | `schema/plan.v4.schema.json` | plan format 4 (note ids) | [plan-format.md](plan-format.md) |
+| API schemas | `schema/api/*.schema.json` | API 2.1 | [api.md](api.md) |
 | Motive format | the motive document has no version member | none | [motive-format.md](motive-format.md) |
 | Theme request schema | `docs/theme-request.md` (`schema_version`) | 2 | [theme-request.md](theme-request.md) |
 | Vocabulary and limits | `composer_api_vocabulary`, member `limits` (`seed_max`, `tempo_min`, `tempo_max`, `piece_sections`, `piece_beats`, `preferences`) | `seed_max`: variants 4294967231, others 4294967295 | [api/vocabulary-and-validation.md](api/vocabulary-and-validation.md) |
@@ -84,6 +84,7 @@ All entries are in `include/ursatz_composer/composer_api.h`; the entry index is 
 | Style profile and labels (`<ursatz_analyzer/style_profile.h>`, `style_labels.h`) | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/composer-api.md) | Style models the harmony and melody stages prefer |
 | `<standard-harmony/...>`, `<standard-counterpoint/...>`, `<standard-voicing/...>`, `<standard-texture/...>`, `<standard-tonality/...>`, `<standard-form/...>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) | Theory rules: phrase model, melodic moves, voicing, scales, phrase form |
 | `<analysis/motive_sketch.h>`, `<analysis/motive_relation.h>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) | The motive value and the relation steps that make a motive from another |
+| `<realization/work.h>`, `<realization/movement.h>`, `<realization/piano_reduction.h>`, `<io/movement_export.h>`, `<theory/knowledge/instrument.h>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/library/docs/modules/realization.md) | A rendered plan as a work of one movement, its lines assigned to one piano part (the K12 piano and solo-piano ensemble of the call's knowledge snapshot), and its MIDI and MusicXML (`render/movement_build.c`, `render/export.c`) |
 | `<core/rational.h>`, `<time/...>`, `<pitch/...>`, `<semantics/...>`, `<io/midi_importer.h>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) | Exact time, pitch spelling, cadence and key types, MIDI import |
 
 The rules for what comes from which library are in [building.md](building.md#library-primitives).
@@ -98,7 +99,7 @@ One `composer_api_theme` request, from the reply's side:
 4. `grow_run` runs a compose run over that section: the stages write the motives, harmony, bass and melody, each through the fill loop with its seed, retries and records ([fill-loop.md](fill-loop.md), [grow-harmony.md](grow-harmony.md)).
 5. With `check` set, the Analyzer check renders the plan once and hears the section through `analyzer_hear`; a planned cadence or key not heard, or a hard voice-leading fault, rejects the run ([analyzer-check.md](analyzer-check.md)).
 6. `form_hear_in` reports the form heard in the theme, kept in the outcome without rejecting ([form-hear.md](form-hear.md), [grow-hearing.md](grow-hearing.md)).
-7. The plan is rendered for MIDI and MusicXML when the request asks ([export.md](export.md)).
+7. The plan is rendered for MIDI and MusicXML when the request asks: the render becomes a work of one movement whose lines are all assigned to one piano part (R-599), and the library's movement export writes the file ([export.md](export.md)).
 8. The reply is a `ComposerResponse`: the theme document in `json`, the plan, the MIDI bytes and the MusicXML text; the caller frees it with `composer_response_destroy` ([api.md](api.md#memory)).
 
 ## Finding things

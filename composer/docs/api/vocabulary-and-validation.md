@@ -86,3 +86,15 @@ API 2.0 (R-597) names the material of a key by its id (`omt.material.major` or `
 | vocabulary | `modes`, `piece_modes`, `pitch_class_names[] {value, major, minor}` | `materials`, `piece_materials`, `pitch_class_names[] {value, names}` |
 
 A request that names `"api_version": 1` is refused at `/api_version` (`api_version must be 2`): its client reads `mode`. A client written for 1.x reads `material` and maps the id to its word through the vocabulary's `materials` (`value` to `label`).
+
+## API 2.1: MIDI and MusicXML layout
+
+API 2.1 (R-599, R-601) changes the layout of the MIDI file and the MusicXML file every entry writes, and the plan the replies carry. The notes are the same (the same channel, ticks and key in the MIDI file; the same measures, onsets, durations, spellings and ties in the MusicXML), so a client that reads notes is unaffected; one that reads the layout changes:
+
+| File | 2.0 | 2.1 |
+| --- | --- | --- |
+| MIDI | track 0 and one track per lane voice, named `melody`, `bass`, `inner_voice_<n>`, on channels 0, 1, 2 and so on | track 0 and one track named `Piano`, a channel for each lane voice in the order they first sound, each with a program change (the piano); `plain_midi` still leaves out the names and the section markers |
+| MusicXML | one part per lane voice (`melody`, `bass`, `inner_voice_<n>`) | one part `piano` named `Piano`, of two staves when a line is on the lower staff: the melody on staff 1, the bass on staff 2, an inner voice by the mean of its notes; each note's `xml:id` is `piano-n<plan note id>` |
+| `plan` (`plan_json`) | plan format 3 | plan format 4: every note has an `id`, and a `source` and `operation` where the Composer knows one; `next_note_id` ([plan-format.md](../plan-format.md#note-ids)) |
+
+The GUI's playback lists a part per line as before (the Analyzer reads one stream per track and channel), and its score is one piano part on a grand staff. `composer_api_versions` and the vocabulary report `"api_version":"2.1"` and `"plan_format_version":4`. The layout is documented in [export.md](../export.md).

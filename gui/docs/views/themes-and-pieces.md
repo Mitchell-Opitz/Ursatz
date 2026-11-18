@@ -102,7 +102,7 @@ reports `heard_agrees` false or the score is under the minimum. The GUI only
 shows these members; it computes none of them. A version composed before API
 1.10 has no `heard` and keeps the single line, never marked. Below it are the score of `theme.musicxml` in the score workspace and a
 MIDI download. Playback is served by the backend, built by the Analyzer from
-`theme.mid` (`GET .../versions/<n>/playback?file=theme`).
+`theme.mid` (`GET .../versions/<n>/playback?file=theme`). Since API 2.1 (P59 B7, R-599) the Composer writes a theme as one piano part: the score is one part on a grand staff, and the MIDI file one track with a channel for each line, so playback still lists a part for each line (the Analyzer reads one stream per track and channel), with the names and program it gave a line before the piano part. The GUI needed no change.
 
 ## Pieces view
 
@@ -181,7 +181,7 @@ retransition, subordinate theme or coda) after Figure, or after Fill in a loop t
 score, the seam rules that held, the Analyzer check and the style
 distance. Below are the MIDI and MusicXML downloads of each version and the scores in the score workspace, a tab
 per version (`<name>.musicxml`), with playback served by the
-backend from `<name>.mid` (`GET .../versions/<n>/playback?file=<name>`). A read-only version of a sized form
+backend from `<name>.mid` (`GET .../versions/<n>/playback?file=<name>`). A composed piece is one piano part in both files (API 2.1, R-599): one part on a grand staff in the score, and in the playback a part for each line as before. A read-only version of a sized form
 names its form, size and the sections the Composer plans. A form the Composer composes once and performs in order
 (R-485: written-out repeats or parts, the three minuet forms) lists the performed sections, and its table gains a Part
 column (the minuet, the trio, the minuet da capo, for a compound form), Upbeat (the chord that leads into the next section,

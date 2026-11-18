@@ -72,6 +72,7 @@ static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, Pl
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
+    memset(&note, 0, sizeof(note));
     note.midi = pitch;
     note.spelled = false;
     note.offset = fraction(0, 1);

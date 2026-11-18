@@ -132,6 +132,7 @@ static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars)
     for (size_t b = 0; b < 8; b++) {
         PlanSpan span = {fraction(bar.num * (long)b, bar.den), bar};
         PlanNote notes[8];
+        memset(notes, 0, sizeof(notes));
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, NUMERALS[b]);
         payload.harmony.has_function = false;
@@ -179,6 +180,7 @@ static LaneSpanId open_voices(Piece *piece, PlanAccompaniment accompaniment, int
         PlanNote note;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
+        memset(&note, 0, sizeof(note));
         note.midi = 55;
         note.spelled = false;
         note.offset = fraction(0, 1);

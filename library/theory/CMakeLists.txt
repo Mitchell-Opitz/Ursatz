@@ -13,6 +13,7 @@ add_library(ursatz_theory
     rules/rule.c
     rules/rule_pair.c
     rules/rule_table.c
+    knowledge/instrument.c
     knowledge/knowledge_snapshot.c
     vocabulary/applied_chord_kind.c
     vocabulary/beat_strength.c
@@ -175,6 +176,7 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/non_chord_tone.h
         theory/vocabulary/subphrase_role.h
         theory/vocabulary/voice_part.h
+        theory/knowledge/instrument.h
         theory/knowledge/knowledge_snapshot.h
         theory/knowledge/relation.h
         theory/tonality/chord_vocabulary.h

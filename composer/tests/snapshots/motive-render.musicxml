@@ -2,17 +2,17 @@
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.1 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
 <score-partwise version="3.1">
   <part-list>
-    <score-part id="melody">
-      <part-name>melody</part-name>
-      <score-instrument id="melody-I1">
-        <instrument-name>melody</instrument-name>
+    <score-part id="piano">
+      <part-name>Piano</part-name>
+      <score-instrument id="piano-I1">
+        <instrument-name>Piano</instrument-name>
       </score-instrument>
-      <midi-instrument id="melody-I1">
+      <midi-instrument id="piano-I1">
         <midi-program>1</midi-program>
       </midi-instrument>
     </score-part>
   </part-list>
-  <part id="melody">
+  <part id="piano">
     <measure number="1">
       <attributes>
         <divisions>2</divisions>
@@ -30,7 +30,7 @@
         </clef>
       </attributes>
       <sound tempo="96"/>
-      <note xml:id="composer-span-1-note-0">
+      <note xml:id="piano-n1">
         <pitch>
           <step>E</step>
           <alter>-1</alter>
@@ -40,7 +40,7 @@
         <voice>1</voice>
         <type>quarter</type>
       </note>
-      <note xml:id="composer-span-1-note-1">
+      <note xml:id="piano-n2">
         <pitch>
           <step>G</step>
           <octave>4</octave>
@@ -50,7 +50,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-1-note-2">
+      <note xml:id="piano-n3">
         <pitch>
           <step>B</step>
           <alter>-1</alter>
@@ -61,7 +61,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-1-note-3">
+      <note xml:id="piano-n4">
         <pitch>
           <step>E</step>
           <alter>-1</alter>
@@ -72,7 +72,7 @@
         <type>eighth</type>
         <beam number="1">begin</beam>
       </note>
-      <note xml:id="composer-span-1-note-4">
+      <note xml:id="piano-n5">
         <pitch>
           <step>D</step>
           <octave>4</octave>
@@ -82,7 +82,7 @@
         <type>eighth</type>
         <beam number="1">end</beam>
       </note>
-      <note xml:id="composer-span-1-note-5">
+      <note xml:id="piano-n6">
         <pitch>
           <step>B</step>
           <alter>-1</alter>

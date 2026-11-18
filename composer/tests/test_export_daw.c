@@ -146,7 +146,7 @@ static void test_midi(const RenderedPlan *rendered, const PiecePlan *plan) {
 
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(rendered_plan_midi_bytes(rendered, &options, &data, &size, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(test_knowledge(), rendered, &options, &data, &size, NULL) == PLAN_EXPORT_OK);
 
     /* The same notes and one declared tempo of 96. */
     MidiImport import;
@@ -176,18 +176,11 @@ static void test_midi(const RenderedPlan *rendered, const PiecePlan *plan) {
     /* Names and markers. */
     TrackMeta tracks[16];
     size_t track_count = scan_tracks(data, size, tracks, 16);
-    assert(track_count == 1 + rendered->part_count);
+    assert(track_count == 2); /* the conductor and the piano: the lines are channels of one part track */
     assert(tracks[0].name_count == 1 && tracks[0].names[0].tick == 0);
     assert(strcmp(tracks[0].names[0].text, rendered->form_name ? rendered->form_name : "piece") == 0);
-    bool melody = false;
-    bool bass = false;
-    for (size_t i = 1; i < track_count; i++) {
-        assert(tracks[i].name_count == 1 && tracks[i].names[0].tick == 0);
-        assert(tracks[i].marker_count == 0);
-        melody = melody || has_name(&tracks[i], "melody");
-        bass = bass || has_name(&tracks[i], "bass");
-    }
-    assert(melody && bass);
+    assert(tracks[1].name_count == 1 && tracks[1].names[0].tick == 0 && tracks[1].marker_count == 0);
+    assert(has_name(&tracks[1], "Piano"));
 
     /* Markers A, B and A' at the starts of the plan's sections, which the plan's own nodes give. */
     static const char *const LETTERS[3] = {"A", "B", "A'"};
@@ -220,7 +213,7 @@ static void test_plain(const RenderedPlan *rendered) {
     plain.section_markers = false;
     unsigned char *data = NULL;
     size_t size = 0;
-    assert(rendered_plan_midi_bytes(rendered, &plain, &data, &size, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(test_knowledge(), rendered, &plain, &data, &size, NULL) == PLAN_EXPORT_OK);
 
     TrackMeta tracks[16];
     size_t track_count = scan_tracks(data, size, tracks, 16);
@@ -228,7 +221,19 @@ static void test_plain(const RenderedPlan *rendered) {
         assert(tracks[i].name_count == 0 && tracks[i].marker_count == 0);
     }
 
-    /* Ursatz's renderer with no options writes the same bytes. */
+    /* Ursatz's renderer, given the lines as the channels of one part with no name, writes the same bytes. */
+    char (*voice_text)[64] = calloc(rendered->part_count ? rendered->part_count : 1, sizeof(*voice_text));
+    const char **voice_ids = calloc(rendered->part_count ? rendered->part_count : 1, sizeof(*voice_ids));
+    assert(voice_text && voice_ids);
+    for (size_t i = 0; i < rendered->part_count; i++) {
+        rendered_part_voice_id(&rendered->parts[i], voice_text[i], sizeof(voice_text[i]));
+        voice_ids[i] = voice_text[i];
+    }
+    MidiRenderPart piano = {NULL, 0, voice_ids, rendered->part_count, NULL, 0};
+    MidiRenderOptions part_options;
+    memset(&part_options, 0, sizeof(part_options));
+    part_options.parts = &piano;
+    part_options.part_count = 1;
     MidiKeySignatureEvent *keys = calloc(rendered->key_count ? rendered->key_count : 1, sizeof(*keys));
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].position = rendered->keys[i].position;
@@ -239,9 +244,11 @@ static void test_plain(const RenderedPlan *rendered) {
     unsigned char *old = NULL;
     size_t old_size = 0;
     assert(midi_renderer_render_with_options(rendered->events, rendered->pitch_values, rendered->count,
-                                             rendered->meter_map, NULL, keys, rendered->key_count, NULL, DIVISION, &old,
+                                             rendered->meter_map, NULL, keys, rendered->key_count, &part_options, DIVISION, &old,
                                              &old_size) == MIDI_RENDER_OK);
     assert(old_size == size && memcmp(old, data, size) == 0);
+    free(voice_text);
+    free(voice_ids);
     free(keys);
     free(old);
     free(data);
@@ -252,12 +259,12 @@ static void test_musicxml(const RenderedPlan *rendered) {
     options.tempo_numerator = 96;
     options.tempo_denominator = 1;
     char *xml = NULL;
-    assert(rendered_plan_musicxml_text(rendered, &options, &xml, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_musicxml_text(test_knowledge(), rendered, &options, &xml, NULL) == PLAN_EXPORT_OK);
     assert(strstr(xml, "<sound tempo=\"96\"/>"));
     free(xml);
 
     xml = NULL;
-    assert(rendered_plan_musicxml_text(rendered, NULL, &xml, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_musicxml_text(test_knowledge(), rendered, NULL, &xml, NULL) == PLAN_EXPORT_OK);
     assert(!strstr(xml, "<sound tempo="));
     free(xml);
 }
@@ -270,13 +277,13 @@ static void test_refused(const RenderedPlan *rendered) {
     char *xml = NULL;
 
     options.tempo_numerator = 96; /* a denominator of 0 with a numerator */
-    assert(rendered_plan_midi_bytes(rendered, &options, &data, &size, &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
+    assert(rendered_plan_midi_bytes(test_knowledge(), rendered, &options, &data, &size, &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
     assert(data == NULL);
-    assert(rendered_plan_musicxml_text(rendered, &options, &xml, &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
+    assert(rendered_plan_musicxml_text(test_knowledge(), rendered, &options, &xml, &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
 
     options.tempo_numerator = 1; /* 1/100000 quarter notes per minute: beyond 0xFFFFFF microseconds per quarter */
     options.tempo_denominator = 100000;
-    assert(rendered_plan_midi_bytes(rendered, &options, &data, &size, &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
+    assert(rendered_plan_midi_bytes(test_knowledge(), rendered, &options, &data, &size, &error) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
     assert(data == NULL);
 }
 
@@ -290,7 +297,7 @@ static void test_loop_markers(const RenderedPlan *rendered) {
     options.loop_markers = true;
     options.loop_start = (Rational){1, 1};
     options.loop_end = (Rational){11, 2};
-    assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(test_knowledge(), rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
     size_t count = scan_tracks(bytes, size, tracks, 8);
     assert(count >= 2);
     bool start = false;
@@ -308,20 +315,20 @@ static void test_loop_markers(const RenderedPlan *rendered) {
     free(bytes);
     /* Without them the file has none; with the plain options they stay, they are not a name or a section. */
     options.loop_markers = false;
-    assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(test_knowledge(), rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
     scan_tracks(bytes, size, tracks, 8);
     assert(tracks[0].marker_count == 3);
     free(bytes);
     options.loop_markers = true;
     options.section_markers = false;
     options.track_names = false;
-    assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
+    assert(rendered_plan_midi_bytes(test_knowledge(), rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
     scan_tracks(bytes, size, tracks, 8);
     assert(tracks[0].marker_count == 2);
     free(bytes);
     /* A time that is not a whole tick at any division is refused. */
     options.loop_start = (Rational){1, 1000003};
-    assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
+    assert(rendered_plan_midi_bytes(test_knowledge(), rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
 }
 
 int main(void) {

@@ -190,6 +190,7 @@ static PiecePlan *build_plan(const Options *options, const Motive *motive, LaneS
                    PLAN_OK &&
          plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     ok = ok && plan_node_set_state(plan, owner, PLAN_STATE_GIVEN) == PLAN_OK;
+    memset(&placeholder, 0, sizeof(placeholder));
     placeholder.midi = 60;
     placeholder.spelled = false;
     placeholder.offset = fraction(0, 1);
@@ -287,7 +288,7 @@ static cJSON *notes_json(const PiecePlan *plan, PlanLaneKind lane, int voice, Pl
     return list;
 }
 
-static ComposerStatus result_json(const Options *options, const Result *result, PlanSpan span, const ApiOutputs *outputs,
+static ComposerStatus result_json(const KnowledgeSnapshot *knowledge, const Options *options, const Result *result, PlanSpan span, const ApiOutputs *outputs,
                                   cJSON **out, ComposerError *error) {
     cJSON *entry = cJSON_CreateObject();
     cJSON *line = notes_json(result->plan, options->above ? PLAN_LANE_BASS : PLAN_LANE_MELODY, 0, span);
@@ -336,7 +337,7 @@ static ComposerStatus result_json(const Options *options, const Result *result, 
             cJSON_Delete(entry);
             return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
         }
-        PlanExportResult written = rendered_plan_musicxml_text(&rendered, &outputs->export_options, &text, &detail);
+        PlanExportResult written = rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, &text, &detail);
         rendered_plan_destroy(&rendered);
         if (written != PLAN_EXPORT_OK) {
             cJSON_Delete(entry);
@@ -444,7 +445,7 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
         }
         for (size_t k = 0; status == COMPOSER_OK && k < made; k++) {
             cJSON *entry = NULL;
-            status = result_json(&options, &results[k], span, &outputs, &entry, &out->error);
+            status = result_json(context->knowledge, &options, &results[k], span, &outputs, &entry, &out->error);
             if (status == COMPOSER_OK && !cJSON_AddItemToArray(list, entry)) {
                 cJSON_Delete(entry);
                 status = api_fail_alloc(&out->error);
@@ -461,7 +462,7 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
         }
         if (status == COMPOSER_OK) {
             /* The first counter-melody's own files. */
-            status = api_render_outputs(results[0].plan, &outputs, out);
+            status = api_render_outputs(context->knowledge, results[0].plan, &outputs, out);
         }
         if (status == COMPOSER_OK) {
             status = api_respond_json(out, document);

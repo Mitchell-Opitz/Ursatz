@@ -417,6 +417,7 @@ static PlanResult part_payload(const VoicingContext *context, const VoicingCandi
                                PlanNote *notes, PlanLanePayload *payload) {
     for (size_t i = context->first; i < candidate->chord_count; i++) {
         PlanNote *note = &notes[i - context->first];
+        memset(note, 0, sizeof(*note));
         note->midi = candidate->pitch[i][part];
         note->spelled = false;
         note->offset = context->chord_start[i];

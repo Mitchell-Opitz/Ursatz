@@ -1,6 +1,7 @@
 {
   "format": "ursatz-composer-plan",
-  "format_version": 3,
+  "format_version": 4,
+  "next_note_id": 2,
   "metadata": {
     "composer_version": "",
     "ursatz_commit": ""
@@ -274,7 +275,8 @@
               "duration": {
                 "num": 1,
                 "den": 1
-              }
+              },
+              "id": 1
             }]
         }
       }

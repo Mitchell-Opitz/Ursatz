@@ -320,6 +320,7 @@ static PlanResult slot_notes(const CounterpointContext *context, const Counterpo
         bool done = i == candidate->slots || candidate->kind[i] != CP_SLOT_TIE;
         if (open && done) {
             PlanNote *note = &notes[(*count)++];
+            memset(note, 0, sizeof(*note));
             note->midi = pitch;
             note->spelled = false;
             note->offset = start;

@@ -457,6 +457,7 @@ static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng 
 /* The notes of a voice as lane notes, from the start of the target. */
 static PlanResult voice_payload(const AccompCandidate *candidate, size_t voice, PlanNote *notes, PlanLanePayload *payload) {
     for (size_t n = 0; n < candidate->note_count[voice]; n++) {
+        memset(&notes[n], 0, sizeof(notes[n]));
         notes[n].midi = candidate->notes[voice][n].pitch;
         notes[n].spelled = false;
         notes[n].offset = candidate->notes[voice][n].onset;
