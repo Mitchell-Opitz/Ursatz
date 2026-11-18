@@ -565,7 +565,7 @@ static void test_compose(const Motifs *m) {
   check(strcmp(string_of(request, "schema"), "ursatz-theme-request") == 0 && number_of(request, "schema_version") == 2,
         "the request has the theme request schema");
   check(strcmp(string_of(request, "into"), "sentence") == 0 && strcmp(string_of(request, "key"), "C") == 0 &&
-            strcmp(string_of(request, "mode"), "minor") == 0 && number_of(request, "bars") == 8,
+            strcmp(string_of(request, "material"), "omt.material.natural-minor") == 0 && number_of(request, "bars") == 8,
         "the request has the form");
   const cJSON *slot_names = member(request, "slots");
   check(strcmp(string_of(slot_names, "basic"), "M1") == 0 && strcmp(string_of(slot_names, "cadential"), "M2") == 0 &&

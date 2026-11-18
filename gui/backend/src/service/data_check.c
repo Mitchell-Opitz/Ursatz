@@ -136,7 +136,8 @@ static bool read_item(const char *items_dir, const char *name, cJSON **out_item)
     return true;
 }
 
-/* True when the motif item's current version has a key off C. */
+/* True when the motif item's current version has a key off C. A motif that names a material is on C (its key text is gone); an
+ * old one has the key text, "C major" or "C minor" passes. */
 static bool motif_is_off_c(const char *items_dir, const char *name, const cJSON *item) {
     const cJSON *type = cJSON_GetObjectItemCaseSensitive(item, "type");
     const cJSON *current = cJSON_GetObjectItemCaseSensitive(item, "current_version");
@@ -151,7 +152,8 @@ static bool motif_is_off_c(const char *items_dir, const char *name, const cJSON 
     cJSON *body = ursatz_gui_read_json_object(path);
     const cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
     const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
-    bool off = cJSON_IsString(key) && key_is_off_c(key->valuestring);
+    bool off = !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(motif, "material")) && cJSON_IsString(key) &&
+               key_is_off_c(key->valuestring);
     cJSON_Delete(body);
     return off;
 }

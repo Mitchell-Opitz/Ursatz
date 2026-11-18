@@ -656,7 +656,7 @@ static void test_compose(const Items *m) {
   check(strcmp(string_of(request, "schema"), "ursatz-piece-request") == 0 && number_of(request, "schema_version") == 2 &&
             strcmp(string_of(request, "form"), "game-loop") == 0,
         "the request has the piece request schema");
-  check(strcmp(string_of(request, "key"), "D") == 0 && strcmp(string_of(request, "mode"), "minor") == 0 &&
+  check(strcmp(string_of(request, "key"), "D") == 0 && strcmp(string_of(request, "material"), "omt.material.natural-minor") == 0 &&
             strcmp(string_of(request, "meter"), "4/4") == 0 && number_of(request, "tempo") == 96,
         "the request has the brief");
   check(strcmp(string_of(member(request, "motive"), "degrees"), kDegreesA) == 0 &&

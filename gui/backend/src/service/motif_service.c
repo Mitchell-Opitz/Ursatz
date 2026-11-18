@@ -103,6 +103,23 @@ const char *ursatz_gui_motif_harmony(const cJSON *motif) {
   return cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? harmony->valuestring : NULL;
 }
 
+/* The key text a motif writes its notes in ("C major"): C and the key word of its material, or the old key text of a body not
+   migrated yet. NULL when it has neither. */
+const char *ursatz_gui_motif_key_text(const cJSON *motif, char *out, size_t out_size) {
+  const cJSON *material = cJSON_GetObjectItemCaseSensitive(motif, "material");
+  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+  char word[32];
+  if (cJSON_IsString(material) && ursatz_gui_composer_key_word(material->valuestring, word, sizeof(word))) {
+    snprintf(out, out_size, "C %s", word);
+    return out;
+  }
+  if (!cJSON_IsString(material) && cJSON_IsString(key) && key->valuestring[0] != '\0') {
+    snprintf(out, out_size, "%s", key->valuestring);
+    return out;
+  }
+  return NULL;
+}
+
 /* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
 /* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
 const char *ursatz_gui_motif_role_option(const char *role) {
@@ -208,16 +225,17 @@ cJSON *ursatz_gui_motif_request(const cJSON *motif) {
   const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
   const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
   const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
-  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+  char key_text[64];
+  const char *key = ursatz_gui_motif_key_text(motif, key_text, sizeof(key_text));
   const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
   if (!cJSON_IsString(form) || !cJSON_IsString(notes) || !cJSON_IsString(meter) || !cJSON_IsString(pickup)) {
     return NULL;
   }
-  bool has_key = cJSON_IsString(key) && key->valuestring[0] != '\0';
+  bool has_key = key != NULL;
   bool full = strcmp(form->valuestring, "full") == 0;
   const cJSON *role = cJSON_GetObjectItemCaseSensitive(motif, "role");
   cJSON *request = ursatz_gui_motif_motive_request(full ? "notes" : NULL, full ? NULL : form->valuestring, notes->valuestring,
-                                  meter->valuestring, has_key ? key->valuestring : NULL, pickup->valuestring);
+                                  meter->valuestring, key, pickup->valuestring);
   if (!request || !ursatz_gui_motif_add_extras(request, ursatz_gui_motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
                                      cJSON_IsString(role) ? role->valuestring : NULL) ||
       (full && has_key && !add_tone_overrides(request, motif))) {
@@ -249,7 +267,8 @@ cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body
   const char *form = optional_string(motif, "form", &bad);
   const char *degrees = optional_string(motif, "degrees", &bad);
   const char *meter = optional_string(motif, "meter", &bad);
-  const char *key = optional_string(motif, "key", &bad);
+  char key_text[64];
+  const char *key = ursatz_gui_motif_key_text(motif, key_text, sizeof(key_text));
   const char *pickup = optional_string(motif, "pickup", &bad);
   if (bad || !form || !degrees || degrees[0] == '\0' || !meter) {
     *status = 400;
@@ -258,7 +277,7 @@ cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body
   }
   bool full = strcmp(form, "full") == 0;
   cJSON *request = ursatz_gui_motif_motive_request(full ? "degrees" : NULL, full ? NULL : form, degrees, meter,
-                                  key && key[0] != '\0' ? key : NULL, pickup);
+                                  key, pickup);
   const char *role = optional_string(motif, "role", &(bool){false});
   bool ok = request && ursatz_gui_motif_add_extras(request, ursatz_gui_motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
                                          ursatz_gui_motif_role_option(role));
@@ -400,14 +419,12 @@ UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, const 
   const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
   const cJSON *notes = cJSON_GetObjectItemCaseSensitive(motif, "notes");
   const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
-  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
   const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
   if (!cJSON_IsString(form) ||
       (strcmp(form->valuestring, "full") != 0 && strcmp(form->valuestring, "rhythm") != 0 &&
        strcmp(form->valuestring, "contour") != 0)) {
     return URSATZ_GUI_MOTIF_ANALYSIS_DONE;
   }
-  bool has_key = cJSON_IsString(key) && key->valuestring[0] != '\0';
   if (!cJSON_IsString(notes) || !cJSON_IsString(meter) || !cJSON_IsString(pickup)) {
     return URSATZ_GUI_MOTIF_ANALYSIS_DONE;
   }

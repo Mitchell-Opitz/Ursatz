@@ -772,9 +772,14 @@ static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, s
     if (!cJSON_IsString(meter) || !is_rational(meter->valuestring, true)) {
         return invalid_body(error, error_size, "motif meter must look like 4/4");
     }
+    /* A motif is in C: its material, or the old key text. */
     const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
     if (key && !cJSON_IsNull(key) && !cJSON_IsString(key)) {
         return invalid_body(error, error_size, "motif key must be null or a string");
+    }
+    const cJSON *material = cJSON_GetObjectItemCaseSensitive(motif, "material");
+    if (material && !cJSON_IsNull(material) && !cJSON_IsString(material)) {
+        return invalid_body(error, error_size, "motif material must be null or a string");
     }
     const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
     if (!cJSON_IsString(pickup) || !is_rational(pickup->valuestring, false)) {
@@ -848,11 +853,11 @@ static bool is_in_set_or_null(const cJSON *object, const char *name, const char 
 /* The form words are the Composer's (R-276): a save keeps their type and size, and validate marks a value the Composer
  * does not read, as compose refuses it with its path. */
 static UrsatzGuiMaterialResult validate_theme_form(const cJSON *form, char *error, size_t error_size) {
-    static const char *const words[] = {"into", "hybrid", "mode", "meter", "cadence", "first_cadence", NULL};
+    static const char *const words[] = {"into", "hybrid", "material", "mode", "meter", "cadence", "first_cadence", NULL};
     for (const char *const *word = words; *word; word++) {
         const cJSON *value = cJSON_GetObjectItemCaseSensitive(form, *word);
         if (!is_string_or_null(form, *word) || (cJSON_IsString(value) && strlen(value->valuestring) > THEME_FORM_WORD_MAX)) {
-            return invalid_body(error, error_size, "theme form into, hybrid, mode, meter, cadence and first_cadence must be text");
+            return invalid_body(error, error_size, "theme form into, hybrid, material, meter, cadence and first_cadence must be text");
         }
     }
     if (cJSON_GetObjectItemCaseSensitive(form, "key")) {
@@ -1189,13 +1194,13 @@ static void join_members(const cJSON *list, const char *member, char *out, size_
     }
 }
 
-/* The key, mode and meter of a structure: the Composer's words (R-276), a save keeps their type and size. */
+/* The key, material (or the old mode) and meter of a structure: the Composer's words (R-276), a save keeps their type and size. */
 static UrsatzGuiMaterialResult validate_piece_words(const cJSON *structure, char *error, size_t error_size) {
-    static const char *const words[] = {"key", "mode", "meter", NULL};
+    static const char *const words[] = {"key", "material", "mode", "meter", NULL};
     for (const char *const *word = words; *word; word++) {
         const cJSON *value = cJSON_GetObjectItemCaseSensitive(structure, *word);
         if (!is_string_or_null(structure, *word) || (cJSON_IsString(value) && strlen(value->valuestring) > PIECE_WORD_MAX)) {
-            return invalid_body(error, error_size, "piece key, mode and meter must be text");
+            return invalid_body(error, error_size, "piece key, material and meter must be text");
         }
     }
     return URSATZ_GUI_MATERIAL_OK;
@@ -1227,7 +1232,7 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
     const cJSON *roles = cJSON_GetObjectItemCaseSensitive(form, "roles");
     int role_count = cJSON_GetArraySize(roles);
     if (!cJSON_IsArray(sections)) {
-        return invalid_body(error, error_size, "a piece structure needs key, mode, meter and sections");
+        return invalid_body(error, error_size, "a piece structure needs key, material, meter and sections");
     }
     if (role_count < 1 || role_count > PIECE_ROLES_MAX) {
         return invalid_body(error, error_size, "the Composer gave no roles for this form");
@@ -1371,7 +1376,7 @@ static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const
  * own sections or is a size. */
 static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, char *error, size_t error_size) {
     if (!cJSON_IsObject(structure)) {
-        return invalid_body(error, error_size, "a piece structure needs key, mode, meter and sections");
+        return invalid_body(error, error_size, "a piece structure needs key, material, meter and sections");
     }
     const cJSON *form_name = cJSON_GetObjectItemCaseSensitive(structure, "form");
     if (!is_absent_or_null(structure, "form") && !cJSON_IsString(form_name)) {
@@ -1536,6 +1541,95 @@ static void remove_item_dir(const char *dir) {
 #endif
 }
 
+/* ---- old members ---------------------------------------------------------- */
+
+/* Renames a member in place (its position stays). false on allocation failure. */
+static bool rename_member(cJSON *object, const char *from, const char *to) {
+    cJSON *item = cJSON_GetObjectItemCaseSensitive(object, from);
+    char *name = item ? cJSON_malloc(strlen(to) + 1) : NULL;
+    if (!name) {
+        return item == NULL;
+    }
+    memcpy(name, to, strlen(to) + 1);
+    if (!(item->type & cJSON_StringIsConst)) {
+        cJSON_free(item->string);
+    }
+    item->type &= ~cJSON_StringIsConst;
+    item->string = name;
+    return true;
+}
+
+/* An old mode member (a key word, or "style") of object becomes the member `material` holding the id of the material; one
+ * that is already there wins and the old member goes. A word that names no material stays as it was. */
+static void migrate_mode_member(cJSON *object) {
+    cJSON *mode = cJSON_GetObjectItemCaseSensitive(object, "mode");
+    if (!mode) {
+        return;
+    }
+    if (cJSON_GetObjectItemCaseSensitive(object, "material")) {
+        cJSON_DeleteItemFromObjectCaseSensitive(object, "mode");
+        return;
+    }
+    char id[64];
+    if (cJSON_IsNull(mode)) {
+        rename_member(object, "mode", "material");
+    } else if (cJSON_IsString(mode) && ursatz_gui_composer_material_of_word(mode->valuestring, id, sizeof(id))) {
+        cJSON *replacement = cJSON_CreateString(id);
+        if (replacement && cJSON_ReplaceItemInObjectCaseSensitive(object, "mode", replacement)) {
+            rename_member(object, "mode", "material");
+        } else {
+            cJSON_Delete(replacement);
+        }
+    }
+}
+
+/* A motif's old key text ("C major" or "C minor", motifs are in C) becomes the member `material`; a key on another tonic
+ * stays as it was (the data check refuses it). */
+static void migrate_motif_key(cJSON *motif) {
+    if (!cJSON_IsObject(motif)) {
+        return;
+    }
+    cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+    if (!key) {
+        return;
+    }
+    if (cJSON_GetObjectItemCaseSensitive(motif, "material")) {
+        cJSON_DeleteItemFromObjectCaseSensitive(motif, "key");
+        return;
+    }
+    char id[64];
+    if (cJSON_IsNull(key)) {
+        rename_member(motif, "key", "material");
+    } else if (cJSON_IsString(key) && strncmp(key->valuestring, "C ", 2) == 0 &&
+               ursatz_gui_composer_material_of_word(key->valuestring + 2, id, sizeof(id)) && strcmp(id, "style") != 0) {
+        cJSON *replacement = cJSON_CreateString(id);
+        if (replacement && cJSON_ReplaceItemInObjectCaseSensitive(motif, "key", replacement)) {
+            rename_member(motif, "key", "material");
+        } else {
+            cJSON_Delete(replacement);
+        }
+    }
+}
+
+void ursatz_gui_material_body_migrate(cJSON *body) {
+    if (!cJSON_IsObject(body)) {
+        return;
+    }
+    migrate_motif_key(cJSON_GetObjectItemCaseSensitive(body, "motif"));
+    const cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
+    if (cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(theme, "form"))) {
+        migrate_mode_member(cJSON_GetObjectItemCaseSensitive(theme, "form"));
+    }
+    const cJSON *piece = cJSON_GetObjectItemCaseSensitive(body, "piece");
+    if (cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(piece, "structure"))) {
+        migrate_mode_member(cJSON_GetObjectItemCaseSensitive(piece, "structure"));
+    }
+    cJSON *use = NULL;
+    cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
+        ursatz_gui_material_body_migrate(cJSON_GetObjectItemCaseSensitive(use, "copy"));
+    }
+}
+
 static bool write_version_locked(const char *id, int number, const cJSON *body) {
     char path[PATH_BYTES];
     return version_path(id, number, path, sizeof(path)) && write_json(path, body);
@@ -1571,6 +1665,7 @@ static UrsatzGuiMaterialResult read_version_locked(const char *id, int number, c
     if (!body) {
         return ursatz_gui_path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
+    ursatz_gui_material_body_migrate(body);
     *out_body = body;
     return URSATZ_GUI_MATERIAL_OK;
 }
@@ -1585,6 +1680,7 @@ static UrsatzGuiMaterialResult fill_uses_locked(const char *self_id, const cJSON
     if (!filled) {
         return URSATZ_GUI_MATERIAL_ERR_ALLOC;
     }
+    ursatz_gui_material_body_migrate(filled);
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
     cJSON *use = NULL;
     cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(filled, "uses")) {

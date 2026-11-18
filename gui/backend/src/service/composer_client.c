@@ -226,6 +226,34 @@ bool ursatz_gui_composer_key_word(const char *material, char *out, size_t out_si
   return false;
 }
 
+bool ursatz_gui_composer_material_word(const char *material, char *out, size_t out_size) {
+  if (material && strcmp(material, "style") == 0) {
+    snprintf(out, out_size, "style");
+    return true;
+  }
+  return ursatz_gui_composer_key_word(material, out, out_size);
+}
+
+bool ursatz_gui_composer_material_of_word(const char *word, char *out, size_t out_size) {
+  if (!word || !ursatz_gui_composer_vocabulary() || !g_vocabulary_tree) {
+    return false;
+  }
+  if (strcmp(word, "style") == 0) {
+    snprintf(out, out_size, "style");
+    return true;
+  }
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "materials")) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(entry, "label");
+    if (cJSON_IsString(value) && cJSON_IsString(label) && strcmp(label->valuestring, word) == 0) {
+      snprintf(out, out_size, "%s", value->valuestring);
+      return true;
+    }
+  }
+  return false;
+}
+
 bool ursatz_gui_composer_reply_refused(const UrsatzGuiComposerReply *reply) {
   return reply->status == COMPOSER_ERR_REQUEST || reply->status == COMPOSER_ERR_UNSATISFIABLE;
 }

@@ -91,4 +91,12 @@ bool ursatz_gui_composer_tonic_name(int pitch_class, const char *material, char 
  * it names none. */
 bool ursatz_gui_composer_key_word(const char *material, char *out, size_t out_size);
 
+/* The word a stored mode member used for a material: its key word ("minor" for "omt.material.natural-minor"), or "style" for
+ * "style" (a brief's own); false for anything else. */
+bool ursatz_gui_composer_material_word(const char *material, char *out, size_t out_size);
+
+/* The material of an old mode word: the id of the materials entry whose key word it is ("minor" gives
+ * "omt.material.natural-minor"), "style" for "style"; false for any other word. */
+bool ursatz_gui_composer_material_of_word(const char *word, char *out, size_t out_size);
+
 #endif /* URSATZ_GUI_COMPOSER_CLIENT_H */
