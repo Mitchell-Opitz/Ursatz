@@ -19,6 +19,7 @@ ursatz_public_headers(ursatz_realization
         realization/line.h
         realization/movement.h
         realization/performer_part.h
+        realization/piano_reduction.h
         realization/realization.h
         realization/scoring.h
         realization/work.h
