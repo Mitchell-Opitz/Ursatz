@@ -86,6 +86,10 @@ uses analysis-texture      model theory analysis-notes
 uses analysis-counterpoint model theory analysis-notes
 uses analysis-galant       model theory analysis-notes
 uses analysis-similarity   model analysis-notes
+# The realization group (library/realization, P59, R-600): lines, performer parts, scoring, movements and works.
+module realization     library/realization        prefix realization/
+group realization realization
+uses realization model theory
 allow library/model/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
 only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
@@ -110,7 +114,8 @@ target ursatz_theory theory
 target ursatz_analysis analysis
 target ursatz_chain chain
 target ursatz_io io
-staged model theory analysis chain io analyzer-api analyzer composer
+target ursatz_realization realization
+staged model theory analysis chain io realization analyzer-api analyzer composer
 generated analyzer version.h ursatz_analyzer_producer_key.h
 
 uses analyzer-api  model theory analysis io
@@ -167,6 +172,10 @@ uses tests-relationship test-helpers
 uses tests-interpretation test-helpers
 uses tests-io test-helpers
 uses tests-export test-helpers
+
+module tests-realization         library/realization/tests         root library/tests library/tests/support library
+like tests-realization realization
+uses tests-realization test-helpers
 
 module tests-theory-framework    library/theory/tests/framework    root library/tests library/tests/support library
 module tests-theory-style        library/theory/tests/style        root library/tests library/tests/support library

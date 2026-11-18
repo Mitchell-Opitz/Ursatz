@@ -9,6 +9,7 @@ endif()
 
 add_subdirectory(model)
 add_subdirectory(theory)
+add_subdirectory(realization)
 add_subdirectory(analysis)
 add_subdirectory(chain)
 add_subdirectory(io)
