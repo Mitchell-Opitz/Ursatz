@@ -55,7 +55,7 @@ json:    {"found": true, "chain": {"steps": [{"op": "retrograde", "params": {}}]
           "kept": ["rhythm", "harmony"], "changed": ["intervals", "contour"],
           "derivation": "Put in retrograde. Kept the rhythm and the harmony; changed the intervals and the contour."}
 
-request: {"mode": "major", "meter": "4/4", "seed": 7}
+request: {"material": "major", "meter": "4/4", "seed": 7}
 json:    {"seed": 7, "motives": [{"motive": {…}, "analysis": {…}}]}
 ```
 

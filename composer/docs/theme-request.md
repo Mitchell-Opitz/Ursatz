@@ -6,7 +6,7 @@ request is an error (`the request must have "schema_version": 2`). Back to the [
 
 ```json
 {"schema": "ursatz-theme-request", "schema_version": 2,
- "into": "sentence", "hybrid": null, "key": "D", "mode": "minor", "meter": "4/4", "bars": 8,
+ "into": "sentence", "hybrid": null, "key": "D", "material": "minor", "meter": "4/4", "bars": 8,
  "cadence": "PAC", "first_cadence": null, "development": "balanced",
  "motives": [{"id": "A", "form": "full", "degrees": "1:q b3:e 5:e 1':h", "pickup": "0", "harmony": null,
               "features": [{"label": "a", "first": 0, "last": 1}], "role": "melodic"},
@@ -26,7 +26,7 @@ request is an error (`the request must have "schema_version": 2`). Back to the [
 | Member | Meaning |
 | --- | --- |
 | `into`, `hybrid` | `sentence`, `period` or `hybrid`; with `hybrid`, the pairing as `--hybrid` writes it (`antecedent+continuation`). |
-| `key`, `mode` | The tonic (or a key like `"D minor"`) and `minor`, `major` or `style`. `style` takes the mode from the style's `mode` category and needs a `style`. |
+| `key`, `material` | The tonic (or a key like `"D minor"`) and the material: an id, name, key word or alias (`omt.material.natural-minor`, `minor`, `natural minor`) of a material the Composer writes keys in (major and natural minor), or `style`, which takes the mode from the style's `mode` category and needs a `style`. The old member `mode` (`major`, `minor`, `style`) is still read, and `material` and `mode` together are refused at `/mode`. |
 | `meter`, `bars` | `2/4`, `3/4`, `4/4` or `6/8`; 3 to 16 bars (default 8; with a `construction` and no `bars`, the construction's). 4 and 8 bars are built as they always were; any other length gets a construction chosen from the motif or the length ([grow-construction.md](grow-construction.md#choosing-a-construction)) and is refused at `/bars` when none fits (`no construction makes a 15-bar sentence from this motif`). |
 | `construction` | API 1.18, `null` (default) or `{"ideas": {"<idea name>": bars, ...}, "extensions": [{"kind", "idea", "bars", "varied"}]}`: the bars of each idea of the theme (the idea names of `ideas`: `basic idea`, `repetition`, `contrasting idea`, ...) and up to 3 extensions (`kind` `repeat`, `stretch`, `addition` or `evaded`; `idea` is required for a repeat and a stretch; `bars` 0 to 4, 0 for the default; `varied` for a repeat). The ideas and the extensions must add up to `bars`. The construction is `given` ([grow-construction.md](grow-construction.md)). |
 | `cadence`, `first_cadence` | As the options of [grow](cli-grow.md): PAC (default), IAC or HC; the weak cadence of an antecedent. |

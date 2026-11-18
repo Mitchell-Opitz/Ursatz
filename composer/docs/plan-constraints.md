@@ -12,7 +12,7 @@ nothing checks them.
 | `length_bars` | `bars`: integer, 1 or more. |
 | `cadence` | `type`: `pac`, `iac`, `hc`, `dc` or `pc`. |
 | `motive_ref` | `motive`: the id of a motive node; `step` (optional): the relation that makes the node's motive from it, as the text of a library relation step ([Motive relation steps](#motive-relation-steps)). `segment` (optional): the label of the segment of the basic motif the node is made from (1 to 8 characters, `"b"`), and `steps` (optional, 1 to 8): the liquidation steps (`liquidate-features`, ch. VIII) the node's motive is the result of; both are a record of what grow-theme made, absent for none. Without `step` the node's melody is that motive itself. Files saved before `step` write `transform` and its members instead, which are still read. |
-| `key` | `tonic` (spelled), `mode` (`major` or `minor`). |
+| `key` | `tonic` (spelled), `material` (the id of a K1 material, `omt.material.major` or `omt.material.natural-minor`). Format 2 wrote `mode` (`major` or `minor`), which is still read. |
 | `archetype` | `type`: `sentence`, `period` or `hybrid`. |
 | `embellish` | No fields. Marks a harmony lane span reopened for the embellishment pass. |
 | `schema` | `schema`: the name of a galant schema as Ursatz's galant-schemas framework names it (`romanesca`, `do-re-mi`, `fonte` and so on); `stage`: the index of the schema's stage the span sounds, from 0. The span's other voices are read from the framework's prototype. |

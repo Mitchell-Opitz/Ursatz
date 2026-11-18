@@ -172,7 +172,7 @@ ComposerStatus composer_api_recognize(const ComposerContext *context, const char
 
 /*
  * Random motives that keep the hard melodic rules of standard counterpoint; their length, pickup, number of notes, rhythm
- * and range are drawn from defaults in the Composer. Request: {"mode": "major"|"minor", "meter": "4/4", "key": "D minor"
+ * and range are drawn from defaults in the Composer. Request: {"material": "major"|"minor"|"random" (a material id, name, key word or alias; the old "mode" is read too, not both), "meter": "4/4", "key": "D minor"
  * (its mode must be "mode"; default C major or A minor), "form": "full"|"rhythm"|"contour", "role": "melodic"|
  * "accompaniment", "style": <a style model file path>, "style_without": [<style categories read without>, at most 8;
  * needs "style"], "count": 1 to 16 (default 1), "seed": 0 to 4294967295 (default from the clock), "preferences": <the
@@ -244,8 +244,8 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
 
 /*
  * Plans a whole short piece from a form template (docs/cli-plan.md); nothing is composed. Request: {"form": a form name
- * (absent with "given": the ternary form of 24 bars, the material in section B), "key": "D" or "D minor", "mode":
- * "major"|"minor" (not with a mode in "key"), "meter": "4/4", "bars", "count", "modulate", "motive": {"input": {"format",
+ * (absent with "given": the ternary form of 24 bars, the material in section B), "key": "D" or "D minor", "material":
+ * "major"|"minor" (or the old "mode"; not with a mode in "key"), "meter": "4/4", "bars", "count", "modulate", "motive": {"input": {"format",
  * "text"}, "source": <a name to show>} (a motive request, read in the meter and key), "corpus": <a corpus directory> with
  * "like": <a passage file> or a "like_progression" given, "accompaniment", "texture", "seed" (0 to 4294967295; default
  * from the clock), "style" (a style model path), "style_weight", "style_without", "blend", "blend_weight", "blend_weights",
@@ -322,7 +322,7 @@ ComposerStatus composer_api_progression(const ComposerContext *context, const ch
 /*
  * Writes a counter-melody against a line in the first, second, third or fourth species of strict counterpoint
  * (docs/cli-counterpoint.md). Request: the motive request of composer_api_motive for the line ("input": {"format", "form",
- * "text"}, "pickup", "harmony"...; any length) with "species" (1 to 4), "key" (a tonic alone with "mode": "major"|"minor"),
+ * "text"}, "pickup", "harmony"...; any length) with "species" (1 to 4), "key" (a tonic alone with "material" or the old "mode": "major"|"minor"),
  * "meter" (all three required), "position" ("below": the line is the melody, the default; "above": the line is the bass),
  * "seed" (0 to 4294967295; default from the clock), "suggest" (1 to 16 different counter-melodies), "plans", "midi",
  * "musicxml" (the first counter-melody's files), "tempo", "plain_midi". json: {"species", "position", "key", "meter",
@@ -354,7 +354,7 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
  * asked for. Request: the motive request of composer_api_motive ("input", "harmony", "features", "role"; or, instead of
  * "input", "corpus": a corpus directory with "like": a passage file, whose first bar of a similar passage becomes the motive,
  * which the document reports as "source") and the brief of the command: "into" ("sentence", "period" or "hybrid"), "hybrid"
- * ("<beginning>+<ending>"), "key", "mode" ("major", "minor" or "style"), "meter", "bars" (4 or 8), "cadence", "first_cadence",
+ * ("<beginning>+<ending>"), "key", "material" or the old "mode" ("major", "minor" or "style"), "meter", "bars" (4 or 8), "cadence", "first_cadence",
  * "accompaniment", "accompaniment_motive" (a motive request of its own, read in the meter, role accompaniment), "texture",
  * "voicing" (true), "check", "style", "style_weight", "style_without" (up to 8 categories), "blend", "blend_weight",
  * "blend_weights", "seed" (0 to 4294967295; default from the clock; if a seed gets stuck the next, up to 16, are tried),

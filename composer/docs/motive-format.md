@@ -13,7 +13,7 @@ lanes, and `notes` is the note payload of a melody lane, with times as in the co
 | Key | Content |
 | --- | --- |
 | `meter` | Optional. `beats_per_bar` (1 to 64), `beat_unit` (1, 2, 4, 8 or 16) and optionally `bars_per_hyperbar`. |
-| `key` | Optional. `tonic_pitch_class` (0 to 11) and `mode` (`major` or `minor`). |
+| `key` | Optional. `tonic_pitch_class` (0 to 11) and `material` (an id, name, key word or alias of a material the Composer writes keys in: `major`, `minor`), or the old `mode` (`major` or `minor`); the two together are refused at `key.mode`. |
 | `notes` | A non-empty array of at most 64 `{"midi_pitch": 0 to 127, "offset": <time>, "duration": <time>}`. `offset` is measured from the start of the motive, so a gap between notes is a rest and a first note after 0 is a leading rest. Notes are in order and do not overlap. A tie is one note as long as both. |
 | `form` | Optional, `full` (the default), `rhythm` or `contour`. A rhythm keeps only the durations and onsets (every note sounds on one pitch); a contour only the heights of the notes in relation to each other (even quarters). Written only when it is not `full`. |
 | `pickup` | Optional. A time in whole notes: the length before the first barline, shorter than one bar. The notes still start at 0; bars and beats are counted from the barline. Written only when it is not 0. |

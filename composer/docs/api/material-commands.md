@@ -44,7 +44,7 @@ request of the line (any length) with:
 
 | Member | Value |
 |---|---|
-| `species`, `key`, `meter` | required: 1 to 4; a tonic alone with `mode` (`major` or `minor`), or tonic and mode; `"4/4"` |
+| `species`, `key`, `meter` | required: 1 to 4; a tonic alone with `material` (or the old `mode`: `major` or `minor`), or tonic and mode; `"4/4"` |
 | `position` | `below` (default: the line is the melody) or `above` (the line is the bass) |
 | `seed`, `suggest` | 0 to 4294967295, default from the clock; 1 to 16 different counter-melodies |
 | `plans`, `midi`, `musicxml`, `tempo`, `plain_midi` | the outputs, as above |
@@ -79,8 +79,8 @@ document reports it as `source` (not with `harmony`, `features` or `role`). The 
 
 | Member | Value |
 |---|---|
-| `into`, `key`, `meter` | required: `sentence`, `period` or `hybrid`; the key (a tonic alone with `mode`); the meter |
-| `hybrid`, `mode`, `bars`, `cadence`, `first_cadence`, `texture`, `voicing`, `accompaniment` | as the options |
+| `into`, `key`, `meter` | required: `sentence`, `period` or `hybrid`; the key (a tonic alone with `material`); the meter |
+| `hybrid`, `material` (or the old `mode`), `bars`, `cadence`, `first_cadence`, `texture`, `voicing`, `accompaniment` | as the options |
 | `accompaniment_motive` | a motive request of its own, read in the meter with the role `accompaniment` |
 | `check` | `true`: pass over a seed the Analyzer contradicts |
 | `style`, `style_weight`, `style_without`, `blend`, `blend_weight`, `blend_weights` | a style model path and its options (`style_without` is a list of at most 8 categories) |

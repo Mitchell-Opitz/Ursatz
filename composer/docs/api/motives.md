@@ -132,9 +132,9 @@ range are drawn from defaults in the Composer.
 
 | Member | Value |
 |---|---|
-| `mode` | `"major"`, `"minor"` or `"random"`. Required |
+| `material` | A material (an id, name, key word or alias; the Composer writes major and natural minor) or `"random"`. Required. The old member `mode` (`"major"`, `"minor"`, `"random"`) is still read, and the two together are refused at `/mode` |
 | `meter` | `"4/4"`, `"3/4"`, `"2/4"`, `"6/8"` or any meter, or `"random"`. Required |
-| `key` | `"D minor"`; its mode must be the mode (`/key`). Default C major or A minor |
+| `key` | `"D minor"`; its mode must be the material (`/key`). Default C major or A minor |
 | `form` | `"full"` (default), `"rhythm"` or `"contour"` |
 | `strategy` | `"segments"` (default) or `"drawn"`: how the motive is made (below). Anything else is a refusal with `/strategy` |
 | `role` | `"melodic"` or `"accompaniment"` |

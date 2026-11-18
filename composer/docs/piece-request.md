@@ -7,7 +7,7 @@ Back to the [docs index](README.md).
 
 ```json
 {"schema": "ursatz-piece-request", "schema_version": 1,
- "key": "D", "mode": "minor", "meter": "4/4",
+ "key": "D", "material": "minor", "meter": "4/4",
  "motive": null,
  "sections": [
   {"id": "intro", "part": "intro", "letter": "I", "beats": 8, "pickup": "0", "cadence": null, "fill": {"kind": "empty"}},
@@ -25,7 +25,7 @@ Back to the [docs index](README.md).
 
 | Member | Meaning |
 | --- | --- |
-| `key`, `mode` | The tonic (or a key like `"D minor"`) and `minor`, `major` or `style`. `style` takes the style's most common mode and needs a `style`. |
+| `key`, `material` | The tonic (or a key like `"D minor"`) and the material: an id, name, key word or alias of a material the Composer writes keys in (major and natural minor), or `style`, which takes the style's most common mode and needs a `style`. The old member `mode` (`major`, `minor`, `style`) is still read (the stored `request.json` files of the GUI use it) and `material` and `mode` together are refused. |
 | `meter` | `2/4`, `3/4`, `4/4` or `6/8`. A form that lists its meters ([forms.md](forms.md)) refuses another at `/request/meter`: `the Minuet form is in 3/4`. |
 | `motive` | `null`, or the piece's basic motive (a degree list as in the [theme request](theme-request.md#motives), melodic). With `null` the basic motive is the own motive of the first motif section, else one invented. It may be as long as the basic idea of every theme section: 2 bars when all are 8 bars, else 1. A longer one is refused at `/motive`. |
 | `accompaniment`, `voicing` | As in the theme request, on every section: `{"pattern": "any" or "block" or "arpeggiated" or "alberti" or "oom-pah"}`, or `"satb"` or `"chorale"`, not both. The pattern `motive` is not available in a piece. |
@@ -67,7 +67,7 @@ of any length that composes; a sentence at the loop's end (nothing after it but 
 `"schema_version": 2` names a built-in form in `form` (`binary`, `rounded-binary`, `ternary`, `variations`, `loop`,
 `layered` or `game-loop`; [the API serves them](api/vocabulary-and-validation.md#forms-composer_api_formsout)). Version 1 is
 the game loop and refuses a `form` at `/request/form`; a version 2 request without `form`, or with another name, is refused
-there too, with the built-in names. The brief (`key`, `mode`, `meter`, `motive`, `accompaniment`, `style`, `style_weight`,
+there too, with the built-in names. The brief (`key`, `material`, `meter`, `motive`, `accompaniment`, `style`, `style_weight`,
 `without`, `tempo`) is as above. The rest depends on the form:
 
 | Form | Members |

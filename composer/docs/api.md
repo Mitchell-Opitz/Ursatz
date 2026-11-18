@@ -63,8 +63,12 @@ snapshot is required` (or the missing id), and the path `""`. The entries that t
 
 The Composer composes in the major and the natural minor. A key text that names another material the snapshot knows (`"C dorian"`,
 `"C harmonic minor"`) is refused at its member with `the Composer writes major and minor keys; '<word>' is not one of them`; a text
-that names no material is refused as an unknown key, as before. The request formats are unchanged: `mode` is still `major` or
-`minor`, and a plan file still names a key by a tonic and a mode, which the reader maps to the snapshot's major and natural minor.
+that names no material is refused as an unknown key, as before. Every request that took a `mode` takes a `material` in its place: an id, name, key word or alias of a material the snapshot knows
+(`omt.material.natural-minor`, `minor`, `natural minor`), `style` where the request offers it today and `random` for the random
+motive. The old `mode` member is read as before (`major`, `minor`, `style`, `random`) so every stored request still runs, and the two
+together are refused at `/mode` with `give "material" or the old "mode", not both`. The versions of the request kinds do not change; the
+replies are unchanged and still say `mode`. A plan file names a key by `tonic` and `material` (plan format 3), or by a tonic and a mode (formats 1 and 2),
+which the reader maps to the snapshot's major and natural minor ([plan-format.md](plan-format.md#format-versions)).
 The command line builds one snapshot per process.
 
 ## Memory
