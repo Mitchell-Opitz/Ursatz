@@ -68,7 +68,7 @@ All entries are in `include/ursatz_composer/composer_api.h`; the entry index is 
 | Composer version | `CMakeLists.txt` (`project(UrsatzComposer VERSION ...)`) | 0.4.1 | [changelog.md](changelog.md) |
 | API version | `include/ursatz_composer/composer_api.h` (`COMPOSER_API_VERSION_MAJOR`, `_MINOR`) | 1.19 | [api.md](api.md#versioning) |
 | Plan format version | `src/include/ursatz_composer/plan_json.h` (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`) | 2 | [plan-format.md](plan-format.md#format-versions) |
-| Plan schema | `schema/plan.v4.schema.json` | plan format 3 | [plan-format.md](plan-format.md) |
+| Plan schema | `schema/plan.v4.schema.json` | plan format 4 (note ids) | [plan-format.md](plan-format.md) |
 | API schemas | `schema/api/*.schema.json` | API 1.19 | [api.md](api.md) |
 | Motive format | the motive document has no version member | none | [motive-format.md](motive-format.md) |
 | Theme request schema | `docs/theme-request.md` (`schema_version`) | 2 | [theme-request.md](theme-request.md) |
