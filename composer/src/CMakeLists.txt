@@ -1,6 +1,7 @@
 add_library(ursatz_composer STATIC
     composer.c
     util/request_parse.c
+    util/request_chords.c
     api/api_internal.c
     api/api_versions.c
     api/api_export.c

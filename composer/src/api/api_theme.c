@@ -20,6 +20,7 @@
 #include "api_vocabulary.h"
 #include "grow/grow_internal.h"
 #include "util/plan_util.h"
+#include "util/request_chords.h"
 #include "util/request_parse.h"
 #include "util/util.h"
 
@@ -217,123 +218,6 @@ static ComposerStatus read_motives(ThemeRequest *theme, const cJSON *request, Co
 }
 
 /*
- * The chords: a list of {"bar", "text"}, at most one a bar, the text in the own-harmony syntax relative to the bar. They are
- * written into material->chords as Given chords from the theme's start, each lasting to the next chord of its bar or the
- * end of the bar.
- */
-static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, const PlanMeter *meter, const AnalysisKey *key,
-                                  long bars, ComposerError *error) {
-    const cJSON *list = cJSON_GetObjectItemCaseSensitive(request, "chords");
-    if (!list || cJSON_IsNull(list)) {
-        return COMPOSER_OK;
-    }
-    if (!cJSON_IsArray(list)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/chords",
-                        "\"chords\" must be a list of {\"bar\": <number from 0>, \"text\": \"I V@3/2\"}");
-    }
-    Rational bar_length;
-    if (rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar_length) != RATIONAL_OK) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "the meter has no bar length");
-    }
-    Rational beat;
-    Rational division;
-    if (!plan_meter_grid(*meter, &beat, &division)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "the meter has no rhythmic grid");
-    }
-    bool seen[GROW_EXT_CHORDS / 2 + 1] = {false};
-    const cJSON *entry = NULL;
-    size_t index = 0;
-    cJSON_ArrayForEach(entry, list) {
-        char path[48];
-        snprintf(path, sizeof path, "/chords/%zu", index++);
-        const cJSON *bar_item = cJSON_IsObject(entry) ? cJSON_GetObjectItemCaseSensitive(entry, "bar") : NULL;
-        const char *text;
-        if (!cJSON_IsObject(entry) || !cJSON_IsNumber(bar_item) || !api_request_string(entry, path, "text", true, &text, error)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path,
-                            "each of \"chords\" must be {\"bar\": <number from 0>, \"text\": \"I V@3/2\"}");
-        }
-        long bar = (long)bar_item->valuedouble;
-        if ((double)bar != bar_item->valuedouble || bar < 0 || bar >= bars) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %g: the theme has bars 0 to %ld",
-                            bar_item->valuedouble, bars - 1);
-        }
-        if (seen[bar]) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: given twice", bar);
-        }
-        seen[bar] = true;
-        MotiveSketchChord parsed[MOTIVE_MAX_CHORDS];
-        size_t count = 0;
-        MotiveError motive_error;
-        if (motive_harmony_parse(text, meter, parsed, &count, &motive_error) != MOTIVE_OK) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: '%s' at %s: %s", bar, text,
-                            motive_error.location, motive_error.message);
-        }
-        if (count == 0 || count > 2) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: write 1 or 2 chords, not %zu", bar, count);
-        }
-        if (material->chord_count + count > GROW_EXT_CHORDS) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/chords", "chords: too many chords");
-        }
-        Rational bar_start;
-        if (rational_mul_int(bar_length, (long long)bar, &bar_start) != RATIONAL_OK) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: the bar is out of range", bar);
-        }
-        for (size_t c = 0; c < count; c++) {
-            const MotiveSketchChord *chord = &parsed[c];
-            Rational divisions;
-            Rational end = bar_length;
-            /* An onset is a whole number of the meter's division (half a beat, a third in a compound meter). */
-            if (rational_div(chord->onset, division, &divisions) != RATIONAL_OK || divisions.den != 1) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: a chord starts on a beat or a half beat",
-                                bar);
-            }
-            Rational cell;
-            Rational in_cells;
-            if (!given_cell_length(meter, &cell) ||
-                rational_make(chord->onset.num * (long)cell.den, chord->onset.den * (long long)cell.num, &in_cells) !=
-                    RATIONAL_OK ||
-                in_cells.den != 1) {
-                /* The harmony and bass operators write chords on the cells of the meter only (see docs/theme-request.md). */
-                long beats = cell.num * (long)meter->beat_unit / (long)cell.den;
-                return rational_cmp(cell, bar_length) == 0
-                           ? api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: a bar of %d/%d takes one chord", bar,
-                                      meter->beats_per_bar, meter->beat_unit)
-                           : api_fail(error, COMPOSER_ERR_REQUEST, path,
-                                      "chords bar %ld: in %d/%d a chord starts only every %ld beats (@%ld)", bar,
-                                      meter->beats_per_bar, meter->beat_unit, beats, beats);
-            }
-            if (rational_cmp(chord->onset, bar_length) >= 0) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: a chord starts inside the bar", bar);
-            }
-            if (chord->alteration != 0) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, path,
-                                "chords bar %ld: altered chords are not given; write a diatonic numeral", bar);
-            }
-            HarmonyChord harmony;
-            memset(&harmony, 0, sizeof(harmony));
-            harmony.degree = chord->degree;
-            harmony.inversion = chord->inversion;
-            harmony.seventh = chord->seventh;
-            size_t at = material->chord_count;
-            if (!harmony_roman_format(harmony_key_mode(key), &harmony, material->chord_numerals[at])) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: that chord does not exist in the key", bar);
-            }
-            if (c + 1 < count) {
-                end = parsed[c + 1].onset;
-            }
-            GivenChord *given = &material->chords[at];
-            given->numeral = material->chord_numerals[at];
-            if (rational_add(bar_start, chord->onset, &given->onset) != RATIONAL_OK ||
-                rational_sub(end, chord->onset, &given->length) != RATIONAL_OK) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: the chord has no length", bar);
-            }
-            material->chord_count++;
-        }
-    }
-    return COMPOSER_OK;
-}
-
-/*
  * A basic motif as long as the presentation or the antecedent fills that part whole: it leaves no contrasting or repeating
  * idea, so a contrasting slot or the motive of that idea is refused where it is given.
  */
@@ -426,7 +310,12 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
         material->has_accompaniment_motive = true;
     }
     status = refuse_idea_beside_part(material, theme, setup, error);
-    return status != COMPOSER_OK ? status : read_chords(material, request, &setup->meter, &setup->key, (long)setup->bars, error);
+    if (status != COMPOSER_OK) {
+        return status;
+    }
+    return request_read_chords(cJSON_GetObjectItemCaseSensitive(request, "chords"), "/chords", "the theme", &setup->meter, &setup->key,
+                               (long)setup->bars, material->chords, material->chord_numerals, GROW_EXT_CHORDS, &material->chord_count,
+                               error);
 }
 
 /* --- the brief ---------------------------------------------------------------------------------------- */
