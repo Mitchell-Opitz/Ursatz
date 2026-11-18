@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "analysis/harmony/key_regions.h"
 

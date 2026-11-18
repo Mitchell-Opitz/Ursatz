@@ -6,12 +6,8 @@
 #include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/imported_notes.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
 #include <ursatz_analyzer/motive_links.h>
-#include <ursatz_analyzer/musicxml_pipeline.h>
-#include <ursatz_analyzer/notation_reading.h>
 #include <ursatz_analyzer/playback.h>
 #include <ursatz_analyzer/score_export.h>
 #include <ursatz_analyzer/similar_material.h>

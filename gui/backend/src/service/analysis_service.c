@@ -643,7 +643,7 @@ static bool find_source_path(const char *dir_path, char *out, size_t out_size) {
 static bool import_piece(const char *dir_path, ImportedFormat format, ImportedScore *out) {
     char source_path[400];
     if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
-        imported_score_import_file(source_path, format, out, NULL) != IMPORTED_SCORE_OK) {
+        analyzer_import_file(source_path, format, out, NULL, 0) != ANALYZER_OK) {
         return false;
     }
     cJSON *meta = read_meta_file(dir_path);

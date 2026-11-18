@@ -16,7 +16,7 @@ UrsatzGuiPlaybackResult ursatz_gui_playback_of_midi(const char *path, char **jso
     }
     *json = NULL;
     ImportedScore notes;
-    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK) {
+    if (analyzer_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL, 0) != ANALYZER_OK) {
         return URSATZ_GUI_PLAYBACK_ERR_IMPORT;
     }
     AnalyzerPlayback playback;

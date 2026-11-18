@@ -1,5 +1,6 @@
 add_library(ursatz_analyzer STATIC
     version.c
+    pipeline/input_pipeline.c
     pipeline/chain_input.c
     pipeline/pitch_class_util.c
     pipeline/spelling_util.c
