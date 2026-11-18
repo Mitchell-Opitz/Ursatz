@@ -57,8 +57,8 @@ static int tonic_of(const ImportedScore *notes) {
     return notes->key_signature.is_minor ? (major + 9) % 12 : major;
 }
 
-static bool same_rational(StyleRational a, StyleRational b) {
-    return a.numerator == b.numerator && a.denominator == b.denominator;
+static bool same_rational(double a, double b) {
+    return a == b;
 }
 
 static bool same_comparison(const StyleComparison *a, const StyleComparison *b) {

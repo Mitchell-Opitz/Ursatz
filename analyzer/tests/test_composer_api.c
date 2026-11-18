@@ -225,8 +225,8 @@ static StyleModel *corpus_model(const char *name, size_t pieces) {
     return corpus_model_without(name, pieces, NULL, 0);
 }
 
-static bool same_rational(StyleRational a, StyleRational b) {
-    return a.numerator == b.numerator && a.denominator == b.denominator;
+static bool same_rational(double a, double b) {
+    return a == b;
 }
 
 static bool has_motive(const StyleComparison *comparison, bool *fragment_side_only) {
@@ -310,8 +310,8 @@ static void test_style_distance(void) {
         CHECKF(distance(analysis, chorales, NULL, 0, &far_style) == ANALYZER_OK, "far");
         CHECKF(near_style.overall_present && far_style.overall_present, "overall distances");
         if (near_style.overall_present && far_style.overall_present) {
-            double near_distance = style_rational_value(near_style.overall);
-            double far_distance = style_rational_value(far_style.overall);
+            double near_distance = near_style.overall;
+            double far_distance = far_style.overall;
             printf("Mozart 545 against sonatinas %.4f, against chorales %.4f\n", near_distance, far_distance);
             CHECKF(near_distance < far_distance, "Mozart 545 is not closer to the sonatinas");
         }

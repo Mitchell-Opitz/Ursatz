@@ -116,17 +116,19 @@ static void print_json_string(const char *text) {
     putchar('"');
 }
 
-static void print_json_rational(StyleRational r) {
-    char fraction[100];
-    style_rational_format(r, fraction, sizeof fraction);
-    printf("{\"fraction\": \"%s\", \"value\": %.6f}", fraction, style_rational_value(r));
+/* A category's exact distance: {"fraction": "n/d", "value": 0.123456}. */
+static void print_json_rational(Rational r) {
+    printf("{\"fraction\": \"%lld/%lld\", \"value\": %.6f}", r.num, r.den, rational_to_double(r));
 }
 
-/* "0.1234 (n/d)" */
-static void print_text_rational(StyleRational r) {
-    char fraction[100];
-    style_rational_format(r, fraction, sizeof fraction);
-    printf("%.4f (%s)", style_rational_value(r), fraction);
+/* A category's distance: "0.1234 (n/d)". */
+static void print_text_rational(Rational r) {
+    printf("%.4f (%lld/%lld)", rational_to_double(r), r.num, r.den);
+}
+
+/* A mean (a dimension's or the overall distance): a double, so a plain number in the JSON. */
+static void print_json_mean(double value) {
+    printf("%.6f", value);
 }
 
 static void print_json_labels(char *const labels[3]) {
@@ -150,17 +152,13 @@ static void print_text_labels(const char *tag, char *const labels[3]) {
 
 static void print_comparison_text(const StyleComparison *comparison) {
     if (comparison->overall_present) {
-        printf("overall ");
-        print_text_rational(comparison->overall);
-        printf("\n");
+        printf("overall %.4f\n", comparison->overall);
     }
     for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
         if (!comparison->dimension_present[d]) {
             continue;
         }
-        printf("%s ", style_dimension_name((StyleDimension)d));
-        print_text_rational(comparison->dimension[d]);
-        printf("\n");
+        printf("%s %.4f\n", style_dimension_name((StyleDimension)d), comparison->dimension[d]);
         for (size_t i = 0; i < comparison->category_count; i++) {
             const StyleCategoryDistance *c = &comparison->categories[i];
             if (c->dimension != (StyleDimension)d) {
@@ -179,7 +177,7 @@ static void print_comparison_text(const StyleComparison *comparison) {
 static void print_comparison_json(const StyleComparison *comparison) {
     printf("{\n  \"overall\": ");
     if (comparison->overall_present) {
-        print_json_rational(comparison->overall);
+        print_json_mean(comparison->overall);
     } else {
         printf("null");
     }
@@ -190,7 +188,7 @@ static void print_comparison_json(const StyleComparison *comparison) {
             continue;
         }
         printf("%s\n    {\"dimension\": \"%s\", \"distance\": ", first ? "" : ",", style_dimension_name((StyleDimension)d));
-        print_json_rational(comparison->dimension[d]);
+        print_json_mean(comparison->dimension[d]);
         printf("}");
         first = false;
     }

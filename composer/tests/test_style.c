@@ -586,8 +586,8 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
         if (run.measured) {
             assert(outcome.style_distance.dimension_present[STYLE_DIMENSION_HARMONY] &&
                    outcome.style_distance.dimension_present[STYLE_DIMENSION_MELODY]);
-            run.harmony = style_rational_value(outcome.style_distance.dimension[STYLE_DIMENSION_HARMONY]);
-            run.melody = style_rational_value(outcome.style_distance.dimension[STYLE_DIMENSION_MELODY]);
+            run.harmony = outcome.style_distance.dimension[STYLE_DIMENSION_HARMONY];
+            run.melody = outcome.style_distance.dimension[STYLE_DIMENSION_MELODY];
         }
     }
     compose_outcome_destroy(&outcome);

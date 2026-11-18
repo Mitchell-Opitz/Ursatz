@@ -16,6 +16,7 @@
 #include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/tonal_key.h"
 #include "theory/style/style_model_build.h"
+#include "theory/style/style_reference.h"
 #include "model/time/duration.h"
 #include "model/time/metrical_position.h"
 #include "model/time/note_value.h"
@@ -235,71 +236,17 @@ AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, Analyzer
     return ANALYZER_OK;
 }
 
-/* A style model of the statistics. The caller destroys it. */
-static StyleModel *model_of(const char *name, const StyleStatistic *statistics, size_t count) {
-    EntityID *id = NULL;
-    StyleModel *model = NULL;
-    if (entity_id_create(name, &id) != ENTITY_ID_OK) {
-        return NULL;
-    }
-    if (style_model_from_statistics(id, name, "<fragment>", URSATZ_ANALYZER_VERSION, statistics, count, &model) !=
-        STYLE_MODEL_BUILD_OK) {
-        entity_id_destroy(id);
-        return NULL;
-    }
-    return model;
-}
-
-static bool has_category(const StyleStatistic *statistics, size_t count, const char *category) {
-    for (size_t i = 0; i < count; i++) {
-        if (strcmp(statistics[i].category, category) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool is_dropped(const char *category, const char *const *dropped, size_t dropped_count) {
-    for (size_t i = 0; i < dropped_count; i++) {
-        if (strcmp(category, dropped[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/* Moves the statistics whose category is not dropped to the front of the array. Returns how many stay. */
-static size_t keep_statistics(StyleStatistic *statistics, size_t count, const char *const *dropped,
-                              size_t dropped_count) {
-    size_t used = 0;
-    for (size_t i = 0; i < count; i++) {
-        if (!is_dropped(statistics[i].category, dropped, dropped_count)) {
-            statistics[used++] = statistics[i];
-        }
-    }
-    return used;
-}
-
 /* ---- the style reference ---- */
 
 struct AnalyzerStyleReference {
-    StyleStatistic *statistics; /* the model's, without the dropped categories */
-    size_t count;
-    StyleModel *base; /* a model of the statistics */
-    char **without;   /* the dropped categories */
-    size_t without_count;
+    StyleReference *reference; /* the library's (theory/style/style_reference.h), with the Analyzer's version */
 };
 
 void analyzer_style_reference_destroy(AnalyzerStyleReference *reference) {
     if (!reference) {
         return;
     }
-    style_model_destroy(reference->base);
-    style_statistics_free(reference->statistics, reference->count);
-    for (size_t i = 0; i < reference->without_count; i++) {
-        free(reference->without[i]);
-    }
-    free(reference->without);
+    style_reference_destroy(reference->reference);
     free(reference);
 }
 
@@ -309,36 +256,15 @@ AnalyzerStatus analyzer_style_reference_create(const StyleModel *model, const ch
         return ANALYZER_ERR_ARGUMENT;
     }
     *out = NULL;
-    if (!model || (without_count > 0 && !without)) {
-        return ANALYZER_ERR_ARGUMENT;
-    }
-    for (size_t i = 0; i < without_count; i++) {
-        StyleDimension dimension;
-        if (!without[i] || !style_category_dimension(without[i], &dimension)) {
-            return ANALYZER_ERR_ARGUMENT;
-        }
-    }
     AnalyzerStyleReference *reference = calloc(1, sizeof *reference);
     if (!reference) {
         return ANALYZER_ERR_ALLOC;
     }
-    reference->without = calloc(without_count > 0 ? without_count : 1, sizeof *reference->without);
-    bool ok = reference->without != NULL;
-    for (size_t i = 0; ok && i < without_count; i++) {
-        reference->without[i] = strdup(without[i]);
-        ok = reference->without[i] != NULL;
-        reference->without_count = i + 1;
-    }
-    ok = ok && style_model_statistics(model, &reference->statistics, &reference->count) == STYLE_MODEL_FILE_OK;
-    if (ok) {
-        reference->count = keep_statistics(reference->statistics, reference->count,
-                                           (const char *const *)reference->without, reference->without_count);
-        reference->base = model_of("fragment-style-base", reference->statistics, reference->count);
-        ok = reference->base != NULL;
-    }
-    if (!ok) {
-        analyzer_style_reference_destroy(reference);
-        return ANALYZER_ERR_ALLOC;
+    StyleReferenceResult made =
+        style_reference_create(model, without, without_count, URSATZ_ANALYZER_VERSION, &reference->reference);
+    if (made != STYLE_REFERENCE_OK) {
+        free(reference);
+        return made == STYLE_REFERENCE_ERR_ARGUMENT ? ANALYZER_ERR_ARGUMENT : ANALYZER_ERR_ALLOC;
     }
     *out = reference;
     return ANALYZER_OK;
@@ -352,10 +278,8 @@ AnalyzerStatus analyzer_result_style_distance(const AnalyzerResult *result, cons
     memset(out, 0, sizeof *out);
     AnalyzerStatus status = ANALYZER_ERR_ALLOC;
     StyleProfile *profile = style_profile_create();
-    StyleStatistic *fragment_stats = NULL, *kept = NULL;
-    size_t fragment_count = 0, kept_count = 0;
-    StyleModel *fragment_model = NULL, *kept_model = NULL;
-    StyleComparison full = {0}, means = {0};
+    StyleStatistic *fragment_stats = NULL;
+    size_t fragment_count = 0;
     if (!profile) {
         goto done;
     }
@@ -367,44 +291,11 @@ AnalyzerStatus analyzer_result_style_distance(const AnalyzerResult *result, cons
     if (style_profile_statistics(profile, &fragment_stats, &fragment_count) != STYLE_PROFILE_OK) {
         goto done;
     }
-    fragment_count = keep_statistics(fragment_stats, fragment_count, (const char *const *)reference->without,
-                                     reference->without_count);
-    kept = calloc(reference->count > 0 ? reference->count : 1, sizeof *kept);
-    fragment_model = model_of("fragment-style", fragment_stats, fragment_count);
-    if (!kept || !fragment_model) {
-        goto done;
-    }
-    /* The means come from the reference cut down to the categories the result has. */
-    for (size_t i = 0; i < reference->count; i++) {
-        if (has_category(fragment_stats, fragment_count, reference->statistics[i].category)) {
-            kept[kept_count++] = reference->statistics[i];
-        }
-    }
-    kept_model = model_of("fragment-style-reference", kept, kept_count);
-    if (!kept_model) {
-        goto done;
-    }
-    if (style_profile_compare(fragment_model, reference->base, &full) != STYLE_COMPARE_OK ||
-        style_profile_compare(fragment_model, kept_model, &means) != STYLE_COMPARE_OK) {
-        status = ANALYZER_ERR_LIBRARY;
-        goto done;
-    }
-    /* The full comparison's categories (the missing ones too) with the means of the cut one. */
-    StyleCategoryDistance *category_list = means.categories;
-    size_t category_count = means.category_count;
-    *out = means;
-    out->categories = full.categories;
-    out->category_count = full.category_count;
-    full.categories = category_list;
-    full.category_count = category_count;
-    memset(&means, 0, sizeof means);
-    status = ANALYZER_OK;
+    StyleReferenceResult measured = style_reference_distance(reference->reference, fragment_stats, fragment_count, out);
+    status = measured == STYLE_REFERENCE_OK ? ANALYZER_OK
+             : measured == STYLE_REFERENCE_ERR_COMPARE ? ANALYZER_ERR_LIBRARY
+             : measured == STYLE_REFERENCE_ERR_ARGUMENT ? ANALYZER_ERR_ARGUMENT : ANALYZER_ERR_ALLOC;
 done:
-    style_comparison_destroy(&full);
-    style_comparison_destroy(&means);
-    style_model_destroy(kept_model);
-    style_model_destroy(fragment_model);
-    free(kept);
     free(fragment_stats);
     style_profile_destroy(profile);
     return status;

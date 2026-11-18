@@ -14,7 +14,6 @@ add_library(ursatz_analyzer STATIC
     pipeline/run_file.c
     style/style_profile.c
     style/style_model_file.c
-    style/style_compare.c
     style/similar_material.c
     links/motive_links.c
     links/motive_link_cache.c

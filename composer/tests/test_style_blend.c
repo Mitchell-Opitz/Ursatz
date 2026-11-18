@@ -255,7 +255,7 @@ typedef struct {
 
 static double dimension_distance(const StyleComparison *comparison, StyleDimension dimension) {
     assert(comparison->dimension_present[dimension]);
-    return style_rational_value(comparison->dimension[dimension]);
+    return comparison->dimension[dimension];
 }
 
 /* A sentence composed under style (NULL for none), measured against both pure styles. */

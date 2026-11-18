@@ -1445,13 +1445,13 @@ cJSON *api_style_distance_json(const StyleComparison *comparison) {
     cJSON *object = cJSON_CreateObject();
     for (int d = 0; object && d < STYLE_DIMENSION_COUNT; d++) {
         if (comparison->dimension_present[d] &&
-            !cJSON_AddItemToObject(object, STYLE_DIMENSION_LABELS[d], four_places(style_rational_value(comparison->dimension[d])))) {
+            !cJSON_AddItemToObject(object, STYLE_DIMENSION_LABELS[d], four_places(comparison->dimension[d]))) {
             cJSON_Delete(object);
             return NULL;
         }
     }
     if (object && comparison->overall_present &&
-        !cJSON_AddItemToObject(object, "overall", four_places(style_rational_value(comparison->overall)))) {
+        !cJSON_AddItemToObject(object, "overall", four_places(comparison->overall))) {
         cJSON_Delete(object);
         return NULL;
     }

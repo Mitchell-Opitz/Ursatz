@@ -279,16 +279,16 @@ static void test_round_trip(StyleProfile *reference) {
 }
 
 static bool all_zero(const StyleComparison *comparison) {
-    if (!comparison->overall_present || comparison->overall.numerator != 0) {
+    if (!comparison->overall_present || comparison->overall != 0.0) {
         return false;
     }
     for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-        if (comparison->dimension_present[d] && comparison->dimension[d].numerator != 0) {
+        if (comparison->dimension_present[d] && comparison->dimension[d] != 0.0) {
             return false;
         }
     }
     for (size_t i = 0; i < comparison->category_count; i++) {
-        if (comparison->categories[i].distance.numerator != 0) {
+        if (comparison->categories[i].distance.num != 0) {
             return false;
         }
     }
@@ -349,21 +349,20 @@ static void test_chorales_and_sonatinas(void) {
         CHECKF(style_profile_compare(chorales, sonatinas, &forward) == STYLE_COMPARE_OK, "chorales against sonatinas");
         CHECKF(style_profile_compare(sonatinas, chorales, &backward) == STYLE_COMPARE_OK, "sonatinas against chorales");
         for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-            CHECKF(forward.dimension_present[d] && forward.dimension[d].numerator > 0, "%s distance is 0",
+            CHECKF(forward.dimension_present[d] && forward.dimension[d] > 0.0, "%s distance is 0",
                    style_dimension_name((StyleDimension)d));
-            CHECKF(forward.dimension[d].numerator == backward.dimension[d].numerator &&
-                       forward.dimension[d].denominator == backward.dimension[d].denominator,
+            CHECKF(forward.dimension[d] == backward.dimension[d],
                    "%s distance is not symmetric", style_dimension_name((StyleDimension)d));
             printf("chorales vs sonatinas %-8s %.4f\n", style_dimension_name((StyleDimension)d),
-                   style_rational_value(forward.dimension[d]));
+                   forward.dimension[d]);
         }
-        CHECKF(forward.overall_present && forward.overall.numerator > 0 && forward.overall.numerator <= forward.overall.denominator,
+        CHECKF(forward.overall_present && forward.overall > 0.0 && forward.overall <= 1.0,
                "overall distance out of range");
-        printf("chorales vs sonatinas overall  %.4f\n", style_rational_value(forward.overall));
+        printf("chorales vs sonatinas overall  %.4f\n", forward.overall);
         for (size_t i = 0; i < forward.category_count; i++) {
             const StyleCategoryDistance *c = &forward.categories[i];
-            CHECKF(c->distance.numerator <= c->distance.denominator, "%s distance above 1", c->category);
-            printf("chorales vs sonatinas   %-24s %.4f\n", c->category, style_rational_value(c->distance));
+            CHECKF(c->distance.num <= c->distance.den, "%s distance above 1", c->category);
+            printf("chorales vs sonatinas   %-24s %.4f\n", c->category, rational_to_double(c->distance));
         }
         style_comparison_destroy(&forward);
         style_comparison_destroy(&backward);
@@ -409,23 +408,21 @@ static void test_hand_distances(void) {
                 mode = &comparison.categories[i];
             }
         }
-        CHECKF(cadence && cadence->distance.numerator == 1 && cadence->distance.denominator == 2, "cadence distance");
+        CHECKF(cadence && cadence->distance.num == 1 && cadence->distance.den == 2, "cadence distance");
         CHECKF(cadence && cadence->in_a && cadence->in_b && strcmp(cadence->top_a[0], "half") == 0 &&
                    strcmp(cadence->top_b[0], "perfect-authentic") == 0 && strcmp(cadence->top_a[1], "perfect-authentic") == 0 &&
                    cadence->top_a[2] == NULL,
                "top labels");
-        CHECKF(mode && mode->distance.numerator == 1 && mode->distance.denominator == 1 && !mode->in_a && mode->in_b,
+        CHECKF(mode && mode->distance.num == 1 && mode->distance.den == 1 && !mode->in_a && mode->in_b,
                "a category in one model only is distance 1");
         /* harmony: cadence-type only, 1/2. form: mode only, 1. Rhythm and melody have no categories. */
-        CHECKF(comparison.dimension_present[STYLE_DIMENSION_HARMONY] && comparison.dimension[STYLE_DIMENSION_HARMONY].numerator == 1 &&
-                   comparison.dimension[STYLE_DIMENSION_HARMONY].denominator == 2,
+        CHECKF(comparison.dimension_present[STYLE_DIMENSION_HARMONY] && comparison.dimension[STYLE_DIMENSION_HARMONY] == 0.5,
                "harmony dimension");
-        CHECKF(comparison.dimension_present[STYLE_DIMENSION_FORM] && comparison.dimension[STYLE_DIMENSION_FORM].numerator == 1 &&
-                   comparison.dimension[STYLE_DIMENSION_FORM].denominator == 1,
+        CHECKF(comparison.dimension_present[STYLE_DIMENSION_FORM] && comparison.dimension[STYLE_DIMENSION_FORM] == 1.0,
                "form dimension");
         CHECKF(!comparison.dimension_present[STYLE_DIMENSION_RHYTHM] && !comparison.dimension_present[STYLE_DIMENSION_MELODY],
                "empty dimensions are left out");
-        CHECKF(comparison.overall_present && comparison.overall.numerator == 3 && comparison.overall.denominator == 4,
+        CHECKF(comparison.overall_present && comparison.overall == 0.75,
                "overall distance");
         style_comparison_destroy(&comparison);
     }

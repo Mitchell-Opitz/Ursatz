@@ -78,15 +78,15 @@ check_case("missing dir" 2 --style-profile "${WORK_DIR}/nothing" --name referenc
 
 # Compare: the same model is 0 everywhere; two different models are not.
 check_case("--compare-styles same" 0 --compare-styles "${REFERENCE}/style-model.json" "${REFERENCE}/style-model.json")
-expect_line("--compare-styles same" "overall 0.0000 \\(0/1\\)\n")
-expect_line("--compare-styles same" "\nharmony 0.0000 \\(0/1\\)\n")
+expect_line("--compare-styles same" "overall 0.0000\n")
+expect_line("--compare-styles same" "\nharmony 0.0000\n")
 expect_line("--compare-styles same" "\n  cadence-type 0.0000 \\(0/1\\)")
 check_case("--compare-styles differ" 0 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json")
 if(last_output MATCHES "overall 0.0000")
     message(FATAL_ERROR "--compare-styles differ: reference and sonatinas are at distance 0")
 endif()
 check_case("--format json" 0 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --format json)
-expect_line("--format json" "^\\{\n  \"overall\": \\{\"fraction\": ")
+expect_line("--format json" "^\\{\n  \"overall\": [0-9]")
 expect_line("--format json" "\"category\": \"cadence-type\"")
 check_case("--format text" 0 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --format text)
 expect_line("--format text" "^overall ")
