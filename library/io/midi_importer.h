@@ -17,6 +17,11 @@
  * NoteEvents (L3). See docs/modules/io.md for the exact scope cut: this
  * is a deliberately minimal, explicitly partial importer, not the full
  * L9 spec.
+ *
+ * NOTE IDS. A note's EntityID is "midi-note-<n>", n the note's index after the notes are sorted into time order. It is
+ * positional: a MIDI file holds no note identity, so the id is not stable across edits of the file (a note added early
+ * renumbers the notes after it). Code that needs ids to survive an edit reads a MusicXML export, which keeps the xml:id
+ * the export wrote (io/musicxml_importer.h).
  */
 
 typedef enum {
