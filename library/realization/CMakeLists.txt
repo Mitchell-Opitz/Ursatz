@@ -7,6 +7,7 @@ add_library(ursatz_realization
     line.c
     performer_part.c
     scoring.c
+    movement.c
 )
 ursatz_public_headers(ursatz_realization
     BASE ${PROJECT_SOURCE_DIR}
