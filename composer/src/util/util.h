@@ -97,10 +97,4 @@ const char *util_function_name(bool has_function, HarmonicFunction function);
 /* A malloc'd copy of the text ("" for NULL), or NULL when out of memory. The caller frees it. */
 char *util_copy_string(const char *text);
 
-/*
- * Reads the whole file at path into a NUL-terminated string in *text (the caller frees it); *size, when not NULL, is
- * its length without the terminator. False, with *text NULL, when the file cannot be read.
- */
-bool util_read_file(const char *path, char **text, size_t *size);
-
 #endif

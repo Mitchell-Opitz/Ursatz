@@ -33,10 +33,13 @@
  * 2.1 changes the layout of the MIDI and MusicXML files (R-599: every plan is one movement whose lines are all in one piano part: one
  * MIDI track named "Piano" with a channel per line, one MusicXML part of two staves; the notes are the same) and the replies' plans are
  * plan format 4 (every note has an id, R-601).
+ * 3.0 seeds from passages given inline (R-619): grow and plan take "corpus_passages" (found by the Analyzer, ranked best first) where they took
+ * "corpus" and "like", which are refused, and a "like_progression" given carries its own "corpus_passages". The reply's "versions" has no
+ * "analyzer_version" from B8 of P61 on.
  */
 
-#define COMPOSER_API_VERSION_MAJOR 2
-#define COMPOSER_API_VERSION_MINOR 2
+#define COMPOSER_API_VERSION_MAJOR 3
+#define COMPOSER_API_VERSION_MINOR 0
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

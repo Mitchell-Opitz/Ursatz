@@ -6,6 +6,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <ursatz_analyzer/corpus_passages.h>
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/corpus_seed.h>
 #include <ursatz_composer/motive.h>
@@ -16,8 +18,10 @@
 #include "ursatz_test.h"
 
 /*
- * Seeding from a corpus (corpus_seed.h, docs/style.md). The corpus is the output directory of `ursatz-analyzer --corpus`
- * over the two sonatinas (Clementi 36 and Mozart 545), analyzed by CMake when the test is built. The passage is the
+ * Seeding from a corpus (corpus_seed.h, docs/style.md; R-619). The corpus is the output directory of `ursatz-analyzer --corpus`
+ * over the two sonatinas (Clementi 36 and Mozart 545), analyzed by CMake when the test is built. The Analyzer finds the passages
+ * (analyzer_corpus_passages_like and _numerals) and the Composer seeds from them given inline, so this test sits at the root, where both
+ * apps are linked. The passage is the
  * opening bar of Mozart 545 (tests/fixtures/mozart545-bar1.mid, C major 4/4: C5 half, E5 quarter, G5 quarter).
  *
  *   motive       the passage seeds a motive equal to that bar in D major, in A minor the first note keeps its degree and
@@ -54,6 +58,36 @@ static AnalysisKey key_of(int tonic, HarmonyMode mode) {
     return key;
 }
 
+
+/* The passages the Analyzer finds like the passage file (or, with numerals, like the numerals), as the Composer reads them: through
+   the JSON of the request member, so the Analyzer's writer and the Composer's reader are held together. */
+static CorpusPassages passages_from(const char *corpus, const char *like_path, const char *numerals) {
+    AnalyzerCorpusPassages found;
+    AnalyzerPassagesStatus searched = like_path ? analyzer_corpus_passages_like(corpus, test_knowledge(), like_path, 10, &found)
+                                                : analyzer_corpus_passages_numerals(corpus, test_knowledge(), numerals, 100, &found);
+    assert(searched == ANALYZER_PASSAGES_OK);
+    char *text = analyzer_corpus_passages_to_json(&found);
+    assert(text);
+    cJSON *array = cJSON_Parse(text);
+    assert(array);
+    CorpusPassages passages;
+    char path[128], message[256];
+    if (!corpus_passages_from_json(array, &passages, path, sizeof path, message, sizeof message)) {
+        fprintf(stderr, "%s: %s\n", path, message);
+        assert(!"the Composer reads the passages the Analyzer wrote");
+    }
+    assert(passages.count == found.count);
+    cJSON_Delete(array);
+    free(text);
+    analyzer_corpus_passages_destroy(&found);
+    return passages;
+}
+
+static CorpusSeedResult seed_motive(const CorpusPassages *passages, const PlanMeter *meter, const AnalysisKey *key,
+                                    unsigned long seed, CorpusSeed *out) {
+    return corpus_seed_motive(test_knowledge(), passages->items, passages->count, meter, key, seed, out);
+}
+
 static Motive bar_in(const PlanMeter *meter, const AnalysisKey *key, const char *notes) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
@@ -78,7 +112,8 @@ static int test_motive(void) {
     PlanMeter meter = four_four();
     AnalysisKey d_major = key_of(2, HARMONY_MODE_MAJOR);
     CorpusSeed seed;
-    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, 1, &seed) == CORPUS_SEED_OK);
+    CorpusPassages passages = passages_from(COMPOSER_SONATINAS_CORPUS, PASSAGE, NULL);
+    assert(seed_motive(&passages, &meter, &d_major, 1, &seed) == CORPUS_SEED_OK);
 
     /* The bar of Mozart 545, a whole tone higher: D5 half, F#5 quarter, A5 quarter. */
     Motive expected = bar_in(&meter, &d_major, "D5:h F#5:q A5:q");
@@ -97,14 +132,14 @@ static int test_motive(void) {
 
     /* In the key it was heard in, nothing moves. */
     AnalysisKey c_major = key_of(0, HARMONY_MODE_MAJOR);
-    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &c_major, 1, &seed) == CORPUS_SEED_OK);
+    assert(seed_motive(&passages, &meter, &c_major, 1, &seed) == CORPUS_SEED_OK);
     expected = bar_in(&meter, &c_major, "C5:h E5:q G5:q");
     expected.key_source = MOTIVE_SKETCH_KEY_GIVEN;
     assert(motive_equal(&seed.motive, &expected));
 
     /* In A minor the first note keeps its degree (the tonic, A) and the intervals are the bar's. */
     AnalysisKey a_minor = key_of(9, HARMONY_MODE_MINOR);
-    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &a_minor, 1, &seed) == CORPUS_SEED_OK);
+    assert(seed_motive(&passages, &meter, &a_minor, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 3);
     assert(seed.motive.notes[0].pitch % 12 == 9);
     assert(seed.motive.notes[1].pitch - seed.motive.notes[0].pitch == 4);
@@ -114,21 +149,26 @@ static int test_motive(void) {
     /* Cut at the barline: a 6/8 bar (three quarters) takes the half note and the quarter, which ends on the barline;
        a 5/8 bar takes the half note and a quarter shortened to the eighth that is left. */
     PlanMeter six_eight = {6, 8, 0};
-    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &six_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
+    assert(seed_motive(&passages, &six_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 2);
     assert(rational_cmp(seed.motive.length, (Rational){3, 4}) == 0);
     assert(rational_cmp(seed.motive.notes[0].duration, (Rational){1, 2}) == 0);
     assert(rational_cmp(seed.motive.notes[1].duration, (Rational){1, 4}) == 0);
     PlanMeter five_eight = {5, 8, 0};
-    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &five_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
+    assert(seed_motive(&passages, &five_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 2);
     assert(rational_cmp(seed.motive.length, (Rational){5, 8}) == 0);
     assert(rational_cmp(seed.motive.notes[1].onset, (Rational){1, 2}) == 0);
     assert(rational_cmp(seed.motive.notes[1].duration, (Rational){1, 8}) == 0);
 
-    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, "no-such-file.mid", &meter, &d_major, 1, &seed) ==
-           CORPUS_SEED_ERR_QUERY);
-    assert(corpus_seed_motive(test_knowledge(), "no-such-directory", PASSAGE, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_CORPUS);
+    /* The Analyzer refuses what cannot be searched; the Composer refuses what cannot be placed. */
+    AnalyzerCorpusPassages refused;
+    assert(analyzer_corpus_passages_like(COMPOSER_SONATINAS_CORPUS, test_knowledge(), "no-such-file.mid", 10, &refused) ==
+           ANALYZER_PASSAGES_ERR_QUERY);
+    assert(analyzer_corpus_passages_like("no-such-directory", test_knowledge(), PASSAGE, 10, &refused) ==
+           ANALYZER_PASSAGES_ERR_CORPUS);
+    assert(corpus_seed_motive(test_knowledge(), NULL, 0, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_NO_MATCH);
+    corpus_passages_destroy(&passages);
     printf("the opening bar of Mozart 545 seeds the bar transposed, cut at the barline\n");
     return 0;
 }
@@ -139,11 +179,12 @@ static int test_same(void) {
     PlanMeter meter = four_four();
     AnalysisKey d_major = key_of(2, HARMONY_MODE_MAJOR);
     CorpusSeed best;
-    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, 0, &best) == CORPUS_SEED_OK);
+    CorpusPassages passages = passages_from(COMPOSER_SONATINAS_CORPUS, PASSAGE, NULL);
+    assert(seed_motive(&passages, &meter, &d_major, 0, &best) == CORPUS_SEED_OK);
     for (unsigned long seed = 1; seed <= 20; seed++) {
         CorpusSeed first, second;
-        assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, seed, &first) == CORPUS_SEED_OK);
-        assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, seed, &second) == CORPUS_SEED_OK);
+        assert(seed_motive(&passages, &meter, &d_major, seed, &first) == CORPUS_SEED_OK);
+        assert(seed_motive(&passages, &meter, &d_major, seed, &second) == CORPUS_SEED_OK);
         assert(strcmp(first.piece, second.piece) == 0 && first.start_measure == second.start_measure &&
                first.start_beat == second.start_beat && first.end_measure == second.end_measure &&
                first.score_numerator == second.score_numerator && first.score_denominator == second.score_denominator);
@@ -151,6 +192,7 @@ static int test_same(void) {
         /* Within 1/10 of the best match: the exact one scores 1. */
         assert(10 * first.score_numerator >= 9 * first.score_denominator);
     }
+    corpus_passages_destroy(&passages);
     printf("the same seed picks the same match, and every pick is within 1/10 of the best\n");
     return 0;
 }
@@ -235,16 +277,23 @@ static int test_plan(void) {
 
 static int test_progression(void) {
     CorpusSeed seed;
-    assert(corpus_seed_progression(test_knowledge(), COMPOSER_SONATINAS_CORPUS, "I IV V I", HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_OK);
+    CorpusPassages major = passages_from(COMPOSER_SONATINAS_CORPUS, NULL, "I IV V I");
+    assert(corpus_seed_progression(test_knowledge(), major.items, major.count, 4, HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_OK);
     assert(seed.numeral_count == 4);
     assert(strlen(seed.piece) > 0 && 2 * seed.score_numerator >= seed.score_denominator);
     for (size_t i = 0; i < seed.numeral_count; i++) {
         assert(strlen(seed.numerals[i]) > 0);
     }
     CorpusSeed minor;
-    assert(corpus_seed_progression(test_knowledge(), COMPOSER_SONATINAS_CORPUS, "i iv V i", HARMONY_MODE_MINOR, &minor) == CORPUS_SEED_OK);
-    assert(corpus_seed_progression(test_knowledge(), COMPOSER_SONATINAS_CORPUS, "not numerals", HARMONY_MODE_MAJOR, &seed) ==
-           CORPUS_SEED_ERR_QUERY);
+    CorpusPassages minor_passages = passages_from(COMPOSER_SONATINAS_CORPUS, NULL, "i iv V i");
+    assert(corpus_seed_progression(test_knowledge(), minor_passages.items, minor_passages.count, 4, HARMONY_MODE_MINOR, &minor) ==
+           CORPUS_SEED_OK);
+    AnalyzerCorpusPassages refused;
+    assert(analyzer_corpus_passages_numerals(COMPOSER_SONATINAS_CORPUS, test_knowledge(), "not numerals", 100, &refused) ==
+           ANALYZER_PASSAGES_ERR_QUERY);
+    assert(corpus_seed_progression(test_knowledge(), major.items, major.count, 0, HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_ERR_ARGUMENT);
+    corpus_passages_destroy(&major);
+    corpus_passages_destroy(&minor_passages);
 
     /* Placed at B in a rounded binary form, the plan fills completely for seeds 1 to 5. */
     remove("seed_progression.json");
@@ -289,8 +338,14 @@ static int test_no_match(void) {
     CorpusSeed seed;
     PlanMeter meter = four_four();
     AnalysisKey d_major = key_of(2, HARMONY_MODE_MAJOR);
-    assert(corpus_seed_motive(test_knowledge(), COMPOSER_EMPTY_CORPUS, PASSAGE, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_NO_MATCH);
-    assert(corpus_seed_progression(test_knowledge(), COMPOSER_EMPTY_CORPUS, "I IV V I", HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_ERR_NO_MATCH);
+    /* Nothing is analyzed: the Analyzer finds no passage, and the Composer has nothing to seed from. */
+    CorpusPassages none = passages_from(COMPOSER_EMPTY_CORPUS, PASSAGE, NULL);
+    assert(none.count == 0 && seed_motive(&none, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_NO_MATCH);
+    corpus_passages_destroy(&none);
+    none = passages_from(COMPOSER_EMPTY_CORPUS, NULL, "I IV V I");
+    assert(none.count == 0 &&
+           corpus_seed_progression(test_knowledge(), none.items, none.count, 4, HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_ERR_NO_MATCH);
+    corpus_passages_destroy(&none);
     printf("a corpus with no match exits 2 and writes nothing\n");
     return 0;
 }

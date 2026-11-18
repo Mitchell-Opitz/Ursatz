@@ -25,7 +25,7 @@ version a client written against 1.0 keeps working with 1.n, if it ignores respo
 version (`composer_api_versions`, the project version) is separate: it follows the releases, not the API.
 
 Every request may carry `"api_version": <major>`. A different major is refused with `COMPOSER_ERR_REQUEST` and the path
-`/api_version` (`api_version must be 2`), so `"api_version": 1` is refused now. A request without it is taken as the major of the library.
+`/api_version` (`api_version must be 3`), so `"api_version": 1` and `"api_version": 2` are refused now. A request without it is taken as the major of the library.
 
 ## Status
 

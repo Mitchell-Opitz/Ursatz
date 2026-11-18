@@ -82,11 +82,8 @@
     "key": {
       "type": "string"
     },
-    "corpus": {
-      "type": "string"
-    },
-    "like": {
-      "type": "string"
+    "corpus_passages": {
+      "$ref": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/corpus-passages.schema.json"
     },
     "into": {
       "enum": [

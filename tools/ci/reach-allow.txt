@@ -14,19 +14,7 @@ analyzer/src/pipeline/composer_api.c hearing_score_build  # the Composer no long
 analyzer/src/pipeline/composer_api.c hearing_score_destroy  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
 analyzer/src/pipeline/composer_api.c hearing_valid  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
 analyzer/src/pipeline/composer_api.c key_signature_of  # the Composer no longer calls the Analyzer's composer API; it goes with the Composer's last Analyzer include until P61 B8; its tests call it
-analyzer/src/pipeline/corpus_passages.c analyzer_corpus_passages_destroy  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c analyzer_corpus_passages_like  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c analyzer_corpus_passages_numerals  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c analyzer_corpus_passages_to_json  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c convert_notes  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c fraction_json  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c location_of  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c passage_clear  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c passage_from_match  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c passage_json  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c passages_of  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c place_json  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
-analyzer/src/pipeline/corpus_passages.c read_chords  # no app calls the corpus passage search until P61 B7's next commit (the Composer CLI); its tests call it
+analyzer/src/pipeline/chord_sequence.c analyzer_chord_sequence_from_document  # no app reads a chord sequence from a document text since P61 B7 (the Composer read documents through it; the Analyzer reads the tree); its tests call it
 analyzer/src/pipeline/input_pipeline.c analyzer_import_buffer  # the GUI imports files only; bytes go in through this entry once it reads uploads from memory (R-614); its test calls it
 composer/src/plan/lanes.c plan_note_by_id  # no app finds a note by id until P62 (the edits saved with the realization name notes by id); its tests call it
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_entries  # test hook: test_analyzer_route reads the import counter

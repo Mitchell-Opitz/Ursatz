@@ -452,13 +452,12 @@ static void test_grow(void) {
     composer_response_destroy(&response);
 }
 
-/* A motive seeded from a corpus: the passage is reported as "source". */
+/* A motive seeded from passages given inline (R-619): the passage is reported as "source". The passages are the Analyzer's, found for
+   the first bar of Mozart 545 (fixtures/corpus-passages-mozart545-bar1.json, trimmed to the chords the seeding reads). */
 static void test_grow_corpus(void) {
-#ifdef COMPOSER_SONATINAS_CORPUS
     ComposerResponse response;
     cJSON *request = cJSON_CreateObject();
-    assert(request && cJSON_AddStringToObject(request, "corpus", COMPOSER_SONATINAS_CORPUS) &&
-           cJSON_AddStringToObject(request, "like", FIXTURE("mozart545-bar1.mid")) &&
+    assert(request && cJSON_AddItemToObject(request, "corpus_passages", load_json(FIXTURE("corpus-passages-mozart545-bar1.json"))) &&
            cJSON_AddStringToObject(request, "into", "sentence") && cJSON_AddStringToObject(request, "key", "D major") &&
            cJSON_AddStringToObject(request, "meter", "4/4") && cJSON_AddNumberToObject(request, "seed", 1));
     succeed(composer_api_grow, "grow", "corpus", request, &response);
@@ -469,13 +468,21 @@ static void test_grow_corpus(void) {
     cJSON_Delete(document);
     composer_response_destroy(&response);
 
+    /* No passage gives no motive. */
     request = cJSON_CreateObject();
-    assert(request && cJSON_AddStringToObject(request, "corpus", COMPOSER_EMPTY_CORPUS) &&
-           cJSON_AddStringToObject(request, "like", FIXTURE("mozart545-bar1.mid")) &&
+    assert(request && cJSON_AddArrayToObject(request, "corpus_passages") &&
            cJSON_AddStringToObject(request, "into", "sentence") && cJSON_AddStringToObject(request, "key", "D major") &&
            cJSON_AddStringToObject(request, "meter", "4/4"));
-    expect_refused(composer_api_grow, request, COMPOSER_ERR_UNSATISFIABLE, "/like", "is similar to");
-#endif
+    expect_refused(composer_api_grow, request, COMPOSER_ERR_UNSATISFIABLE, "/corpus_passages", "gives a motive");
+
+    /* A passage the request does not describe is refused at its member. */
+    request = cJSON_CreateObject();
+    cJSON *bad = cJSON_AddArrayToObject(request, "corpus_passages");
+    cJSON *passage = bad ? cJSON_CreateObject() : NULL;
+    assert(passage && cJSON_AddNumberToObject(passage, "piece", 1) && cJSON_AddItemToArray(bad, passage) &&
+           cJSON_AddStringToObject(request, "into", "sentence") && cJSON_AddStringToObject(request, "key", "D major") &&
+           cJSON_AddStringToObject(request, "meter", "4/4"));
+    expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/corpus_passages/0", "a passage needs piece");
 }
 
 static void test_grow_refusals(void) {
@@ -506,12 +513,16 @@ static void test_grow_refusals(void) {
     request = grow_request("sentence");
     assert(cJSON_AddStringToObject(request, "mode", "style"));
     expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/mode", "mode style needs style");
+    /* corpus and like are gone (3.0): the passages come inline. */
     request = grow_request("sentence");
     assert(cJSON_AddStringToObject(request, "like", "passage.mid"));
-    expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/like", "like needs corpus");
+    expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/like", "are gone");
     request = grow_request("sentence");
     assert(cJSON_AddStringToObject(request, "corpus", "corpus") && cJSON_AddStringToObject(request, "like", "passage.mid"));
-    expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/corpus", "not both");
+    expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/corpus", "are gone");
+    request = grow_request("sentence");
+    assert(cJSON_AddArrayToObject(request, "corpus_passages"));
+    expect_refused(composer_api_grow, request, COMPOSER_ERR_REQUEST, "/corpus_passages", "not both");
     request = cJSON_CreateObject();
     assert(request && cJSON_AddStringToObject(request, "into", "sentence") && cJSON_AddStringToObject(request, "key", "D minor") &&
            cJSON_AddStringToObject(request, "meter", "4/4"));
@@ -597,7 +608,7 @@ static void test_cancel(void) {
 }
 
 static void test_version(void) {
-    assert(strcmp(composer_api_version(), "2.2") == 0);
+    assert(strcmp(composer_api_version(), "3.0") == 0);
 }
 
 int main(int argc, char **argv) {

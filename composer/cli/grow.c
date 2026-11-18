@@ -332,11 +332,16 @@ int run_grow(int argc, char **argv) {
     memset(&file, 0, sizeof file);
     memset(&accompaniment_file, 0, sizeof accompaniment_file);
     if (options.from_corpus) {
+        /* The passages are found here, by the Analyzer, and given to the API inline (R-619). */
+        cJSON *passages = cli_corpus_passages(options.from_corpus, options.like_path, NULL, &status);
+        if (!passages) {
+            return status;
+        }
         request = cJSON_CreateObject();
         if (!request || !cJSON_AddStringToObject(request, "key", options.key) ||
-            !cJSON_AddStringToObject(request, "corpus", options.from_corpus) ||
-            !cJSON_AddStringToObject(request, "like", options.like_path)) {
+            !cJSON_AddItemToObject(request, "corpus_passages", passages)) {
             cJSON_Delete(request);
+            cJSON_Delete(passages);
             return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
         }
         if (motive_extras_given(&options.extras) && !motive_extras_add_members(&options.extras, request)) {
@@ -404,7 +409,9 @@ int run_grow(int argc, char **argv) {
     }
     const cJSON *notice = NULL;
     cJSON_ArrayForEach(notice, cJSON_GetObjectItemCaseSensitive(document, "notices")) {
-        fprintf(stderr, strncmp(notice->valuestring, "only ", 5) == 0 ? "Note: %s\n" : "Warning: %s\n", notice->valuestring);
+        char text[1400];
+        fprintf(stderr, strncmp(notice->valuestring, "only ", 5) == 0 ? "Note: %s\n" : "Warning: %s\n",
+                cli_corpus_notice_text(notice->valuestring, options.from_corpus, text, sizeof text));
     }
     cJSON_DeleteItemFromObjectCaseSensitive(document, "notices");
 

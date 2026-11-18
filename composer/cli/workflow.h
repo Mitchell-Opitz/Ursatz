@@ -122,6 +122,25 @@ double cli_json_number(const cJSON *object, const char *name);
 /* Prints "Warning: <text>" to stderr for each of "notices" and removes the member. */
 void cli_print_notices(cJSON *document);
 
+/*
+ * As cli_print_notices for a command that seeded from a corpus directory: the notice about stale documents (the API sees the
+ * passages, not the directory) names corpus_dir, as "3 stale documents in '<dir>' (analyzed by another version; run the
+ * corpus again)". corpus_dir may be NULL.
+ */
+void cli_print_corpus_notices(cJSON *document, const char *corpus_dir);
+
+/* The notice text as cli_print_corpus_notices prints it, written into out (size bytes); the notice itself when it is not about stale documents. */
+const char *cli_corpus_notice_text(const char *notice, const char *corpus_dir, char *out, size_t size);
+
+/*
+ * The passages of the corpus (the output directory of `ursatz-analyzer --corpus`) that look like the passage file like_path
+ * (numerals NULL: ten of them) or like the progression numerals (like_path NULL: a hundred), as the Composer API's
+ * "corpus_passages" member, found by the Analyzer. NULL after printing the error, with *status the exit status: the passage
+ * or the numerals cannot be read (CLI_EXIT_USAGE), the corpus cannot be read, or no passage of it is similar enough
+ * (CLI_EXIT_UNSATISFIABLE).
+ */
+cJSON *cli_corpus_passages(const char *corpus_dir, const char *like_path, const char *numerals, int *status);
+
 /* "A heard as period, cadences PAC; B heard as ..." for the "sections" array of a result; no newline. */
 void cli_print_heard_line(const cJSON *sections);
 

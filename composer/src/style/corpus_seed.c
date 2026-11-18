@@ -9,10 +9,6 @@
 #include <model/core/rational.h>
 #include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/tonal_key.h>
-
-#include <ursatz_analyzer/chord_sequence.h>
-#include <ursatz_analyzer/similar_material.h>
-#include <ursatz_analyzer/staleness.h>
 #include "theory/style/style_labels.h"
 
 #include <ursatz_composer/fill_rng.h>
@@ -21,10 +17,7 @@
 #include "util/util.h"
 #include "motive/motive_internal.h"
 
-/* How many matches a progression search looks through for one the plan can place. */
-#define PROGRESSION_CANDIDATES 100
-
-/* The beats of a document's locations are compared as doubles; two are the same place within this. */
+/* The beats of a passage's places are compared as doubles; two are the same place within this. */
 #define BEAT_EPSILON 1e-6
 
 const char *corpus_seed_result_name(CorpusSeedResult result) {
@@ -33,121 +26,174 @@ const char *corpus_seed_result_name(CorpusSeedResult result) {
         return "ok";
     case CORPUS_SEED_ERR_ARGUMENT:
         return "invalid argument";
-    case CORPUS_SEED_ERR_QUERY:
-        return "the passage cannot be read as a query";
-    case CORPUS_SEED_ERR_CORPUS:
-        return "the corpus cannot be read";
     case CORPUS_SEED_ERR_NO_MATCH:
-        return "no passage of the corpus is similar enough";
+        return "no passage can seed this";
     case CORPUS_SEED_ERR_ALLOC:
         return "out of memory";
     }
     return "unknown";
 }
 
-/* --- reading an analysis document ------------------------------------------------- */
+/* --- reading the passages ---------------------------------------------------------- */
 
-/* The text of a document and its parse; the caller frees both. NULL when it cannot be read or parsed. */
-static cJSON *read_document(const char *corpus_output_dir, const char *document, char **text) {
-    char path[2048];
-    if (snprintf(path, sizeof(path), "%s/%s", corpus_output_dir, document) >= (int)sizeof(path)) {
-        return NULL;
+void corpus_passages_destroy(CorpusPassages *passages) {
+    if (!passages) {
+        return;
     }
-    if (!util_read_file(path, text, NULL)) {
-        return NULL;
+    for (size_t i = 0; i < passages->count; i++) {
+        free(passages->items[i].notes);
+        free(passages->items[i].chords);
     }
-    cJSON *parsed = cJSON_Parse(*text);
-    if (!parsed) {
-        free(*text);
-        *text = NULL;
+    free(passages->items);
+    memset(passages, 0, sizeof(*passages));
+}
+
+static void fail_at(char *path, size_t path_size, char *message, size_t message_size, const char *where, const char *text) {
+    if (path) {
+        snprintf(path, path_size, "%s", where);
     }
-    return parsed;
+    if (message) {
+        snprintf(message, message_size, "%s", text);
+    }
 }
 
 static const cJSON *member(const cJSON *object, const char *name) {
     return object ? cJSON_GetObjectItemCaseSensitive(object, name) : NULL;
 }
 
-/* A location edge of a chord entry as a measure and a beat plus the fraction of it, as the Analyzer reads it. */
-static bool location_of(const cJSON *entry, const char *edge, int *measure, double *beat) {
-    const cJSON *position = member(member(entry, "location"), edge);
-    const cJSON *m = member(position, "measure");
-    const cJSON *b = member(position, "beat");
-    const cJSON *subdivision = member(position, "subdivision");
-    const cJSON *n = member(subdivision, "num");
-    const cJSON *d = member(subdivision, "den");
-    if (!cJSON_IsNumber(m) || !cJSON_IsNumber(b) || !cJSON_IsNumber(n) || !cJSON_IsNumber(d) || d->valuedouble <= 0) {
+static bool whole_number(const cJSON *item, long long minimum, long long *out) {
+    if (!cJSON_IsNumber(item) || item->valuedouble != (double)(long long)item->valuedouble ||
+        item->valuedouble < (double)minimum || item->valuedouble > 9e15) {
         return false;
     }
-    *measure = (int)m->valuedouble;
-    *beat = b->valuedouble + n->valuedouble / d->valuedouble;
+    *out = (long long)item->valuedouble;
     return true;
 }
 
-typedef struct {
-    char *numeral;
-    int measure;
-    double beat;
-    char key_label[24];
-} DocumentChord;
-
-static void chords_free(DocumentChord *chords, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        free(chords[i].numeral);
-    }
-    free(chords);
+static bool fraction_of(const cJSON *item, Rational *out) {
+    long long n, d;
+    return whole_number(member(item, "num"), 0, &n) && whole_number(member(item, "den"), 1, &d) &&
+           rational_make(n, d, out) == RATIONAL_OK;
 }
 
-/*
- * The document's chords in time order with a root-position numeral: the Analyzer's joined chord sequence (the one
- * reader of its document, R-220), so an index here is an index there. The sequence holds the numeral and the entry the
- * chord starts at; the place and key of that entry come from the document's "chords". *out is NULL when there are
- * none. *stale counts a document that is not current, which is read all the same. false on allocation failure.
- */
-static bool read_chords(const char *text, const cJSON *document, DocumentChord **out, size_t *count, size_t *stale) {
-    AnalyzerChord *sequence = NULL;
-    size_t sequence_count = 0;
-    *out = NULL;
-    *count = 0;
-    if (stale && analyzer_document_status(text) != ANALYZER_DOCUMENT_CURRENT) {
-        (*stale)++;
-    }
-    AnalyzerStatus status = analyzer_chord_sequence_from_document(text, &sequence, &sequence_count);
-    if (status != ANALYZER_OK) {
-        return status != ANALYZER_ERR_ALLOC;
-    }
-    if (sequence_count == 0) {
-        return true;
-    }
-    const cJSON *entries = member(document, "chords");
-    DocumentChord *chords = calloc(sequence_count, sizeof(*chords));
-    if (!chords) {
-        analyzer_chord_sequence_free(sequence, sequence_count);
+static bool place_of(const cJSON *item, int *measure, double *beat) {
+    long long m;
+    const cJSON *b = member(item, "beat");
+    if (!whole_number(member(item, "measure"), 0, &m) || m > 1000000 || !cJSON_IsNumber(b) || b->valuedouble < 0) {
         return false;
     }
-    size_t n = 0;
-    for (size_t i = 0; i < sequence_count; i++) {
-        const cJSON *entry = cJSON_GetArrayItem(entries, (int)sequence[i].first_entry);
-        const cJSON *key = member(entry, "key_label");
-        if (!location_of(entry, "start", &chords[n].measure, &chords[n].beat)) {
-            continue;
-        }
-        chords[n].numeral = strdup(sequence[i].numeral);
-        if (!chords[n].numeral) {
-            chords_free(chords, n);
-            analyzer_chord_sequence_free(sequence, sequence_count);
-            return false;
-        }
-        snprintf(chords[n].key_label, sizeof(chords[n].key_label), "%s", cJSON_IsString(key) ? key->valuestring : "");
-        n++;
-    }
-    analyzer_chord_sequence_free(sequence, sequence_count);
-    if (n == 0) {
-        free(chords);
+    *measure = (int)m;
+    *beat = b->valuedouble;
+    return true;
+}
+
+static bool read_notes(const cJSON *array, CorpusPassage *passage, const char *base, char *path, size_t path_size, char *message,
+                       size_t message_size) {
+    int count = cJSON_GetArraySize(array);
+    if (count == 0) {
         return true;
     }
-    *out = chords;
-    *count = n;
+    passage->notes = calloc((size_t)count, sizeof(*passage->notes));
+    if (!passage->notes) {
+        fail_at(path, path_size, message, message_size, base, "out of memory");
+        return false;
+    }
+    for (int i = 0; i < count; i++) {
+        const cJSON *note = cJSON_GetArrayItem(array, i);
+        long long pitch;
+        char where[160];
+        snprintf(where, sizeof where, "%s/%d", base, i);
+        if (!cJSON_IsObject(note) || !whole_number(member(note, "midi"), 0, &pitch) || pitch > 127 ||
+            !fraction_of(member(note, "onset"), &passage->notes[i].onset) ||
+            !fraction_of(member(note, "duration"), &passage->notes[i].duration) || passage->notes[i].duration.num == 0) {
+            fail_at(path, path_size, message, message_size, where,
+                    "a note needs midi (0 to 127), onset and duration (fractions {\"num\", \"den\"} of whole notes)");
+            return false;
+        }
+        passage->notes[i].pitch = (int)pitch;
+        passage->note_count++;
+    }
+    return true;
+}
+
+static bool read_chords(const cJSON *array, CorpusPassage *passage, const char *base, char *path, size_t path_size, char *message,
+                        size_t message_size) {
+    int count = cJSON_GetArraySize(array);
+    if (count == 0) {
+        return true;
+    }
+    passage->chords = calloc((size_t)count, sizeof(*passage->chords));
+    if (!passage->chords) {
+        fail_at(path, path_size, message, message_size, base, "out of memory");
+        return false;
+    }
+    for (int i = 0; i < count; i++) {
+        const cJSON *chord = cJSON_GetArrayItem(array, i);
+        const cJSON *numeral = member(chord, "numeral");
+        const cJSON *key = member(chord, "key");
+        char where[160];
+        snprintf(where, sizeof where, "%s/%d", base, i);
+        CorpusPassageChord *made = &passage->chords[i];
+        if (!cJSON_IsObject(chord) || !cJSON_IsString(numeral) || strlen(numeral->valuestring) >= CORPUS_SEED_NUMERAL_MAX ||
+            (key && (!cJSON_IsString(key) || strlen(key->valuestring) >= CORPUS_PASSAGE_KEY_MAX)) ||
+            !place_of(chord, &made->measure, &made->beat)) {
+            fail_at(path, path_size, message, message_size, where,
+                    "a chord needs numeral (text), measure, beat and optionally key (a key label)");
+            return false;
+        }
+        snprintf(made->numeral, sizeof made->numeral, "%s", numeral->valuestring);
+        snprintf(made->key_label, sizeof made->key_label, "%s", key ? key->valuestring : "");
+        passage->chord_count++;
+    }
+    return true;
+}
+
+bool corpus_passages_from_json(const cJSON *array, CorpusPassages *out, char *path, size_t path_size, char *message,
+                               size_t message_size) {
+    memset(out, 0, sizeof(*out));
+    if (!cJSON_IsArray(array)) {
+        fail_at(path, path_size, message, message_size, "/corpus_passages", "corpus_passages must be an array of passages");
+        return false;
+    }
+    int count = cJSON_GetArraySize(array);
+    if (count > 0) {
+        out->items = calloc((size_t)count, sizeof(*out->items));
+        if (!out->items) {
+            fail_at(path, path_size, message, message_size, "/corpus_passages", "out of memory");
+            return false;
+        }
+    }
+    for (int i = 0; i < count; i++) {
+        const cJSON *item = cJSON_GetArrayItem(array, i);
+        CorpusPassage *passage = &out->items[i];
+        char where[96];
+        snprintf(where, sizeof where, "/corpus_passages/%d", i);
+        const cJSON *piece = member(item, "piece");
+        const cJSON *stale = member(item, "stale");
+        out->count = (size_t)i + 1;
+        if (!cJSON_IsObject(item) || !cJSON_IsString(piece) || strlen(piece->valuestring) >= CORPUS_SEED_PIECE_MAX ||
+            !place_of(member(item, "start"), &passage->start_measure, &passage->start_beat) ||
+            !place_of(member(item, "end"), &passage->end_measure, &passage->end_beat) ||
+            !fraction_of(member(item, "similarity"), &passage->similarity) || rational_cmp(passage->similarity, rational_ratio(1, 1)) > 0 ||
+            (stale && !cJSON_IsBool(stale)) || !cJSON_IsArray(member(item, "notes")) || !cJSON_IsArray(member(item, "chords"))) {
+            fail_at(path, path_size, message, message_size, where,
+                    "a passage needs piece (text), start and end ({\"measure\", \"beat\"}), similarity (a fraction from 0 to 1), "
+                    "notes and chords (arrays), and optionally stale (true or false)");
+            corpus_passages_destroy(out);
+            return false;
+        }
+        snprintf(passage->piece, sizeof passage->piece, "%s", piece->valuestring);
+        passage->stale = cJSON_IsTrue(stale);
+        char base[128];
+        snprintf(base, sizeof base, "%s/notes", where);
+        bool ok = read_notes(member(item, "notes"), passage, base, path, path_size, message, message_size);
+        snprintf(base, sizeof base, "%s/chords", where);
+        ok = ok && read_chords(member(item, "chords"), passage, base, path, path_size, message, message_size);
+        if (!ok) {
+            corpus_passages_destroy(out);
+            return false;
+        }
+    }
     return true;
 }
 
@@ -158,9 +204,9 @@ static bool same_place(int measure_a, double beat_a, int measure_b, double beat_
 /* --- the key the source was heard in ------------------------------------------------ */
 
 /* The key of the last chord that starts at or before the passage, else of the first chord; false when no chord names one. */
-static bool source_key(const KnowledgeSnapshot *knowledge, const DocumentChord *chords, size_t count, int measure,
+static bool source_key(const KnowledgeSnapshot *knowledge, const CorpusPassageChord *chords, size_t count, int measure,
                        double beat, AnalysisKey *out) {
-    const DocumentChord *found = NULL;
+    const CorpusPassageChord *found = NULL;
     for (size_t i = 0; i < count; i++) {
         bool before = chords[i].measure < measure || same_place(chords[i].measure, chords[i].beat, measure, beat) ||
                       (chords[i].measure == measure && chords[i].beat < beat);
@@ -191,50 +237,46 @@ static int transposition(int pitch, const AnalysisKey *source, const AnalysisKey
     return shift > 6 ? shift - 12 : shift;
 }
 
-static bool plan_time_of(unsigned long long numerator, unsigned long long denominator, Rational *out) {
-    unsigned long long divisor = rational_gcd_unsigned(numerator, denominator);
-    if (denominator == 0 || divisor == 0) {
-        return false;
-    }
-    numerator /= divisor;
-    denominator /= divisor;
-    if (numerator > 0x7fffffffUL || denominator > 0xffffffffUL) {
-        return false;
-    }
-    return rational_make((long)numerator, (long long)denominator, out) == RATIONAL_OK;
+/* A plan time fits when its parts do: a numerator to 0x7fffffff and a denominator to 0xffffffff. */
+static bool plan_time_fits(Rational time) {
+    return time.num >= 0 && time.num <= 0x7fffffffLL && time.den <= 0xffffffffLL;
 }
 
 /*
- * One bar of a matched melody as a motive: the notes that start in the first bar, the last shortened to the barline,
- * moved by shift semitones. false when fewer than two notes are left or one does not fit a Rational.
+ * One bar of a passage's melody as a motive: the notes that start in the first bar, the last shortened to the barline,
+ * moved by shift semitones. false when fewer than two notes are left or one does not fit a plan time.
  */
-static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *meter, const AnalysisKey *key, int shift,
+static bool motive_from_passage(const CorpusPassage *passage, const PlanMeter *meter, const AnalysisKey *key, int shift,
                                 Motive *out) {
-    unsigned long long bar_n = (unsigned long long)meter->beats_per_bar;
-    unsigned long long bar_d = (unsigned long long)meter->beat_unit;
+    Rational bar;
+    if (rational_make((long long)meter->beats_per_bar, (long long)meter->beat_unit, &bar) != RATIONAL_OK) {
+        return false;
+    }
     motive_init(out, *meter);
     motive_set_key(out, key, MOTIVE_SKETCH_KEY_GIVEN);
-    for (size_t i = 0; i < match->note_count && out->note_count < MOTIVE_MAX_NOTES; i++) {
-        const SimilarNote *note = &match->notes[i];
-        unsigned long long on_n = note->onset_numerator, on_d = note->onset_denominator;
-        /* The note starts in the bar when onset < bar, that is on_n / on_d < bar_n / bar_d. */
-        if (on_n * bar_d >= bar_n * on_d) {
+    for (size_t i = 0; i < passage->note_count && out->note_count < MOTIVE_MAX_NOTES; i++) {
+        const CorpusPassageNote *note = &passage->notes[i];
+        /* The note starts in the bar when onset < bar. */
+        if (rational_cmp(note->onset, bar) >= 0) {
             break;
         }
-        unsigned long long end_n = on_n * note->duration_denominator + note->duration_numerator * on_d;
-        unsigned long long end_d = on_d * note->duration_denominator;
-        unsigned long long length_n = note->duration_numerator, length_d = note->duration_denominator;
-        if (end_n * bar_d > bar_n * end_d) {
+        Rational end, length = note->duration;
+        if (rational_add(note->onset, note->duration, &end) != RATIONAL_OK) {
+            return false;
+        }
+        if (rational_cmp(end, bar) > 0) {
             /* Across the barline: the note lasts until it, bar - onset. */
-            length_n = bar_n * on_d - on_n * bar_d;
-            length_d = bar_d * on_d;
+            if (rational_sub(bar, note->onset, &length) != RATIONAL_OK) {
+                return false;
+            }
         }
         MotiveSketchNote *placed = &out->notes[out->note_count];
         int pitch = note->pitch + shift;
-        if (pitch < 0 || pitch > 127 || !plan_time_of(on_n, on_d, &placed->onset) ||
-            !plan_time_of(length_n, length_d, &placed->duration)) {
+        if (pitch < 0 || pitch > 127 || !plan_time_fits(note->onset) || !plan_time_fits(length)) {
             return false;
         }
+        placed->onset = note->onset;
+        placed->duration = length;
         placed->pitch = pitch;
         out->note_count++;
     }
@@ -246,107 +288,66 @@ static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *mete
 }
 
 /* Whether a score is within 1/10 of the best: 10 * score >= 10 * best - 1, in fractions. */
-static bool near_best(const SimilarityScore *score, const SimilarityScore *best) {
+static bool near_best(const Rational *score, const Rational *best) {
     long double s = (long double)score->num / (long double)score->den;
     long double b = (long double)best->num / (long double)best->den;
     return s >= b - 0.1L - 1e-12L;
 }
 
-static void fill_match(const SimilarMatch *match, CorpusSeed *out) {
-    snprintf(out->piece, sizeof(out->piece), "%s", match->piece);
-    out->start_measure = match->start_measure;
-    out->start_beat = match->start_beat;
-    out->end_measure = match->end_measure;
-    out->end_beat = match->end_beat;
-    out->score_numerator = (unsigned long)match->score.similarity.num;
-    out->score_denominator = (unsigned long)match->score.similarity.den;
+static void fill_match(const CorpusPassage *passage, CorpusSeed *out) {
+    snprintf(out->piece, sizeof(out->piece), "%s", passage->piece);
+    out->start_measure = passage->start_measure;
+    out->start_beat = passage->start_beat;
+    out->end_measure = passage->end_measure;
+    out->end_beat = passage->end_beat;
+    out->score_numerator = (unsigned long)passage->similarity.num;
+    out->score_denominator = (unsigned long)passage->similarity.den;
 }
 
-static CorpusSeedResult search(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
-                               SimilarResults *results) {
-    SimilarOptions options = similar_options_default();
-    options.minimum_numerator = CORPUS_SEED_MINIMUM_NUMERATOR;
-    options.minimum_denominator = CORPUS_SEED_MINIMUM_DENOMINATOR;
-    options.max_results = 10;
-    SimilarResult found = similar_material_find(corpus_output_dir, knowledge, query, &options, results);
-    if (found == SIMILAR_ERR_ALLOC) {
-        return CORPUS_SEED_ERR_ALLOC;
-    }
-    if (found != SIMILAR_OK) {
-        return CORPUS_SEED_ERR_CORPUS;
-    }
-    return results->count == 0 ? CORPUS_SEED_ERR_NO_MATCH : CORPUS_SEED_OK;
-}
-
-CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir, const char *passage_path,
+CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassage *passages, size_t count,
                                     const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out) {
-    if (!knowledge || !corpus_output_dir || !passage_path || !meter || !key || !out || meter->beats_per_bar < 1 ||
-        meter->beat_unit < 1) {
+    if (!knowledge || (count > 0 && !passages) || !meter || !key || !out || meter->beats_per_bar < 1 || meter->beat_unit < 1) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }
     CommonPracticeMaterials materials;
     if (!common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }
-    SimilarQuery query;
-    SimilarResult read = similar_query_from_file(passage_path, knowledge, &query);
-    if (read == SIMILAR_ERR_ALLOC) {
-        return CORPUS_SEED_ERR_ALLOC;
-    }
-    if (read != SIMILAR_OK) {
-        return CORPUS_SEED_ERR_QUERY;
-    }
-    SimilarResults results;
-    memset(&results, 0, sizeof(results));
-    CorpusSeedResult status = search(corpus_output_dir, knowledge, &query, &results);
-    similar_query_destroy(&query);
-    if (status != CORPUS_SEED_OK) {
-        similar_results_destroy(&results);
-        return status;
+    if (count == 0) {
+        return CORPUS_SEED_ERR_NO_MATCH;
     }
 
-    /* The matches are sorted best first; the ones within 1/10 of the best are the choice. */
+    /* The passages are ranked best first; the ones within 1/10 of the best are the choice. */
     size_t eligible = 0;
-    while (eligible < results.count &&
-           near_best(&results.matches[eligible].score.similarity, &results.matches[0].score.similarity)) {
+    while (eligible < count && near_best(&passages[eligible].similarity, &passages[0].similarity)) {
         eligible++;
     }
     FillRng rng;
     fill_rng_seed(&rng, seed);
     size_t pick = (size_t)fill_rng_below(&rng, eligible);
 
-    status = CORPUS_SEED_ERR_NO_MATCH;
+    CorpusSeedResult status = CORPUS_SEED_ERR_NO_MATCH;
     size_t stale = 0;
     for (size_t step = 0; step < eligible && status != CORPUS_SEED_OK; step++) {
-        const SimilarMatch *match = &results.matches[(pick + step) % eligible];
-        if (match->note_count == 0) {
+        const CorpusPassage *passage = &passages[(pick + step) % eligible];
+        if (passage->note_count == 0) {
             continue;
         }
         int shift = 0;
-        char *text = NULL;
-        cJSON *document = read_document(corpus_output_dir, match->document, &text);
-        if (document) {
-            DocumentChord *chords = NULL;
-            size_t chord_count = 0;
-            AnalysisKey from;
-            if (read_chords(text, document, &chords, &chord_count, &stale) &&
-                source_key(knowledge, chords, chord_count, match->start_measure, match->start_beat, &from)) {
-                shift = transposition(match->notes[0].pitch, &from, key);
-            }
-            chords_free(chords, chord_count);
-            cJSON_Delete(document);
-            free(text);
+        AnalysisKey from;
+        stale += passage->stale ? 1 : 0;
+        if (source_key(knowledge, passage->chords, passage->chord_count, passage->start_measure, passage->start_beat, &from)) {
+            shift = transposition(passage->notes[0].pitch, &from, key);
         }
         CorpusSeed seeded;
         memset(&seeded, 0, sizeof(seeded));
-        if (motive_from_passage(match, meter, key, shift, &seeded.motive)) {
-            fill_match(match, &seeded);
+        if (motive_from_passage(passage, meter, key, shift, &seeded.motive)) {
+            fill_match(passage, &seeded);
             seeded.stale_documents = stale;
             *out = seeded;
             status = CORPUS_SEED_OK;
         }
     }
-    similar_results_destroy(&results);
     return status;
 }
 
@@ -360,83 +361,47 @@ static bool numeral_placeable(HarmonyMode mode, const char *numeral) {
 }
 
 /*
- * The numerals of the passage a match is, read from its document: the chords from the one that starts where the match
- * does. false when the document cannot be read, has no chord there, or a numeral cannot be placed under the mode.
+ * The numerals of the passage, read from its chords: the chords from the one that starts where the passage does. false when the
+ * passage has no chord there, or a numeral cannot be placed under the mode.
  */
-static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *match, size_t wanted, HarmonyMode mode,
-                           CorpusSeed *seeded, size_t *stale) {
+static bool passage_numerals(const CorpusPassage *passage, size_t wanted, HarmonyMode mode, CorpusSeed *seeded) {
     bool ok = false;
-    char *text = NULL;
-    cJSON *document = read_document(corpus_output_dir, match->document, &text);
-    if (!document) {
-        return false;
-    }
-    DocumentChord *chords = NULL;
-    size_t chord_count = 0;
-    if (read_chords(text, document, &chords, &chord_count, stale)) {
-        for (size_t first = 0; first < chord_count && !ok; first++) {
-            if (!same_place(chords[first].measure, chords[first].beat, match->start_measure, match->start_beat)) {
-                continue;
-            }
-            ok = first + wanted <= chord_count;
-            for (size_t i = 0; ok && i < wanted; i++) {
-                const char *numeral = chords[first + i].numeral;
-                ok = strlen(numeral) < CORPUS_SEED_NUMERAL_MAX && numeral_placeable(mode, numeral);
-                if (ok) {
-                    snprintf(seeded->numerals[i], CORPUS_SEED_NUMERAL_MAX, "%s", numeral);
-                }
-            }
-            break;
+    for (size_t first = 0; first < passage->chord_count && !ok; first++) {
+        if (!same_place(passage->chords[first].measure, passage->chords[first].beat, passage->start_measure, passage->start_beat)) {
+            continue;
         }
+        ok = first + wanted <= passage->chord_count;
+        for (size_t i = 0; ok && i < wanted; i++) {
+            const char *numeral = passage->chords[first + i].numeral;
+            ok = strlen(numeral) < CORPUS_SEED_NUMERAL_MAX && numeral_placeable(mode, numeral);
+            if (ok) {
+                snprintf(seeded->numerals[i], CORPUS_SEED_NUMERAL_MAX, "%s", numeral);
+            }
+        }
+        break;
     }
-    chords_free(chords, chord_count);
-    cJSON_Delete(document);
-    free(text);
     return ok;
 }
 
-CorpusSeedResult corpus_seed_progression(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir,
-                                         const char *numerals_text, HarmonyMode mode, CorpusSeed *out) {
-    if (!knowledge || !corpus_output_dir || !numerals_text || !out) {
+CorpusSeedResult corpus_seed_progression(const KnowledgeSnapshot *knowledge, const CorpusPassage *passages, size_t count,
+                                         size_t wanted, HarmonyMode mode, CorpusSeed *out) {
+    if (!knowledge || (count > 0 && !passages) || !out || wanted < 1 || wanted > CORPUS_SEED_MAX_NUMERALS) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }
-    SimilarQuery query;
-    SimilarResult read = similar_query_from_numerals(numerals_text, &query);
-    if (read == SIMILAR_ERR_ALLOC) {
-        return CORPUS_SEED_ERR_ALLOC;
-    }
-    if (read != SIMILAR_OK) {
-        return CORPUS_SEED_ERR_QUERY;
-    }
-    if (query.numeral_count > CORPUS_SEED_MAX_NUMERALS) {
-        similar_query_destroy(&query);
-        return CORPUS_SEED_ERR_QUERY;
-    }
-    size_t wanted = query.numeral_count;
-    SimilarOptions options = similar_options_default();
-    options.minimum_numerator = CORPUS_SEED_MINIMUM_NUMERATOR;
-    options.minimum_denominator = CORPUS_SEED_MINIMUM_DENOMINATOR;
-    options.max_results = PROGRESSION_CANDIDATES;
-    SimilarResults results;
-    memset(&results, 0, sizeof(results));
-    SimilarResult found = similar_material_find(corpus_output_dir, knowledge, &query, &options, &results);
-    similar_query_destroy(&query);
-    CorpusSeedResult status = found == SIMILAR_ERR_ALLOC ? CORPUS_SEED_ERR_ALLOC
-                              : found != SIMILAR_OK      ? CORPUS_SEED_ERR_CORPUS
-                                                         : CORPUS_SEED_ERR_NO_MATCH;
-    /* The first match, best first, whose chords the plan can place in the key's mode. */
+    /* The first passage, best first, whose chords the plan can place in the key's mode. */
+    CorpusSeedResult status = CORPUS_SEED_ERR_NO_MATCH;
     size_t stale = 0;
-    for (size_t i = 0; i < results.count && status == CORPUS_SEED_ERR_NO_MATCH; i++) {
+    for (size_t i = 0; i < count && status == CORPUS_SEED_ERR_NO_MATCH; i++) {
         CorpusSeed seeded;
         memset(&seeded, 0, sizeof(seeded));
-        if (match_numerals(corpus_output_dir, &results.matches[i], wanted, mode, &seeded, &stale)) {
-            fill_match(&results.matches[i], &seeded);
+        stale += passages[i].stale ? 1 : 0;
+        if (passage_numerals(&passages[i], wanted, mode, &seeded)) {
+            fill_match(&passages[i], &seeded);
             seeded.stale_documents = stale;
             seeded.numeral_count = wanted;
             *out = seeded;
             status = CORPUS_SEED_OK;
         }
     }
-    similar_results_destroy(&results);
     return status;
 }

@@ -300,10 +300,22 @@ static void test_plan_refusals(void) {
         assert(cJSON_AddItemToArray(given, item) && cJSON_AddItemToObject(request, "given", given));
         expect_refused(composer_api_plan, request, COMPOSER_ERR_UNSATISFIABLE, "/given/0", "numeral that cannot be read");
     }
-    /* A corpus is needed for a passage to look for. */
+    /* like and corpus are gone (3.0): the passages come inline. */
     request = plan_members("binary", "C");
     assert(cJSON_AddStringToObject(request, "like", FIXTURE("mozart545-bar1.mid")));
-    expect_refused(composer_api_plan, request, COMPOSER_ERR_REQUEST, "", "like needs corpus <dir>");
+    expect_refused(composer_api_plan, request, COMPOSER_ERR_REQUEST, "/like", "are gone");
+    request = plan_members("binary", "C");
+    assert(cJSON_AddStringToObject(request, "corpus", "corpus-dir"));
+    expect_refused(composer_api_plan, request, COMPOSER_ERR_REQUEST, "/corpus", "are gone");
+    /* A like_progression needs its passages, and a motive and passages both give the motive. */
+    request = plan_members("binary", "C");
+    {
+        cJSON *given = cJSON_AddArrayToObject(request, "given");
+        cJSON *item = cJSON_CreateObject();
+        assert(given && item && cJSON_AddStringToObject(item, "kind", "like_progression") &&
+               cJSON_AddStringToObject(item, "numerals", "I IV V I") && cJSON_AddItemToArray(given, item));
+        expect_refused(composer_api_plan, request, COMPOSER_ERR_REQUEST, "/given/0", "needs its corpus_passages");
+    }
 }
 
 /* --- fill, lock, regenerate, variations, harmonize ------------------------------------------------ */

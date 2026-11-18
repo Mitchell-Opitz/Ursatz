@@ -69,18 +69,13 @@ ComposerStatus api_style_without_add(const char **names, size_t *count, size_t c
 
 /* --- seeding from a corpus ------------------------------------------------------------------------------- */
 
-static ComposerStatus seed_failure(CorpusSeedResult result, const char *corpus_dir, const char *what, ComposerError *error) {
+static ComposerStatus seed_failure(CorpusSeedResult result, ComposerError *error) {
     switch (result) {
     case CORPUS_SEED_ERR_NO_MATCH:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/like",
-                        "no passage of the corpus '%s' is similar to %s (a score of 1/2 or more)", corpus_dir, what);
-    case CORPUS_SEED_ERR_QUERY:
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/like", "cannot read %s as a passage to look for", what);
-    case CORPUS_SEED_ERR_CORPUS:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus",
-                        "cannot read the corpus '%s' (the output directory of ursatz-analyzer --corpus)", corpus_dir);
+        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus_passages",
+                        "no passage of corpus_passages gives a motive (it needs two or more notes in its first bar)");
     default:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/like", "%s", corpus_seed_result_name(result));
+        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus_passages", "%s", corpus_seed_result_name(result));
     }
 }
 
@@ -98,18 +93,16 @@ ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, Composer
     return COMPOSER_OK;
 }
 
-ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const char *corpus_dir, const char *like_path,
-                               const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out,
-                               ComposerError *error) {
-    CorpusSeedResult result = corpus_seed_motive(knowledge, corpus_dir, like_path, meter, key, seed, out);
-    return result == CORPUS_SEED_OK ? COMPOSER_OK : seed_failure(result, corpus_dir, like_path, error);
+ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
+                               const AnalysisKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error) {
+    CorpusSeedResult result = corpus_seed_motive(knowledge, passages->items, passages->count, meter, key, seed, out);
+    return result == CORPUS_SEED_OK ? COMPOSER_OK : seed_failure(result, error);
 }
 
-void api_seed_stale_notice(const CorpusSeed *seed, const char *corpus_dir, char *out, size_t size) {
+void api_seed_stale_notice(const CorpusSeed *seed, char *out, size_t size) {
     out[0] = '\0';
     if (seed->stale_documents > 0) {
-        snprintf(out, size, "%zu stale documents in '%s' (analyzed by another version; run the corpus again)",
-                 seed->stale_documents, corpus_dir);
+        snprintf(out, size, "%zu stale documents (analyzed by another version; run the corpus again)", seed->stale_documents);
     }
 }
 
@@ -245,23 +238,19 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
     bool check = false;
     unsigned long seed = 0;
     unsigned long suggest = 1;
-    const char *corpus = NULL;
-    const char *like = NULL;
-    if (!api_member_string(request, "corpus", &corpus, &found, error) || !api_member_string(request, "like", &like, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+    const cJSON *passages_member = cJSON_GetObjectItemCaseSensitive(request, "corpus_passages");
+    bool has_passages = passages_member && !cJSON_IsNull(passages_member);
+    if (cJSON_GetObjectItemCaseSensitive(request, "corpus") || cJSON_GetObjectItemCaseSensitive(request, "like")) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, cJSON_GetObjectItemCaseSensitive(request, "corpus") ? "/corpus" : "/like",
+                        "corpus and like are gone (Composer API 3.0): give corpus_passages, the passages found by "
+                        "analyzer_corpus_passages_like");
     }
     bool has_input = cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(request, "input"));
-    if (like && !corpus) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/like", "like needs corpus");
+    if (has_passages && has_input) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/corpus_passages", "give a motive input or corpus_passages, not both");
     }
-    if (corpus && !like) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/corpus", "corpus needs like <file>");
-    }
-    if (corpus && has_input) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/corpus", "give a motive input or corpus, not both");
-    }
-    if (!corpus && !has_input) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/input", "the request needs an input (a motive) or a corpus with like");
+    if (!has_passages && !has_input) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/input", "the request needs an input (a motive) or corpus_passages");
     }
     ComposerStatus status = read_brief(request, &state->brief, error);
     if (status != COMPOSER_OK) {
@@ -336,21 +325,28 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
     if (status != COMPOSER_OK) {
         return status;
     }
-    if (corpus) {
+    if (has_passages) {
         if (cJSON_GetObjectItemCaseSensitive(request, "harmony") || cJSON_GetObjectItemCaseSensitive(request, "features") ||
             cJSON_GetObjectItemCaseSensitive(request, "role")) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/harmony",
                             "harmony, features and role describe a motive input, not one seeded from a corpus");
         }
         /* The passage is chosen once, by the first seed; the seeds tried after it grow from the same motive. */
-        status = api_seed_motive(setup->knowledge, corpus, like, &setup->meter, &setup->key, setup->seed, &setup->seed_found, error);
+        CorpusPassages passages = {0};
+        char path[sizeof error->path];
+        char message[sizeof error->message];
+        if (!corpus_passages_from_json(passages_member, &passages, path, sizeof path, message, sizeof message)) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", message);
+        }
+        status = api_seed_motive(setup->knowledge, &passages, &setup->meter, &setup->key, setup->seed, &setup->seed_found, error);
+        corpus_passages_destroy(&passages);
         if (status == COMPOSER_OK) {
             status = api_seed_source(&setup->seed_found, &setup->source, error);
         }
         if (status != COMPOSER_OK) {
             return status;
         }
-        api_seed_stale_notice(&setup->seed_found, corpus, state->stale, sizeof state->stale);
+        api_seed_stale_notice(&setup->seed_found, state->stale, sizeof state->stale);
         setup->seeded = true;
         state->motive = setup->seed_found.motive;
     } else {
