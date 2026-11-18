@@ -4,6 +4,7 @@
 # plan/section_json.h, when the Composer first includes them.
 add_library(ursatz_plan
     section.c
+    section_json.c
 )
 ursatz_public_headers(ursatz_plan
     BASE ${PROJECT_SOURCE_DIR}
