@@ -727,6 +727,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
     }
+    result = result == PIECE_OK ? piece_set_form_record(plan, form) : result;
     if (result != PIECE_OK) {
         plan_destroy(plan);
         return result;

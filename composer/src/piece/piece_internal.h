@@ -31,6 +31,9 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
 PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
                                PlanSpan material, Rational bar, NodeId *out);
 
+/* Records the form a plan was built from (name, document version, the built-in document's hash, checks, closing), R-608. */
+PieceResult piece_set_form_record(PiecePlan *plan, const FormSpec *form);
+
 /* Whether the plan is a piece structure plan: some section of it has a piece part (a section description with a role of a game loop part). */
 bool piece_is_structure_plan(const PiecePlan *plan);
 

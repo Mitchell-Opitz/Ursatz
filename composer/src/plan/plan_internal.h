@@ -49,6 +49,8 @@ struct PiecePlan {
     size_t removed_lane_span_count;
     char analyzer_version[PLAN_ANALYZER_VERSION_MAX]; /* "" unless the plan was loaded from an Analyzer result */
     PlanNoteId next_note_id;                          /* the id the next new note gets: 1 in a new plan, only rises */
+    bool has_form_record;
+    PlanFormRecord form_record;                       /* the form the plan was built from, when has_form_record */
 };
 
 /*

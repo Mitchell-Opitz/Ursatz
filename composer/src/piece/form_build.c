@@ -163,6 +163,7 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
             description.setting = (SectionSetting)setting_pattern(section, request, accompaniment);
         }
     }
+    description.closed = section->closed;
     description.has_figure = section->has_figure;
     description.figure = section->figure;
     description.layers = section->layers;
@@ -428,6 +429,22 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
     return true;
 }
 
+PieceResult piece_set_form_record(PiecePlan *plan, const FormSpec *form) {
+    PlanFormRecord record;
+    memset(&record, 0, sizeof(record));
+    snprintf(record.name, sizeof(record.name), "%s", form->name);
+    record.version = FORM_SPEC_VERSION;
+    for (size_t i = 0; i < form_spec_builtin_count(); i++) {
+        if (strcmp(form_spec_builtin_name(i), form->name) == 0) {
+            const char *hash = form_spec_builtin_hash(i);
+            snprintf(record.hash, sizeof(record.hash), "%s", hash ? hash : "");
+        }
+    }
+    record.checks = form->checks;
+    record.closing = form->closing;
+    return piece_result_of_plan(plan_set_form_record(plan, &record));
+}
+
 PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, PiecePlan **out) {
     if (!form || !request || !out) {
         return PIECE_ERR_NULL;
@@ -550,6 +567,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
     }
+    result = result == PIECE_OK ? piece_set_form_record(plan, form) : result;
     if (result != PIECE_OK) {
         plan_destroy(plan);
         return result;

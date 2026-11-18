@@ -1,10 +1,12 @@
 #include <ursatz_composer/form_spec.h>
 
+#include <stdio.h>
 #include <string.h>
 
 /* form/form_builtin_data.c, generated at build time from the files in forms/ by cmake/EmbedForms.cmake. */
 extern const char *const COMPOSER_FORM_DOCUMENTS[];
 extern const char *const COMPOSER_FORM_NAMES[];
+extern const char *const COMPOSER_FORM_PLAN_NAMES[];
 extern const size_t COMPOSER_FORM_DOCUMENT_COUNT;
 
 size_t form_spec_builtin_count(void) {
@@ -17,6 +19,26 @@ const char *form_spec_builtin_document(size_t index) {
 
 const char *form_spec_builtin_name(size_t index) {
     return index < COMPOSER_FORM_DOCUMENT_COUNT ? COMPOSER_FORM_NAMES[index] : NULL;
+}
+
+const char *form_spec_builtin_plan_name(size_t index) {
+    return index < COMPOSER_FORM_DOCUMENT_COUNT ? COMPOSER_FORM_PLAN_NAMES[index] : NULL;
+}
+
+/* FNV-1a 64 of the document's bytes as embedded, 16 lowercase hexadecimal digits; the text is one buffer per call. */
+const char *form_spec_builtin_hash(size_t index) {
+    static char hashes[FORM_SPEC_BUILTIN_MAX][FORM_SPEC_HASH_LEN + 1];
+    if (index >= COMPOSER_FORM_DOCUMENT_COUNT || index >= FORM_SPEC_BUILTIN_MAX) {
+        return NULL;
+    }
+    if (hashes[index][0] == '\0') {
+        unsigned long long hash = 14695981039346656037ULL;
+        for (const unsigned char *byte = (const unsigned char *)COMPOSER_FORM_DOCUMENTS[index]; *byte; byte++) {
+            hash = (hash ^ *byte) * 1099511628211ULL;
+        }
+        snprintf(hashes[index], sizeof(hashes[index]), "%016llx", hash);
+    }
+    return hashes[index];
 }
 
 FormSpecResult form_spec_builtin(const char *name, FormSpec **out) {

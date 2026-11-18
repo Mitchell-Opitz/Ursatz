@@ -232,7 +232,8 @@ PieceResult piece_compose_parts(const FormSpec *form, const PieceRequest *reques
     return result;
 }
 
-static PieceResult perform(const PiecePerformPart *parts, size_t part_count, const char *plan_name, PiecePerformance *out) {
+static PieceResult perform(const PiecePerformPart *parts, size_t part_count, const FormSpec *record_form, const char *plan_name,
+                           PiecePerformance *out) {
     if (!parts || part_count == 0 || !out) {
         return PIECE_ERR_NULL;
     }
@@ -310,6 +311,7 @@ static PieceResult perform(const PiecePerformPart *parts, size_t part_count, con
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_node_set_state(performed, form_id, PLAN_STATE_GIVEN));
     }
+    result = result == PIECE_OK && record_form ? piece_set_form_record(performed, record_form) : result;
     if (result != PIECE_OK) {
         plan_destroy(performed);
         memset(out, 0, sizeof(*out));
@@ -320,7 +322,8 @@ static PieceResult perform(const PiecePerformPart *parts, size_t part_count, con
 }
 
 PieceResult piece_perform(const PiecePerformPart *parts, size_t part_count, PiecePerformance *out) {
-    return perform(parts, part_count, parts && part_count > 0 && parts[0].form ? parts[0].form->plan_name : NULL, out);
+    const FormSpec *form = parts && part_count > 0 ? parts[0].form : NULL;
+    return perform(parts, part_count, form, form ? form->plan_name : NULL, out);
 }
 
 size_t piece_parts_source(const FormSpec *form, size_t index) {
@@ -349,5 +352,5 @@ PieceResult piece_perform_compound(const FormSpec *form, size_t bars, size_t cou
         performed[i].repeats = form->parts[i].repeats;
         performed[i].name = form->parts[i].name;
     }
-    return perform(performed, form->part_count, form->plan_name, out);
+    return perform(performed, form->part_count, form, form->plan_name, out);
 }

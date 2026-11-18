@@ -32,6 +32,28 @@ const char *plan_analyzer_version(const PiecePlan *plan) {
     return plan ? plan->analyzer_version : "";
 }
 
+PlanResult plan_set_form_record(PiecePlan *plan, const PlanFormRecord *record) {
+    if (!plan || !record) {
+        return PLAN_ERR_NULL;
+    }
+    size_t name = strnlen(record->name, PLAN_FORM_NAME_MAX);
+    size_t hash = strnlen(record->hash, sizeof(record->hash));
+    bool hex = hash == 0 || hash == PLAN_FORM_HASH_LEN;
+    for (size_t i = 0; hex && i < hash; i++) {
+        hex = (record->hash[i] >= '0' && record->hash[i] <= '9') || (record->hash[i] >= 'a' && record->hash[i] <= 'f');
+    }
+    if (name == 0 || name >= PLAN_FORM_NAME_MAX || !hex || hash >= sizeof(record->hash) || (record->checks & ~31u) != 0) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
+    plan->form_record = *record;
+    plan->has_form_record = true;
+    return PLAN_OK;
+}
+
+const PlanFormRecord *plan_form_record(const PiecePlan *plan) {
+    return plan && plan->has_form_record ? &plan->form_record : NULL;
+}
+
 PlanResult plan_set_analyzer_version(PiecePlan *plan, const char *version) {
     if (!plan || !version) {
         return PLAN_ERR_NULL;

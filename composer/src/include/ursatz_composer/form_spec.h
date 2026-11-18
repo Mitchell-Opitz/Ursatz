@@ -217,6 +217,13 @@ size_t form_spec_builtin_count(void);
 /* The document text of the form at index (NUL-terminated), and the name its file goes by; NULL past the end. */
 const char *form_spec_builtin_document(size_t index);
 const char *form_spec_builtin_name(size_t index);
+/* The name the plan's form node of the form at index has (its plan_name, else its name), and the hash of its document: FNV-1a 64
+   of the embedded bytes, 16 lowercase hexadecimal digits. NULL past the end. The hash is kept in static storage. */
+#define FORM_SPEC_BUILTIN_MAX 32
+#define FORM_SPEC_HASH_LEN 16
+#define FORM_SPEC_VERSION 2 /* the version of the form documents this library reads and writes */
+const char *form_spec_builtin_plan_name(size_t index);
+const char *form_spec_builtin_hash(size_t index);
 /* Parses the built-in form with this name into *out (on every call: no state is kept); FORM_SPEC_ERR_UNKNOWN for none. */
 FormSpecResult form_spec_builtin(const char *name, FormSpec **out);
 /* The built-in form the plan's root node is named for (a form's plan_name); FORM_SPEC_ERR_UNKNOWN when none is. */
