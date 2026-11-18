@@ -17,9 +17,6 @@ char *text_copy(const char *text);
 /* qsort comparator for size_t values, ascending. */
 int size_compare(const void *left, const void *right);
 
-/* A new EntityID with the same value as id; NULL on failure. */
-EntityID *entity_id_copy(const EntityID *id);
-
 /* The end (start plus duration) of the latest-ending note, or 0/1 with no notes, written to *out. False when a sum
    overflows (*out is untouched). */
 bool notes_last_end(const NoteEvent *const *events, size_t count, MusicalTime *out);

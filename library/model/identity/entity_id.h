@@ -12,6 +12,8 @@ typedef enum {
 } EntityIDResult;
 
 EntityIDResult entity_id_create(const char *value, EntityID **out);
+/* A new EntityID with the same value as id; NULL when id is NULL or on allocation failure. */
+EntityID *entity_id_copy(const EntityID *id);
 void entity_id_destroy(EntityID *id);
 bool entity_id_equals(const EntityID *a, const EntityID *b);
 const char *entity_id_value(const EntityID *id);

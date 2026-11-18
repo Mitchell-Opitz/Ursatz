@@ -23,11 +23,6 @@ int size_compare(const void *left, const void *right) {
     return a < b ? -1 : (a > b ? 1 : 0);
 }
 
-EntityID *entity_id_copy(const EntityID *id) {
-    EntityID *copy = NULL;
-    return entity_id_create(entity_id_value(id), &copy) == ENTITY_ID_OK ? copy : NULL;
-}
-
 bool notes_last_end(const NoteEvent *const *events, size_t count, MusicalTime *out) {
     MusicalTime latest = musical_time_of(rational_ratio(0, 1));
     for (size_t i = 0; i < count; i++) {
