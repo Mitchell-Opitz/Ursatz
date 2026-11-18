@@ -42,4 +42,19 @@ char *plan_to_json(const PiecePlan *plan, PlanJsonError *error);
  */
 PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error);
 
+/*
+ * Resolves the key spans a plan names only by a relation and an anchor (R-597), where a read plan is composed: each such span, in
+ * the order the key lane runs, takes the key its K6 relation entry reaches from its anchor, region_resolve against the plan's home
+ * key (the first key span) or the key span before it, and then holds that key beside its relation like a span the Composer drew.
+ * A plan with no such span is untouched. The plan's keys are made of the snapshot's materials. Returns PLAN_OK, PLAN_ERR_NULL (no
+ * plan, no snapshot or no snapshot with the four materials) or PLAN_ERR_FORMAT with error saying why, at the path of the span:
+ * the first span has no anchor, the snapshot has no such relation, the relation does not apply to its anchor (the relation's own
+ * message), or it reaches a material the Composer does not compose in (a key is major or natural minor). A refusal leaves the plan
+ * as it was.
+ */
+PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *knowledge, PlanJsonError *error);
+
+/* plan_from_json, then plan_resolve_key_spans: the plan a caller composes from. On failure *out is NULL. */
+PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error);
+
 #endif

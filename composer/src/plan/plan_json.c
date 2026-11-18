@@ -1437,9 +1437,23 @@ static bool read_key_relation(JsonReader *reader, const cJSON *object, const cha
     return true;
 }
 
-/* The payload of a key span: its key and, in version 3, the relation it is named by. */
+/*
+ * The payload of a key span: its key and, in version 3, the relation it is named by. A version 3 span with a "relation" and an
+ * "anchor" and neither a "tonic" nor a "material" is named only by them: its key is the zero key until plan_resolve_key_spans.
+ */
 static bool read_key_span(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *key, PlanKeyRelation *relation) {
     memset(relation, 0, sizeof(*relation));
+    if (reader->version >= 3 && cJSON_GetObjectItemCaseSensitive(object, "relation") &&
+        !cJSON_GetObjectItemCaseSensitive(object, "tonic") && !cJSON_GetObjectItemCaseSensitive(object, "material")) {
+        AnalysisKey zero;
+        memset(&zero, 0, sizeof(zero));
+        *key = zero;
+        if (!read_key_relation(reader, object, path, relation)) {
+            return false;
+        }
+        relation->resolved = false;
+        return true;
+    }
     return read_key_members(reader, object, path, key) &&
            (reader->version < 3 || read_key_relation(reader, object, path, relation));
 }
@@ -2492,6 +2506,19 @@ static PlanResult read_document(const cJSON *document, PiecePlan *plan, const Co
         return reader.result;
     }
     return PLAN_OK;
+}
+
+PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error) {
+    PlanResult result = plan_from_json(knowledge, text, out, error);
+    if (result != PLAN_OK) {
+        return result;
+    }
+    result = plan_resolve_key_spans(*out, knowledge, error);
+    if (result != PLAN_OK) {
+        plan_destroy(*out);
+        *out = NULL;
+    }
+    return result;
 }
 
 PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error) {

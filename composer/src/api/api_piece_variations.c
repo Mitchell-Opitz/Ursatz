@@ -175,7 +175,7 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
         PlanJsonError plan_error;
         if (!plan_text) {
             status = api_fail_alloc(&out->error);
-        } else if (plan_from_json(context->knowledge, plan_text, &original, &plan_error) != PLAN_OK) {
+        } else if (plan_from_json_resolved(context->knowledge, plan_text, &original, &plan_error) != PLAN_OK) {
             status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/from", "cannot read the loop plan: %s", plan_error.message);
         } else {
             original_signature = plan_signature(original);

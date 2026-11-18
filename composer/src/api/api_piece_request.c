@@ -202,7 +202,7 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
         char *text = cJSON_PrintUnformatted(plan);
         PlanJsonError detail;
         memset(&detail, 0, sizeof detail);
-        PlanResult read = text ? plan_from_json(request->knowledge, text, &request->theme_plan[index], &detail) : PLAN_ERR_ALLOC;
+        PlanResult read = text ? plan_from_json_resolved(request->knowledge, text, &request->theme_plan[index], &detail) : PLAN_ERR_ALLOC;
         cJSON_free(text);
         if (read == PLAN_ERR_ALLOC) {
             return api_fail_alloc(error);

@@ -1611,6 +1611,160 @@ static void test_older_formats_read_into_materials(void) {
     plan_destroy(plan);
 }
 
+/* A plan with the key spans given, over 4 bars each: a span is a key, or a relation and an anchor not yet resolved (key.material NULL). */
+typedef struct {
+    int tonic;
+    const char *material; /* "major" or "minor"; NULL for a span named only by its relation */
+    const char *relation; /* NULL for none */
+    PlanKeyAnchor anchor;
+    bool resolved;
+} KeySpanCase;
+
+static PiecePlan *key_spans_plan(const KeySpanCase *cases, size_t count) {
+    PiecePlan *plan = plan_create();
+    assert(plan != NULL);
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, (long)(4 * count)), "form");
+    for (size_t i = 0; i < count; i++) {
+        PlanLanePayload payload;
+        memset(&payload, 0, sizeof(payload));
+        if (cases[i].material) {
+            payload.key = test_key(cases[i].tonic, cases[i].material);
+        }
+        LaneSpanId id = add_lane(plan, form, PLAN_LANE_KEY, 0, bars((long)(4 * i), 4), &payload);
+        if (cases[i].relation) {
+            assert(plan_lane_span_set_key_relation(plan, id, cases[i].relation, cases[i].anchor, cases[i].resolved) == PLAN_OK);
+        }
+    }
+    return plan;
+}
+
+/* The key of span `index` of the key lane, in time order. */
+static AnalysisKey key_span_at(const PiecePlan *plan, size_t index) {
+    LaneSpanId ids[8];
+    PlanSpan everything = bars(0, 1000);
+    assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, ids, 8) > index);
+    return plan_lane_span_payload(plan, ids[index])->key;
+}
+
+/* Reads the text and resolves it, returning the result; *out is the plan read. */
+static PlanResult read_resolved(const char *text, PiecePlan **out, PlanJsonError *error) {
+    assert(plan_from_json(test_knowledge(), text, out, error) == PLAN_OK);
+    return plan_resolve_key_spans(*out, test_knowledge(), error);
+}
+
+/* A key span named only by a relation and an anchor is written as that, read back unresolved and resolved against its anchor. */
+static void test_relation_named_spans(void) {
+    PlanJsonError error;
+    const KeySpanCase named[] = {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false},
+                                 {0, NULL, "omt.relation.dominant", PLAN_KEY_ANCHOR_HOME, false}};
+    PiecePlan *plan = key_spans_plan(named, 2);
+    char *text = plan_to_json(plan, &error);
+    assert(text != NULL && strstr(text, "\"relation\": \"omt.relation.dominant\"") != NULL &&
+           strstr(text, "\"anchor\": \"home\"") != NULL);
+    PiecePlan *read = NULL;
+    assert(plan_from_json(test_knowledge(), text, &read, &error) == PLAN_OK);
+    const PlanKeyRelation *relation = plan_lane_span_key_relation(read, 2);
+    assert(relation && !relation->resolved && relation->anchor == PLAN_KEY_ANCHOR_HOME &&
+           strcmp(relation->relation, "omt.relation.dominant") == 0);
+    char *unchanged = plan_to_json(read, &error);
+    assert(unchanged != NULL && strcmp(unchanged, text) == 0);
+    free(unchanged);
+    plan_destroy(read);
+
+    /* resolved, it is the plan of the key the relation reaches, with the relation beside it */
+    const KeySpanCase explicit_keys[] = {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false},
+                                         {7, "major", "omt.relation.dominant", PLAN_KEY_ANCHOR_HOME, true}};
+    PiecePlan *explicit_plan = key_spans_plan(explicit_keys, 2);
+    char *explicit_text = plan_to_json(explicit_plan, &error);
+    assert(explicit_text != NULL);
+    assert(read_resolved(text, &read, &error) == PLAN_OK);
+    char *resolved_text = plan_to_json(read, &error);
+    assert(resolved_text != NULL && strcmp(resolved_text, explicit_text) == 0);
+    plan_destroy(read);
+    /* a plan with every key named is untouched, and resolving twice changes nothing */
+    assert(plan_from_json_resolved(test_knowledge(), explicit_text, &read, &error) == PLAN_OK);
+    assert(plan_resolve_key_spans(read, test_knowledge(), &error) == PLAN_OK);
+    char *again = plan_to_json(read, &error);
+    assert(again != NULL && strcmp(again, explicit_text) == 0);
+    plan_destroy(read);
+    free(again);
+    free(resolved_text);
+    free(explicit_text);
+    plan_destroy(explicit_plan);
+    free(text);
+    plan_destroy(plan);
+}
+
+/* The anchor "previous" is the span before; "home" is the first span. */
+static void test_relation_anchors(void) {
+    PlanJsonError error;
+    const KeySpanCase chain[] = {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false},
+                                 {0, NULL, "omt.relation.dominant", PLAN_KEY_ANCHOR_PREVIOUS, false},
+                                 {0, NULL, "omt.relation.dominant", PLAN_KEY_ANCHOR_PREVIOUS, false},
+                                 {0, NULL, "omt.relation.dominant", PLAN_KEY_ANCHOR_HOME, false}};
+    PiecePlan *plan = key_spans_plan(chain, 4);
+    char *text = plan_to_json(plan, &error);
+    PiecePlan *read = NULL;
+    assert(text != NULL && read_resolved(text, &read, &error) == PLAN_OK);
+    AnalysisKey second = key_span_at(read, 1);
+    AnalysisKey third = key_span_at(read, 2);
+    AnalysisKey fourth = key_span_at(read, 3);
+    assert(analysis_key_tonic_pitch_class(&second) == 7 && analysis_key_tonic_pitch_class(&third) == 2 &&
+           analysis_key_tonic_pitch_class(&fourth) == 7);
+    assert(second.material == third.material && harmony_key_mode(&second) == HARMONY_MODE_MAJOR);
+    plan_destroy(read);
+    free(text);
+    plan_destroy(plan);
+}
+
+/* A relation that cannot be resolved is refused with its message at its span, and the plan stays as it was. */
+static void test_relation_refusals(void) {
+    PlanJsonError error;
+    struct {
+        KeySpanCase first;
+        const char *relation;
+        PlanKeyAnchor anchor;
+        const char *message;
+    } cases[] = {
+        {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.subtonic", PLAN_KEY_ANCHOR_HOME,
+         "relation 'subtonic' from C major: the triad on degree 7 is not major or minor"},
+        {{0, "major", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.no-such-relation", PLAN_KEY_ANCHOR_HOME, "no relation has the id"},
+        {{0, "minor", NULL, PLAN_KEY_ANCHOR_HOME, false}, "omt.relation.two-steps-brighter", PLAN_KEY_ANCHOR_PREVIOUS,
+         "composes in"},
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        const KeySpanCase spans[] = {cases[i].first, {0, NULL, cases[i].relation, cases[i].anchor, false}};
+        PiecePlan *plan = key_spans_plan(spans, 2);
+        char *text = plan_to_json(plan, &error);
+        PiecePlan *read = NULL;
+        assert(text != NULL && read_resolved(text, &read, &error) == PLAN_ERR_FORMAT);
+        assert(strstr(error.message, cases[i].message) != NULL && strcmp(error.path, "keys[1].composer.payload.relation") == 0);
+        const PlanKeyRelation *relation = plan_lane_span_key_relation(read, 2);
+        assert(relation && !relation->resolved);
+        plan_destroy(read);
+        assert(plan_from_json_resolved(test_knowledge(), text, &read, &error) == PLAN_ERR_FORMAT && read == NULL);
+        free(text);
+        plan_destroy(plan);
+    }
+    /* the first span has no anchor to be taken from */
+    const KeySpanCase first[] = {{0, NULL, "omt.relation.dominant", PLAN_KEY_ANCHOR_HOME, false}};
+    PiecePlan *plan = key_spans_plan(first, 1);
+    char *text = plan_to_json(plan, &error);
+    PiecePlan *read = NULL;
+    assert(text != NULL && read_resolved(text, &read, &error) == PLAN_ERR_FORMAT);
+    assert(strcmp(error.path, "keys[0].composer.payload.anchor") == 0);
+    plan_destroy(read);
+    free(text);
+    plan_destroy(plan);
+    /* a relation member without its anchor is malformed */
+    PiecePlan *half = NULL;
+    assert(plan_from_json(test_knowledge(),
+                          "{\"format\":\"ursatz-composer-plan\",\"format_version\":3,\"form\":null,\"keys\":[{\"span\":{\"start\":{\"num\":0,\"den\":1},"
+                          "\"end\":{\"num\":4,\"den\":1}},\"composer\":{\"id\":1,\"owner\":1,\"lane\":\"key\",\"voice\":0,\"state\":\"given\","
+                          "\"constraints\":[],\"payload\":{\"relation\":\"omt.relation.dominant\"}}}]}",
+                          &half, &error) == PLAN_ERR_FORMAT);
+}
+
 int main(void) {
     test_round_trip();
     test_old_transforms();
@@ -1629,6 +1783,9 @@ int main(void) {
     test_plan_files();
     test_version_one_values();
     test_older_formats_read_into_materials();
+    test_relation_named_spans();
+    test_relation_anchors();
+    test_relation_refusals();
     test_spelling_round_trip();
     test_format_errors();
     return 0;
