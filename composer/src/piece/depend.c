@@ -1,6 +1,7 @@
 #include <ursatz_composer/regenerate.h>
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
@@ -61,13 +62,8 @@ static bool names_motive(const PiecePlan *plan, LaneSpanId id, NodeId motive) {
 }
 
 static bool returns_section(const PiecePlan *plan, NodeId node, NodeId section) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
-        if (constraint->kind == PLAN_CONSTRAINT_RETURN && constraint->params.section_return.section == section) {
-            return true;
-        }
-    }
-    return false;
+    const char *name = plan_node_name(plan, section);
+    return name && name[0] != '\0' && strcmp(plan_section_or_empty(plan, node)->returns, name) == 0;
 }
 
 /* The lane spans a node owns. */

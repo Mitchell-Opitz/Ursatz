@@ -461,12 +461,12 @@ bool api_piece_loop_region(const PiecePlan *plan, Rational *start, Rational *end
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
             continue;
         }
-        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            if (constraint->kind != PLAN_CONSTRAINT_PIECE_PART) {
-                continue;
-            }
-            int part = constraint->params.piece_part.part;
+        const SectionDescription *section = plan_node_section(plan, id);
+        if (!section->has_role || section->role < SECTION_ROLE_INTRO || section->role > SECTION_ROLE_ENDING) {
+            continue;
+        }
+        {
+            int part = (int)(section->role - SECTION_ROLE_INTRO);
             PlanSpan span = plan_node_span(plan, id);
             Rational span_end;
             if ((part != (int)PIECE_PART_BODY && part != (int)PIECE_PART_TURNAROUND) ||
@@ -689,13 +689,7 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
         if (id == PLAN_NODE_NONE) {
             continue;
         }
-        const PlanConstraint *cadence = NULL;
-        const PlanConstraint *connective = NULL;
-        for (size_t c = 0; c < plan_node_constraint_count(plan, id); c++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, c);
-            cadence = constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence ? constraint : cadence;
-            connective = constraint->kind == PLAN_CONSTRAINT_CONNECTIVE && !connective ? constraint : connective;
-        }
+        const SectionDescription *described = plan_node_section(plan, id);
         Row *row = &rows[count++];
         memset(row, 0, sizeof(*row));
         row->connective = -1;
@@ -704,12 +698,12 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
         row->start = plan_node_span(plan, id).start;
         row->length = plan_node_span(plan, id).length;
         row->kept = size_section_kept(version, id);
-        row->has_cadence = cadence != NULL;
-        row->cadence = cadence ? cadence->params.cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
+        row->has_cadence = described->has_cadence;
+        row->cadence = described->has_cadence ? described->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
         row->plan = plan;
         row->node = id;
         row->pedal = section_pedal(plan, plan_node_span(plan, id));
-        row->connective = connective ? (connective->params.connective.written ? 1 : 0) : -1;
+        row->connective = described->connective != SECTION_CONNECTIVE_NONE ? (described->connective_written ? 1 : 0) : -1;
         if (size->sections[i].leads_in && i + 1 < size->section_count) {
             NodeId next = sized_section_find(plan, size->sections[i + 1].name);
             char ignored[PLAN_ROMAN_NUMERAL_MAX];
@@ -719,7 +713,7 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
         }
         key_heard_at(keys, key_count, row->start, row->key_heard, sizeof row->key_heard);
         planned_key_at(plan, plan_node_span(plan, id), row->key, sizeof row->key, &row->key_flats);
-        if (cadence) {
+        if (described->has_cadence) {
             row->heard = heard_cadence(check, next_item++);
         }
         if (!check) {
@@ -802,23 +796,18 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
     const PiecePlan *plan = version->plan;
     for (NodeId id = 1; id <= plan_node_count(plan) && count < PIECE_ROWS_MAX; id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION ||
-            plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
+            plan_section_has_role(plan, id, SECTION_ROLE_SEAM)) {
             continue;
         }
-        const PlanConstraint *part = NULL;
-        const PlanConstraint *cadence = NULL;
-        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            part = constraint->kind == PLAN_CONSTRAINT_PIECE_PART ? constraint : part;
-            cadence = constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence ? constraint : cadence;
-        }
-        if (!part) {
+        const SectionDescription *described = plan_node_section(plan, id);
+        const bool has_part = described->has_role && described->role >= SECTION_ROLE_INTRO && described->role <= SECTION_ROLE_ENDING;
+        if (!has_part) {
             continue;
         }
         Row *row = &rows[count];
         memset(row, 0, sizeof(*row));
         for (size_t s = 0; s < request->request.section_count; s++) {
-            if (strcmp(request->sections[s].id, part->params.piece_part.id) == 0) {
+            if (strcmp(request->sections[s].id, described->id) == 0) {
                 row->section = &request->sections[s];
                 row->source = request->source[s];
             }
@@ -830,9 +819,9 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
         row->node = id;
         row->start = plan_node_span(plan, id).start;
         row->kept = section_kept(version, id);
-        row->has_cadence = cadence != NULL;
-        row->cadence = cadence ? cadence->params.cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
-        if (cadence && check) {
+        row->has_cadence = described->has_cadence;
+        row->cadence = described->has_cadence ? described->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
+        if (described->has_cadence && check) {
             row->heard = heard_cadence(check, next_item);
             next_item++;
         }
@@ -1018,15 +1007,10 @@ static void append_part(char *text, size_t size, const char *part) {
 
 /* The pattern of the new accompaniment of a section whose RETURN is a setting (R-518, after the plan's substitution); NULL otherwise. */
 static const char *return_setting_name(const Row *row) {
-    for (size_t i = 0; i < plan_node_constraint_count(row->plan, row->node); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(row->plan, row->node, i);
-        if (constraint && constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            return constraint->params.section_return.variation == SECTION_RETURN_SETTING
-                       ? api_accompaniment_name(constraint->params.section_return.setting)
-                       : NULL;
-        }
-    }
-    return NULL;
+    const SectionDescription *section = plan_node_section(row->plan, row->node);
+    return section && section->returns[0] != '\0' && section->variation == SECTION_RETURN_SETTING
+               ? api_accompaniment_name((PlanAccompanimentPattern)section->setting)
+               : NULL;
 }
 
 /* How a section that returns another differs from it: null for a section that returns none. */

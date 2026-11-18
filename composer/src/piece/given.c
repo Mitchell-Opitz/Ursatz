@@ -12,6 +12,7 @@
 #include "harmony/harmony_internal.h"
 #include "piece/form_return_internal.h"
 #include "util/util.h"
+#include "util/plan_util.h"
 
 const char *given_result_name(GivenResult result) {
     switch (result) {
@@ -56,12 +57,7 @@ typedef struct {
 } Placement;
 
 static bool is_material(const PiecePlan *plan, NodeId section) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_MATERIAL) {
-            return true;
-        }
-    }
-    return false;
+    return plan_section_has_role(plan, section, SECTION_ROLE_MATERIAL);
 }
 
 static Rational times(Rational unit, size_t count) {

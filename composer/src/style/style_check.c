@@ -196,13 +196,8 @@ static bool form_fixed(const PiecePlan *plan, FillTarget target) {
         (function.function == SECTION_FUNCTION_RETRANSITION || function.function == SECTION_FUNCTION_CODA)) {
         return true;
     }
-    for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
-        PlanConstraintKind kind = plan_node_constraint_at(plan, target.id, i)->kind;
-        if (kind == PLAN_CONSTRAINT_THEME_PAIRING || kind == PLAN_CONSTRAINT_FREE_PHRASE || kind == PLAN_CONSTRAINT_LIQUIDATION) {
-            return true;
-        }
-    }
-    return false;
+    const SectionDescription *section = plan_section_or_empty(plan, target.id);
+    return section->has_pairing || section->free_phrase || (section->has_role && section->role == SECTION_ROLE_LIQUIDATION);
 }
 
 /* The form labels of a planned theme: its form's name, and a phrase a period's half or otherwise the whole of it. */

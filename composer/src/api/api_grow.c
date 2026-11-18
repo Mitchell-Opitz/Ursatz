@@ -1589,14 +1589,13 @@ cJSON *api_grow_construction_json(const SectionConstruction *given, const Sectio
 
 /* The construction of the theme (R-468) as the response gives it, null for a theme without one. */
 static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
-    const PlanConstraint *construction = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_CONSTRUCTION);
-    const PlanConstraint *pairing = plan_node_find_constraint(plan, node, PLAN_CONSTRAINT_THEME_PAIRING);
-    if (!construction || !pairing) {
+    const SectionDescription *section = plan_section_or_empty(plan, node);
+    if (!section->has_construction || !section->has_pairing) {
         return cJSON_CreateNull();
     }
     char text[192];
     grow_section_describe(plan, node, text, sizeof text);
-    return api_grow_construction_json(&construction->params.construction, &pairing->params.theme_pairing, text);
+    return api_grow_construction_json(&section->construction, &section->pairing, text);
 }
 
 static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const GrowThemeInfo *info, Rational bar) {

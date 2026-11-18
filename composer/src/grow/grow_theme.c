@@ -121,31 +121,37 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         return false;
     }
     /* A section that returns an earlier one is form-return's, not grown afresh; a held one is the seam stage's. */
-    if (form_return_handles(plan, target.id) || plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_HOLD)) {
+    if (form_return_handles(plan, target.id) || plan_section_or_empty(plan, target.id)->leads_in) {
         return false;
     }
     request.section = target.id;
     request.span = plan_node_span(plan, target.id);
-    bool archetype = false;
-    bool pairing = false;
-    bool cadence = false;
+    const SectionDescription *section = plan_section_or_empty(plan, target.id);
+    const bool archetype = section->has_pairing;
+    const bool pairing = section->has_pairing;
+    const bool cadence = section->has_cadence;
     PlanArchetype requested = PLAN_ARCHETYPE_SENTENCE;
+    if (pairing) {
+        request.pairing = section->pairing;
+        requested = (PlanArchetype)grow_pairing_archetype(&section->pairing);
+    }
+    if (cadence) {
+        request.cadence = section->cadence;
+    }
+    if (section->has_first_cadence) {
+        /* The first cadence is the theme's; the second is the weak one an antecedent ends in. */
+        request.has_first = true;
+        request.first_cadence = section->first_cadence;
+    }
+    request.pedal = section->pedal != 0;
+    request.transition = section->has_function && section->function.function == SECTION_FUNCTION_TRANSITION;
+    if (section->has_construction) {
+        request.has_construction = true;
+        request.construction = section->construction;
+    }
     for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, target.id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE) {
-            archetype = true;
-            requested = constraint->params.archetype;
-        } else if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
-            pairing = true;
-            request.pairing = constraint->params.theme_pairing;
-        } else if (constraint->kind == PLAN_CONSTRAINT_CADENCE && !cadence) {
-            /* The first cadence is the theme's; a second is the weak one an antecedent ends in. */
-            cadence = true;
-            request.cadence = constraint->params.cadence;
-        } else if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
-            request.has_first = true;
-            request.first_cadence = constraint->params.cadence;
-        } else if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
+        if (constraint->kind == PLAN_CONSTRAINT_ACCOMPANIMENT) {
             request.has_accompaniment = true;
             request.accompaniment = constraint->params.accompaniment;
         } else if (constraint->kind == PLAN_CONSTRAINT_VOICING) {
@@ -154,14 +160,6 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         } else if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && !request.has_motive_ref) {
             request.has_motive_ref = true;
             request.motive_ref = constraint->params.motive;
-        } else if (constraint->kind == PLAN_CONSTRAINT_PEDAL) {
-            request.pedal = true;
-        } else if (constraint->kind == PLAN_CONSTRAINT_SECTION_FUNCTION &&
-                   constraint->params.section_function.function == SECTION_FUNCTION_TRANSITION) {
-            request.transition = true;
-        } else if (constraint->kind == PLAN_CONSTRAINT_CONSTRUCTION && !request.has_construction) {
-            request.has_construction = true;
-            request.construction = constraint->params.construction;
         }
     }
     LaneSpanId lane[2];

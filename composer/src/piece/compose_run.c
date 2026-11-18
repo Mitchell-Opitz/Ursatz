@@ -122,25 +122,16 @@ void compose_outcome_destroy(ComposeOutcome *outcome) {
  * (R-494), or a retransition or a coda (R-503), which an operator grows.
  */
 static bool is_theme_section(const PiecePlan *plan, NodeId id) {
-    bool archetype = false;
-    bool pairing = false;
-    bool free_phrase = false;
-    bool liquidation = false;
-    SectionFunction function;
-    if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
+    const SectionDescription *section = plan_node_section(plan, id);
+    if (!section) {
         return false;
     }
-    if (plan_section_function_of(plan, id, &function)) {
-        liquidation = function.function == SECTION_FUNCTION_RETRANSITION || function.function == SECTION_FUNCTION_CODA;
+    bool liquidation = section->has_role && section->role == SECTION_ROLE_LIQUIDATION;
+    if (section->has_function) {
+        liquidation = liquidation || section->function.function == SECTION_FUNCTION_RETRANSITION ||
+                      section->function.function == SECTION_FUNCTION_CODA;
     }
-    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-        PlanConstraintKind kind = plan_node_constraint_at(plan, id, i)->kind;
-        archetype = archetype || kind == PLAN_CONSTRAINT_ARCHETYPE;
-        pairing = pairing || kind == PLAN_CONSTRAINT_THEME_PAIRING;
-        free_phrase = free_phrase || kind == PLAN_CONSTRAINT_FREE_PHRASE;
-        liquidation = liquidation || kind == PLAN_CONSTRAINT_LIQUIDATION;
-    }
-    return (archetype && pairing) || free_phrase || liquidation;
+    return section->has_pairing || section->free_phrase || liquidation;
 }
 
 /* Whether a lane span in the section (a lane span reopened by plan_regenerate_all) is still open. */
@@ -223,13 +214,8 @@ static bool soprano_voiced(const PiecePlan *plan, NodeId section) {
 }
 
 static bool has_archetype(const PiecePlan *plan, NodeId section, PlanArchetype archetype) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE && constraint->params.archetype == archetype) {
-            return true;
-        }
-    }
-    return false;
+    const SectionDescription *description = plan_section_or_empty(plan, section);
+    return description->has_pairing && grow_pairing_archetype(&description->pairing) == (int)archetype;
 }
 
 /* Whether a melody span that motive-invent is to write is still open. */
@@ -281,7 +267,7 @@ static bool stage_done(const PiecePlan *plan, ComposeStage stage, const NodeId *
         bool done = false;
         /* A section that returns an earlier one has nothing yet: the returns stage gives it its material. A held
            section is left for the seam stage. */
-        if (form_return_handles(plan, section) || plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_HOLD)) {
+        if (form_return_handles(plan, section) || plan_section_or_empty(plan, section)->leads_in) {
             continue;
         }
         switch (stage) {
@@ -415,16 +401,13 @@ static bool structure_score(const FillRecord *record, NodeId section, GrowScore 
 /* Hears one finished section. */
 /* The part and the id a piece structure gave the section, if it did. */
 static void read_part(const PiecePlan *plan, NodeId section, ComposeHeard *out) {
+    const SectionDescription *description = plan_section_or_empty(plan, section);
     out->has_part = false;
     grow_section_describe(plan, section, out->construction_text, sizeof(out->construction_text));
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART) {
-            out->has_part = true;
-            out->part = constraint->params.piece_part.part;
-            memcpy(out->id, constraint->params.piece_part.id, sizeof(out->id));
-            return;
-        }
+    if (description->has_role && description->role >= SECTION_ROLE_INTRO && description->role <= SECTION_ROLE_ENDING) {
+        out->has_part = true;
+        out->part = (int)(description->role - SECTION_ROLE_INTRO);
+        memcpy(out->id, description->id, sizeof(out->id));
     }
 }
 
@@ -436,14 +419,11 @@ static void hear_section(ComposerHearing *hearing, const PiecePlan *plan, NodeId
     out->requested_form = -1;
     out->requested_beginning = -1;
     out->requested_ending = -1;
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE) {
-            out->requested_form = form_of(constraint->params.archetype);
-        } else if (constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
-            out->requested_beginning = grow_phrase_beginning(constraint->params.theme_pairing.beginning);
-            out->requested_ending = grow_phrase_ending(constraint->params.theme_pairing.ending);
-        }
+    const SectionDescription *description = plan_section_or_empty(plan, section);
+    if (description->has_pairing) {
+        out->requested_form = form_of((PlanArchetype)grow_pairing_archetype(&description->pairing));
+        out->requested_beginning = grow_phrase_beginning(description->pairing.beginning);
+        out->requested_ending = grow_phrase_ending(description->pairing.ending);
     }
     out->heard_result = form_hear_in(hearing, plan, span, &out->heard);
     if (out->heard_result == FORM_HEAR_OK && out->heard.count > 0) {
@@ -460,15 +440,9 @@ static void hear_section(ComposerHearing *hearing, const PiecePlan *plan, NodeId
     }
 }
 
-/* The section a theme section returns, if it has a RETURN constraint. */
+/* The section a theme section returns, if it returns one. */
 static NodeId returned_section(const PiecePlan *plan, NodeId section) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            return constraint->params.section_return.section;
-        }
-    }
-    return PLAN_NODE_NONE;
+    return plan_section_named(plan, plan_section_or_empty(plan, section)->returns);
 }
 
 /* Hears the returns the plan asks for. A return that cannot be heard counts as not heard. */
@@ -521,7 +495,7 @@ static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *
         SectionFunction function;
         const bool operator_part = plan_section_function_of(plan, themes[t], &function) &&
                                    (function.function == SECTION_FUNCTION_RETRANSITION || function.function == SECTION_FUNCTION_CODA);
-        if (!heard->in_scope || operator_part || plan_node_has_constraint(plan, themes[t], PLAN_CONSTRAINT_LIQUIDATION)) {
+        if (!heard->in_scope || operator_part || plan_section_has_role(plan, themes[t], SECTION_ROLE_LIQUIDATION)) {
             /* A liquidation (R-494), a retransition or a coda (R-503) is no theme shape: nothing to hear it as, and it adds nothing to the score. */
             continue;
         }
@@ -765,16 +739,13 @@ static bool returns_pending(const PiecePlan *plan, const NodeId *themes, size_t 
     return false;
 }
 
-/* The FIGURE constraint of a section, when it has one. */
+/* The figure of a section, when it has one. */
 static bool figure_of(const PiecePlan *plan, NodeId section, SectionFigure *out) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_FIGURE) {
-            *out = constraint->params.figure;
-            return true;
-        }
+    const SectionDescription *description = plan_section_or_empty(plan, section);
+    if (description->has_figure) {
+        *out = description->figure;
     }
-    return false;
+    return description->has_figure;
 }
 
 /* The theme sections to be returned with a reharmonization (a REHARMONIZE or a VARIED return, or a FIGURATE one whose figure sits over a reharmonized copy). */
@@ -922,7 +893,7 @@ static PieceResult run_seam(Run *run) {
     }
     size_t held_count = 0;
     for (size_t t = 0; t < run->theme_count; t++) {
-        if (plan_node_has_constraint(plan, run->themes[t], PLAN_CONSTRAINT_HOLD)) {
+        if (plan_section_or_empty(plan, run->themes[t])->leads_in) {
             held[held_count++] = run->themes[t];
         }
     }
@@ -950,7 +921,7 @@ static PieceResult run_seam(Run *run) {
         /* A held section that asks for a connective gets it once its melody is written, before the texture reads it. */
         if (result == PIECE_OK && STAGES[s] == COMPOSE_STAGE_MELODY) {
             for (size_t i = 0; result == PIECE_OK && i < released; i++) {
-                if (plan_node_has_constraint(plan, held[i], PLAN_CONSTRAINT_CONNECTIVE)) {
+                if (plan_section_or_empty(plan, held[i])->connective != SECTION_CONNECTIVE_NONE) {
                     result = piece_connective_write(plan, held[i]);
                 }
             }

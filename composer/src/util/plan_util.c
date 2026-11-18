@@ -1,5 +1,7 @@
 #include "util/plan_util.h"
 
+#include <string.h>
+
 #include <model/identity/entity_id.h>
 #include <model/time/meter_arithmetic.h>
 #include <model/time/meter_map.h>
@@ -139,10 +141,58 @@ bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) {
 }
 
 bool plan_section_function_of(const PiecePlan *plan, NodeId node, SectionFunction *out) {
+    const SectionDescription *section = plan_node_section(plan, node);
+    if (!section || !section->has_function) {
+        return false;
+    }
+    *out = section->function;
+    return true;
+}
+
+const SectionDescription *plan_section_or_empty(const PiecePlan *plan, NodeId node) {
+    static const SectionDescription EMPTY;
+    const SectionDescription *section = plan_node_section(plan, node);
+    return section ? section : &EMPTY;
+}
+
+bool plan_section_has_role(const PiecePlan *plan, NodeId node, SectionRole role) {
+    const SectionDescription *section = plan_node_section(plan, node);
+    return section && section->has_role && section->role == role;
+}
+
+bool plan_section_part_of(const PiecePlan *plan, NodeId node, int *part) {
+    const SectionDescription *section = plan_node_section(plan, node);
+    if (!section || !section->has_role || section->role < SECTION_ROLE_INTRO || section->role > SECTION_ROLE_ENDING) {
+        return false;
+    }
+    if (part) {
+        *part = (int)(section->role - SECTION_ROLE_INTRO);
+    }
+    return true;
+}
+
+NodeId plan_section_named(const PiecePlan *plan, const char *name) {
+    for (NodeId id = 1; name && id <= plan_node_count(plan); id++) {
+        const char *node_name = plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION ? plan_node_name(plan, id) : NULL;
+        if (node_name && strcmp(node_name, name) == 0) {
+            return id;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+bool plan_node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out) {
+    const SectionDescription *section = plan_node_section(plan, node);
+    if (section) {
+        if (section->has_cadence) {
+            *out = section->cadence;
+        }
+        return section->has_cadence;
+    }
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
-        if (constraint->kind == PLAN_CONSTRAINT_SECTION_FUNCTION) {
-            *out = constraint->params.section_function;
+        if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
+            *out = constraint->params.cadence;
             return true;
         }
     }

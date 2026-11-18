@@ -220,9 +220,9 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             material = child;
-        } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+        } else if (plan_section_has_role(plan, child, SECTION_ROLE_SEAM)) {
             continue; /* the seam is not a section of the piece */
         } else if (count < FORM_SPEC_MAX_SECTIONS) {
             sections[count++] = child;
@@ -391,9 +391,9 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
     Rational piece_end = {0, 1};
     for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             piece_end = plan_node_span(plan, child).start;
-        } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+        } else if (plan_section_has_role(plan, child, SECTION_ROLE_SEAM)) {
             continue;
         } else if (section_count < FORM_SPEC_MAX_SECTIONS) {
             sections[section_count++] = child;

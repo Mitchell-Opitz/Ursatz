@@ -9,6 +9,7 @@
 #include "melody/melody_internal.h"
 #include "piece/form_return_internal.h"
 #include "util/util.h"
+#include "util/plan_util.h"
 #include <ursatz_composer/constraint.h>
 
 /* The most key spans a section is read across: a section holds at most two keys, with a few to spare. */
@@ -369,14 +370,17 @@ void return_payload_destroy(void *payload) {
 /* ------------------------------------------------------------- the target */
 
 static bool find_return(const PiecePlan *plan, NodeId section, PlanReturn *out) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_RETURN) {
-            *out = constraint->params.section_return;
-            return true;
-        }
+    const SectionDescription *description = plan_section_or_empty(plan, section);
+    NodeId source = description->returns[0] != '\0' ? plan_section_named(plan, description->returns) : PLAN_NODE_NONE;
+    if (source == PLAN_NODE_NONE) {
+        return false;
     }
-    return false;
+    memset(out, 0, sizeof(*out));
+    out->section = source;
+    out->variation = description->variation;
+    out->setting = (PlanAccompanimentPattern)description->setting;
+    out->across_modes = description->mode == SECTION_MODE_HOME;
+    return true;
 }
 
 bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out) {
@@ -492,7 +496,7 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, PlanReturn *r
     }
     if (ret->section == section || !plan_has_node(plan, ret->section) ||
         plan_node_kind(plan, ret->section) != PLAN_NODE_SECTION ||
-        plan_node_has_constraint(plan, ret->section, PLAN_CONSTRAINT_MATERIAL)) {
+        plan_section_has_role(plan, ret->section, SECTION_ROLE_MATERIAL)) {
         return false;
     }
     PlanSpan from = plan_node_span(plan, ret->section);
@@ -537,8 +541,7 @@ bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, S
     PlanReturn ret;
     if (!plan_has_node(plan, section) || plan_node_kind(plan, section) != PLAN_NODE_SECTION ||
         plan_node_state(plan, section) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, section) != 0 ||
-        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_ARCHETYPE) ||
-        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_THEME_PAIRING) || !return_geometry(plan, section, &ret) ||
+        !plan_section_or_empty(plan, section)->has_pairing || !return_geometry(plan, section, &ret) ||
         !variation_offered(ret.variation)) {
         return false;
     }
@@ -868,10 +871,8 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     }
     payload->key = pieces[0].key;
     if (variation == SECTION_RETURN_FIGURATE) {
-        for (size_t i = 0; i < plan_node_constraint_count(plan, target); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, target, i);
-            payload->reharmonize = payload->reharmonize || (constraint->kind == PLAN_CONSTRAINT_FIGURE && constraint->params.figure.reharmonize);
-        }
+        const SectionDescription *described = plan_section_or_empty(plan, target);
+        payload->reharmonize = payload->reharmonize || (described->has_figure && described->figure.reharmonize);
         payload->reharmonize = payload->reharmonize || payload->mode_change;
     }
     if (!return_copy_read(plan, source, &payload->source) || !return_copy_clone(&payload->source, &payload->result) ||

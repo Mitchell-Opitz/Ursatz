@@ -239,14 +239,11 @@ bool form_figure_skeleton(const PiecePlan *plan, NodeId section, FormSkeleton *o
 /* ------------------------------------------------------------- the figure */
 
 bool form_figure_find(const PiecePlan *plan, NodeId section, SectionFigure *out) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_FIGURE) {
-            *out = constraint->params.figure;
-            return true;
-        }
+    const SectionDescription *described = plan_section_or_empty(plan, section);
+    if (described->has_figure) {
+        *out = described->figure;
     }
-    return false;
+    return described->has_figure;
 }
 
 /* The notes a figure has per cell: the cell over the note length; 0 when it is not a whole number from 2 to 8. */

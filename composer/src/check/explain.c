@@ -14,6 +14,7 @@
 #include "check/shaping.h"
 #include "plan/plan_json_internal.h"
 #include "style/style_internal.h"
+#include "util/plan_util.h"
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner-voice"};
 static const char *const OUTCOME_NAMES[] = {"applied", "no-operator", "all-rejected"};
@@ -125,13 +126,7 @@ static NodeId owner_of(const PiecePlan *plan, FillTarget target) {
 }
 
 static void letter_of(const PiecePlan *plan, NodeId section, char *out) {
-    out[0] = '\0';
-    for (size_t i = 0; section != PLAN_NODE_NONE && i < plan_node_constraint_count(plan, section); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_SECTION_LETTER) {
-            snprintf(out, PLAN_SECTION_LETTER_MAX, "%s", constraint->params.letter);
-        }
-    }
+    snprintf(out, PLAN_SECTION_LETTER_MAX, "%s", plan_section_or_empty(plan, section)->letter);
 }
 
 /* ------------------------------------------------------------- building */

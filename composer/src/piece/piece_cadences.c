@@ -17,11 +17,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *sections) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        bool material = false;
-        for (size_t c = 0; c < plan_node_constraint_count(plan, child); c++) {
-            PlanConstraintKind kind = plan_node_constraint_at(plan, child, c)->kind;
-            material = material || kind == PLAN_CONSTRAINT_MATERIAL || kind == PLAN_CONSTRAINT_SEAM;
-        }
+        bool material = plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL) || plan_section_has_role(plan, child, SECTION_ROLE_SEAM);
         if (!material && count < FORM_SPEC_MAX_SECTIONS) {
             sections[count++] = child;
         }
@@ -56,12 +52,13 @@ static const FormSpecSize *size_of_plan(const FormSpec *form, const PiecePlan *p
 
 /* The cadences of the section in order: the one it ends in, then an antecedent's weak one. Returns how many. */
 static size_t section_cadences(const PiecePlan *plan, NodeId section, CadenceType *out) {
+    const SectionDescription *described = plan_section_or_empty(plan, section);
     size_t count = 0;
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section) && count < MAX_CADENCES; i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
-        if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
-            out[count++] = constraint->params.cadence;
-        }
+    if (described->has_cadence) {
+        out[count++] = described->cadence;
+    }
+    if (described->has_first_cadence && count < MAX_CADENCES) {
+        out[count++] = described->first_cadence;
     }
     return count;
 }

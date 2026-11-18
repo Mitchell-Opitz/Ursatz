@@ -400,12 +400,10 @@ static NodeId find_part_section(const PiecePlan *plan, const PieceSection *secti
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
             continue;
         }
-        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART && constraint->params.piece_part.part == (int)section->part &&
-                strcmp(constraint->params.piece_part.id, section->id) == 0) {
-                return id;
-            }
+        const SectionDescription *described = plan_node_section(plan, id);
+        if (described->has_role && described->role >= SECTION_ROLE_INTRO && described->role <= SECTION_ROLE_ENDING &&
+            (int)(described->role - SECTION_ROLE_INTRO) == (int)section->part && strcmp(described->id, section->id) == 0) {
+            return id;
         }
     }
     return PLAN_NODE_NONE;

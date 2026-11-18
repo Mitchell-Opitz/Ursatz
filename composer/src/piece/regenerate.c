@@ -65,14 +65,13 @@ static void scope_add(Scope *scope, FillTarget target) {
 
 /* A section the theme operators grow: an archetype and a theme pairing. */
 static bool is_theme_section(const PiecePlan *plan, NodeId id) {
-    return plan_node_kind(plan, id) == PLAN_NODE_SECTION && plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_ARCHETYPE) &&
-           plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_THEME_PAIRING);
+    return plan_node_kind(plan, id) == PLAN_NODE_SECTION && plan_section_or_empty(plan, id)->has_pairing;
 }
 
 /* Whether the node is the material section or under it. */
 static bool in_material(const PiecePlan *plan, NodeId id) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
-        if (plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_section_has_role(plan, id, SECTION_ROLE_MATERIAL)) {
             return true;
         }
     }
@@ -150,13 +149,11 @@ static void add_returners(Scope *scope, NodeId section) {
         return;
     }
     scope->returns_added[section] = true;
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        for (size_t i = 0; plan_has_node(plan, id) && i < plan_node_constraint_count(plan, id); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            if (constraint->kind == PLAN_CONSTRAINT_RETURN && constraint->params.section_return.section == section) {
-                FillTarget target = {FILL_TARGET_NODE, id};
-                scope_add(scope, target);
-            }
+    const char *name = plan_node_name(plan, section);
+    for (NodeId id = 1; name && name[0] != '\0' && id <= plan_node_count(plan); id++) {
+        if (plan_has_node(plan, id) && strcmp(plan_section_or_empty(plan, id)->returns, name) == 0) {
+            FillTarget target = {FILL_TARGET_NODE, id};
+            scope_add(scope, target);
         }
     }
 }
@@ -188,7 +185,7 @@ static bool harmony_rebuildable(const PiecePlan *plan, LaneSpanId id) {
 /* The section a section that returns another is reopened as: a return is made from its source. */
 static NodeId return_section_of(const PiecePlan *plan, FillTarget target) {
     NodeId section = plan_section_of(plan, owner_node(plan, target));
-    if (section != PLAN_NODE_NONE && plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_RETURN) &&
+    if (section != PLAN_NODE_NONE && plan_section_or_empty(plan, section)->returns[0] != '\0' &&
         plan_node_state(plan, section) != PLAN_STATE_GIVEN) {
         return section;
     }

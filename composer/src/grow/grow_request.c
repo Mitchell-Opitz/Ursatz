@@ -989,18 +989,11 @@ bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter
 
 NodeId grow_find_theme(const PiecePlan *plan, bool open_only) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        bool archetype = false;
-        bool pairing = false;
         if (plan_node_kind(plan, id) != PLAN_NODE_SECTION ||
             (open_only && plan_node_state(plan, id) != PLAN_STATE_CONSTRAINED)) {
             continue;
         }
-        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-            PlanConstraintKind kind = plan_node_constraint_at(plan, id, i)->kind;
-            archetype = archetype || kind == PLAN_CONSTRAINT_ARCHETYPE;
-            pairing = pairing || kind == PLAN_CONSTRAINT_THEME_PAIRING;
-        }
-        if (archetype && pairing) {
+        if (plan_node_section(plan, id)->has_pairing) {
             return id;
         }
     }

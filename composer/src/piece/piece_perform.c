@@ -28,7 +28,7 @@ static size_t composed_sections(const PiecePlan *plan, NodeId *out, size_t capac
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId child = plan_node_child_at(plan, root, i);
-        if (plan_node_kind(plan, child) == PLAN_NODE_SECTION && !plan_node_has_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_kind(plan, child) == PLAN_NODE_SECTION && !plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL)) {
             if (count < capacity) {
                 out[count] = child;
             }

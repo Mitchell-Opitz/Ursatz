@@ -70,17 +70,12 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
 /* ----------------------------------------------------------------- material */
 
 static bool section_is_material(const PiecePlan *plan, NodeId id) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-        if (plan_node_constraint_at(plan, id, i)->kind == PLAN_CONSTRAINT_MATERIAL) {
-            return true;
-        }
-    }
-    return false;
+    return plan_section_has_role(plan, id, SECTION_ROLE_MATERIAL);
 }
 
 /* Whether the section is the seam: the copy of the body's first bar after the loop's end, which is not part of the piece. */
 static bool section_is_seam(const PiecePlan *plan, NodeId id) {
-    return plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM);
+    return plan_section_has_role(plan, id, SECTION_ROLE_SEAM);
 }
 
 /* True for a node that is, or sits under, the seam section. */
@@ -112,13 +107,8 @@ static bool lane_sounds_in(const PiecePlan *plan, NodeId id, PlanLaneKind lane) 
         if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
             continue;
         }
-        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            if (constraint->kind == PLAN_CONSTRAINT_LAYERS) {
-                return (constraint->params.layers.lanes & PLAN_LAYER_BIT(lane)) != 0;
-            }
-        }
-        return true;
+        const SectionDescription *section = plan_node_section(plan, id);
+        return section->layers == 0 || (section->layers & PLAN_LAYER_BIT(lane)) != 0;
     }
     return true;
 }
@@ -725,13 +715,8 @@ PlanRenderResult render_notes(const RenderNote *notes, size_t count, const Analy
 /* ----------------------------------------------------------------- sections */
 
 static const char *section_label(const PiecePlan *plan, NodeId id) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-        if (constraint->kind == PLAN_CONSTRAINT_SECTION_LETTER && constraint->params.letter[0]) {
-            return constraint->params.letter;
-        }
-    }
-    return plan_node_name(plan, id);
+    const SectionDescription *section = plan_node_section(plan, id);
+    return section && section->letter[0] ? section->letter : plan_node_name(plan, id);
 }
 
 /* The sections that are not material and start inside the range (all of them without one), earliest first. */
