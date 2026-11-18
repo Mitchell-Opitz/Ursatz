@@ -66,11 +66,11 @@ static char *render(const SimilarResults *results) {
     size_t length = (size_t)snprintf(text, capacity, "%zu pieces searched, %zu matches\n", results->pieces_searched, results->count);
     for (size_t i = 0; i < results->count; i++) {
         const SimilarMatch *m = &results->matches[i];
-        length += (size_t)snprintf(text + length, capacity - length, "%lu/%lu %s m.%d b.%g - m.%d b.%g", m->score.similarity.num,
+        length += (size_t)snprintf(text + length, capacity - length, "%lld/%lld %s m.%d b.%g - m.%d b.%g", m->score.similarity.num,
                                    m->score.similarity.den, m->piece, m->start_measure, m->start_beat, m->end_measure,
                                    m->end_beat);
         for (size_t d = 0; d < m->score.dimension_score_count; d++) {
-            length += (size_t)snprintf(text + length, capacity - length, " %s %lu/%lu",
+            length += (size_t)snprintf(text + length, capacity - length, " %s %lld/%lld",
                                        similarity_dimension_name(m->score.dimension_scores[d].dimension),
                                        m->score.dimension_scores[d].score.num, m->score.dimension_scores[d].score.den);
         }
@@ -135,7 +135,7 @@ static void test_motive(void) {
         const SimilarMatch *first = &results.matches[0];
         CHECKF(strcmp(first->piece, motive_piece) == 0 && first->start_measure == 1 && first->start_beat == 1.0,
                "first match is %s m.%d b.%g", first->piece, first->start_measure, first->start_beat);
-        CHECKF(first->score.similarity.num == first->score.similarity.den, "first score %lu/%lu",
+        CHECKF(first->score.similarity.num == first->score.similarity.den, "first score %lld/%lld",
                first->score.similarity.num, first->score.similarity.den);
         CHECKF(first->note_count == 4 && first->notes[0].onset_numerator == 0 && first->notes[0].pitch == query.notes[0].pitch,
                "first match notes");
