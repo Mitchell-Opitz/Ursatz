@@ -990,7 +990,7 @@ static void test_refused_forms(const char *plan) {
     static const char *const NO_FORM[][2] = {{"form", NULL}};
     static const char *const UNKNOWN[][2] = {{"form", "\"sonata\""}};
     static const char *const VERSION_ONE[][2] = {{"schema_version", "1"}};
-    static const char *const SECTIONS[][2] = {{"sections", "[]"}};
+    static const char *const SECTIONS[][2] = {{"sections", "[{\"name\":\"Z\"}]"}};
     static const char *const VOICING[][2] = {{"voicing", "\"satb\""}};
     static const char *const BARS[][2] = {{"bars", "20"}};
     static const char *const COUNT[][2] = {{"count", "9"}};
@@ -999,7 +999,7 @@ static void test_refused_forms(const char *plan) {
     expect_form_refusal("rounded-binary.json", NULL, NO_FORM, 1, "/request/form", "the request needs \"form\"");
     expect_form_refusal("rounded-binary.json", NULL, UNKNOWN, 1, "/request/form", "unknown form 'sonata'");
     expect_form_refusal("rounded-binary.json", NULL, VERSION_ONE, 1, "/request/form", "schema_version 1 is the game loop");
-    expect_form_refusal("rounded-binary.json", NULL, SECTIONS, 1, "/request/sections", "takes its sections from its form");
+    expect_form_refusal("rounded-binary.json", NULL, SECTIONS, 1, "/request/sections/0/name", "no section 'Z' in the rounded-binary form");
     expect_form_refusal("rounded-binary.json", NULL, VOICING, 1, "/request/voicing", "no voicing");
     expect_form_refusal("rounded-binary.json", NULL, BARS, 1, "/request/bars", "has no size of 20 bars; it has 16, 24 bars");
     expect_form_refusal("rounded-binary.json", NULL, COUNT, 1, "/request/count", "has no size of count 9");
