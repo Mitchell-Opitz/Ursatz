@@ -380,6 +380,32 @@ static void test_piece(const char *project, const char *motif) {
   free(piece);
 }
 
+/* A stored progression fill is the section's harmony and an empty fill (R-610); a section's own harmony is kept. */
+static void test_progression_fill(void) {
+  static const char *const text =
+      "{\"uses\":[],\"piece\":{\"structure\":{\"sections\":["
+      "{\"id\":\"s0\",\"part\":\"body\",\"beats\":16,\"fill\":{\"kind\":\"progression\",\"numerals\":\"i iv V i\",\"cells\":2}},"
+      "{\"id\":\"s1\",\"part\":\"body\",\"beats\":16,\"harmony\":{\"schema\":\"romanesca\"},"
+      "\"fill\":{\"kind\":\"progression\",\"numerals\":\"I V\",\"cells\":1}},"
+      "{\"id\":\"s2\",\"part\":\"body\",\"beats\":16,\"fill\":{\"kind\":\"empty\"}}]}}}";
+  cJSON *body = cJSON_Parse(text);
+  ursatz_gui_material_body_migrate(body);
+  const cJSON *sections = member_of(member_of(member_of(body, "piece"), "structure"), "sections");
+  const cJSON *first = cJSON_GetArrayItem(sections, 0);
+  const cJSON *second = cJSON_GetArrayItem(sections, 1);
+  const cJSON *third = cJSON_GetArrayItem(sections, 2);
+  check_quiet(strcmp(str(member_of(first, "harmony"), "progression"), "i iv V i") == 0 &&
+                  member_of(member_of(first, "harmony"), "cells") && member_of(member_of(first, "harmony"), "cells")->valuedouble == 2 &&
+                  strcmp(str(member_of(first, "fill"), "kind"), "empty") == 0,
+              "a progression fill is read as the section's harmony and an empty fill");
+  check_quiet(strcmp(str(member_of(second, "harmony"), "schema"), "romanesca") == 0 && !member_of(member_of(second, "harmony"), "progression") &&
+                  strcmp(str(member_of(second, "fill"), "kind"), "empty") == 0,
+              "a section's own harmony is kept and the fill's numerals are dropped");
+  check_quiet(!member_of(third, "harmony") && strcmp(str(member_of(third, "fill"), "kind"), "empty") == 0,
+              "a section with no progression fill is left as it is");
+  cJSON_Delete(body);
+}
+
 /* Removes the store: the items hold version folders the service deletes only with the item. */
 static void remove_store(void) {
   ursatz_gui_material_service_shutdown();
@@ -419,6 +445,7 @@ int main(void) {
   if (motif) {
     test_theme(project_id, motif);
     test_piece(project_id, motif);
+    test_progression_fill();
   }
 
   remove_store();

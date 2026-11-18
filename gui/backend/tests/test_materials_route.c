@@ -2213,6 +2213,40 @@ static void test_validation(void) {
   check(status == 400 && strcmp(string_of(answer, "path"), "/key") == 0, "validate refuses that key at /key");
   cJSON_Delete(answer);
 
+  /* A section's region and harmony (R-610): kept in the request, and refused when they are not the shapes the route reads. */
+  static const struct {
+    const char *what;
+    const char *members;
+    int status;
+    bool saves;
+  } placed[] = {
+      {"a home region and a progression harmony", "\"region\":\"home\",\"harmony\":{\"progression\":\"I V\",\"cells\":1},", 200, true},
+      {"a region by key", "\"region\":{\"tonic\":\"G\",\"material\":\"omt.material.major\"},", 200, true},
+      {"a region by relation", "\"region\":{\"relation\":\"omt.relation.dominant\",\"anchor\":\"home\"},", 200, true},
+      {"a schema harmony", "\"harmony\":{\"schema\":\"romanesca\"},", 200, true},
+      {"a chords harmony", "\"harmony\":{\"chords\":[{\"bar\":1,\"text\":\"I V@2\"}]},", 200, true},
+      {"a region that is a number", "\"region\":5,", 400, false},
+      {"a region with half of a pair", "\"region\":{\"relation\":\"omt.relation.dominant\"},", 200, false},
+      {"a harmony with two members", "\"harmony\":{\"schema\":\"romanesca\",\"cells\":1},", 400, false},
+      {"a harmony with cells of 0", "\"harmony\":{\"progression\":\"i V\",\"cells\":0},", 400, false},
+      {"a chord at bar 0", "\"harmony\":{\"chords\":[{\"bar\":0,\"text\":\"I\"}]},", 400, false},
+  };
+  for (size_t i = 0; i < sizeof(placed) / sizeof(placed[0]); i++) {
+    snprintf(body, sizeof(body),
+             "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":["
+             "{\"id\":\"s0\",\"part\":\"body\",\"letter\":\"A\",\"beats\":16,\"pickup\":\"0\",\"cadence\":null,%s\"fill\":{\"kind\":\"empty\"}}]}}}",
+             placed[i].members);
+    snprintf(request, sizeof(request), "{\"type\":\"piece\",\"body\":%s}", body);
+    answer = test_http_json(PORT, "POST", "/api/materials/items/validate", request, &status);
+    const cJSON *asked = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "request"), "sections"), 0);
+    bool kept = placed[i].status != 200 || cJSON_GetObjectItemCaseSensitive(asked, "region") || cJSON_GetObjectItemCaseSensitive(asked, "harmony");
+    check(status == placed[i].status && kept, placed[i].what);
+    cJSON_Delete(answer);
+    char *stored = create_item("piece", "Placed", project, body);
+    check((stored != NULL) == placed[i].saves, placed[i].what);
+    free(stored);
+  }
+
   /* The request itself. */
   answer = test_http_json(PORT, "POST", "/api/materials/items/validate", "{\"type\":\"chord\",\"body\":{}}", &status);
   check(status == 400 && !ok_true(answer), "a type that is not motif, theme or piece is refused");
