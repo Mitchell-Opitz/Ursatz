@@ -2,7 +2,7 @@
 
 [Docs index](README.md): the Ursatz docs by topic.
 
-Ursatz is organized into five groups under `library/`: `model/` (value types), `theory/` (rule libraries and vocabularies), `analysis/` (analyses and framework adapters), `chain/` (the analysis chain) and `io/` (import and export), each one CMake target, with one folder per area inside and its tests under `<group>/tests/<area>/`. This page explains the library; the groups and their rules are in [layers-and-dependency-rules.md](layers-and-dependency-rules.md). Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
+Ursatz is organized into six groups under `library/`: `model/` (value types), `theory/` (rule libraries and vocabularies), `realization/` (lines, performer parts, scoring, movements and works), `analysis/` (analyses and framework adapters), `chain/` (the analysis chain) and `io/` (import and export), each one CMake target, with one folder per area inside and its tests under `<group>/tests/<area>/`. This page explains the library; the groups and their rules are in [layers-and-dependency-rules.md](layers-and-dependency-rules.md). Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
 
 ## Purpose
 
@@ -21,6 +21,7 @@ Ursatz depends on no other part of the repository. The Analyzer ([architecture](
 |---|---|---|
 | `model/<area>/` | The value types, target `ursatz_model` | [Groups](layers-and-dependency-rules.md#groups) and [module-status.md](module-status.md) |
 | `theory/<area>/` | Rule libraries, vocabularies and style models, target `ursatz_theory` | [theory/README.md](../theory/README.md) |
+| `realization/` | Lines, performer parts and scoring assignments, on model and theory, target `ursatz_realization` | [realization](modules/realization.md) |
 | `analysis/<area>/` | Analyses and the 11 frameworks' adapters, target `ursatz_analysis` | [analysis/README.md](../analysis/README.md) |
 | `chain/` | The analysis chain, target `ursatz_chain` | [chain/README.md](../chain/README.md) |
 | `io/` | MIDI and MusicXML import and export, target `ursatz_io` | [io](modules/io.md) |
@@ -56,6 +57,7 @@ The headers the apps include are the staged public headers (`build/library/publi
 | theory/meter | `beat_grid.h`, `borrowed_rules.h` and 8 more | framework entry and rules | Meter, beat grid, syncopation, hemiola and hypermeter rules. | [README](../theory/meter/README.md), [metric position](modules/standard-meter-metric-position.md) |
 | theory/galant | `galant_degree.h`, `galant_exemplar.h` and 11 more | framework entry and rules | Galant schema prototypes, rule of the octave and sequences. | [README](../theory/galant/README.md), [sequences](../theory/galant/sequences.md) |
 | theory/markings | `dynamics_rules.h`, `framework.h` and 1 more | framework entry and rules | Dynamics and tempo rules. | [README](../theory/markings/README.md) |
+| realization | `realization.h`, `derivation.h`, `line.h`, `performer_part.h`, `scoring.h` | `Line`, `PerformerPart`, `ScoringAssignment`, `realization_score` | Music held as lines that belong to no instrument and performer parts that do, with note ids and derivations; scoring assignments place lines into parts. Not staged until a file outside the group includes a header. | [realization](modules/realization.md) |
 | analysis/notes | `analysis_key.h`, `analysis_note.h` and 9 more | `AnalysisNote`, `CadenceType`, `sonority_segmentation` | The neutral analysis inputs and the segmentation. | [semantics](modules/semantics.md) |
 | analysis/motive | `motif_window_matching.h`, `motive_link.h` and 4 more | `motive_sketch`, `motif_window_matching` | Motive sketches, relations, links and variant recognition. | [analysis](modules/analysis.md), [motive link](modules/motive-link.md) |
 | analysis/voices | `outer_voice.h`, `voice_separation.h` | `outer_voice_extract`, `voice_separate` | Outer voices and voice separation. | [analysis voices](modules/analysis-voices.md) |
