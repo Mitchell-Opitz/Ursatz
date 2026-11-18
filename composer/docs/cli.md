@@ -44,7 +44,7 @@ ursatz-composer recognize theme.txt variant.txt --meter 4/4 --key "D minor"
 `recognize` names the chain of registry operations that turns one motive into another ([cli-recognize.md](cli-recognize.md)).
 
 ```sh
-ursatz-composer random-motive --mode minor --meter 3/4 --count 4 --seed 7
+ursatz-composer random-motive --material minor --meter 3/4 --count 4 --seed 7
 ```
 
 `random-motive` makes random motives from a mode and a meter ([cli-random-motive.md](cli-random-motive.md)).
@@ -74,7 +74,7 @@ ursatz-composer piece request.json --seed 7 --check --out loop.json --ending-out
 `piece` composes a looping game track from a request, as a loop and an ending ([cli-piece.md](cli-piece.md), [piece-request.md](piece-request.md)).
 
 ```sh
-ursatz-composer plan --form ternary --key A --mode minor --meter 3/4 --seed 4 --out piece.json
+ursatz-composer plan --form ternary --key A --material minor --meter 3/4 --seed 4 --out piece.json
 ursatz-composer fill piece.json --seed 7 --midi piece.mid --musicxml piece.xml
 ```
 

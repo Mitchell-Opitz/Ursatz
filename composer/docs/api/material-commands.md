@@ -32,7 +32,7 @@ A chord progression for one phrase, with a bass line ([cli-progression.md](../cl
 `json`: `{"key", "meter", "bars", "cadence", "seed", "heard", "chords": [{"bar", "beat", "chord", "function", "bass"}]}`; with
 `suggest`, `"alternatives": [{"heard", "chords"}]` in place of the last two; `plan` and `musicxml` in each entry when
 asked, and `notices` (strings) when fewer alternatives than asked for were found. `list_schemas`: `{"schemas": [{"name",
-"function", "modes"}], "sequences": [name]}`. Progress per seed tried (`"progression"`) and for each fill stage; a cancel
+"function", "materials"}], "sequences": [name]}`. Progress per seed tried (`"progression"`) and for each fill stage; a cancel
 is `COMPOSER_ERR_CANCELLED`. A phrase too short for the cadence, a schema that cannot be written in the key and a request no
 seed completes are `COMPOSER_ERR_UNSATISFIABLE`. Schemas: `progression.request.schema.json`,
 `progression.response.schema.json`.

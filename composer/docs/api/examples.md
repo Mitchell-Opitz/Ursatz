@@ -28,7 +28,7 @@ status:  COMPOSER_OK    plan_json filled with the plan file text, nothing render
 ```
 request: {"input": {"format": "notes", "text": "D4:q E4:q F4:q G4:q"}, "meter": "4/4", "key": "D major"}
 status:  COMPOSER_OK
-json:    {"motive": {"meter": {"beats_per_bar": 4, "beat_unit": 4, …}, "key": {"tonic_pitch_class": 2, "mode": "major"},
+json:    {"motive": {"meter": {"beats_per_bar": 4, "beat_unit": 4, …}, "key": {"tonic_pitch_class": 2, "material": "omt.material.major"},
           "notes": [{"midi_pitch": 62, "offset": {"num": 0, "den": 1}, "duration": {"num": 1, "den": 4}}, …]},
           "analysis": {"notes_text": "D4:q E4:q F4:q G4:q", "degrees_text": "1:q 2:q #2:q 4:q", …}}
 
@@ -128,9 +128,9 @@ json:    {"key": "D major", "meter": "4/4", "bars": 8, "into": "sentence", "pair
 
 ```
 composer_api_vocabulary(&context, &out)
-json: {"meters": […], "modes": […], "keys": […], …, "limits": {"motive_notes": 64, "motive_chords": 8, "motive_features": 8,
+json: {"meters": […], "materials": […], "piece_materials": […], "keys": […], …, "limits": {"motive_notes": 64, "motive_chords": 8, "motive_features": 8,
        "variant_chain": 4, "variant_functions": 4, "random_motive_count": 16, "tempo_min": 20, …}}
 
-composer_api_validate(&context, "random_motive", "{\"mode\": \"random\", \"meter\": \"random\", \"seed\": 5}", &out)
-json: {"request": {"seed": 5, "mode": "major", "meter": "4/4"}}
+composer_api_validate(&context, "random_motive", "{\"material\": \"random\", \"meter\": \"random\", \"seed\": 5}", &out)
+json: {"request": {"seed": 5, "material": "omt.material.major", "meter": "4/4"}}
 ```

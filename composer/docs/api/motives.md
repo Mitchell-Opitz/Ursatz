@@ -152,12 +152,12 @@ true and the motive's `harmony` and `features` are set; a rhythm or contour moti
 strategy: a rhythm drawn note by note over a frame of chord tones of I, with no harmony or features of its own (the harmony
 and segments in the analysis are proposed). The vocabulary serves the names as `random_motive_strategies`.
 
-**Random mode and meter (R-269).** `"random"` is drawn from the seed by the rule the GUI used before the Composer drew, so a
-GUI seed draws what it drew: `m = ((seed + 1) * 2654435761) mod 2^32`; the mode is major when `(m >> 8)` is even and
-minor when it is odd; the meter is `"4/4"`, `"3/4"`, `"2/4"` or `"6/8"` for `(m >> 16) mod 4` of 0, 1, 2 and 3. Seed 0 draws
+**Random material and meter (R-269).** `"random"` is drawn from the seed by the rule the GUI used before the Composer drew, so a
+GUI seed draws what it drew: `m = ((seed + 1) * 2654435761) mod 2^32`; the material is major (`omt.material.major`) when `(m >> 8)` is even and
+minor (`omt.material.natural-minor`) when it is odd; the meter is `"4/4"`, `"3/4"`, `"2/4"` or `"6/8"` for `(m >> 16) mod 4` of 0, 1, 2 and 3. Seed 0 draws
 minor 6/8, seed 1 and seed 2 minor 2/4, and seed 4294967295 (where `seed + 1` wraps to 0) major 4/4. The response says what
 was drawn.
 
-`json`: `{"seed", "motives": [<the motive entry's document>]}` and `"drawn": {"mode", "meter"}`, with only the members that
+`json`: `{"seed", "motives": [<the motive entry's document>]}` and `"drawn": {"material", "meter"}` (the id of the drawn material; API 2.0 named it `mode` before), with only the members that
 were drawn, when something was, and `"preferences"` (the full document the settings made) when the request had the member. The same request and seed give the same motives. Schemas:
 `random_motive.request.schema.json`, `random_motive.response.schema.json`.

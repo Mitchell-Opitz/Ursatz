@@ -59,7 +59,7 @@ document above) and an `analysis` member (and, from `motive --render-key`, `--mi
 | `rhythm_text`, `contour_text` | Only for the form: the rhythm list (`x:q x:e`) of a `rhythm` motive, the contour list (`0 2 1 3`) of a `contour` motive. |
 | `note_count` | The number of notes. |
 | `length`, `bars` | The motive's length in whole notes, and as a number of bars of its meter. Times. |
-| `key` | `null` without a key. Otherwise `tonic_pitch_class`, `mode` and `source`: `given` or `inferred`. |
+| `key` | `null` without a key. Otherwise `tonic_pitch_class`, `material` (the id of the key's material, `omt.material.major` or `omt.material.natural-minor`; API 2.0 wrote `mode`, `"major"` or `"minor"`, before) and `source`: `given` or `inferred`. |
 | `intervals` | `null` for a rhythm or a contour. Otherwise one per pair of neighboring notes: `semitones` (signed) and `steps` (signed diatonic steps in the key, `null` without a key). |
 | `contour` | `null` for a rhythm. Otherwise `shape` (`single note`, `level`, `ascending`, `descending`, `arch`, `valley` or `wave`) and `directions`, one of `up`, `down` and `same` per interval. |
 | `rhythm` | `null` for a contour. Otherwise one per note: `onset`, `duration`, `bar` (the first full bar is 0, and a pickup's notes are in bar -1), `beat` (the position in the bar in beats of the beat unit, 0 is the downbeat; a time), `on_beat`, `dotted` (the duration is 3 or 7 over a power of two) and `rest_before` (a time). |
