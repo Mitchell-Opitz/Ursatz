@@ -30,7 +30,7 @@ static unsigned long mix_seed(unsigned long seed) {
 }
 
 /* Reads the members that make the options, without the style. drawn_mode and drawn_meter are set to what was drawn. */
-static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials,
+static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot *knowledge,
                                    MotiveRandomOptions *out,
                                    bool *accompaniment, bool *has_role, const char **drawn_mode, const char **drawn_meter,
                                    ComposerPreferences *preferences, bool *has_preferences, ComposerError *error) {
@@ -48,23 +48,20 @@ static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot
     out->count = count;
     out->seed = has_seed ? seed : api_default_seed();
     const char *mode_text = NULL;
+    const char *material_member = NULL;
     const char *meter_text = NULL;
     const char *key_text = NULL;
     const char *form_text = NULL;
     const char *strategy_text = NULL;
     const char *role_text = NULL;
     bool present = false;
-    bool has_mode = false;
     bool has_meter = false;
-    if (!api_member_string(request, "mode", &mode_text, &has_mode, error) ||
+    if (!api_read_material(request, NULL, true, &mode_text, &material_member, error) ||
         !api_member_string(request, "meter", &meter_text, &has_meter, error) ||
         !api_member_string(request, "key", &key_text, &present, error)) {
         return COMPOSER_ERR_REQUEST;
     }
     bool has_key = present;
-    if (!has_mode) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode is required: major or minor");
-    }
     if (!has_meter) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "meter is required, as in 4/4 or 6/8");
     }
@@ -77,12 +74,15 @@ static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot
         meter_text = RANDOM_METERS[(mixed >> 16) % 4];
         *drawn_meter = meter_text;
     }
-    if (request_equals_ignore_case(mode_text, "major")) {
-        out->material = materials->major;
-    } else if (request_equals_ignore_case(mode_text, "minor")) {
-        out->material = materials->natural_minor;
-    } else {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be major or minor, not '%s'", mode_text);
+    {
+        char member_path[32];
+        ApiMaterialKind kind;
+        snprintf(member_path, sizeof member_path, "/%s", material_member);
+        ComposerStatus resolved = api_resolve_material(knowledge, material_member, member_path, mode_text, 0, &out->material,
+                                                       &kind, error);
+        if (resolved != COMPOSER_OK) {
+            return resolved;
+        }
     }
     if (!request_parse_meter(meter_text, &out->meter)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/meter",
@@ -205,8 +205,7 @@ static cJSON *random_document(unsigned long seed, const Motive *motives, size_t 
     return document;
 }
 
-static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials,
-                                  const ComposerJob *job,
+static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot *knowledge, const ComposerJob *job,
                                   ComposerResponse *out) {
     ComposerError *error = &out->error;
     MotiveRandomOptions options;
@@ -216,7 +215,7 @@ static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot 
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, knowledge, materials, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    ComposerStatus status = read_options(request, knowledge, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     if (status != COMPOSER_OK) {
         return status;
@@ -253,8 +252,8 @@ static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot 
     return api_respond_json(out, document);
 }
 
-ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *request,
-                                   cJSON *filled, ComposerError *error) {
+ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, cJSON *filled,
+                                   ComposerError *error) {
     MotiveRandomOptions options;
     bool accompaniment = false;
     bool has_role = false;
@@ -262,7 +261,7 @@ ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const Com
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, knowledge, materials, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    ComposerStatus status = read_options(request, knowledge, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     ComposerStyle *style = NULL;
     if (status == COMPOSER_OK) {
@@ -276,8 +275,11 @@ ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const Com
     cJSON_DeleteItemFromObjectCaseSensitive(filled, "seed");
     bool ok = cJSON_AddNumberToObject(filled, "seed", (double)options.seed) != NULL;
     if (drawn_mode) {
+        /* The drawn word goes in the member the request wrote, so the filled request never holds both. */
+        const char *member = cJSON_GetObjectItemCaseSensitive(filled, "material") ? "material" : "mode";
         cJSON_DeleteItemFromObjectCaseSensitive(filled, "mode");
-        ok = ok && cJSON_AddStringToObject(filled, "mode", drawn_mode);
+        cJSON_DeleteItemFromObjectCaseSensitive(filled, "material");
+        ok = ok && cJSON_AddStringToObject(filled, member, drawn_mode);
     }
     if (drawn_meter) {
         cJSON_DeleteItemFromObjectCaseSensitive(filled, "meter");
@@ -299,7 +301,7 @@ ComposerStatus composer_api_random_motive(const ComposerContext *context, const 
     if (status != COMPOSER_OK) {
         return status;
     }
-    status = make_random(request, context->knowledge, &materials, job, out);
+    status = make_random(request, context->knowledge, job, out);
     cJSON_Delete(request);
     if (status != COMPOSER_OK) {
         ComposerError error = out->error;

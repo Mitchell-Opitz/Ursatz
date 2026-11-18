@@ -102,7 +102,7 @@ ComposerStatus composer_api_validate(const ComposerContext *context, const char 
         } else if (strcmp(kind, "piece") == 0) {
             status = api_piece_validate(context->knowledge, &materials, request, filled, error);
         } else {
-            status = api_random_validate(context->knowledge, &materials, request, filled, error);
+            status = api_random_validate(context->knowledge, request, filled, error);
         }
     }
     if (status == COMPOSER_OK && !cJSON_AddItemToObject(root, "request", filled)) {

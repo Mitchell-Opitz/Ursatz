@@ -9,6 +9,7 @@
 
 #include "api_vocabulary.h"
 #include "util/request_parse.h"
+#include "util/util.h"
 
 ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char *path, const char *format, ...) {
     if (error) {
@@ -28,6 +29,78 @@ bool api_fail_unsupported_key(ComposerError *error, const char *path, const Know
     }
     api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", message);
     return true;
+}
+
+bool api_read_material(const cJSON *object, const char *base, bool required, const char **text, const char **member,
+                       ComposerError *error) {
+    const cJSON *material = cJSON_GetObjectItemCaseSensitive(object, "material");
+    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(object, "mode");
+    bool has_material = material && !cJSON_IsNull(material);
+    bool has_mode = mode && !cJSON_IsNull(mode);
+    char path[128];
+    *text = NULL;
+    *member = has_mode && !has_material ? "mode" : "material";
+    if (has_material && has_mode) {
+        snprintf(path, sizeof path, "%s/mode", base ? base : "");
+        api_fail(error, COMPOSER_ERR_REQUEST, path, "give \"material\" or the old \"mode\", not both");
+        return false;
+    }
+    if (base) {
+        return api_request_string(object, base, *member, required, text, error);
+    }
+    bool present = false;
+    if (!api_member_string(object, *member, text, &present, error)) {
+        return false;
+    }
+    if (!present && required) {
+        snprintf(path, sizeof path, "/%s", *member);
+        api_fail(error, COMPOSER_ERR_REQUEST, path, "material is required: major or minor");
+        return false;
+    }
+    return true;
+}
+
+ComposerStatus api_resolve_material(const KnowledgeSnapshot *knowledge, const char *member, const char *path, const char *text,
+                                    unsigned allow, const PitchMaterial **material, ApiMaterialKind *kind, ComposerError *error) {
+    CommonPracticeMaterials materials;
+    char message[256];
+    *material = NULL;
+    *kind = API_MATERIAL_PICKED;
+    if (!knowledge || !common_practice_materials_resolve(knowledge, &materials, message, sizeof message)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "", "a knowledge snapshot is required");
+    }
+    if ((allow & API_MATERIAL_ALLOW_STYLE) && request_equals_ignore_case(text, "style")) {
+        *kind = API_MATERIAL_STYLE;
+        return COMPOSER_OK;
+    }
+    if ((allow & API_MATERIAL_ALLOW_RANDOM) && request_equals_ignore_case(text, "random")) {
+        *kind = API_MATERIAL_RANDOM;
+        return COMPOSER_OK;
+    }
+    bool old = strcmp(member, "mode") == 0;
+    if (old) {
+        if (request_equals_ignore_case(text, "major")) {
+            *material = materials.major;
+        } else if (request_equals_ignore_case(text, "minor")) {
+            *material = materials.natural_minor;
+        } else {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "mode must be %s, not '%s'",
+                            (allow & API_MATERIAL_ALLOW_STYLE) ? "major, minor or style" : "major or minor", text);
+        }
+        return COMPOSER_OK;
+    }
+    const PitchMaterial *named = knowledge_snapshot_material_named(knowledge, text);
+    if (!named) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, path,
+                        "material must be a material id, name, key word or alias%s, not '%s'",
+                        (allow & API_MATERIAL_ALLOW_STYLE) ? " (or style)" : "", text);
+    }
+    if (!composer_material_supported(&materials, named)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, path,
+                        "the Composer writes major and minor keys; '%s' is not one of them", text);
+    }
+    *material = named;
+    return COMPOSER_OK;
 }
 
 ComposerStatus api_require_knowledge(const ComposerContext *context, CommonPracticeMaterials *materials, ComposerError *error) {

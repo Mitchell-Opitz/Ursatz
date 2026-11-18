@@ -86,15 +86,6 @@ int api_choice_find(const ApiChoice *table, const char *text) {
     return -1;
 }
 
-int api_choice_find_ignore_case(const ApiChoice *table, const char *text) {
-    for (size_t i = 0; text && table[i].value; i++) {
-        if (request_equals_ignore_case(text, table[i].value)) {
-            return (int)i;
-        }
-    }
-    return -1;
-}
-
 void api_choice_list(const ApiChoice *table, char *out, size_t size) {
     api_choice_join(table, ", ", " or ", out, size);
 }

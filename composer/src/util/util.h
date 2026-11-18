@@ -76,12 +76,6 @@ bool composer_material_supported(const CommonPracticeMaterials *materials, const
  */
 bool composer_key_is_minor(const AnalysisKey *key);
 
-/*
- * Makes the key a major or a minor key, keeping its tonic spelling: its material becomes the major or the natural minor of
- * materials (`mode` is the key's mode). The one way the Composer writes a mode.
- */
-void composer_key_set_mode(AnalysisKey *key, const CommonPracticeMaterials *materials, CommonPracticeKeyMode mode);
-
 /* Makes the key of the material (the tonic spelling stays). The material is the major or the natural minor of the call's materials. */
 void composer_key_set_material(AnalysisKey *key, const PitchMaterial *material);
 

@@ -320,7 +320,7 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
     const char *voicing = NULL;
     char path[128];
     if (!api_request_string(root, base, "key", true, &request->key_text, error) ||
-        !api_request_string(root, base, "mode", true, &request->mode_text, error) ||
+        !api_read_material(root, base, true, &request->material_text, &request->material_member, error) ||
         !api_request_string(root, base, "meter", true, &request->meter_text, error) ||
         (!request->style_path && !api_request_string(root, base, "style", false, &request->style_path, error)) ||
         !api_request_string(root, base, "style_weight", false, &style_weight, error) ||
@@ -328,17 +328,18 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
         return COMPOSER_ERR_REQUEST;
     }
     PieceRequest *piece = &request->request;
-    const char *mode = request->mode_text;
-    snprintf(path, sizeof path, "%s/mode", base);
-    if (api_choice_find_ignore_case(API_PIECE_MODES, mode) < 0) {
-        char modes[64];
-        api_choice_list(API_PIECE_MODES, modes, sizeof modes);
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"mode\" must be %s, not '%s'", modes, mode);
+    const PitchMaterial *material = NULL;
+    ApiMaterialKind kind;
+    snprintf(path, sizeof path, "%s/%s", base, request->material_member);
+    ComposerStatus resolved = api_resolve_material(request->knowledge, request->material_member, path, request->material_text,
+                                                   API_MATERIAL_ALLOW_STYLE, &material, &kind, error);
+    if (resolved != COMPOSER_OK) {
+        return resolved;
     }
-    if (request_equals_ignore_case(mode, "style") && !request->style_path) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"mode\": \"style\" needs a \"style\"");
+    if (kind == API_MATERIAL_STYLE && !request->style_path) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"%s\": \"style\" needs a \"style\"", request->material_member);
     }
-    /* The key may be a tonic alone: the mode is the one "mode" gives. */
+    /* The key may be a tonic alone: the material is the one "material" gives. */
     char tonic_key[64];
     const char *key_text = request->key_text;
     if (strlen(key_text) + 7 < sizeof(tonic_key) && !strpbrk(key_text, " \t")) {
@@ -353,10 +354,8 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
         return api_fail(error, COMPOSER_ERR_REQUEST, path,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\"", request->key_text);
     }
-    if (request_equals_ignore_case(mode, "major")) {
-        composer_key_set_mode(&piece->key, request->materials, COMMON_PRACTICE_KEY_MAJOR);
-    } else if (request_equals_ignore_case(mode, "minor")) {
-        composer_key_set_mode(&piece->key, request->materials, COMMON_PRACTICE_KEY_MINOR);
+    if (material) {
+        composer_key_set_material(&piece->key, material);
     }
     if (!request_parse_meter(request->meter_text, &piece->meter) || !harmony_meter_supported(&piece->meter)) {
         snprintf(path, sizeof path, "%s/meter", base);
@@ -483,11 +482,12 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
         request->tempo_from = "form";
     }
     request->mode_from = "request";
-    if (request_equals_ignore_case(request->mode_text, "style")) {
+    if (request_equals_ignore_case(request->material_text, "style")) {
         const PitchMaterial *material = NULL;
         if (!composer_style_mode(request->style, request->materials, &material)) {
-            snprintf(path, sizeof path, "%s/mode", base);
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"mode\": \"style\" needs a style with a mode category");
+            snprintf(path, sizeof path, "%s/%s", base, request->material_member);
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"%s\": \"style\" needs a style with a mode category",
+                            request->material_member);
         }
         composer_key_set_material(&request->request.key, material);
         request->mode_from = "style";

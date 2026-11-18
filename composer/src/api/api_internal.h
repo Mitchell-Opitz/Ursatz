@@ -27,6 +27,27 @@ ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char 
  */
 bool api_fail_unsupported_key(ComposerError *error, const char *path, const KnowledgeSnapshot *knowledge, const char *key_text);
 
+/* What a request's "material" (or old "mode") member asked for. */
+typedef enum { API_MATERIAL_PICKED, API_MATERIAL_STYLE, API_MATERIAL_RANDOM } ApiMaterialKind;
+#define API_MATERIAL_ALLOW_STYLE 1u
+#define API_MATERIAL_ALLOW_RANDOM 2u
+
+/*
+ * Reads the "material" member of a request object, or the old "mode" member (the two together are refused). *text is the
+ * value, NULL when neither is present (an error when required), and *member names the member read ("material" or "mode").
+ * base NULL reads as api_member_string (paths "/<member>"); a base reads as api_request_string (paths "<base>/<member>").
+ */
+bool api_read_material(const cJSON *object, const char *base, bool required, const char **text, const char **member,
+                       ComposerError *error);
+
+/*
+ * Resolves the text api_read_material gave. "style" (allow API_MATERIAL_ALLOW_STYLE) and "random" (API_MATERIAL_ALLOW_RANDOM) set
+ * *kind and leave *material NULL. Under "material" the text is a K1 id, name, key word or alias of a material the Composer
+ * composes in; under the old "mode" only major and minor (any case), as before. path is the member's path, for the refusal.
+ */
+ComposerStatus api_resolve_material(const KnowledgeSnapshot *knowledge, const char *member, const char *path, const char *text,
+                                    unsigned allow, const PitchMaterial **material, ApiMaterialKind *kind, ComposerError *error);
+
 /*
  * Checks the call context an entry takes first: COMPOSER_OK when context and its knowledge are present, else
  * COMPOSER_ERR_REQUEST with error set to "a knowledge snapshot is required" (no path). The entry zeroes its response first.
@@ -158,7 +179,6 @@ ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *o
 ComposerStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *request,
                                   ComposerError *error);
 /* As api_theme_validate for a random motive request; filled (a copy of request) gets the seed and the drawn mode and meter. */
-ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *request,
-                                   cJSON *filled, ComposerError *error);
+ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, cJSON *filled, ComposerError *error);
 
 #endif

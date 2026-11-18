@@ -64,7 +64,8 @@ typedef struct {
     const cJSON *piece_motive_json;
     Motive *piece_motive; /* owned */
     const char *key_text;
-    const char *mode_text;
+    const char *material_text;   /* "material" or the old "mode": a material word, or "style" */
+    const char *material_member; /* which of the two the request wrote */
     const char *meter_text;
     const char *style_path;
     ComposerRatio weight;

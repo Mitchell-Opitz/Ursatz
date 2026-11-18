@@ -170,7 +170,7 @@ static ComposerStatus read_brief(const cJSON *request, GrowRequestText *brief, C
     if (!api_member_string(request, "into", &text->into, &found, error) ||
         !api_member_string(request, "hybrid", &text->hybrid, &found, error) ||
         !api_member_string(request, "key", &text->key, &found, error) ||
-        !api_member_string(request, "mode", &text->mode, &found, error) ||
+        !api_read_material(request, NULL, false, &text->material, &text->material_member, error) ||
         !api_member_string(request, "meter", &text->meter, &found, error) ||
         !api_member_string(request, "cadence", &text->cadence, &found, error) ||
         !api_member_string(request, "first_cadence", &text->first_cadence, &found, error) ||

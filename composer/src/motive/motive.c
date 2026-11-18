@@ -574,6 +574,7 @@ static bool begin(Motive *motive, MotiveDocument *document, const MotiveOptions 
         motive_set_error(error, "", "the options carry no knowledge snapshot with the common-practice materials");
         return false;
     }
+    document->knowledge = options->knowledge;
     document->key = plan_key_of_pitch_class(0, document->materials.major);
     motive_set_meter(motive, (PlanMeter){4, 4, 0});
     motive->length = motive_time(0, 1);
@@ -921,17 +922,34 @@ static bool read_key(JsonReader *reader, const cJSON *item, MotiveDocument *docu
     if (!json_read_int_member(reader, item, "key", "tonic_pitch_class", 0, 11, &tonic)) {
         return false;
     }
-    const cJSON *mode = plan_json_member(reader, item, "key", "mode", true);
-    if (!mode) {
-        return false;
+    /* "material" (a K1 id, name, key word or alias) or the old "mode" (major or minor); the two together are refused. */
+    const cJSON *material = cJSON_GetObjectItemCaseSensitive(item, "material");
+    const cJSON *old_mode = cJSON_GetObjectItemCaseSensitive(item, "mode");
+    if (material && old_mode) {
+        return json_bad_format(reader, "key.mode", "give \"material\" or the old \"mode\", not both");
     }
-    if (!cJSON_IsString(mode) || (strcmp(mode->valuestring, "major") != 0 && strcmp(mode->valuestring, "minor") != 0)) {
-        return json_bad_format(reader, "key.mode", "expected \"major\" or \"minor\"");
+    const PitchMaterial *picked = NULL;
+    if (material) {
+        if (!cJSON_IsString(material)) {
+            return json_bad_format(reader, "key.material", "expected a material id, name, key word or alias");
+        }
+        picked = knowledge_snapshot_material_named(document->knowledge, material->valuestring);
+        if (!picked || !composer_material_supported(&document->materials, picked)) {
+            return json_bad_format(reader, "key.material", "expected a material the Composer writes keys in (major or minor)");
+        }
+    } else {
+        const cJSON *mode = plan_json_member(reader, item, "key", "mode", true);
+        if (!mode) {
+            return false;
+        }
+        if (!cJSON_IsString(mode) || (strcmp(mode->valuestring, "major") != 0 && strcmp(mode->valuestring, "minor") != 0)) {
+            return json_bad_format(reader, "key.mode", "expected \"major\" or \"minor\"");
+        }
+        picked = common_practice_material(&document->materials, strcmp(mode->valuestring, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
+                                                                                                           : COMMON_PRACTICE_KEY_MAJOR);
     }
     document->has_key = true;
-    document->key = plan_key_of_pitch_class(
-        (int)tonic, common_practice_material(&document->materials, strcmp(mode->valuestring, "minor") == 0 ? COMMON_PRACTICE_KEY_MINOR
-                                                                                                         : COMMON_PRACTICE_KEY_MAJOR));
+    document->key = plan_key_of_pitch_class((int)tonic, picked);
     return true;
 }
 

@@ -63,7 +63,8 @@ typedef struct {
     const cJSON *root;
     const char *form_text;
     const char *key_text;
-    const char *mode_text;
+    const char *material_text;
+    const char *material_member;
     const char *meter_text;
     bool modulate;
     const cJSON *motive;
@@ -222,7 +223,7 @@ static ComposerStatus read_request(PlanBuild *state, ComposerError *error) {
     bool present = false;
     if (!api_member_string(root, "form", &state->form_text, &present, error) ||
         !api_member_string(root, "key", &state->key_text, &present, error) ||
-        !api_member_string(root, "mode", &state->mode_text, &present, error) ||
+        !api_read_material(root, NULL, false, &state->material_text, &state->material_member, error) ||
         !api_member_string(root, "meter", &state->meter_text, &present, error) ||
         !api_member_bool(root, "modulate", &state->modulate, &present, error) ||
         !api_member_string(root, "corpus", &state->from_corpus, &present, error) ||
@@ -361,18 +362,25 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
         }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/form", "unknown form '%s'; the forms are %s", state->form_text, names);
     }
-    /* The key is a tonic, with the mode from "mode" (major by default), or tonic and mode together. */
+    /* The key is a tonic, with the material from "material" (major by default), or tonic and key word together. */
     bool has_mode_in_key = strchr(state->key_text, ' ') != NULL;
-    if (has_mode_in_key && state->mode_text) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "key '%s' names a mode already; leave out mode", state->key_text);
+    char member_path[32];
+    snprintf(member_path, sizeof member_path, "/%s", state->material_member);
+    if (has_mode_in_key && state->material_text) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, member_path, "key '%s' names a mode already; leave out %s",
+                        state->key_text, state->material_member);
     }
-    if (state->mode_text && api_choice_find_ignore_case(API_MODES, state->mode_text) < 0) {
-        char modes[64];
-        api_choice_list(API_MODES, modes, sizeof modes);
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be %s, not '%s'", modes, state->mode_text);
+    const PitchMaterial *picked = NULL;
+    if (state->material_text) {
+        ApiMaterialKind kind;
+        ComposerStatus resolved = api_resolve_material(state->knowledge, state->material_member, member_path,
+                                                       state->material_text, 0, &picked, &kind, error);
+        if (resolved != COMPOSER_OK) {
+            return resolved;
+        }
     }
     if (snprintf(state->key_request, sizeof(state->key_request), has_mode_in_key ? "%s" : "%s %s", state->key_text,
-                 state->mode_text ? state->mode_text : "major") >= (int)sizeof(state->key_request) ||
+                 picked ? picked->key_word : "major") >= (int)sizeof(state->key_request) ||
         !request_parse_key(state->key_request, state->knowledge, &state->key)) {
         if (api_fail_unsupported_key(error, "/key", state->knowledge, state->key_request)) {
             return COMPOSER_ERR_REQUEST;

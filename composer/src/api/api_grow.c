@@ -286,18 +286,24 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     } else if (text->hybrid) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/hybrid", "hybrid applies only to into hybrid");
     }
-    if (text->mode && api_choice_find_ignore_case(API_PIECE_MODES, text->mode) < 0) {
-        char modes[64];
-        api_choice_list(API_PIECE_MODES, modes, sizeof modes);
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be %s, not '%s'", modes, text->mode);
+    const PitchMaterial *picked = NULL;
+    char member_path[32];
+    if (text->material) {
+        ApiMaterialKind kind;
+        snprintf(member_path, sizeof member_path, "/%s", text->material_member);
+        ComposerStatus resolved = api_resolve_material(out->knowledge, text->material_member, member_path, text->material,
+                                                       API_MATERIAL_ALLOW_STYLE, &picked, &kind, error);
+        if (resolved != COMPOSER_OK) {
+            return resolved;
+        }
+        if (kind == API_MATERIAL_STYLE && !text->has_style) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, member_path, "%s style needs style", text->material_member);
+        }
     }
-    if (text->mode && request_equals_ignore_case(text->mode, "style") && !text->has_style) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode style needs style");
-    }
-    /* With a mode the key may be a tonic alone: the mode is the one the mode gives. */
+    /* With a material the key may be a tonic alone: the material is the one the member gives. */
     char tonic_key[64];
     const char *key_text = text->key;
-    if (text->mode && strlen(key_text) + 7 < sizeof tonic_key && !strpbrk(key_text, " \t")) {
+    if (text->material && strlen(key_text) + 7 < sizeof tonic_key && !strpbrk(key_text, " \t")) {
         snprintf(tonic_key, sizeof tonic_key, "%s major", key_text);
         key_text = tonic_key;
     }
@@ -310,10 +316,8 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
                         "example \"D minor\"",
                         text->key);
     }
-    if (text->mode && request_equals_ignore_case(text->mode, "major")) {
-        composer_key_set_mode(&out->key, out->materials, COMMON_PRACTICE_KEY_MAJOR);
-    } else if (text->mode && request_equals_ignore_case(text->mode, "minor")) {
-        composer_key_set_mode(&out->key, out->materials, COMMON_PRACTICE_KEY_MINOR);
+    if (picked) {
+        composer_key_set_material(&out->key, picked);
     }
     if (!request_parse_meter(text->meter, &out->meter) || !harmony_meter_supported(&out->meter)) {
         return api_fail_meter(error, "/meter", text->meter);
@@ -522,11 +526,14 @@ ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *
     } else if (composer_style_tempo(out->style, &out->tempo)) {
         out->tempo_from = "style";
     }
-    bool from_style = out->text->mode && request_equals_ignore_case(out->text->mode, "style");
+    bool from_style = out->text->material && request_equals_ignore_case(out->text->material, "style");
     if (from_style) {
         const PitchMaterial *material = NULL;
         if (!composer_style_mode(out->style, out->materials, &material)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode style needs a style with a mode category");
+            char member_path[32];
+            snprintf(member_path, sizeof member_path, "/%s", out->text->material_member);
+            return api_fail(error, COMPOSER_ERR_REQUEST, member_path, "%s style needs a style with a mode category",
+                            out->text->material_member);
         }
         composer_key_set_material(&out->key, material);
     }

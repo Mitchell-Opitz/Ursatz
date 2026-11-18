@@ -448,7 +448,8 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
     const char *into;
     const char *hybrid;
     const char *key;
-    const char *mode;
+    const char *material;
+    const char *material_member;
     const char *meter;
     const char *cadence;
     const char *first_cadence;
@@ -459,7 +460,7 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
     if (!api_request_string(request, "", "into", true, &into, error) ||
         !api_request_string(request, "", "development", false, &development, error) ||
         !api_request_string(request, "", "hybrid", false, &hybrid, error) ||
-        !api_request_string(request, "", "key", true, &key, error) || !api_request_string(request, "", "mode", true, &mode, error) ||
+        !api_request_string(request, "", "key", true, &key, error) || !api_read_material(request, "", true, &material, &material_member, error) ||
         !api_request_string(request, "", "meter", true, &meter, error) ||
         !api_request_string(request, "", "cadence", false, &cadence, error) ||
         !api_request_string(request, "", "first_cadence", false, &first_cadence, error) ||
@@ -475,7 +476,8 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
     text->into = into;
     text->hybrid = hybrid;
     text->key = key;
-    text->mode = mode;
+    text->material = material;
+    text->material_member = material_member;
     text->meter = meter;
     text->cadence = cadence;
     text->first_cadence = first_cadence;

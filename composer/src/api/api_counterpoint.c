@@ -60,7 +60,8 @@ static const char *value_text(const cJSON *item, char *buffer, size_t size) {
 
 static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
                                    ApiOutputs *outputs, cJSON **line, ComposerError *error) {
-    const char *mode_text = NULL;
+    const char *material_text = NULL;
+    const char *material_member = NULL;
     const char *position_text = NULL;
     bool found;
     char buffer[32];
@@ -81,7 +82,7 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
     options->species = (int)number;
     if (!api_member_string(request, "position", &position_text, &found, error) ||
         !api_member_string(request, "key", &options->key_text, &found, error) ||
-        !api_member_string(request, "mode", &mode_text, &found, error) ||
+        !api_read_material(request, NULL, false, &material_text, &material_member, error) ||
         !api_member_string(request, "meter", &options->meter_text, &found, error) ||
         !api_member_bool(request, "plans", &options->plans, &found, error)) {
         return COMPOSER_ERR_REQUEST;
@@ -95,14 +96,20 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
     }
     char combined[64];
     snprintf(combined, sizeof(combined), "%s", options->key_text);
-    if (mode_text) {
-        if (!request_equals_ignore_case(mode_text, "major") && !request_equals_ignore_case(mode_text, "minor")) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be major or minor, not '%s'", mode_text);
+    if (material_text) {
+        char member_path[32];
+        const PitchMaterial *picked = NULL;
+        ApiMaterialKind kind;
+        snprintf(member_path, sizeof member_path, "/%s", material_member);
+        ComposerStatus resolved = api_resolve_material(knowledge, material_member, member_path, material_text, 0, &picked, &kind, error);
+        if (resolved != COMPOSER_OK) {
+            return resolved;
         }
         if (strchr(options->key_text, ' ')) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "key already names a mode; give a tonic alone with mode");
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "key already names a mode; give a tonic alone with %s",
+                            material_member);
         }
-        snprintf(combined, sizeof(combined), "%s %s", options->key_text, mode_text);
+        snprintf(combined, sizeof(combined), "%s %s", options->key_text, picked->key_word);
         if (!request_parse_key(combined, knowledge, &options->key)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "unknown key '%s'", options->key_text);
         }

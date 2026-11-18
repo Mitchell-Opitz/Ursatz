@@ -68,7 +68,8 @@ typedef struct {
     const char *into;
     const char *hybrid;
     const char *key;
-    const char *mode;
+    const char *material;        /* a material word or "style"; NULL for none */
+    const char *material_member; /* "material" or the old "mode", for the path of a refusal */
     const char *meter;
     const char *bars;
     const char *cadence;

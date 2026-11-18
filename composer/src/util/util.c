@@ -77,10 +77,6 @@ void composer_key_set_material(AnalysisKey *key, const PitchMaterial *material) 
     key->material = material;
 }
 
-void composer_key_set_mode(AnalysisKey *key, const CommonPracticeMaterials *materials, CommonPracticeKeyMode mode) {
-    composer_key_set_material(key, common_practice_material(materials, mode));
-}
-
 unsigned util_scale_mask(int tonic_pitch_class, const PitchMaterial *material) {
     return standard_tonality_material_pitch_classes(util_pitch_class(tonic_pitch_class), material);
 }

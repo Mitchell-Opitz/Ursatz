@@ -36,6 +36,7 @@ typedef struct {
     bool accompaniment;
     /* The options' snapshot's materials: the default C major of a degree list, the keys of a JSON document and of a file's signature. */
     CommonPracticeMaterials materials;
+    const KnowledgeSnapshot *knowledge; /* the options' snapshot: a key's "material" is looked up in it */
 } MotiveDocument;
 
 /*
