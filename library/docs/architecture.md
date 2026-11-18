@@ -2,7 +2,7 @@
 
 [Docs index](README.md): the Ursatz docs by topic.
 
-Ursatz is organized into six groups under `library/`: `model/` (value types), `theory/` (rule libraries and vocabularies), `realization/` (lines, performer parts, scoring, movements and works), `analysis/` (analyses and framework adapters), `chain/` (the analysis chain) and `io/` (import and export), each one CMake target, with one folder per area inside and its tests under `<group>/tests/<area>/`. This page explains the library; the groups and their rules are in [layers-and-dependency-rules.md](layers-and-dependency-rules.md). Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
+Ursatz is organized into seven groups under `library/`: `model/` (value types), `theory/` (rule libraries and vocabularies), `realization/` (lines, performer parts, scoring, movements and works), `plan/` (the section description), `analysis/` (analyses and framework adapters), `chain/` (the analysis chain) and `io/` (import and export), each one CMake target, with one folder per area inside and its tests under `<group>/tests/<area>/`. This page explains the library; the groups and their rules are in [layers-and-dependency-rules.md](layers-and-dependency-rules.md). Per-module detail (what each module provides, what is deferred, what to know before building on it) lives under `docs/modules/`.
 
 ## Purpose
 
@@ -22,6 +22,7 @@ Ursatz depends on no other part of the repository. The Analyzer ([architecture](
 | `model/<area>/` | The value types, target `ursatz_model` | [Groups](layers-and-dependency-rules.md#groups) and [module-status.md](module-status.md) |
 | `theory/<area>/` | Rule libraries, vocabularies and style models, target `ursatz_theory` | [theory/README.md](../theory/README.md) |
 | `realization/` | Lines, performer parts and scoring assignments, on model and theory, target `ursatz_realization` | [realization](modules/realization.md) |
+| `plan/` | The section description shared by forms, plans and piece requests: its vocabulary, rules and JSON codec, on model and theory, target `ursatz_plan` | [plan](modules/plan.md) |
 | `analysis/<area>/` | Analyses and the 11 frameworks' adapters, target `ursatz_analysis` | [analysis/README.md](../analysis/README.md) |
 | `chain/` | The analysis chain, target `ursatz_chain` | [chain/README.md](../chain/README.md) |
 | `io/` | MIDI and MusicXML import and export, target `ursatz_io` | [io](modules/io.md) |
