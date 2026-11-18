@@ -1038,7 +1038,7 @@ static PiecePlan *key_spans_plan(const KeySpanCase *cases, size_t count) {
         }
         LaneSpanId id = add_lane(plan, form, PLAN_LANE_KEY, 0, bars((long)(4 * i), 4), &payload);
         if (cases[i].relation) {
-            assert(plan_lane_span_set_key_relation(plan, id, cases[i].relation, cases[i].anchor, cases[i].resolved) == PLAN_OK);
+            assert(plan_lane_span_set_key_relation(plan, id, cases[i].relation, cases[i].anchor, NULL, cases[i].resolved) == PLAN_OK);
         }
     }
     return plan;

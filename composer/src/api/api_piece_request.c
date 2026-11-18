@@ -813,6 +813,21 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapsho
                         "the sections are not a piece: they need a body, in the order intro, body, turnaround, ending, with "
                         "different ids, whole beats and a pickup shorter than a bar");
     }
+    bool asks_for_regions = false;
+    for (size_t i = 0; i < piece->section_count; i++) {
+        asks_for_regions = asks_for_regions || (piece->sections[i].description.key_end.kind != SECTION_REGION_NONE &&
+                                                piece->sections[i].description.key_end.kind != SECTION_REGION_HOME);
+    }
+    if (asks_for_regions) {
+        PieceRegion regions[PIECE_STRUCTURE_MAX_SECTIONS];
+        size_t refused = 0;
+        char why[256];
+        if (piece_resolve_regions(piece, knowledge, regions, &refused, why, sizeof(why)) != PIECE_OK) {
+            char at[160];
+            snprintf(at, sizeof(at), "%s/sections/%zu/region", base, refused);
+            return api_fail(error, COMPOSER_ERR_REQUEST, at, "%s", why);
+        }
+    }
     size_t given = piece->section_count;
     if (piece_default_ending(request->form, piece, PIECE_STRUCTURE_MAX_SECTIONS + 1) && piece->section_count > given) {
         /* The default ending is made from the basic motive, like an empty section. */

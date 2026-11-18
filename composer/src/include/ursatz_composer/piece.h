@@ -246,6 +246,31 @@ PieceResult piece_build_ending(const PiecePlan *loop_plan, const PieceRequest *r
 PieceResult piece_request_check(const PieceRequest *request);
 
 /*
+ * The key a section of the request asks for with `region` (R-610): `has_region` is false for a section that gives none (it is in the
+ * home key), else `key` is the key, `relation`, `anchor` and `anchor_section` say what it was reached by when it is a relation (the
+ * K6 id, "" for a key given as a tonic and a material or as home) and `text` is the region as the reply shows it ("home", "Eb major",
+ * "mediant of A").
+ */
+typedef struct {
+    bool has_region;
+    bool changes_key; /* the key differs from the section before's (home for the first): the plan has a key change here */
+    AnalysisKey key;
+    char relation[PLAN_KEY_RELATION_MAX];
+    PlanKeyAnchor anchor;
+    char anchor_section[PLAN_KEY_ANCHOR_SECTION_MAX];
+    char text[128];
+} PieceRegion;
+
+/*
+ * Resolves the regions of the request's sections, in time order, into out (one entry per section). `home` is the request's key; a
+ * relation is taken from home, from the section before (`previous`) or from an earlier section (`anchor_section`). PIECE_ERR_BAD_REQUEST
+ * when one refuses: *refused is its section's index and message says why (the first section has no previous region; an anchor must be
+ * an earlier section; a region that is not a tonal or modal region in major or natural minor is refused naming P69, R-611).
+ */
+PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSnapshot *knowledge, PieceRegion *out, size_t *refused,
+                                  char *message, size_t message_size);
+
+/*
  * The cadences the form document gives, on every section of the request without has_cadence (the document's `cadences`:
  * the rules in order, each for the last section of its roles, else the default). The game loop's: the last section of the
  * loop (the turnaround, else the body) and the last of the intro lead back (HC); the last section of the ending closes

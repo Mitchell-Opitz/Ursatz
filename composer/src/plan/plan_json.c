@@ -113,14 +113,18 @@ bool json_key_members(cJSON *object, const AnalysisKey *key) {
 }
 
 /* A key span's payload: the key, with the relation it is named by beside it (R-597); a span not yet resolved is only the relation. */
+static const char *key_anchor_text(const PlanKeyRelation *relation) {
+    return relation->anchor == PLAN_KEY_ANCHOR_SECTION ? relation->anchor_section : KEY_ANCHOR_NAMES[relation->anchor];
+}
+
 static bool key_payload_json(cJSON *object, const AnalysisKey *key, const PlanKeyRelation *relation) {
     if (relation && !relation->resolved) {
         return plan_json_add(object, "relation", cJSON_CreateString(relation->relation)) &&
-               plan_json_add(object, "anchor", cJSON_CreateString(KEY_ANCHOR_NAMES[relation->anchor]));
+               plan_json_add(object, "anchor", cJSON_CreateString(key_anchor_text(relation)));
     }
     return json_key_members(object, key) &&
            (!relation || (plan_json_add(object, "relation", cJSON_CreateString(relation->relation)) &&
-                          plan_json_add(object, "anchor", cJSON_CreateString(KEY_ANCHOR_NAMES[relation->anchor]))));
+                          plan_json_add(object, "anchor", cJSON_CreateString(key_anchor_text(relation)))));
 }
 
 static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *constraint) {
@@ -965,20 +969,24 @@ static bool read_key_relation(JsonReader *reader, const cJSON *object, const cha
         return json_bad_format(reader, at, "expected a relation id like \"omt.relation.dominant\"");
     }
     json_child_path(at, path, "anchor");
-    if (!cJSON_IsString(anchor)) {
-        return json_bad_format(reader, at, "expected \"home\" or \"previous\"");
+    if (!cJSON_IsString(anchor) || anchor->valuestring[0] == '\0' || strlen(anchor->valuestring) >= PLAN_KEY_ANCHOR_SECTION_MAX) {
+        return json_bad_format(reader, at, "expected \"home\", \"previous\" or the name of an earlier section");
     }
-    int found = -1;
+    /* "home" and "previous" are the plan's own; any other name is a section (format 5). */
+    int found = PLAN_KEY_ANCHOR_SECTION;
     for (int i = 0; i < (int)COUNT_OF(KEY_ANCHOR_NAMES); i++) {
         if (strcmp(anchor->valuestring, KEY_ANCHOR_NAMES[i]) == 0) {
             found = i;
         }
     }
-    if (found < 0) {
+    if (found == PLAN_KEY_ANCHOR_SECTION && reader->version < 5) {
         return json_bad_format(reader, at, "expected \"home\" or \"previous\"");
     }
     snprintf(relation->relation, PLAN_KEY_RELATION_MAX, "%s", id->valuestring);
     relation->anchor = (PlanKeyAnchor)found;
+    if (found == PLAN_KEY_ANCHOR_SECTION) {
+        snprintf(relation->anchor_section, PLAN_KEY_ANCHOR_SECTION_MAX, "%s", anchor->valuestring);
+    }
     relation->resolved = true;
     return true;
 }
@@ -1904,7 +1912,9 @@ static bool build_lane_span(JsonReader *reader, PiecePlan *plan, const ParsedLan
         } else if (id != expected_id) {
             ok = json_bad_format(reader, parsed->path, "lane span ids must run from 1 without gaps");
         } else if (relation.relation[0] != '\0' &&
-                   plan_lane_span_set_key_relation(plan, id, relation.relation, relation.anchor, relation.resolved) != PLAN_OK) {
+                   plan_lane_span_set_key_relation(plan, id, relation.relation, relation.anchor,
+                                                   relation.anchor == PLAN_KEY_ANCHOR_SECTION ? relation.anchor_section : NULL,
+                                                   relation.resolved) != PLAN_OK) {
             ok = json_bad_format(reader, parsed->path, "a key span names its relation badly");
         }
     }

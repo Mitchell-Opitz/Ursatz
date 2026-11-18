@@ -63,6 +63,7 @@ typedef struct {
 /* A key signature from position on. sharps_flats is -7 to 7. */
 typedef struct {
     int sharps_flats;
+    int tonic;                     /* the key's tonic as a pitch class, 0 to 11; the first key is the movement's home region */
     const PitchMaterial *material; /* the key's material; the export reads its mode from it */
     MusicalTime position;
 } RenderedKey;

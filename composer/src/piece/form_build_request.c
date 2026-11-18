@@ -409,7 +409,7 @@ static bool is_held(const FormSpec *form, const PieceRequest *request, size_t in
     return true;
 }
 
-static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *request, const PieceSection *section,
+static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *request, const AnalysisKey *key, const PieceSection *section,
                                        size_t start_beats, const Motive *motive, NodeId form, PlanSpan span, NodeId *out) {
     PlanConstraint constraint;
     SectionPairing pairing;
@@ -493,7 +493,7 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_KEY;
-        constraint.params.key = request->key;
+        constraint.params.key = *key; /* the section's own region, else the home key */
         result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && request->has_accompaniment) {
@@ -513,6 +513,99 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
         constraint.kind = PLAN_CONSTRAINT_PICKUP;
         constraint.params.pickup = section->description.pickup;
         result = piece_add_constraint(plan, *out, &constraint);
+    }
+    return result;
+}
+
+/* The index of the first section of the loop's first part (the body), which the seam copies the first bar of. */
+static size_t first_body_index(const FormSpec *form, const PieceRequest *request) {
+    for (size_t i = 0; i < request->section_count; i++) {
+        if (piece_section_part(&request->sections[i]) == first_loop_part(form)) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+typedef struct {
+    PlanSpan span;
+    const PieceRegion *region; /* the first section of the span: what its key was reached by */
+} KeyRun;
+
+/*
+ * The key lane, Given: one span over the sections and the material when every section is in the home key, as it always was; else a
+ * span for each run of sections in one key, the seam in the first body section's key and the material in the home key (R-610). A
+ * span reached by a relation is named by it and its anchor.
+ */
+static PieceResult add_key_lane(PiecePlan *plan, const FormSpec *form, NodeId form_id, const PieceRequest *request,
+                                const PieceRegion *regions, bool regional, size_t laid, bool loop_plan, Rational bar, PlanSpan span_form,
+                                PlanSpan material) {
+    PlanLanePayload payload;
+    LaneSpanId lane;
+    memset(&payload, 0, sizeof(payload));
+    if (!regional) {
+        payload.key = request->key;
+        PieceResult result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, span_form, &payload, &lane));
+        return result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
+    }
+    KeyRun runs[PIECE_STRUCTURE_MAX_SECTIONS + 2];
+    AnalysisKey keys[PIECE_STRUCTURE_MAX_SECTIONS + 2];
+    size_t count = 0;
+    Rational at = {0, 1};
+    PieceResult result = PIECE_OK;
+    for (size_t i = 0; result == PIECE_OK && i < laid; i++) {
+        if (loop_plan && is_dropped(form, piece_section_part(&request->sections[i]))) {
+            continue;
+        }
+        Rational length = beats_of(&request->meter, request->sections[i].description.beats);
+        if (count > 0 && analysis_key_equals(&keys[count - 1], &regions[i].key)) {
+            result = piece_result_of_plan(plan_result_of_rational(rational_add(runs[count - 1].span.length, length, &runs[count - 1].span.length)));
+        } else {
+            runs[count].span.start = at;
+            runs[count].span.length = length;
+            runs[count].region = &regions[i];
+            keys[count++] = regions[i].key;
+        }
+        result = result == PIECE_OK ? piece_result_of_plan(plan_result_of_rational(rational_add(at, length, &at))) : result;
+    }
+    /* The seam bar after the loop's end, then the material: the first body section's key, then home. */
+    if (result == PIECE_OK && !loop_plan) {
+        AnalysisKey seam_key = regions[first_body_index(form, request)].key;
+        if (count > 0 && analysis_key_equals(&keys[count - 1], &seam_key)) {
+            result = piece_result_of_plan(plan_result_of_rational(rational_add(runs[count - 1].span.length, bar, &runs[count - 1].span.length)));
+        } else {
+            runs[count].span.start = at;
+            runs[count].span.length = bar;
+            runs[count].region = NULL;
+            keys[count++] = seam_key;
+        }
+    }
+    if (result == PIECE_OK) {
+        PieceRegion home;
+        memset(&home, 0, sizeof(home));
+        Rational end = {0, 1};
+        result = piece_result_of_plan(plan_result_of_rational(rational_add(runs[count - 1].span.start, runs[count - 1].span.length, &end)));
+        if (result == PIECE_OK && analysis_key_equals(&keys[count - 1], &request->key)) {
+            result = piece_result_of_plan(plan_result_of_rational(rational_sub(span_form.length, runs[count - 1].span.start, &runs[count - 1].span.length)));
+        } else if (result == PIECE_OK) {
+            runs[count].span.start = end;
+            result = piece_result_of_plan(plan_result_of_rational(rational_sub(span_form.length, end, &runs[count].span.length)));
+            runs[count].region = NULL;
+            keys[count++] = request->key;
+        }
+        (void)material;
+    }
+    for (size_t i = 0; result == PIECE_OK && i < count; i++) {
+        memset(&payload, 0, sizeof(payload));
+        payload.key = keys[i];
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, runs[i].span, &payload, &lane));
+        if (result == PIECE_OK && runs[i].region && runs[i].region->relation[0] != '\0') {
+            const PieceRegion *region = runs[i].region;
+            result = piece_result_of_plan(plan_lane_span_set_key_relation(
+                plan, lane, region->relation, region->anchor,
+                region->anchor == PLAN_KEY_ANCHOR_SECTION ? region->anchor_section : NULL, true));
+        }
+        result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     return result;
 }
@@ -550,6 +643,25 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         (request->has_accompaniment && !grow_accompaniment_valid(&request->meter, &request->accompaniment)) ||
         !grow_cells_per_bar(&request->meter, &cells)) {
         return PIECE_ERR_BAD_REQUEST;
+    }
+    /* The keys the sections ask for with `region` (R-610); every section is in the home key without one. */
+    PieceRegion regions[PIECE_STRUCTURE_MAX_SECTIONS];
+    bool regional = false;
+    for (size_t i = 0; i < copy.section_count; i++) {
+        regional = regional || (copy.sections[i].description.key_end.kind != SECTION_REGION_NONE &&
+                                copy.sections[i].description.key_end.kind != SECTION_REGION_HOME);
+    }
+    if (regional) {
+        size_t refused;
+        char why[256];
+        if (!request->knowledge || piece_resolve_regions(&copy, request->knowledge, regions, &refused, why, sizeof(why)) != PIECE_OK) {
+            return PIECE_ERR_BAD_REQUEST;
+        }
+    } else {
+        for (size_t i = 0; i < copy.section_count; i++) {
+            memset(&regions[i], 0, sizeof(regions[i]));
+            regions[i].key = request->key;
+        }
     }
     size_t motive_bars = motive ? grow_motive_layout_bars(motive, bar) : 1;
     /* The sections laid out are the intro, the body and the turnaround; the ending version lays out the ending. */
@@ -621,10 +733,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     if (result == PIECE_OK) {
-        memset(&payload, 0, sizeof(payload));
-        payload.key = request->key;
-        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, span_form, &payload, &lane));
-        result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
+        result = add_key_lane(plan, form, form_id, &copy, regions, regional, laid, loop_plan != NULL, bar, span_form, material);
     }
     /* The sections in time order, each from the end of the one before. */
     Rational start = {0, 1};
@@ -638,7 +747,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         bool from_loop = loop_plan && piece_section_part(&copy.sections[i]) != PIECE_PART_ENDING;
         NodeId loop_section = from_loop ? find_part_section(loop_plan, &copy.sections[i]) : PLAN_NODE_NONE;
         PlanSpan span = {start, beats_of(&request->meter, copy.sections[i].description.beats)};
-        result = add_request_section(plan, &copy, &copy.sections[i], start_beats, motive, form_id, span, &id);
+        result = add_request_section(plan, &copy, &regions[i].key, &copy.sections[i], start_beats, motive, form_id, span, &id);
         if (result == PIECE_OK && from_loop) {
             if (loop_section == PLAN_NODE_NONE || plan_give_section(plan, id, loop_plan, loop_section) != GIVEN_OK) {
                 result = PIECE_ERR_BAD_REQUEST;
@@ -683,7 +792,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
             PlanConstraint key;
             memset(&key, 0, sizeof(key));
             key.kind = PLAN_CONSTRAINT_KEY;
-            key.params.key = request->key;
+            key.params.key = regions[first_body_index(form, &copy)].key; /* the seam is the first body section's key */
             result = piece_add_constraint(plan, seam, &key);
         }
     }

@@ -320,7 +320,8 @@ const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId 
     return entry ? &entry->payload : NULL;
 }
 
-PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor, bool resolved) {
+PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor,
+                                           const char *anchor_section, bool resolved) {
     if (!relation) {
         return PLAN_ERR_NULL;
     }
@@ -329,13 +330,18 @@ PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const
         return plan ? PLAN_ERR_NOT_FOUND : PLAN_ERR_NULL;
     }
     size_t length = strlen(relation);
+    size_t section_length = anchor_section ? strlen(anchor_section) : 0;
     if (entry->lane != PLAN_LANE_KEY || length == 0 || length >= PLAN_KEY_RELATION_MAX ||
-        (anchor != PLAN_KEY_ANCHOR_HOME && anchor != PLAN_KEY_ANCHOR_PREVIOUS)) {
+        (anchor != PLAN_KEY_ANCHOR_HOME && anchor != PLAN_KEY_ANCHOR_PREVIOUS && anchor != PLAN_KEY_ANCHOR_SECTION) ||
+        (anchor == PLAN_KEY_ANCHOR_SECTION) != (section_length > 0) || section_length >= PLAN_KEY_ANCHOR_SECTION_MAX) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     memset(&entry->key_relation, 0, sizeof(entry->key_relation));
     memcpy(entry->key_relation.relation, relation, length);
     entry->key_relation.anchor = anchor;
+    if (section_length > 0) {
+        memcpy(entry->key_relation.anchor_section, anchor_section, section_length);
+    }
     entry->key_relation.resolved = resolved;
     return PLAN_OK;
 }

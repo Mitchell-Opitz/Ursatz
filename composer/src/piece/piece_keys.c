@@ -1,5 +1,6 @@
 #include <ursatz_composer/piece_plan_keys.h>
 
+#include <stdarg.h>
 #include <string.h>
 
 #include <stdio.h>
@@ -18,6 +19,7 @@
 #include "check/hearing.h"
 #include "form/form_internal.h"
 #include "util/plan_util.h"
+#include "util/request_parse.h"
 #include "util/util.h"
 
 /* A key lane span before it is added: its key, the relation that reached it from home (NULL for home) and where it lies. */
@@ -257,7 +259,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
         result = piece_result_of_plan(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, segments[i].span, &payload, &id));
         if (result == PIECE_OK && segments[i].relation) {
             result = piece_result_of_plan(
-                plan_lane_span_set_key_relation(plan, id, segments[i].relation, PLAN_KEY_ANCHOR_HOME, true));
+                plan_lane_span_set_key_relation(plan, id, segments[i].relation, PLAN_KEY_ANCHOR_HOME, NULL, true));
         }
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
     }
@@ -267,6 +269,132 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
         }
     }
     return result;
+}
+
+
+/* ------------------------------------------------------------- the regions a request names */
+
+static PieceResult refuse_region(size_t index, size_t *refused, char *message, size_t size, const char *format, ...) {
+    va_list args;
+    if (refused) {
+        *refused = index;
+    }
+    if (message && size > 0) {
+        va_start(args, format);
+        vsnprintf(message, size, format, args);
+        va_end(args);
+    }
+    return PIECE_ERR_BAD_REQUEST;
+}
+
+/* The words of a refusal for a region the Composer does not write: its material, until P69 (R-611). */
+static PieceResult refuse_material(size_t index, const char *section, int center, const PitchMaterial *material, size_t *refused,
+                                   char *message, size_t size) {
+    static const char *const NAMES[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
+    return refuse_region(index, refused, message, size,
+                         "section '%s' is in %s %s: the Composer writes major and natural minor keys until P69", section,
+                         center >= 0 && center < 12 ? NAMES[center] : "?", material && material->name ? material->name : "no material");
+}
+
+PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSnapshot *knowledge, PieceRegion *out, size_t *refused,
+                                  char *message, size_t message_size) {
+    CommonPracticeMaterials materials;
+    if (!request || !out || !knowledge || !common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
+        return PIECE_ERR_NULL;
+    }
+    AnalysisKey keys[PIECE_STRUCTURE_MAX_SECTIONS];
+    size_t count = request->section_count < PIECE_STRUCTURE_MAX_SECTIONS ? request->section_count : PIECE_STRUCTURE_MAX_SECTIONS;
+    for (size_t i = 0; i < count; i++) {
+        const SectionDescription *section = &request->sections[i].description;
+        const SectionRegion *region = &section->key_end;
+        PieceRegion *entry = &out[i];
+        memset(entry, 0, sizeof(*entry));
+        entry->key = request->key;
+        keys[i] = request->key;
+        snprintf(entry->text, sizeof(entry->text), "home");
+        if (region->kind == SECTION_REGION_NONE) {
+            continue;
+        }
+        entry->has_region = true;
+        if (region->kind == SECTION_REGION_HOME) {
+            entry->changes_key = i > 0 && !analysis_key_equals(&keys[i - 1], &request->key);
+            continue;
+        }
+        if (region->kind == SECTION_REGION_KEY) {
+            char text[SECTION_TONIC_MAX + SECTION_WORD_MAX + 2];
+            snprintf(text, sizeof(text), "%s %s", region->tonic, region->material);
+            const PitchMaterial *material = knowledge_snapshot_material_named(knowledge, region->material);
+            AnalysisKey key;
+            if (!material) {
+                return refuse_region(i, refused, message, message_size, "section '%s': no material is named '%s'", section->id, region->material);
+            }
+            if (!composer_material_supported(&materials, material)) {
+                char tonic[SECTION_TONIC_MAX + 8];
+                snprintf(tonic, sizeof(tonic), "%s major", region->tonic);
+                AnalysisKey center;
+                int pc = request_parse_key(tonic, knowledge, &center) ? analysis_key_tonic_pitch_class(&center) : -1;
+                return refuse_material(i, section->id, pc, material, refused, message, message_size);
+            }
+            if (!request_parse_key(text, knowledge, &key)) {
+                return refuse_region(i, refused, message, message_size, "section '%s': '%s' is not a tonic", section->id, region->tonic);
+            }
+            entry->key = key;
+            keys[i] = key;
+            entry->changes_key = !analysis_key_equals(i > 0 ? &keys[i - 1] : &request->key, &key);
+            snprintf(entry->text, sizeof(entry->text), "%s", text);
+            continue;
+        }
+        /* a relation from an anchor: home, the section before, or an earlier section */
+        const AnalysisKey *anchor_key = &request->key;
+        const char *anchor_name = "home";
+        if (region->anchor == SECTION_ANCHOR_PREVIOUS) {
+            if (i == 0) {
+                return refuse_region(i, refused, message, message_size, "the first section has no previous region");
+            }
+            anchor_key = &keys[i - 1];
+            anchor_name = "previous";
+        } else if (region->anchor == SECTION_ANCHOR_SECTION) {
+            size_t found = i;
+            for (size_t k = 0; k < i; k++) {
+                if (strcmp(request->sections[k].description.id, region->anchor_section) == 0) {
+                    found = k;
+                }
+            }
+            if (found == i) {
+                return refuse_region(i, refused, message, message_size, "anchor '%s' must be an earlier section", region->anchor_section);
+            }
+            anchor_key = &keys[found];
+            anchor_name = region->anchor_section;
+        }
+        const Relation *relation = knowledge_snapshot_relation_named(knowledge, region->relation);
+        Region from = region_tonal(analysis_key_tonic_pitch_class(anchor_key), anchor_key->material);
+        Region reached;
+        char why[256];
+        if (!relation) {
+            return refuse_region(i, refused, message, message_size, "section '%s': no relation is named '%s'", section->id, region->relation);
+        }
+        if (region_resolve_named(knowledge, region->relation, &from, &reached, why, sizeof(why)) != REGION_RELATION_OK) {
+            return refuse_region(i, refused, message, message_size, "section '%s': %s", section->id, why);
+        }
+        if (reached.kind != REGION_TONAL_MODAL || !composer_material_supported(&materials, reached.material)) {
+            return refuse_material(i, section->id, reached.center, reached.material, refused, message, message_size);
+        }
+        entry->key = plan_key_of_pitch_class(reached.center, reached.material);
+        keys[i] = entry->key;
+        /* A region equal to the section before's (home for the first) asks for no key change. */
+        const AnalysisKey *before = i > 0 ? &keys[i - 1] : &request->key;
+        Region before_region = region_tonal(analysis_key_tonic_pitch_class(before), before->material);
+        entry->changes_key = !region_equals(&reached, &before_region);
+        snprintf(entry->relation, sizeof(entry->relation), "%s", relation->id);
+        entry->anchor = region->anchor == SECTION_ANCHOR_PREVIOUS  ? PLAN_KEY_ANCHOR_PREVIOUS
+                        : region->anchor == SECTION_ANCHOR_SECTION ? PLAN_KEY_ANCHOR_SECTION
+                                                                   : PLAN_KEY_ANCHOR_HOME;
+        if (entry->anchor == PLAN_KEY_ANCHOR_SECTION) {
+            snprintf(entry->anchor_section, sizeof(entry->anchor_section), "%s", region->anchor_section);
+        }
+        snprintf(entry->text, sizeof(entry->text), "%s of %s", region->relation, anchor_name);
+    }
+    return PIECE_OK;
 }
 
 /* ------------------------------------------------------------- the check */

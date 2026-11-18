@@ -550,6 +550,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         keys[i].plan_span = span;
         keys[i].key = *key;
         out->keys[i].sharps_flats = key_sharps_flats(key);
+        out->keys[i].tonic = analysis_key_tonic_pitch_class(key);
         out->keys[i].material = key->material;
         out->keys[i].position = musical_time_of(key_start);
         out->key_count++;

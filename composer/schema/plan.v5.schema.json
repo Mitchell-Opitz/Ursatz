@@ -55,7 +55,7 @@
     "tonic": { "type": "string", "pattern": "^[A-G](bb|b|#|x)?$" },
     "materialId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$" },
     "relationId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$", "maxLength": 63 },
-    "anchor": { "enum": ["home", "previous"] },
+    "anchor": { "type": "string", "minLength": 1, "maxLength": 31, "description": "home, previous, or the name of an earlier section (its key at its start)." },
     "time": { "type": "string", "pattern": "^-?[0-9]+/[0-9]+$" },
     "formRecord": {
       "type": "object",
