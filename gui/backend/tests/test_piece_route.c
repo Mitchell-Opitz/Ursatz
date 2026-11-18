@@ -686,9 +686,10 @@ static void test_compose(const Items *m) {
         "a theme fill names the copy of the plan by an absolute path in the version folder");
   check(is_theme_plan(plan, m->theme, 2), "the copy is the plan of the theme version");
   const cJSON *s3 = section_named(request, "s3");
-  check(strcmp(string_of(member(s3, "fill"), "kind"), "progression") == 0 &&
-            strcmp(string_of(member(s3, "fill"), "numerals"), "i iv V i") == 0 && number_of(member(s3, "fill"), "cells") == 2,
-        "a progression fill passes its numerals and cells");
+  /* A stored progression fill is the section's harmony on an empty fill (R-610). */
+  check(strcmp(string_of(member(s3, "fill"), "kind"), "empty") == 0 &&
+            strcmp(string_of(member(s3, "harmony"), "progression"), "i iv V i") == 0 && number_of(member(s3, "harmony"), "cells") == 2,
+        "a progression fill is read as harmony: its numerals and cells");
   check(strcmp(string_of(member(section_named(request, "end"), "fill"), "kind"), "empty") == 0 &&
             strcmp(string_of(section_named(request, "end"), "part"), "ending") == 0,
         "the ending is a section like the others");
@@ -1523,7 +1524,8 @@ static void test_any_form(const Items *m) {
 
   /* What a form does not have is refused. */
   check(create_sized("Bad", "waltz", "", more, NULL) == 400, "a form the Composer does not build is refused");
-  check(create_sized("Bad", "rounded-binary", ",\"sections\":[]", more, NULL) == 400, "sections on a rounded binary are refused");
+  check(create_sized("Bad", "rounded-binary", ",\"sections\":[{\"name\":\"Z\",\"region\":\"home\"}]", more, NULL) == 400,
+        "an overlay that names no section of a rounded binary is refused");
   check(create_sized("Bad", "rounded-binary", ",\"bars\":20", more, NULL) == 400, "a rounded binary of 20 bars is refused");
   char *loop_piece = NULL;
   char sections[5000];

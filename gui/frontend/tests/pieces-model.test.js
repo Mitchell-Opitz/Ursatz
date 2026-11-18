@@ -25,7 +25,7 @@ function filled() {
     section("s1", "body", "A", 32, { kind: "motif", item_id: "mot-1", version: 2, into: "sentence", hybrid: "" }),
     section("s2", "body", "B", 16, { kind: "motif", item_id: "mot-2", version: 1, into: "sentence", hybrid: "" }),
     section("s3", "turnaround", "T", 8),
-    section("s4", "ending", "E", 8, { kind: "progression", numerals: "I  IV V I", cells: "2" }),
+    section("s4", "ending", "E", 8, null, { harmony: { kind: "progression", numerals: "I  IV V I", cells: "2", schema: "", chords: [] } }),
   ];
   return state;
 }
@@ -51,7 +51,7 @@ check(body.piece.structure.sections[2].fill.into === "sentence", "a motif of 4 b
 const freeState = filled();
 freeState.sections[2].beats = 14;
 check(P.bodyFromState(freeState).piece.structure.sections[2].fill.into === undefined, "a motif of any other length is a free phrase and has no theme form");
-check(same(body.piece.structure.sections[4].fill, { kind: "progression", numerals: "I IV V I", cells: 2 }), "numerals are tidied and cells are a number");
+check(same(body.piece.structure.sections[4].harmony, { progression: "I IV V I", cells: 2 }), "numerals are tidied and cells are a number");
 check(same(body.piece.motive, { item_id: "mot-9", version: 3 }) && body.piece.pool === "approved", "motive and pool are in the body");
 check(same(body.piece.accompaniment, { pattern: "alberti" }), "the accompaniment is a pattern");
 check(body.piece.brief.scopes.length === 1 && body.piece.brief.style_ids[0] === "sty-1", "the brief comes from the picks");
@@ -71,9 +71,9 @@ for (const placeholder of [{ uses: [], piece: { structure: null } }, { uses: [],
 const unfinished = filled();
 unfinished.sections[1].fill = { kind: "motif", item_id: "", version: 0, into: "sentence" };
 unfinished.sections[2].fill = { kind: "theme", item_id: "", version: 0 };
-unfinished.sections[4].fill = { kind: "progression", numerals: "  ", cells: "" };
+unfinished.sections[4].harmony = { kind: "progression", numerals: "  ", cells: "", schema: "", chords: [] };
 const unfinishedBody = P.bodyFromState(unfinished);
-check(unfinishedBody.piece.structure.sections.every((entry) => entry.fill.kind === "empty"), "a fill that names nothing is saved empty");
+check(unfinishedBody.piece.structure.sections.every((entry) => entry.fill.kind === "empty" && entry.harmony === undefined), "a fill that names nothing is saved empty, and so is a harmony");
 check(P.formProblems(unfinished).length === 0, "an unfinished fill is no problem");
 const old = P.stateFromBody({ uses: [], piece: { structure: { key: "F", mode: "minor", meter: "3/4", sections: [{ id: "s0", part: "body", letter: "A", beats: 6, pickup: "1", cadence: "HC", fill: { kind: "motif", item_id: "m", version: 1, into: null, hybrid: null } }] } } }, "x");
 check(old.meter === "3/4" && old.sections[0].cadence === "HC" && old.sections[0].pickup === "1", "meter, pickup and cadence are read");

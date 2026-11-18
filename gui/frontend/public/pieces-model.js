@@ -8,8 +8,12 @@
  * for its default size; such a form has no sections here), modulate a boolean, tempo and seed as the text typed (blank for
  * none), beats a whole number, pickup a string of beats ("0", "1/2"),
  * cadence null for the default and fill one of
- *   {kind: "empty"} | {kind: "motif", item_id, version, into, hybrid} | {kind: "theme", item_id, version}
- *   | {kind: "progression", numerals, cells}. */
+ *   {kind: "empty"} | {kind: "motif", item_id, version, into, hybrid} | {kind: "theme", item_id, version}.
+ * A section (and an overlay of a sized form, {name, region, harmony, fill}) may also have a region (R-610)
+ *   {kind: "none"} | {kind: "home"} | {kind: "key", tonic, material} | {kind: "relation", relation, anchor}
+ * and a harmony
+ *   {kind: "none"} | {kind: "progression", numerals, cells} | {kind: "schema", schema} | {kind: "chords", chords: [{bar, text}]},
+ * and a sized form's state has overlays: [{name, region, harmony, fill}] for the sections of its size that have any. */
 (function (root) {
   const Req = root.ApiRequest || (typeof require === "function" ? require("./request.js") : null);
   const Themes = root.ThemesModel || (typeof require === "function" ? require("./themes-model.js") : null);
@@ -48,6 +52,14 @@
     return { kind: "empty" };
   }
 
+  function emptyRegion() {
+    return { kind: "none", tonic: "", material: "", relation: "", anchor: "home" };
+  }
+
+  function emptyHarmony() {
+    return { kind: "none", numerals: "", cells: "", schema: "", chords: [] };
+  }
+
   function emptyState(id) {
     return {
       id: id || "",
@@ -61,6 +73,7 @@
       count: 0,
       modulate: false,
       sections: [],
+      overlays: [],
       motive: null,
       pool: "approved-and-unflagged",
       accompaniment: { kind: "none", pattern: "any" },
@@ -374,6 +387,8 @@
       cadence: null,
       fill: emptyFill(),
       function: "",
+      region: emptyRegion(),
+      harmony: emptyHarmony(),
     };
   }
 
@@ -446,17 +461,6 @@
       }
       case "theme":
         return text(f.item_id) ? { kind: "theme", item_id: f.item_id, version: Number(f.version) } : emptyFill();
-      case "progression": {
-        if (text(f.numerals) === "") {
-          return emptyFill();
-        }
-        const out = { kind: "progression", numerals: text(f.numerals).split(/\s+/).join(" ") };
-        const cells = wholeNumber(f.cells, 1, MAX_CELLS);
-        if (cells !== null) {
-          out.cells = cells;
-        }
-        return out;
-      }
       default:
         return emptyFill();
     }
@@ -478,15 +482,145 @@
         };
       case "theme":
         return { kind: "theme", item_id: fill.item_id, version: Number(fill.version) };
-      case "progression":
-        return {
-          kind: "progression",
-          numerals: typeof fill.numerals === "string" ? fill.numerals : "",
-          cells: Number.isInteger(fill.cells) ? String(fill.cells) : "",
-        };
       default:
         return emptyFill();
     }
+  }
+
+  /* The region of a state as the body keeps it (R-610): null for none, "home", {tonic, material} or {relation, anchor}; a
+   * region that names nothing yet is none, so it may be saved unfinished. */
+  function regionFromState(region) {
+    const r = region && typeof region === "object" ? region : emptyRegion();
+    if (r.kind === "home") {
+      return "home";
+    }
+    if (r.kind === "key" && text(r.tonic) !== "" && text(r.material) !== "") {
+      return { tonic: text(r.tonic), material: text(r.material) };
+    }
+    if (r.kind === "relation" && text(r.relation) !== "") {
+      return { relation: text(r.relation), anchor: text(r.anchor) || "home" };
+    }
+    return null;
+  }
+
+  function regionFromBody(region) {
+    if (region === "home") {
+      return { ...emptyRegion(), kind: "home" };
+    }
+    if (region && typeof region === "object" && typeof region.tonic === "string" && typeof region.material === "string") {
+      return { ...emptyRegion(), kind: "key", tonic: region.tonic, material: region.material };
+    }
+    if (region && typeof region === "object" && typeof region.relation === "string") {
+      return {
+        ...emptyRegion(),
+        kind: "relation",
+        relation: region.relation,
+        anchor: typeof region.anchor === "string" && region.anchor !== "" ? region.anchor : "home",
+      };
+    }
+    return emptyRegion();
+  }
+
+  /* The harmony of a state as the body keeps it: null, {progression, cells?}, {schema} or {chords: [{bar, text}]}; a chord with
+   * no bar or no text is left out, and a kind that names nothing is none. */
+  function harmonyFromState(harmony) {
+    const h = harmony && typeof harmony === "object" ? harmony : emptyHarmony();
+    if (h.kind === "progression" && text(h.numerals) !== "") {
+      const out = { progression: text(h.numerals).split(/\s+/).join(" ") };
+      const cells = wholeNumber(h.cells, 1, MAX_CELLS);
+      if (cells !== null) {
+        out.cells = cells;
+      }
+      return out;
+    }
+    if (h.kind === "schema" && text(h.schema) !== "") {
+      return { schema: text(h.schema) };
+    }
+    if (h.kind === "chords") {
+      const chords = (Array.isArray(h.chords) ? h.chords : [])
+        .map((chord) => ({ bar: wholeNumber(chord && chord.bar, 1, Infinity), text: text(chord && chord.text) }))
+        .filter((chord) => chord.bar !== null && chord.text !== "");
+      return chords.length > 0 ? { chords } : null;
+    }
+    return null;
+  }
+
+  function harmonyFromBody(harmony) {
+    if (harmony && typeof harmony === "object" && typeof harmony.progression === "string") {
+      return {
+        ...emptyHarmony(),
+        kind: "progression",
+        numerals: harmony.progression,
+        cells: Number.isInteger(harmony.cells) && harmony.cells > 0 ? String(harmony.cells) : "",
+      };
+    }
+    if (harmony && typeof harmony === "object" && typeof harmony.schema === "string") {
+      return { ...emptyHarmony(), kind: "schema", schema: harmony.schema };
+    }
+    if (harmony && typeof harmony === "object" && Array.isArray(harmony.chords)) {
+      return {
+        ...emptyHarmony(),
+        kind: "chords",
+        chords: harmony.chords
+          .filter((chord) => chord && typeof chord === "object")
+          .map((chord) => ({ bar: Number.isInteger(chord.bar) ? String(chord.bar) : "", text: typeof chord.text === "string" ? chord.text : "" })),
+      };
+    }
+    return emptyHarmony();
+  }
+
+  /* A stored progression fill is the section's harmony (R-610): a body saved before P60 reads into harmony.progression. */
+  function legacyProgression(fill) {
+    if (!fill || fill.kind !== "progression" || typeof fill.numerals !== "string" || fill.numerals.trim() === "") {
+      return emptyHarmony();
+    }
+    return {
+      ...emptyHarmony(),
+      kind: "progression",
+      numerals: fill.numerals,
+      cells: Number.isInteger(fill.cells) && fill.cells > 0 ? String(fill.cells) : "",
+    };
+  }
+
+  /* The overlays of a sized form as the body keeps them: {name, region?, harmony?, fill?} for each that has something. */
+  function overlaysFromState(overlays) {
+    const seen = new Set();
+    const out = [];
+    (Array.isArray(overlays) ? overlays : []).forEach((overlay) => {
+      const name = text(overlay && overlay.name);
+      if (name === "" || seen.has(name)) {
+        return;
+      }
+      const entry = { name };
+      const region = regionFromState(overlay.region);
+      const harmony = harmonyFromState(overlay.harmony);
+      const fill = fillFromState(overlay.fill, true);
+      if (region !== null) {
+        entry.region = region;
+      }
+      if (harmony !== null) {
+        entry.harmony = harmony;
+      }
+      if (fill.kind !== "empty") {
+        entry.fill = fill;
+      }
+      if (Object.keys(entry).length > 1) {
+        seen.add(name);
+        out.push(entry);
+      }
+    });
+    return out;
+  }
+
+  function overlaysFromBody(sections) {
+    return (Array.isArray(sections) ? sections : [])
+      .filter((entry) => entry && typeof entry === "object" && typeof entry.name === "string" && entry.name !== "")
+      .map((entry) => ({
+        name: entry.name,
+        region: regionFromBody(entry.region),
+        harmony: harmonyFromBody(entry.harmony),
+        fill: fillFromBody(entry.fill),
+      }));
   }
 
   function sectionFromState(section, meter) {
@@ -504,6 +638,15 @@
     if (kept !== "") {
       out.function = kept;
     }
+    /* A section without a region or harmony has no member, so a piece saved before P60 is unchanged (R-610). */
+    const region = regionFromState(section.region);
+    if (region !== null) {
+      out.region = region;
+    }
+    const harmony = harmonyFromState(section.harmony);
+    if (harmony !== null) {
+      out.harmony = harmony;
+    }
     return out;
   }
 
@@ -518,6 +661,10 @@
       structure.bars = Number(s.bars) || 0;
       structure.count = Number(s.count) || 0;
       structure.modulate = form.settings && form.settings.modulate === true && s.modulate === true;
+      const overlays = overlaysFromState(s.overlays);
+      if (overlays.length > 0) {
+        structure.sections = overlays;
+      }
     } else {
       structure.sections = (Array.isArray(s.sections) ? s.sections : []).map((section) => sectionFromState(section, s.meter));
     }
@@ -559,6 +706,7 @@
       state.bars = Number.isInteger(structure.bars) ? structure.bars : 0;
       state.count = Number.isInteger(structure.count) ? structure.count : 0;
       state.modulate = structure.modulate === true;
+      state.overlays = overlaysFromBody(structure.sections);
     }
     state.sections = (isSized(kept) || !Array.isArray(structure.sections) ? [] : structure.sections)
       .filter((section) => section && typeof section === "object" && roleValues(kept).includes(section.part))
@@ -571,6 +719,8 @@
         cadence: cadences().includes(section.cadence) ? section.cadence : null,
         fill: fillFromBody(section.fill),
         function: functionKept(section.function, section.part),
+        region: regionFromBody(section.region),
+        harmony: section.harmony === undefined || section.harmony === null ? legacyProgression(section.fill) : harmonyFromBody(section.harmony),
       }));
     if (piece.motive && typeof piece.motive === "object" && text(piece.motive.item_id)) {
       state.motive = { item_id: piece.motive.item_id, version: Number(piece.motive.version) };
@@ -950,7 +1100,7 @@
 
   const FROM_TEXT = { request: "set here", option: "set here", style: "from the brief", none: "not set" };
   const DISTANCE_LABELS = ["harmony", "rhythm", "melody", "form", "overall"];
-  const FILL_TEXT = { empty: "empty", motif: "motif", theme: "theme", progression: "progression" };
+  const FILL_TEXT = { empty: "empty", motif: "motif", theme: "theme" };
   const SEAM_RULES = [
     { key: "progression", label: "The chords lead back" },
     { key: "no_parallels", label: "No parallel perfect intervals across the seam" },
@@ -1022,6 +1172,9 @@
         fill: FILL_TEXT[section.fill] || section.fill || "",
         source: sourceText(section.source, options && options.sourceNames),
         plannedKey: section.key || "",
+        /* The region and the harmony the request gave the section, as it asked (R-610); "" for none. */
+        region: section.region || "",
+        harmony: section.harmony || "",
         keyHeard: section.key_heard || "",
         pedal: entry && entry.pedal && entry.pedal.label ? entry.pedal.label : "",
         returns: section.returns || "",
@@ -1227,6 +1380,10 @@
     validateRequest,
     emptyState,
     emptyFill,
+    emptyRegion,
+    emptyHarmony,
+    regionFromState,
+    harmonyFromState,
     barBeats,
     newSection,
     addSection,

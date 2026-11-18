@@ -68,7 +68,9 @@ static cJSON *motive_of(const cJSON *body, const cJSON *reference, char *message
 static UrsatzGuiThemeResult build_fill(const cJSON *body, const cJSON *derived_list, const char *pool, const cJSON *section,
                                        const char *dir, cJSON **out, char *message, size_t message_size) {
     const cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
+    /* A section of a game loop has an id, an overlay of a sized form a name (R-610). */
     const char *id = ursatz_gui_json_string(section, "id");
+    id = id[0] != '\0' ? id : ursatz_gui_json_string(section, "name");
     const char *kind = cJSON_IsObject(fill) ? ursatz_gui_json_string(fill, "kind") : "empty";
     cJSON *object = cJSON_CreateObject();
     bool ok = object && cJSON_AddStringToObject(object, "kind", kind);
@@ -130,8 +132,45 @@ static cJSON *section_json(const cJSON *section, cJSON *fill) {
     bool ok = object && ursatz_gui_json_add_copy_or_null(object, section, "id") && ursatz_gui_json_add_copy_or_null(object, section, "part") &&
               ursatz_gui_json_add_copy_if(object, section, "letter") && ursatz_gui_json_add_copy_or_null(object, section, "beats") &&
               ursatz_gui_json_attach(object, "pickup", cJSON_IsString(pickup) ? cJSON_Duplicate(pickup, 1) : cJSON_CreateString("0")) &&
-              ursatz_gui_json_add_copy_or_null(object, section, "cadence") && ursatz_gui_json_add_copy_if(object, section, "function");
+              ursatz_gui_json_add_copy_or_null(object, section, "cadence") && ursatz_gui_json_add_copy_if(object, section, "function") &&
+              ursatz_gui_json_add_copy_if(object, section, "region") && ursatz_gui_json_add_copy_if(object, section, "harmony");
+    /* A progression fill of a body not migrated yet is the section's harmony (R-610). */
+    if (ok && fill && strcmp(ursatz_gui_json_string(fill, "kind"), "progression") == 0) {
+        const cJSON *numerals = cJSON_GetObjectItemCaseSensitive(fill, "numerals");
+        const cJSON *cells = cJSON_GetObjectItemCaseSensitive(fill, "cells");
+        cJSON *harmony = cJSON_IsString(numerals) && cJSON_GetObjectItemCaseSensitive(object, "harmony") == NULL ? cJSON_CreateObject() : NULL;
+        if (harmony && cJSON_AddStringToObject(harmony, "progression", numerals->valuestring) &&
+            (!cJSON_IsNumber(cells) || cJSON_AddNumberToObject(harmony, "cells", cells->valuedouble)) &&
+            cJSON_AddItemToObject(object, "harmony", harmony)) {
+            harmony = NULL;
+        }
+        cJSON_Delete(harmony);
+        cJSON *empty = cJSON_CreateObject();
+        if (empty && cJSON_AddStringToObject(empty, "kind", "empty")) {
+            cJSON_Delete(fill);
+            fill = empty;
+        } else {
+            cJSON_Delete(empty);
+        }
+    }
     ok = ursatz_gui_json_attach(object, "fill", fill) && ok;
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* An overlay of a sized form as the request holds it: its name, its region and harmony, and a fill when it has one (R-610). */
+static cJSON *overlay_json(const cJSON *overlay, cJSON *fill) {
+    cJSON *object = cJSON_CreateObject();
+    bool ok = object && ursatz_gui_json_add_copy_or_null(object, overlay, "name") && ursatz_gui_json_add_copy_if(object, overlay, "region") &&
+              ursatz_gui_json_add_copy_if(object, overlay, "harmony");
+    if (ok && fill && strcmp(ursatz_gui_json_string(fill, "kind"), "empty") != 0) {
+        ok = ursatz_gui_json_attach(object, "fill", fill);
+    } else {
+        cJSON_Delete(fill);
+    }
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
@@ -211,14 +250,15 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
         result = URSATZ_GUI_THEME_ERR_FAILED;
     }
     const cJSON *section = NULL;
-    const cJSON *own_sections = sized ? NULL : cJSON_GetObjectItemCaseSensitive(structure, "sections");
+    /* A game loop's sections, or a sized form's overlays: the sections of its size that were given something (R-610). */
+    const cJSON *own_sections = cJSON_GetObjectItemCaseSensitive(structure, "sections");
     cJSON_ArrayForEach(section, own_sections) {
         if (result != URSATZ_GUI_THEME_OK) {
             break;
         }
         cJSON *fill = NULL;
         result = build_fill(body, derived_list, pool, section, dir, &fill, message, message_size);
-        cJSON *entry = result == URSATZ_GUI_THEME_OK ? section_json(section, fill) : NULL;
+        cJSON *entry = result == URSATZ_GUI_THEME_OK ? (sized ? overlay_json(section, fill) : section_json(section, fill)) : NULL;
         if (result == URSATZ_GUI_THEME_OK && (!entry || !cJSON_AddItemToArray(sections, entry))) {
             cJSON_Delete(entry);
             result = URSATZ_GUI_THEME_ERR_ALLOC;
@@ -248,6 +288,10 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
         ok = cJSON_AddNumberToObject(request, "bars", cJSON_IsNumber(bars) ? bars->valuedouble : 0) &&
              cJSON_AddNumberToObject(request, "count", cJSON_IsNumber(count) ? count->valuedouble : 0) &&
              cJSON_AddBoolToObject(request, "modulate", cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(structure, "modulate")));
+        if (ok && cJSON_GetArraySize(sections) > 0) {
+            ok = ursatz_gui_json_attach(request, "sections", sections);
+            sections = NULL;
+        }
     } else if (ok) {
         ok = ursatz_gui_json_attach(request, "sections", sections);
         sections = NULL;

@@ -1181,6 +1181,64 @@ static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *erro
     return URSATZ_GUI_MATERIAL_OK;
 }
 
+/* A section's region (R-610): null or absent, "home", {tonic, material} or {relation, anchor}, each member text. */
+static UrsatzGuiMaterialResult validate_piece_region(const cJSON *section, char *error, size_t error_size) {
+    const cJSON *region = cJSON_GetObjectItemCaseSensitive(section, "region");
+    if (is_absent_or_null(section, "region") || (cJSON_IsString(region) && strcmp(region->valuestring, "home") == 0)) {
+        return URSATZ_GUI_MATERIAL_OK;
+    }
+    bool key = cJSON_IsObject(region) && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(region, "tonic")) &&
+               cJSON_IsString(cJSON_GetObjectItemCaseSensitive(region, "material"));
+    bool relation = cJSON_IsObject(region) && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(region, "relation")) &&
+                    cJSON_IsString(cJSON_GetObjectItemCaseSensitive(region, "anchor"));
+    const cJSON *member = NULL;
+    bool long_text = false;
+    cJSON_ArrayForEach(member, region) {
+        long_text = long_text || !cJSON_IsString(member) || strlen(member->valuestring) > PIECE_WORD_MAX;
+    }
+    if ((!key && !relation) || long_text) {
+        return invalid_body(error, error_size, "a section region must be home, {tonic, material} or {relation, anchor}");
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+/* A section's harmony (R-610): null or absent, {progression, cells}, {schema} or {chords: [{bar, text}]}; the Composer checks the text. */
+static UrsatzGuiMaterialResult validate_piece_harmony(const cJSON *section, char *error, size_t error_size) {
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(section, "harmony");
+    if (is_absent_or_null(section, "harmony")) {
+        return URSATZ_GUI_MATERIAL_OK;
+    }
+    const cJSON *progression = cJSON_GetObjectItemCaseSensitive(harmony, "progression");
+    const cJSON *schema = cJSON_GetObjectItemCaseSensitive(harmony, "schema");
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(harmony, "chords");
+    if (!cJSON_IsObject(harmony) || (cJSON_GetArraySize(harmony) != (cJSON_IsString(progression) && !is_absent_or_null(harmony, "cells") ? 2 : 1))) {
+        return invalid_body(error, error_size, "a section harmony is {progression, cells}, {schema} or {chords}");
+    }
+    if (progression) {
+        const cJSON *cells = cJSON_GetObjectItemCaseSensitive(harmony, "cells");
+        if (!cJSON_IsString(progression) || progression->valuestring[0] == '\0' || strlen(progression->valuestring) > PIECE_TEXT_MAX ||
+            (!is_absent_or_null(harmony, "cells") && (!is_whole_number(cells, 1) || cells->valuedouble > PIECE_CELLS_MAX))) {
+            return invalid_body(error, error_size, "a harmony progression needs numerals as text and cells of 1 to 8");
+        }
+    } else if (schema) {
+        if (!cJSON_IsString(schema) || schema->valuestring[0] == '\0' || strlen(schema->valuestring) > PIECE_WORD_MAX) {
+            return invalid_body(error, error_size, "a harmony schema must be a name");
+        }
+    } else if (cJSON_IsArray(chords) && cJSON_GetArraySize(chords) >= 1 && cJSON_GetArraySize(chords) <= 16) {
+        const cJSON *chord = NULL;
+        cJSON_ArrayForEach(chord, chords) {
+            const cJSON *text = cJSON_GetObjectItemCaseSensitive(chord, "text");
+            if (!cJSON_IsObject(chord) || !is_whole_number(cJSON_GetObjectItemCaseSensitive(chord, "bar"), 1) || !cJSON_IsString(text) ||
+                text->valuestring[0] == '\0' || strlen(text->valuestring) > PIECE_WORD_MAX) {
+                return invalid_body(error, error_size, "each harmony chord needs a bar from 1 and text");
+            }
+        }
+    } else {
+        return invalid_body(error, error_size, "a section harmony is {progression, cells}, {schema} or {chords}");
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
 /* The words of a form's list (roles or sizes members) joined by ", ": member (value or label) of each entry. */
 static void join_members(const cJSON *list, const char *member, char *out, size_t out_size) {
     size_t used = 0;
@@ -1319,6 +1377,11 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
         if (filled != URSATZ_GUI_MATERIAL_OK) {
             return filled;
         }
+        UrsatzGuiMaterialResult placed = validate_piece_region(section, error, error_size);
+        placed = placed == URSATZ_GUI_MATERIAL_OK ? validate_piece_harmony(section, error, error_size) : placed;
+        if (placed != URSATZ_GUI_MATERIAL_OK) {
+            return placed;
+        }
     }
     int index = 0;
     const cJSON *role = NULL;
@@ -1334,14 +1397,64 @@ static UrsatzGuiMaterialResult validate_piece_sections(const cJSON *structure, c
     return URSATZ_GUI_MATERIAL_OK;
 }
 
+/* The overlays of a sized form (R-610): each names a section of the size the piece picks, once, and has a region, a harmony and a
+ * fill; the Composer checks what the region and the harmony say. */
+static UrsatzGuiMaterialResult validate_piece_overlays(const cJSON *structure, const cJSON *form, const cJSON *overlays, double want_bars,
+                                                       double want_count, char *error, size_t error_size) {
+    (void)structure;
+    if (is_absent_or_null(structure, "sections")) {
+        return URSATZ_GUI_MATERIAL_OK;
+    }
+    const cJSON *picked = NULL;
+    const cJSON *size = NULL;
+    cJSON_ArrayForEach(size, cJSON_GetObjectItemCaseSensitive(form, "sizes")) {
+        const cJSON *size_bars = cJSON_GetObjectItemCaseSensitive(size, "bars");
+        const cJSON *size_count = cJSON_GetObjectItemCaseSensitive(size, "count");
+        bool match = want_bars != 0 || want_count != 0
+                         ? (cJSON_IsNumber(size_bars) && cJSON_IsNumber(size_count) && (want_bars == 0 || size_bars->valuedouble == want_bars) &&
+                            (want_count == 0 || size_count->valuedouble == want_count))
+                         : cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(size, "default"));
+        picked = picked ? picked : (match ? size : NULL);
+    }
+    const char *label = ursatz_gui_json_string(form, "label");
+    const cJSON *overlay = NULL;
+    cJSON_ArrayForEach(overlay, overlays) {
+        const cJSON *name = cJSON_GetObjectItemCaseSensitive(overlay, "name");
+        bool found = false;
+        const cJSON *section = NULL;
+        cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(picked, "sections")) {
+            found = found || (cJSON_IsString(name) && strcmp(ursatz_gui_json_string(section, "name"), name->valuestring) == 0);
+        }
+        if (!cJSON_IsObject(overlay) || !cJSON_IsString(name) || !found) {
+            char message[256];
+            snprintf(message, sizeof(message), "an overlay names a section of the %s form at this size, not '%s'", label ? label : "sized",
+                     cJSON_IsString(name) ? name->valuestring : "");
+            return invalid_body(error, error_size, message);
+        }
+        for (const cJSON *earlier = overlays->child; earlier != overlay; earlier = earlier->next) {
+            if (strcmp(ursatz_gui_json_string(earlier, "name"), name->valuestring) == 0) {
+                return invalid_body(error, error_size, "each overlay names a section once");
+            }
+        }
+        UrsatzGuiMaterialResult result = validate_piece_fill(cJSON_GetObjectItemCaseSensitive(overlay, "fill"), error, error_size);
+        result = result == URSATZ_GUI_MATERIAL_OK ? validate_piece_region(overlay, error, error_size) : result;
+        result = result == URSATZ_GUI_MATERIAL_OK ? validate_piece_harmony(overlay, error, error_size) : result;
+        if (result != URSATZ_GUI_MATERIAL_OK) {
+            return result;
+        }
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
 /* A form with sizes: no sections, bars and count (absent is 0) that pick one of the form's sizes, 0 and 0 being the
  * default, and modulate only where the form allows it. */
 static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const cJSON *form, char *error,
                                                    size_t error_size) {
     const char *label = ursatz_gui_json_string(form, "label");
     char message[256];
-    if (!is_absent_or_null(structure, "sections")) {
-        snprintf(message, sizeof(message), "a %s piece has no sections of its own", label ? label : "sized");
+    const cJSON *overlays = cJSON_GetObjectItemCaseSensitive(structure, "sections");
+    if (!is_absent_or_null(structure, "sections") && (!cJSON_IsArray(overlays) || cJSON_GetArraySize(overlays) > PIECE_SECTIONS_MAX)) {
+        snprintf(message, sizeof(message), "a %s piece takes its sections from its form: sections lists the overlays", label ? label : "sized");
         return invalid_body(error, error_size, message);
     }
     const cJSON *bars = cJSON_GetObjectItemCaseSensitive(structure, "bars");
@@ -1369,7 +1482,8 @@ static UrsatzGuiMaterialResult validate_piece_size(const cJSON *structure, const
             return invalid_body(error, error_size, message);
         }
     }
-    return validate_piece_modulate(structure, form, error, error_size);
+    UrsatzGuiMaterialResult overlaid = validate_piece_overlays(structure, form, overlays, want_bars, want_count, error, error_size);
+    return overlaid == URSATZ_GUI_MATERIAL_OK ? validate_piece_modulate(structure, form, error, error_size) : overlaid;
 }
 
 /* structure.form names a form of the Composer (absent is game-loop); the form says whether the structure lists its
@@ -1611,6 +1725,29 @@ static void migrate_motif_key(cJSON *motif) {
     }
 }
 
+/* A stored progression fill is the section's harmony (R-610): {"progression", "cells"} on the section and an empty fill. A section that
+ * has a harmony already keeps it and loses the fill's numerals. */
+static void migrate_progression_fill(cJSON *section) {
+    cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
+    if (!cJSON_IsObject(fill) || strcmp(ursatz_gui_json_string(fill, "kind"), "progression") != 0) {
+        return;
+    }
+    const cJSON *numerals = cJSON_GetObjectItemCaseSensitive(fill, "numerals");
+    const cJSON *cells = cJSON_GetObjectItemCaseSensitive(fill, "cells");
+    cJSON *harmony = is_absent_or_null(section, "harmony") && cJSON_IsString(numerals) ? cJSON_CreateObject() : NULL;
+    /* The harmony is made from the fill before the fill goes. */
+    if (harmony && cJSON_AddStringToObject(harmony, "progression", numerals->valuestring) &&
+        (!cJSON_IsNumber(cells) || cJSON_AddNumberToObject(harmony, "cells", cells->valuedouble)) &&
+        cJSON_AddItemToObject(section, "harmony", harmony)) {
+        harmony = NULL;
+    }
+    cJSON_Delete(harmony);
+    cJSON *empty = cJSON_CreateObject();
+    if (!empty || !cJSON_AddStringToObject(empty, "kind", "empty") || !cJSON_ReplaceItemInObjectCaseSensitive(section, "fill", empty)) {
+        cJSON_Delete(empty);
+    }
+}
+
 void ursatz_gui_material_body_migrate(cJSON *body) {
     if (!cJSON_IsObject(body)) {
         return;
@@ -1623,6 +1760,12 @@ void ursatz_gui_material_body_migrate(cJSON *body) {
     const cJSON *piece = cJSON_GetObjectItemCaseSensitive(body, "piece");
     if (cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(piece, "structure"))) {
         migrate_mode_member(cJSON_GetObjectItemCaseSensitive(piece, "structure"));
+        cJSON *section = NULL;
+        cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(piece, "structure"), "sections")) {
+            if (cJSON_IsObject(section)) {
+                migrate_progression_fill(section);
+            }
+        }
     }
     cJSON *use = NULL;
     cJSON_ArrayForEach(use, cJSON_GetObjectItemCaseSensitive(body, "uses")) {
