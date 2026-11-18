@@ -660,6 +660,7 @@ if(URSATZ_JSONSCHEMA_PYTHON)
                      -DVALIDATOR=${CMAKE_SOURCE_DIR}/tests/support/validate_schema.py
                      -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations,progression,counterpoint,develop,grow,vocabulary,forms,validate
                      -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                     -DFRAGMENT=${CMAKE_SOURCE_DIR}/library/plan/schema/section.schema.json
                      -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_api_schema.cmake
         LABELS schema
         PROPERTIES FIXTURES_REQUIRED api_responses_written)

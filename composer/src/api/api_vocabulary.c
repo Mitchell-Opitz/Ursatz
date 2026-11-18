@@ -608,6 +608,26 @@ bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials)
            add_preferences(root) && add_limits(root);
 }
 
+/* The relations of the snapshot (K6), by id: a section's region may be one, taken from an anchor (R-610). */
+static bool add_relations(cJSON *root, const KnowledgeSnapshot *knowledge) {
+    static const char *const FAMILIES[] = {"tonal", "modal", "neo-riemannian", "set", "serial"};
+    cJSON *list = add_list(root, "relations");
+    for (size_t i = 0; list && i < knowledge_snapshot_entry_count(knowledge); i++) {
+        const KnowledgeEntry *entry = knowledge_snapshot_entry_at(knowledge, i);
+        const Relation *relation = entry && strcmp(entry->kind, "relation") == 0 ? knowledge_snapshot_relation(knowledge, entry->id) : NULL;
+        if (!relation) {
+            continue;
+        }
+        cJSON *item = cJSON_CreateObject();
+        if (!item || !cJSON_AddStringToObject(item, "id", relation->id) || !cJSON_AddStringToObject(item, "name", relation->name) ||
+            !cJSON_AddStringToObject(item, "family", FAMILIES[relation->family]) || !cJSON_AddItemToArray(list, item)) {
+            cJSON_Delete(item);
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
@@ -616,7 +636,7 @@ ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerR
         return context_status;
     }
     cJSON *root = cJSON_CreateObject();
-    if (!root || !api_vocabulary_build(root, &materials)) {
+    if (!root || !api_vocabulary_build(root, &materials) || !add_relations(root, context->knowledge)) {
         cJSON_Delete(root);
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }

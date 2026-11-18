@@ -37,10 +37,17 @@
     "tone_labels",
     "variant_operations",
     "preferences",
+    "relations",
     "limits"
   ],
   "additionalProperties": false,
   "properties": {
+    "relations": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The relations of the knowledge snapshot (K6) a section's region may name, from an anchor (R-610).",
+      "items": { "$ref": "#/$defs/relation" }
+    },
     "meters": {
       "type": "array",
       "minItems": 1,
@@ -358,6 +365,16 @@
     }
   },
   "$defs": {
+    "relation": {
+      "type": "object",
+      "required": ["id", "name", "family"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "family": { "enum": ["tonal", "modal", "neo-riemannian", "set", "serial"] }
+      },
+      "additionalProperties": false
+    },
     "choice": {
       "type": "object",
       "required": [

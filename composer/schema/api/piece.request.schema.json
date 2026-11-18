@@ -147,92 +147,16 @@
           "type": "array",
           "minItems": 1,
           "items": {
-            "type": "object",
-            "required": [
-              "id",
-              "part",
-              "beats"
-            ],
-            "properties": {
-              "id": {
-                "type": "string"
+            "oneOf": [
+              {
+                "$ref": "#/$defs/loop_section"
               },
-              "part": {
-                "enum": [
-                  "intro",
-                  "body",
-                  "turnaround",
-                  "ending"
-                ]
-              },
-              "letter": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "beats": {
-                "type": "integer",
-                "minimum": 1
-              },
-              "pickup": {
-                "type": [
-                  "string",
-                  "number",
-                  "null"
-                ]
-              },
-              "cadence": {
-                "enum": [
-                  "PAC",
-                  "IAC",
-                  "HC",
-                  "DC",
-                  "PC",
-                  null
-                ]
-              },
-              "function": {
-                "enum": [
-                  "transition",
-                  "coda",
-                  null
-                ],
-                "description": "The part of a larger form the section is (R-508): a transition on any body section but the ending, a coda on the ending; absent or null for none."
-              },
-              "fill": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "type": "object",
-                    "required": [
-                      "kind"
-                    ],
-                    "properties": {
-                      "kind": {
-                        "enum": [
-                          "empty",
-                          "motif",
-                          "theme",
-                          "progression"
-                        ]
-                      },
-                      "plan": {
-                        "$ref": "#/$defs/plan",
-                        "description": "theme: the plan object of the theme"
-                      },
-                      "source": {
-                        "type": "string",
-                        "description": "theme: the name shown as the section's source"
-                      }
-                    }
-                  }
-                ]
+              {
+                "$ref": "#/$defs/overlay_section"
               }
-            }
-          }
+            ]
+          },
+          "description": "The game loop's sections (version 1 and the game loop), or for a form with sizes the overlays: the sections of its size given a region, a motif with a motive of its own or a theme."
         },
         "accompaniment": {
           "type": [
@@ -359,6 +283,192 @@
           "material",
           "mode"
         ]
+      }
+    },
+    "loop_section": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "part": {
+          "enum": [
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ],
+          "description": "The old name of role; give role or part, not both."
+        },
+        "letter": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "beats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pickup": {
+          "type": [
+            "string",
+            "number",
+            "null"
+          ]
+        },
+        "cadence": {
+          "enum": [
+            "PAC",
+            "IAC",
+            "HC",
+            "DC",
+            "PC",
+            null
+          ]
+        },
+        "function": {
+          "enum": [
+            "transition",
+            "coda",
+            null
+          ],
+          "description": "The part of a larger form the section is (R-508): a transition on any body section but the ending, a coda on the ending; absent or null for none."
+        },
+        "fill": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "empty",
+                    "motif",
+                    "theme",
+                    "progression"
+                  ]
+                },
+                "plan": {
+                  "$ref": "#/$defs/plan",
+                  "description": "theme: the plan object of the theme"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "theme: the name shown as the section's source"
+                }
+              }
+            }
+          ]
+        },
+        "role": {
+          "enum": [
+            "intro",
+            "body",
+            "turnaround",
+            "ending"
+          ],
+          "description": "The name of part in the section description; give role or part, not both (R-610)."
+        },
+        "bars": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The length in bars; beats or bars (R-605)."
+        },
+        "region": {
+          "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json#/$defs/region",
+          "description": "The key the section is in (R-610): home, {tonic, material} or {relation, anchor}."
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "part"
+          ]
+        },
+        {
+          "required": [
+            "role"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "required": [
+                "beats"
+              ]
+            },
+            {
+              "required": [
+                "bars"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "overlay_section": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "description": "A section of a form that takes its sections from its size, given something of its own (R-610).",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 31,
+          "description": "A section of the form's size."
+        },
+        "region": {
+          "$ref": "https://github.com/Mitchell-Opitz/Ursatz/library/plan/schema/section.schema.json#/$defs/region"
+        },
+        "fill": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "empty",
+                    "motif",
+                    "theme"
+                  ]
+                },
+                "motive": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "description": "motif: the section's own motive"
+                },
+                "plan": {
+                  "$ref": "#/$defs/plan",
+                  "description": "theme: the plan object of the theme"
+                },
+                "source": {
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
       }
     }
   }

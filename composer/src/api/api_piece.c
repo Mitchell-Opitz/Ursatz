@@ -528,6 +528,7 @@ typedef struct {
     NodeId node;
     char key_heard[16]; /* the key the Analyzer heard at the section's start over the whole piece, "" when none */
     char key[16];       /* the key the plan gives the section's start (R-493), "" when the plan has none */
+    char region[128];   /* the region as the request asked for it or the form names it (R-610), "" for none */
     bool key_flats;     /* that key is spelled with flats: the figure's skeleton names its tones so */
     bool pedal;        /* a harmony span in the section's first half was written over a pedal */
     bool kept;         /* a regenerate left the section as it was: it was neither heard nor checked */
@@ -684,6 +685,14 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
         keys = NULL;
         key_count = 0;
     }
+    PieceRegion regions[FORM_SPEC_MAX_SECTIONS];
+    bool regional = false;
+    size_t refused = 0;
+    char why[64];
+    if (!size || piece_resolve_overlay_regions(&request->request, size, request->knowledge, regions, &regional, &refused, why, sizeof why) !=
+                     PIECE_OK) {
+        regional = false;
+    }
     for (size_t i = 0; size && i < size->section_count && count < PIECE_ROWS_MAX; i++) {
         NodeId id = sized_section_find(plan, size->sections[i].name);
         if (id == PLAN_NODE_NONE) {
@@ -713,6 +722,13 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
         }
         key_heard_at(keys, key_count, row->start, row->key_heard, sizeof row->key_heard);
         planned_key_at(plan, plan_node_span(plan, id), row->key, sizeof row->key, &row->key_flats);
+        if (regional && regions[i].has_region) {
+            snprintf(row->region, sizeof row->region, "%s", regions[i].text);
+        } else if (size->sections[i].key_end.kind == SECTION_REGION_FORM || size->sections[i].key_start.kind == SECTION_REGION_FORM) {
+            snprintf(row->region, sizeof row->region, "%s",
+                     size->sections[i].key_end.kind == SECTION_REGION_FORM ? size->sections[i].key_end.form_region
+                                                                              : size->sections[i].key_start.form_region);
+        }
         if (described->has_cadence) {
             row->heard = heard_cadence(check, next_item++);
         }
@@ -794,6 +810,12 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
     size_t next_item = 0;
     size_t count = 0;
     const PiecePlan *plan = version->plan;
+    PieceRegion loop_regions[PIECE_STRUCTURE_MAX_SECTIONS];
+    size_t loop_refused = 0;
+    char loop_why[64];
+    bool loop_regional = request->request.section_count > 0 &&
+                         piece_resolve_regions(&request->request, request->knowledge, loop_regions, &loop_refused, loop_why, sizeof loop_why) ==
+                             PIECE_OK;
     for (NodeId id = 1; id <= plan_node_count(plan) && count < PIECE_ROWS_MAX; id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION ||
             plan_section_has_role(plan, id, SECTION_ROLE_SEAM)) {
@@ -810,6 +832,9 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
             if (strcmp(request->sections[s].description.id, described->id) == 0) {
                 row->section = &request->sections[s];
                 row->source = request->source[s];
+                if (loop_regional && loop_regions[s].has_region) {
+                    snprintf(row->region, sizeof row->region, "%s", loop_regions[s].text);
+                }
             }
         }
         if (!row->section) {
@@ -971,7 +996,8 @@ static cJSON *loop_row_json(const Row *row) {
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
               api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
               cJSON_AddStringToObject(entry, "fill", piece_fill_name(row->section->fill)) &&
-              cJSON_AddStringToObject(entry, "source", row->source) && add_construction_text(entry, row);
+              cJSON_AddStringToObject(entry, "source", row->source) &&
+              api_add(entry, "region", string_or_null(row->region[0] ? row->region : NULL)) && add_construction_text(entry, row);
     if (!ok) {
         cJSON_Delete(entry);
         return NULL;
@@ -1222,6 +1248,7 @@ static cJSON *size_row_json(const PieceSpec *request, const Row *row) {
               api_add(entry, "motive", string_or_null(has_motive ? motive : NULL)) &&
               api_add(entry, "key_heard", string_or_null(row->key_heard[0] ? row->key_heard : NULL)) &&
               api_add(entry, "key", string_or_null(row->key[0] ? row->key : NULL)) &&
+              api_add(entry, "region", string_or_null(row->region[0] ? row->region : NULL)) &&
               api_add(entry, "pedal", string_or_null(row->pedal ? "dominant" : NULL)) &&
               api_add(entry, "changes", changes_json(row)) && api_add(entry, "figure", figure_json(row)) &&
               api_add(entry, "function", function_json(row)) && api_add(entry, "part", string_or_null(row->part)) &&
