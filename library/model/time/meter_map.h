@@ -88,6 +88,11 @@ MeterMapResult meter_map_create_defaulted(EntityID *id, MeterMap **out);
 
 void meter_map_destroy(MeterMap *map);
 
+/* A deep copy: the id's value, every region's id, start, end, time signature (its groups included), defaulted flag and pickup. The
+   copy shares nothing with the original and outlives it. METER_MAP_ERR_NULL_ARGUMENT for a NULL map or out, METER_MAP_ERR_ALLOC when
+   it cannot be made (*out is untouched on failure). */
+MeterMapResult meter_map_copy(const MeterMap *map, MeterMap **out);
+
 const EntityID *meter_map_id(const MeterMap *map);
 
 /* True when every region is defaulted. */

@@ -307,6 +307,39 @@ void meter_map_destroy(MeterMap *map) {
     map_release(map, map->count);
 }
 
+MeterMapResult meter_map_copy(const MeterMap *map, MeterMap **out) {
+    if (map == NULL || out == NULL) {
+        return METER_MAP_ERR_NULL_ARGUMENT;
+    }
+    MeterMap *copy = (MeterMap *)calloc(1, sizeof(MeterMap));
+    if (copy == NULL) {
+        return METER_MAP_ERR_ALLOC;
+    }
+    copy->regions = (MeterMapRegion *)calloc(map->count + 1, sizeof(MeterMapRegion));
+    if (copy->regions == NULL || entity_id_create(entity_id_value(map->id), &copy->id) != ENTITY_ID_OK) {
+        free(copy->regions);
+        free(copy);
+        return METER_MAP_ERR_ALLOC;
+    }
+    copy->pickup = map->pickup;
+    for (size_t i = 0; i < map->count; i++) {
+        MeterMapRegion *region = &copy->regions[i];
+        *region = map->regions[i];
+        region->id = NULL;
+        region->time_signature = NULL;
+        if (entity_id_create(entity_id_value(map->regions[i].id), &region->id) != ENTITY_ID_OK ||
+            time_signature_copy(map->regions[i].time_signature, &region->time_signature) != TIME_SIGNATURE_OK) {
+            region_release(region);
+            entity_id_destroy(copy->id);
+            map_release(copy, i);
+            return METER_MAP_ERR_ALLOC;
+        }
+        copy->count = i + 1;
+    }
+    *out = copy;
+    return METER_MAP_OK;
+}
+
 const EntityID *meter_map_id(const MeterMap *map) {
     return map->id;
 }
