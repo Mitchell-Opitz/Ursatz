@@ -43,7 +43,7 @@ Stages, in the order they run (the order of the rows of the stage table, below),
 | `OUTER_VOICES` | `chain_build_pitches` | `outer_voice_extract`, on the segmentation without the merge over unchanged harmony |
 | `CADENCES` | `chain_build_harmony_segments`, `chain_add_boundary_cadences`, `chain_confirm_key_changes` | `harmony_analysis_find_cadences` |
 | `FORM` | `chain_build_form_input`, `chain_build_grid_input`, `chain_build_motive_input` | the phrase grid and the cadence claims (final pass, below), `standard_form_segment_phrases` (kernel detector injected) or its grid form, ideas, themes, expansions, motive families (kernel window matcher injected) |
-| `METER` | `chain_build_meter_input` | standard-meter: syncopations, hemiolas, hypermeter, density |
+| `METER` | (none: the collected rhythm stage, `chain_result_rhythm.c`, builds the input with `chain_build_meter_input`) | standard-meter: syncopations, hemiolas, hypermeter, density, tuplets (R-616: one meter analysis; the chain has no meter step of its own, the stage bit selects the collected stage) |
 | `TEXTURE` | `chain_build_texture_input` | `voice_separate`, standard-texture |
 | `VOICE_LEADING` | `chain_build_voice_grid` | `standard_counterpoint_classify_motions`, perfect intervals, harmony resolutions |
 | `MELODY` | `chain_build_melody_line` | standard-counterpoint melody: intervals, contour, climax, leap recovery, non-chord tones (relabelled by the injected kernel classifier) |
