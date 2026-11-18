@@ -49,7 +49,7 @@ uses containers      L0-L2 events
 uses structure       L0-L2 events containers
 uses relationship    model
 uses interpretation  model
-uses io              model ezxml
+uses io              model realization ezxml
 uses theory-framework    model
 uses theory-style        model
 uses theory-rules        model theory-framework

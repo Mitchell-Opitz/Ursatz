@@ -9,6 +9,22 @@ library/analysis/harmony/chord_reading.c mask_above_root  # helper of chord_read
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
 library/chain/analysis_chain.c analysis_chain_chord_reading  # no app reads a chord reading until P62's reading layer; its tests call it
 library/chain/analysis_chain.c segment_pitch_classes  # helper of analysis_chain_chord_reading, which no app calls until P62; its tests call it
+library/io/movement_export.c build_events  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c build_midi_parts  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c built_release  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c check_movement  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c choose_division  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c compare_ints  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c fail  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c make_event  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c midi_build_release  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c movement_export_midi  # no app calls it until P59 B7 exports every plan through one piano part; its tests call it
+library/io/movement_export.c movement_export_musicxml  # no app calls it until P59 B7 exports every plan through one piano part; its tests call it
+library/io/movement_export.c need_division_for  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c need_time  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c sharp_spelling  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c total_notes  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
+library/io/movement_export.c total_pedals  # helper of movement_export_midi and movement_export_musicxml, which no app calls until P59 B7; its tests call it
 library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P60 (sections name regions); its tests call it
 library/model/pitch/region.c region_equals  # no app compares regions until P60 (sections name regions); its tests call it
 library/model/pitch/region.c same_material  # helper of region_equals, which no app calls until P60; its tests call it

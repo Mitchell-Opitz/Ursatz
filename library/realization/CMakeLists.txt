@@ -14,6 +14,14 @@ add_library(ursatz_realization
 ursatz_public_headers(ursatz_realization
     BASE ${PROJECT_SOURCE_DIR}
     SOURCE_DIRS ${PROJECT_SOURCE_DIR}
+    HEADERS
+        realization/derivation.h
+        realization/line.h
+        realization/movement.h
+        realization/performer_part.h
+        realization/realization.h
+        realization/scoring.h
+        realization/work.h
 )
 target_link_libraries(ursatz_realization PUBLIC ursatz_model ursatz_theory)
 
