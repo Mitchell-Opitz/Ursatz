@@ -13,6 +13,9 @@ Path `library/realization/`, target `ursatz_realization`, on `model` and `theory
 | `line.h` | `Line`, `LineNote`, `LineRole`, `LineRelation` |
 | `performer_part.h` | `PerformerPart`, `PerformerNote`, `PedalMarking` |
 | `scoring.h` | `ScoringAssignment`, `ScoringTransform`, `scoring_assignment_check`, `realization_score` |
+| `movement.h` | `Movement`, `MovementKeySignature`, `MovementMarker`, `MovementPart` |
+| `work.h` | `Work`, `work_movement_ensemble` |
+| `piano_reduction.h` | `movement_reduce_to_piano` |
 
 ## Ids
 
@@ -36,6 +39,16 @@ A line has an id, a role (`melody`, `counter-melody`, `harmony-line`, `bass`, `c
 
 One line to several parts is doubling, several lines to one part is a reduction, spans are hand-offs, and `divisi` is notation only. An `INTERVAL` transform needs spelling in a key and is refused with `REALIZATION_ERR_NOT_BUILT`.
 
+## Movements and works
+
+A `Movement` owns its `MeterMap` and `TempoMap` (a setter takes ownership and frees the one held before; NULL clears), so a movement in 3/4 and one in 4/4 sit in one work without sharing a map. It holds its lines, scoring assignments and performer parts (ids unique in each; `movement_add_line` and `movement_add_part` take ownership on success only), key signatures and markers in time order, played spans, compound parts (a minuet and its trio), an optional home `Region` and an optional ensemble template id. `movement_score` is `realization_score` over its own lines, assignments and parts. A played span means a repeat or a path through the written music; none means the written order once.
+
+A `Work` holds movements in order and the defaults they inherit: a title, a composer, an ensemble template id and material references (`<kind>:<name>`, as spec 4.13 writes them). `work_movement_ensemble(work, movement)` is the movement's own ensemble, else the work's, else NULL. A project stays the store's: the library has no type for it (R-600).
+
+## The piano reduction
+
+`movement_reduce_to_piano(movement, piano, run)` (the only realization header that includes the K12 `Instrument`) makes the part `piano` and one whole-line assignment `a-<line id>` per line, in line order, then scores the movement. A melody line is on staff 1 and a bass line on staff 2; any other line is on staff 1 when the mean MIDI number of its notes is 60 or more (a line with no notes: staff 1) and on staff 2 below that. The voice is the line's index plus 1. The part has two staves when any line is on staff 2, else one (a motif stays on one staff). It is refused with `REALIZATION_ERR_BAD_VALUE` and nothing changed when the movement already holds parts or assignments or the instrument has fewer than two staves. This is R-599's rule: the Composer exports every plan as one movement whose lines are all assigned to one piano part.
+
 ## Deferred
 
-Movements and works (P59 B3), export (P59 B4), the realization codec (P62), other instruments (P74) and keyboard limits and pedal writing (P75).
+Export of a movement (P59 B4; a played order is refused until a phase writes repeats as signs), the Composer's use (P59 B7), the realization codec (P62), other instruments (P74), keyboard limits and pedal writing (P75).
