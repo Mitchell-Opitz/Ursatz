@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cJSON.h>
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_spec.h>
@@ -1154,6 +1155,187 @@ static bool section_written(const PiecePlan *plan, NodeId section) {
         }
     }
     return found > 0;
+}
+
+/* ------------------------------------------------------------------ the form record of a plan (R-608) */
+
+static PiecePlan *built_plan(const char *form) {
+    PieceRequest request;
+    memset(&request, 0, sizeof(request));
+    request.form = form;
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
+    request.meter.beats_per_bar = 4;
+    request.meter.beat_unit = 4;
+    PiecePlan *plan = NULL;
+    assert(piece_build_plan(&request, &plan) == PIECE_OK && plan);
+    return plan;
+}
+
+/* The sections of a plan that are not its material, in time order. */
+static size_t record_sections(const PiecePlan *plan, NodeId *out) {
+    size_t count = 0;
+    NodeId root = plan_root(plan);
+    for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
+        NodeId child = plan_node_child_at(plan, root, i);
+        if (plan_node_kind(plan, child) == PLAN_NODE_SECTION && !plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL) &&
+            !plan_section_has_role(plan, child, SECTION_ROLE_SEAM)) {
+            out[count++] = child;
+        }
+    }
+    return count;
+}
+
+/* A plan built from a form carries its record, and the record is kept by a plan file and refused when it is malformed. */
+static void test_form_record(void) {
+    PiecePlan *plan = built_plan("ternary");
+    const PlanFormRecord *record = plan_form_record(plan);
+    assert(record && strcmp(record->name, "ternary") == 0 && record->version == FORM_SPEC_VERSION);
+    assert(strlen(record->hash) == PLAN_FORM_HASH_LEN && record->checks == FORM_CHECK_ALL && record->closing);
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
+    size_t count = record_sections(plan, sections);
+    assert(count == 3 && plan_section_or_empty(plan, sections[0])->closed && !plan_section_or_empty(plan, sections[1])->closed);
+    /* the hash is the built-in document's: a form that is not built in has none */
+    for (size_t i = 0; i < form_spec_builtin_count(); i++) {
+        if (strcmp(form_spec_builtin_name(i), "ternary") == 0) {
+            assert(strcmp(record->hash, form_spec_builtin_hash(i)) == 0);
+        }
+    }
+    char *text = plan_to_json(plan, NULL);
+    assert(text && strstr(text, "\"form\": {") != NULL && strstr(text, "\"checks\": [\"sections\"") != NULL);
+    PiecePlan *read = NULL;
+    PlanJsonError error;
+    assert(plan_from_json(test_knowledge(), text, &read, &error) == PLAN_OK);
+    assert(plan_form_record(read) && memcmp(plan_form_record(read), record, sizeof(*record)) == 0);
+    char *again = plan_to_json(read, NULL);
+    assert(again && strcmp(again, text) == 0);
+    /* a malformed record is refused at its path, and a record the plan refuses is refused in the file */
+    const char *bad[][2] = {{"\"closing\": true", "\"closing\": 1"},
+                            {"\"hash\": \"", "\"hash\": \"Z"},
+                            {"\"checks\": [\"sections\"", "\"checks\": [\"sections\", \"sections\", \"nonsense\""}};
+    for (size_t i = 0; i < 3; i++) {
+        const char *at = strstr(text, bad[i][0]);
+        assert(at);
+        size_t before = (size_t)(at - text);
+        char *edited = NULL;
+        assert(asprintf(&edited, "%.*s%s%s", (int)before, text, bad[i][1], at + strlen(bad[i][0])) > 0);
+        PiecePlan *refused = NULL;
+        assert(plan_from_json(test_knowledge(), edited, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+        assert(strstr(error.path, "composer/form") != NULL || strstr(error.path, "form") != NULL);
+        free(edited);
+    }
+    PlanFormRecord wrong = *record;
+    wrong.checks = 32;
+    assert(plan_set_form_record(plan, &wrong) == PLAN_ERR_BAD_PAYLOAD);
+    wrong = *record;
+    wrong.hash[3] = 'G';
+    assert(plan_set_form_record(plan, &wrong) == PLAN_ERR_BAD_PAYLOAD);
+    wrong = *record;
+    wrong.name[0] = '\0';
+    assert(plan_set_form_record(plan, &wrong) == PLAN_ERR_BAD_PAYLOAD);
+    assert(plan_set_form_record(plan, NULL) == PLAN_ERR_NULL);
+    free(again);
+    free(text);
+    plan_destroy(read);
+    plan_destroy(plan);
+}
+
+/* A plan of format 4 has no record: it reads with the record and the closed sections of its built-in form. */
+static void test_form_record_migration(void) {
+    PiecePlan *plan = built_plan("ternary");
+    char *v5 = plan_to_json(plan, NULL);
+    assert(v5);
+    cJSON *document = cJSON_Parse(v5);
+    assert(document != NULL);
+    cJSON_SetNumberHelper(cJSON_GetObjectItemCaseSensitive(document, "format_version"), 4);
+    cJSON *root = cJSON_GetObjectItemCaseSensitive(document, "form");
+    cJSON_DeleteItemFromObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(root, "composer"), "form");
+    cJSON *node;
+    cJSON_ArrayForEach(node, cJSON_GetObjectItemCaseSensitive(root, "children")) {
+        /* a format 4 section has no description, and the material is the one marked by a constraint */
+        cJSON *composer = cJSON_GetObjectItemCaseSensitive(node, "composer");
+        cJSON_DeleteItemFromObjectCaseSensitive(composer, "section");
+        const cJSON *label = cJSON_GetObjectItemCaseSensitive(node, "label");
+        if (cJSON_IsString(label) && strcmp(label->valuestring, "material") == 0) {
+            cJSON_ReplaceItemInObjectCaseSensitive(composer, "constraints", cJSON_Parse("[{\"kind\":\"material\"}]"));
+        }
+    }
+    char *v4 = cJSON_Print(document);
+    cJSON_Delete(document);
+    assert(v4);
+    PiecePlan *read = NULL;
+    PlanJsonError error;
+    assert(plan_from_json(test_knowledge(), v4, &read, &error) == PLAN_OK);
+    assert(plan_form_record(read) && memcmp(plan_form_record(read), plan_form_record(plan), sizeof(PlanFormRecord)) == 0);
+    NodeId made[FORM_SPEC_MAX_SECTIONS];
+    NodeId migrated[FORM_SPEC_MAX_SECTIONS];
+    size_t count = record_sections(plan, made);
+    assert(count == 3 && record_sections(read, migrated) == 3);
+    for (size_t i = 0; i < count; i++) {
+        assert(plan_section_or_empty(read, migrated[i])->closed == plan_section_or_empty(plan, made[i])->closed);
+    }
+    assert(plan_section_or_empty(read, migrated[0])->closed);
+    /* a plan of no built-in form has no record */
+    PiecePlan *empty = plan_create();
+    char *empty_text = plan_to_json(empty, NULL);
+    PiecePlan *empty_read = NULL;
+    assert(empty_text && plan_from_json(test_knowledge(), empty_text, &empty_read, &error) == PLAN_OK);
+    assert(plan_form_record(empty_read) == NULL);
+    free(empty_text);
+    plan_destroy(empty_read);
+    plan_destroy(empty);
+    free(v4);
+    free(v5);
+    plan_destroy(read);
+    plan_destroy(plan);
+}
+
+/* The cadence check reads the record and the descriptions: a record that does not close has nothing to check. */
+static void test_form_record_cadences(void) {
+    PiecePlan *plan = built_plan("ternary");
+    PieceCadenceCheck check;
+    assert(piece_check_cadences(plan, &check) && check.ok);
+    NodeId sections[FORM_SPEC_MAX_SECTIONS];
+    size_t count = record_sections(plan, sections);
+    SectionDescription last = *plan_section_or_empty(plan, sections[count - 1]);
+    last.cadence = CADENCE_TYPE_HALF;
+    assert(plan_node_set_section(plan, sections[count - 1], &last) == PLAN_OK);
+    assert(piece_check_cadences(plan, &check) && !check.ok);
+    PlanFormRecord record = *plan_form_record(plan);
+    record.closing = false;
+    assert(plan_set_form_record(plan, &record) == PLAN_OK);
+    assert(piece_check_cadences(plan, &check) && check.ok);
+    plan_destroy(plan);
+    /* a plan that records no form has nothing to check */
+    PiecePlan *none = plan_create();
+    assert(piece_check_cadences(none, &check) && check.ok);
+    plan_destroy(none);
+}
+
+/* A plan composes with the checks it records, whether or not its form is the built-in one any more (its hash differs). */
+static void test_recorded_checks(void) {
+    for (unsigned long seed = 1; seed <= 5; seed++) {
+        PiecePlan *plan = built_plan("ternary");
+        PlanFormRecord record = *plan_form_record(plan);
+        record.checks = FORM_CHECK_SECTIONS;
+        snprintf(record.hash, sizeof(record.hash), "0000000000000000");
+        assert(plan_set_form_record(plan, &record) == PLAN_OK);
+        ComposeConfig config;
+        memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
+        config.seed = seed;
+        ComposeOutcome outcome;
+        PieceResult ran = compose_run(plan, &config, &outcome);
+        if (ran == PIECE_OK) {
+            assert(outcome.returns_planned == 0 && outcome.section_count > 0);
+            compose_outcome_destroy(&outcome);
+            plan_destroy(plan);
+            return;
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    assert(!"ternary composed with a recorded check in none of seeds 1 to 5");
 }
 
 static int test_uneven_form(void);
@@ -2859,6 +3041,10 @@ int main(int argc, char **argv) {
     test_figured_variations();
     test_main_and_subordinate();
     test_for_plan();
+    test_form_record();
+    test_form_record_migration();
+    test_form_record_cadences();
+    test_recorded_checks();
     test_refusals();
     test_game_loop();
     test_default_cadences();
