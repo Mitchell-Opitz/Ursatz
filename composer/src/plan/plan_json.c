@@ -27,6 +27,9 @@
 #define COMPOSER_FRAMEWORK "ursatz-composer"
 #define PLAN_FORMAT_NAME "ursatz-composer-plan"
 #define COMPOSER_KEY_METHOD "composer_plan"
+/* The materials a file of format 1 or 2 means by "major" and "minor". */
+#define MATERIAL_ID_MAJOR "omt.material.major"
+#define MATERIAL_ID_MINOR "omt.material.natural-minor"
 
 static const char *const NODE_KINDS[] = {"form", "section", "phrase", "subphrase", "idea", "motive"};
 static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
@@ -1289,16 +1292,36 @@ static bool read_motive_tones(JsonReader *reader, const cJSON *item, const char 
 }
 
 /*
+ * Plan formats 1 and 2 name a key's mode, "major" or "minor", where format 3 names a material (R-597). The migration reads them as
+ * the materials the snapshot holds for those words: the major as omt.material.major, the minor as omt.material.natural-minor. A
+ * file of format 1 or 2 has no relation beside a key either: a key span reads back with none.
+ */
+static bool read_legacy_material(JsonReader *reader, const cJSON *object, const char *path, const PitchMaterial **out) {
+    int mode;
+    if (!read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &mode)) {
+        return false;
+    }
+    *out = knowledge_snapshot_material(reader->knowledge, mode == 1 ? MATERIAL_ID_MINOR : MATERIAL_ID_MAJOR);
+    if (!*out) {
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "mode");
+        return json_bad_format(reader, at, "the knowledge snapshot has no material for this mode");
+    }
+    return true;
+}
+
+/*
  * Version 1 files (R-260): a key is "tonic_pitch_class" and "mode", with no spelling. The tonic is spelled as the library
  * spells the key on that pitch class (standard_tonality_key_tonic_of_pitch_class_material: the fewest accidentals in its
  * signature, sharps on a tie), which is how every plan of version 1 was written.
  */
-static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, const PitchMaterial *material,
-                        AnalysisKey *out) {
+static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+    const PitchMaterial *material;
     long pitch_class;
     PitchLetter letter;
     int accidental;
-    if (!json_read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &pitch_class)) {
+    if (!read_legacy_material(reader, object, path, &material) ||
+        !json_read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &pitch_class)) {
         return false;
     }
     if (!standard_tonality_key_tonic_of_pitch_class_material((int)pitch_class, material, &letter, &accidental)) {
@@ -1353,28 +1376,29 @@ static bool read_key_v3(JsonReader *reader, const cJSON *object, const char *pat
     return true;
 }
 
-/* A key's members: "tonic" and "material" in version 3; in version 2 "tonic" and "mode" (see read_key_v1 for version 1). */
-static bool read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
-    if (reader->version >= 3) {
-        return read_key_v3(reader, object, path, out);
-    }
-    int mode;
-    if (!read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &mode)) {
-        return false;
-    }
-    /* A plan file names a mode, not a material: major or minor are the snapshot's major and natural minor (until the formats carry ids). */
-    const PitchMaterial *material = common_practice_material(reader->materials, mode == 1 ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
-    if (reader->version == 1) {
-        return read_key_v1(reader, object, path, material, out);
-    }
+/* A version 2 key: "tonic" and "mode". */
+static bool read_key_v2(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+    const PitchMaterial *material;
     PitchLetter letter;
     int accidental;
-    if (!read_tonic_member(reader, object, path, &letter, &accidental)) {
+    if (!read_legacy_material(reader, object, path, &material) || !read_tonic_member(reader, object, path, &letter, &accidental)) {
         return false;
     }
     AnalysisKey key = {NULL, letter, accidental, material};
     *out = key;
     return true;
+}
+
+/* A key's members, by the version of the file: see read_key_v1, read_key_v2 and read_key_v3. */
+static bool read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+    switch (reader->version) {
+    case 1:
+        return read_key_v1(reader, object, path, out);
+    case 2:
+        return read_key_v2(reader, object, path, out);
+    default:
+        return read_key_v3(reader, object, path, out);
+    }
 }
 
 /* A key span's optional "relation" and "anchor" beside its key (version 3): both or neither. *relation is left empty for neither. */

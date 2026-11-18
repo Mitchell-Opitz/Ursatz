@@ -197,7 +197,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                strcmp(a->params.motive.segment, b->params.motive.segment) == 0 && a->params.motive.steps == b->params.motive.steps;
     case PLAN_CONSTRAINT_KEY:
         return a->params.key.tonic_letter == b->params.key.tonic_letter &&
-               a->params.key.tonic_accidental == b->params.key.tonic_accidental && harmony_key_mode(&a->params.key) == harmony_key_mode(&b->params.key);
+               a->params.key.tonic_accidental == b->params.key.tonic_accidental && a->params.key.material == b->params.key.material &&
+               harmony_key_mode(&a->params.key) == harmony_key_mode(&b->params.key);
     case PLAN_CONSTRAINT_ARCHETYPE:
         return a->params.archetype == b->params.archetype;
     case PLAN_CONSTRAINT_EMBELLISH:
@@ -334,7 +335,7 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
         return a->meter.beats_per_bar == b->meter.beats_per_bar && a->meter.beat_unit == b->meter.beat_unit &&
                a->meter.bars_per_hyperbar == b->meter.bars_per_hyperbar;
     case PLAN_LANE_KEY:
-        return a->key.tonic_letter == b->key.tonic_letter && a->key.tonic_accidental == b->key.tonic_accidental &&
+        return a->key.tonic_letter == b->key.tonic_letter && a->key.tonic_accidental == b->key.tonic_accidental && a->key.material == b->key.material &&
                harmony_key_mode(&a->key) == harmony_key_mode(&b->key);
     case PLAN_LANE_HARMONY:
         return strcmp(a->harmony.roman_numeral, b->harmony.roman_numeral) == 0 &&
@@ -1561,6 +1562,55 @@ static void test_format_errors(void) {
     assert(strcmp(error.path, "metadata.analyzer_version") == 0);
 }
 
+/* A version 3 text turned into the version 2 text the same plan had: keys name a mode, major or minor, where they name a material. */
+static char *as_version_two(const char *v3) {
+    char *step = replace_all(v3, "\"format_version\": 3", "\"format_version\": 2");
+    char *next = replace_all(step, "\"material\": \"omt.material.major\"", "\"mode\": \"major\"");
+    free(step);
+    step = replace_all(next, "\"material\": \"omt.material.natural-minor\"", "\"mode\": \"minor\"");
+    free(next);
+    return step;
+}
+
+/* Formats 1 and 2 read into materials: the major and the natural minor of the snapshot, the same keys the format 3 text holds. */
+static void test_older_formats_read_into_materials(void) {
+    PiecePlan *plan = build_sentence_plan();
+    PlanJsonError error;
+    char *v3 = plan_to_json(plan, &error);
+    assert(v3 != NULL && strstr(v3, "\"mode\"") == NULL && strstr(v3, "omt.material.") != NULL);
+    char *v2 = as_version_two(v3);
+    char *v1 = as_version_one(v3);
+    assert(strstr(v2, "omt.material.") == NULL && strstr(v2, "\"mode\"") != NULL);
+    const PitchMaterial *minor = knowledge_snapshot_material(test_knowledge(), "omt.material.natural-minor");
+    assert(minor);
+    char *texts[2] = {v2, v1};
+    for (size_t i = 0; i < 2; i++) {
+        PiecePlan *old = NULL;
+        assert(plan_from_json(test_knowledge(), texts[i], &old, &error) == PLAN_OK);
+        assert(plans_equal(plan, old));
+        char *again = plan_to_json(old, &error);
+        assert(again != NULL && strcmp(again, v3) == 0);
+        free(again);
+        plan_destroy(old);
+    }
+    /* a minor key reads as the natural minor, and a mode that is neither word is refused at its path */
+    char *minor_text = replace_all(v2, "\"mode\": \"major\"", "\"mode\": \"minor\"");
+    PiecePlan *read = NULL;
+    assert(plan_from_json(test_knowledge(), minor_text, &read, &error) == PLAN_OK);
+    LaneSpanId key_span;
+    assert(plan_lane_find(read, PLAN_LANE_KEY, 0, plan_node_span(read, plan_root(read)), &key_span, 1) == 1);
+    assert(plan_lane_span_payload(read, key_span)->key.material == minor);
+    plan_destroy(read);
+    free(minor_text);
+    char *dorian = replace_all(v2, "\"mode\": \"major\"", "\"mode\": \"dorian\"");
+    assert(plan_from_json(test_knowledge(), dorian, &read, &error) == PLAN_ERR_FORMAT && strstr(error.path, "mode") != NULL);
+    free(dorian);
+    free(v1);
+    free(v2);
+    free(v3);
+    plan_destroy(plan);
+}
+
 int main(void) {
     test_round_trip();
     test_old_transforms();
@@ -1578,6 +1628,7 @@ int main(void) {
     test_malformed_input();
     test_plan_files();
     test_version_one_values();
+    test_older_formats_read_into_materials();
     test_spelling_round_trip();
     test_format_errors();
     return 0;
