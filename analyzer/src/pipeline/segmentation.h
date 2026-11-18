@@ -11,6 +11,7 @@
 #include "model/time/meter_map.h"
 #include "model/time/musical_time.h"
 #include "analysis/harmony/weighted_chord_identification.h"
+#include "model/pitch/midi_pitch.h"
 
 /*
  * One sonority segment of the library chain (analysis_chain_segments, analysis_chain_voice_segments: Ursatz's adaptive
@@ -48,7 +49,7 @@ static inline int segment_bass_pitch_class(const Segment *segment) {
             lowest = segment->members[i].pitch;
         }
     }
-    return pitch_class_of(lowest);
+    return pitch_class_of_midi(lowest);
 }
 
 #endif

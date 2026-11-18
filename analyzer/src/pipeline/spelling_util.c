@@ -8,6 +8,7 @@
 #include "pipeline/pitch_class_util.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "model/pitch/pitch_spelling.h"
+#include "model/pitch/midi_pitch.h"
 
 bool spelled_note_name(const NoteEvent *note, long sounding_pitch, bool with_octave, char out[16]) {
     const PitchSpelling *spelling = note_event_optional_pitch_spelling(note);
@@ -18,7 +19,7 @@ bool spelled_note_name(const NoteEvent *note, long sounding_pitch, bool with_oct
     int accidental = pitch_spelling_accidental(spelling);
     char name[8];
     if (!pitch_spelling_name(letter, accidental, name, sizeof(name)) ||
-        pitch_class_of_letter(letter, accidental) != pitch_class_of(sounding_pitch)) {
+        pitch_class_of_letter(letter, accidental) != pitch_class_of_midi((int)sounding_pitch)) {
         return false;
     }
     if (with_octave) {
@@ -30,7 +31,7 @@ bool spelled_note_name(const NoteEvent *note, long sounding_pitch, bool with_oct
 }
 
 void note_name(long midi, bool prefer_flats, char out[16]) {
-    snprintf(out, 16, "%s%d", pitch_class_name(pitch_class_of(midi), prefer_flats), (int)(midi / 12) - 1);
+    snprintf(out, 16, "%s%d", pitch_class_name(pitch_class_of_midi((int)midi), prefer_flats), (int)(midi / 12) - 1);
 }
 
 int spelling_from_name(const char *name, PitchSpelling **out) {
@@ -56,7 +57,7 @@ static int pitch_class_of_name(const char *name) {
 static bool lowest_spelling(const ImportedScore *notes, const Segment *segment, int pitch_class, char out[16]) {
     size_t found = segment->member_count;
     for (size_t i = 0; i < segment->member_count; i++) {
-        if (pitch_class_of(segment->members[i].pitch) == pitch_class &&
+        if (pitch_class_of_midi((int)segment->members[i].pitch) == pitch_class &&
             (found == segment->member_count || segment->members[i].pitch < segment->members[found].pitch)) {
             found = i;
         }

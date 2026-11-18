@@ -10,6 +10,7 @@
 #include "analysis/harmony/outer_scale_degrees.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/spelling_util.h"
+#include "model/pitch/midi_pitch.h"
 
 /* The position of the segment's member that is the entry's note, or segment->member_count when it is none. */
 static size_t member_of(const Segment *segment, const OuterVoiceEntry *entry) {
@@ -59,7 +60,7 @@ static bool fill_note(const ImportedScore *notes, const Segment *segment, const 
     CommonPracticeKeyMode mode;
     if (region && common_practice_key_mode_of(region->material, &mode)) {
         const char *degree =
-            common_practice_scale_degree_label(pitch_class_of(out->pitch), region->tonic_pitch_class, mode, materials);
+            common_practice_scale_degree_label(pitch_class_of_midi((int)out->pitch), region->tonic_pitch_class, mode, materials);
         if (degree) {
             out->degree = strdup(degree);
             if (!out->degree) {
