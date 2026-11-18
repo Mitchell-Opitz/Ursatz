@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*
  * MeterMap tests: a single region, several changes, a mid-measure change, a pickup from a short
@@ -329,6 +330,89 @@ static void test_lookup_overflow_is_refused(void) {
     assert(musical_time_same(huge, at(0, 1)));
 }
 
+static void assert_same_map(const MeterMap *a, const MeterMap *b) {
+    assert(a != b);
+    assert(strcmp(entity_id_value(meter_map_id(a)), entity_id_value(meter_map_id(b))) == 0);
+    assert(meter_map_is_defaulted(a) == meter_map_is_defaulted(b));
+    assert(meter_map_has_pickup(a) == meter_map_has_pickup(b));
+    assert(meter_map_first_measure_number(a) == meter_map_first_measure_number(b));
+    assert(meter_map_region_count(a) == meter_map_region_count(b));
+    for (size_t i = 0; i < meter_map_region_count(a); i++) {
+        const MeterMapRegion *x = meter_map_region(a, i);
+        const MeterMapRegion *y = meter_map_region(b, i);
+        assert(x != y);
+        assert(musical_time_same(meter_map_region_start(x), meter_map_region_start(y)));
+        MusicalTime end_x, end_y;
+        bool closed_x = meter_map_region_end(x, &end_x);
+        assert(closed_x == meter_map_region_end(y, &end_y));
+        assert(!closed_x || musical_time_same(end_x, end_y));
+        assert(meter_map_region_time_signature(x) != meter_map_region_time_signature(y));
+        assert(time_signature_equals(meter_map_region_time_signature(x), meter_map_region_time_signature(y)));
+        assert(meter_map_region_first_measure_number(x) == meter_map_region_first_measure_number(y));
+        assert(meter_map_region_is_defaulted(x) == meter_map_region_is_defaulted(y));
+        assert(meter_map_region_is_pickup(x) == meter_map_region_is_pickup(y));
+    }
+}
+
+static void test_copy(void) {
+    /* a grouped signature: 7/8 as 3+2+2 */
+    NoteValue *eighth = NULL;
+    assert(note_value_create(3, &eighth) == NOTE_VALUE_OK);
+    const unsigned groups[3] = {3, 2, 2};
+    TimeSignature *grouped = NULL;
+    assert(time_signature_create_grouped(groups, 3, eighth, &grouped) == TIME_SIGNATURE_OK);
+    note_value_destroy(eighth);
+    TimeSignature *common = sig(4, 2);
+    MeterMapChangePoint points[2] = {{grouped, at(0, 1)}, {common, at(14, 8)}};
+    MeterMap *original = NULL;
+    assert(meter_map_create(id("grouped"), points, 2, &original) == METER_MAP_OK);
+    time_signature_destroy(grouped);
+    time_signature_destroy(common);
+    MeterMap *copy = NULL;
+    assert(meter_map_copy(original, &copy) == METER_MAP_OK && copy != NULL);
+    assert_same_map(original, copy);
+    /* the copy outlives the original and keeps the groups */
+    meter_map_destroy(original);
+    const TimeSignature *kept = meter_map_region_time_signature(meter_map_region(copy, 0));
+    assert(time_signature_group_count(kept) == 3 && time_signature_group_at(kept, 0) == 3 && time_signature_group_at(kept, 2) == 2);
+    MusicalTime start = at(1, 1);
+    int measure = -99;
+    assert(meter_map_measure_index_at(copy, &start, &measure) == METER_MAP_OK && measure == 2);
+    meter_map_destroy(copy);
+
+    /* a pickup */
+    Change pickup[] = {{1, 3, 0, 1}, {12, 3, 1, 8}};
+    original = build(pickup, 2);
+    assert(meter_map_copy(original, &copy) == METER_MAP_OK);
+    assert_same_map(original, copy);
+    assert(meter_map_has_pickup(copy) && meter_map_region_is_pickup(meter_map_region(copy, 0)));
+    meter_map_destroy(original);
+    meter_map_destroy(copy);
+
+    /* a defaulted map, and a first signature after zero (a defaulted lead-in region) */
+    original = NULL;
+    assert(meter_map_create_defaulted(id("default"), &original) == METER_MAP_OK);
+    assert(meter_map_copy(original, &copy) == METER_MAP_OK);
+    assert_same_map(original, copy);
+    assert(meter_map_is_defaulted(copy));
+    meter_map_destroy(original);
+    meter_map_destroy(copy);
+    Change late[] = {{3, 2, 2, 1}};
+    original = build(late, 1);
+    assert(meter_map_copy(original, &copy) == METER_MAP_OK);
+    assert_same_map(original, copy);
+    assert(meter_map_region_is_defaulted(meter_map_region(copy, 0)) && !meter_map_region_is_defaulted(meter_map_region(copy, 1)));
+    meter_map_destroy(original);
+    meter_map_destroy(copy);
+
+    /* refusals leave *out alone */
+    MeterMap *untouched = NULL;
+    assert(meter_map_copy(NULL, &untouched) == METER_MAP_ERR_NULL_ARGUMENT && untouched == NULL);
+    original = build(late, 1);
+    assert(meter_map_copy(original, NULL) == METER_MAP_ERR_NULL_ARGUMENT);
+    meter_map_destroy(original);
+}
+
 int main(void) {
     test_single_region();
     test_barline_belongs_to_following_measure();
@@ -345,6 +429,7 @@ int main(void) {
     test_lookup_before_zero_fails();
     test_grid_overflow_is_refused();
     test_lookup_overflow_is_refused();
+    test_copy();
     printf("test_meter_map: ok\n");
     return 0;
 }
