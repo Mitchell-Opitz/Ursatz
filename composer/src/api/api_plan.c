@@ -795,6 +795,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
     request.accompaniment = state->accompaniment;
     request.modulate = state->modulate;
     request.seed = state->seed;
+    request.knowledge = state->knowledge;
     request.given_melodies = state->given_melodies;
     if (state->style_path) {
         request.has_style = true;
