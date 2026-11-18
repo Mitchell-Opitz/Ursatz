@@ -93,7 +93,7 @@ static const int DIATONIC_STEPS[7][7] = {{0, 1, 3, 5, 6, 8, 10}, {0, 1, 3, 5, 7,
 
 static void test_embedded_counts(void) {
     KnowledgeSnapshot *snapshot = build(NULL, 0);
-    size_t materials = 0, relations = 0, chord_types = 0, instruments = 0, others = 0;
+    size_t materials = 0, relations = 0, chord_types = 0, instruments = 0, ensembles = 0, others = 0;
     for (size_t i = 0; i < knowledge_snapshot_entry_count(snapshot); i++) {
         const KnowledgeEntry *entry = knowledge_snapshot_entry_at(snapshot, i);
         assert(entry != NULL && entry->status == KNOWLEDGE_STATUS_ACTIVE);
@@ -103,13 +103,15 @@ static void test_embedded_counts(void) {
             relations++;
         } else if (strcmp(entry->kind, "chord-type") == 0) {
             chord_types++;
-        } else if (strcmp(entry->kind, "instrument") == 0) {
+        } else if (strcmp(entry->kind, "instrument") == 0 && strcmp(entry->subtype, "instrument") == 0) {
             instruments++;
+        } else if (strcmp(entry->kind, "instrument") == 0 && strcmp(entry->subtype, "ensemble") == 0) {
+            ensembles++;
         } else {
             others++;
         }
     }
-    assert(materials == 9 && relations == 18 && chord_types == 9 && instruments == 2 && others == 0);
+    assert(materials == 9 && relations == 18 && chord_types == 9 && instruments == 1 && ensembles == 1 && others == 0);
     /* the seven diatonic modes, darkest to brightest: each a rotation of the major scale with its own steps */
     for (int mode = 0; mode < 7; mode++) {
         const PitchMaterial *material = knowledge_snapshot_material(snapshot, DIATONIC_IDS[mode]);
@@ -123,6 +125,11 @@ static void test_embedded_counts(void) {
     assert(knowledge_snapshot_material(snapshot, "omt.relation.supertonic") == NULL);
     assert(knowledge_snapshot_entry(snapshot, "omt.chord-type.diminished-seventh") != NULL);
     assert(knowledge_snapshot_material(snapshot, "omt.chord-type.diminished-seventh") == NULL);
+    /* the instrument entries are loaded, each under its own subtype only */
+    assert(knowledge_snapshot_instrument(snapshot, "omt.instrument.piano") != NULL);
+    assert(knowledge_snapshot_instrument(snapshot, "omt.instrument.solo-piano") == NULL);
+    assert(knowledge_snapshot_ensemble(snapshot, "omt.instrument.solo-piano") != NULL);
+    assert(knowledge_snapshot_ensemble(snapshot, "omt.instrument.piano") == NULL);
     knowledge_snapshot_destroy(snapshot);
 }
 
