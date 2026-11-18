@@ -90,6 +90,10 @@ uses analysis-similarity   model analysis-notes
 module realization     library/realization        prefix realization/
 group realization realization
 uses realization model theory
+# The plan group (library/plan, P60, R-605): the section description, shared by forms, plans and piece requests.
+module plan            library/plan               prefix plan/
+group plan plan
+uses plan model theory cjson
 allow library/model/interpretation/claim_interpretation.h relationship -- a claim's interpretation names its relationship
 only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
@@ -115,6 +119,7 @@ target ursatz_analysis analysis
 target ursatz_chain chain
 target ursatz_io io
 target ursatz_realization realization
+target ursatz_plan plan
 staged model theory analysis chain io realization analyzer-api analyzer composer
 generated analyzer version.h ursatz_analyzer_producer_key.h
 
@@ -176,6 +181,10 @@ uses tests-export test-helpers
 module tests-realization         library/realization/tests         root library/tests library/tests/support library
 like tests-realization realization
 uses tests-realization test-helpers
+
+module tests-plan                library/plan/tests                root library/tests library/tests/support library
+like tests-plan plan
+uses tests-plan test-helpers
 
 module tests-theory-framework    library/theory/tests/framework    root library/tests library/tests/support library
 module tests-theory-style        library/theory/tests/style        root library/tests library/tests/support library

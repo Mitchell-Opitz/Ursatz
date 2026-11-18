@@ -20,6 +20,49 @@ library/model/time/tempo_map.c region_at_time  # no app converts a tempo map to 
 library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/tempo_map.c tempo_map_time_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/time_span.c time_span_length  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
+library/plan/section.c check_construction  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c check_harmony  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c check_region  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c check_use  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c fail  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c find_in  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c has_keys  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c name_at  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c operator_refusal  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c refuse_others  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_beginning_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_beginning_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_connective_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_connective_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_construction_reason_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_construction_reason_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_description_check  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_description_init  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_ending_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_ending_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_extension_kind_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_extension_kind_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_figure_kind_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_figure_kind_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_figure_rhythm_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_figure_rhythm_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_function_kind_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_function_kind_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_idea_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_idea_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_lane_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_lane_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_mode_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_mode_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_return_variation_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_return_variation_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_role_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_role_is_operator  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_role_is_theme  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_role_label  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_role_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_setting_find  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
+library/plan/section.c section_setting_name  # no app calls it until P60 B2 (forms read their sections through the section description); its tests call it
 library/realization/derivation.c note_derivation_present  # no app calls it until P62 (the realization codec writes only the derivations a note has); its tests call it
 library/realization/line.c line_add_relation  # no app calls it until P74 (line-writing stages); its tests call it
 library/realization/line.c line_name  # no app calls it until P62 (the realization codec writes line names); its tests call it
