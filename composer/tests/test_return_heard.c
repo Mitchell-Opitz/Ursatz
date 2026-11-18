@@ -41,6 +41,8 @@ static PieceRequest request_of(const Scenario *scenario) {
     request.form = scenario->kind;
     request.bars = scenario->bars;
     request.count = scenario->count;
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     return request;

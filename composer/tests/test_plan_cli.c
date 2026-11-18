@@ -223,7 +223,7 @@ static void test_plan_errors(void) {
     expect_failure("plan", "--form loop --key C --meter 4/4 --count 2 --out plan_cli_bad.json", 1, "loop has no size");
     expect_failure("plan", "--form binary --key H --meter 4/4 --out plan_cli_bad.json", 1, "unknown key 'H'");
     expect_failure("plan", "--form binary --key C --mode dorian --meter 4/4 --out plan_cli_bad.json", 1,
-                   "--mode must be major or minor");
+                   "the Composer writes major and minor keys");
     expect_failure("plan", "--form binary --key \"C minor\" --mode minor --meter 4/4 --out plan_cli_bad.json", 1,
                    "names a mode already");
     expect_failure("plan", "--form binary --key C --meter 5/4 --out plan_cli_bad.json", 1, "meter '5/4' is not supported");

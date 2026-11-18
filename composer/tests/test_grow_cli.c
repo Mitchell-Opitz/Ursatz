@@ -417,8 +417,8 @@ static void test_style_without(void) {
 
 /* --mode style needs a style (and a mode in it); the other modes replace the key's. */
 static void test_mode(void) {
-    expect_failure(BASE " --into sentence --mode style", 1, "--mode style needs --style");
-    expect_failure(BASE " --into sentence --mode dorian", 1, "--mode must be major, minor or style");
+    expect_failure(BASE " --into sentence --mode style", 1, "--material style needs --style");
+    expect_failure(BASE " --into sentence --mode dorian", 1, "the Composer writes major and minor keys");
     char *out = output_of(FIXTURE("motive_d_minor.txt") " --key D --mode major --meter 4/4 --into sentence --seed 1");
     assert(strstr(out, "key D major") != NULL);
     free(out);
