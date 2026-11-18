@@ -596,6 +596,11 @@ ursatz_test(test_api_validate LIBS ursatz_composer composer_test_support cjson
 
 # Per-section controls in a piece request (R-610, R-611): regions, own motives and theme fills of a sized form's overlays, a game loop's
 # region, and the refusals. It composes four pieces at one seed each, so it stays in the fast set.
+# A section's harmony in a piece request (R-610): the old progression fill as harmony, a schema, chords at bars, and the refusals.
+ursatz_test(test_piece_harmony LIBS ursatz_composer composer_test_support cjson
+    INCLUDES ${PROJECT_SOURCE_DIR}/src
+    DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
 ursatz_test(test_piece_sections LIBS ursatz_composer composer_test_support cjson
     DEFINITIONS COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 
