@@ -1,4 +1,5 @@
 #include "random_motive.h"
+#include "cli_context.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,7 +16,7 @@
 #define RANDOM_MOTIVE_COUNT_DEFAULT 1
 
 typedef struct {
-    const char *mode_text;
+    const char *material_text;
     const char *meter_text;
     const char *key_text;
     const char *form_text;
@@ -34,9 +35,9 @@ static void print_help(FILE *out) {
     fprintf(out, "Makes random motives that keep the hard melodic rules of standard counterpoint. Their length, pickup,\n");
     fprintf(out, "number of notes, rhythm and range are not options: they are drawn from defaults in the Composer. The\n");
     fprintf(out, "same options and seed give the same motives.\n\n");
-    fprintf(out, "  --mode <mode>        major or minor (required); random draws it from the seed\n");
+    fprintf(out, "  --material <word>    major or minor (required); random draws it from the seed (--mode is the same option)\n");
     fprintf(out, "  --meter <n/m>        beats over a beat unit, as in 4/4 or 6/8 (required); random draws 4/4, 3/4, 2/4 or 6/8 from the seed\n");
-    fprintf(out, "  --key <key>          for example \"D minor\"; its mode must be --mode. Default: C major or A minor\n");
+    fprintf(out, "  --key <key>          for example \"D minor\"; its mode must be --material. Default: C major or A minor\n");
     fprintf(out, "  --form <form>        full (pitches and rhythm, the default), rhythm or contour\n");
     fprintf(out, "  --strategy <name>    segments (the default: a harmony plan and repeated segments) or drawn (a rhythm drawn note by note)\n");
     motive_extras_print_help(out, true);
@@ -48,7 +49,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid argument, or an unreadable style file; 2 no motive could be made.\n\n");
     fprintf(out, "Example:\n");
-    fprintf(out, "  ursatz-composer random-motive --mode minor --meter 3/4 --count 4 --seed 7\n");
+    fprintf(out, "  ursatz-composer random-motive --material minor --meter 3/4 --count 4 --seed 7\n");
 }
 
 static int read_options(int argc, char **argv, Options *options) {
@@ -72,11 +73,11 @@ static int read_options(int argc, char **argv, Options *options) {
             if (added != 0) {
                 return added;
             }
-        } else if (strcmp(argument, "--mode") == 0 || strcmp(argument, "--meter") == 0 ||
+        } else if (strcmp(argument, "--material") == 0 || strcmp(argument, "--mode") == 0 || strcmp(argument, "--meter") == 0 ||
                    strcmp(argument, "--key") == 0 || strcmp(argument, "--form") == 0 || strcmp(argument, "--strategy") == 0 ||
                    strcmp(argument, "--style") == 0 || strcmp(argument, "--count") == 0 ||
                    strcmp(argument, "--seed") == 0) {
-            const char **slot = strcmp(argument, "--mode") == 0    ? &options->mode_text
+            const char **slot = strcmp(argument, "--material") == 0 || strcmp(argument, "--mode") == 0 ? &options->material_text
                                 : strcmp(argument, "--meter") == 0 ? &options->meter_text
                                 : strcmp(argument, "--key") == 0   ? &options->key_text
                                 : strcmp(argument, "--form") == 0  ? &options->form_text
@@ -106,9 +107,10 @@ static void print_text(const cJSON *document) {
     printf("Seed: %.0f\n", member(document, "seed")->valuedouble);
     const cJSON *drawn = member(document, "drawn");
     if (drawn) {
-        const cJSON *mode = member(drawn, "mode");
+        const cJSON *mode = member(drawn, "material");
         const cJSON *meter = member(drawn, "meter");
-        printf("Drawn:%s%s%s%s\n", mode ? " mode " : "", mode ? mode->valuestring : "", meter ? (mode ? ", meter " : " meter ") : "",
+        char word[64];
+        printf("Drawn:%s%s%s%s\n", mode ? " mode " : "", mode ? cli_material_word(mode->valuestring, word, sizeof word) : "", meter ? (mode ? ", meter " : " meter ") : "",
                meter ? meter->valuestring : "");
     }
     size_t number = 0;
@@ -135,7 +137,7 @@ static bool add_members(cJSON *request, const Options *options) {
     const struct {
         const char *name;
         const char *text;
-    } texts[] = {{"mode", options->mode_text}, {"meter", options->meter_text}, {"key", options->key_text},
+    } texts[] = {{"material", options->material_text}, {"meter", options->meter_text}, {"key", options->key_text},
                  {"form", options->form_text}, {"strategy", options->strategy_text}, {"style", options->style_path}, {"count", options->count_text},
                  {"seed", options->seed_text}, {"role", options->extras.role_text}};
     for (size_t i = 0; ok && i < sizeof texts / sizeof texts[0]; i++) {
@@ -161,8 +163,8 @@ int run_random_motive(int argc, char **argv) {
     if (options.without.count > 0 && !options.style_path) {
         return cli_fail(CLI_EXIT_USAGE, "--style-without needs --style");
     }
-    if (!options.mode_text || !options.meter_text) {
-        return cli_fail(CLI_EXIT_USAGE, "random-motive needs --mode and --meter\n%s", RANDOM_MOTIVE_USAGE_LINE);
+    if (!options.material_text || !options.meter_text) {
+        return cli_fail(CLI_EXIT_USAGE, "random-motive needs --material and --meter\n%s", RANDOM_MOTIVE_USAGE_LINE);
     }
     cJSON *request = cJSON_CreateObject();
     char *text = request && add_members(request, &options) ? cJSON_PrintUnformatted(request) : NULL;
@@ -171,7 +173,7 @@ int run_random_motive(int argc, char **argv) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_random_motive(text, NULL, &response);
+    ComposerStatus api_status = composer_api_random_motive(cli_context(), text, NULL, &response);
     free(text);
     if (api_status != COMPOSER_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);

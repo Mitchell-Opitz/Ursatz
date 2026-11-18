@@ -8,33 +8,26 @@
 #include "theory/meter/segmentation_beat_grid.h"
 
 /* The length of a beat, from the first measure's beat grid. */
-static bool beat_duration(const MeterMap *map, Duration **out) {
-    MusicalTime **starts = NULL;
+static bool beat_duration(const MeterMap *map, Duration *out) {
+    MusicalTime *starts = NULL;
     size_t count = 0;
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (!standard_meter_segmentation_beat_grid(map, 1, NULL, &starts, &count) || count == 0) {
         return false;
     }
     bool ok = false;
     if (meter_map_measure_span(map, 1, &span) == METER_MAP_OK) {
-        Rational first;
-        Rational next;
+        Rational first = starts[0].value;
+        Rational next = count > 1 ? starts[1].value : span.end.value;
         Rational length;
-        ok = chain_rational_of(starts[0], &first) &&
-             (count > 1 ? chain_rational_of(starts[1], &next) : chain_rational_of(time_span_end(span), &next)) &&
-             rational_sub(next, first, &length) == RATIONAL_OK &&
-             duration_create((long)length.num, (unsigned long)length.den, out) == DURATION_OK;
-        time_span_destroy(span);
-    }
-    for (size_t b = 0; b < count; b++) {
-        musical_time_destroy(starts[b]);
+        ok = rational_sub(next, first, &length) == RATIONAL_OK && duration_of(length, out) == DURATION_OK;
     }
     free(starts);
     return ok;
 }
 
 /* The degree (1..7) of an outer line's note in the major key on `tonic`, or 0 for a chromatic or an absent note. */
-/* Already the tonality owner's reading (standard_tonality_degree_of_semitone); kept as the one chain wrapper (R-582). */
+/* Already the tonality owner's reading (standard_tonality_natural_degree_of_semitone); kept as the one chain wrapper (R-582). */
 static int degree_of(const OuterVoiceEntry *entry, int tonic) {
     if (entry == NULL || !entry->present) {
         return 0;
@@ -42,8 +35,7 @@ static int degree_of(const OuterVoiceEntry *entry, int tonic) {
     long position = pitch_numeric_value_position_numerator(entry->pitch);
     int degree = 0;
     int alteration = 0;
-    if (!standard_tonality_degree_of_semitone((int)(position - tonic), STANDARD_TONALITY_MODE_MAJOR, &degree,
-                                              &alteration)) {
+    if (!standard_tonality_natural_degree_of_semitone((int)(position - tonic), &degree, &alteration)) {
         return 0;
     }
     return alteration == 0 ? degree : 0;
@@ -82,15 +74,16 @@ ChainInputStatus chain_build_harmony_segments(const ChainSegments *segments, siz
     }
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
-        if (metrical_position_from_time(map, time_span_start(window), &built.positions[s]) != METRICAL_POSITION_OK) {
+        if (metrical_position_from_time(map, &window->start, &built.positions[s]) != METRICAL_POSITION_OK) {
             chain_harmony_inputs_destroy(&built);
             return CHAIN_INPUT_ERR_KEYS;
         }
         HarmonySegmentInput *input = &built.inputs[s];
-        AnalysisSegment segment = {segments->ids[s], window, built.positions[s], chain_attack_strength(map, time_span_start(window))};
+        AnalysisSegment segment = {segments->ids[s], *window, built.positions[s], chain_attack_strength(map, &window->start)};
         input->segment = segment;
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
+        input->has_beat_length = true;
         input->beat_length = built.beat_length;
         if (!romans[s].has_numeral) {
             input->degree = 0;
@@ -125,14 +118,9 @@ void chain_harmony_inputs_destroy(ChainHarmonyInputs *inputs) {
     for (size_t s = 0; s < inputs->count && inputs->positions != NULL; s++) {
         metrical_position_destroy(inputs->positions[s]);
     }
-    duration_destroy(inputs->beat_length);
     free(inputs->positions);
     free(inputs->inputs);
     memset(inputs, 0, sizeof(*inputs));
-}
-
-static double time_double(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
 }
 
 ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, size_t count, const CommonPracticeKeyRegions *regions,
@@ -140,14 +128,14 @@ ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, siz
     if (prepared == NULL || regions == NULL || cadences == NULL) {
         return CHAIN_INPUT_ERR_NULL_ARGUMENT;
     }
-    double *starts = calloc(regions->region_count + 1, sizeof(double));
+    Rational *starts = calloc(regions->region_count + 1, sizeof(Rational));
     if (starts == NULL) {
         return CHAIN_INPUT_ERR_ALLOC;
     }
     size_t n = 0;
     for (size_t i = 1; i < regions->region_count; i++) {
         if (regions->regions[i].key_index == home_key_index && regions->regions[i - 1].key_index != home_key_index) {
-            starts[n++] = time_double(time_span_start(regions->regions[i].span));
+            starts[n++] = regions->regions[i].span.start.value;
         }
     }
     HarmonyCadenceAnalysisStatus status = harmony_analysis_add_boundary_cadences(prepared, count, NULL, starts, n, cadences);
@@ -155,11 +143,11 @@ ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, siz
     return status == HARMONY_CADENCE_ANALYSIS_OK ? CHAIN_INPUT_OK : CHAIN_INPUT_ERR_KEYS;
 }
 
-ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const double *segment_starts, const HarmonyCadences *cadences) {
+ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const Rational *segment_starts, const HarmonyCadences *cadences) {
     if (regions == NULL || segment_starts == NULL || cadences == NULL) {
         return CHAIN_INPUT_ERR_NULL_ARGUMENT;
     }
-    double *arrivals = calloc(cadences->count + 1, sizeof(double));
+    Rational *arrivals = calloc(cadences->count + 1, sizeof(Rational));
     if (arrivals == NULL) {
         return CHAIN_INPUT_ERR_ALLOC;
     }
@@ -174,8 +162,8 @@ ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, co
         }
         const CommonPracticeKeyRegion *into = &regions->regions[change->to_region];
         KeyChangeExtent confirmed = change->extent;
-        if (!harmony_key_change_confirm(change->extent, time_double(time_span_start(into->span)),
-                                        time_double(time_span_end(into->span)), arrivals, cadences->count, &confirmed)) {
+        if (!harmony_key_change_confirm(change->extent, into->span.start.value,
+                                        into->span.end.value, arrivals, cadences->count, &confirmed)) {
             status = CHAIN_INPUT_ERR_KEYS;
             break;
         }

@@ -5,45 +5,24 @@
 #include "model/time/musical_time.h"
 
 /*
- * TimeSpan: a positioned interval between two MusicalTime points, with an
- * explicit boundary treatment.
- *
- * The boundary vocabulary below is PROVISIONAL per Domain Spec §16.3 —
- * a working vocabulary only, not frozen. It may be revised later without
- * that counting as a breaking-change violation.
+ * TimeSpan: a positioned interval between two MusicalTime points. A plain value: copy it, never allocate
+ * it. A span is always half-open, [start, end): it holds its start and not its end (R-585).
  */
-typedef enum {
-    TIME_SPAN_BOUNDARY_CLOSED,
-    TIME_SPAN_BOUNDARY_OPEN,
-    TIME_SPAN_BOUNDARY_LEFT_CLOSED,
-    TIME_SPAN_BOUNDARY_RIGHT_CLOSED
-} TimeSpanBoundary;
-
-typedef struct TimeSpan TimeSpan;
+typedef struct {
+    MusicalTime start;
+    MusicalTime end;
+} TimeSpan;
 
 typedef enum {
     TIME_SPAN_OK = 0,
-    TIME_SPAN_ERR_NULL,
-    TIME_SPAN_ERR_END_BEFORE_START,
-    TIME_SPAN_ERR_INVALID_BOUNDARY,
-    TIME_SPAN_ERR_ALLOC
+    TIME_SPAN_ERR_END_BEFORE_START
 } TimeSpanResult;
 
-/*
- * boundary MUST be one of the TimeSpanBoundary values above — there is no
- * default. A deserializer built on top of this constructor MUST reject a
- * payload that omits boundary rather than silently assuming CLOSED.
- */
-TimeSpanResult time_span_create(const MusicalTime *start, const MusicalTime *end, TimeSpanBoundary boundary,
-                                 TimeSpan **out);
-void time_span_destroy(TimeSpan *span);
-
-const MusicalTime *time_span_start(const TimeSpan *span);
-const MusicalTime *time_span_end(const TimeSpan *span);
-TimeSpanBoundary time_span_boundary(const TimeSpan *span);
-
-/* True when the span has both ends and its end is strictly after its start (a non-empty span). Compared
-   exactly; false for NULL or for ends that do not fit a Rational. */
-bool time_span_is_valid(const TimeSpan *span);
+/* The half-open span [start, end). TIME_SPAN_ERR_END_BEFORE_START when end < start. */
+TimeSpanResult time_span_make(MusicalTime start, MusicalTime end, TimeSpan *out);
+/* True when the end is strictly after the start (a non-empty span). */
+bool time_span_holds(TimeSpan span);
+/* end - start; DURATION_ERR_OVERFLOW when it does not fit. */
+DurationResult time_span_length(TimeSpan span, Duration *out);
 
 #endif

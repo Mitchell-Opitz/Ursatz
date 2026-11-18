@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <theory/harmony/harmony_key_change.h>
+#include <theory/harmony/harmony_related_key.h>
 #include <ursatz_composer/compose.h>
+#include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/lanes.h>
@@ -14,6 +17,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/render.h>
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * A composed piece performed in order (R-485, docs/form-performance.md): tests/fixtures/forms/repeat-form.json (A, B, A',
@@ -60,7 +64,8 @@ static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutco
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.seed = seed;
@@ -68,6 +73,7 @@ static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutco
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.form = form;
     *ran = compose_run(plan, &config, outcome);
@@ -243,12 +249,12 @@ static void check_parts_performance(const FormSpec *form, unsigned long seed, co
     size_t found = plan_lane_find(performance.plan, PLAN_LANE_KEY, 0, all, ids, 8);
     assert(found == 6);
     static const int TONIC[3] = {0, 9, 0};
-    static const KeyStructureMode MODE[3] = {KEY_STRUCTURE_MODE_MAJOR, KEY_STRUCTURE_MODE_MINOR, KEY_STRUCTURE_MODE_MAJOR};
+    static const HarmonyMode MODE[3] = {HARMONY_MODE_MAJOR, HARMONY_MODE_MINOR, HARMONY_MODE_MAJOR};
     for (size_t k = 0; k < 6; k++) {
         PlanSpan span = plan_lane_span_span(performance.plan, ids[k]);
         const AnalysisKey *key = &plan_lane_span_payload(performance.plan, ids[k])->key;
         assert(rational_cmp(span.start, whole((long long)k * 8)) == 0 && rational_cmp(span.length, whole(8)) == 0);
-        assert(analysis_key_tonic_pitch_class(key) == TONIC[k / 2] && key->mode == MODE[k / 2]);
+        assert(analysis_key_tonic_pitch_class(key) == TONIC[k / 2] && harmony_key_mode(key) == MODE[k / 2]);
     }
     Rational end;
     size_t sections;
@@ -268,12 +274,12 @@ static void check_region_keys(void) {
     FillRng rng;
     AnalysisKey key;
     fill_rng_seed(&rng, 1);
-    AnalysisKey c_major = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
-    AnalysisKey a_minor = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
-    assert(piece_region_key(c_major, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
-           key.mode == KEY_STRUCTURE_MODE_MINOR);
-    assert(piece_region_key(a_minor, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
-           key.mode == KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey c_major = test_key(0, "major");
+    AnalysisKey a_minor = test_key(9, "minor");
+    assert(piece_region_key(test_knowledge(), c_major, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
+           harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    assert(piece_region_key(test_knowledge(), a_minor, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
+           harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
     /* Any other degree is the closely related key, as before: 6 of C major is A minor, 3 of A minor is C major. */
     FormRegion other;
     memset(&other, 0, sizeof(other));
@@ -281,16 +287,16 @@ static void check_region_keys(void) {
     other.major_count = 1;
     other.minor[0] = 3;
     other.minor_count = 1;
-    assert(piece_region_key(c_major, &other, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
-           key.mode == KEY_STRUCTURE_MODE_MINOR);
-    assert(piece_region_key(a_minor, &other, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
-           key.mode == KEY_STRUCTURE_MODE_MAJOR);
+    assert(piece_region_key(test_knowledge(), c_major, &other, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
+           harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    assert(piece_region_key(test_knowledge(), a_minor, &other, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
+           harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
     /* A degree that is no closely related key is refused. */
     FormRegion none;
     memset(&none, 0, sizeof(none));
     none.major[0] = 7;
     none.major_count = 1;
-    assert(!piece_region_key(c_major, &none, &rng, &key));
+    assert(!piece_region_key(test_knowledge(), c_major, &none, &rng, &key));
 }
 
 static int test_parts(void) {
@@ -306,12 +312,14 @@ static int test_parts(void) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
         request.form = form->name;
-        request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+        request.key = test_key(0, "major");
+        request.knowledge = test_knowledge();
         request.meter.beats_per_bar = 4;
         request.meter.beat_unit = 4;
         request.seed = seed;
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         PieceParts parts;
         PieceResult ran = piece_compose_parts(form, &request, &config, &parts);
@@ -322,8 +330,8 @@ static int test_parts(void) {
         }
         composed++;
         assert(parts.count == 3 && parts.plans[0] && parts.plans[1] && parts.plans[2] == NULL);
-        assert(analysis_key_tonic_pitch_class(&parts.keys[0]) == 0 && parts.keys[0].mode == KEY_STRUCTURE_MODE_MAJOR);
-        assert(analysis_key_tonic_pitch_class(&parts.keys[1]) == 9 && parts.keys[1].mode == KEY_STRUCTURE_MODE_MINOR);
+        assert(analysis_key_tonic_pitch_class(&parts.keys[0]) == 0 && harmony_key_mode(&parts.keys[0]) == HARMONY_MODE_MAJOR);
+        assert(analysis_key_tonic_pitch_class(&parts.keys[1]) == 9 && harmony_key_mode(&parts.keys[1]) == HARMONY_MODE_MINOR);
         assert(analysis_key_equals(&parts.keys[2], &parts.keys[0]));
         assert(parts.forms[0] && parts.forms[1] && parts.forms[2] == NULL);
         check_parts_performance(form, seed, &parts);
@@ -338,11 +346,13 @@ static int test_parts(void) {
     /* A form that is not compound, and a size it does not have, are refused. */
     PieceRequest request;
     memset(&request, 0, sizeof(request));
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     PieceParts parts;
     request.bars = 20;
     assert(piece_compose_parts(form, &request, &config, &parts) == PIECE_ERR_BAD_SIZE);
@@ -401,13 +411,15 @@ static int test_part_bars(void) {
             PieceRequest request;
             memset(&request, 0, sizeof(request));
             request.form = form->name;
-            request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+            request.key = test_key(0, "major");
+            request.knowledge = test_knowledge();
             request.meter.beats_per_bar = 3;
             request.meter.beat_unit = 4;
             request.bars = SIZES[z];
             request.seed = seed;
             ComposeConfig config;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             config.seed = seed;
             PieceParts parts;
             PieceResult ran = piece_compose_parts(form, &request, &config, &parts);

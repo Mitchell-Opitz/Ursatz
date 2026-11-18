@@ -40,6 +40,7 @@ add_library(ursatz_composer STATIC
     plan/plan_state.c
     plan/constraint.c
     plan/plan_json.c
+    plan/plan_key_spans.c
     check/analyzer_check.c
     check/hearing.c
     check/explain.c

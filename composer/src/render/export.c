@@ -10,8 +10,9 @@
 #include <model/identity/entity_id.h>
 #include <io/midi_renderer.h>
 #include <model/time/musical_time.h>
-#include <model/time/time_rational.h>
 #include <model/time/tempo_map.h>
+
+#include "util/util.h"
 
 #define PREFERRED_DIVISION 480u
 #define MIDI_NAME_TEXT_MAX 48
@@ -56,16 +57,14 @@ static PlanExportResult build_tempo_map(const PlanExportOptions *options, TempoM
         return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
     }
     EntityID *id = NULL;
-    MusicalTime *start = NULL;
     TempoMapChangePoint point;
     TempoMapResult made = TEMPO_MAP_ERR_ALLOC;
-    if (entity_id_create("composer-tempo-map", &id) == ENTITY_ID_OK &&
-        musical_time_create(0, 1, &start) == MUSICAL_TIME_OK) {
-        point.start = start;
+    if (entity_id_create("composer-tempo-map", &id) == ENTITY_ID_OK) {
+        point.start = musical_time_of(rational_ratio(0, 1));
         point.microseconds_per_quarter = (unsigned long)micros;
+        point.kind = TEMPO_MAP_CHANGE_ABSOLUTE;
         made = tempo_map_create(id, &point, 1, out);
     }
-    musical_time_destroy(start);
     if (made != TEMPO_MAP_OK) {
         entity_id_destroy(id);
         set_message(error, "out of memory");
@@ -99,25 +98,25 @@ static unsigned choose_division(const RenderedPlan *rendered, const PlanExportOp
     for (size_t i = 0; i < rendered->count; i++) {
         const NoteEvent *event = rendered->events[i];
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(event));
-        if (!need_division_for(musical_time_denominator(position), &needed) ||
-            !need_division_for(duration_denominator(note_event_duration(event)), &needed)) {
+        if (!need_division_for((unsigned long)position->value.den, &needed) ||
+            !need_division_for((unsigned long)note_event_duration(event)->value.den, &needed)) {
             return 0;
         }
     }
     for (size_t i = 0; i < rendered->key_count; i++) {
-        if (!need_division_for(musical_time_denominator(rendered->keys[i].position), &needed)) {
+        if (!need_division_for((unsigned long)rendered->keys[i].position.value.den, &needed)) {
             return 0;
         }
     }
     for (size_t i = 0; with_markers && i < rendered->section_count; i++) {
-        if (!need_division_for(musical_time_denominator(rendered->sections[i].position), &needed)) {
+        if (!need_division_for((unsigned long)rendered->sections[i].position.value.den, &needed)) {
             return 0;
         }
     }
     if (rendered->meter_map) {
         for (size_t i = 0; i < meter_map_region_count(rendered->meter_map); i++) {
-            const MusicalTime *start = meter_map_region_start(meter_map_region(rendered->meter_map, i));
-            if (!need_division_for(musical_time_denominator(start), &needed)) {
+            MusicalTime start = meter_map_region_start(meter_map_region(rendered->meter_map, i));
+            if (!need_division_for((unsigned long)start.value.den, &needed)) {
                 return 0;
             }
         }
@@ -150,8 +149,8 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].position = rendered->keys[i].position;
         keys[i].sharps_flats = (int8_t)rendered->keys[i].sharps_flats;
-        keys[i].mode_byte = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 0;
-        keys[i].mode_hint = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
+        keys[i].mode_byte = composer_material_is_minor(rendered->keys[i].material) ? 1 : 0;
+        keys[i].mode_hint = composer_material_is_minor(rendered->keys[i].material) ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     }
 
     /* Track names: the conductor track for the form, each part's track for its lane. */
@@ -175,15 +174,9 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
     size_t section_markers = options.section_markers ? rendered->section_count : 0;
     size_t marker_count = section_markers + (options.loop_markers ? 2 : 0);
     MidiMarker *markers = marker_count ? calloc(marker_count, sizeof(*markers)) : NULL;
-    MusicalTime *loop_positions[2] = {NULL, NULL};
     TempoMap *tempo_map = NULL;
     PlanExportResult tempo_result = build_tempo_map(&options, &tempo_map, error);
-    bool loop_ok = !options.loop_markers ||
-                   (musical_time_from_rational(options.loop_start, &loop_positions[0]) == TIME_RATIONAL_OK &&
-                    musical_time_from_rational(options.loop_end, &loop_positions[1]) == TIME_RATIONAL_OK);
-    if ((marker_count && !markers) || !loop_ok || tempo_result != PLAN_EXPORT_OK) {
-        musical_time_destroy(loop_positions[0]);
-        musical_time_destroy(loop_positions[1]);
+    if ((marker_count && !markers) || tempo_result != PLAN_EXPORT_OK) {
         free(markers);
         free(voice_ids);
         free(part_names);
@@ -191,8 +184,8 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
         free(keys);
         tempo_map_destroy(tempo_map);
         if (tempo_result == PLAN_EXPORT_OK) {
-            set_message(error, loop_ok ? "out of memory" : "the loop markers are not times a file can hold");
-            return loop_ok ? PLAN_EXPORT_ERR_ALLOC : PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
+            set_message(error, "out of memory");
+            return PLAN_EXPORT_ERR_ALLOC;
         }
         return tempo_result;
     }
@@ -204,9 +197,9 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
             markers[i].text = rendered->sections[i].label;
         }
         if (options.loop_markers) {
-            markers[section_markers].position = loop_positions[0];
+            markers[section_markers].position = musical_time_of(options.loop_start);
             markers[section_markers].text = "loopStart";
-            markers[section_markers + 1].position = loop_positions[1];
+            markers[section_markers + 1].position = musical_time_of(options.loop_end);
             markers[section_markers + 1].text = "loopEnd";
         }
         midi_options.markers = markers;
@@ -226,8 +219,6 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
     free(part_names);
     free(names);
     free(markers);
-    musical_time_destroy(loop_positions[0]);
-    musical_time_destroy(loop_positions[1]);
     tempo_map_destroy(tempo_map);
     switch (result) {
     case MIDI_RENDER_OK:
@@ -281,7 +272,7 @@ PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const
     }
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].sharps_flats = rendered->keys[i].sharps_flats;
-        keys[i].mode = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MUSICXML_EXPORT_MODE_MINOR
+        keys[i].mode = composer_material_is_minor(rendered->keys[i].material) ? MUSICXML_EXPORT_MODE_MINOR
                                                                   : MUSICXML_EXPORT_MODE_MAJOR;
         keys[i].position = rendered->keys[i].position;
         keys[i].part_index = 0;

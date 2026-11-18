@@ -17,6 +17,7 @@
 #include "api/api_piece.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The plans every form template makes (R-417): each template at each size in C major 4/4 and A minor 3/4, with an
@@ -41,13 +42,13 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C-major", 0, KEY_STRUCTURE_MODE_MAJOR, 4},
-    {"A-minor", 9, KEY_STRUCTURE_MODE_MINOR, 3},
+    {"C-major", 0, HARMONY_MODE_MAJOR, 4},
+    {"A-minor", 9, HARMONY_MODE_MINOR, 3},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -156,7 +157,8 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, int beats,
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = size->kind;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = beats;
     request.meter.beat_unit = 4;
     request.bars = size->bars;
@@ -288,7 +290,7 @@ static char *theme_plan(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
     free(printed);
     char *plan = strdup(response.plan_json);
     composer_response_destroy(&response);
@@ -318,7 +320,7 @@ static uint64_t piece_hash(const char *name, const char *theme) {
     assert(spec);
     ComposerError error;
     memset(&error, 0, sizeof(error));
-    if (api_piece_read_request(spec, root, "", NULL, false, NULL, &error) != COMPOSER_OK) {
+    if (api_piece_read_request(spec, test_knowledge(), test_materials(), root, "", NULL, false, NULL, &error) != COMPOSER_OK) {
         fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);
         exit(1);
     }

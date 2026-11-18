@@ -656,7 +656,7 @@ static void test_compose(const Items *m) {
   check(strcmp(string_of(request, "schema"), "ursatz-piece-request") == 0 && number_of(request, "schema_version") == 2 &&
             strcmp(string_of(request, "form"), "game-loop") == 0,
         "the request has the piece request schema");
-  check(strcmp(string_of(request, "key"), "D") == 0 && strcmp(string_of(request, "mode"), "minor") == 0 &&
+  check(strcmp(string_of(request, "key"), "D") == 0 && strcmp(string_of(request, "material"), "omt.material.natural-minor") == 0 &&
             strcmp(string_of(request, "meter"), "4/4") == 0 && number_of(request, "tempo") == 96,
         "the request has the brief");
   check(strcmp(string_of(member(request, "motive"), "degrees"), kDegreesA) == 0 &&
@@ -1538,6 +1538,84 @@ static void test_any_form(const Items *m) {
   free(piece);
 }
 
+/* A piece structure names its material (R-597): a rounded binary saved with `material` composes the same MIDI and MusicXML as
+ * the one saved with the old mode word, its request carries the material, a game loop saved with a mode is read with the
+ * material, and the material style needs a brief. */
+static void test_materials(const Items *m) {
+  int status = 0;
+  char more[200];
+  char path[400];
+  char dir[200];
+  snprintf(more, sizeof(more), ",\"motive\":{\"item_id\":\"%s\",\"version\":1}", m->a);
+  char *old_piece = NULL;
+  check(create_sized("By mode", "rounded-binary", "", more, &old_piece) == 200 && old_piece, "a rounded binary with the mode major is saved");
+  char body[2000];
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"piece\":{\"structure\":{\"form\":\"rounded-binary\",\"key\":\"C\",\"material\":\"omt.material.major\","
+           "\"meter\":\"4/4\"}%s}}",
+           more);
+  char *new_piece = create_item("piece", "By material", body, &status);
+  check(status == 200 && new_piece, "a rounded binary with the material major is saved");
+  if (!old_piece || !new_piece) {
+    free(old_piece);
+    free(new_piece);
+    return;
+  }
+  cJSON *answer = compose(old_piece, "{\"seed\":1}", &status);
+  check(status == 200 && ok_true(answer), "the piece with the mode composes");
+  cJSON_Delete(answer);
+  answer = compose(new_piece, "{\"seed\":1}", &status);
+  check(status == 200 && ok_true(answer), "the piece with the material composes");
+  cJSON_Delete(answer);
+  cJSON *request = last_request();
+  check(strcmp(string_of(request, "material"), "omt.material.major") == 0 && !member(request, "mode"),
+        "the request of the piece with a material carries it");
+  cJSON_Delete(request);
+
+  static const char *const files[] = {"piece.mid", "piece.musicxml"};
+  for (size_t i = 0; i < 2; i++) {
+    size_t old_size = 0;
+    size_t new_size = 0;
+    version_dir(old_piece, 2, dir, sizeof(dir));
+    snprintf(path, sizeof(path), "%s/%s", dir, files[i]);
+    char *old_bytes = test_read_file(path, &old_size);
+    version_dir(new_piece, 2, dir, sizeof(dir));
+    snprintf(path, sizeof(path), "%s/%s", dir, files[i]);
+    char *new_bytes = test_read_file(path, &new_size);
+    char what[120];
+    snprintf(what, sizeof(what), "the piece with a material composes the same %s as the one with a mode", files[i]);
+    check(old_bytes && new_bytes && old_size == new_size && old_size > 0 && memcmp(old_bytes, new_bytes, old_size) == 0, what);
+    free(old_bytes);
+    free(new_bytes);
+  }
+  for (int version = 1; version <= 2; version++) {
+    snprintf(path, sizeof(path), "/api/materials/items/%s/versions/%d", old_piece, version);
+    answer = exchange("GET", path, NULL, &status);
+    const cJSON *structure = member(member(member(answer, "body"), "piece"), "structure");
+    check(status == 200 && strcmp(string_of(structure, "material"), "omt.material.major") == 0 && !member(structure, "mode") &&
+              strcmp(string_of(structure, "key"), "C") == 0,
+          "a piece saved with a mode is read with the material and no mode");
+    cJSON_Delete(answer);
+  }
+
+  /* The material style needs a brief. */
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"piece\":{\"structure\":{\"form\":\"rounded-binary\",\"key\":\"C\",\"material\":\"style\","
+           "\"meter\":\"4/4\"}%s}}",
+           more);
+  char *styled = create_item("piece", "Style", body, &status);
+  check(status == 200 && styled, "a piece with the material style is saved");
+  if (styled) {
+    answer = compose(styled, "{\"seed\":1}", &status);
+    check(status == 400 && strstr(string_of(answer, "error"), "the material style needs a brief") != NULL,
+          "the material style without a brief is 400");
+    cJSON_Delete(answer);
+  }
+  free(styled);
+  free(old_piece);
+  free(new_piece);
+}
+
 /* A piece saved before the forms (a body without structure.form and a folder of the game loop's files) opens, plays,
    regenerates and exports as before (R-430). */
 static void test_old_game_loop_piece(const Items *m) {
@@ -1712,6 +1790,7 @@ int main(int argc, char **argv) {
     test_update_uses(&items);
     test_regenerate(&items);
     test_any_form(&items);
+    test_materials(&items);
     test_old_game_loop_piece(&items);
     test_failures(&items);
     test_real_composer();

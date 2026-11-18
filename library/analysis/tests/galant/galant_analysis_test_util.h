@@ -15,8 +15,6 @@
 /* A run of segments for the unit tests. Time is counted in eighth notes ("units"); a beat is two units (a quarter note). */
 typedef struct {
     GalantSegmentList list;
-    TimeSpan **spans;
-    size_t span_count;
     char **ids; /* the segment ids the list borrows */
     size_t id_count;
     int next_id;
@@ -29,10 +27,6 @@ static inline void seq_init(Seq *seq) {
 
 static inline void seq_destroy(Seq *seq) {
     galant_segments_destroy(&seq->list);
-    for (size_t i = 0; i < seq->span_count; i++) {
-        time_span_destroy(seq->spans[i]);
-    }
-    free(seq->spans);
     for (size_t i = 0; i < seq->id_count; i++) {
         free(seq->ids[i]);
     }
@@ -47,15 +41,11 @@ static inline GalantPitchDegree deg(int degree, int alteration) {
 /* A segment from unit `start` for `length` units; `bass` and `soprano` are degrees in the local key `key` (soprano degree 0: absent). */
 static inline void seq_add(Seq *seq, int start, int length, BeatStrength strength, GalantPitchDegree bass, GalantPitchDegree soprano,
                            GalantPitchDegree key, double uncertainty) {
-    MusicalTime *from = NULL;
-    MusicalTime *to = NULL;
-    TimeSpan *span = NULL;
-    assert(musical_time_create(start, 8, &from) == MUSICAL_TIME_OK && musical_time_create(start + length, 8, &to) == MUSICAL_TIME_OK);
-    assert(time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
-    musical_time_destroy(from);
-    musical_time_destroy(to);
-    seq->spans = (TimeSpan **)realloc(seq->spans, (seq->span_count + 1) * sizeof(TimeSpan *));
-    seq->spans[seq->span_count++] = span;
+    MusicalTime from;
+    MusicalTime to;
+    TimeSpan span;
+    assert(musical_time_make(start, 8, &from) == MUSICAL_TIME_OK && musical_time_make(start + length, 8, &to) == MUSICAL_TIME_OK);
+    assert(time_span_make(from, to, &span) == TIME_SPAN_OK);
     GalantSegment segment;
     memset(&segment, 0, sizeof(segment));
     char id[16];

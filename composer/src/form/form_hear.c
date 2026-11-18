@@ -5,7 +5,7 @@
 
 #include <analysis/form/analysis_theme.h>
 #include <theory/form/phrase_level_form.h>
-#include <model/time/time_rational.h>
+#include <theory/tonality/common_practice_materials.h>
 #include <model/time/time_span.h>
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/result_chain.h>
@@ -172,7 +172,8 @@ FormHearResult form_hear_in(ComposerHearing *hearing, const PiecePlan *plan, Pla
 }
 
 /* The key regions the Analyzer heard over the span, with where each starts. */
-static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out, size_t *count) {
+static FormHearResult copy_keys(const AnalyzerResult *result, const CommonPracticeMaterials *materials, FormHeardKey **out,
+                                size_t *count) {
     const CommonPracticeKeyRegions *regions = analysis_chain_key_regions(analyzer_result_chain(result));
     if (!regions || regions->region_count == 0) {
         return FORM_HEAR_OK;
@@ -183,8 +184,8 @@ static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out
     }
     for (size_t i = 0; i < regions->region_count; i++) {
         const CommonPracticeKeyRegion *region = &regions->regions[i];
-        if (!region->span || rational_of_musical_time(time_span_start(region->span), &keys[i].start) != RATIONAL_OK ||
-            !common_practice_key_region_analysis_key(region, &keys[i].key)) {
+        keys[i].start = region->span.start.value;
+        if (!common_practice_key_region_analysis_key(region, materials, &keys[i].key)) {
             free(keys);
             return FORM_HEAR_ERR_ANALYSIS;
         }
@@ -195,7 +196,8 @@ static FormHearResult copy_keys(const AnalyzerResult *result, FormHeardKey **out
     return FORM_HEAR_OK;
 }
 
-FormHearResult form_hear_keys(const PiecePlan *plan, PlanSpan span, FormHeardKey **out, size_t *count) {
+FormHearResult form_hear_keys(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, PlanSpan span, FormHeardKey **out,
+                              size_t *count) {
     if (!out || !count) {
         return FORM_HEAR_ERR_NULL;
     }
@@ -205,9 +207,14 @@ FormHearResult form_hear_keys(const PiecePlan *plan, PlanSpan span, FormHeardKey
         return FORM_HEAR_ERR_NULL;
     }
     ComposerHearing *hearing = NULL;
-    FormHearResult status = result_of(hearing_create(plan, &hearing));
+    FormHearResult status = result_of(hearing_create(plan, knowledge, &hearing));
     if (status != FORM_HEAR_OK) {
         return status;
+    }
+    CommonPracticeMaterials materials;
+    if (!common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
+        hearing_destroy(hearing);
+        return FORM_HEAR_ERR_ANALYSIS;
     }
     if (lane_open(plan, PLAN_LANE_MELODY, span) || lane_open(plan, PLAN_LANE_BASS, span) ||
         lane_open(plan, PLAN_LANE_HARMONY, span)) {
@@ -222,7 +229,7 @@ FormHearResult form_hear_keys(const PiecePlan *plan, PlanSpan span, FormHeardKey
         status = result_of(hearing_section(hearing, span, &result));
     }
     if (status == FORM_HEAR_OK) {
-        status = copy_keys(result, out, count);
+        status = copy_keys(result, &materials, out, count);
     }
     hearing_destroy(hearing);
     return status;

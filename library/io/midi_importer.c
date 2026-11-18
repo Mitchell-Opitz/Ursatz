@@ -274,30 +274,20 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         return NOTE_EVENT_ERR_ALLOC;
     }
 
-    MusicalTime *position = NULL;
-    if (musical_time_create((long)matched->start_tick, ticks_denominator, &position) != MUSICAL_TIME_OK) {
+    MusicalTime position;
+    if (musical_time_make((long)matched->start_tick, (long long)ticks_denominator, &position) != MUSICAL_TIME_OK) {
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
 
-    TemporalAnchor *anchor = NULL;
-    if (temporal_anchor_create(position, &anchor) != TEMPORAL_ANCHOR_OK) {
-        musical_time_destroy(position);
-        entity_id_destroy(id);
-        return NOTE_EVENT_ERR_ALLOC;
-    }
-
-    Duration *duration = NULL;
-    if (duration_create((long)matched->duration_ticks, ticks_denominator, &duration) != DURATION_OK) {
-        temporal_anchor_destroy(anchor);
+    Duration duration;
+    if (duration_make((long)matched->duration_ticks, (long long)ticks_denominator, &duration) != DURATION_OK) {
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
 
     PitchNumericValue *numeric = NULL;
     if (pitch_numeric_value_create(tuning_system, matched->note, 1, &numeric) != PITCH_NUMERIC_VALUE_OK) {
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -306,8 +296,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
     PitchNumericValueToIdentityResult to_identity_result = pitch_numeric_value_to_identity(numeric, &pitch);
     if (to_identity_result != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK) {
         pitch_numeric_value_destroy(numeric);
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -316,8 +304,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
     if (!pitch_spelling_of_midi(matched->note, 0, &spelling)) {
         pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -327,8 +313,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -339,8 +323,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
         pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
-        duration_destroy(duration);
-        temporal_anchor_destroy(anchor);
         entity_id_destroy(id);
         return NOTE_EVENT_ERR_ALLOC;
     }
@@ -354,8 +336,6 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
             pitch_spelling_destroy(spelling);
             pitch_numeric_value_destroy(numeric);
             pitch_identity_destroy(pitch);
-            duration_destroy(duration);
-            temporal_anchor_destroy(anchor);
             entity_id_destroy(id);
             return NOTE_EVENT_ERR_ALLOC;
         }
@@ -364,18 +344,19 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
             pitch_spelling_destroy(spelling);
             pitch_numeric_value_destroy(numeric);
             pitch_identity_destroy(pitch);
-            duration_destroy(duration);
-            temporal_anchor_destroy(anchor);
             entity_id_destroy(id);
             return NOTE_EVENT_ERR_ALLOC;
         }
     }
 
-    NoteEventResult result = note_event_create(id, anchor, duration, pitch, spelling, voice, provenance, out);
+    NoteEventResult result = note_event_create(id, position, duration, pitch, spelling, voice, provenance, out);
     if (result != NOTE_EVENT_OK) {
         voice_reference_destroy(voice);
         pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
+        pitch_identity_destroy(pitch);
+        provenance_reference_destroy(provenance);
+        entity_id_destroy(id);
         return result;
     }
 
@@ -527,10 +508,9 @@ void midi_meter_import_destroy(MidiMeterImport *meter) {
         return;
     }
     meter_map_destroy(meter->meter_map);
-    musical_time_destroy(meter->end_time);
     free(meter->conflict_ticks);
     meter->meter_map = NULL;
-    meter->end_time = NULL;
+    meter->end_time = (MusicalTime){{0, 1}};
     meter->conflict_ticks = NULL;
     meter->conflict_count = 0;
 }
@@ -539,7 +519,7 @@ void midi_meter_import_destroy(MidiMeterImport *meter) {
    4 * division; end_tick is the tick of the last note-off. */
 static MidiImportResult build_meter_from(unsigned long denominator, uint32_t end_tick,
                                          const MidiTimeSignatureEvents *signatures, MidiMeterImport *out) {
-    MidiMeterImport result = {NULL, NULL, NULL, 0};
+    MidiMeterImport result = {NULL, {{0, 1}}, NULL, 0};
     MidiImportResult failure = MIDI_IMPORT_OK;
 
     EntityID *map_id = NULL;
@@ -552,30 +532,22 @@ static MidiImportResult build_meter_from(unsigned long denominator, uint32_t end
         }
     } else {
         MeterMapChangePoint *points = calloc(signatures->count, sizeof(MeterMapChangePoint));
-        MusicalTime **starts = calloc(signatures->count, sizeof(MusicalTime *));
-        if (points == NULL || starts == NULL) {
+        if (points == NULL) {
             failure = MIDI_IMPORT_ERR_ALLOC;
         } else {
             for (size_t i = 0; i < signatures->count && failure == MIDI_IMPORT_OK; i++) {
-                if (musical_time_create((long)signatures->events[i].tick, denominator, &starts[i]) !=
-                    MUSICAL_TIME_OK) {
+                if (musical_time_make((long)signatures->events[i].tick, (long long)denominator,
+                                      &points[i].start) != MUSICAL_TIME_OK) {
                     failure = MIDI_IMPORT_ERR_ALLOC;
                     break;
                 }
                 points[i].time_signature = signatures->events[i].time_signature;
-                points[i].start = starts[i];
             }
             if (failure == MIDI_IMPORT_OK &&
                 meter_map_create(map_id, points, signatures->count, &result.meter_map) != METER_MAP_OK) {
                 failure = MIDI_IMPORT_ERR_ALLOC;
             }
         }
-        if (starts != NULL) {
-            for (size_t i = 0; i < signatures->count; i++) {
-                musical_time_destroy(starts[i]);
-            }
-        }
-        free(starts);
         free(points);
         if (failure != MIDI_IMPORT_OK) {
             entity_id_destroy(map_id);
@@ -583,7 +555,7 @@ static MidiImportResult build_meter_from(unsigned long denominator, uint32_t end
     }
 
     if (failure == MIDI_IMPORT_OK &&
-        musical_time_create((long)end_tick, denominator, &result.end_time) != MUSICAL_TIME_OK) {
+        musical_time_make((long)end_tick, (long long)denominator, &result.end_time) != MUSICAL_TIME_OK) {
         failure = MIDI_IMPORT_ERR_ALLOC;
     }
     if (failure == MIDI_IMPORT_OK && signatures->conflict_count > 0) {
@@ -646,17 +618,16 @@ static MidiImportResult build_tempo_from(unsigned long denominator, const MidiTe
         }
     } else {
         TempoMapChangePoint *points = calloc(tempos->count, sizeof(TempoMapChangePoint));
-        MusicalTime **starts = calloc(tempos->count, sizeof(MusicalTime *));
-        if (points == NULL || starts == NULL) {
+        if (points == NULL) {
             failure = MIDI_IMPORT_ERR_ALLOC;
         } else {
             for (size_t i = 0; i < tempos->count && failure == MIDI_IMPORT_OK; i++) {
                 if (tempos->events[i].tick > (uint64_t)LONG_MAX ||
-                    musical_time_create((long)tempos->events[i].tick, denominator, &starts[i]) != MUSICAL_TIME_OK) {
+                    musical_time_make((long)tempos->events[i].tick, (long long)denominator,
+                                      &points[i].start) != MUSICAL_TIME_OK) {
                     failure = MIDI_IMPORT_ERR_ALLOC;
                     break;
                 }
-                points[i].start = starts[i];
                 points[i].microseconds_per_quarter = tempos->events[i].microseconds_per_quarter;
             }
             if (failure == MIDI_IMPORT_OK &&
@@ -664,12 +635,6 @@ static MidiImportResult build_tempo_from(unsigned long denominator, const MidiTe
                 failure = MIDI_IMPORT_ERR_ALLOC;
             }
         }
-        if (starts != NULL) {
-            for (size_t i = 0; i < tempos->count; i++) {
-                musical_time_destroy(starts[i]);
-            }
-        }
-        free(starts);
         free(points);
         if (failure != MIDI_IMPORT_OK) {
             entity_id_destroy(map_id);
@@ -710,9 +675,6 @@ void midi_import_destroy(MidiImport *import) {
     if (import->tracks != NULL) {
         for (size_t t = 0; t < import->track_count; t++) {
             free(import->tracks[t].name);
-            for (size_t p = 0; p < import->tracks[t].program_count; p++) {
-                musical_time_destroy(import->tracks[t].programs[p].time);
-            }
             free(import->tracks[t].programs);
         }
         free(import->tracks);
@@ -747,7 +709,7 @@ static MidiImportResult build_track_info(unsigned long denominator, MidiFileScan
         }
         for (size_t p = 0; p < scanned->program_count; p++) {
             MidiProgramChange *change = &info->programs[p];
-            if (musical_time_create((long)scanned->programs[p].tick, denominator, &change->time) !=
+            if (musical_time_make((long)scanned->programs[p].tick, (long long)denominator, &change->time) !=
                 MUSICAL_TIME_OK) {
                 return MIDI_IMPORT_ERR_ALLOC;
             }

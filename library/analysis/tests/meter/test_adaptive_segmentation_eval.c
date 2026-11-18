@@ -9,7 +9,6 @@
 #include "theory/meter/segmentation_beat_grid.h"
 #include "analysis/notes/sonority_segmentation.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_span.h"
 #include "ursatz_test.h"
 
@@ -39,7 +38,7 @@ static Imported import_corpus_file(const char *name) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, name);
     unsigned char *data = (unsigned char *)test_must_read_file(path, &size);
-    Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
+    Imported imported = {NULL, NULL, 0, {NULL, {{0, 1}}, NULL, 0}};
     assert(test_midi_import_parts(data, size, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     free(data);
     return imported;
@@ -97,8 +96,7 @@ static Marks load_marks(void) {
 static Rational *segment_starts(const AdaptiveSonorities *sonorities) {
     Rational *starts = (Rational *)calloc(sonorities->count + 1, sizeof(Rational));
     for (size_t i = 0; i < sonorities->count; i++) {
-        assert(rational_of_musical_time(time_span_start(sonority_time_window(sonorities->items[i].sonority)), &starts[i]) ==
-               RATIONAL_OK);
+        starts[i] = sonority_time_window(sonorities->items[i].sonority)->start.value;
     }
     return starts;
 }
@@ -172,15 +170,14 @@ static AdaptiveSonorities segment(const Imported *imported, const MeterMap *map)
 
 static MeterMap *three_four_map(void) {
     TimeSignature *three_four = make_signature(3, 2);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
     MeterMapChangePoint point = {three_four, zero};
     EntityID *id = NULL;
     assert(entity_id_create("bach-114-score-meter", &id) == ENTITY_ID_OK);
     MeterMap *map = NULL;
     assert(meter_map_create(id, &point, 1, &map) == METER_MAP_OK);
     time_signature_destroy(three_four);
-    musical_time_destroy(zero);
     return map;
 }
 
@@ -239,10 +236,8 @@ static void report_corpus_statistics(void) {
         double total = 0.0;
         for (size_t i = 0; i < out.count; i++) {
             const TimeSpan *window = sonority_time_window(out.items[i].sonority);
-            Rational window_start;
-            Rational window_end;
-            assert(rational_of_musical_time(time_span_end(window), &window_end) == RATIONAL_OK);
-            assert(rational_of_musical_time(time_span_start(window), &window_start) == RATIONAL_OK);
+            Rational window_start = window->start.value;
+            Rational window_end = window->end.value;
             total += as_double(window_end) - as_double(window_start);
         }
         double mean_whole = out.count == 0 ? 0.0 : total / (double)out.count;

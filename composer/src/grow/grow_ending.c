@@ -303,8 +303,7 @@ static bool draw_accelerating_fragments(FillRng *rng, const GrowThemeRequest *re
  * seventh). A residue keeps to the scale when m0 does (liquid_diatonic); a chromatic m0's residue keeps to the range only.
  */
 static bool liquid_in_range(const Motive *motive, bool in_scale) {
-    unsigned scale = standard_tonality_mode_pitch_classes_with_leading_tone(
-        0, motive->minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR);
+    unsigned scale = standard_tonality_material_pitch_classes_with_leading_tone(0, motive->material);
     for (size_t i = 0; i < motive->note_count; i++) {
         int pitch = motive_pitch(motive, i);
         if (pitch < LIQUID_LOW || pitch > LIQUID_HIGH) {
@@ -344,7 +343,7 @@ static bool liquid_take_cadence(Motive *motive, bool has_cadence, CadenceType ca
     if (motive->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         return false;
     }
-    int want = (motive->tonic_pc + (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? 0 : (motive->minor ? 3 : 4))) % 12;
+    int want = (motive->tonic_pc + (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? 0 : composer_material_third(motive->material))) % 12;
     MotiveSketchNote *last = &motive->notes[motive->note_count - 1];
     int pitch = motive_pitch(motive, motive->note_count - 1);
     int shift = util_pitch_class(want - pitch);
@@ -779,7 +778,7 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
     AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
     int tonic = analysis_key_tonic_pitch_class(&ends_in);
     int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
-               : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + (ends_in.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12
+               : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + composer_material_third(ends_in.material)) % 12
                                                       : -1;
     /* A contrasting idea with a motive of its own is that motive as it is: nothing to draw. */
     bool own_contrast = grow_idea_own(spec, GROW_PLACE_CONSEQUENT_CONTRAST);

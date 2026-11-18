@@ -114,7 +114,7 @@ bool form_return_copies(const PiecePlan *plan, NodeId section);
  * return in the home mode (R-524) or a figurate return in the parallel mode (R-499). *to is the mode of the target's
  * keys. False for a copy in keys of the same mode and for a section that does not copy.
  */
-bool form_return_mode_change(const PiecePlan *plan, NodeId section, KeyStructureMode *to);
+bool form_return_mode_change(const PiecePlan *plan, NodeId section, const PitchMaterial **to);
 
 /*
  * Registers form-return. melody gives the range a re-registered melody keeps to (NULL for the defaults); the registry

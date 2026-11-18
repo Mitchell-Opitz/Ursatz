@@ -10,9 +10,9 @@
  * and the overflow guard on construction.
  */
 
-static MusicalTime *at(long n, unsigned long d) {
-    MusicalTime *t = NULL;
-    assert(musical_time_create(n, d, &t) == MUSICAL_TIME_OK);
+static MusicalTime at(long n, unsigned long d) {
+    MusicalTime t;
+    assert(musical_time_make(n, (long long)d, &t) == MUSICAL_TIME_OK);
     return t;
 }
 
@@ -29,18 +29,14 @@ typedef struct {
 } Change;
 
 static TempoMap *build(const Change *changes, size_t count) {
-    MusicalTime *starts[8];
     TempoMapChangePoint points[8];
     for (size_t i = 0; i < count; i++) {
-        starts[i] = at(changes[i].start_n, changes[i].start_d);
-        points[i].start = starts[i];
+        points[i].start = at(changes[i].start_n, changes[i].start_d);
         points[i].microseconds_per_quarter = changes[i].tempo;
+        points[i].kind = TEMPO_MAP_CHANGE_ABSOLUTE;
     }
     TempoMap *map = NULL;
     assert(tempo_map_create(id("tempo"), points, count, &map) == TEMPO_MAP_OK);
-    for (size_t i = 0; i < count; i++) {
-        musical_time_destroy(starts[i]);
-    }
     return map;
 }
 
@@ -52,18 +48,16 @@ static TempoMap *three_tempos(void) {
 
 /* The tempo of the region a time falls in: the last region that starts at or before it. */
 static unsigned long tempo_at(const TempoMap *map, long n, unsigned long d) {
-    MusicalTime *t = at(n, d);
+    MusicalTime t = at(n, d);
     unsigned long tempo = 0;
     for (size_t i = tempo_map_region_count(map); i > 0; i--) {
         const TempoMapRegion *region = tempo_map_region(map, i - 1);
-        const MusicalTime *start = tempo_map_region_start(region);
-        if (musical_time_numerator(start) * (long)musical_time_denominator(t) <=
-            musical_time_numerator(t) * (long)musical_time_denominator(start)) {
+        MusicalTime start = tempo_map_region_start(region);
+        if (musical_time_cmp(start, t) <= 0) {
             tempo = tempo_map_region_microseconds_per_quarter(region);
             break;
         }
     }
-    musical_time_destroy(t);
     return tempo;
 }
 
@@ -130,9 +124,7 @@ static void test_region_accessors(void) {
     TempoMap *map = three_tempos();
     const TempoMapRegion *second = tempo_map_region(map, 1);
     assert(tempo_map_region_microseconds_per_quarter(second) == 1000000);
-    MusicalTime *one = at(1, 1);
-    assert(musical_time_equals(tempo_map_region_start(second), one));
-    musical_time_destroy(one);
+    assert(musical_time_same(tempo_map_region_start(second), at(1, 1)));
     assert(tempo_map_region(map, 3) == NULL);
     tempo_map_destroy(map);
 }
@@ -141,9 +133,9 @@ static void test_rejects_bad_input(void) {
     TempoMap *map = NULL;
     assert(tempo_map_create(id("tempo"), NULL, 0, &map) == TEMPO_MAP_ERR_NO_CHANGE_POINTS);
 
-    MusicalTime *zero = at(0, 1);
-    MusicalTime *one = at(1, 1);
-    MusicalTime *negative = at(-1, 4);
+    MusicalTime zero = at(0, 1);
+    MusicalTime one = at(1, 1);
+    MusicalTime negative = at(-1, 4);
 
     TempoMapChangePoint zero_tempo = {zero, 0};
     assert(tempo_map_create(id("tempo"), &zero_tempo, 1, &map) == TEMPO_MAP_ERR_ZERO_TEMPO);
@@ -154,24 +146,18 @@ static void test_rejects_bad_input(void) {
     TempoMapChangePoint same[2] = {{one, 500000}, {one, 600000}};
     assert(tempo_map_create(id("tempo"), same, 2, &map) == TEMPO_MAP_ERR_NOT_ASCENDING);
     assert(map == NULL);
-
-    musical_time_destroy(zero);
-    musical_time_destroy(one);
-    musical_time_destroy(negative);
 }
 
 static void test_overflow_is_an_error_not_a_wrap(void) {
     /* Construction refuses a map whose seconds at a change point do not fit, and keeps the id. */
-    MusicalTime *zero = at(0, 1);
-    MusicalTime *huge = at(LONG_MAX, 1);
+    MusicalTime zero = at(0, 1);
+    MusicalTime huge = at(LONG_MAX, 1);
     TempoMapChangePoint points[2] = {{zero, 16777215}, {huge, 1}};
     EntityID *kept = id("tempo");
     TempoMap *map = NULL;
     assert(tempo_map_create(kept, points, 2, &map) == TEMPO_MAP_ERR_OVERFLOW);
     assert(map == NULL);
     entity_id_destroy(kept);
-    musical_time_destroy(zero);
-    musical_time_destroy(huge);
 }
 
 int main(void) {

@@ -27,6 +27,7 @@ typedef struct {
 } Piece;
 
 struct MotiveLinkScope {
+    const KnowledgeSnapshot *knowledge; /* borrowed: the sketches point into it */
     Piece *pieces;
     size_t piece_count;
     size_t piece_capacity;

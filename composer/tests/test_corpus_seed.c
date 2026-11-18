@@ -12,6 +12,7 @@
 #include <ursatz_composer/plan_json.h>
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 #include "ursatz_test.h"
 
 /*
@@ -48,14 +49,15 @@ static PlanMeter four_four(void) {
     return meter;
 }
 
-static AnalysisKey key_of(int tonic, KeyStructureMode mode) {
-    AnalysisKey key = plan_key_of_pitch_class(tonic, mode);
+static AnalysisKey key_of(int tonic, HarmonyMode mode) {
+    AnalysisKey key = test_key_mode(tonic, mode);
     return key;
 }
 
 static Motive bar_in(const PlanMeter *meter, const AnalysisKey *key, const char *notes) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter = *meter;
     options.has_key = true;
@@ -74,9 +76,9 @@ static Motive bar_in(const PlanMeter *meter, const AnalysisKey *key, const char 
 
 static int test_motive(void) {
     PlanMeter meter = four_four();
-    AnalysisKey d_major = key_of(2, KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey d_major = key_of(2, HARMONY_MODE_MAJOR);
     CorpusSeed seed;
-    assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, 1, &seed) == CORPUS_SEED_OK);
+    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, 1, &seed) == CORPUS_SEED_OK);
 
     /* The bar of Mozart 545, a whole tone higher: D5 half, F#5 quarter, A5 quarter. */
     Motive expected = bar_in(&meter, &d_major, "D5:h F#5:q A5:q");
@@ -94,39 +96,39 @@ static int test_motive(void) {
     assert(seed.score_numerator == seed.score_denominator);
 
     /* In the key it was heard in, nothing moves. */
-    AnalysisKey c_major = key_of(0, KEY_STRUCTURE_MODE_MAJOR);
-    assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &c_major, 1, &seed) == CORPUS_SEED_OK);
+    AnalysisKey c_major = key_of(0, HARMONY_MODE_MAJOR);
+    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &c_major, 1, &seed) == CORPUS_SEED_OK);
     expected = bar_in(&meter, &c_major, "C5:h E5:q G5:q");
     expected.key_source = MOTIVE_SKETCH_KEY_GIVEN;
     assert(motive_equal(&seed.motive, &expected));
 
     /* In A minor the first note keeps its degree (the tonic, A) and the intervals are the bar's. */
-    AnalysisKey a_minor = key_of(9, KEY_STRUCTURE_MODE_MINOR);
-    assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &a_minor, 1, &seed) == CORPUS_SEED_OK);
+    AnalysisKey a_minor = key_of(9, HARMONY_MODE_MINOR);
+    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &a_minor, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 3);
     assert(seed.motive.notes[0].pitch % 12 == 9);
     assert(seed.motive.notes[1].pitch - seed.motive.notes[0].pitch == 4);
     assert(seed.motive.notes[2].pitch - seed.motive.notes[1].pitch == 3);
-    assert(seed.motive.tonic_pc == 9 && seed.motive.minor);
+    assert(seed.motive.tonic_pc == 9 && motive_sketch_minor(&seed.motive));
 
     /* Cut at the barline: a 6/8 bar (three quarters) takes the half note and the quarter, which ends on the barline;
        a 5/8 bar takes the half note and a quarter shortened to the eighth that is left. */
     PlanMeter six_eight = {6, 8, 0};
-    assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &six_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
+    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &six_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 2);
     assert(rational_cmp(seed.motive.length, (Rational){3, 4}) == 0);
     assert(rational_cmp(seed.motive.notes[0].duration, (Rational){1, 2}) == 0);
     assert(rational_cmp(seed.motive.notes[1].duration, (Rational){1, 4}) == 0);
     PlanMeter five_eight = {5, 8, 0};
-    assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &five_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
+    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &five_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 2);
     assert(rational_cmp(seed.motive.length, (Rational){5, 8}) == 0);
     assert(rational_cmp(seed.motive.notes[1].onset, (Rational){1, 2}) == 0);
     assert(rational_cmp(seed.motive.notes[1].duration, (Rational){1, 8}) == 0);
 
-    assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, "no-such-file.mid", &meter, &d_major, 1, &seed) ==
+    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, "no-such-file.mid", &meter, &d_major, 1, &seed) ==
            CORPUS_SEED_ERR_QUERY);
-    assert(corpus_seed_motive("no-such-directory", PASSAGE, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_CORPUS);
+    assert(corpus_seed_motive(test_knowledge(), "no-such-directory", PASSAGE, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_CORPUS);
     printf("the opening bar of Mozart 545 seeds the bar transposed, cut at the barline\n");
     return 0;
 }
@@ -135,13 +137,13 @@ static int test_motive(void) {
 
 static int test_same(void) {
     PlanMeter meter = four_four();
-    AnalysisKey d_major = key_of(2, KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey d_major = key_of(2, HARMONY_MODE_MAJOR);
     CorpusSeed best;
-    assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, 0, &best) == CORPUS_SEED_OK);
+    assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, 0, &best) == CORPUS_SEED_OK);
     for (unsigned long seed = 1; seed <= 20; seed++) {
         CorpusSeed first, second;
-        assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, seed, &first) == CORPUS_SEED_OK);
-        assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, seed, &second) == CORPUS_SEED_OK);
+        assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, seed, &first) == CORPUS_SEED_OK);
+        assert(corpus_seed_motive(test_knowledge(), COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &d_major, seed, &second) == CORPUS_SEED_OK);
         assert(strcmp(first.piece, second.piece) == 0 && first.start_measure == second.start_measure &&
                first.start_beat == second.start_beat && first.end_measure == second.end_measure &&
                first.score_numerator == second.score_numerator && first.score_denominator == second.score_denominator);
@@ -233,15 +235,15 @@ static int test_plan(void) {
 
 static int test_progression(void) {
     CorpusSeed seed;
-    assert(corpus_seed_progression(COMPOSER_SONATINAS_CORPUS, "I IV V I", KEY_STRUCTURE_MODE_MAJOR, &seed) == CORPUS_SEED_OK);
+    assert(corpus_seed_progression(test_knowledge(), COMPOSER_SONATINAS_CORPUS, "I IV V I", HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_OK);
     assert(seed.numeral_count == 4);
     assert(strlen(seed.piece) > 0 && 2 * seed.score_numerator >= seed.score_denominator);
     for (size_t i = 0; i < seed.numeral_count; i++) {
         assert(strlen(seed.numerals[i]) > 0);
     }
     CorpusSeed minor;
-    assert(corpus_seed_progression(COMPOSER_SONATINAS_CORPUS, "i iv V i", KEY_STRUCTURE_MODE_MINOR, &minor) == CORPUS_SEED_OK);
-    assert(corpus_seed_progression(COMPOSER_SONATINAS_CORPUS, "not numerals", KEY_STRUCTURE_MODE_MAJOR, &seed) ==
+    assert(corpus_seed_progression(test_knowledge(), COMPOSER_SONATINAS_CORPUS, "i iv V i", HARMONY_MODE_MINOR, &minor) == CORPUS_SEED_OK);
+    assert(corpus_seed_progression(test_knowledge(), COMPOSER_SONATINAS_CORPUS, "not numerals", HARMONY_MODE_MAJOR, &seed) ==
            CORPUS_SEED_ERR_QUERY);
 
     /* Placed at B in a rounded binary form, the plan fills completely for seeds 1 to 5. */
@@ -286,9 +288,9 @@ static int test_no_match(void) {
     assert(!test_file_exists("seed_none.json"));
     CorpusSeed seed;
     PlanMeter meter = four_four();
-    AnalysisKey d_major = key_of(2, KEY_STRUCTURE_MODE_MAJOR);
-    assert(corpus_seed_motive(COMPOSER_EMPTY_CORPUS, PASSAGE, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_NO_MATCH);
-    assert(corpus_seed_progression(COMPOSER_EMPTY_CORPUS, "I IV V I", KEY_STRUCTURE_MODE_MAJOR, &seed) == CORPUS_SEED_ERR_NO_MATCH);
+    AnalysisKey d_major = key_of(2, HARMONY_MODE_MAJOR);
+    assert(corpus_seed_motive(test_knowledge(), COMPOSER_EMPTY_CORPUS, PASSAGE, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_NO_MATCH);
+    assert(corpus_seed_progression(test_knowledge(), COMPOSER_EMPTY_CORPUS, "I IV V I", HARMONY_MODE_MAJOR, &seed) == CORPUS_SEED_ERR_NO_MATCH);
     printf("a corpus with no match exits 2 and writes nothing\n");
     return 0;
 }

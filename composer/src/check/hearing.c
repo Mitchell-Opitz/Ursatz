@@ -1,4 +1,5 @@
 #include "check/hearing_result.h"
+#include "util/util.h"
 
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -7,7 +8,7 @@
 #include <model/time/duration.h>
 #include <model/time/musical_time.h>
 #include <model/time/temporal_anchor.h>
-#include <model/time/time_rational.h>
+#include <theory/tonality/common_practice_materials.h>
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
@@ -37,6 +38,8 @@ struct ComposerHearing {
     HeardSpan *spans;
     size_t span_count;
     size_t span_capacity;
+    /* The snapshot the Analyzer reads its materials from (the call context's); borrowed, it outlives the hearing. */
+    const KnowledgeSnapshot *knowledge;
 };
 
 static void heard_span_release(HeardSpan *heard) {
@@ -62,12 +65,12 @@ void hearing_destroy(ComposerHearing *hearing) {
     free(hearing);
 }
 
-HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out) {
+HearingResult hearing_create(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, ComposerHearing **out) {
     if (!out) {
         return HEARING_ERR_NULL;
     }
     *out = NULL;
-    if (!plan) {
+    if (!plan || !knowledge) {
         return HEARING_ERR_NULL;
     }
     ComposerHearing *hearing = calloc(1, sizeof(*hearing));
@@ -75,6 +78,7 @@ HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out) {
         return HEARING_ERR_ALLOC;
     }
     hearing->plan = plan;
+    hearing->knowledge = knowledge;
     PlanRenderResult drawn = plan_render(plan, &hearing->rendered);
     if (drawn != PLAN_RENDER_OK) {
         hearing_destroy(hearing);
@@ -89,8 +93,7 @@ HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out) {
     }
     for (size_t i = 0; i < count; i++) {
         const MusicalTime *at = temporal_anchor_position(note_event_temporal_anchor(hearing->rendered.events[i]));
-        hearing->starts[i] = (Rational){0, 1};
-        rational_of_musical_time(at, &hearing->starts[i]);
+        hearing->starts[i] = at->value;
         hearing->midi[i] = (int)pitch_numeric_value_position_numerator(hearing->rendered.pitch_values[i]);
     }
     *out = hearing;
@@ -126,9 +129,10 @@ static HeardSpan *find_heard(ComposerHearing *hearing, PlanSpan span) {
     return NULL;
 }
 
-AnalyzerHearingOptions hearing_analyzer_options(void) {
+AnalyzerHearingOptions hearing_analyzer_options(const KnowledgeSnapshot *knowledge) {
     AnalyzerHearingOptions options = analyzer_hearing_options_default();
     options.analysis.harmonic_spans = false;
+    options.analysis.knowledge = knowledge;
     return options;
 }
 
@@ -211,9 +215,16 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
     input.meter = rendered->meter_map;
     input.has_key = true;
     input.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
-    input.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
+    /* The key's mode (major or minor) picks the major or natural minor material of the hearing's snapshot. */
+    CommonPracticeMaterials materials;
+    if (!common_practice_materials_resolve(hearing->knowledge, &materials, NULL, 0)) {
+        heard_span_release(&heard);
+        return HEARING_ERR_ANALYSIS;
+    }
+    input.key_material = common_practice_material(
+        &materials, composer_key_is_minor(&key) ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
     input.streams = heard.streams;
-    AnalyzerHearingOptions options = hearing_analyzer_options();
+    AnalyzerHearingOptions options = hearing_analyzer_options(hearing->knowledge);
     atomic_fetch_add(&hearing_analyzer_calls_made, 1);
     AnalyzerStatus status = analyzer_hear(&input, &options, &heard.result);
     if (status != ANALYZER_OK) {

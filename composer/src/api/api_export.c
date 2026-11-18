@@ -59,8 +59,13 @@ static ComposerStatus read_loop(const cJSON *request, PlanExportOptions *options
     return COMPOSER_OK;
 }
 
-ComposerStatus composer_api_export(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_export(const ComposerContext *context, const char *request_json,
+                                   const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *request = NULL;
     ComposerStatus status = api_parse_request(request_json, &request, &out->error);
     if (status != COMPOSER_OK) {
@@ -113,7 +118,7 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
     }
     PiecePlan *plan = NULL;
     PlanJsonError load_error;
-    PlanResult loaded = plan_from_json(plan_text, &plan, &load_error);
+    PlanResult loaded = plan_from_json_resolved(context->knowledge, plan_text, &plan, &load_error);
     free(plan_text);
     if (loaded != PLAN_OK) {
         if (loaded == PLAN_ERR_ALLOC) {

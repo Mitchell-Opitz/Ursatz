@@ -8,18 +8,18 @@ Core versions, vocabulary and validation entries of the Composer API. Back to th
 Composer was built with (the Analyzer's, and its producer key, held in `ursatz_commit` until the next versions rename it, are the ones a plan or
 an analysis is stale against). Schema: `schema/api/versions.schema.json`.
 
-## Vocabularies: `composer_api_vocabulary(out)`
+## Vocabularies: `composer_api_vocabulary(context, out)`
 
 The words an application offers and the requests accept, in the order an application shows them, so it holds no table of its own (R-270: where the Composer and an application differ, the Composer's list wins). No request. `json`:
 
 | Member | Entries |
 |---|---|
 | `meters` | `2/4 3/4 4/4 6/8`: `{"value", "label", "beats", "chord_onset_step": "1/2", "second_chord_beat"}`. A theme chord starts on any half beat of a bar and, where the bar takes two chords, the second on `second_chord_beat` (4/4: 2, 6/8: 3; absent for 2/4 and 3/4). |
-| `modes`, `piece_modes` | `major`, `minor`; `piece_modes` adds `style` ("From the brief"). |
+| `materials`, `piece_materials` | `{"value": <material id>, "label": <key word>}` for the materials the Composer composes in: `omt.material.major` (`major`) and `omt.material.natural-minor` (`minor`); `piece_materials` adds `{"value": "style", "label": "From the brief"}` (API 2.0; they were `modes` and `piece_modes`). |
 | `keys` | the 24 keys as the Composer spells a tonic: C, Db, D, Eb, E, F, F#, G, Ab, A, Bb, B major, then C, C#, D, D#, E, F, F#, G, G#, A, Bb, B minor. |
-| `pitch_class_names` | `{"value": 0 to 11, "major", "minor"}`: the tonic of each pitch class in each mode. |
+| `pitch_class_names` | `{"value": 0 to 11, "names": {<material id>: <spelling>}}`: the tonic of each pitch class in each of the two materials (API 2.0; the entries were `{"value", "major", "minor"}`). |
 | `cadences`, `theme_cadences` | `PAC IAC HC DC PC` with their names; a theme ends in `PAC`, `IAC` or `HC`. |
-| `pickups` | `{"<meter>": ["0", "1/4", "1/2", "1", "3/2", "2", "3"]}`: the pickups offered in beats, each a number a reader accepts in that meter (shorter than a bar). Any other multiple of 1/32 of a whole note shorter than a bar is accepted too. |
+| `pickups` | `{"<meter>": ["0", "1/4", "1/2", "1", "3/2", "2", "3"]}`: the pickups offered in beats, each a number a reader accepts in that meter (shorter than a bar). Any other length on the meter's grid shorter than a bar is accepted too: a multiple of 1/32 of a whole note, or a triplet of the beat or the division (1/6 and 1/12 in 4/4). |
 | `motive_forms`, `roles`, `functions`, `distances` | `full rhythm contour`; `melodic accompaniment`; `beginning continuation contrast cadential`; `close medium far`. |
 | `theme_slots`, `theme_ideas`, `theme_motive_categories`, `theme_pools` | the four slots, each with `required` (API 1.13: true for `basic` alone, the slot every theme needs; an application reads it instead of naming the slot); the ten ideas, each with its `slot`; the style categories a theme can read without (`motive-degrees`, `motive-intervals`, `motive-rhythm`, `motive-nct-figure`); the pools `approved-and-unflagged`, `approved`, `none` (the Composer reads no pool: they are the application's rule for which saved motives it offers, listed so the application keeps no table). |
 | `theme_bars`, `theme_bars_regular`, `theme_extensions`, `theme_first_cadences`, `style_weights` | the bars a theme has (`3` to `16`, API 1.18; a length that no construction makes from the motif is refused at `/bars`); the lengths that need no construction (`[4, 8]`, numbers); the extensions of a construction, `{"value", "label", "ideas", "varied"}`: `repeat` (Internal repetition, `varied` true, with the ideas it can follow), `stretch` (Stretched cadence, with its ideas), `addition` (Addition after the cadence) and `evaded` (Evaded cadence), the last two with no ideas; the cadences a period's first phrase ends in (`IAC`, `HC`, in the order of `cadences`); the style weights offered (`1/4` Light, `1/2` Normal, `1` Strong; any fraction the reader accepts is still accepted). Theme modes are the existing `piece_modes`. |
@@ -36,7 +36,7 @@ Every list but those noted is `[{"value", "label"}]`, and every value is accepte
 
 Differences from the GUI tables it replaces (Ursatz-GUI `049adaf`; the Composer's list wins):
 
-- `keys`, `pitch_class_names`: the GUI offers one list of tonics (`C C# D Eb E F F# G Ab A Bb B`) for both modes. The Composer spells a major tonic Db (not C#) and a minor tonic C#, D# and G# (not Eb and Ab).
+- `keys`, `pitch_class_names`: the GUI offers one list of tonics (`C C# D Eb E F F# G Ab A Bb B`) for both materials. The Composer spells a major tonic Db (not C#) and a minor tonic C#, D# and G# (not Eb and Ab).
 - `pickups`: the GUI offers `0 1/4 1/2 1 3/2 2 3` for every meter; the Composer drops the ones that are not shorter than a bar (2/4 has no `2` or `3`, 3/4 no `3`).
 - `accompaniment_patterns`: the GUI has five patterns; the Composer adds `motive` (a pattern read from a motive of the accompaniment role).
 - `tone_labels`: the GUI has an "Automatic" choice first (no override); the Composer lists none, a note without an override is one the request leaves out. The abbreviations are the GUI's, now served.
@@ -61,13 +61,28 @@ The built-in forms, in registry order (API 1.13, R-428): what the Pieces view ne
 
 Schema: `schema/api/forms.schema.json`. A piece of any form but the game loop is not composed yet: the forms are listed here, the piece entries take them in P45 B2.
 
-## Validation: `composer_api_validate(kind, request_json, out)`
+## Validation: `composer_api_validate(context, kind, request_json, out)`
 
 Reads a request as its entry does and composes nothing, so an application can check a form and show the Composer's defaults. `kind`: `motive` (the request of `composer_api_motive`), `theme` (of `composer_api_theme`), `piece` (the piece request object of `docs/piece-request.md`, not the `{"request", ...}` wrapper of `composer_api_piece`) and `random_motive` (of `composer_api_random_motive`). `json`: `{"request": <the request with the Composer's defaults filled>}`:
 
 - `motive`: `meter` (the motive's, when the request has none and the input declares one), `role` (`melodic`), `input.format` (`auto`) and `input.form` (`full`) when absent; `harmony` as `[{"numeral", "onset"}]`, the numerals as the library writes them (`V7`, `bVII65`) and the onsets in beats of the meter in the request syntax (`"0"`, `"3/2"`). Own harmony takes upper case numerals with an optional figure and `@onset` (`I V@3/2 V7@3`); a slash chord or a lower case numeral is refused at `/harmony`.
 - `piece`: the `cadence` of every section that has none (`piece_default_cadences`: the last of the intro and of the loop `HC`, the last ending `PAC`, any other `IAC`) and the default ending section (`end`, `PAC`, an empty fill) when the request has no ending.
-- `random_motive`: the `seed` (the request's, or the one read from the clock) and the `mode` and `meter` a `"random"` drew from it (R-269).
+- `random_motive`: the `seed` (the request's, or the one read from the clock) and the `material` (an id) and `meter` a `"random"` drew from it (R-269).
 - `theme`: the request as it is, once its plan is built without seeding. A request that Compose would refuse before it seeds (the pairing, the bars, the construction, the cadences, a motif that is too long or does not suit its place, an accompaniment or voicing that is not valid, a given chord that cannot arrive the cadence) is refused with `COMPOSER_ERR_UNSATISFIABLE`, the reason and the path of its field: [theme-request.md](../theme-request.md#refusals-before-composing). One refusal is given at a time, the first.
 
 A request an entry would refuse is refused the same way, with its message and path. An unknown `kind` is `COMPOSER_ERR_REQUEST` with the path `/kind`. A style model named in the request is read.
+
+## API 2.0: materials
+
+API 2.0 (R-597) names the material of a key by its id (`omt.material.major` or `omt.material.natural-minor`, a K1 entry) where API 1 said `mode` (`"major"` or `"minor"`). A reply changes in these members, and nothing else in it does; the text members (`key`, `key_heard`, `rendered.key`, the labels) keep their words:
+
+| Reply | 1.x | 2.0 |
+| --- | --- | --- |
+| `motive.key`, `analysis.key` | `{tonic_pitch_class, mode}` | `{tonic_pitch_class, material}` |
+| `brief` of a theme, a piece and its variations | `{mode, from}` | `{material, from}` |
+| `drawn` of a random motive | `{mode, meter}` | `{material, meter}` |
+| `changes` of a section's row | `mode` | `material` (an id or `null`) |
+| `schemas[]` of `list_schemas` | `modes` | `materials` |
+| vocabulary | `modes`, `piece_modes`, `pitch_class_names[] {value, major, minor}` | `materials`, `piece_materials`, `pitch_class_names[] {value, names}` |
+
+A request that names `"api_version": 1` is refused at `/api_version` (`api_version must be 2`): its client reads `mode`. A client written for 1.x reads `material` and maps the id to its word through the vocabulary's `materials` (`value` to `label`).

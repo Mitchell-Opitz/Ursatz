@@ -25,8 +25,8 @@ static size_t *notes_attacked_in(const ImportedNotes *notes, const StandardTextu
     }
     for (size_t note = 0; note < notes->count; note++) {
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes->events[note]));
-        long long n = (long long)musical_time_numerator(onset);
-        long long d = (long long)musical_time_denominator(onset);
+        long long n = onset->value.num;
+        long long d = onset->value.den;
         if (!before(n, d, claim->start_n, claim->start_d) && before(n, d, claim->end_n, claim->end_d)) {
             ids[(*count)++] = note;
         }

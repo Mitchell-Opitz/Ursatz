@@ -14,7 +14,7 @@ is the first), `musicxml` is rendered in memory (in each entry, and `musicxml` o
 file of the first is `midi`; the MIDI file of another is `composer_api_export` of its plan. A refused option is the member of
 the same name with its path.
 
-### `composer_api_progression(request_json, job, out)`
+### `composer_api_progression(context, request_json, job, out)`
 
 A chord progression for one phrase, with a bass line ([cli-progression.md](../cli-progression.md)).
 
@@ -32,19 +32,19 @@ A chord progression for one phrase, with a bass line ([cli-progression.md](../cl
 `json`: `{"key", "meter", "bars", "cadence", "seed", "heard", "chords": [{"bar", "beat", "chord", "function", "bass"}]}`; with
 `suggest`, `"alternatives": [{"heard", "chords"}]` in place of the last two; `plan` and `musicxml` in each entry when
 asked, and `notices` (strings) when fewer alternatives than asked for were found. `list_schemas`: `{"schemas": [{"name",
-"function", "modes"}], "sequences": [name]}`. Progress per seed tried (`"progression"`) and for each fill stage; a cancel
+"function", "materials"}], "sequences": [name]}`. Progress per seed tried (`"progression"`) and for each fill stage; a cancel
 is `COMPOSER_ERR_CANCELLED`. A phrase too short for the cadence, a schema that cannot be written in the key and a request no
 seed completes are `COMPOSER_ERR_UNSATISFIABLE`. Schemas: `progression.request.schema.json`,
 `progression.response.schema.json`.
 
-### `composer_api_counterpoint(request_json, job, out)`
+### `composer_api_counterpoint(context, request_json, job, out)`
 
 A counter-melody against a line in strict species ([cli-counterpoint.md](../cli-counterpoint.md)). The request is the motive
 request of the line (any length) with:
 
 | Member | Value |
 |---|---|
-| `species`, `key`, `meter` | required: 1 to 4; a tonic alone with `mode` (`major` or `minor`), or tonic and mode; `"4/4"` |
+| `species`, `key`, `meter` | required: 1 to 4; a tonic alone with `material` (or the old `mode`: `major` or `minor`), or tonic and mode; `"4/4"` |
 | `position` | `below` (default: the line is the melody) or `above` (the line is the bass) |
 | `seed`, `suggest` | 0 to 4294967295, default from the clock; 1 to 16 different counter-melodies |
 | `plans`, `midi`, `musicxml`, `tempo`, `plain_midi` | the outputs, as above |
@@ -56,7 +56,7 @@ species cannot be written against, or no counter-melody that holds the rules fro
 for), is `COMPOSER_ERR_UNSATISFIABLE`. Progress per seed (`"counterpoint"`). Schemas: `counterpoint.request.schema.json`,
 `counterpoint.response.schema.json`.
 
-### `composer_api_develop(request_json, job, out)`
+### `composer_api_develop(context, request_json, job, out)`
 
 Motives related to one motive, best first ([cli-develop.md](../cli-develop.md)). The request is the motive request with:
 
@@ -71,7 +71,7 @@ Motives related to one motive, best first ([cli-develop.md](../cli-develop.md)).
 "score_denominator", "text"}]}`. A development that can be made from nothing is `COMPOSER_ERR_UNSATISFIABLE`. Progress once
 (`"develop"`). Schemas: `develop.request.schema.json`, `develop.response.schema.json`.
 
-### `composer_api_grow(request_json, job, out)`
+### `composer_api_grow(context, request_json, job, out)`
 
 A theme grown from a motive ([cli-grow.md](../cli-grow.md)). The request is the motive request, or, in place of `input`,
 `corpus` (a corpus directory) with `like` (a passage file): the first bar of a similar passage becomes the motive and the
@@ -79,8 +79,8 @@ document reports it as `source` (not with `harmony`, `features` or `role`). The 
 
 | Member | Value |
 |---|---|
-| `into`, `key`, `meter` | required: `sentence`, `period` or `hybrid`; the key (a tonic alone with `mode`); the meter |
-| `hybrid`, `mode`, `bars`, `cadence`, `first_cadence`, `texture`, `voicing`, `accompaniment` | as the options |
+| `into`, `key`, `meter` | required: `sentence`, `period` or `hybrid`; the key (a tonic alone with `material`); the meter |
+| `hybrid`, `material` (or the old `mode`), `bars`, `cadence`, `first_cadence`, `texture`, `voicing`, `accompaniment` | as the options |
 | `accompaniment_motive` | a motive request of its own, read in the meter with the role `accompaniment` |
 | `check` | `true`: pass over a seed the Analyzer contradicts |
 | `style`, `style_weight`, `style_without`, `blend`, `blend_weight`, `blend_weights` | a style model path and its options (`style_without` is a list of at most 8 categories) |

@@ -2,41 +2,53 @@
 
 #include <stddef.h>
 
+/* duple, triple or quadruple from the number of beats; none for any other count */
+static MeterGrouping grouping_of_beats(size_t beats) {
+    switch (beats) {
+    case 2:
+        return METER_GROUPING_DUPLE;
+    case 3:
+        return METER_GROUPING_TRIPLE;
+    case 4:
+        return METER_GROUPING_QUADRUPLE;
+    default:
+        return METER_GROUPING_NONE;
+    }
+}
+
+/* The beats of a bar, one per group, when every group is the same size (the beat is the group); 0 for an additive
+   meter such as 3+2, which has no beat count of its own: it counts its bottom units, as the beat owner says. */
+static size_t beats_of(const TimeSignature *time_signature) {
+    size_t count = time_signature_group_count(time_signature);
+    unsigned first = time_signature_group_at(time_signature, 0);
+    for (size_t i = 1; i < count; i++) {
+        if (time_signature_group_at(time_signature, i) != first) {
+            return 0;
+        }
+    }
+    return count;
+}
+
 MeterClass standard_meter_classify(const TimeSignature *time_signature) {
     MeterClass unclassified = {METER_TYPE_UNCLASSIFIED, METER_GROUPING_NONE};
     if (time_signature == NULL) {
         return unclassified;
     }
 
+    /* OMT I ch. 10: the beat is a group of the meter, a compound beat is three divisions, the grouping counts beats */
+    size_t beats = beats_of(time_signature);
     MeterClass result;
-    switch (time_signature_top_number(time_signature)) {
-    case 2:
-        result.type = METER_TYPE_SIMPLE;
-        result.grouping = METER_GROUPING_DUPLE;
-        return result;
-    case 3:
-        result.type = METER_TYPE_SIMPLE;
-        result.grouping = METER_GROUPING_TRIPLE;
-        return result;
-    case 4:
-        result.type = METER_TYPE_SIMPLE;
-        result.grouping = METER_GROUPING_QUADRUPLE;
-        return result;
-    case 6:
+    if (time_signature_is_compound(time_signature)) {
         result.type = METER_TYPE_COMPOUND;
-        result.grouping = METER_GROUPING_DUPLE;
+        result.grouping = grouping_of_beats(beats);
         return result;
-    case 9:
-        result.type = METER_TYPE_COMPOUND;
-        result.grouping = METER_GROUPING_TRIPLE;
-        return result;
-    case 12:
-        result.type = METER_TYPE_COMPOUND;
-        result.grouping = METER_GROUPING_QUADRUPLE;
-        return result;
-    default:
+    }
+    result.grouping = grouping_of_beats(beats);
+    if (result.grouping == METER_GROUPING_NONE) {
         return unclassified;
     }
+    result.type = METER_TYPE_SIMPLE;
+    return result;
 }
 
 MeterType standard_meter_type(const TimeSignature *time_signature) {
@@ -83,22 +95,16 @@ bool standard_meter_category(MeterType type, MeterGrouping grouping, unsigned *o
 }
 
 bool standard_meter_beats_per_measure(const TimeSignature *time_signature, unsigned *out_beats) {
-    MeterClass meter = standard_meter_classify(time_signature);
-    unsigned division;
-    return standard_meter_category(meter.type, meter.grouping, out_beats, &division);
-}
-
-bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration **out) {
-    MeterType type = standard_meter_type(time_signature);
-    if (type == METER_TYPE_UNCLASSIFIED) {
+    if (standard_meter_type(time_signature) == METER_TYPE_UNCLASSIFIED) {
         return false;
     }
-    unsigned division;
-    unsigned subdivision;
-    standard_meter_beat_division(type, &division, &subdivision);
-
-    /* a beat is `division` bottom units for compound, one for simple */
-    long units = type == METER_TYPE_COMPOUND ? 3 : 1;
-    return duration_create(units, time_signature_bottom_number(time_signature), out) == DURATION_OK;
+    *out_beats = (unsigned)beats_of(time_signature);
+    return true;
 }
 
+bool standard_meter_beat_duration(const TimeSignature *time_signature, Duration *out) {
+    if (standard_meter_type(time_signature) == METER_TYPE_UNCLASSIFIED) {
+        return false;
+    }
+    return time_signature_beat_length(time_signature, out) == DURATION_OK;
+}

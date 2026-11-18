@@ -9,6 +9,14 @@
 #include "chain/tests/weighted_pipeline.h"
 #include "io/tests/io/midi_import_split.h"
 #include "tests/key_index_test_util.h"
+#include "test_knowledge.h"
+
+/* The default config with the snapshot's materials: the key regions estimate has none of its own. */
+static const CommonPracticeKeyRegionsConfig *default_config(void) {
+    static CommonPracticeKeyRegionsConfig config;
+    config = common_practice_key_regions_config_default(test_materials());
+    return &config;
+}
 
 /*
  * Local key regions on Clementi, Sonatina Op. 36 No. 1 (first movement) and Mozart, K. 545 (first movement),
@@ -170,8 +178,8 @@ static void report_piece(const char *label, const char *file, const char *annota
     CommonPracticeWeightedConfig weighting = common_practice_weighted_config_default();
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(p.sonorities.items[s].sonority);
-        segments[s].start = time_span_start(window);
-        segments[s].end = time_span_end(window);
+        segments[s].start = window->start;
+        segments[s].end = window->end;
         segments[s].source = &p.segments[s];
         assert(common_practice_weight_segment(p.segments[s].members, p.segments[s].member_count, &weighting,
                                               &segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
@@ -198,7 +206,7 @@ static void report_piece(const char *label, const char *file, const char *annota
     for (int with_events = 1; with_events >= 0; with_events--) {
         CommonPracticeKeyRegions regions = {0};
         assert(key_regions_estimate(segments, count, p.meter.meter_map, with_events ? events : NULL,
-                                    with_events ? scanned.count : 0, NULL, &regions) ==
+                                    with_events ? scanned.count : 0, default_config(), &regions) ==
                COMMON_PRACTICE_KEY_REGIONS_OK);
         printf(" %s the key signature events:\n", with_events ? "with" : "without");
         for (size_t i = 0; i < regions.region_count; i++) {
@@ -273,7 +281,7 @@ static void report_piece(const char *label, const char *file, const char *annota
     printf(" sensitivity to change_penalty (with the key signature events; not asserted):\n");
     static const double PENALTIES[5] = {0.1, 0.2, 0.4, 0.6, 1.0};
     for (size_t k = 0; k < 5; k++) {
-        CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+        CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
         config.change_penalty = PENALTIES[k];
         CommonPracticeKeyRegions regions = {0};
         assert(key_regions_estimate(segments, count, p.meter.meter_map, events, scanned.count, &config, &regions) ==
@@ -290,7 +298,7 @@ static void report_piece(const char *label, const char *file, const char *annota
     /* the second pass: the chords of the first pass as functional evidence (information; not asserted) */
     {
         CommonPracticeKeyRegions first = {0};
-        assert(key_regions_estimate(segments, count, p.meter.meter_map, events, scanned.count, NULL, &first) ==
+        assert(key_regions_estimate(segments, count, p.meter.meter_map, events, scanned.count, default_config(), &first) ==
                COMMON_PRACTICE_KEY_REGIONS_OK);
         size_t first_scored = 0;
         size_t first_right = 0;
@@ -299,8 +307,7 @@ static void report_piece(const char *label, const char *file, const char *annota
         while (s < count) {
             size_t region = 0;
             for (size_t i = 0; i < first.region_count; i++) {
-                if (musical_time_numerator(time_span_start(first.regions[i].span)) * (long)musical_time_denominator(segments[s].start) <=
-                    musical_time_numerator(segments[s].start) * (long)musical_time_denominator(time_span_start(first.regions[i].span))) {
+                if (musical_time_cmp(first.regions[i].span.start, segments[s].start) <= 0) {
                     region = i;
                 }
             }
@@ -308,8 +315,7 @@ static void report_piece(const char *label, const char *file, const char *annota
             while (end < count) {
                 size_t other = 0;
                 for (size_t i = 0; i < first.region_count; i++) {
-                    if (musical_time_numerator(time_span_start(first.regions[i].span)) * (long)musical_time_denominator(segments[end].start) <=
-                        musical_time_numerator(segments[end].start) * (long)musical_time_denominator(time_span_start(first.regions[i].span))) {
+                    if (musical_time_cmp(first.regions[i].span.start, segments[end].start) <= 0) {
                         other = i;
                     }
                 }
@@ -330,7 +336,7 @@ static void report_piece(const char *label, const char *file, const char *annota
             s = end;
         }
         CommonPracticeKeyRegions second = {0};
-        assert(key_regions_estimate(segments, count, p.meter.meter_map, events, scanned.count, NULL, &second) ==
+        assert(key_regions_estimate(segments, count, p.meter.meter_map, events, scanned.count, default_config(), &second) ==
                COMMON_PRACTICE_KEY_REGIONS_OK);
         size_t scored = 0;
         size_t right = 0;
@@ -355,16 +361,16 @@ static void check_whole_piece_estimator(void) {
     CommonPracticeKeyMode mode;
     /* Clementi 36: C D D# E F F# G A B */
     int clementi_in_c[9] = {0, 2, 3, 4, 5, 6, 7, 9, 11};
-    assert(common_practice_identify_key_mode(clementi_in_c, 9, &mode) && mode == COMMON_PRACTICE_KEY_MAJOR);
+    assert(common_practice_identify_key_mode(test_materials(), clementi_in_c, 9, &mode) && mode == COMMON_PRACTICE_KEY_MAJOR);
     int clementi_in_e[9] = {8, 10, 11, 0, 1, 2, 3, 5, 7}; /* relative to E */
-    assert(common_practice_identify_key_mode(clementi_in_e, 9, &mode) && mode == COMMON_PRACTICE_KEY_MINOR);
+    assert(common_practice_identify_key_mode(test_materials(), clementi_in_e, 9, &mode) && mode == COMMON_PRACTICE_KEY_MINOR);
     int clementi_in_a[9] = {3, 5, 6, 7, 8, 9, 10, 0, 2}; /* relative to A */
-    assert(common_practice_identify_key_mode(clementi_in_a, 9, &mode) && mode == COMMON_PRACTICE_KEY_MINOR);
+    assert(common_practice_identify_key_mode(test_materials(), clementi_in_a, 9, &mode) && mode == COMMON_PRACTICE_KEY_MINOR);
     int clementi_in_d[9] = {10, 0, 1, 2, 3, 4, 5, 7, 9}; /* relative to D: no key matches */
-    assert(!common_practice_identify_key_mode(clementi_in_d, 9, &mode));
+    assert(!common_practice_identify_key_mode(test_materials(), clementi_in_d, 9, &mode));
     /* Mozart 545: all twelve pitch classes sound, so the major collection matches first on any tonic */
     int all_twelve[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-    assert(common_practice_identify_key_mode(all_twelve, 12, &mode) && mode == COMMON_PRACTICE_KEY_MAJOR);
+    assert(common_practice_identify_key_mode(test_materials(), all_twelve, 12, &mode) && mode == COMMON_PRACTICE_KEY_MAJOR);
 }
 
 int main(void) {

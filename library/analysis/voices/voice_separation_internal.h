@@ -6,7 +6,6 @@
 
 #include "analysis/voices/voice_separation.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 
 /*
  * Internal to voice separation: the steps as separate functions so each has its own unit tests. Not part of

@@ -11,6 +11,7 @@
 #include "cJSON.h"
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Key regions, tonicizations, modulations and pivot chords.
@@ -112,7 +113,7 @@ static int run_reference_piece(const ReferencePiece *piece) {
         return 1;
     }
     AnalysisReport report;
-    if (!run_analysis_pipeline(&notes, &report)) {
+    if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "%s: pipeline failed\n", piece->path);
         imported_notes_destroy(&notes);
         return 1;
@@ -299,7 +300,7 @@ typedef struct {
 
 static void analyze(const char *path, Analyzed *out) {
     if (midi_pipeline_import_file(path, &out->notes) != MIDI_PIPELINE_OK ||
-        !run_analysis_pipeline(&out->notes, &out->report)) {
+        !run_analysis_pipeline(&out->notes, test_knowledge(), &out->report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         exit(1);
     }

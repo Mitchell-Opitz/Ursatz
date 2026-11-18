@@ -539,7 +539,7 @@ function themeVersionView(viewEl, id, number, body, nameOf, title) {
   const state = ThemesModel.formFromBody(body, id);
   viewEl.appendChild(
     themeFacts([
-      ["Form", `${state.into}${state.into === "hybrid" ? ` (${state.hybrid})` : ""}, ${state.mode}, ${state.meter}, ${state.bars} bars, ${state.cadence}`],
+      ["Form", `${state.into}${state.into === "hybrid" ? ` (${state.hybrid})` : ""}, ${Vocabulary.materialWord(state.material)}, ${state.meter}, ${state.bars} bars, ${state.cadence}`],
       ...state.slots.map((entry) => [ThemesModel.SLOT_LABELS[entry.slot], `${nameOf(entry.item_id)} v${entry.version}`]),
       ["Given chords", ThemesModel.chordsText(state)],
       ["Brief", ThemesModel.briefLabel(ThemesModel.briefFromPicks(state.picks))],
@@ -983,7 +983,7 @@ function buildThemeEditor(ctx) {
   const theme = materialsElement("section", "panel materials-editor theme-editor");
   theme.appendChild(materialsElement("h2", "section-title", "Theme"));
   const main = materialsElement("div", "upload-controls");
-  const mode = themeField(main, "Mode", themeSelect(ThemesModel.MODES, state.mode));
+  const mode = themeField(main, "Mode", themeSelect(ThemesModel.MATERIALS, state.material));
   const meter = themeField(main, "Meter", themeSelect(ThemesModel.METERS, state.meter));
   const tempo = themeField(main, "Tempo", themeInput("from the brief", state.tempo));
   tempo.addEventListener("input", () => {
@@ -1012,7 +1012,7 @@ function buildThemeEditor(ctx) {
   function syncForm() {
     state.into = into.value;
     state.hybrid = `${beginningSelect.value}+${endingSelect.value}`;
-    state.mode = mode.value;
+    state.material = mode.value;
     state.meter = meter.value;
     state.bars = Number(bars.value);
     const dropped = chordRow ? ThemesModel.dropChords(state) : [];
@@ -1041,7 +1041,7 @@ function buildThemeEditor(ctx) {
     control.addEventListener("input", syncForm);
   }
   mode.addEventListener("input", () => {
-    state.modeChosen = true;
+    state.materialChosen = true;
     syncForm();
   });
   structure.appendChild(form);
@@ -1058,10 +1058,10 @@ function buildThemeEditor(ctx) {
   syncForm();
   sections.structure = structure;
 
-  /* Structure tab: the slots. The first basic motif sets the mode (R-205). */
+  /* Structure tab: the slots. The first basic motif sets the material (R-205). */
   sections.slots = buildThemeSlotsSection(state, itemsOf, (motifBody, hadBasic) => {
-    if (ThemesModel.applyBasicMode(state, hadBasic, motifBody)) {
-      mode.value = state.mode;
+    if (ThemesModel.applyBasicMaterial(state, hadBasic, motifBody)) {
+      mode.value = state.material;
     }
   });
 
@@ -1084,7 +1084,7 @@ function buildThemeEditor(ctx) {
       ...sections.slots.rowFields(),
       into,
       hybrid: beginningSelect,
-      mode,
+      material: mode,
       meter,
       bars,
       construction: constructionBlock.element,

@@ -12,13 +12,12 @@
 
 /* The measure the time lies in on the meter map, or false when the map cannot place it. */
 static bool measure_at(const MeterMap *map, long numerator, unsigned long denominator, int *measure) {
-    MusicalTime *time = NULL;
-    if (musical_time_create(numerator, denominator, &time) != MUSICAL_TIME_OK) {
+    MusicalTime time;
+    if (musical_time_make(numerator, (long long)denominator, &time) != MUSICAL_TIME_OK) {
         return false;
     }
     MetricalPosition *position = NULL;
-    MetricalPositionResult result = metrical_position_from_time(map, time, &position);
-    musical_time_destroy(time);
+    MetricalPositionResult result = metrical_position_from_time(map, &time, &position);
     if (result != METRICAL_POSITION_OK) {
         return false;
     }

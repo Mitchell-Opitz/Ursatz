@@ -14,7 +14,7 @@ each framework folder, with common-practice-minimal's perception and all of stan
 | `notes/` | `AnalysisNote`, `AnalysisSegment`, `AnalysisKey`, `AnalysisVoiceGrid`, sonority segmentation, contour and rhythm patterns | kernel `semantics` |
 | `motive/` | Motive sketches, relations, links, tone roles, variant recognition, window matching | kernel `analysis` |
 | `voices/` | Outer voices, voice separation | kernel `analysis` |
-| `harmony/` | Chord segments to functions, cadences, six-fours, prolongation; weighted chord identification, key regions, non-chord tones, harmonic spans, Roman numeral and applied-chord adapters; progression patterns | standard-harmony, standard-tonality, common-practice-minimal |
+| `harmony/` | Chord segments to functions, cadences, six-fours, prolongation; weighted chord identification, key regions, non-chord tones, harmonic spans, Roman numeral and applied-chord adapters; progression patterns; chord readings of sonorities | standard-harmony, standard-tonality, common-practice-minimal |
 | `form/` | Phrase, idea, repeat, similarity, theme, expansion and motive analysis; form structure, phrase boundaries, thematic returns | standard-form |
 | `meter/` | Meter position, syncopation, hemiola, hypermeter, density, checks, tuplets; beat grid length | standard-meter |
 | `texture/` | Texture rules, classification and features | standard-texture |
@@ -36,3 +36,11 @@ common-practice-minimal's is [harmony/README.md](harmony/README.md), standard-te
   ([analytic-job-owners.md](../docs/analytic-job-owners.md)).
 - **Building and testing.** The root build compiles `ursatz_analysis` and adds `library/analysis/tests/`, one folder
   per area. The chain-level tests are in `library/chain/tests/`.
+- **Sonorities and chord readings.** The sonority is the base harmonic object and a chord is one reading of it
+  (`harmony/chord_reading.h`). `SonorityPitches` holds the pitch classes sounding over a span and the lowest one;
+  an aggregate no chord explains is a valid sonority. `ChordReading` adds a root, the chord type the knowledge
+  snapshot gives for the pitch classes above it, the members by role, the bass, and the `borrowed_from`, `role`
+  (functional or embellishing) and `expected` fields. `chord_reading_of_sonority` reads a sonority on a root; the
+  chain gives each of its chords as a reading with `analysis_chain_chord_reading` (a cadential six-four is
+  embellishing). No mixture, common-tone or elision reading fills the other fields yet, and nothing writes readings
+  until the reading layer of P62.

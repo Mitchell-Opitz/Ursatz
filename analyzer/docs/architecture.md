@@ -68,7 +68,7 @@ The other public headers (analysis result, report, document, corpus, staleness, 
 | `ursatz_analyzer_producer_key()` | `<ursatz_analyzer/version.h>`, the key from the generated `producer_key.h` | a hash of the sources that produce an analysis, 16 hex digits | [building.md](building.md#version-header-and-producer-key) |
 | `URSATZ_ANALYZER_TEXT_EXPORT_VERSION` | `include/ursatz_analyzer/text_export.h` | 2 | [text-export.md](text-export.md) |
 | `URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION` | `include/ursatz_analyzer/analysis_document.h` | 12 | [versions.md](analysis-document/versions.md) |
-| analysis document schema | `schema/analysis-document.v12.schema.json` | v12 | [analysis-document.md](analysis-document.md) |
+| analysis document schema | `schema/analysis-document.v13.schema.json` | v13 | [analysis-document.md](analysis-document.md) |
 | corpus index, motive link cache schemas | `schema/corpus-index.v2.schema.json`, `schema/motive-link-cache.v2.schema.json` | v2 each |
 | motive links, similar material, style model schemas | `schema/*.v1.schema.json` | v1 each | [corpus.md](corpus.md), [motive-links.md](motive-links.md), [similar-material.md](similar-material.md), [style-profile.md](style-profile.md) |
 

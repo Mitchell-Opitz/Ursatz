@@ -11,6 +11,7 @@
 #include "model/interpretation/uncertainty.h"
 #include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_arithmetic.h"
+#include "theory/tonality/common_practice_materials.h"
 
 static const char *mode_suffix(CommonPracticeKeyMode mode) {
     switch (mode) {
@@ -44,10 +45,14 @@ static int tonic_pitch_class_of(const char *name) {
     return pitch_class_of_midi(pitch_class);
 }
 
-KeyResult common_practice_build_key(CommonPracticeKeyMode mode, const char *tonic_name, EntityID *context_target_id,
+KeyResult common_practice_build_key(const PitchMaterial *material, const char *tonic_name, EntityID *context_target_id,
                                      Key **out) {
     if (tonic_name == NULL || tonic_name[0] == '\0') {
         return KEY_ERR_NULL_LABEL;
+    }
+    CommonPracticeKeyMode mode;
+    if (!common_practice_key_mode_of(material, &mode)) {
+        return KEY_ERR_BAD_STRUCTURE;
     }
     const char *suffix = mode_suffix(mode);
     if (suffix == NULL) {
@@ -136,9 +141,7 @@ KeyResult common_practice_build_key(CommonPracticeKeyMode mode, const char *toni
     int tonic_pitch_class = tonic_pitch_class_of(tonic_name);
     KeyResult key_result;
     if (tonic_pitch_class >= 0) {
-        KeyStructure structure = {tonic_pitch_class,
-                                  mode == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR
-                                                                    : KEY_STRUCTURE_MODE_MAJOR};
+        KeyStructure structure = {tonic_pitch_class, material};
         key_result = key_create_with_structure(interpretation, label, &structure, out);
     } else {
         key_result = key_create(interpretation, label, out);

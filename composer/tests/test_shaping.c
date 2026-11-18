@@ -8,6 +8,7 @@
 #include "check/shaping.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
+#include "support/test_knowledge.h"
 
 /*
  * The shaping preferences (R-164), each on hand-written melodies and progressions that hold and that fail. The melody
@@ -28,7 +29,7 @@ static MelodyCandidate *candidate(long length) {
     assert(rational_make(1, 1, &whole) == RATIONAL_OK && rational_make(1, 4, &quarter) == RATIONAL_OK);
     MelodyContext *context = &melody->context;
     melody_context_zero(context);
-    context->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    context->key = test_key(0, "major");
     context->metre.bar_length = whole;
     context->metre.cell_length = quarter;
     context->metre.cells_per_bar = 4;

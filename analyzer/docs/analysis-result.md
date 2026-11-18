@@ -61,7 +61,8 @@ entries through `analyzer_result_report` or the exported document.
 ## Exports
 
 `analysis_document_build_from_result` and `analysis_document_render_result` (`analysis_document.h`) render from the
-result: the same bytes as `analysis_document_build` over the same notes and report.
+result: the same bytes as `analysis_document_build` over the same notes and report. `analysis_document_build` takes the knowledge
+snapshot the report was made with (the labels of a notated key signature are spelled with its major and natural minor materials).
 
 `run_analysis_pipeline` is a wrapper over `analyzer_analyze`: it moves the result's report out into the caller's
 `AnalysisReport`, with the same ownership as before. `AnalysisReport` and the fragment API stay until the Composer and

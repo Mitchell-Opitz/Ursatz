@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 struct Sonority {
-    TimeSpan *time_window;
+    TimeSpan time_window;
     EntityID **event_ids;
     size_t event_id_count;
     EntityID **voice_ids;
@@ -11,12 +11,9 @@ struct Sonority {
     SonorityEventDomain event_domain;
 };
 
-SonorityResult sonority_create(TimeSpan *time_window, EntityID **event_ids, size_t event_id_count,
+SonorityResult sonority_create(TimeSpan time_window, EntityID **event_ids, size_t event_id_count,
                                 EntityID **voice_ids, size_t voice_id_count, SonorityEventDomain event_domain,
                                 Sonority **out) {
-    if (time_window == NULL) {
-        return SONORITY_ERR_NULL_TIME_WINDOW;
-    }
     if (event_ids == NULL || event_id_count == 0) {
         return SONORITY_ERR_NULL_EVENT_IDS;
     }
@@ -78,7 +75,6 @@ void sonority_destroy(Sonority *sonority) {
     if (sonority == NULL) {
         return;
     }
-    time_span_destroy(sonority->time_window);
     for (size_t i = 0; i < sonority->event_id_count; i++) {
         entity_id_destroy(sonority->event_ids[i]);
     }
@@ -91,7 +87,7 @@ void sonority_destroy(Sonority *sonority) {
 }
 
 const TimeSpan *sonority_time_window(const Sonority *sonority) {
-    return sonority->time_window;
+    return &sonority->time_window;
 }
 
 size_t sonority_event_id_count(const Sonority *sonority) {

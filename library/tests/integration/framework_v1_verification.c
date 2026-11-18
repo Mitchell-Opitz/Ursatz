@@ -3,6 +3,7 @@
 #include "framework_v1_chain.h"
 #include "framework_v1_deviations.h"
 #include "interpretation_test_access.h"
+#include "test_knowledge.h"
 
 /*
  * Framework v1 verification: the full chain over the five reference pieces (Bach BWV Anh. 114, Clementi Op. 36 No. 1, Field Nocturne No. 1,
@@ -78,7 +79,7 @@ static void fv1_check_keys(const Chain *c, Fv1Verifier *v) {
     char name2[24];
 
     /* the home key: the key the chain's own estimator gives the whole scope taken as one window (key_window_scores, the library's profiles) */
-    CommonPracticeKeyRegionsConfig whole = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig whole = common_practice_key_regions_config_default(test_materials());
     whole.window_measures = (size_t)(x->keys_last - x->keys_first + 1);
     CommonPracticeKeyWindows windows = {0};
     assert(key_window_scores(c->key_segments, c->count, c->map, &whole, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK && windows.count >= 1);
@@ -169,7 +170,7 @@ static void fv1_beat_text(double beat, char out[16]) {
 static bool fv1_reading_matches(const Chain *c, const XReadingSide *want, bool prolongation, CadenceType type, size_t arrival_first) {
     double at = fv1_time_of(c, want->measure, want->beat);
     return want->prolongation == prolongation && (prolongation || want->type == type) &&
-           fabs(analysis_chain_segments(c->chain)->starts[arrival_first] - at) <= c->beat_length + 1e-9;
+           fabs(rational_to_double(analysis_chain_segments(c->chain)->starts[arrival_first]) - at) <= c->beat_length + 1e-9;
 }
 
 static void fv1_reading_text(const Chain *c, bool prolongation, CadenceType type, size_t arrival_first, int share, char *out, size_t size) {
@@ -208,8 +209,8 @@ static void fv1_check_readings(const Chain *c, Fv1Verifier *v, bool *used) {
         int match_order = 0;
         for (size_t k = 0; k < found->count && match < 0; k++) {
             const HarmonyCadenceResult *r = &found->items[k];
-            double d0 = fabs(analysis_chain_segments(c->chain)->starts[r->arrival_first] - fv1_time_of(c, want->side[0].measure, want->side[0].beat));
-            double d1 = fabs(analysis_chain_segments(c->chain)->starts[r->arrival_first] - fv1_time_of(c, want->side[1].measure, want->side[1].beat));
+            double d0 = fabs(rational_to_double(analysis_chain_segments(c->chain)->starts[r->arrival_first]) - fv1_time_of(c, want->side[0].measure, want->side[0].beat));
+            double d1 = fabs(rational_to_double(analysis_chain_segments(c->chain)->starts[r->arrival_first]) - fv1_time_of(c, want->side[1].measure, want->side[1].beat));
             if (near < 0 && (d0 <= tolerance || d1 <= tolerance)) {
                 near = (long)k;
             }
@@ -277,12 +278,12 @@ static void fv1_check_cadences(const Chain *c, Fv1Verifier *v) {
         double at = fv1_time_of(c, want->measure, want->beat);
         long best = -1;
         for (size_t k = 0; k < found->count; k++) {
-            if (claimed[k] || fabs(analysis_chain_segments(c->chain)->starts[found->items[k].arrival_first] - at) > tolerance) {
+            if (claimed[k] || fabs(rational_to_double(analysis_chain_segments(c->chain)->starts[found->items[k].arrival_first]) - at) > tolerance) {
                 continue;
             }
             if (best < 0 || (found->items[k].type == want->type && found->items[(size_t)best].type != want->type) ||
-                (fabs(analysis_chain_segments(c->chain)->starts[found->items[k].arrival_first] - at) <
-                     fabs(analysis_chain_segments(c->chain)->starts[found->items[(size_t)best].arrival_first] - at) &&
+                (fabs(rational_to_double(analysis_chain_segments(c->chain)->starts[found->items[k].arrival_first]) - at) <
+                     fabs(rational_to_double(analysis_chain_segments(c->chain)->starts[found->items[(size_t)best].arrival_first]) - at) &&
                  (found->items[k].type == want->type) == (found->items[(size_t)best].type == want->type))) {
                 best = (long)k;
             }

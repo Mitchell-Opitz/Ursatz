@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Targeted chord tests on small constructed files (division 96, 4/4, C major
@@ -126,8 +127,8 @@ static Analyzed analyze(const char *name, const Note *notes, size_t count) {
     ImportedNotes imported;
     assert(midi_pipeline_import_file(path, &imported) == MIDI_PIPELINE_OK);
     AnalysisReport report;
-    assert(run_analysis_pipeline(&imported, &report));
-    AnalysisDocument *built = analysis_document_build(path, &imported, &report);
+    assert(run_analysis_pipeline(&imported, test_knowledge(), &report));
+    AnalysisDocument *built = analysis_document_build(path, &imported, &report, test_knowledge());
     assert(built != NULL);
     char *json = analysis_document_to_json(built);
     assert(json != NULL);

@@ -1,5 +1,5 @@
 {
-	"schema_version":	12,
+	"schema_version":	13,
 	"metadata":	{
 		"source_file":	"Clementi 36.mid",
 		"note_count":	333,
@@ -104,7 +104,7 @@
 				"uncertainty":	0.80240701559647221,
 				"index":	0,
 				"tonic":	"C",
-				"mode":	"major",
+				"material":	"omt.material.major",
 				"measures":	{
 					"first":	1,
 					"last":	7
@@ -145,7 +145,7 @@
 				"uncertainty":	0.793514551715566,
 				"index":	1,
 				"tonic":	"G",
-				"mode":	"major",
+				"material":	"omt.material.major",
 				"measures":	{
 					"first":	8,
 					"last":	15
@@ -186,7 +186,7 @@
 				"uncertainty":	1,
 				"index":	2,
 				"tonic":	"C",
-				"mode":	"minor",
+				"material":	"omt.material.natural-minor",
 				"measures":	{
 					"first":	16,
 					"last":	23
@@ -227,7 +227,7 @@
 				"uncertainty":	0.67082636850830979,
 				"index":	3,
 				"tonic":	"C",
-				"mode":	"major",
+				"material":	"omt.material.major",
 				"measures":	{
 					"first":	24,
 					"last":	38

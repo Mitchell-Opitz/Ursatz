@@ -13,6 +13,8 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "support/test_knowledge.h"
+
 /*
  * Motivic development. Every transformation is run through the fill loop, across seeds and parameters, on source
  * motives with a rest, a dotted rhythm, a leading rest and a minor key. Each development is then judged a relative of
@@ -64,20 +66,26 @@ typedef struct {
     const char *name;
     const char *notes;
     PlanMeter meter;
-    AnalysisKey key;
+    int tonic; /* a pitch class */
+    HarmonyMode mode;
 } Source;
 
 static const Source SOURCES[] = {
-    {"minor", "D4:q F4:e A4:e D5:h", {4, 4, 0}, {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR}},
-    {"rest and dotted", "G4:q r:e A4:e C5:q. B4:e", {4, 4, 0}, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}},
-    {"dotted", "G4:q. A4:e B4:q D5:q", {4, 4, 0}, {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR}},
-    {"leading rest", "r:q E4:q G4:q C5:q", {4, 4, 0}, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}},
+    {"minor", "D4:q F4:e A4:e D5:h", {4, 4, 0}, 2, HARMONY_MODE_MINOR},
+    {"rest and dotted", "G4:q r:e A4:e C5:q. B4:e", {4, 4, 0}, 0, HARMONY_MODE_MAJOR},
+    {"dotted", "G4:q. A4:e B4:q D5:q", {4, 4, 0}, 7, HARMONY_MODE_MAJOR},
+    {"leading rest", "r:q E4:q G4:q C5:q", {4, 4, 0}, 0, HARMONY_MODE_MAJOR},
 };
+static AnalysisKey source_key(const Source *source) {
+    return test_key_mode(source->tonic, source->mode);
+}
+
 #define SOURCE_COUNT (sizeof(SOURCES) / sizeof(SOURCES[0]))
 
 static Motive load(const char *notes, const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter = *meter;
     if (key) {
@@ -92,7 +100,8 @@ static Motive load(const char *notes, const PlanMeter *meter, const AnalysisKey 
 }
 
 static Motive load_source(const Source *source) {
-    return load(source->notes, &source->meter, &source->key);
+    AnalysisKey key = source_key(source);
+    return load(source->notes, &source->meter, &key);
 }
 
 /* ------------------------------------------------------------------- scenes */
@@ -151,7 +160,7 @@ static MotiveDevelopContext context_for(const Source *source) {
     motive_develop_context_default(&context);
     context.meter = source->meter;
     context.has_key = true;
-    context.key = source->key;
+    context.key = source_key(source);
     return context;
 }
 
@@ -164,7 +173,8 @@ static bool read_target(const Scene *scene, const Source *source, Motive *out) {
     const PlanLanePayload *payload = plan_lane_span_payload(scene->plan, ids[0]);
     Motive motive;
     motive_init(&motive, source->meter);
-    motive_set_key(&motive, &source->key, MOTIVE_SKETCH_KEY_GIVEN);
+    AnalysisKey key_of_source = source_key(source);
+    motive_set_key(&motive, &key_of_source, MOTIVE_SKETCH_KEY_GIVEN);
     motive_set_lane_notes(&motive, payload->notes.notes, payload->notes.note_count);
     PlanSpan span = plan_lane_span_span(scene->plan, ids[0]);
     motive.length = span.length;
@@ -233,7 +243,7 @@ static const int MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
 
 /* The step of the key's scale a pitch is on, or LONG_MIN when it is not in the scale. */
 static long step_of(AnalysisKey key, int pitch) {
-    const int *scale = key.mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
+    const int *scale = harmony_key_mode(&key) == HARMONY_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
     int relative = pitch - analysis_key_tonic_pitch_class(&key);
     long octave = relative >= 0 ? relative / 12 : -((-relative + 11) / 12);
     int rest = (int)(relative - octave * 12);
@@ -549,10 +559,10 @@ static void test_every_development_is_a_relative(void) {
                             families[f].name, seed, (int)run.status);
                 }
                 assert(run.completed && written);
-                if (!families[f].related(&source, &result, &families[f].ref, SOURCES[s].key)) {
+                if (!families[f].related(&source, &result, &families[f].ref, source_key(&SOURCES[s]))) {
                     fprintf(stderr, "%s / %s / seed %lu: not a relative\n", SOURCES[s].name, families[f].name, seed);
                 }
-                assert(families[f].related(&source, &result, &families[f].ref, SOURCES[s].key));
+                assert(families[f].related(&source, &result, &families[f].ref, source_key(&SOURCES[s])));
 
                 /* Given material is never modified: the source is as it was, still Given. */
                 Motive after;
@@ -758,7 +768,7 @@ static void test_explicit_parameters(void) {
 
 static void test_degenerate_cases(void) {
     PlanMeter meter = {4, 4, 0};
-    AnalysisKey c_major = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+    AnalysisKey c_major = test_key(0, "major");
     Motive single = load("C4:q", &meter, &c_major);
     Motive four = load("D4:q F4:e A4:e D5:h", &meter, &c_major);
     Motive result;
@@ -904,7 +914,7 @@ static bool score_is(MotiveScore score, unsigned long num, unsigned long den) {
 /* The pickup scales with augmentation and diminution, and a tonal transposition or inversion spells F and B as degrees. */
 static void test_pickups_and_tonal_spelling(void) {
     const PlanMeter three_four = {3, 4, 0};
-    const AnalysisKey c_major = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+    const AnalysisKey c_major = test_key(0, "major");
     Motive source = load("C4:q E4:q G4:q E4:q", &three_four, &c_major);
     Motive result;
     MotiveRelationStep spec;
@@ -946,7 +956,7 @@ static void test_pickups_and_tonal_spelling(void) {
 
 static void test_recognizability(void) {
     PlanMeter meter = {4, 4, 0};
-    AnalysisKey d_minor = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
+    AnalysisKey d_minor = test_key(2, "minor");
     Motive source = load("D4:q F4:e A4:e D5:h", &meter, &d_minor);
     MotiveRecognizability r;
 
@@ -1078,7 +1088,7 @@ static void test_constraint_json(void) {
     assert(json && strstr(json, "\"step\": \"interval-change interval=2 amount=-1 keep-contour=1\"") != NULL);
     PiecePlan *copy = NULL;
     PlanJsonError error;
-    assert(plan_from_json(json, &copy, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, &copy, &error) == PLAN_OK);
     const PlanConstraint *read = plan_node_constraint_at(copy, scene.target, 0);
     assert(read && read->kind == PLAN_CONSTRAINT_MOTIVE_REF);
     const PlanMotiveRef *ref = &read->params.motive;

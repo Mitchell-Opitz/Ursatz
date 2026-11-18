@@ -17,15 +17,15 @@ static inline TimeSignature *make_signature(unsigned beats, int beat_unit_expone
     return time_signature;
 }
 
-static inline Duration *make_duration(long numerator, unsigned long denominator) {
-    Duration *duration = NULL;
-    assert(duration_create(numerator, denominator, &duration) == DURATION_OK);
+static inline Duration make_duration(long numerator, unsigned long denominator) {
+    Duration duration;
+    assert(duration_make(numerator, (long long)denominator, &duration) == DURATION_OK);
     return duration;
 }
 
 static inline void assert_duration(const Duration *duration, long numerator, unsigned long denominator) {
-    assert(duration_numerator(duration) == numerator);
-    assert(duration_denominator(duration) == denominator);
+    assert(duration->value.num == numerator);
+    assert(duration->value.den == (long long)denominator);
 }
 
 #endif

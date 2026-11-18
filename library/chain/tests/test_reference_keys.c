@@ -10,6 +10,7 @@
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The chain's keys against Michelle's readings of the Clementi and Mozart reference pieces (R-401): the keys are placed on the phrases of the
@@ -44,19 +45,18 @@ static const Piece CLEMENTI = {"Clementi 36", "Clementi 36.mid"};
 static const Piece MOZART = {"Mozart 545", "Mozart 545.mid"};
 
 static double to_double(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+    return (double)time->value.num / (double)time->value.den;
 }
 
 /* The measure a time in whole notes lies in, and whether it is the measure's first beat. */
 static int measure_of(const MeterMap *map, double at, bool *beat_one) {
     for (int measure = 1; measure < MAX_MEASURES; measure++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
             break;
         }
-        double from = to_double(time_span_start(span));
-        double to = to_double(time_span_end(span));
-        time_span_destroy(span);
+        double from = to_double(&span.start);
+        double to = to_double(&span.end);
         if (from - 1e-9 <= at && at < to - 1e-9) {
             if (beat_one != NULL) {
                 *beat_one = fabs(at - from) < 1e-9;
@@ -84,9 +84,10 @@ static AnalysisChain *run_chain(const Piece *piece, WeightedPipeline *p, Analysi
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p->import.key_signatures.events[i];
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
+        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
     }
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
     config.home_key_index = test_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
@@ -103,10 +104,10 @@ static size_t claimed_of(const AnalysisChain *chain, const MeterMap *map, Claime
     for (size_t i = 0; i < cadences->count; i++) {
         const HarmonyCadenceResult *c = &cadences->items[i];
         memset(&out[i], 0, sizeof(out[i]));
-        out[i].measure = measure_of(map, segments->starts[c->arrival_first], &out[i].beat_one);
+        out[i].measure = measure_of(map, rational_to_double(segments->starts[c->arrival_first]), &out[i].beat_one);
         out[i].type = c->type;
         if (c->alternative.present && c->alternative.reading == HARMONY_CADENCE_READING_CADENCE) {
-            out[i].alternative_measure = measure_of(map, segments->starts[c->alternative.arrival_first], &out[i].alternative_beat_one);
+            out[i].alternative_measure = measure_of(map, rational_to_double(segments->starts[c->alternative.arrival_first]), &out[i].alternative_beat_one);
             out[i].alternative_type = c->alternative.type;
         }
     }
@@ -271,7 +272,7 @@ static size_t labels_of(const AnalysisChain *chain, const MeterMap *map, int *me
     size_t count = analysis_chain_segment_count(chain);
     assert(segments != NULL && romans != NULL);
     for (size_t i = 0; i < count; i++) {
-        measures[i] = measure_of(map, segments->starts[i], NULL);
+        measures[i] = measure_of(map, rational_to_double(segments->starts[i]), NULL);
         labels[i] = romans[i].has_numeral ? romans[i].claim.label : "";
     }
     return count;

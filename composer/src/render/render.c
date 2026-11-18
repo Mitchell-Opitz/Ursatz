@@ -14,7 +14,6 @@
 #include <model/pitch/tuning_system.h>
 #include <theory/tonality/tonal_key.h>
 #include <model/time/duration.h>
-#include <model/time/time_rational.h>
 #include <model/time/note_value.h>
 #include <model/time/temporal_anchor.h>
 #include <model/time/time_signature.h>
@@ -55,14 +54,10 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
     free(rendered->spans);
     free(rendered->parts);
     meter_map_destroy(rendered->meter_map);
-    for (size_t i = 0; i < rendered->key_count; i++) {
-        musical_time_destroy(rendered->keys[i].position);
-    }
     free(rendered->keys);
     free(rendered->skipped);
     for (size_t i = 0; i < rendered->section_count; i++) {
         free(rendered->sections[i].label);
-        musical_time_destroy(rendered->sections[i].position);
     }
     free(rendered->sections);
     free(rendered->form_name);
@@ -195,7 +190,7 @@ static int key_sharps_flats(const AnalysisKey *key) {
     int accidental;
     int fifths = 0;
     if (!key_tonic(key, &letter, &accidental) ||
-        !standard_tonality_key_fifths(letter, accidental, key->mode == KEY_STRUCTURE_MODE_MINOR, &fifths)) {
+        !standard_tonality_key_fifths_of(letter, accidental, key->material, &fifths)) {
         return 0;
     }
     return fifths;
@@ -244,7 +239,7 @@ static Spelling spell(int midi, const AnalysisKey *key) {
     int tonic_accidental = 0;
     KeySignature *signature = NULL;
     if (key && key_tonic(key, &tonic_letter, &tonic_accidental) &&
-        standard_tonality_key_signature_of(tonic_letter, tonic_accidental, key->mode == KEY_STRUCTURE_MODE_MINOR, &signature)) {
+        standard_tonality_key_signature_of_material(tonic_letter, tonic_accidental, key->material, &signature)) {
         for (int step = 0; step < 7; step++) {
             PitchLetter letter = pitch_letter_offset(PITCH_LETTER_C, step);
             int accidental = 0;
@@ -335,9 +330,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
                                    const TuningSystem *tuning, NoteEvent **out_event,
                                    PitchNumericValue **out_value) {
     EntityID *id = NULL;
-    MusicalTime *position = NULL;
-    TemporalAnchor *anchor = NULL;
-    Duration *duration = NULL;
+    Duration duration;
     PitchNumericValue *value = NULL;
     PitchIdentity *identity = NULL;
     PitchSpelling *spelling = NULL;
@@ -350,12 +343,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
     /* A note the plan spells is written as spelled; any other is spelled in the key under it. */
     Spelling written = note->spelled ? (Spelling){note->letter, note->accidental} : spell(note->midi, key);
     bool ok = entity_id_create(text, &id) == ENTITY_ID_OK &&
-              musical_time_from_rational(note->onset, &position) == TIME_RATIONAL_OK &&
-              temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK;
-    if (ok) {
-        position = NULL;
-    }
-    ok = ok && duration_create(note->duration.num, note->duration.den, &duration) == DURATION_OK &&
+              duration_of(note->duration, &duration) == DURATION_OK &&
          pitch_numeric_value_create(tuning, note->midi, 1, &value) == PITCH_NUMERIC_VALUE_OK &&
          pitch_numeric_value_to_identity(value, &identity) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK &&
          pitch_spelling_create(written.letter, written.accidental, spelling_octave(note->midi, written), &spelling) ==
@@ -369,16 +357,13 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
     ok = ok && provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK;
 
     NoteEvent *event = NULL;
-    if (ok && note_event_create(id, anchor, duration, identity, spelling, voice, provenance, &event) ==
+    if (ok && note_event_create(id, musical_time_of(note->onset), duration, identity, spelling, voice, provenance, &event) ==
                   NOTE_EVENT_OK) {
         *out_event = event;
         *out_value = value;
         return PLAN_RENDER_OK;
     }
     entity_id_destroy(id);
-    musical_time_destroy(position);
-    temporal_anchor_destroy(anchor);
-    duration_destroy(duration);
     pitch_numeric_value_destroy(value);
     pitch_identity_destroy(identity);
     pitch_spelling_destroy(spelling);
@@ -397,10 +382,9 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
         return PLAN_RENDER_OK;
     }
     TimeSignature **signatures = calloc(count, sizeof(TimeSignature *));
-    MusicalTime **starts = calloc(count, sizeof(MusicalTime *));
     MeterMapChangePoint *points = calloc(count, sizeof(MeterMapChangePoint));
     PlanRenderResult result = PLAN_RENDER_OK;
-    if (!signatures || !starts || !points) {
+    if (!signatures || !points) {
         result = PLAN_RENDER_ERR_ALLOC;
     }
     for (size_t i = 0; result == PLAN_RENDER_OK && i < count; i++) {
@@ -424,12 +408,10 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
             note_value_destroy(unit);
             if (made != TIME_SIGNATURE_OK) {
                 result = PLAN_RENDER_ERR_NOT_REPRESENTABLE;
-            } else if (musical_time_from_rational(start, &starts[i]) != TIME_RATIONAL_OK) {
-                result = PLAN_RENDER_ERR_ALLOC;
             }
         }
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = musical_time_of(start);
     }
     if (result == PLAN_RENDER_OK) {
         EntityID *id = NULL;
@@ -440,12 +422,10 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
             result = PLAN_RENDER_ERR_NOT_REPRESENTABLE;
         }
     }
-    for (size_t i = 0; signatures && starts && i < count; i++) {
+    for (size_t i = 0; signatures && i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     free(signatures);
-    free(starts);
     free(points);
     return result;
 }
@@ -574,12 +554,9 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         keys[i].plan_span = span;
         keys[i].key = *key;
         out->keys[i].sharps_flats = key_sharps_flats(key);
-        out->keys[i].mode = key->mode;
-        if (musical_time_from_rational(key_start, &out->keys[i].position) != TIME_RATIONAL_OK) {
-            result = PLAN_RENDER_ERR_ALLOC;
-        } else {
-            out->key_count++;
-        }
+        out->keys[i].material = key->material;
+        out->keys[i].position = musical_time_of(key_start);
+        out->key_count++;
     }
 
     /* Meter. */
@@ -776,12 +753,7 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
             break;
         }
         memcpy(entry->label, label, length + 1);
-        if (musical_time_from_rational(shifted, &entry->position) != TIME_RATIONAL_OK) {
-            free(entry->label);
-            entry->label = NULL;
-            result = PLAN_RENDER_ERR_ALLOC;
-            break;
-        }
+        entry->position = musical_time_of(shifted);
         starts[out->section_count++] = shifted;
     }
     /* Insertion sort by start; the children are normally in order already. */

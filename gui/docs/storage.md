@@ -15,7 +15,7 @@ exists in it. Otherwise it is refused when any of these holds:
 
 - `data/corpus.db` exists and `collections/.imported-from-corpus-db` does not;
 - `materials/items/` holds an item and `materials/` lacks `tones-migrated`, `segments-migrated` or `themes-cleared`;
-- a motif's current version has a key that, trimmed, is not empty and not `C major` or `C minor` (older versions are not read).
+- a motif's current version has no `material` and a `key` that, trimmed, is not empty and not `C major` or `C minor` (older versions are not read; a motif that names its material is on C).
 
 The backend prints `ursatz-gui-backend: the data folder (...) has not had the one-time migrations of the GUI before the
 overhaul: <what is missing>. Run the GUI built from the git tag pre-overhaul once on this data folder, then start this
@@ -33,7 +33,7 @@ most 8 tries.
 
 - `source.mid` or `source.musicxml`: the upload's bytes, written unchanged. A
   `.xml` or `.mxl` upload keeps its extension (`source.xml`, `source.mxl`).
-- `analysis.json`: the Analyzer's analysis document (schema v12).
+- `analysis.json`: the Analyzer's analysis document (schema v13).
 - `meta.json`: `{"filename", "format": "midi"|"musicxml", "uploaded_at"
   (ISO 8601 UTC), "analyzer_version", "document_schema_version",
   "ursatz_commit"}` plus the
@@ -122,7 +122,7 @@ materials/
 - A version body is validated by `ursatz_gui_material_body_validate` before it
   is written: an object with a `uses` array, and the member of its own type
   (`motif`, `theme` or `piece`) and no other. A motif carries `role`, `form`,
-  `notes`, `meter`, `key`, `pickup`, `harmony` (null or text, at most 200
+  `notes`, `meter`, `material` (the id of a material the Composer offers: a motif is in C, so the material says the key), `pickup`, `harmony` (null or text, at most 200
   characters), `features`, `segments_proposed`, `analysis` and `derived`; the rules are listed in
   `service/material_service.h`. `features` are the motif's segments. `segments_proposed` (a bool; a body without it
   reads as false) is true while the segments are the Composer's proposal rather than ones Michelle set: the proposal is
@@ -130,17 +130,23 @@ materials/
 - Projects and items are passed as cJSON objects; the caller frees what it
   receives.
 
+### Material members and migration on read
+
+Items name a material (R-597). A motif holds `material` (the id, `omt.material.major` or `omt.material.natural-minor`) where it held the key text (`"C minor"`); a theme's `form` and a piece's `structure` hold `material` (an id or `style`) where they held `mode`.
+
+Version files are never rewritten. Every body read from the store, and every body saved, goes through `ursatz_gui_material_body_migrate`, the uses' copies included: a motif's `key` "C major" or "C minor" becomes the `material` of that key word, and a form's or structure's `mode` word becomes its `material`. A member already new wins and the old one goes. A value that names no material stays as it was: a motif key on another tonic (the data check refuses it), a mode such as `dorian`. A save writes the new members into the next version. `ursatz_gui_motif_key_text` gives the key text the Composer reads: "C" and the key word of the material, or the old key.
+
 ### Theme bodies and version files
 
 A theme body (the rules are in `service/material_service.h`) is a placeholder or a composable theme (R-167). The
 placeholder, `form` null or a string and `slots` an array of anything, stays valid so earlier versions still read. A
 body with a `form` object, a slot written as `{slot, item_id, version}` or any of the members below is a composable theme:
 
-- `form`: `{into, hybrid, mode, meter, bars, cadence, first_cadence}`: each member null or text (`bars` a number), in
-  the words of the Composer's vocabulary (`GET /api/composer/vocabulary`: `into` `sentence`, `period` or `hybrid`, `mode`
-  `major`, `minor` or `style`, `meter` `2/4`, `3/4`, `4/4` or `6/8`, `bars` 4 or 8...). A save keeps the type and size
+- `form`: `{into, hybrid, material, meter, bars, cadence, first_cadence}`: each member null or text (`bars` a number), in
+  the words of the Composer's vocabulary (`GET /api/composer/vocabulary`: `into` `sentence`, `period` or `hybrid`, `material`
+  a value of `materials` (`omt.material.major`, `omt.material.natural-minor`) or `style`, `meter` `2/4`, `3/4`, `4/4` or `6/8`, `bars` 4 or 8...). A save keeps the type and size
   of a word and not the word: a value the Composer does not read is saved, `POST /api/materials/items/validate` marks
-  it and compose refuses it with its path (R-276). Compose needs `into`, `mode` and `meter`. A theme is in C: a body
+  it and compose refuses it with its path (R-276). Compose needs `into`, `material` and `meter`. A theme is in C: a body
   with a `key` is refused (`themes are in C; remove key`).
 - `slots`: `[{slot, item_id, version}]`, `slot` one of the vocabulary's `theme_slots` (today `basic`, `contrasting`,
   `continuation`, `cadential`), the one marked `required` (`basic`) present and each slot at most once; the same item may be
@@ -177,7 +183,7 @@ placeholder, `structure` null, a string, an array or an object without a list of
 versions still read. A body whose `structure` has a `sections` list, or that has any of the members below, is a
 composable piece. A structure alone is valid: every fill may be left out.
 
-- `structure`: `{form?, key, mode, meter, ...}`: `key`, `mode` and `meter` null or text, in the Composer's words (a
+- `structure`: `{form?, key, material, meter, ...}`: `key`, `material` and `meter` null or text, in the Composer's words (a
   value it does not read is saved and marked by validate, R-276). `form` names a form of the Composer's forms entry
   (`GET /api/composer/forms`); absent or null is `game-loop`, so a piece saved before the forms is a game loop (R-430).
   The form says what else the structure has. A form whose `sections` is `request` (the game loop) has `sections`, 1 to

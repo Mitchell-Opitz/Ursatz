@@ -10,11 +10,19 @@
 #include "model/time/time_signature.h"
 #include "tests/key_index_test_util.h"
 #include "interpretation_test_access.h"
+#include "test_knowledge.h"
 
 /*
  * Key regions, step 1: windowed key scoring. Segments are built straight from pitch-class weights (one whole
  * note per measure in 4/4), so each test says exactly which pitch classes sound where.
  */
+
+/* The default config with the snapshot's materials: key_regions_estimate has none of its own. */
+static const CommonPracticeKeyRegionsConfig *default_config(void) {
+    static CommonPracticeKeyRegionsConfig config;
+    config = common_practice_key_regions_config_default(test_materials());
+    return &config;
+}
 
 static EntityID *make_id(const char *value) {
     EntityID *id = NULL;
@@ -28,27 +36,23 @@ static MeterMap *four_four(void) {
     TimeSignature *signature = NULL;
     assert(time_signature_create(4, quarter, &signature) == TIME_SIGNATURE_OK);
     note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
     MeterMapChangePoint point = {signature, zero};
     MeterMap *map = NULL;
     assert(meter_map_create(make_id("map"), &point, 1, &map) == METER_MAP_OK);
     time_signature_destroy(signature);
-    musical_time_destroy(zero);
     return map;
 }
 
 typedef struct {
     CommonPracticeKeySegment items[64];
-    MusicalTime *times[130];
     size_t count;
-    size_t time_count;
 } Piece;
 
-static MusicalTime *time_at(Piece *piece, long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
-    piece->times[piece->time_count++] = time;
+static MusicalTime time_at(long numerator, unsigned long denominator) {
+    MusicalTime time;
+    assert(musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK);
     return time;
 }
 
@@ -56,20 +60,14 @@ static MusicalTime *time_at(Piece *piece, long numerator, unsigned long denomina
 static void add_measure(Piece *piece, long measure, const double weights[12]) {
     CommonPracticeKeySegment *segment = &piece->items[piece->count++];
     memset(segment, 0, sizeof(*segment));
-    segment->start = time_at(piece, measure, 1);
-    segment->end = time_at(piece, measure + 1, 1);
+    segment->start = time_at(measure, 1);
+    segment->end = time_at(measure + 1, 1);
     for (int pc = 0; pc < 12; pc++) {
         segment->weights.pitch_class[pc] = weights[pc];
         segment->weights.total += weights[pc];
     }
     segment->weights.bass_pitch = -1;
     segment->weights.bass_pitch_class = -1;
-}
-
-static void destroy_piece(Piece *piece) {
-    for (size_t i = 0; i < piece->time_count; i++) {
-        musical_time_destroy(piece->times[i]);
-    }
 }
 
 /* A major scale's weights on a tonic, tonic/third/fifth heavier. */
@@ -94,7 +92,7 @@ static int best_key(const CommonPracticeKeyWindow *window) {
 
 static void test_a_scale_scores_its_own_key_highest(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     double c[12];
     major_weights(0, c);
     for (long m = 0; m < 6; m++) {
@@ -115,13 +113,12 @@ static void test_a_scale_scores_its_own_key_highest(void) {
     common_practice_key_windows_destroy(&windows);
     common_practice_key_windows_destroy(&windows);
     common_practice_key_windows_destroy(NULL);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_minor_distribution_scores_the_minor_key(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     /* A minor with the raised seventh (G#): A 4, B 1, C 2.5, D 1.5, E 3, F 1.5, G# 1 */
     double a_minor[12] = {0};
     a_minor[9] = 4.0;
@@ -137,13 +134,12 @@ static void test_a_minor_distribution_scores_the_minor_key(void) {
     assert(windows.count == 1);
     assert(best_key(&windows.items[0]) == test_key_index_of(9, COMMON_PRACTICE_KEY_MINOR));
     common_practice_key_windows_destroy(&windows);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_the_windows_follow_a_change_of_key(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     double c[12];
     double g[12];
     major_weights(0, c);
@@ -160,13 +156,12 @@ static void test_the_windows_follow_a_change_of_key(void) {
     assert(best_key(&windows.items[0]) == 0);
     assert(best_key(&windows.items[4]) == 7);
     common_practice_key_windows_destroy(&windows);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_short_piece_gets_one_window(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     double c[12];
     major_weights(0, c);
     add_measure(&piece, 0, c);
@@ -176,18 +171,17 @@ static void test_a_short_piece_gets_one_window(void) {
     assert(windows.count == 1 && windows.items[0].first_measure == 1 && windows.items[0].last_measure == 2);
     common_practice_key_windows_destroy(&windows);
 
-    CommonPracticeKeyRegionsConfig one = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig one = common_practice_key_regions_config_default(test_materials());
     one.window_measures = 1;
     assert(key_window_scores(piece.items, piece.count, map, &one, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(windows.count == 2);
     common_practice_key_windows_destroy(&windows);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_silent_window_scores_zero(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     double none[12] = {0};
     add_measure(&piece, 0, none);
     CommonPracticeKeyWindows windows = {0};
@@ -196,17 +190,16 @@ static void test_a_silent_window_scores_zero(void) {
         assert(windows.items[0].correlation[k] == 0.0);
     }
     common_practice_key_windows_destroy(&windows);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_custom_profile_set_is_used(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     double only_g[12] = {0};
     only_g[7] = 1.0;
     add_measure(&piece, 0, only_g);
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
     memset(&config.profiles, 0, sizeof(config.profiles));
     config.profiles.major[0] = 1.0; /* only the tonic counts */
     CommonPracticeKeyWindows windows = {0};
@@ -214,13 +207,12 @@ static void test_a_custom_profile_set_is_used(void) {
     assert(best_key(&windows.items[0]) == 7);
     assert(fabs(windows.items[0].correlation[7] - 1.0) < 1e-12);
     common_practice_key_windows_destroy(&windows);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_bad_input(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     double c[12];
     major_weights(0, c);
     add_measure(&piece, 0, c);
@@ -232,11 +224,11 @@ static void test_bad_input(void) {
     assert(key_window_scores(NULL, 2, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT);
     assert(key_window_scores(piece.items, 0, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_NO_SEGMENTS);
 
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
     config.window_measures = 0;
     assert(key_window_scores(piece.items, piece.count, map, &config, &windows) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    config = common_practice_key_regions_config_default();
+    config = common_practice_key_regions_config_default(test_materials());
     config.profiles.minor[3] = NAN;
     assert(key_window_scores(piece.items, piece.count, map, &config, &windows) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
@@ -250,10 +242,9 @@ static void test_bad_input(void) {
     negative.weights.pitch_class[2] = -1.0;
     assert(key_window_scores(&negative, 1, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT);
     CommonPracticeKeySegment missing = piece.items[0];
-    missing.start = NULL;
+    assert(musical_time_make(-1, 1, &missing.start) == MUSICAL_TIME_OK); /* a negative start is refused */
     assert(key_window_scores(&missing, 1, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT);
     assert(windows.items == NULL);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
@@ -278,8 +269,8 @@ static void add_run(Piece *piece, long *measure, int tonic, long count) {
     }
 }
 
-static bool time_is(const MusicalTime *time, long numerator, unsigned long denominator) {
-    return musical_time_numerator(time) * (long)denominator == numerator * (long)musical_time_denominator(time);
+static bool time_is(MusicalTime time, long numerator, unsigned long denominator) {
+    return musical_time_cmp(time, time_at(numerator, denominator)) == 0;
 }
 
 static void assert_gap_free(const CommonPracticeKeyRegions *regions, int first, int last) {
@@ -293,47 +284,46 @@ static void assert_gap_free(const CommonPracticeKeyRegions *regions, int first, 
         assert(region->uncertainty >= 0.0 && region->uncertainty <= 1.0);
         assert(region->source == COMMON_PRACTICE_REGION_SOURCE_PROFILE ||
                region->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
-        assert(region->key != NULL && region->span != NULL);
+        assert(region->key != NULL);
         if (i > 0) {
             assert(region->first_measure == regions->regions[i - 1].last_measure + 1);
             assert(regions->changes[i - 1].from_region == i - 1 && regions->changes[i - 1].to_region == i);
             assert(!regions->changes[i - 1].cadence_confirmed);
             assert(regions->regions[i].key_index != regions->regions[i - 1].key_index);
             /* the spans meet at a barline */
-            assert(musical_time_equals(time_span_end(regions->regions[i - 1].span), time_span_start(region->span)));
+            assert(musical_time_same(regions->regions[i - 1].span.end, region->span.start));
         }
     }
 }
 
 static void test_a_single_key_piece_is_one_region(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert_gap_free(&regions, 1, 8);
     assert(regions.region_count == 1 && regions.change_count == 0);
     assert(regions.regions[0].key_index == 0);
     assert(strcmp(key_label(regions.regions[0].key), "C major") == 0);
-    assert(time_is(time_span_start(regions.regions[0].span), 0, 1) && time_is(time_span_end(regions.regions[0].span), 8, 1));
+    assert(time_is(regions.regions[0].span.start, 0, 1) && time_is(regions.regions[0].span.end, 8, 1));
     assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[0].key))),
                   "key-region-1") == 0);
     common_practice_key_regions_destroy(&regions);
     common_practice_key_regions_destroy(&regions);
     common_practice_key_regions_destroy(NULL);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_modulation_from_c_to_g_is_two_regions(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 8);
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert_gap_free(&regions, 1, 16);
     assert(regions.region_count == 2);
     assert(regions.regions[0].key_index == 0 && regions.regions[1].key_index == 7);
@@ -345,23 +335,22 @@ static void test_a_modulation_from_c_to_g_is_two_regions(void) {
     common_practice_key_regions_destroy(&regions);
 
     /* a penalty above the correlation range allows no change; zero follows every window */
-    CommonPracticeKeyRegionsConfig stiff = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig stiff = common_practice_key_regions_config_default(test_materials());
     stiff.change_penalty = 10.0;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &stiff, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 1);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_brief_excursion_that_returns_is_a_tonicization(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 6);
     add_run(&piece, &measure, 0, 8);
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
     config.tonicization_max_measures = 8;
     CommonPracticeKeyRegions regions = {0};
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
@@ -373,27 +362,26 @@ static void test_a_brief_excursion_that_returns_is_a_tonicization(void) {
     common_practice_key_regions_destroy(&regions);
 
     /* the same excursion, no longer "short" under the default limit of 4 measures, is a weak modulation */
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 3);
     assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_WEAK_MODULATION);
     assert(regions.changes[1].extent == KEY_CHANGE_EXTENT_WEAK_MODULATION && regions.changes[1].is_return);
     assert(key_change_extent_is_modulation(regions.changes[0].extent));
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_the_same_input_gives_the_same_regions(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 6);
     add_run(&piece, &measure, 7, 6);
     add_run(&piece, &measure, 2, 6);
     CommonPracticeKeyRegions a = {0};
     CommonPracticeKeyRegions b = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &a) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &b) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &a) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &b) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(a.region_count == b.region_count && a.change_count == b.change_count);
     for (size_t i = 0; i < a.region_count; i++) {
         assert(a.regions[i].key_index == b.regions[i].key_index);
@@ -406,39 +394,37 @@ static void test_the_same_input_gives_the_same_regions(void) {
     }
     common_practice_key_regions_destroy(&a);
     common_practice_key_regions_destroy(&b);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_region_input_errors(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 4);
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, NULL) == COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT);
-    assert(key_regions_estimate(piece.items, 0, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_NO_SEGMENTS);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), NULL) == COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT);
+    assert(key_regions_estimate(piece.items, 0, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_NO_SEGMENTS);
 
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
     config.change_penalty = -0.1;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
     config.change_penalty = NAN;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    config = common_practice_key_regions_config_default();
+    config = common_practice_key_regions_config_default(test_materials());
     config.tonicization_max_measures = 0;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    config = common_practice_key_regions_config_default();
+    config = common_practice_key_regions_config_default(test_materials());
     config.context_id_prefix = "";
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
     config.context_id_prefix = NULL;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    config = common_practice_key_regions_config_default();
+    config = common_practice_key_regions_config_default(test_materials());
     config.context_id_prefix = "piece-7";
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(strcmp(entity_id_value(interpretation_target_id(key_interpretation(regions.regions[0].key))), "piece-7-1") == 0);
     common_practice_key_regions_destroy(&regions);
     assert(regions.regions == NULL);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
@@ -450,10 +436,10 @@ static void make_chord(CommonPracticeMember members[4], CommonPracticeSegment *s
         members[i].note_id = NULL;
         members[i].pitch = pitches[i];
         members[i].held = false;
-        members[i].duration = 1.0;
+        members[i].duration = rational_ratio(1, 1);
         members[i].strength = BEAT_STRENGTH_STRONG;
         members[i].voice_id = NULL;
-        members[i].onset = 0.0;
+        members[i].onset = rational_ratio(0, 1);
         members[i].resolves_in_segment = false;
     }
     segment->members = members;
@@ -474,26 +460,25 @@ static void build_modulation(Piece *piece, const CommonPracticeSegment *chord, i
 
 static void test_a_chord_in_both_keys_is_the_pivot(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     CommonPracticeMember members[4];
     CommonPracticeSegment chord;
     const int c_major[4] = {48, 60, 64, 67}; /* I in C, IV in G */
     make_chord(members, &chord, c_major, "chord-c");
     build_modulation(&piece, &chord, 7);
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 2 && regions.regions[1].key_index == 7);
     assert(regions.changes[0].has_pivot && regions.changes[0].pivot_segment == 7);
     common_practice_key_regions_destroy(&regions);
 
     /* a search distance of 0 reaches only segments at the boundary, and the chord is a measure before it */
-    CommonPracticeKeyRegionsConfig none = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig none = common_practice_key_regions_config_default(test_materials());
     none.pivot_search_measures = 0;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &none, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 2);
     assert(regions.regions[1].first_measure == 9 ? !regions.changes[0].has_pivot : true);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
@@ -521,7 +506,7 @@ static void build_minor_modulation(Piece *piece, const CommonPracticeSegment *ch
 
 static void test_a_pivot_chord_in_a_minor_old_key_is_read_in_minor(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     CommonPracticeMember members[4];
     CommonPracticeSegment chord;
     /* E G# B E: the V of A minor, which is also the I of E major. Read in A minor's own vocabulary it is the
@@ -531,36 +516,34 @@ static void test_a_pivot_chord_in_a_minor_old_key_is_read_in_minor(void) {
     make_chord(members, &chord, e_major, "chord-e");
     build_minor_modulation(&piece, &chord);
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 2);
     assert(regions.regions[0].key_index == 21 && regions.regions[1].key_index == 4);
     assert(regions.changes[0].has_pivot && regions.changes[0].pivot_segment == 7);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_direct_modulation_has_no_pivot(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     CommonPracticeMember members[4];
     CommonPracticeSegment chord;
     const int c_major[4] = {48, 60, 64, 67};
     make_chord(members, &chord, c_major, "chord-c");
     build_modulation(&piece, &chord, 6); /* F# major shares no note of C major's triad */
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 2 && regions.regions[1].key_index == 6);
     assert(regions.changes[0].extent == KEY_CHANGE_EXTENT_MODULATION);
     assert(!regions.changes[0].has_pivot);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_tonicization_has_no_pivot_but_a_weak_modulation_does(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     CommonPracticeMember members[4];
     CommonPracticeSegment chord;
     const int c_major[4] = {48, 60, 64, 67};
@@ -571,7 +554,7 @@ static void test_a_tonicization_has_no_pivot_but_a_weak_modulation_does(void) {
     add_run(&piece, &measure, 7, 6);
     add_run(&piece, &measure, 0, 8);
 
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
     config.tonicization_max_measures = 8;
     CommonPracticeKeyRegions regions = {0};
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
@@ -579,18 +562,17 @@ static void test_a_tonicization_has_no_pivot_but_a_weak_modulation_does(void) {
     assert(!regions.changes[0].has_pivot);
     common_practice_key_regions_destroy(&regions);
 
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 3 && regions.changes[0].extent == KEY_CHANGE_EXTENT_WEAK_MODULATION);
     assert(regions.changes[0].has_pivot && regions.changes[0].pivot_segment == 7);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 /* --- key signature events --- */
 
-static CommonPracticeKeySignatureEvent make_event(Piece *piece, long numerator, unsigned long denominator, int sharps) {
-    CommonPracticeKeySignatureEvent event = {time_at(piece, numerator, denominator), sharps};
+static CommonPracticeKeySignatureEvent make_event(long numerator, unsigned long denominator, int sharps) {
+    CommonPracticeKeySignatureEvent event = {time_at(numerator, denominator), sharps};
     return event;
 }
 
@@ -605,21 +587,21 @@ static const CommonPracticeKeyRegion *region_starting_at(const CommonPracticeKey
 
 static void test_a_signature_change_forces_a_boundary_against_the_profile(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 8); /* the notes say G major throughout the second half */
     CommonPracticeKeyRegions regions = {0};
 
     /* without the event the boundary is wherever the path puts it, and the key is G */
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 2 && regions.regions[1].key_index == 7);
     assert(regions.regions[1].source == COMMON_PRACTICE_REGION_SOURCE_PROFILE);
     common_practice_key_regions_destroy(&regions);
 
     /* one flat at measure 8 (F major / D minor) forces a boundary there, though G major fits the notes */
-    CommonPracticeKeySignatureEvent one_flat = make_event(&piece, 8, 1, -1);
-    assert(key_regions_estimate(piece.items, piece.count, map, &one_flat, 1, NULL, &regions) ==
+    CommonPracticeKeySignatureEvent one_flat = make_event(8, 1, -1);
+    assert(key_regions_estimate(piece.items, piece.count, map, &one_flat, 1, default_config(), &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_OK);
     assert_gap_free(&regions, 1, 16);
     const CommonPracticeKeyRegion *forced = region_starting_at(&regions, 9);
@@ -629,22 +611,21 @@ static void test_a_signature_change_forces_a_boundary_against_the_profile(void) 
     assert(regions.regions[0].last_measure == 8 && regions.regions[0].key_index == 0);
     assert(regions.regions[0].source == COMMON_PRACTICE_REGION_SOURCE_PROFILE);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_signature_at_the_start_restricts_only_the_first_region(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 7, 12); /* G major notes */
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 1 && regions.regions[0].key_index == 7);
     common_practice_key_regions_destroy(&regions);
 
-    CommonPracticeKeySignatureEvent none = make_event(&piece, 0, 1, 0); /* C major / A minor */
-    assert(key_regions_estimate(piece.items, piece.count, map, &none, 1, NULL, &regions) ==
+    CommonPracticeKeySignatureEvent none = make_event(0, 1, 0); /* C major / A minor */
+    assert(key_regions_estimate(piece.items, piece.count, map, &none, 1, default_config(), &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_OK);
     assert_gap_free(&regions, 1, 12);
     assert(regions.region_count >= 2);
@@ -652,69 +633,65 @@ static void test_a_signature_at_the_start_restricts_only_the_first_region(void) 
     assert(regions.regions[0].source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
     assert(regions.regions[regions.region_count - 1].key_index == 7); /* free again after the first region */
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_repeated_and_late_events_are_not_boundaries(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 16);
-    CommonPracticeKeySignatureEvent events[3] = {make_event(&piece, 0, 1, 0), make_event(&piece, 8, 1, 0),
-                                                 make_event(&piece, 100, 1, 1)};
+    CommonPracticeKeySignatureEvent events[3] = {make_event(0, 1, 0), make_event(8, 1, 0),
+                                                 make_event(100, 1, 1)};
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, events, 3, NULL, &regions) ==
+    assert(key_regions_estimate(piece.items, piece.count, map, events, 3, default_config(), &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 1 && regions.regions[0].key_index == 0);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_events_snap_to_the_nearest_barline(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 8);
     CommonPracticeKeyRegions regions = {0};
-    CommonPracticeKeySignatureEvent early = make_event(&piece, 33, 4, -1); /* 8 + 1/4 whole notes */
-    assert(key_regions_estimate(piece.items, piece.count, map, &early, 1, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    CommonPracticeKeySignatureEvent early = make_event(33, 4, -1); /* 8 + 1/4 whole notes */
+    assert(key_regions_estimate(piece.items, piece.count, map, &early, 1, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(region_starting_at(&regions, 9) != NULL &&
            region_starting_at(&regions, 9)->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
     common_practice_key_regions_destroy(&regions);
-    CommonPracticeKeySignatureEvent late = make_event(&piece, 35, 4, -1); /* 8 + 3/4 */
-    assert(key_regions_estimate(piece.items, piece.count, map, &late, 1, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    CommonPracticeKeySignatureEvent late = make_event(35, 4, -1); /* 8 + 3/4 */
+    assert(key_regions_estimate(piece.items, piece.count, map, &late, 1, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(region_starting_at(&regions, 10) != NULL &&
            region_starting_at(&regions, 10)->source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_bad_events(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     CommonPracticeKeyRegions regions = {0};
-    CommonPracticeKeySignatureEvent bad = make_event(&piece, 4, 1, 8);
-    assert(key_regions_estimate(piece.items, piece.count, map, &bad, 1, NULL, &regions) ==
+    CommonPracticeKeySignatureEvent bad = make_event(4, 1, 8);
+    assert(key_regions_estimate(piece.items, piece.count, map, &bad, 1, default_config(), &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT);
-    bad = make_event(&piece, 4, 1, -8);
-    assert(key_regions_estimate(piece.items, piece.count, map, &bad, 1, NULL, &regions) ==
+    bad = make_event(4, 1, -8);
+    assert(key_regions_estimate(piece.items, piece.count, map, &bad, 1, default_config(), &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT);
-    CommonPracticeKeySignatureEvent no_position = {NULL, 0};
-    assert(key_regions_estimate(piece.items, piece.count, map, &no_position, 1, NULL, &regions) ==
+    CommonPracticeKeySignatureEvent no_position = {time_at(-1, 1), 0}; /* a negative position */
+    assert(key_regions_estimate(piece.items, piece.count, map, &no_position, 1, default_config(), &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT);
-    CommonPracticeKeySignatureEvent swapped[2] = {make_event(&piece, 6, 1, 1), make_event(&piece, 2, 1, 2)};
-    assert(key_regions_estimate(piece.items, piece.count, map, swapped, 2, NULL, &regions) ==
+    CommonPracticeKeySignatureEvent swapped[2] = {make_event(6, 1, 1), make_event(2, 1, 2)};
+    assert(key_regions_estimate(piece.items, piece.count, map, swapped, 2, default_config(), &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT);
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 2, NULL, &regions) ==
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 2, default_config(), &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT);
     assert(regions.regions == NULL);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
@@ -732,7 +709,7 @@ static void set_chord(Piece *piece, size_t segment, int root, unsigned mask) {
 
 static void test_functional_evidence_favours_the_key_a_dominant_resolves_into(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     double flat[12];
     for (int pc = 0; pc < 12; pc++) {
         flat[pc] = 1.0;
@@ -788,7 +765,7 @@ static void test_functional_evidence_favours_the_key_a_dominant_resolves_into(vo
     common_practice_key_windows_destroy(&windows);
 
     /* a zero weight turns the evidence off */
-    CommonPracticeKeyRegionsConfig off = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig off = common_practice_key_regions_config_default(test_materials());
     off.evidence_weight = 0.0;
     assert(key_window_scores(piece.items, piece.count, map, &off, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
     for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
@@ -799,27 +776,25 @@ static void test_functional_evidence_favours_the_key_a_dominant_resolves_into(vo
     assert(key_window_scores(piece.items, piece.count, map, &off, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
     piece.items[0].chord.root_pitch_class = 12;
     assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_edges_snap_to_a_nearby_phrase_boundary(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 8);
     CommonPracticeKeyRegions plain = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &plain) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &plain) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(plain.region_count == 2);
     int edge = plain.regions[1].first_measure;
     common_practice_key_regions_destroy(&plain);
 
     /* a boundary one measure from the edge, whichever side it is on, takes the edge */
     for (int target = edge - 1; target <= edge + 1; target++) {
-        MusicalTime *boundary = time_at(&piece, target - 1, 1); /* the start of measure `target` */
-        const MusicalTime *list[1] = {boundary};
-        CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+        const MusicalTime list[1] = {time_at(target - 1, 1)}; /* the start of measure `target` */
+        CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
         config.phrase_boundaries = list;
         config.phrase_boundary_count = 1;
         CommonPracticeKeyRegions snapped = {0};
@@ -831,9 +806,8 @@ static void test_edges_snap_to_a_nearby_phrase_boundary(void) {
     }
 
     /* a boundary beyond the reach is ignored, and reach 0 keeps every edge */
-    MusicalTime *far = time_at(&piece, edge + 2, 1);
-    const MusicalTime *far_list[1] = {far};
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    const MusicalTime far_list[1] = {time_at(edge + 2, 1)};
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
     config.phrase_boundaries = far_list;
     config.phrase_boundary_count = 1;
     CommonPracticeKeyRegions kept = {0};
@@ -850,10 +824,8 @@ static void test_edges_snap_to_a_nearby_phrase_boundary(void) {
     common_practice_key_regions_destroy(&kept);
 
     /* a boundary at the start of the piece, or past its end, moves nothing */
-    MusicalTime *before = time_at(&piece, 0, 1);
-    MusicalTime *after = time_at(&piece, 40, 1);
-    const MusicalTime *outside[2] = {before, after};
-    config = common_practice_key_regions_config_default();
+    const MusicalTime outside[2] = {time_at(0, 1), time_at(40, 1)};
+    config = common_practice_key_regions_config_default(test_materials());
     config.phrase_boundaries = outside;
     config.phrase_boundary_count = 2;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) == COMMON_PRACTICE_KEY_REGIONS_OK);
@@ -864,24 +836,25 @@ static void test_edges_snap_to_a_nearby_phrase_boundary(void) {
     config.phrase_boundaries = NULL;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    const MusicalTime *missing[1] = {NULL};
+    MusicalTime negative;
+    assert(musical_time_make(-1, 1, &negative) == MUSICAL_TIME_OK);
+    const MusicalTime missing[1] = {negative};
     config.phrase_boundaries = missing;
     config.phrase_boundary_count = 1;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_an_edge_at_a_key_signature_does_not_snap(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 8);
-    CommonPracticeKeySignatureEvent events[2] = {make_event(&piece, 0, 1, 0), make_event(&piece, 8, 1, 1)};
-    const MusicalTime *list[1] = {time_at(&piece, 9, 1)};
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    CommonPracticeKeySignatureEvent events[2] = {make_event(0, 1, 0), make_event(8, 1, 1)};
+    const MusicalTime list[1] = {time_at(9, 1)};
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
     config.phrase_boundaries = list;
     config.phrase_boundary_count = 1;
     CommonPracticeKeyRegions regions = {0};
@@ -889,7 +862,6 @@ static void test_an_edge_at_a_key_signature_does_not_snap(void) {
     assert(regions.region_count == 2 && regions.regions[1].first_measure == 9);
     assert(regions.regions[1].source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
@@ -907,7 +879,7 @@ static void g_leaning_diatonic_weights(double out[12]) {
 
 static void test_a_passage_of_iv_v_and_ii_keeps_the_home_key(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     double passage[12];
@@ -919,7 +891,7 @@ static void test_a_passage_of_iv_v_and_ii_keeps_the_home_key(void) {
 
     /* without chord data the profile follows the passage into the dominant key */
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count > 1);
     common_practice_key_regions_destroy(&regions);
 
@@ -929,14 +901,14 @@ static void test_a_passage_of_iv_v_and_ii_keeps_the_home_key(void) {
         int root = roots[i % 3];
         set_chord(&piece, i, root, triad_mask(root, root == 7 || root == 5 ? 4 : 3, 7));
     }
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert_gap_free(&regions, 1, 22);
     assert(regions.region_count == 1 && regions.regions[0].key_index == 0);
     common_practice_key_regions_destroy(&regions);
 
     /* a chord off IV, V and ii (vi) lets the switch stand */
     set_chord(&piece, 10, 9, triad_mask(9, 3, 7));
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count > 1);
     common_practice_key_regions_destroy(&regions);
 
@@ -946,12 +918,12 @@ static void test_a_passage_of_iv_v_and_ii_keeps_the_home_key(void) {
         piece.items[i].weights.pitch_class[6] = 1.0;
         piece.items[i].weights.total += 1.0;
     }
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count > 1);
     common_practice_key_regions_destroy(&regions);
 
     /* a tolerance wide enough to forgive that pitch holds the key again */
-    CommonPracticeKeyRegionsConfig lax = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig lax = common_practice_key_regions_config_default(test_materials());
     lax.hold_tolerance = 0.5;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &lax, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 1);
@@ -959,7 +931,6 @@ static void test_a_passage_of_iv_v_and_ii_keeps_the_home_key(void) {
     lax.hold_tolerance = -1.0;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &lax, &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
@@ -981,7 +952,7 @@ static CommonPracticeKeyPhrase phrase_of(int first, int last, unsigned cadence_k
 }
 
 static CommonPracticeKeyRegionsConfig phrase_config(const CommonPracticeKeyPhrase *phrases, size_t count) {
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
     config.phrases = phrases;
     config.phrase_count = count;
     return config;
@@ -995,17 +966,17 @@ static void assert_region(const CommonPracticeKeyRegions *regions, size_t index,
 
 static void test_no_phrases_gives_the_window_regions(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 8);
     CommonPracticeKeyRegions plain = {0};
     CommonPracticeKeyRegions same = {0};
-    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &plain) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, default_config(), &plain) == COMMON_PRACTICE_KEY_REGIONS_OK);
     /* a phrase list with a count of 0 and a repeat list with a count of 0 change nothing */
     CommonPracticeKeyPhrase unused = phrase_of(1, 16, G_BIT, 0, false);
     CommonPracticeKeyRepeat unused_repeat = {1, 9, 8};
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
     assert(config.phrases == NULL && config.phrase_count == 0 && config.repeats == NULL && config.repeat_count == 0);
     config.phrases = &unused;
     config.repeats = &unused_repeat;
@@ -1019,13 +990,12 @@ static void test_no_phrases_gives_the_window_regions(void) {
     assert(!plain.changes[0].at_arrival && !same.changes[0].at_arrival);
     common_practice_key_regions_destroy(&plain);
     common_practice_key_regions_destroy(&same);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_key_changes_only_when_a_phrase_cadences_in_it(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 16);
     add_run(&piece, &measure, 7, 8);
@@ -1059,13 +1029,12 @@ static void test_a_key_changes_only_when_a_phrase_cadences_in_it(void) {
     assert_region(&regions, 0, 1, 16, 0); /* each phrase starts after the one before: 3-8 from 1, 10-16 from 9, 20-40 from 17 to 24 */
     assert_region(&regions, 1, 17, 24, 7);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_modulation_and_its_return_each_need_a_cadence(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 8);
@@ -1089,13 +1058,12 @@ static void test_a_modulation_and_its_return_each_need_a_cadence(void) {
     assert(regions.region_count == 1);
     assert_region(&regions, 0, 1, 24, 0);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_change_belongs_at_the_elided_arrival(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     add_run(&piece, &measure, 7, 8);
@@ -1111,10 +1079,9 @@ static void test_a_change_belongs_at_the_elided_arrival(void) {
     assert_region(&regions, 1, 8, 16, 7);
     assert(regions.changes[0].at_arrival);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
 
     /* the modulating phrase has G music and its cadence arrives in G: it stays C, the next phrase is G */
-    Piece five = {{{0}}, {0}, 0, 0};
+    Piece five = {{{0}}, 0};
     measure = 0;
     add_run(&five, &measure, 0, 12);
     add_run(&five, &measure, 7, 8);
@@ -1142,13 +1109,12 @@ static void test_a_change_belongs_at_the_elided_arrival(void) {
     assert_region(&regions, 1, 13, 20, 7);
     assert(!regions.changes[0].at_arrival);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&five);
     meter_map_destroy(map);
 }
 
 static void test_a_closing_cadence_frees_the_next_phrase(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 16);
     add_run(&piece, &measure, 7, 8);
@@ -1167,16 +1133,15 @@ static void test_a_closing_cadence_frees_the_next_phrase(void) {
     assert(regions.region_count == 1);
     assert_region(&regions, 0, 1, 24, 0);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_signature_restricts_the_first_phrase(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 16); /* C major notes under an F major signature */
-    CommonPracticeKeySignatureEvent one_flat = make_event(&piece, 0, 1, -1);
+    CommonPracticeKeySignatureEvent one_flat = make_event(0, 1, -1);
     CommonPracticeKeyPhrase phrases[2] = {phrase_of(1, 3, 0, 0, false), phrase_of(4, 16, C_BIT, 0, false)};
     CommonPracticeKeyRegionsConfig config = phrase_config(phrases, 2);
     CommonPracticeKeyRegions regions = {0};
@@ -1192,7 +1157,7 @@ static void test_a_signature_restricts_the_first_phrase(void) {
     /* a signature that starts in the middle of a phrase splits it: the part before keeps no cadence data */
     CommonPracticeKeyPhrase whole[1] = {phrase_of(1, 16, C_BIT, 0, false)};
     config = phrase_config(whole, 1);
-    CommonPracticeKeySignatureEvent two_sharps = make_event(&piece, 8, 1, 2);
+    CommonPracticeKeySignatureEvent two_sharps = make_event(8, 1, 2);
     assert(key_regions_estimate(piece.items, piece.count, map, &two_sharps, 1, &config, &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_OK);
     assert_gap_free(&regions, 1, 16);
@@ -1200,13 +1165,12 @@ static void test_a_signature_restricts_the_first_phrase(void) {
     assert(regions.regions[1].first_measure == 9 && regions.regions[1].source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
     assert(regions.regions[1].key_index == 2 || regions.regions[1].key_index == 23); /* D major or B minor */
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_repeat_copies_its_keys(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     double flat[12];
     for (int pc = 0; pc < 12; pc++) {
@@ -1244,13 +1208,12 @@ static void test_a_repeat_copies_its_keys(void) {
     assert_region(&regions, 1, 9, 20, 7);
     assert_region(&regions, 2, 21, 24, 0);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
 static void test_a_repeat_does_not_copy_the_first_region_of_a_signature_span(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     double flat[12];
     for (int pc = 0; pc < 12; pc++) {
@@ -1260,7 +1223,7 @@ static void test_a_repeat_does_not_copy_the_first_region_of_a_signature_span(voi
     for (int i = 0; i < 8; i++) {
         add_measure(&piece, measure++, flat);
     }
-    CommonPracticeKeySignatureEvent one_flat = make_event(&piece, 0, 1, -1);
+    CommonPracticeKeySignatureEvent one_flat = make_event(0, 1, -1);
     CommonPracticeKeyPhrase phrases[3] = {phrase_of(1, 8, 0, 0, false), phrase_of(9, 16, C_BIT, 0, false),
                                           phrase_of(17, 24, 0, 0, false)};
     CommonPracticeKeyRepeat repeat = {1, 17, 8};
@@ -1275,7 +1238,6 @@ static void test_a_repeat_does_not_copy_the_first_region_of_a_signature_span(voi
     assert(regions.regions[0].last_measure == 8 && regions.regions[0].source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
     assert_region(&regions, 1, 9, 24, 0); /* measures 17 to 24 keep C: the signature's first region is not copied */
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 
@@ -1309,16 +1271,16 @@ static void test_cadence_keys_read_the_arrival(void) {
 
 static void test_bad_phrase_configs(void) {
     MeterMap *map = four_four();
-    Piece piece = {{{0}}, {0}, 0, 0};
+    Piece piece = {{{0}}, 0};
     long measure = 0;
     add_run(&piece, &measure, 0, 8);
     CommonPracticeKeyRegions regions = {0};
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default(test_materials());
 
     config.phrase_count = 1; /* a count with no list */
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
-    config = common_practice_key_regions_config_default();
+    config = common_practice_key_regions_config_default(test_materials());
     config.repeat_count = 1;
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) ==
            COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
@@ -1343,7 +1305,6 @@ static void test_bad_phrase_configs(void) {
     assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
     assert(regions.region_count == 1 && regions.regions[0].key_index == 0);
     common_practice_key_regions_destroy(&regions);
-    destroy_piece(&piece);
     meter_map_destroy(map);
 }
 

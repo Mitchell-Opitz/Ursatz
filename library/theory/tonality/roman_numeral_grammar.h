@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "theory/tonality/roman_numeral_rules.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/tonal_key.h"
 
 /*
@@ -90,13 +91,13 @@ bool standard_tonality_numeral_format_styled(const StandardTonalityNumeralText *
                                              StandardTonalityNumeralStyle style, char *buffer, size_t size);
 
 /*
- * The root's semitones above the tonic (0..11) in the mode. An applied numeral is resolved through its target:
- * the target's root in the mode, then the numeral's degree in the target's own scale (major for an uppercase
- * target, harmonic minor for a lowercase one). The alteration is added last. False (output untouched) for an
- * invalid value, an invalid mode, or NULL arguments.
+ * The root's semitones above the tonic (0..11) in the key's material. An applied numeral is resolved through its target: the target's
+ * root in the key's material, then the numeral's degree in the target's own scale (`materials`' major for an uppercase target, its
+ * harmonic minor for a lowercase one). The alteration is added last. False (output untouched) for an invalid value, a NULL argument,
+ * or a material without the degree.
  */
-bool standard_tonality_numeral_root_semitone(const StandardTonalityNumeralText *numeral, StandardTonalityMode mode,
-                                             int *semitones);
+bool standard_tonality_numeral_root_semitone_of(const StandardTonalityNumeralText *numeral, const PitchMaterial *key_material,
+                                                const CommonPracticeMaterials *materials, int *semitones);
 
 /*
  * The text of a plain numeral: root position, no alteration, no target. The major-major and major-minor sevenths

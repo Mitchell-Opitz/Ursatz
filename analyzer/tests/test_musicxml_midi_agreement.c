@@ -99,7 +99,7 @@ static void compare_keys(const cJSON *midi, const cJSON *xml) {
         const cJSON *a = cJSON_GetArrayItem(midi_regions, i);
         const cJSON *b = cJSON_GetArrayItem(xml_regions, i);
         assert(strcmp(string(a, "tonic"), string(b, "tonic")) == 0);
-        assert(strcmp(string(a, "mode"), string(b, "mode")) == 0);
+        assert(strcmp(string(a, "material"), string(b, "material")) == 0);
         assert(same(test_json_require(a, "measures"), test_json_require(b, "measures")));
     }
     const cJSON *midi_input = test_json_require(test_json_require(midi, "metadata"), "input");

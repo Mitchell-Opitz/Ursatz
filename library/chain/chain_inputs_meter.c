@@ -6,35 +6,12 @@
 
 /* --- the meter input --- */
 
-static const MusicalTime *meter_time(ChainMeterInput *build, const MusicalTime *time) {
-    if (build->time_count == build->time_capacity) {
-        size_t capacity = build->time_capacity == 0 ? 128 : build->time_capacity * 2;
-        MusicalTime **grown = realloc(build->times, capacity * sizeof(MusicalTime *));
-        if (grown == NULL) {
-            return NULL;
-        }
-        build->times = grown;
-        build->time_capacity = capacity;
-    }
-    MusicalTime *copy = NULL;
-    if (musical_time_create(musical_time_numerator(time), musical_time_denominator(time), &copy) != MUSICAL_TIME_OK) {
-        return NULL;
-    }
-    build->times[build->time_count++] = copy;
-    return copy;
-}
-
 void chain_meter_input_destroy(ChainMeterInput *input) {
     if (input == NULL) {
         return;
     }
     standard_meter_input_destroy(&input->input);
-    for (size_t i = 0; i < input->time_count; i++) {
-        musical_time_destroy(input->times[i]);
-    }
     free(input->notes);
-    chain_release_spans(input->spans, input->span_count);
-    free(input->times);
     memset(input, 0, sizeof(*input));
 }
 
@@ -97,7 +74,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
     }
     for (size_t i = 0; i < notes->count && status == CHAIN_INPUT_OK; i++) {
         AnalysisNote note = notes->notes[i];
-        int measure = chain_measure_of(notes->map, time_span_start(note.span));
+        int measure = chain_measure_of(notes->map, &note.span.start);
         if (measure < first_measure || measure > last_measure) {
             continue;
         }
@@ -119,33 +96,22 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
         if (chord_labels[s] == NULL || chord_labels[s - 1] == NULL || strcmp(chord_labels[s], chord_labels[s - 1]) == 0) {
             continue;
         }
-        const MusicalTime *start = time_span_start(sonority_time_window(segments->sonorities.items[s].sonority));
+        const MusicalTime *start = &sonority_time_window(segments->sonorities.items[s].sonority)->start;
         int measure = chain_measure_of(notes->map, start);
         if (measure < first_measure || measure > last_measure) {
             continue;
         }
         char id[48];
         snprintf(id, sizeof(id), "chord-change-%zu", s);
-        const MusicalTime *kept = meter_time(&build, start);
-        if (kept == NULL || standard_meter_input_add_chord_change(&build.input, id, kept) != STANDARD_METER_ANALYSIS_OK) {
-            status = kept == NULL ? CHAIN_INPUT_ERR_ALLOC : CHAIN_INPUT_ERR_BAD_NOTES;
+        if (standard_meter_input_add_chord_change(&build.input, id, *start) != STANDARD_METER_ANALYSIS_OK) {
+            status = CHAIN_INPUT_ERR_BAD_NOTES;
         }
     }
     for (size_t i = 0; phrases != NULL && form != NULL && i < phrases->count && status == CHAIN_INPUT_OK; i++) {
         const StandardFormPhrase *phrase = &phrases->items[i];
-        const TimeSpan *span = chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, time_span_start(phrase->span), time_span_end(phrase->span));
         const TimeSpan *arrival = NULL;
-        if (span == NULL) {
-            status = CHAIN_INPUT_ERR_ALLOC;
-            break;
-        }
         if (phrase->claim.cadence_index >= 0) {
-            const TimeSpan *chord = form->cadences[phrase->claim.cadence_index].arrival;
-            arrival = chain_keep_span(&build.spans, &build.span_count, &build.span_capacity, time_span_start(chord), time_span_end(chord));
-            if (arrival == NULL) {
-                status = CHAIN_INPUT_ERR_ALLOC;
-                break;
-            }
+            arrival = &form->cadences[phrase->claim.cadence_index].arrival;
         }
         StandardMeterExpansionKind expansion = STANDARD_METER_EXPANSION_NONE;
         int measures = 0;
@@ -159,7 +125,7 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
         }
         char id[32];
         snprintf(id, sizeof(id), "phrase-%zu", i);
-        if (standard_meter_input_add_phrase(&build.input, id, span, arrival, expansion, measures, false) !=
+        if (standard_meter_input_add_phrase(&build.input, id, phrase->span, arrival, expansion, measures, false) !=
             STANDARD_METER_ANALYSIS_OK) {
             status = CHAIN_INPUT_ERR_BAD_NOTES;
         }

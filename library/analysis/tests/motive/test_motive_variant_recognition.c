@@ -4,6 +4,7 @@
 
 #include "analysis/motive/motive_variant_recognition.h"
 #include "theory/vocabulary/non_chord_tone.h"
+#include "test_knowledge.h"
 
 /*
  * Analysis-regression tests for the variant recognizer. Each relation is applied to a fixture, the
@@ -28,6 +29,7 @@ static MotiveSketch base(void) {
     }
     sketch.note_count = 6;
     sketch.has_scale = true;
+    sketch.material = test_materials()->major;
     sketch.bar = q(1, 1);
     sketch.beat = q(1, 4);
     sketch.pickup = q(0, 1);
@@ -621,7 +623,7 @@ static MotiveSketch d_minor_with_pickup(void) {
     }
     sketch.note_count = 5;
     sketch.tonic_pc = 2;
-    sketch.minor = true;
+    sketch.material = test_materials()->natural_minor;
     sketch.pickup = q(1, 4);
     sketch.length = at;
     sketch.feature_count = 0;

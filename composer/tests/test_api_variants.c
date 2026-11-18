@@ -9,6 +9,7 @@
 
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
 #error "COMPOSER_SNAPSHOT_DIR is not defined"
@@ -98,9 +99,9 @@ static void test_operations(void) {
 static void test_variants(void) {
     ComposerResponse response;
     const char *const gui = "{\"functions\":[\"beginning\",\"continuation\"],\"distance\":\"medium\",\"count\":4,\"seed\":3,"
-                            "\"api_version\":1}";
+                            "\"api_version\":2}";
     char *request = variants_basic_request(gui);
-    assert(composer_api_variants(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_variants(test_context(), request, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "variants-basic.stdout.json");
     write_pair("variants", "basic", request, &response);
     composer_response_destroy(&response);
@@ -110,7 +111,7 @@ static void test_variants(void) {
     cJSON *each = input_object(COMPOSER_FIXTURE_DIR "/motive_d_minor.json", "json");
     assert(cJSON_AddTrueToObject(each, "each_op") && cJSON_AddNumberToObject(each, "seed", 1));
     request = print(each);
-    assert(composer_api_variants(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_variants(test_context(), request, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "variants-each-op.stdout.json");
     write_pair("variants", "each_op", request, &response);
     composer_response_destroy(&response);
@@ -125,7 +126,7 @@ static void test_variants(void) {
     assert(cJSON_AddItemToObject(steps, "steps", cJSON_Parse("[{\"op\":\"invert\",\"params\":{\"tonal\":true}},"
                                                              "{\"op\":\"augment\",\"params\":{\"ratio\":\"2:1\"}}]")));
     request = print(chain);
-    assert(composer_api_variants(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_variants(test_context(), request, NULL, &response) == COMPOSER_OK);
     cJSON *document = cJSON_Parse(response.json);
     const cJSON *variants = cJSON_GetObjectItemCaseSensitive(document, "variants");
     assert(cJSON_GetArraySize(variants) == 2);
@@ -137,14 +138,14 @@ static void test_variants(void) {
 
     /* The same request gives the same variants, and the exact figures are asked for. */
     ComposerResponse again;
-    assert(composer_api_variants(request, NULL, &response) == COMPOSER_OK);
-    assert(composer_api_variants(request, NULL, &again) == COMPOSER_OK);
+    assert(composer_api_variants(test_context(), request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_variants(test_context(), request, NULL, &again) == COMPOSER_OK);
     assert(strcmp(response.json, again.json) == 0);
     composer_response_destroy(&response);
     composer_response_destroy(&again);
     free(request);
     request = variants_basic_request("{\"count\":1,\"seed\":3,\"detail\":true}");
-    assert(composer_api_variants(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_variants(test_context(), request, NULL, &response) == COMPOSER_OK);
     assert(strstr(response.json, "\"remoteness_fraction\"") && strstr(response.json, "\"leaves_harmony\""));
     composer_response_destroy(&response);
     free(request);
@@ -158,7 +159,7 @@ static void test_recognize(void) {
     assert(cJSON_AddStringToObject(request, "meter", "4/4") && cJSON_AddStringToObject(request, "key", "C major") &&
            cJSON_AddNumberToObject(request, "pickup", 0));
     char *text = print(request);
-    assert(composer_api_recognize(text, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_recognize(test_context(), text, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "recognize.stdout.json");
     write_pair("recognize", "gui", text, &response);
     composer_response_destroy(&response);
@@ -167,21 +168,21 @@ static void test_recognize(void) {
     cJSON *bad = cJSON_Parse(text);
     cJSON_DeleteItemFromObjectCaseSensitive(bad, "meter");
     char *without = print(bad);
-    assert(composer_api_recognize(without, NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_recognize(test_context(), without, NULL, &response) == COMPOSER_ERR_REQUEST);
     assert(strcmp(response.error.path, "/meter") == 0);
     composer_response_destroy(&response);
     free(without);
     bad = cJSON_Parse(text);
     cJSON_ReplaceItemInObjectCaseSensitive(bad, "meter", cJSON_CreateString("5/3"));
     without = print(bad);
-    assert(composer_api_recognize(without, NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_recognize(test_context(), without, NULL, &response) == COMPOSER_ERR_REQUEST);
     assert(strcmp(response.error.path, "/meter") == 0);
     composer_response_destroy(&response);
     free(without);
     bad = cJSON_Parse(text);
     cJSON_AddItemToObject(bad, "target_pickup", cJSON_CreateString("x"));
     without = print(bad);
-    assert(composer_api_recognize(without, NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_recognize(test_context(), without, NULL, &response) == COMPOSER_ERR_REQUEST);
     assert(strcmp(response.error.path, "/target_pickup") == 0);
     composer_response_destroy(&response);
     free(without);
@@ -208,7 +209,7 @@ static void test_random(void) {
     ComposerResponse response;
     char *request = print(cJSON_Parse("{\"mode\":\"major\",\"meter\":\"4/4\",\"key\":\"C major\",\"form\":\"full\","
                                       "\"role\":\"accompaniment\",\"strategy\":\"drawn\",\"count\":2,\"seed\":5}"));
-    assert(composer_api_random_motive(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_random_motive(test_context(), request, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "random-motive-style.stdout.json");
     assert(!strstr(response.json, "\"drawn\""));
     write_pair("random_motive", "gui", request, &response);
@@ -216,7 +217,7 @@ static void test_random(void) {
     free(request);
 
     request = print(cJSON_Parse("{\"mode\":\"minor\",\"meter\":\"3/4\",\"strategy\":\"drawn\",\"count\":3,\"seed\":1}"));
-    assert(composer_api_random_motive(request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_random_motive(test_context(), request, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "random-motive.stdout.json");
     composer_response_destroy(&response);
     free(request);
@@ -231,15 +232,15 @@ static void test_random(void) {
 
         char text[160];
         snprintf(text, sizeof text, "{\"mode\":\"random\",\"meter\":\"random\",\"strategy\":\"drawn\",\"seed\":%lu}", DRAWS[i].seed);
-        assert(composer_api_random_motive(text, NULL, &response) == COMPOSER_OK);
+        assert(composer_api_random_motive(test_context(), text, NULL, &response) == COMPOSER_OK);
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *drawn = cJSON_GetObjectItemCaseSensitive(document, "drawn");
-        assert(drawn && strcmp(cJSON_GetObjectItemCaseSensitive(drawn, "mode")->valuestring, DRAWS[i].mode) == 0);
+        assert(drawn && strstr(cJSON_GetObjectItemCaseSensitive(drawn, "material")->valuestring, DRAWS[i].mode));
         assert(strcmp(cJSON_GetObjectItemCaseSensitive(drawn, "meter")->valuestring, DRAWS[i].meter) == 0);
         /* The motive is in the mode and the meter drawn. */
         const cJSON *motive = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "motives"), 0), "motive");
         const cJSON *key = cJSON_GetObjectItemCaseSensitive(motive, "key");
-        assert(strcmp(cJSON_GetObjectItemCaseSensitive(key, "mode")->valuestring, DRAWS[i].mode) == 0);
+        assert(strstr(cJSON_GetObjectItemCaseSensitive(key, "material")->valuestring, DRAWS[i].mode));
         assert(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(motive, "meter"), "beats_per_bar")->valueint ==
                atoi(DRAWS[i].meter));
         if (i == 0) {
@@ -251,22 +252,22 @@ static void test_random(void) {
 
     /* Only what was left to chance is reported, and the same seed draws the same motives. */
     ComposerResponse again;
-    assert(composer_api_random_motive("{\"mode\":\"random\",\"meter\":\"4/4\",\"seed\":1}", NULL, &response) == COMPOSER_OK);
-    assert(composer_api_random_motive("{\"mode\":\"random\",\"meter\":\"4/4\",\"seed\":1}", NULL, &again) == COMPOSER_OK);
+    assert(composer_api_random_motive(test_context(), "{\"mode\":\"random\",\"meter\":\"4/4\",\"seed\":1}", NULL, &response) == COMPOSER_OK);
+    assert(composer_api_random_motive(test_context(), "{\"mode\":\"random\",\"meter\":\"4/4\",\"seed\":1}", NULL, &again) == COMPOSER_OK);
     assert(strcmp(response.json, again.json) == 0);
     cJSON *only = cJSON_Parse(response.json);
     const cJSON *drawn_only = cJSON_GetObjectItemCaseSensitive(only, "drawn");
-    assert(drawn_only && cJSON_GetObjectItemCaseSensitive(drawn_only, "mode") && !cJSON_GetObjectItemCaseSensitive(drawn_only, "meter"));
+    assert(drawn_only && cJSON_GetObjectItemCaseSensitive(drawn_only, "material") && !cJSON_GetObjectItemCaseSensitive(drawn_only, "meter"));
     cJSON_Delete(only);
     composer_response_destroy(&response);
     composer_response_destroy(&again);
 }
 
 /* A request that is refused names the member at fault. */
-static void expect_refused(ComposerStatus (*entry)(const char *, const ComposerJob *, ComposerResponse *), const char *request,
+static void expect_refused(ComposerStatus (*entry)(const ComposerContext *, const char *, const ComposerJob *, ComposerResponse *), const char *request,
                            ComposerStatus status, const char *path) {
     ComposerResponse response;
-    ComposerStatus got = entry(request, NULL, &response);
+    ComposerStatus got = entry(test_context(), request, NULL, &response);
     if (got != status || strcmp(response.error.path, path) != 0) {
         fprintf(stderr, "%s: status %d path '%s' message '%s'\n", request, got, response.error.path, response.error.message);
     }
@@ -285,7 +286,7 @@ static void test_random_strategy(void) {
     char *documents[3];
     for (size_t r = 0; r < 3; r++) {
         ComposerResponse response;
-        assert(composer_api_random_motive(REQUESTS[r], NULL, &response) == COMPOSER_OK);
+        assert(composer_api_random_motive(test_context(), REQUESTS[r], NULL, &response) == COMPOSER_OK);
         documents[r] = strdup(response.json);
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *motives = cJSON_GetObjectItemCaseSensitive(document, "motives");
@@ -323,8 +324,8 @@ static void test_random_preferences(void) {
     ComposerResponse plain;
     ComposerResponse empty;
     ComposerResponse set;
-    assert(composer_api_random_motive("{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":4,\"seed\":3}", NULL, &plain) == COMPOSER_OK);
-    assert(composer_api_random_motive("{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":4,\"seed\":3,\"preferences\":{}}", NULL,
+    assert(composer_api_random_motive(test_context(), "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":4,\"seed\":3}", NULL, &plain) == COMPOSER_OK);
+    assert(composer_api_random_motive(test_context(), "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":4,\"seed\":3,\"preferences\":{}}", NULL,
                                       &empty) == COMPOSER_OK);
     cJSON *plain_document = cJSON_Parse(plain.json);
     cJSON *empty_document = cJSON_Parse(empty.json);
@@ -338,7 +339,7 @@ static void test_random_preferences(void) {
 
     const char *request = "{\"mode\":\"major\",\"meter\":\"4/4\",\"count\":4,\"seed\":3,"
                           "\"preferences\":{\"motif\":{\"bars\":{\"one\":0,\"two\":1}},\"melody\":{\"keep\":2}}}";
-    assert(composer_api_random_motive(request, NULL, &set) == COMPOSER_OK);
+    assert(composer_api_random_motive(test_context(), request, NULL, &set) == COMPOSER_OK);
     write_pair("random_motive", "preferences", request, &set);
     cJSON *document = cJSON_Parse(set.json);
     assert(document);
@@ -359,9 +360,9 @@ static void test_random_preferences(void) {
     /* The drawn strategy does not read the motif group. */
     ComposerResponse drawn;
     ComposerResponse drawn_set;
-    assert(composer_api_random_motive("{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"drawn\",\"count\":4,\"seed\":3}", NULL,
+    assert(composer_api_random_motive(test_context(), "{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"drawn\",\"count\":4,\"seed\":3}", NULL,
                                       &drawn) == COMPOSER_OK);
-    assert(composer_api_random_motive("{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"drawn\",\"count\":4,\"seed\":3,"
+    assert(composer_api_random_motive(test_context(), "{\"mode\":\"major\",\"meter\":\"4/4\",\"strategy\":\"drawn\",\"count\":4,\"seed\":3,"
                                       "\"preferences\":{\"motif\":{\"bars\":{\"one\":0,\"two\":1}}}}",
                                       NULL, &drawn_set) == COMPOSER_OK);
     cJSON *drawn_document = cJSON_Parse(drawn.json);
@@ -463,10 +464,10 @@ static void test_cancel(void) {
     /* Progress once for each variant tried; a run that is not cancelled gives the response it gives with no job. */
     Job counting = {0, 0, 0, false, ""};
     ComposerJob job = {progress, cancelled, &counting};
-    assert(composer_api_variants(request, &job, &response) == COMPOSER_OK);
+    assert(composer_api_variants(test_context(), request, &job, &response) == COMPOSER_OK);
     assert(strcmp(counting.stage, "variants") == 0 && counting.steps >= 4 && !counting.decreased);
     ComposerResponse plain;
-    assert(composer_api_variants(request, NULL, &plain) == COMPOSER_OK);
+    assert(composer_api_variants(test_context(), request, NULL, &plain) == COMPOSER_OK);
     assert(strcmp(response.json, plain.json) == 0);
     composer_response_destroy(&response);
     composer_response_destroy(&plain);
@@ -474,7 +475,7 @@ static void test_cancel(void) {
     /* A cancel at the third variant stops there: no response, only the error. */
     Job stopping = {0, 3, 0, false, ""};
     job.user = &stopping;
-    assert(composer_api_variants(request, &job, &response) == COMPOSER_ERR_CANCELLED);
+    assert(composer_api_variants(test_context(), request, &job, &response) == COMPOSER_ERR_CANCELLED);
     assert(!response.json && response.error.message[0] != '\0');
     assert(stopping.steps == 3 && strcmp(stopping.stage, "variants") == 0);
     composer_response_destroy(&response);
@@ -486,13 +487,13 @@ static void test_cancel(void) {
     request = print(each);
     Job first = {0, 1, 0, false, ""};
     job.user = &first;
-    assert(composer_api_variants(request, &job, &response) == COMPOSER_ERR_CANCELLED);
+    assert(composer_api_variants(test_context(), request, &job, &response) == COMPOSER_ERR_CANCELLED);
     composer_response_destroy(&response);
     free(request);
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.25") == 0);
+    assert(strcmp(composer_api_version(), "2.0") == 0);
     test_operations();
     test_variants();
     test_recognize();

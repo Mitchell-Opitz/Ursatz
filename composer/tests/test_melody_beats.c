@@ -14,6 +14,7 @@
 
 #include "accompaniment_check.h"
 #include "support/test_oracles.h"
+#include "support/test_knowledge.h"
 
 /*
  * Melody, accompaniment and voicing over spans that start and end on any beat, and melody pickups (R-168). Everything
@@ -57,7 +58,7 @@ static Rational beats(long count) {
 }
 
 static AnalysisKey c_major(void) {
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+    AnalysisKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     return key;
 }
 
@@ -127,6 +128,7 @@ static NodeId add_melody_motive(Piece *piece) {
     NodeId source;
     PlanSpan material = {beats(40), beats(4)};
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -400,11 +402,15 @@ static void test_pickup_at_start(void) {
     assert(fill_seeds(chords, 4, span, 8, check_pickup_melody) > 0);
 }
 
-/* A pickup is a multiple of 1/32 of a whole note, and not a bar or more of the longest meter. */
+/* A pickup is on the meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division), and not a
+   bar or more of the longest meter. */
 static void test_pickup_constraint(void) {
-    static const long NUM[4] = {1, 1, 0, 3};
-    static const unsigned long DEN[4] = {3, 64, 4, 2};
-    static const PlanResult EXPECTED[4] = {PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD, PLAN_OK};
+    /* 1/3 is four triplet eighths, 1/6 a triplet of the beat, 1/12 a triplet of the division; 1/24 and 1/48 are on no level */
+    static const long NUM[9] = {1, 1, 0, 3, 1, 1, 1, 1, 5};
+    static const unsigned long DEN[9] = {3, 64, 4, 2, 6, 12, 24, 48, 32};
+    static const PlanResult EXPECTED[9] = {PLAN_OK,          PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD,
+                                           PLAN_OK,          PLAN_OK,              PLAN_OK,
+                                           PLAN_ERR_BAD_PAYLOAD, PLAN_ERR_BAD_PAYLOAD, PLAN_OK};
     Piece piece = build(PICKUP_CHORDS, 5, false);
     NodeId motive = add_melody_motive(&piece);
     PlanSpan span = {beats(3), beats(9)};
@@ -412,7 +418,7 @@ static void test_pickup_constraint(void) {
     memset(&pickup, 0, sizeof(pickup));
     pickup.kind = PLAN_CONSTRAINT_PICKUP;
     add_melody_target(&piece, span, motive, 0);
-    for (size_t i = 0; i < 4; i++) {
+    for (size_t i = 0; i < 9; i++) {
         pickup.params.pickup.num = NUM[i];
         pickup.params.pickup.den = DEN[i];
         assert(plan_lane_span_add_constraint(piece.plan, piece.target, &pickup) == EXPECTED[i]);
@@ -442,7 +448,7 @@ static void test_pickup_json(void) {
     char *text = plan_to_json(piece.plan, &error);
     assert(text && strstr(text, "\"kind\": \"pickup\"") && strstr(text, "\"length\": \"1/4\""));
     PiecePlan *parsed = NULL;
-    assert(plan_from_json(text, &parsed, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, &parsed, &error) == PLAN_OK);
     char *again = plan_to_json(parsed, &error);
     assert(again && strcmp(text, again) == 0);
     LaneSpanId melody;
@@ -462,7 +468,7 @@ static void test_pickup_json(void) {
     assert(at);
     at[12] = 'x';
     PiecePlan *rejected = NULL;
-    assert(plan_from_json(broken, &rejected, &error) != PLAN_OK && rejected == NULL);
+    assert(plan_from_json(test_knowledge(), broken, &rejected, &error) != PLAN_OK && rejected == NULL);
     free(broken);
     free(again);
     free(text);
@@ -479,7 +485,9 @@ static FillOutcome accompany(PiecePlan *plan, unsigned long seed) {
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = accompaniment_checker;
-    assert(registry && accompaniment_register(registry, NULL) == FILL_OK);
+    AccompanimentParams params = accompaniment_params_default();
+    params.knowledge = test_knowledge();
+    assert(registry && accompaniment_register(registry, &params) == FILL_OK);
     assert(fill_run(plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;

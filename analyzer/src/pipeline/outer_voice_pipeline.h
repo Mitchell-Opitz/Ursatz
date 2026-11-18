@@ -9,6 +9,7 @@
 
 #include "pipeline/chord_pipeline.h"
 #include "analysis/voices/outer_voice.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "pipeline/segmentation.h"
 
 /*
@@ -33,6 +34,6 @@
  */
 bool collect_outer_voices(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
                           const ChordEstimate *chords, const AnalysisKeyRegion *regions, const OuterVoiceLines *lines,
-                          AnalysisReport *report);
+                          const CommonPracticeMaterials *materials, AnalysisReport *report);
 
 #endif

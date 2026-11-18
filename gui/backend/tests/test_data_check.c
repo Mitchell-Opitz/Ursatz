@@ -183,6 +183,46 @@ static void test_tonics(void) {
   check_quiet(run(message, sizeof(message)), "the store passes once the three are removed");
 }
 
+/* A motif item whose one version has the given body text for its motif object. */
+static void make_motif_body(const char *id, const char *motif_text) {
+  char path[256];
+  char text[512];
+  snprintf(path, sizeof(path), "materials/items/%s", id);
+  make_dirs(path);
+  snprintf(path, sizeof(path), "materials/items/%s/v1.json", id);
+  snprintf(text, sizeof(text), "{\"uses\":[],\"motif\":%s}", motif_text);
+  write_file(path, text);
+  snprintf(path, sizeof(path), "materials/items/%s/item.json", id);
+  snprintf(text, sizeof(text), "{\"id\":\"%s\",\"type\":\"motif\",\"current_version\":1}", id);
+  write_file(path, text);
+}
+
+/* A motif that names its material is on C (its key text is gone), the old key text "C major" or "C minor" passes, and an old
+   key text on another tonic is still refused (R-597). */
+static void test_materials(void) {
+  printf("-- motifs with materials\n");
+  reset_case();
+  make_dirs("materials");
+  make_store_markers(3);
+  make_motif_body("mot-material", "{\"material\":\"omt.material.natural-minor\"}");
+  make_motif_body("mot-material-major", "{\"material\":\"omt.material.major\"}");
+  make_motif_body("mot-old-minor", "{\"key\":\"C minor\"}");
+  make_motif_body("mot-old-major", "{\"key\":\"C major\"}");
+  make_motif_body("mot-material-and-key", "{\"material\":\"omt.material.major\",\"key\":\"D minor\"}");
+  char message[4096];
+  check_quiet(run(message, sizeof(message)) && message[0] == '\0',
+        "motifs with a material, with the old key text C major or C minor, and with both pass");
+  check_quiet(exists(".pre-overhaul-checked"), "a store of such motifs gets the marker");
+
+  reset_case();
+  make_dirs("materials");
+  make_store_markers(3);
+  make_motif_body("mot-material", "{\"material\":\"omt.material.major\"}");
+  make_motif_body("mot-old-d", "{\"key\":\"D minor\"}");
+  check_quiet(!run(message, sizeof(message)), "an old key on another tonic is refused beside a motif with a material");
+  check_quiet(has(message, "mot-old-d") && !has(message, "mot-material"), "only the old key on another tonic is named");
+}
+
 static void test_marker_wins(void) {
   printf("-- a checked folder\n");
   reset_case();
@@ -201,6 +241,7 @@ int main(void) {
   test_corpus_db();
   test_store_markers();
   test_tonics();
+  test_materials();
   test_marker_wins();
   reset_case();
 #ifdef _WIN32

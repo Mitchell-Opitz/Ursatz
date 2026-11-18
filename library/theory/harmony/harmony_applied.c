@@ -20,10 +20,6 @@ static const struct {
     {7, STANDARD_TONALITY_NUMERAL_HALF_DIMINISHED_SEVENTH},
 };
 
-static StandardTonalityMode tonality_mode(HarmonyMode mode) {
-    return mode == HARMONY_MODE_MAJOR ? STANDARD_TONALITY_MODE_MAJOR : STANDARD_TONALITY_MODE_NATURAL_MINOR;
-}
-
 bool harmony_applied_quality_valid(HarmonyAppliedQuality quality) {
     return quality >= 0 && quality < HARMONY_APPLIED_QUALITY_COUNT;
 }
@@ -103,7 +99,9 @@ int harmony_applied_scale_semitone(HarmonyMode mode, int degree) {
     if (!harmony_mode_valid(mode) || degree < 1 || degree > 7) {
         return -1;
     }
-    return standard_tonality_degree_semitone(tonality_mode(mode), degree);
+    /* The major scale is the natural notes C D E F G A B; the minor key is its natural minor, the third, sixth and seventh a semitone down. */
+    int lowered = mode == HARMONY_MODE_MINOR && (degree == 3 || degree == 6 || degree == 7) ? 1 : 0;
+    return standard_tonality_natural_degree_semitone(degree) - lowered;
 }
 
 int harmony_applied_root_degree(HarmonyMode mode, const HarmonyAppliedChord *chord) {

@@ -3,6 +3,9 @@
 
 #include <stddef.h>
 
+#include <theory/harmony/harmony_chord.h>
+#include <theory/knowledge/knowledge_snapshot.h>
+
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece_plan.h>
 
@@ -56,10 +59,11 @@ const char *corpus_seed_result_name(CorpusSeedResult result);
  * requested key, the key of the source being the key its analysis heard at the passage. A match with fewer than two
  * notes in the bar is passed over for the next.
  *
- * out is untouched on any result but CORPUS_SEED_OK.
+ * knowledge is the snapshot the passage and the corpus documents are read with (the call context's); CORPUS_SEED_ERR_ARGUMENT for
+ * NULL. out is untouched on any result but CORPUS_SEED_OK.
  */
-CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *passage_path, const PlanMeter *meter,
-                                    const AnalysisKey *key, unsigned long seed, CorpusSeed *out);
+CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir, const char *passage_path,
+                                    const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out);
 
 /*
  * The chords of the passage of the corpus that best matches the numerals in text (separated by spaces or '-', as the
@@ -68,7 +72,7 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
  * is the best match (the best hundred are looked through) whose every chord the plan can place under a key of mode.
  * There is no seed: the best match is the first the Analyzer ranks. out->motive is not set.
  */
-CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const char *numerals_text, KeyStructureMode mode,
-                                         CorpusSeed *out);
+CorpusSeedResult corpus_seed_progression(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir,
+                                         const char *numerals_text, HarmonyMode mode, CorpusSeed *out);
 
 #endif

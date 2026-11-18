@@ -22,8 +22,8 @@ ChainInputStatus chain_build_key_segments(const ChainSegments *segments, size_t 
     }
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
-        built[s].start = time_span_start(window);
-        built[s].end = time_span_end(window);
+        built[s].start = window->start;
+        built[s].end = window->end;
         built[s].source = &segments->segments[s];
         if (common_practice_weight_segment(segments->segments[s].members, segments->segments[s].member_count, &evidence,
                                            &built[s].weights, NULL) != COMMON_PRACTICE_WEIGHTED_OK) {

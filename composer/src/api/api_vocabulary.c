@@ -25,8 +25,6 @@
 
 /* --- the tables ------------------------------------------------------------------------------------------ */
 
-const ApiChoice API_MODES[] = {{"major", "Major"}, {"minor", "Minor"}, {NULL, NULL}};
-const ApiChoice API_PIECE_MODES[] = {{"major", "Major"}, {"minor", "Minor"}, {"style", "From the brief"}, {NULL, NULL}};
 const ApiChoice API_METERS[] = {{"2/4", "2/4"}, {"3/4", "3/4"}, {"4/4", "4/4"}, {"6/8", "6/8"}, {NULL, NULL}};
 const ApiChoice API_FUNCTIONS[] = {{"beginning", "Beginning"},
                                    {"continuation", "Continuation"},
@@ -43,8 +41,8 @@ const ApiChoice API_ACCOMPANIMENT_PATTERNS[] = {{"any", "Any pattern"},       {"
                                                 {"oom-pah", "Oom-pah"},       {"motive", "From a motive"},
                                                 {NULL, NULL}};
 const ApiChoice API_PIECE_INTOS[] = {{"sentence", "Sentence"}, {"period", "Period"}, {"hybrid", "Hybrid"}, {NULL, NULL}};
-/* The pickups an application offers, in beats of the meter: a pickup is also accepted when it is any other multiple of 1/32
-   of a whole note shorter than a bar. */
+/* The pickups an application offers, in beats of the meter: a pickup is also accepted when it is any other length on the
+   meter's grid (a multiple of 1/32 of a whole note, or a triplet of the beat or the division) shorter than a bar. */
 const ApiChoice API_PICKUPS[] = {{"0", "0"},   {"1/4", "1/4"}, {"1/2", "1/2"}, {"1", "1"},
                                  {"3/2", "3/2"}, {"2", "2"},   {"3", "3"},     {NULL, NULL}};
 
@@ -80,15 +78,6 @@ size_t api_choice_count(const ApiChoice *table) {
 int api_choice_find(const ApiChoice *table, const char *text) {
     for (size_t i = 0; text && table[i].value; i++) {
         if (strcmp(table[i].value, text) == 0) {
-            return (int)i;
-        }
-    }
-    return -1;
-}
-
-int api_choice_find_ignore_case(const ApiChoice *table, const char *text) {
-    for (size_t i = 0; text && table[i].value; i++) {
-        if (request_equals_ignore_case(text, table[i].value)) {
             return (int)i;
         }
     }
@@ -176,6 +165,14 @@ static bool add_choices(cJSON *root, const char *name, const ApiChoice *table) {
     return list != NULL;
 }
 
+/* The materials the Composer composes in, as {value: the material's id, label: its key word}; a piece's list adds "style". */
+static bool add_materials(cJSON *root, const CommonPracticeMaterials *materials, const char *name, bool with_style) {
+    cJSON *list = add_list(root, name);
+    return list && add_choice(list, materials->major->id, materials->major->key_word) &&
+           add_choice(list, materials->natural_minor->id, materials->natural_minor->key_word) &&
+           (!with_style || add_choice(list, "style", "From the brief"));
+}
+
 /* The meters: the value, the beats of a bar and where a second chord may start (theme chords start on a cell of the meter). */
 static bool add_meters(cJSON *root) {
     cJSON *list = add_list(root, "meters");
@@ -198,13 +195,13 @@ static bool add_meters(cJSON *root) {
     return list != NULL;
 }
 
-static bool add_keys(cJSON *root) {
+static bool add_keys(cJSON *root, const CommonPracticeMaterials *materials) {
     cJSON *keys = add_list(root, "keys");
     cJSON *names = add_list(root, "pitch_class_names");
     for (int minor = 0; keys && minor < 2; minor++) {
         for (int pitch_class = 0; pitch_class < 12; pitch_class++) {
             char name[32];
-            util_key_name(pitch_class, minor != 0, name, sizeof name);
+            util_key_name(pitch_class, minor ? materials->natural_minor : materials->major, name, sizeof name);
             if (!add_choice(keys, name, name)) {
                 return false;
             }
@@ -213,13 +210,21 @@ static bool add_keys(cJSON *root) {
     for (int pitch_class = 0; names && pitch_class < 12; pitch_class++) {
         char major[32];
         char minor[32];
-        util_key_name(pitch_class, false, major, sizeof major);
-        util_key_name(pitch_class, true, minor, sizeof minor);
+        util_key_name(pitch_class, materials->major, major, sizeof major);
+        util_key_name(pitch_class, materials->natural_minor, minor, sizeof minor);
         *strchr(major, ' ') = '\0';
         *strchr(minor, ' ') = '\0';
         cJSON *entry = cJSON_CreateObject();
-        if (!entry || !cJSON_AddNumberToObject(entry, "value", pitch_class) || !cJSON_AddStringToObject(entry, "major", major) ||
-            !cJSON_AddStringToObject(entry, "minor", minor) || !cJSON_AddItemToArray(names, entry)) {
+        cJSON *spellings = entry ? cJSON_CreateObject() : NULL;
+        if (!entry || !spellings || !cJSON_AddNumberToObject(entry, "value", pitch_class) ||
+            !cJSON_AddStringToObject(spellings, materials->major->id, major) ||
+            !cJSON_AddStringToObject(spellings, materials->natural_minor->id, minor) ||
+            !cJSON_AddItemToObject(entry, "names", spellings)) {
+            cJSON_Delete(spellings);
+            cJSON_Delete(entry);
+            return false;
+        }
+        if (!cJSON_AddItemToArray(names, entry)) {
             cJSON_Delete(entry);
             return false;
         }
@@ -241,7 +246,7 @@ static bool add_cadences(cJSON *root) {
     return all && theme;
 }
 
-/* The pickups of each meter: the offered values the readers accept (a number of beats shorter than a bar, on the 1/32 grid). */
+/* The pickups of each meter: the offered values the readers accept (a number of beats shorter than a bar, on the meter's grid). */
 static bool add_pickups(cJSON *root) {
     cJSON *pickups = cJSON_AddObjectToObject(root, "pickups");
     for (size_t m = 0; pickups && API_METERS[m].value; m++) {
@@ -252,10 +257,9 @@ static bool add_pickups(cJSON *root) {
         cJSON *list = cJSON_AddArrayToObject(pickups, API_METERS[m].value);
         for (size_t i = 0; list && API_PICKUPS[i].value; i++) {
             Rational pickup;
-            Rational grid;
             if (!request_parse_pickup(API_PICKUPS[i].value, meter.beat_unit, &pickup) ||
                 rational_cmp(pickup, (Rational){meter.beats_per_bar, meter.beat_unit}) >= 0 ||
-                rational_make(pickup.num * PIECE_PICKUP_GRID, pickup.den, &grid) != RATIONAL_OK || grid.den != 1) {
+                !plan_meter_pickup_on_grid(meter, pickup)) {
                 continue;
             }
             cJSON *text = cJSON_CreateString(API_PICKUPS[i].value);
@@ -590,9 +594,9 @@ static bool add_limits(cJSON *root) {
            add_preference_limits(limits);
 }
 
-bool api_vocabulary_build(cJSON *root) {
-    return add_meters(root) && add_choices(root, "modes", API_MODES) && add_choices(root, "piece_modes", API_PIECE_MODES) &&
-           add_keys(root) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
+bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials) {
+    return add_meters(root) && add_materials(root, materials, "materials", false) && add_materials(root, materials, "piece_materials", true) &&
+           add_keys(root, materials) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
            add_choices(root, "functions", API_FUNCTIONS) && add_choices(root, "distances", API_DISTANCES) &&
            add_theme_slots(root) && add_theme_lists(root) &&
            add_choices(root, "theme_pools", API_THEME_POOLS) && add_choices(root, "theme_bars", API_THEME_BARS) &&
@@ -604,10 +608,15 @@ bool api_vocabulary_build(cJSON *root) {
            add_preferences(root) && add_limits(root);
 }
 
-ComposerStatus composer_api_vocabulary(ComposerResponse *out) {
+ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = cJSON_CreateObject();
-    if (!root || !api_vocabulary_build(root)) {
+    if (!root || !api_vocabulary_build(root, &materials)) {
         cJSON_Delete(root);
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }

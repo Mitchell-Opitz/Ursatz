@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Cadences, boundary cadences and cadence-confirmed key changes on the five reference pieces (Ursatz's
@@ -61,7 +62,7 @@ static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid"},
 static const char *const TYPES[] = {"perfect-authentic", "imperfect-authentic", "half",       "subverted",
                                     "plagal",            "deceptive",           "authentic-unspecified", "unknown"};
 
-static bool rational_equals(const cJSON *rational, long num, long den) {
+static bool json_rational_equals(const cJSON *rational, long num, long den) {
     return (long)test_json_member(rational, "num")->valuedouble * den == num * (long)test_json_member(rational, "den")->valuedouble;
 }
 
@@ -175,7 +176,7 @@ static bool has_cadence_at(const cJSON *cadences, const char *type, long num, lo
     const cJSON *cadence;
     cJSON_ArrayForEach(cadence, cadences) {
         if (strcmp(test_json_member(cadence, "type")->valuestring, type) == 0 &&
-            rational_equals(test_json_member(test_json_member(test_json_member(cadence, "arrival"), "span"), "start"), num, den)) {
+            json_rational_equals(test_json_member(test_json_member(test_json_member(cadence, "arrival"), "span"), "start"), num, den)) {
             return true;
         }
     }
@@ -247,7 +248,7 @@ static void run_piece(const Piece *piece) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
     ImportedNotes notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
+    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return;

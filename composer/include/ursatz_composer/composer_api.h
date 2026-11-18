@@ -28,10 +28,12 @@
  * 1.24 adds each section's setting and the tonic major mode to the forms entry, the setting to the rows' changes, and the embellish and
  * setting variations.
  * 1.25 adds the home mode and the elaboration role to the forms entry, and the mode of a copy across modes to the rows' changes.
+ * 2.0 names materials: the replies hold "material" (a K1 id) where they held "mode", the vocabulary holds "materials" and
+ * "piece_materials" and the pitch class names by material, and a request names "api_version" 2.
  */
 
-#define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 25
+#define COMPOSER_API_VERSION_MAJOR 2
+#define COMPOSER_API_VERSION_MINOR 0
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -73,6 +75,23 @@ typedef struct {
     ComposerError error;
 } ComposerResponse;
 
+/*
+ * The knowledge snapshot (theory/knowledge/knowledge_snapshot.h): opaque to a consumer of this header, which builds one with the
+ * library's knowledge_snapshot_build and keeps it alive as long as the calls that take it.
+ */
+typedef struct KnowledgeSnapshot KnowledgeSnapshot;
+
+/*
+ * What the Composer knows: the knowledge snapshot every composing and reading entry takes first. The snapshot
+ * holds the pitch materials, relations and chord types the Composer reads; the caller builds it once and keeps it alive
+ * for the calls (a snapshot is read-only, so calls on several threads may share one). A NULL context, or one with a NULL
+ * knowledge, is COMPOSER_ERR_REQUEST with the message "a knowledge snapshot is required". composer_api_version,
+ * composer_api_versions, composer_api_variant_operations and composer_api_forms take none.
+ */
+typedef struct {
+    const KnowledgeSnapshot *knowledge;
+} ComposerContext;
+
 /* Frees and zeroes the response. Safe on a zeroed response and when called twice. */
 void composer_response_destroy(ComposerResponse *response);
 
@@ -86,7 +105,8 @@ ComposerStatus composer_api_versions(ComposerResponse *out);
  * loopEnd markers into the MIDI file. midi/midi_size and musicxml are filled for the formats asked for. json: {"skipped":
  * [{"span", "lane", "reason"}]}, the lane spans the render left out.
  */
-ComposerStatus composer_api_export(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_export(const ComposerContext *context, const char *request_json,
+                                   const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Analyzes a motive: its intervals, contour, rhythm, range, scale degrees, implied harmony, base harmony and tones.
@@ -97,7 +117,8 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
  * "text" is required; "format" defaults to auto, "form" to full. MusicXML arrives as text; MIDI as bytes through
  * composer_api_motive_from_midi. json: the analysis document the "motive" command prints with --json.
  */
-ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_motive(const ComposerContext *context, const char *request_json,
+                                   const ComposerJob *job, ComposerResponse *out);
 
 /*
  * As composer_api_motive for a motive that arrives as the bytes of a Standard MIDI File (type 0 or 1), read in memory.
@@ -105,8 +126,8 @@ ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *
  * the way it does for the command line. A buffer that is not a MIDI file, or holds more than one voice, is
  * COMPOSER_ERR_UNSATISFIABLE.
  */
-ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, const char *request_json,
-                                             const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_motive_from_midi(const ComposerContext *context, const uint8_t *bytes, size_t size,
+                                             const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
 /*
  * As composer_api_motive, and renders the motive: the request adds "render_key" ("G minor": hear the motive in this key,
@@ -116,7 +137,8 @@ ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, 
  * {"key", "notes": [{"midi_pitch", "offset", "duration"}]}, always present. A key the motive cannot be moved to, or a file
  * that cannot be made, is COMPOSER_ERR_UNSATISFIABLE with path /render_key, /midi or /musicxml.
  */
-ComposerStatus composer_api_motive_render(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_motive_render(const ComposerContext *context, const char *request_json,
+                                          const ComposerJob *job, ComposerResponse *out);
 
 /*
  * The variant operations of the registry: name, label, category, citation, parameters and the forms each applies to. json:
@@ -137,7 +159,8 @@ ComposerStatus composer_api_variant_operations(ComposerResponse *out);
  * each_op and "notices" (strings) when a draw was skipped or fewer variants than asked for were found. "detail": true adds
  * to each variant "remoteness_fraction": [numerator, denominator] and "leaves_harmony".
  */
-ComposerStatus composer_api_variants(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_variants(const ComposerContext *context, const char *request_json,
+                                     const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Names the chain of registry operations that turns a source motive into a target. Request: {"source": <motive request:
@@ -146,11 +169,12 @@ ComposerStatus composer_api_variants(const char *request_json, const ComposerJob
  * the form of the source's input. json: {"found", "chain", "distance", "remoteness", "kept", "changed", "derivation"};
  * "detail": true adds "distance_fraction" and "remoteness_fraction", each [numerator, denominator].
  */
-ComposerStatus composer_api_recognize(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_recognize(const ComposerContext *context, const char *request_json,
+                                      const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Random motives that keep the hard melodic rules of standard counterpoint; their length, pickup, number of notes, rhythm
- * and range are drawn from defaults in the Composer. Request: {"mode": "major"|"minor", "meter": "4/4", "key": "D minor"
+ * and range are drawn from defaults in the Composer. Request: {"material": "major"|"minor"|"random" (a material id, name, key word or alias; the old "mode" is read too, not both), "meter": "4/4", "key": "D minor"
  * (its mode must be "mode"; default C major or A minor), "form": "full"|"rhythm"|"contour", "role": "melodic"|
  * "accompaniment", "style": <a style model file path>, "style_without": [<style categories read without>, at most 8;
  * needs "style"], "count": 1 to 16 (default 1), "seed": 0 to 4294967295 (default from the clock), "preferences": <the
@@ -163,7 +187,8 @@ ComposerStatus composer_api_recognize(const char *request_json, const ComposerJo
  * the settings made) when the request had the member.
  * A style that cannot be read is COMPOSER_ERR_UNSATISFIABLE with path /style.
  */
-ComposerStatus composer_api_random_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_random_motive(const ComposerContext *context, const char *request_json,
+                                          const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Grows a theme from the theme request (docs/theme-request.md, schema "ursatz-theme-request" version 2) with its motives
@@ -178,7 +203,8 @@ ComposerStatus composer_api_random_motive(const char *request_json, const Compos
  * musicxml: the first theme's files, when asked. Progress per compose stage and per seed tried ("grow"); a cancel is
  * COMPOSER_ERR_CANCELLED with no partial plan.
  */
-ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_theme(const ComposerContext *context, const char *request_json,
+                                  const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Composes a piece (docs/piece-request.md): the loop version and the ending version built from it, or the loop plan of an
@@ -199,7 +225,8 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
  * files, when asked (the MIDI file has the loopStart and loopEnd markers). Progress per seed ("seed") and per compose stage; a
  * cancel is COMPOSER_ERR_CANCELLED with no partial plan. A theme fill with a path in "plan" is refused with its path.
  */
-ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_piece(const ComposerContext *context, const char *request_json,
+                                  const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Variations of one section of a loop plan: the section is written again from one seed after another (as a regenerate does,
@@ -214,12 +241,13 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
  * "loop"). Progress once per seed tried, stage "variations" and the compose stages; a cancel is COMPOSER_ERR_CANCELLED.
  * COMPOSER_ERR_UNSATISFIABLE when no version differs from the plan.
  */
-ComposerStatus composer_api_piece_variations(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_piece_variations(const ComposerContext *context, const char *request_json,
+                                             const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Plans a whole short piece from a form template (docs/cli-plan.md); nothing is composed. Request: {"form": a form name
- * (absent with "given": the ternary form of 24 bars, the material in section B), "key": "D" or "D minor", "mode":
- * "major"|"minor" (not with a mode in "key"), "meter": "4/4", "bars", "count", "modulate", "motive": {"input": {"format",
+ * (absent with "given": the ternary form of 24 bars, the material in section B), "key": "D" or "D minor", "material":
+ * "major"|"minor" (or the old "mode"; not with a mode in "key"), "meter": "4/4", "bars", "count", "modulate", "motive": {"input": {"format",
  * "text"}, "source": <a name to show>} (a motive request, read in the meter and key), "corpus": <a corpus directory> with
  * "like": <a passage file> or a "like_progression" given, "accompaniment", "texture", "seed" (0 to 4294967295; default
  * from the clock), "style" (a style model path), "style_weight", "style_without", "blend", "blend_weight", "blend_weights",
@@ -227,7 +255,8 @@ ComposerStatus composer_api_piece_variations(const char *request_json, const Com
  * "numerals", "at": "B:3" (the section's letter and the bar), "cells", "source": <a name to show>}]}. json: what `plan
  * --format json` prints, without "file"; plan_json: the plan. "notices" lists stale corpus documents.
  */
-ComposerStatus composer_api_plan(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_plan(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Realizes a plan (docs/cli-fill.md). Request: {"plan": <plan object>, "seed", "check", "candidates" (1 to 32), "style",
@@ -238,13 +267,15 @@ ComposerStatus composer_api_plan(const char *request_json, const ComposerJob *jo
  * json is {"stuck": {"first", "last", "stage", "key_rejected", "open": [{"what", "reason"}], "more"}}. Progress per seed
  * ("seed") and per compose stage; a cancel is COMPOSER_ERR_CANCELLED.
  */
-ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_fill(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Locks a node of a plan, or one lane of it, as Given (docs/cli-fill.md). Request: {"plan", "node" (an id) or "section" (a
  * letter), "lane"}. json: {"locked": {"nodes", "spans"}, "what": "section B"}; plan_json: the plan.
  */
-ComposerStatus composer_api_lock(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_lock(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Writes one node of a plan again (docs/cli-regenerate.md). Request: {"plan", "node" or "section", "lane", "seed",
@@ -252,7 +283,8 @@ ComposerStatus composer_api_lock(const char *request_json, const ComposerJob *jo
  * "files": as fill's, with "reopened": {"sections", "spans"}. plan_json, midi and musicxml are filled. A refused target is
  * COMPOSER_ERR_UNSATISFIABLE.
  */
-ComposerStatus composer_api_regenerate(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_regenerate(const ComposerContext *context, const char *request_json,
+                                       const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Several distinct versions of one node of a plan (docs/cli-variations.md). Request: {"plan", "node" or "section", "lane",
@@ -260,13 +292,15 @@ ComposerStatus composer_api_regenerate(const char *request_json, const ComposerJ
  * object>, "musicxml" (when asked), "sections": [...]}], "kept", "requested", "seeds_tried"}; the MIDI file of a
  * variation is composer_api_export of its plan. COMPOSER_ERR_UNSATISFIABLE when none differs from the plan.
  */
-ComposerStatus composer_api_variations(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_variations(const ComposerContext *context, const char *request_json,
+                                       const ComposerJob *job, ComposerResponse *out);
 
 /*
  * As composer_api_variations for the harmony of a section whose melody is given (docs/cli-variations.md, harmonize).
  * Request: {"plan", "section", "count", "seed", "musicxml", "plain_midi", "tempo"}.
  */
-ComposerStatus composer_api_harmonize(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_harmonize(const ComposerContext *context, const char *request_json,
+                                      const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for (docs/cli-progression.md).
@@ -284,12 +318,13 @@ ComposerStatus composer_api_harmonize(const char *request_json, const ComposerJo
  * tried ("progression") and per fill stage; a cancel is COMPOSER_ERR_CANCELLED. No seed that works is
  * COMPOSER_ERR_UNSATISFIABLE, as is a schema that cannot be written in the key or a phrase too short for the cadence.
  */
-ComposerStatus composer_api_progression(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_progression(const ComposerContext *context, const char *request_json,
+                                        const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Writes a counter-melody against a line in the first, second, third or fourth species of strict counterpoint
  * (docs/cli-counterpoint.md). Request: the motive request of composer_api_motive for the line ("input": {"format", "form",
- * "text"}, "pickup", "harmony"...; any length) with "species" (1 to 4), "key" (a tonic alone with "mode": "major"|"minor"),
+ * "text"}, "pickup", "harmony"...; any length) with "species" (1 to 4), "key" (a tonic alone with "material" or the old "mode": "major"|"minor"),
  * "meter" (all three required), "position" ("below": the line is the melody, the default; "above": the line is the bass),
  * "seed" (0 to 4294967295; default from the clock), "suggest" (1 to 16 different counter-melodies), "plans", "midi",
  * "musicxml" (the first counter-melody's files), "tempo", "plain_midi". json: {"species", "position", "key", "meter",
@@ -299,7 +334,8 @@ ComposerStatus composer_api_progression(const char *request_json, const Composer
  * counter-melody that holds the rules from the seeds tried (16 for each one asked for), is COMPOSER_ERR_UNSATISFIABLE.
  * Progress per seed ("counterpoint"); a cancel is COMPOSER_ERR_CANCELLED.
  */
-ComposerStatus composer_api_counterpoint(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_counterpoint(const ComposerContext *context, const char *request_json,
+                                         const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Makes motives related to a motive, best first (docs/cli-develop.md). Request: the motive request of composer_api_motive
@@ -312,14 +348,15 @@ ComposerStatus composer_api_counterpoint(const char *request_json, const Compose
  * "operation", "seed", "candidates": [{"index", "label", "score_numerator", "score_denominator", "text"}]}. Nothing that
  * can be developed as asked is COMPOSER_ERR_UNSATISFIABLE. Progress once ("develop"); a cancel is COMPOSER_ERR_CANCELLED.
  */
-ComposerStatus composer_api_develop(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_develop(const ComposerContext *context, const char *request_json,
+                                    const ComposerJob *job, ComposerResponse *out);
 
 /*
  * Grows a theme from a motive (docs/cli-grow.md): its structure, a harmony, a bass line and a melody, ending in the cadence
  * asked for. Request: the motive request of composer_api_motive ("input", "harmony", "features", "role"; or, instead of
  * "input", "corpus": a corpus directory with "like": a passage file, whose first bar of a similar passage becomes the motive,
  * which the document reports as "source") and the brief of the command: "into" ("sentence", "period" or "hybrid"), "hybrid"
- * ("<beginning>+<ending>"), "key", "mode" ("major", "minor" or "style"), "meter", "bars" (4 or 8), "cadence", "first_cadence",
+ * ("<beginning>+<ending>"), "key", "material" or the old "mode" ("major", "minor" or "style"), "meter", "bars" (4 or 8), "cadence", "first_cadence",
  * "accompaniment", "accompaniment_motive" (a motive request of its own, read in the meter, role accompaniment), "texture",
  * "voicing" (true), "check", "style", "style_weight", "style_without" (up to 8 categories), "blend", "blend_weight",
  * "blend_weights", "seed" (0 to 4294967295; default from the clock; if a seed gets stuck the next, up to 16, are tried),
@@ -330,7 +367,8 @@ ComposerStatus composer_api_develop(const char *request_json, const ComposerJob 
  * stale or fewer themes than asked for were found. plan_json, midi and musicxml: the first theme's. Progress per compose stage
  * and per seed tried ("grow"); a cancel is COMPOSER_ERR_CANCELLED with no partial plan.
  */
-ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+ComposerStatus composer_api_grow(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out);
 
 /*
  * The words an application offers and the requests accept, in the order an application shows them (R-270: the Composer's
@@ -343,7 +381,7 @@ ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *jo
  * gives), "preferences" (the default settings document, docs/preferences.md), "limits" (with "preferences": the limits of
  * the settings as numbers)}. Every list but those noted is [{"value", "label"}]; a request accepts every value.
  */
-ComposerStatus composer_api_vocabulary(ComposerResponse *out);
+ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out);
 
 /*
  * The built-in forms, in registry order (R-428; quick, no job, never cancelled). json: {"forms": [{"name", "label",
@@ -372,6 +410,7 @@ ComposerStatus composer_api_forms(ComposerResponse *out);
  * A request that an entry would refuse is refused the same way, with its message and path. An unknown kind is
  * COMPOSER_ERR_REQUEST with path /kind.
  */
-ComposerStatus composer_api_validate(const char *kind, const char *request_json, ComposerResponse *out);
+ComposerStatus composer_api_validate(const ComposerContext *context, const char *kind, const char *request_json,
+                                     ComposerResponse *out);
 
 #endif

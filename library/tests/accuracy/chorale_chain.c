@@ -20,12 +20,12 @@
 #include "theory/meter/segmentation_beat_grid.h"
 #include "model/time/duration.h"
 #include "model/time/metrical_position.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_span.h"
 #include "chain/analysis_chain.h"
 #include "analysis/harmony/weighted_chord_identification.h"
 #include "../rational_test_util.h"
 #include "../key_index_test_util.h"
+#include "test_knowledge.h"
 
 /* The analysis (segments, key regions in two passes, chords, Roman numerals) is analysis_chain_run on the imported notes. What stays here
    is the harness's own: the phrase ends it finds between the passes (cadence ends, on outer degrees read from the segment members), the
@@ -45,13 +45,13 @@ typedef struct {
     AnalysisChain *chain;  /* pass 2: the key regions again, on pass 1's chords and the cadence ends as boundaries */
     CommonPracticeKeySegment *key_segments;
     size_t segment_count;
-    MusicalTime **boundaries; /* the phrase ends found from pass 1, owned copies */
+    MusicalTime *boundaries;  /* the phrase ends found from pass 1, owned */
     size_t boundary_count;
     const CommonPracticeKeyRegions *regions;
     const StandardTonalityChordInput *chain_inputs;
     const StandardTonalityRomanResult *chain_romans;
-    const double *starts;
-    const double *ends;
+    const Rational *starts;
+    const Rational *ends;
     Key **annotation_keys;
     size_t annotation_key_count;
     StandardTonalityKeyRegionInput *annotation_region_inputs;
@@ -75,9 +75,6 @@ static void run_destroy(Run *r) {
         key_destroy(r->annotation_keys[i]);
     }
     free(r->annotation_keys);
-    for (size_t i = 0; i < r->boundary_count; i++) {
-        musical_time_destroy(r->boundaries[i]);
-    }
     free(r->boundaries);
     chain_key_segments_destroy(r->key_segments);
     analysis_chain_destroy(r->chain);
@@ -125,7 +122,7 @@ static void fail(char *message, size_t size, const char *text) {
 static size_t region_at(const CommonPracticeKeyRegions *regions, double t) {
     size_t found = 0;
     for (size_t i = 0; i < regions->region_count; i++) {
-        Rational start = test_rational_of_time(time_span_start(regions->regions[i].span));
+        Rational start = test_rational_of_time(&regions->regions[i].span.start);
         if (rational_to_double(start) <= t + 1e-12) {
             found = i;
         }
@@ -168,17 +165,17 @@ static bool read_numerals(Run *r) {
     size_t region_total = 0;
     for (size_t i = 0; i < r->annotation.key_count; i++) {
         if (i + 1 < r->annotation.key_count &&
-            musical_time_equals(r->annotation.keys[i].time, r->annotation.keys[i + 1].time)) {
+            musical_time_same(r->annotation.keys[i].time, r->annotation.keys[i + 1].time)) {
             continue;
         }
         const RomanTextKey *k = &r->annotation.keys[i];
-        CommonPracticeKeyMode mode = k->minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR;
+        CommonPracticeKeyMode mode = k->is_minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR;
         int index = test_key_index_of(k->tonic_pitch_class, mode);
         char id[48];
         snprintf(id, sizeof(id), "annotation-key-%zu", region_total);
         EntityID *context = NULL;
         if (entity_id_create(id, &context) != ENTITY_ID_OK ||
-            common_practice_build_key(mode, common_practice_key_index_tonic_name(index), context,
+            common_practice_build_key(common_practice_material(test_materials(), mode), common_practice_key_index_tonic_name(index), context,
                                       &r->annotation_keys[region_total]) != KEY_OK) {
             return false;
         }
@@ -189,12 +186,14 @@ static bool read_numerals(Run *r) {
         region_total++;
     }
     if (standard_tonality_build_chord_inputs(r->segment_inputs, n, r->annotation_region_inputs, region_total,
-                                             &r->annotation_inputs, &count) != STANDARD_TONALITY_CHORD_INPUT_OK ||
-        standard_tonality_build_roman_numerals_with_config(r->annotation_inputs, count, NULL, &r->annotation_romans) !=
-            STANDARD_TONALITY_ROMAN_OK) {
+                                             &r->annotation_inputs, &count) != STANDARD_TONALITY_CHORD_INPUT_OK) {
         return false;
     }
-    return true;
+    for (size_t mi = 0; mi < count; mi++) {
+        r->annotation_inputs[mi].materials = test_materials();
+    }
+    return standard_tonality_build_roman_numerals_with_config(r->annotation_inputs, count, NULL, &r->annotation_romans) ==
+           STANDARD_TONALITY_ROMAN_OK;
 }
 
 static bool same_set(const int *a, size_t an, const int *b, size_t bn) {
@@ -244,23 +243,19 @@ static int degree_of_pitch(int pitch, int tonic) {
 }
 
 /* The length of a beat, from the first measure's beat grid. */
-static bool beat_duration(const MeterMap *map, Duration **out) {
-    MusicalTime **starts = NULL;
+static bool beat_duration(const MeterMap *map, Duration *out) {
+    MusicalTime *starts = NULL;
     size_t count = 0;
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (!standard_meter_segmentation_beat_grid(map, 1, NULL, &starts, &count) || count == 0) {
         return false;
     }
     bool ok = false;
     if (meter_map_measure_span(map, 1, &span) == METER_MAP_OK) {
-        Rational next = count > 1 ? test_rational_of_time(starts[1]) : test_rational_of_time(time_span_end(span));
+        Rational next = count > 1 ? starts[1].value : span.end.value;
         Rational length = {0, 1};
-        ok = rational_sub(next, test_rational_of_time(starts[0]), &length) == 0 &&
-             duration_create((long)length.num, (unsigned long)length.den, out) == DURATION_OK;
-        time_span_destroy(span);
-    }
-    for (size_t b = 0; b < count; b++) {
-        musical_time_destroy(starts[b]);
+        ok = rational_sub(next, starts[0].value, &length) == 0 &&
+             duration_of(length, out) == DURATION_OK;
     }
     free(starts);
     return ok;
@@ -276,23 +271,24 @@ static bool find_phrase_ends(Run *r) {
     const StandardTonalityRomanResult *first_romans = analysis_chain_numerals(r->first);
     HarmonySegmentInput *inputs = (HarmonySegmentInput *)calloc(n, sizeof(HarmonySegmentInput));
     MetricalPosition **positions = (MetricalPosition **)calloc(n, sizeof(MetricalPosition *));
-    Duration *beat_length = NULL;
+    Duration beat_length = {rational_ratio(0, 1)};
     HarmonySegment *prepared = NULL;
     HarmonyCadences cadences = {NULL, 0};
     bool ok = inputs != NULL && positions != NULL && beat_duration(r->map, &beat_length);
     for (size_t i = 0; i < n && ok; i++) {
         const TimeSpan *window = sonority_time_window(segs->sonorities.items[i].sonority);
-        ok = metrical_position_from_time(r->map, time_span_start(window), &positions[i]) == METRICAL_POSITION_OK;
+        ok = metrical_position_from_time(r->map, &window->start, &positions[i]) == METRICAL_POSITION_OK;
         if (!ok) {
             break;
         }
         HarmonySegmentInput *input = &inputs[i];
         input->segment.id = segs->ids[i];
-        input->segment.span = window;
+        input->segment.span = *window;
         input->segment.position = positions[i];
-        input->segment.strength = chain_attack_strength(r->map, time_span_start(window));
+        input->segment.strength = chain_attack_strength(r->map, &window->start);
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
+        input->has_beat_length = true;
         input->beat_length = beat_length;
         if (!first_romans[i].has_numeral) {
             input->degree = 0;
@@ -325,13 +321,10 @@ static bool find_phrase_ends(Run *r) {
     ok = ok && harmony_analysis_prepare(inputs, n, &prepared) == HARMONY_ANALYSIS_OK &&
          harmony_analysis_find_cadences(prepared, n, NULL, &cadences) == HARMONY_CADENCE_ANALYSIS_OK;
     if (ok && cadences.count > 0) {
-        r->boundaries = (MusicalTime **)calloc(cadences.count, sizeof(MusicalTime *));
+        r->boundaries = (MusicalTime *)calloc(cadences.count, sizeof(MusicalTime));
         ok = r->boundaries != NULL;
         for (size_t k = 0; k < cadences.count && ok; k++) {
-            const MusicalTime *end = r->key_segments[cadences.items[k].arrival_last].end;
-            ok = musical_time_create(musical_time_numerator(end), musical_time_denominator(end),
-                                     &r->boundaries[r->boundary_count]) == MUSICAL_TIME_OK;
-            r->boundary_count += ok ? 1 : 0;
+            r->boundaries[r->boundary_count++] = r->key_segments[cadences.items[k].arrival_last].end;
         }
     }
     harmony_cadences_destroy(&cadences);
@@ -339,7 +332,6 @@ static bool find_phrase_ends(Run *r) {
     for (size_t i = 0; i < n && positions != NULL; i++) {
         metrical_position_destroy(positions[i]);
     }
-    duration_destroy(beat_length);
     free(positions);
     free(inputs);
     return ok;
@@ -356,7 +348,7 @@ static int compare_double(const void *a, const void *b) {
 static const RomanTextChord *chord_at(const RomanTextAnalysis *a, double t) {
     const RomanTextChord *found = NULL;
     for (size_t i = 0; i < a->chord_count; i++) {
-        Rational at = test_rational_of_time(a->chords[i].time);
+        Rational at = test_rational_of_time(&a->chords[i].time);
         if (rational_to_double(at) <= t + 1e-12) {
             found = &a->chords[i];
         }
@@ -367,7 +359,7 @@ static const RomanTextChord *chord_at(const RomanTextAnalysis *a, double t) {
 static const RomanTextKey *key_at(const RomanTextAnalysis *a, double t) {
     const RomanTextKey *found = NULL;
     for (size_t i = 0; i < a->key_count; i++) {
-        Rational at = test_rational_of_time(a->keys[i].time);
+        Rational at = test_rational_of_time(&a->keys[i].time);
         if (rational_to_double(at) <= t + 1e-12) {
             found = &a->keys[i];
         }
@@ -377,7 +369,7 @@ static const RomanTextKey *key_at(const RomanTextAnalysis *a, double t) {
 
 static long segment_at(const Run *r, double t) {
     for (size_t s = 0; s < r->segment_count; s++) {
-        if (r->starts[s] <= t + 1e-12 && t < r->ends[s] - 1e-12) {
+        if (rational_to_double(r->starts[s]) <= t + 1e-12 && t < rational_to_double(r->ends[s]) - 1e-12) {
             return (long)s;
         }
     }
@@ -398,19 +390,19 @@ static void compare(const Run *r, ChoraleScore *out) {
         return;
     }
     size_t n = 0;
-    double first = rational_to_double(test_rational_of_time(r->annotation.chords[0].time));
+    double first = rational_to_double(test_rational_of_time(&r->annotation.chords[0].time));
     double end = rational_to_double(r->layout.end);
     cuts[n++] = first;
     cuts[n++] = end;
     for (size_t s = 0; s < r->segment_count; s++) {
-        cuts[n++] = r->starts[s];
-        cuts[n++] = r->ends[s];
+        cuts[n++] = rational_to_double(r->starts[s]);
+        cuts[n++] = rational_to_double(r->ends[s]);
     }
     for (size_t i = 0; i < r->annotation.chord_count; i++) {
-        cuts[n++] = rational_to_double(test_rational_of_time(r->annotation.chords[i].time));
+        cuts[n++] = rational_to_double(test_rational_of_time(&r->annotation.chords[i].time));
     }
     for (size_t i = 0; i < r->annotation.key_count; i++) {
-        cuts[n++] = rational_to_double(test_rational_of_time(r->annotation.keys[i].time));
+        cuts[n++] = rational_to_double(test_rational_of_time(&r->annotation.keys[i].time));
     }
     qsort(cuts, n, sizeof(double), compare_double);
 
@@ -426,10 +418,10 @@ static void compare(const Run *r, ChoraleScore *out) {
         long s = segment_at(r, a);
         out->annotated_time += w;
         if (key != NULL && s >= 0) {
-            const CommonPracticeKeyRegion *region = &r->regions->regions[region_at(r->regions, r->starts[s])];
+            const CommonPracticeKeyRegion *region = &r->regions->regions[region_at(r->regions, rational_to_double(r->starts[s]))];
             int tonic = common_practice_key_index_tonic(region->key_index);
-            bool minor = common_practice_key_index_mode(region->key_index) == COMMON_PRACTICE_KEY_MINOR;
-            if (tonic == key->tonic_pitch_class && minor == key->minor) {
+            bool is_minor = common_practice_key_index_mode(region->key_index) == COMMON_PRACTICE_KEY_MINOR;
+            if (tonic == key->tonic_pitch_class && is_minor == key->is_minor) {
                 out->key_right += w;
             }
         }
@@ -516,7 +508,7 @@ ChoraleChainStatus chorale_chain_run(const char *piece_dir, ChoraleScore *out, c
     }
     for (size_t i = 0; i < r.key_event_count; i++) {
         r.key_events[i].time = r.imported.key_signatures[i].position;
-        if (!analysis_key_from_fifths(r.imported.key_signatures[i].sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &r.key_events[i].key)) {
+        if (!analysis_key_from_fifths(r.imported.key_signatures[i].sharps_flats, test_materials()->major, &r.key_events[i].key)) {
             goto done;
         }
     }
@@ -525,6 +517,7 @@ ChoraleChainStatus chorale_chain_run(const char *piece_dir, ChoraleScore *out, c
        (cadence ends). Pass 2: the key regions again with those chords as evidence and the cadence ends as boundaries, and everything after
        them once more. No further iteration. */
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_NUMERALS;
     config.first_measure = 0;
     config.refine_keys = false;
@@ -543,7 +536,7 @@ ChoraleChainStatus chorale_chain_run(const char *piece_dir, ChoraleScore *out, c
     }
     config.refine_keys = true;
     config.refine_with_given_boundaries = true;
-    config.key_regions.phrase_boundaries = (const MusicalTime *const *)r.boundaries;
+    config.key_regions.phrase_boundaries = r.boundaries;
     config.key_regions.phrase_boundary_count = r.boundary_count;
     if (analysis_chain_run(&set, r.key_events, r.key_event_count, &config, &r.chain) != ANALYSIS_CHAIN_OK) {
         fail(message, message_size, "the second pass failed");

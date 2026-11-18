@@ -6,7 +6,6 @@
 
 #include "theory/meter/metric_position_rules.h"
 #include "theory/meter/segmentation_beat_grid.h"
-#include "model/time/time_rational.h"
 
 ChainInputStatus chain_build_segments(const AnalysisNoteSet *notes, const AdaptiveSegmentationConfig *config, ChainSegments *out) {
     if (notes == NULL || out == NULL) {
@@ -37,22 +36,18 @@ ChainInputStatus chain_build_segments(const AnalysisNoteSet *notes, const Adapti
     }
     built.count = built.sonorities.count;
     built.ids = calloc(built.count > 0 ? built.count : 1, sizeof(char[32]));
-    built.starts = calloc(built.count > 0 ? built.count : 1, sizeof(double));
-    built.ends = calloc(built.count > 0 ? built.count : 1, sizeof(double));
+    built.starts = calloc(built.count > 0 ? built.count : 1, sizeof(Rational));
+    built.ends = calloc(built.count > 0 ? built.count : 1, sizeof(Rational));
     if (built.ids == NULL || built.starts == NULL || built.ends == NULL) {
         chain_segments_destroy(&built);
         return CHAIN_INPUT_ERR_ALLOC;
     }
     for (size_t s = 0; s < built.count; s++) {
         const TimeSpan *window = sonority_time_window(built.sonorities.items[s].sonority);
-        Rational start;
-        Rational end;
-        if (!chain_rational_of(time_span_start(window), &start) || !chain_rational_of(time_span_end(window), &end)) {
-            chain_segments_destroy(&built);
-            return CHAIN_INPUT_ERR_SEGMENTATION;
-        }
-        built.starts[s] = rational_to_double(start);
-        built.ends[s] = rational_to_double(end);
+        Rational start = window->start.value;
+        Rational end = window->end.value;
+        built.starts[s] = start;
+        built.ends[s] = end;
         snprintf(built.ids[s], sizeof(built.ids[s]), "seg-%zu", s);
     }
     *out = built;
@@ -79,38 +74,28 @@ BeatStrength chain_attack_strength(const MeterMap *map, const MusicalTime *onset
 /* The beat a segment [start, end) lies inside, as a non-zero index (measure and beat), or 0 when it spans beats or the grid cannot be
    read. It is CommonPracticeSegment.beat, which the context chord reading shares. */
 static long beat_index(const MeterMap *map, Rational start, Rational end) {
-    MusicalTime *at = musical_time_from_rational_or_null(start);
+    MusicalTime at = musical_time_of(start);
     int measure = 0;
-    bool found = at != NULL && meter_map_measure_index_at(map, at, &measure) == METER_MAP_OK;
-    musical_time_destroy(at);
-    MusicalTime **starts = NULL;
+    bool found = meter_map_measure_index_at(map, &at, &measure) == METER_MAP_OK;
+    MusicalTime *starts = NULL;
     size_t count = 0;
     if (!found || !standard_meter_segmentation_beat_grid(map, measure, NULL, &starts, &count)) {
         return 0;
     }
-    TimeSpan *span = NULL;
+    TimeSpan span;
     long index = 0;
     if (meter_map_measure_span(map, measure, &span) == METER_MAP_OK) {
-        Rational measure_end;
-        if (chain_rational_of(time_span_end(span), &measure_end)) {
-            for (size_t b = 0; b < count; b++) {
-                Rational beat_start;
-                Rational beat_end = measure_end;
-                if (!chain_rational_of(starts[b], &beat_start) || (b + 1 < count && !chain_rational_of(starts[b + 1], &beat_end))) {
-                    break;
+        Rational measure_end = span.end.value;
+        for (size_t b = 0; b < count; b++) {
+            Rational beat_start = starts[b].value;
+            Rational beat_end = b + 1 < count ? starts[b + 1].value : measure_end;
+            if (rational_cmp(beat_start, start) <= 0 && rational_cmp(start, beat_end) < 0) {
+                if (rational_cmp(end, beat_end) <= 0) {
+                    index = ((long)measure + 1) * 1000 + (long)b + 1;
                 }
-                if (rational_cmp(beat_start, start) <= 0 && rational_cmp(start, beat_end) < 0) {
-                    if (rational_cmp(end, beat_end) <= 0) {
-                        index = ((long)measure + 1) * 1000 + (long)b + 1;
-                    }
-                    break;
-                }
+                break;
             }
         }
-        time_span_destroy(span);
-    }
-    for (size_t b = 0; b < count; b++) {
-        musical_time_destroy(starts[b]);
     }
     free(starts);
     return index;
@@ -150,12 +135,8 @@ ChainInputStatus chain_build_members(const AnalysisNoteSet *notes, ChainSegments
     for (size_t s = 0; s < segments->count && status == CHAIN_INPUT_OK; s++) {
         const AdaptiveSonority *segment = &segments->sonorities.items[s];
         const TimeSpan *window = sonority_time_window(segment->sonority);
-        Rational start;
-        Rational end;
-        if (!chain_rational_of(time_span_start(window), &start) || !chain_rational_of(time_span_end(window), &end)) {
-            status = CHAIN_INPUT_ERR_MEMBER;
-            break;
-        }
+        Rational start = window->start.value;
+        Rational end = window->end.value;
         size_t count = sonority_event_id_count(segment->sonority);
         views[s].members = &members[next];
         views[s].member_count = count;
@@ -170,12 +151,12 @@ ChainInputStatus chain_build_members(const AnalysisNoteSet *notes, ChainSegments
             }
             const AnalysisNote *note = &notes->notes[found->index];
             CommonPracticeMember *member = &members[next];
-            if (!common_practice_member_from_analysis_note(note, window, BEAT_STRENGTH_STRONG, member)) {
+            if (!common_practice_member_from_analysis_note(note, *window, BEAT_STRENGTH_STRONG, member)) {
                 status = CHAIN_INPUT_ERR_MEMBER;
                 break;
             }
             member->held = segment->held[j];
-            member->strength = member->held ? BEAT_STRENGTH_STRONG : chain_attack_strength(notes->map, time_span_start(note->span));
+            member->strength = member->held ? BEAT_STRENGTH_STRONG : chain_attack_strength(notes->map, &note->span.start);
             next++;
         }
     }
@@ -243,7 +224,7 @@ ChainInputStatus chain_build_span_cells(const AnalysisNoteSet *notes, const Chai
         return CHAIN_INPUT_ERR_ALLOC;
     }
     for (size_t i = 0; i < segments->count; i++) {
-        const MusicalTime *start = time_span_start(sonority_time_window(segments->sonorities.items[i].sonority));
+        const MusicalTime *start = &sonority_time_window(segments->sonorities.items[i].sonority)->start;
         int measure = 0;
         if (meter_map_measure_index_at(notes->map, start, &measure) != METER_MAP_OK) {
             free(cells);
@@ -305,11 +286,11 @@ static bool merged_sonority(const ChainSegments *segs, size_t first, size_t last
             }
         }
     }
-    TimeSpan *window = NULL;
+    TimeSpan window;
     const TimeSpan *from = sonority_time_window(segs->sonorities.items[first].sonority);
     const TimeSpan *to = sonority_time_window(segs->sonorities.items[last].sonority);
     Sonority *sonority = NULL;
-    ok = ok && n > 0 && time_span_create(time_span_start(from), time_span_end(to), TIME_SPAN_BOUNDARY_LEFT_CLOSED, &window) == TIME_SPAN_OK &&
+    ok = ok && n > 0 && time_span_make(from->start, to->end, &window) == TIME_SPAN_OK &&
          sonority_create(window, ids, n, NULL, 0, SONORITY_EVENT_DOMAIN_SOUNDING, &sonority) == SONORITY_OK;
     if (!ok) {
         if (ids != NULL) {
@@ -317,15 +298,12 @@ static bool merged_sonority(const ChainSegments *segs, size_t first, size_t last
                 entity_id_destroy(ids[k]);
             }
         }
-        if (sonority == NULL) {
-            time_span_destroy(window);
-        }
         free(ids);
         free(held);
         free(values);
         return false;
     }
-    free(ids); /* the sonority took the ids and the window */
+    free(ids); /* the sonority took the ids and copied the window */
     free(values);
     out->sonority = sonority;
     out->held = held;
@@ -343,8 +321,8 @@ ChainInputStatus chain_merge_segments(const AnalysisNoteSet *notes, ChainSegment
     memset(&built, 0, sizeof(built));
     built.sonorities.items = calloc(spans->count, sizeof(AdaptiveSonority));
     built.ids = calloc(spans->count, sizeof(char[32]));
-    built.starts = calloc(spans->count, sizeof(double));
-    built.ends = calloc(spans->count, sizeof(double));
+    built.starts = calloc(spans->count, sizeof(Rational));
+    built.ends = calloc(spans->count, sizeof(Rational));
     if (built.sonorities.items == NULL || built.ids == NULL || built.starts == NULL || built.ends == NULL) {
         chain_segments_destroy(&built);
         return CHAIN_INPUT_ERR_ALLOC;

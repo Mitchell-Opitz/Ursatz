@@ -65,6 +65,10 @@ cJSON *ursatz_gui_motif_request(const cJSON *motif);
 /* The harmony text of a motif member, NULL when it has none. */
 const char *ursatz_gui_motif_harmony(const cJSON *motif);
 
+/* The key text a motif writes its notes in ("C major"): C and the key word of its material, or the old key text of a body not
+ * migrated yet; NULL when it has neither. The text is written to out. */
+const char *ursatz_gui_motif_key_text(const cJSON *motif, char *out, size_t out_size);
+
 /* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
 const char *ursatz_gui_motif_role_option(const char *role);
 

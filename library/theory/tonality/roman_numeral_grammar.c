@@ -292,23 +292,23 @@ bool standard_tonality_numeral_format(const StandardTonalityNumeralText *numeral
     return standard_tonality_numeral_format_styled(numeral, STANDARD_TONALITY_NUMERAL_STYLE_CANONICAL, buffer, size);
 }
 
-bool standard_tonality_numeral_root_semitone(const StandardTonalityNumeralText *numeral, StandardTonalityMode mode,
-                                             int *semitones) {
-    if (semitones == NULL || !valid_numeral(numeral)) {
+bool standard_tonality_numeral_root_semitone_of(const StandardTonalityNumeralText *numeral, const PitchMaterial *key_material,
+                                                const CommonPracticeMaterials *materials, int *semitones) {
+    if (semitones == NULL || materials == NULL || !valid_numeral(numeral)) {
         return false;
     }
     int root;
     if (numeral->has_target) {
-        int target = standard_tonality_degree_semitone(mode, numeral->target_degree);
-        StandardTonalityMode local = numeral->target_minor ? STANDARD_TONALITY_MODE_HARMONIC_MINOR
-                                                           : STANDARD_TONALITY_MODE_MAJOR;
-        int within = standard_tonality_degree_semitone(local, numeral->degree);
+        int target = standard_tonality_material_degree_semitone(key_material, numeral->target_degree);
+        /* A lowercase target reads the harmonic minor, as the numerals always have. */
+        const PitchMaterial *local = numeral->target_minor ? materials->harmonic_minor : materials->major;
+        int within = standard_tonality_material_degree_semitone(local, numeral->degree);
         if (target < 0 || within < 0) {
             return false;
         }
         root = target + numeral->target_alteration + within + numeral->alteration;
     } else {
-        int degree = standard_tonality_degree_semitone(mode, numeral->degree);
+        int degree = standard_tonality_material_degree_semitone(key_material, numeral->degree);
         if (degree < 0) {
             return false;
         }

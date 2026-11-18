@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "member_test_util.h"
 #include "analysis/harmony/weighted_identification.h"
+#include "test_knowledge.h"
 
 /*
  * Weighted chord identification tests. Step 1, the weights: duration sounding in the segment times the
@@ -20,7 +22,8 @@ static CommonPracticeMember member(int pitch, bool held, double duration, BeatSt
     memset(&m, 0, sizeof(m));
     m.pitch = pitch;
     m.held = held;
-    m.duration = duration;
+    m.duration = member_whole_notes(duration);
+    m.onset = rational_ratio(0, 1);
     m.strength = strength;
     return m;
 }
@@ -565,6 +568,7 @@ static size_t rank_applied(const CommonPracticeWeights *weights, int tonic, Comm
                            bool require_bass, CommonPracticeRankedChord out[COMMON_PRACTICE_CANDIDATE_COUNT]) {
     CommonPracticeWeightedConfig config = bass_heavy();
     config.applied_chords = applied;
+    config.materials = test_materials();
     config.require_bass_chord_tone = require_bass;
     size_t count = 0;
     assert(common_practice_rank_candidates(weights, tonic, mode, &config, out, &count) == COMMON_PRACTICE_WEIGHTED_OK);

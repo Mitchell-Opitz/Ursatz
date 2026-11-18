@@ -18,6 +18,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /* A single target regenerated: plan_regenerate_all with a list of one. */
 static RegenerateResult regenerate_one(PiecePlan *plan, FillTarget target, const ComposeConfig *config,
@@ -80,7 +81,8 @@ static PieceRequest request(void) {
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
     request.bars = 24;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     return request;
@@ -89,6 +91,7 @@ static PieceRequest request(void) {
 static ComposeConfig config_of(unsigned long seed) {
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     return config;
 }
@@ -267,7 +270,7 @@ static RegenerateResult regenerate_retry(Piece *piece, TargetKind kind, unsigned
         Rational from;
         Piece trial;
         ComposeConfig config = config_of(seed + attempt);
-        assert(plan_from_json(snapshot, &fresh, NULL) == PLAN_OK);
+        assert(plan_from_json(test_knowledge(), snapshot, &fresh, NULL) == PLAN_OK);
         trial.plan = fresh;
         bind(&trial);
         compose_outcome_destroy(outcome);
@@ -348,7 +351,7 @@ static int test_remove(void) {
     /* The file renumbers from 1 and reads back to the same file. */
     char *text = json_of(plan);
     PiecePlan *again = NULL;
-    assert(plan_from_json(text, &again, NULL) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, &again, NULL) == PLAN_OK);
     size_t live_nodes = 0;
     size_t live_spans = 0;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -1049,7 +1052,7 @@ static int test_determinism(void) {
             ComposeOutcome outcome;
             ComposeConfig config = config_of(9);
             memset(&outcome, 0, sizeof(outcome));
-            assert(plan_from_json(snapshot, &again.plan, NULL) == PLAN_OK);
+            assert(plan_from_json(test_knowledge(), snapshot, &again.plan, NULL) == PLAN_OK);
             bind(&again);
             results[run] = regenerate_one(again.plan, pick(&again, KINDS[k], &from), &config, &outcome);
             assert(results[run] == REGENERATE_OK || results[run] == REGENERATE_ERR_STUCK);

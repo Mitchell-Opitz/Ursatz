@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <theory/tonality/common_practice_materials.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
@@ -120,6 +121,9 @@ typedef struct {
     PlanMeter meter;
     bool has_key;
     AnalysisKey key;
+    /* The snapshot's common-practice materials: motive-invent reads its C major from them when neither the plan nor the context has a
+       key. NULL for none (the key is then the zero key). Must outlive the registry. */
+    const CommonPracticeMaterials *materials;
     /* How many candidates an operator proposes when the constraint leaves the parameters open. */
     size_t candidates;
     /* The fewest notes a fragment or liquidation may have; 0 means MOTIVE_DEV_MIN_LENGTH. */

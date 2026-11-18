@@ -43,7 +43,7 @@ typedef struct {
  * inversion/retrograde/fragmentation, no pitch-interval math):
  * two windows match iff their Contour direction sequences are equal
  * element-for-element (contour_direction_at) AND their RhythmicPattern
- * duration sequences are equal element-for-element (duration_equals).
+ * duration sequences are equal element-for-element (duration_same).
  * Equal Contour directions is transposition-invariant by construction
  * (a transposition preserves relative up/down/same), so this single
  * rule covers both exact repetition and transposition without any

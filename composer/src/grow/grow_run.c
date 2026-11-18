@@ -77,6 +77,7 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
     compose.pool_count = config->pool_count;
     compose.fidelity = config->fidelity;
     compose.job = config->job;
+    compose.knowledge = config->knowledge;
     GrowResult result = from_piece(compose_run(plan, &compose, &composed));
 
     for (int stage = 0; stage < GROW_STAGE_COUNT; stage++) {

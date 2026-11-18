@@ -3,14 +3,13 @@
 #include <stdlib.h>
 
 #include "theory/tonality/tonal_key.h"
+#include "theory/tonality/common_practice_materials.h"
 
 /* The pitch classes of a key's natural collection as a 12-bit mask: the major scale, or the relative major's
    for a minor key. */
-static unsigned natural_collection(int key_index) {
-    StandardTonalityMode mode = common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR
-                                    ? STANDARD_TONALITY_MODE_NATURAL_MINOR
-                                    : STANDARD_TONALITY_MODE_MAJOR;
-    return standard_tonality_mode_pitch_classes(common_practice_key_index_tonic(key_index), mode);
+static unsigned natural_collection(int key_index, const CommonPracticeMaterials *materials) {
+    const PitchMaterial *material = common_practice_material(materials, common_practice_key_index_mode(key_index));
+    return standard_tonality_material_pitch_classes(common_practice_key_index_tonic(key_index), material);
 }
 
 /* True when the key `to` is closely related to `from`: the dominant or subdominant in the same mode, or the
@@ -28,17 +27,16 @@ static bool closely_related(int from, int to) {
 }
 
 /* The tones a key's diatonic chords are made of: its natural collection, plus the raised seventh in minor. */
-static unsigned held_collection(int key_index) {
-    StandardTonalityMode mode = common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR
-                                    ? STANDARD_TONALITY_MODE_NATURAL_MINOR
-                                    : STANDARD_TONALITY_MODE_MAJOR;
-    return standard_tonality_mode_pitch_classes_with_leading_tone(common_practice_key_index_tonic(key_index), mode);
+static unsigned held_collection(int key_index, const CommonPracticeMaterials *materials) {
+    const PitchMaterial *material = common_practice_material(materials, common_practice_key_index_mode(key_index));
+    return standard_tonality_material_pitch_classes_with_leading_tone(common_practice_key_index_tonic(key_index), material);
 }
 
 /* Folds a region back into the key before it when it is a passage of IV, V and ii of that key (see key_regions.h,
    HOME KEY HELD). */
 void key_regions_hold_home_keys(const CommonPracticeKeySegment *segments, size_t segment_count,
-                           const MeasureWeights *measures, const bool *fixed, double tolerance, int *measure_key) {
+                           const MeasureWeights *measures, const bool *fixed, double tolerance, int *measure_key,
+                           const CommonPracticeMaterials *materials) {
     size_t from = 1;
     while (from < measures->measure_count) {
         if (measure_key[from] == measure_key[from - 1]) {
@@ -51,7 +49,7 @@ void key_regions_hold_home_keys(const CommonPracticeKeySegment *segments, size_t
         }
         int old_key = measure_key[from - 1];
         int tonic = common_practice_key_index_tonic(old_key);
-        unsigned collection = held_collection(old_key);
+        unsigned collection = held_collection(old_key, materials);
         bool hold = !fixed[from] && closely_related(old_key, measure_key[from]);
         size_t chords = 0;
         for (size_t i = 0; i < segment_count && hold; i++) {
@@ -154,13 +152,13 @@ CommonPracticeKeyRegionsStatus key_regions_snap_edges(int *measure_key, const bo
    distance, whose best chord in the old key lies inside the new key's collection. */
 CommonPracticeKeyRegionsStatus key_regions_find_pivot(const CommonPracticeKeySegment *segments, size_t segment_count,
                                                   const MeasureWeights *measures, int boundary_measure,
-                                                  const MusicalTime *boundary_start, int old_key, int new_key,
+                                                  MusicalTime boundary_start, int old_key, int new_key,
                                                   size_t search_measures, bool strictly_before, bool *found,
-                                                  size_t *pivot) {
+                                                  size_t *pivot, const CommonPracticeMaterials *materials) {
     *found = false;
     int old_tonic = common_practice_key_index_tonic(old_key);
     CommonPracticeKeyMode old_mode = common_practice_key_index_mode(old_key);
-    unsigned new_collection = natural_collection(new_key);
+    unsigned new_collection = natural_collection(new_key, materials);
     for (size_t i = segment_count; i-- > 0;) {
         int measure = measures->segment_measure[i];
         if (measure > boundary_measure || key_regions_before(boundary_start, segments[i].start) ||

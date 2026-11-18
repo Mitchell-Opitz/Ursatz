@@ -58,10 +58,31 @@
     return current;
   }
 
-  /* The list called name, as the Composer gives it ([{value, label, ...}]); [] for an unknown name. */
+  /* The list called name, as the Composer gives it ([{value, label, ...}]); [] for an unknown name. The materials lists
+   * ("materials", "piece_materials") give each material's id as its value and its key word as its label. */
   function list(name) {
     const entries = get()[name];
     return Array.isArray(entries) ? entries : [];
+  }
+
+  /* The key word of a material's id ("minor" for "omt.material.natural-minor"), or "" for an id the Composer does not offer. */
+  function keyWord(id) {
+    const found = (get().materials || []).find((item) => item.value === id);
+    return found ? String(found.label) : "";
+  }
+
+  /* The word a page shows for a material's id: its key word ("minor"), "style" for the brief's own, else the id. */
+  function materialWord(id) {
+    return id === "style" ? "style" : keyWord(id) || String(id || "");
+  }
+
+  /* The choices of a materials list for a select: the id as the value, the key word capitalized as the text ("Major"); the
+   * brief's own keeps the Composer's label. */
+  function materialChoices(name) {
+    return list(name).map((entry) => {
+      const word = String(entry.label);
+      return entry.value === "style" ? entry : { ...entry, label: word.charAt(0).toUpperCase() + word.slice(1) };
+    });
   }
 
   /* The values of a list, as strings. */
@@ -158,7 +179,7 @@
     return { check, now, cancel };
   }
 
-  const api = { load, set, loaded, get, forms, form, list, values, labelOf, entry, limit, seedMax, createValidator };
+  const api = { load, set, loaded, get, forms, form, list, keyWord, materialWord, materialChoices, values, labelOf, entry, limit, seedMax, createValidator };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   } else {

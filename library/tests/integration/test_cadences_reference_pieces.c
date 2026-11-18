@@ -19,6 +19,7 @@
 #include "chain/analysis_chain.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "../key_index_test_util.h"
+#include "test_knowledge.h"
 
 /*
  * Cadences from real music for the five reference pieces (Bach 114, Mozart 545, Clementi 36, Field 1, Field 5), against
@@ -218,7 +219,7 @@ static const HandChord *chord_at(const Annotation *a, double t) {
 typedef struct {
     HarmonySegmentInput *inputs;
     MetricalPosition **positions;
-    Duration *beat_length;
+    Duration beat_length;
     size_t count;
 } Inputs;
 
@@ -228,17 +229,18 @@ static Inputs make_inputs(const WeightedPipeline *p, const MeterMap *map, const 
     in.inputs = (HarmonySegmentInput *)calloc(count, sizeof(HarmonySegmentInput));
     in.positions = (MetricalPosition **)calloc(count, sizeof(MetricalPosition *));
     assert(in.inputs != NULL && in.positions != NULL);
-    assert(duration_create(a->beat_num, (unsigned long)a->beat_den, &in.beat_length) == DURATION_OK);
+    assert(duration_make(a->beat_num, (long long)a->beat_den, &in.beat_length) == DURATION_OK);
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(p->sonorities.items[s].sonority);
-        assert(metrical_position_from_time(map, time_span_start(window), &in.positions[s]) == METRICAL_POSITION_OK);
+        assert(metrical_position_from_time(map, &window->start, &in.positions[s]) == METRICAL_POSITION_OK);
         HarmonySegmentInput *input = &in.inputs[s];
         input->segment.id = p->segment_ids[s];
-        input->segment.span = window;
+        input->segment.span = *window;
         input->segment.position = in.positions[s];
-        input->segment.strength = chain_attack_strength(map, time_span_start(window));
+        input->segment.strength = chain_attack_strength(map, &window->start);
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
+        input->has_beat_length = true;
         input->beat_length = in.beat_length;
     }
     return in;
@@ -248,7 +250,6 @@ static void destroy_inputs(Inputs *in) {
     for (size_t s = 0; s < in->count; s++) {
         metrical_position_destroy(in->positions[s]);
     }
-    duration_destroy(in->beat_length);
     free(in->positions);
     free(in->inputs);
 }
@@ -443,10 +444,11 @@ static AnalysisChain *run_analysis_chain(const WeightedPipeline *p, const MeterM
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p->import.key_signatures.events[i];
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
+        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
     }
     AnalysisNoteSet set = {p->notes, p->note_count, map};
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
     config.home_key_index = test_key_index_of(a->home, COMMON_PRACTICE_KEY_MAJOR);
@@ -464,7 +466,14 @@ static Score run_whole_chain(const Piece *piece) {
     AnalysisChain *chain = run_analysis_chain(&p, map, &a);
 
     printf("%s, the whole chain, the analysis chain (draft hand marks):\n", piece->name);
-    Score score = evaluate(&a, analysis_chain_segments(chain)->starts, analysis_chain_cadences(chain), true);
+    const ChainSegments *chain_segments = analysis_chain_segments(chain);
+    double *chain_starts = (double *)calloc(chain_segments->count > 0 ? chain_segments->count : 1, sizeof(double));
+    assert(chain_starts != NULL);
+    for (size_t s = 0; s < chain_segments->count; s++) {
+        chain_starts[s] = rational_to_double(chain_segments->starts[s]);
+    }
+    Score score = evaluate(&a, chain_starts, analysis_chain_cadences(chain), true);
+    free(chain_starts);
     report("chain", &score);
 
     analysis_chain_destroy(chain);

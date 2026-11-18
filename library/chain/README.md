@@ -9,7 +9,7 @@ An extension above the numbered stack. It may include kernel L0 to L8 and the fr
 ## Contents
 
 - `analysis_chain.h/.c`: `analysis_chain_run` and the opaque `AnalysisChain` that owns every result (below).
-- `chain_inputs.h`: the input builders, one per framework input, each owning what it allocates with a matching `_destroy`. A failed builder leaves its output untouched. `ChainInputStatus` names the failure. They sit in one file per stage, `chain_inputs_<stage>.c` (segments, keys, outer_voices, cadences, form, meter, texture, voice_leading, melody, schemas), over `chain_inputs_common.c` (the note key order, the rational and measure readers, the degree parser and the span helper `chain_keep_span` with `chain_release_spans`) and its unstaged header `chain_inputs_internal.h`.
+- `chain_inputs.h`: the input builders, one per framework input, each owning what it allocates with a matching `_destroy`. A failed builder leaves its output untouched. `ChainInputStatus` names the failure. They sit in one file per stage, `chain_inputs_<stage>.c` (segments, keys, outer_voices, cadences, form, meter, texture, voice_leading, melody, schemas), over `chain_inputs_common.c` (the note key order, the measure reader and the degree parser) and its unstaged header `chain_inputs_internal.h`.
 - `analysis_chain_internal.h`: the `AnalysisChain` struct and the stage table (below). Not staged.
 - `form_bridge.h/.c`: `chain_form_boundary_detect` (standard-form's boundary detector, over the kernel's Phrase Boundary Detection) and `chain_form_match_windows` (standard-form's window matcher, over the kernel's Motif Window Matching).
 

@@ -32,8 +32,9 @@ static BeatStrength member_attack_strength(const CommonPracticeSegment *segment,
 
 ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, size_t line_count, const OuterVoiceEntry *entries,
                                          const ChainSegments *segments, size_t count, const CommonPracticeWeightedResult *results,
-                                         int tonic_pitch_class, CommonPracticeKeyMode mode, ChainMelodyLine *out) {
-    if (line_segments == NULL || segments == NULL || entries == NULL || results == NULL || out == NULL) {
+                                         int tonic_pitch_class, CommonPracticeKeyMode mode, const CommonPracticeMaterials *materials,
+                                         ChainMelodyLine *out) {
+    if (line_segments == NULL || segments == NULL || entries == NULL || results == NULL || materials == NULL || out == NULL) {
         return CHAIN_INPUT_ERR_NULL_ARGUMENT;
     }
     if (line_segments->starts == NULL || segments->segments == NULL || segments->starts == NULL || line_count == 0 ||
@@ -51,7 +52,7 @@ ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, siz
     size_t chord = 0; /* the chord segment holding the entry's line segment: the last that starts at or before it */
     for (size_t s = 0; s < line_count; s++) {
         const OuterVoiceEntry *entry = &entries[s];
-        while (chord + 1 < count && segments->starts[chord + 1] <= line_segments->starts[s] + 1e-12) {
+        while (chord + 1 < count && rational_cmp(segments->starts[chord + 1], line_segments->starts[s]) <= 0) {
             chord++;
         }
         if (!entry->present) {
@@ -77,7 +78,7 @@ ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, siz
         note.pitch = entry->pitch;
         note.confidence = 1.0;
         long midi = pitch_numeric_value_position_numerator(entry->pitch);
-        if (!chain_parse_degree(common_practice_scale_degree_label(pitch_class_of_midi(midi), tonic_pitch_class, mode), &note.degree,
+        if (!chain_parse_degree(common_practice_scale_degree_label(pitch_class_of_midi(midi), tonic_pitch_class, mode, materials), &note.degree,
                           &note.alteration)) {
             chain_melody_line_destroy(&built);
             return CHAIN_INPUT_ERR_BAD_NOTES;

@@ -41,10 +41,10 @@ static void test_conductor_track(void) {
 
     MidiKeySignatureEvent keys[2];
     memset(keys, 0, sizeof(keys));
-    keys[0].position = test_time(0, 1);
+    assert(musical_time_make(0, 1, &keys[0].position) == MUSICAL_TIME_OK);
     keys[0].sharps_flats = -2;
     keys[0].mode_byte = 0;
-    keys[1].position = test_time(1, 1);
+    assert(musical_time_make(1, 1, &keys[1].position) == MUSICAL_TIME_OK);
     keys[1].sharps_flats = 3;
     keys[1].mode_byte = 1;
 
@@ -65,8 +65,6 @@ static void test_conductor_track(void) {
     assert_bytes(data, size, expected, sizeof(expected));
     free(data);
 
-    musical_time_destroy(keys[0].position);
-    musical_time_destroy(keys[1].position);
     meter_map_destroy(meter_map);
     tempo_map_destroy(tempo_map);
 }

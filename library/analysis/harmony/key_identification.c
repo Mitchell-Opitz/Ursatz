@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "theory/tonality/tonal_key.h"
+#include "theory/tonality/common_practice_materials.h"
 
 static bool contains_pitch_class(const int *pitch_classes, size_t count, int pitch_class) {
     for (size_t i = 0; i < count; i++) {
@@ -31,8 +32,8 @@ static size_t count_distinct(const int *pitch_classes, size_t pitch_class_count,
 
 /* True when every pitch class of the mode's scale on tonic 0 is among the distinct ones, compared as an unordered
    set -- see header for the tie-break rule. */
-static bool matches_collection(const int *distinct, size_t distinct_count, StandardTonalityMode mode) {
-    unsigned scale = standard_tonality_mode_pitch_classes(0, mode);
+static bool matches_collection(const int *distinct, size_t distinct_count, const PitchMaterial *material) {
+    unsigned scale = standard_tonality_material_pitch_classes(0, material);
     for (int pitch_class = 0; pitch_class < 12; pitch_class++) {
         if ((scale & (1u << pitch_class)) != 0 && !contains_pitch_class(distinct, distinct_count, pitch_class)) {
             return false;
@@ -41,20 +42,20 @@ static bool matches_collection(const int *distinct, size_t distinct_count, Stand
     return true;
 }
 
-bool common_practice_identify_key_mode(const int *tonic_relative_pitch_classes, size_t pitch_class_count,
-                                        CommonPracticeKeyMode *out) {
-    if (tonic_relative_pitch_classes == NULL || out == NULL) {
+bool common_practice_identify_key_mode(const CommonPracticeMaterials *materials, const int *tonic_relative_pitch_classes,
+                                        size_t pitch_class_count, CommonPracticeKeyMode *out) {
+    if (materials == NULL || tonic_relative_pitch_classes == NULL || out == NULL) {
         return false;
     }
 
     int distinct[12];
     size_t distinct_count = count_distinct(tonic_relative_pitch_classes, pitch_class_count, distinct, 12);
 
-    if (matches_collection(distinct, distinct_count, STANDARD_TONALITY_MODE_MAJOR)) {
+    if (matches_collection(distinct, distinct_count, materials->major)) {
         *out = COMMON_PRACTICE_KEY_MAJOR;
         return true;
     }
-    if (matches_collection(distinct, distinct_count, STANDARD_TONALITY_MODE_NATURAL_MINOR)) {
+    if (matches_collection(distinct, distinct_count, materials->natural_minor)) {
         *out = COMMON_PRACTICE_KEY_MINOR;
         return true;
     }

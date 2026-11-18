@@ -286,31 +286,38 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     } else if (text->hybrid) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/hybrid", "hybrid applies only to into hybrid");
     }
-    if (text->mode && api_choice_find_ignore_case(API_PIECE_MODES, text->mode) < 0) {
-        char modes[64];
-        api_choice_list(API_PIECE_MODES, modes, sizeof modes);
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be %s, not '%s'", modes, text->mode);
+    const PitchMaterial *picked = NULL;
+    char member_path[32];
+    if (text->material) {
+        ApiMaterialKind kind;
+        snprintf(member_path, sizeof member_path, "/%s", text->material_member);
+        ComposerStatus resolved = api_resolve_material(out->knowledge, text->material_member, member_path, text->material,
+                                                       API_MATERIAL_ALLOW_STYLE, &picked, &kind, error);
+        if (resolved != COMPOSER_OK) {
+            return resolved;
+        }
+        if (kind == API_MATERIAL_STYLE && !text->has_style) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, member_path, "%s style needs style", text->material_member);
+        }
     }
-    if (text->mode && request_equals_ignore_case(text->mode, "style") && !text->has_style) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode style needs style");
-    }
-    /* With a mode the key may be a tonic alone: the mode is the one the mode gives. */
+    /* With a material the key may be a tonic alone: the material is the one the member gives. */
     char tonic_key[64];
     const char *key_text = text->key;
-    if (text->mode && strlen(key_text) + 7 < sizeof tonic_key && !strpbrk(key_text, " \t")) {
+    if (text->material && strlen(key_text) + 7 < sizeof tonic_key && !strpbrk(key_text, " \t")) {
         snprintf(tonic_key, sizeof tonic_key, "%s major", key_text);
         key_text = tonic_key;
     }
-    if (!request_parse_key(key_text, &out->key)) {
+    if (!request_parse_key(key_text, out->knowledge, &out->key)) {
+        if (api_fail_unsupported_key(error, "/key", out->knowledge, key_text)) {
+            return COMPOSER_ERR_REQUEST;
+        }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, for "
                         "example \"D minor\"",
                         text->key);
     }
-    if (text->mode && request_equals_ignore_case(text->mode, "major")) {
-        out->key.mode = KEY_STRUCTURE_MODE_MAJOR;
-    } else if (text->mode && request_equals_ignore_case(text->mode, "minor")) {
-        out->key.mode = KEY_STRUCTURE_MODE_MINOR;
+    if (picked) {
+        composer_key_set_material(&out->key, picked);
     }
     if (!request_parse_meter(text->meter, &out->meter) || !harmony_meter_supported(&out->meter)) {
         return api_fail_meter(error, "/meter", text->meter);
@@ -519,13 +526,16 @@ ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *
     } else if (composer_style_tempo(out->style, &out->tempo)) {
         out->tempo_from = "style";
     }
-    bool from_style = out->text->mode && request_equals_ignore_case(out->text->mode, "style");
+    bool from_style = out->text->material && request_equals_ignore_case(out->text->material, "style");
     if (from_style) {
-        bool minor = false;
-        if (!composer_style_mode(out->style, &minor)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode style needs a style with a mode category");
+        const PitchMaterial *material = NULL;
+        if (!composer_style_mode(out->style, out->materials, &material)) {
+            char member_path[32];
+            snprintf(member_path, sizeof member_path, "/%s", out->text->material_member);
+            return api_fail(error, COMPOSER_ERR_REQUEST, member_path, "%s style needs a style with a mode category",
+                            out->text->material_member);
         }
-        out->key.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+        composer_key_set_material(&out->key, material);
     }
     out->mode_from = from_style ? "style" : "request";
     return COMPOSER_OK;
@@ -749,6 +759,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     config.style_weight = setup->style_weight;
     config.tempo = setup->tempo;
     config.job = setup->job;
+    config.knowledge = setup->knowledge;
     if (material) {
         config.pool = material->pool;
         config.pool_count = material->pool_count;
@@ -775,7 +786,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     }
     /* A theme the Analyzer cannot read is not held against it. */
     if (ran == GROW_OK && setup->check && theme_node != PLAN_NODE_NONE) {
-        theme->checked = analyzer_check_section(theme->plan, theme_node, &theme->check) == ANALYZER_CHECK_OK;
+        theme->checked = analyzer_check_section(theme->plan, setup->knowledge, theme_node, &theme->check) == ANALYZER_CHECK_OK;
         if (theme->checked && theme->check.contradicts) {
             ComposeRejection rejection;
             if (setup->explain &&
@@ -1479,14 +1490,14 @@ static cJSON *ratio_number(const ComposerRatio *ratio) {
 cJSON *api_brief_json(const GrowBrief *brief) {
     cJSON *object = cJSON_CreateObject();
     cJSON *tempo = cJSON_CreateObject();
-    cJSON *mode = cJSON_CreateObject();
+    cJSON *material = cJSON_CreateObject();
     cJSON *without = cJSON_CreateArray();
-    if (!object || !tempo || !mode || !without ||
+    if (!object || !tempo || !material || !without ||
         !cJSON_AddItemToObject(tempo, "qpm", brief->tempo.denominator > 0 ? ratio_number(&brief->tempo) : cJSON_CreateNull()) ||
         !cJSON_AddStringToObject(tempo, "from", brief->tempo_from) ||
-        !cJSON_AddStringToObject(mode, "mode", brief->minor ? "minor" : "major") ||
-        !cJSON_AddStringToObject(mode, "from", brief->mode_from) || !cJSON_AddItemToObject(object, "tempo", tempo) ||
-        !cJSON_AddItemToObject(object, "mode", mode) ||
+        !cJSON_AddStringToObject(material, "material", brief->material ? brief->material->id : "omt.material.major") ||
+        !cJSON_AddStringToObject(material, "from", brief->mode_from) || !cJSON_AddItemToObject(object, "tempo", tempo) ||
+        !cJSON_AddItemToObject(object, "material", material) ||
         !cJSON_AddItemToObject(object, "density", brief->has_density ? ratio_number(&brief->density) : cJSON_CreateNull()) ||
         !cJSON_AddItemToObject(object, "without", without) ||
         (brief->development && !cJSON_AddStringToObject(object, "development", brief->development))) {
@@ -1494,8 +1505,8 @@ cJSON *api_brief_json(const GrowBrief *brief) {
         if (!object || !cJSON_GetObjectItem(object, "tempo")) {
             cJSON_Delete(tempo);
         }
-        if (!object || !cJSON_GetObjectItem(object, "mode")) {
-            cJSON_Delete(mode);
+        if (!object || !cJSON_GetObjectItem(object, "material")) {
+            cJSON_Delete(material);
         }
         if (!object || !cJSON_GetObjectItem(object, "without")) {
             cJSON_Delete(without);
@@ -1520,7 +1531,7 @@ void api_grow_brief(const GrowSetup *setup, GrowBrief *out) {
     memset(out, 0, sizeof(*out));
     out->tempo = setup->tempo;
     out->tempo_from = setup->tempo_from;
-    out->minor = setup->key.mode == KEY_STRUCTURE_MODE_MINOR;
+    out->material = setup->key.material;
     out->mode_from = setup->mode_from;
     out->has_density = composer_style_density(setup->style, &out->density);
     out->without = setup->without;
@@ -1656,7 +1667,7 @@ static cJSON *given_construction_json(const PlanConstruction *construction) {
 cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const GrowThemeInfo *info) {
     const GrowBriefText *text = setup->text;
     char key[24];
-    util_key_name(analysis_key_tonic_pitch_class(&setup->key), setup->key.mode == KEY_STRUCTURE_MODE_MINOR, key, sizeof key);
+    util_key_name(analysis_key_tonic_pitch_class(&setup->key), setup->key.material, key, sizeof key);
     char pairing[64];
     snprintf(pairing, sizeof(pairing), "%s + %s", BEGINNING_NAMES[setup->pairing.beginning],
              ENDING_NAMES[setup->pairing.ending]);

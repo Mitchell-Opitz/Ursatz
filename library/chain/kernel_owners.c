@@ -43,7 +43,7 @@ static bool sketch_of(const StandardFormMotiveShape *shape, const ChainRelationC
     if (shape->generic && context != NULL && context->has_key) {
         out->has_scale = true;
         out->tonic_pc = context->tonic_pitch_class;
-        out->minor = context->minor;
+        out->material = context->material;
         out->key_source = MOTIVE_SKETCH_KEY_GIVEN;
     }
     return motive_sketch_validate(out);

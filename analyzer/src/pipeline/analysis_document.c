@@ -10,6 +10,7 @@
 
 #include "cJSON.h"
 #include "theory/tonality/common_practice_framework.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "model/core/rational.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/analysis_result_internal.h"
@@ -28,7 +29,6 @@
 #include "model/time/metrical_position.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_signature.h"
 #include "util/json_util.h"
 #include "util/misc_util.h"
@@ -51,6 +51,7 @@ static const char READING_METER_SOURCE[] = "notation-reading-meter";
    fails instead of printing a wrapped time. */
 typedef struct {
     bool overflowed;
+    CommonPracticeMaterials materials; /* the major and natural minor a notated key signature's labels are spelled with */
 } DocBuild;
 
 static Rational doc_rational(DocBuild *build, long long num, unsigned long long den) {
@@ -81,7 +82,7 @@ static Rational doc_sub(DocBuild *build, Rational a, Rational b) {
 /* length measured in beats of the given duration. */
 static Rational doc_in_beats(DocBuild *build, Rational length, const Duration *beat) {
     Rational beats = {0, 1};
-    if (rational_div(length, doc_rational(build, duration_numerator(beat), duration_denominator(beat)), &beats) !=
+    if (rational_div(length, doc_rational(build, beat->value.num, (unsigned long long)beat->value.den), &beats) !=
         RATIONAL_OK) {
         build->overflowed = true;
     }
@@ -90,24 +91,12 @@ static Rational doc_in_beats(DocBuild *build, Rational length, const Duration *b
 
 static bool time_before(Rational a, Rational b) { return rational_cmp(a, b) < 0; }
 
-static Rational time_rational(DocBuild *build, const MusicalTime *time) {
-    Rational value = {0, 1};
-    if (rational_of_musical_time(time, &value) != RATIONAL_OK) {
-        build->overflowed = true;
-    }
-    return value;
-}
-
-static Rational note_onset(DocBuild *build, const NoteEvent *event) {
-    return time_rational(build, temporal_anchor_position(note_event_temporal_anchor(event)));
+static Rational note_onset(const NoteEvent *event) {
+    return temporal_anchor_position(note_event_temporal_anchor(event))->value;
 }
 
 static Rational note_end(DocBuild *build, const NoteEvent *event) {
-    Rational length = {0, 1};
-    if (rational_of_duration(note_event_duration(event), &length) != RATIONAL_OK) {
-        build->overflowed = true;
-    }
-    return doc_add(build, note_onset(build, event), length);
+    return doc_add(build, note_onset(event), note_event_duration(event)->value);
 }
 
 /* Earliest onset to latest note end over the given notes (ids NULL means
@@ -117,7 +106,7 @@ static void notes_span(DocBuild *build, const ImportedNotes *notes, const size_t
     *end = (Rational){0, 1};
     for (size_t i = 0; i < id_count; i++) {
         const NoteEvent *event = notes->events[ids ? ids[i] : i];
-        Rational onset = note_onset(build, event);
+        Rational onset = note_onset(event);
         Rational finish = note_end(build, event);
         if (i == 0 || time_before(onset, *start)) {
             *start = onset;
@@ -178,13 +167,9 @@ static cJSON *uncertainty_json(AnalysisConfidence confidence) {
    past its start, as a rational (0/1 on the beat). Null when the
    position cannot be read, e.g. a signature with no beat grid. */
 static cJSON *position_json(DocBuild *build, const MeterMap *map, Rational time) {
-    MusicalTime *musical_time = NULL;
-    if (musical_time_create((long)time.num, (unsigned long)time.den, &musical_time) != MUSICAL_TIME_OK) {
-        return cJSON_CreateNull();
-    }
+    MusicalTime musical_time = musical_time_of(time);
     MetricalPosition *position = NULL;
-    MetricalPositionResult result = metrical_position_from_time(map, musical_time, &position);
-    musical_time_destroy(musical_time);
+    MetricalPositionResult result = metrical_position_from_time(map, &musical_time, &position);
     if (result != METRICAL_POSITION_OK) {
         return cJSON_CreateNull();
     }
@@ -276,18 +261,18 @@ static cJSON *time_signature_json(const TimeSignature *time_signature) {
    no beat grid). */
 static cJSON *pickup_json(DocBuild *build, const MeterMap *map) {
     const MeterMapRegion *region = meter_map_region(map, 0);
-    const MusicalTime *end = meter_map_region_end(region);
+    MusicalTime end;
     const TimeSignature *reading = NULL;
-    if (!end || metrical_position_reading_signature(map, 0, &reading) != METRICAL_POSITION_OK) {
+    if (!meter_map_region_end(region, &end) ||
+        metrical_position_reading_signature(map, 0, &reading) != METRICAL_POSITION_OK) {
         return NULL;
     }
-    Rational length = time_rational(build, end);
+    Rational length = end.value;
 
     cJSON *beats = NULL;
-    Duration *beat = NULL;
+    Duration beat;
     if (standard_meter_beat_start(reading, 1, &beat)) {
-        beats = rational_json(doc_in_beats(build, length, beat));
-        duration_destroy(beat);
+        beats = rational_json(doc_in_beats(build, length, &beat));
     } else {
         beats = cJSON_CreateNull();
     }
@@ -311,10 +296,11 @@ static cJSON *meter_changes_json(DocBuild *build, const MeterMap *map, size_t fi
     }
     for (size_t i = first_index; i < meter_map_region_count(map); i++) {
         const MeterMapRegion *region = meter_map_region(map, i);
+        MusicalTime region_start = meter_map_region_start(region);
         cJSON *change = cJSON_CreateObject();
         if (!(change &&
               json_add(change, "measure", cJSON_CreateNumber((double)meter_map_region_first_measure_number(region))) &&
-              json_add(change, "start", rational_json(time_rational(build, meter_map_region_start(region)))) &&
+              json_add(change, "start", rational_json(region_start.value)) &&
               json_add(change, "time_signature", time_signature_json(meter_map_region_time_signature(region))) &&
               json_add(change, "inferred", cJSON_CreateBool(meter_map_region_is_defaulted(region))))) {
             cJSON_Delete(change);
@@ -358,7 +344,7 @@ static cJSON *meter_json(DocBuild *build, const ImportedNotes *notes) {
     const TimeSignature *time_signature = meter_map_region_time_signature(meter_map_region(map, primary_index));
 
     size_t measure_count = 0;
-    if (meter_map_measure_count(map, notes->meter.end_time, &measure_count) != METER_MAP_OK) {
+    if (meter_map_measure_count(map, &notes->meter.end_time, &measure_count) != METER_MAP_OK) {
         return NULL;
     }
 
@@ -415,9 +401,9 @@ static cJSON *key_signatures_json(DocBuild *build, const ImportedNotes *notes) {
     for (size_t i = 0; i < notes->key_signature_events.count; i++) {
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
         int major = key_signature_major_tonic(event->sharps_flats);
-        char *major_label = key_label_create(major, true);
-        char *minor_label = key_label_create((major + 9) % 12, false);
-        Rational start = time_rational(build, event->position);
+        char *major_label = key_label_create(major, build->materials.major);
+        char *minor_label = key_label_create((major + 9) % 12, build->materials.natural_minor);
+        Rational start = event->position.value;
         cJSON *object = cJSON_CreateObject();
         bool ok = major_label && minor_label && object &&
                   json_add(object, "start", rational_json(start)) &&
@@ -542,7 +528,7 @@ static size_t *notes_starting_in(DocBuild *build, const ImportedNotes *notes, Ra
     }
     *count = 0;
     for (size_t i = 0; i < notes->count; i++) {
-        Rational onset = note_onset(build, notes->events[i]);
+        Rational onset = note_onset(notes->events[i]);
         if (!time_before(onset, start) && time_before(onset, end)) {
             ids[(*count)++] = i;
         }
@@ -584,7 +570,7 @@ static cJSON *key_region_json(DocBuild *build, const ImportedNotes *notes, const
     cJSON *claim = region_span_claim(build, notes, region, region->label, cJSON_CreateNumber(region->uncertainty));
     if (!(claim && json_add(claim, "index", cJSON_CreateNumber((double)index)) &&
           json_add(claim, "tonic", cJSON_CreateString(pitch_class_name(region->tonic_pitch_class, region->prefer_flats))) &&
-          json_add(claim, "mode", cJSON_CreateString(region->is_major ? "major" : "minor")) &&
+          json_add(claim, "material", cJSON_CreateString(region->material->id)) &&
           json_add(claim, "measures", measures_json(region->first_measure, region->last_measure)) &&
           json_add(claim, "source", cJSON_CreateString(region_source_name(region->source))))) {
         cJSON_Delete(claim);
@@ -599,7 +585,7 @@ static cJSON *home_region_indices_json(const AnalysisReport *report) {
     cJSON *indices = cJSON_CreateArray();
     for (size_t i = 0; indices && i < report->key_region_count; i++) {
         const AnalysisKeyRegion *region = &report->key_regions[i];
-        if (region->tonic_pitch_class == home->tonic_pitch_class && region->is_major == home->is_major &&
+        if (region->tonic_pitch_class == home->tonic_pitch_class && region->material == home->material &&
             !json_append(indices, cJSON_CreateNumber((double)i))) {
             cJSON_Delete(indices);
             return NULL;
@@ -824,7 +810,12 @@ static cJSON *pivot_chords_json(DocBuild *build, const ImportedNotes *notes, con
 /* Whether a key is the major key of a notated signature or its relative minor. */
 static bool key_fits_signature(const AnalysisKeyRegion *region, int sharps_flats) {
     int major = key_signature_major_tonic(sharps_flats);
-    return region->is_major ? region->tonic_pitch_class == major : region->tonic_pitch_class == (major + 9) % 12;
+    CommonPracticeKeyMode mode;
+    if (!common_practice_key_mode_of(region->material, &mode)) {
+        return false;
+    }
+    return mode == COMMON_PRACTICE_KEY_MAJOR ? region->tonic_pitch_class == major
+                                             : region->tonic_pitch_class == (major + 9) % 12;
 }
 
 /* The region in effect at time: the one whose span holds it, the first for a time before the piece's first
@@ -841,14 +832,14 @@ static const AnalysisKeyRegion *region_at(DocBuild *build, const AnalysisReport 
 
 /* One disagreement between a notated signature and the detected keys. signature_index is -1 for a note about
    the home key, which fits no signature at all. */
-static cJSON *disagreement_json(const char *scope, long signature_index, const MidiKeySignatureEvent *event,
+static cJSON *disagreement_json(const DocBuild *build, const char *scope, long signature_index, const MidiKeySignatureEvent *event,
                                 size_t region_index, const AnalysisKeyRegion *region) {
     char notated[96] = "";
     char message[256];
     if (event) {
         int major = key_signature_major_tonic(event->sharps_flats);
-        char *major_label = key_label_create(major, true);
-        char *minor_label = key_label_create((major + 9) % 12, false);
+        char *major_label = key_label_create(major, build->materials.major);
+        char *minor_label = key_label_create((major + 9) % 12, build->materials.natural_minor);
         if (major_label && minor_label) {
             snprintf(notated, sizeof(notated), "%s or %s", major_label, minor_label);
         }
@@ -902,14 +893,14 @@ static cJSON *notes_json(DocBuild *build, const ImportedNotes *notes, const Anal
             continue; /* the same signature repeated is not a new one (the library does not treat it as a boundary) */
         }
         size_t region_index = 0;
-        const AnalysisKeyRegion *region = region_at(build, report, time_rational(build, event->position), &region_index);
+        const AnalysisKeyRegion *region = region_at(build, report, event->position.value, &region_index);
         if (region && !key_fits_signature(region, event->sharps_flats) &&
-            !json_append(list, disagreement_json("region_at_signature", (long)i, event, region_index, region))) {
+            !json_append(list, disagreement_json(build, "region_at_signature", (long)i, event, region_index, region))) {
             cJSON_Delete(list);
             return NULL;
         }
     }
-    if (!home_fits_any && !json_append(list, disagreement_json("home_key", -1, NULL, report->home_region, home))) {
+    if (!home_fits_any && !json_append(list, disagreement_json(build, "home_key", -1, NULL, report->home_region, home))) {
         cJSON_Delete(list);
         return NULL;
     }
@@ -920,18 +911,14 @@ static cJSON *notes_json(DocBuild *build, const ImportedNotes *notes, const Anal
    position cannot be read or the signature has no beat grid. Segments do not cross a barline, so one
    signature covers the whole span. */
 static cJSON *span_beats_json(DocBuild *build, const MeterMap *map, Rational start, Rational end) {
-    MusicalTime *musical_time = NULL;
-    if (musical_time_create((long)start.num, (unsigned long)start.den, &musical_time) != MUSICAL_TIME_OK) {
-        return cJSON_CreateNull();
-    }
+    MusicalTime musical_time = musical_time_of(start);
     MetricalPosition *position = NULL;
-    MetricalPositionResult result = metrical_position_from_time(map, musical_time, &position);
-    musical_time_destroy(musical_time);
+    MetricalPositionResult result = metrical_position_from_time(map, &musical_time, &position);
     if (result != METRICAL_POSITION_OK) {
         return cJSON_CreateNull();
     }
     const TimeSignature *reading = NULL;
-    Duration *beat = NULL;
+    Duration beat;
     bool readable = metrical_position_reading_signature(map, metrical_position_measure(position), &reading) ==
                         METRICAL_POSITION_OK &&
                     standard_meter_beat_start(reading, 1, &beat);
@@ -941,9 +928,7 @@ static cJSON *span_beats_json(DocBuild *build, const MeterMap *map, Rational sta
     }
 
     Rational length = doc_sub(build, end, start);
-    cJSON *beats = rational_json(doc_in_beats(build, length, beat));
-    duration_destroy(beat);
-    return beats;
+    return rational_json(doc_in_beats(build, length, &beat));
 }
 
 static cJSON *optional_string_json(const char *value) {
@@ -1078,8 +1063,7 @@ static cJSON *applied_json(DocBuild *build, const AnalysisReport *report, const 
     int target_tonic = -1;
     if (in_region) {
         const AnalysisKeyRegion *local = &report->key_regions[entry->region];
-        int semitones = standard_tonality_degree_semitone(
-            local->is_major ? STANDARD_TONALITY_MODE_MAJOR : STANDARD_TONALITY_MODE_NATURAL_MINOR, roman->target_degree);
+        int semitones = standard_tonality_material_degree_semitone(local->material, roman->target_degree);
         target_tonic = semitones < 0 ? -1 : (local->tonic_pitch_class + semitones) % 12;
     }
     Rational chord_start = doc_rational(build, entry->time_numerator, entry->time_denominator);
@@ -2183,7 +2167,7 @@ static bool add_outer_note_timing(DocBuild *build, cJSON *claim, const ImportedN
         return json_add(claim, "onset", cJSON_CreateNull()) && json_add(claim, "duration", cJSON_CreateNull());
     }
     const NoteEvent *event = notes->events[voice->note_id];
-    Rational onset = note_onset(build, event);
+    Rational onset = note_onset(event);
     Rational end = note_end(build, event);
     cJSON *onset_object = cJSON_CreateObject();
     cJSON *duration = cJSON_CreateObject();
@@ -2594,7 +2578,7 @@ static cJSON *motive_features_json(const AnalysisMotiveFeatures *features) {
     /* json_add() takes an item over, and frees it itself when it fails, so each is cleared once handed over */
     ok = ok && add_owned(object, "notes", &notes) &&
          json_add(object, "tonic_pc", cJSON_CreateNumber(features->tonic_pc)) &&
-         json_add(object, "minor", cJSON_CreateBool(features->minor)) &&
+         json_add(object, "material", cJSON_CreateString(features->material->id)) &&
          json_add(object, "bar", fraction_string_json(features->bar_numerator, features->bar_denominator)) &&
          json_add(object, "beat", fraction_string_json(features->beat_numerator, features->beat_denominator)) &&
          json_add(object, "pickup", fraction_string_json(features->pickup_numerator, features->pickup_denominator)) &&
@@ -3666,17 +3650,13 @@ static cJSON *voice_leading_json(DocBuild *build, const ImportedNotes *notes, co
 
 /* The measure a time lies in, as the library numbers them (a pickup is 0); 0 when the position cannot be read. */
 static int measure_of_time(const MeterMap *map, Rational time) {
-    MusicalTime *musical_time = NULL;
+    MusicalTime musical_time = musical_time_of(time);
     MetricalPosition *position = NULL;
     int measure = 0;
-    if (musical_time_create((long)time.num, (unsigned long)time.den, &musical_time) != MUSICAL_TIME_OK) {
-        return 0;
-    }
-    if (metrical_position_from_time(map, musical_time, &position) == METRICAL_POSITION_OK) {
+    if (metrical_position_from_time(map, &musical_time, &position) == METRICAL_POSITION_OK) {
         measure = metrical_position_measure(position);
         metrical_position_destroy(position);
     }
-    musical_time_destroy(musical_time);
     return measure;
 }
 
@@ -3992,13 +3972,16 @@ static bool print_value(Buffer *buffer, const cJSON *item, int depth) {
     return buffer_indent(buffer, depth) && buffer_append(buffer, close);
 }
 
-AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes,
-                                          const AnalysisReport *report) {
+AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report,
+                                          const KnowledgeSnapshot *knowledge) {
+    DocBuild build = {false, {NULL, NULL, NULL, NULL}};
+    if (!common_practice_materials_resolve(knowledge, &build.materials, NULL, 0)) {
+        return NULL;
+    }
     AnalysisDocument *document = malloc(sizeof(AnalysisDocument));
     if (!document) {
         return NULL;
     }
-    DocBuild build = {false};
     document->root = document_json(&build, input_path, notes, report);
     if (document->root && build.overflowed) {
         cJSON_Delete(document->root);
@@ -4015,7 +3998,8 @@ AnalysisDocument *analysis_document_build_from_result(const char *input_path, co
     if (!analyzer_result_report_complete(result)) {
         return NULL;
     }
-    return analysis_document_build(input_path, analyzer_result_notes(result), analyzer_result_report(result));
+    return analysis_document_build(input_path, analyzer_result_notes(result), analyzer_result_report(result),
+                                   analyzer_result_knowledge(result));
 }
 
 char *analysis_document_render_result(const char *input_path, const AnalyzerResult *result) {

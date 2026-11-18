@@ -14,6 +14,7 @@
 
 #include "accompaniment_check.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * The accompaniment operator on realized plans: the fixed 8-bar sentence in C major 4/4, and plans built here in 3/4
@@ -43,7 +44,7 @@ static Rational fraction(long num, unsigned long den) {
 }
 
 static AnalysisKey c_major(void) {
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+    AnalysisKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     return key;
 }
 
@@ -213,7 +214,9 @@ static FillOutcome accompany(PiecePlan *plan, unsigned long seed) {
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     config.checker = accompaniment_checker;
-    assert(registry && accompaniment_register(registry, NULL) == FILL_OK);
+    AccompanimentParams params = accompaniment_params_default();
+    params.knowledge = test_knowledge();
+    assert(registry && accompaniment_register(registry, &params) == FILL_OK);
     assert(fill_run(plan, registry, &config, &outcome, NULL) == FILL_OK);
     fill_registry_destroy(registry);
     return outcome;
@@ -386,7 +389,7 @@ static void test_unused_voices_are_written_empty(void) {
     char *json = plan_to_json(piece.plan, NULL);
     PiecePlan *read = NULL;
     PlanJsonError error;
-    assert(json && plan_from_json(json, &read, &error) == PLAN_OK);
+    assert(json && plan_from_json(test_knowledge(), json, &read, &error) == PLAN_OK);
     char *again = plan_to_json(read, NULL);
     assert(again && strcmp(json, again) == 0);
     free(again);
@@ -482,7 +485,7 @@ static void test_constraint(void) {
            strstr(json, "\"texture\": \"melody and accompaniment\"") && strstr(json, "\"pattern\": \"oom-pah\""));
     PiecePlan *read = NULL;
     PlanJsonError error;
-    assert(plan_from_json(json, &read, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, &read, &error) == PLAN_OK);
     LaneSpanId read_target;
     assert(plan_lane_find(read, PLAN_LANE_INNER_VOICE, 1, piece.span, &read_target, 1) == 1);
     assert(plan_lane_span_constraint_count(read, read_target) == 2);
@@ -503,13 +506,13 @@ static void test_constraint(void) {
     assert(at);
     memcpy(at, "\"albertz\"", 9);
     PiecePlan *refused = NULL;
-    assert(plan_from_json(bad, &refused, &error) == PLAN_ERR_FORMAT && !refused);
+    assert(plan_from_json(test_knowledge(), bad, &refused, &error) == PLAN_ERR_FORMAT && !refused);
     free(bad);
     bad = strdup(json);
     at = strstr(bad, "\"melody and accompaniment\"");
     assert(at);
     memcpy(at + 1, "melody and accompanimenx", 24);
-    assert(plan_from_json(bad, &refused, &error) == PLAN_ERR_FORMAT && !refused);
+    assert(plan_from_json(test_knowledge(), bad, &refused, &error) == PLAN_ERR_FORMAT && !refused);
     free(bad);
     free(json);
     plan_destroy(read);

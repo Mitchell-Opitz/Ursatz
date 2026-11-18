@@ -15,6 +15,7 @@
 #include <ursatz_composer/style.h>
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_CLI_PATH
 #error "COMPOSER_CLI_PATH is not defined"
@@ -52,7 +53,8 @@ static PiecePlan *rounded_binary(void) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 24;
@@ -65,6 +67,7 @@ static PiecePlan *period_a_minor(Motive *motive) {
     PiecePlan *plan = NULL;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 3;
     options.meter.beat_unit = 4;
@@ -72,7 +75,7 @@ static PiecePlan *period_a_minor(Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+    request.key = test_key(9, "minor");
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
@@ -120,6 +123,7 @@ static int test_choices(void) {
     ComposerStyle *style = chorales();
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 3;
     config.analyzer_check = true;
     config.style = style;
@@ -257,6 +261,7 @@ static int test_rejections(void) {
         PiecePlan *plan = period_a_minor(&motive);
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.analyzer_check = true;
         ComposeOutcome outcome;
@@ -309,6 +314,7 @@ static void explained(unsigned long seed, char **text, char **json) {
     ComposerStyle *style = chorales();
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.analyzer_check = true;
     config.style = style;

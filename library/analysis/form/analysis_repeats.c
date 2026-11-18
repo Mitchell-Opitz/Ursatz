@@ -107,7 +107,9 @@ static StandardFormAnalysisStatus table_build(const StandardFormRepeatNote *note
         Rational end;
         Rational measure_start;
         int measure = 0;
-        if (!score_time_span(notes[i].span, &start, &end) || meter_map_measure_of(map, start, &measure) != METER_MAP_OK ||
+        start = notes[i].span.start.value;
+        end = notes[i].span.end.value;
+        if (meter_map_measure_of(map, start, &measure) != METER_MAP_OK ||
             meter_map_measure_bounds(map, measure, &measure_start, NULL) != METER_MAP_OK ||
             rational_sub(start, measure_start, &entries[i].onset) != RATIONAL_OK ||
             rational_sub(end, start, &entries[i].duration) != RATIONAL_OK) {
@@ -328,11 +330,6 @@ StandardFormAnalysisStatus standard_form_find_repeats(const StandardFormRepeatNo
     size_t min_measures = config == NULL ? DEFAULT_MIN_MEASURES : config->min_measures;
     if (min_measures == 0) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
-    }
-    for (size_t i = 0; i < count; i++) {
-        if (notes[i].span == NULL) {
-            return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
-        }
     }
     StandardFormRepeats none = {NULL, 0};
     if (count == 0) {

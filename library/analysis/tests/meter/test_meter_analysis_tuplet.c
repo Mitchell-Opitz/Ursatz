@@ -24,7 +24,7 @@ static void fixture_note(Fixture *f, long sn, unsigned long sd, long en, unsigne
     snprintf(f->ids[f->count], sizeof(f->ids[f->count]), "t%zu", f->count);
     memset(note, 0, sizeof(*note));
     note->note_id = f->ids[f->count];
-    note->span = piece_span(&f->piece, sn, sd, en, ed);
+    note->span = whole_span(sn, sd, en, ed);
     note->midi = 60;
     note->track = ANALYSIS_INDEX_NONE;
     note->voice = ANALYSIS_INDEX_NONE;

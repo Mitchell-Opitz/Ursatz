@@ -5,6 +5,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_knowledge.h"
 
 /*
  * An 8-bar sentence in 4/4, one whole note per bar:
@@ -114,7 +115,7 @@ int main(void) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    key.key = test_key(0, "major");
     LaneSpanId key_span = add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
 
     PlanLanePayload tonic = harmony_payload("I", HARMONIC_FUNCTION_TONIC);
@@ -230,7 +231,7 @@ int main(void) {
     assert(plan_lane_span_set_state(plan, key_span, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload bad_key;
     memset(&bad_key, 0, sizeof(bad_key));
-    bad_key.key = plan_key_of_pitch_class(7, bad_key.key.mode);
+    bad_key.key = test_key(7, "major");
     assert(plan_lane_span_write(plan, key_span, &bad_key) == PLAN_ERR_GIVEN_LOCKED);
     assert(analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, key_span)->key) == 0);
 

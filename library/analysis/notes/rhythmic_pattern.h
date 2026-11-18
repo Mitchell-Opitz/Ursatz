@@ -22,17 +22,14 @@ typedef struct RhythmicPattern RhythmicPattern;
 typedef enum {
     RHYTHMIC_PATTERN_OK = 0,
     RHYTHMIC_PATTERN_ERR_NULL_DURATIONS,
-    RHYTHMIC_PATTERN_ERR_NULL_DURATION,
     RHYTHMIC_PATTERN_ERR_ALLOC
 } RhythmicPatternResult;
 
 /*
- * On success takes ownership of each Duration durations points to
- * (destroyed by rhythmic_pattern_destroy) and copies the durations array,
- * which stays the caller's to free. On failure nothing is taken. durations must
- * be non-NULL with duration_count > 0; no entry may be NULL.
+ * Copies the duration_count Durations (values) durations points to; the array
+ * stays the caller's to free. durations must be non-NULL with duration_count > 0.
  */
-RhythmicPatternResult rhythmic_pattern_create(Duration **durations, size_t duration_count,
+RhythmicPatternResult rhythmic_pattern_create(const Duration *durations, size_t duration_count,
                                                RhythmicPattern **out);
 void rhythmic_pattern_destroy(RhythmicPattern *pattern);
 

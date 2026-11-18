@@ -92,8 +92,8 @@ static uint64_t signature_of(const PiecePlan *plan, bool harmony_only) {
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(rendered.events[i]));
         const Duration *duration = note_event_duration(rendered.events[i]);
         hash = hash_value(hash, rendered.part_index[i]);
-        hash = hash_fraction(hash, musical_time_numerator(onset), musical_time_denominator(onset));
-        hash = hash_fraction(hash, duration_numerator(duration), duration_denominator(duration));
+        hash = hash_fraction(hash, (long)onset->value.num, (unsigned long)onset->value.den);
+        hash = hash_fraction(hash, (long)duration->value.num, (unsigned long)duration->value.den);
         hash = hash_value(hash, (uint64_t)pitch_numeric_value_position_numerator(rendered.pitch_values[i]));
     }
     rendered_plan_destroy(&rendered);
@@ -119,10 +119,10 @@ static bool ids_are_stable(const PiecePlan *plan) {
     return true;
 }
 
-static PiecePlan *copy_plan(const char *text) {
+static PiecePlan *copy_plan(const KnowledgeSnapshot *knowledge, const char *text) {
     PiecePlan *copy = NULL;
     PlanJsonError error;
-    return plan_from_json(text, &copy, &error) == PLAN_OK ? copy : NULL;
+    return plan_from_json(knowledge, text, &copy, &error) == PLAN_OK ? copy : NULL;
 }
 
 void plan_variations_destroy(PlanVariations *variations) {
@@ -171,7 +171,7 @@ static RegenerateResult vary(const PiecePlan *plan, const FillTarget *targets, s
     size_t seeds = 4 * count;
     for (size_t k = 0; k < seeds && out->count < count && result == REGENERATE_OK; k++) {
         out->seeds_tried = k + 1;
-        PiecePlan *copy = copy_plan(text);
+        PiecePlan *copy = copy_plan(config->knowledge, text);
         if (!copy) {
             result = REGENERATE_ERR_ALLOC;
             break;

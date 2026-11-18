@@ -1,6 +1,7 @@
 #include "theory/knowledge/knowledge_snapshot.h"
 
 #include <cJSON.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +19,19 @@ typedef struct {
     KnowledgeEntry entry;
     PitchMaterial material;
     bool has_material;
-    char *strings; /* the id, kind, subtype and name texts the entry and the material point into */
+    ChordType chord_type;
+    bool has_chord_type;
+    Relation relation;
+    bool has_relation;
+    const char **aliases; /* the entry's aliases, in file order */
+    size_t alias_count;
+    const char *variant_target;  /* the ids a material or relation names, resolved once every entry is read */
+    const char *rotation_target;
+    const char *material_target;
+    const char *path; /* the file the entry came from: valid only while the snapshot is built */
+    char **owned;     /* texts copied for the loaders: key word, family, aliases and link targets */
+    size_t owned_count;
+    char *strings; /* the id, kind, subtype and name texts the entry and the loaders point into */
 } Slot;
 
 struct KnowledgeSnapshot {
@@ -46,12 +59,21 @@ static void hex16(uint64_t value, char out[17]) {
     snprintf(out, 17, "%016llx", (unsigned long long)value);
 }
 
+static void slot_release(Slot *slot) {
+    for (size_t i = 0; i < slot->owned_count; i++) {
+        free(slot->owned[i]);
+    }
+    free(slot->owned);
+    free(slot->aliases);
+    free(slot->strings);
+}
+
 void knowledge_snapshot_destroy(KnowledgeSnapshot *snapshot) {
     if (snapshot == NULL) {
         return;
     }
     for (size_t i = 0; i < snapshot->count; i++) {
-        free(snapshot->slots[i].strings);
+        slot_release(&snapshot->slots[i]);
     }
     free(snapshot->slots);
     free(snapshot);
@@ -116,6 +138,485 @@ static const cJSON *text_field(const cJSON *entry, const char *name, bool requir
     return item;
 }
 
+static char *own(Slot *slot, const char *text) {
+    char **grown = realloc(slot->owned, (slot->owned_count + 1) * sizeof(char *));
+    if (grown == NULL) {
+        return NULL;
+    }
+    slot->owned = grown;
+    size_t size = strlen(text) + 1;
+    char *copy = malloc(size);
+    if (copy == NULL) {
+        return NULL;
+    }
+    memcpy(copy, text, size);
+    slot->owned[slot->owned_count++] = copy;
+    return copy;
+}
+
+/* A non-empty string member of an object, or NULL. */
+static const char *string_of(const cJSON *item) {
+    return cJSON_IsString(item) && item->valuestring[0] != '\0' ? item->valuestring : NULL;
+}
+
+/* Lowercase letter words joined by `separator`: "minor", "harmonic minor" (' ') or "neo-riemannian" ('-'). */
+static bool lowercase_words(const char *text, char separator) {
+    size_t length = strlen(text);
+    if (length == 0 || text[0] == separator || text[length - 1] == separator) {
+        return false;
+    }
+    for (size_t i = 0; i < length; i++) {
+        bool letter = text[i] >= 'a' && text[i] <= 'z';
+        if (!letter && (text[i] != separator || text[i + 1] == separator)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool nocase_equal(const char *a, const char *b) {
+    while (*a != '\0' && *b != '\0') {
+        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
+            return false;
+        }
+        a++;
+        b++;
+    }
+    return *a == *b;
+}
+
+static KnowledgeStatus read_aliases(Slot *slot, const cJSON *entry, const char *path, char *message, size_t message_size) {
+    const cJSON *aliases = member(entry, "aliases");
+    if (aliases == NULL) {
+        return KNOWLEDGE_OK;
+    }
+    if (!cJSON_IsArray(aliases)) {
+        fail(message, message_size, path, slot->entry.id, "aliases", "not an array of non-empty strings");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    size_t count = (size_t)cJSON_GetArraySize(aliases);
+    if (count == 0) {
+        return KNOWLEDGE_OK;
+    }
+    slot->aliases = calloc(count, sizeof(char *));
+    if (slot->aliases == NULL) {
+        return KNOWLEDGE_ERR_ALLOC;
+    }
+    const cJSON *item;
+    cJSON_ArrayForEach(item, aliases) {
+        const char *text = string_of(item);
+        if (text == NULL) {
+            fail(message, message_size, path, slot->entry.id, "aliases", "not an array of non-empty strings");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        slot->aliases[slot->alias_count] = own(slot, text);
+        if (slot->aliases[slot->alias_count] == NULL) {
+            return KNOWLEDGE_ERR_ALLOC;
+        }
+        slot->alias_count++;
+    }
+    return KNOWLEDGE_OK;
+}
+
+/* "b3", "#4", "bb7": the degree (1 to 13) and the alteration against major. */
+static bool read_color_note(const char *text, int *degree, int *alteration) {
+    int shift = 0;
+    size_t i = 0;
+    for (; text[i] == '#' || text[i] == 'b'; i++) {
+        shift += text[i] == '#' ? 1 : -1;
+        if (i >= 2) {
+            return false;
+        }
+    }
+    if (text[i] < '1' || text[i] > '9') {
+        return false;
+    }
+    int value = text[i] - '0';
+    if (text[i + 1] != '\0') {
+        if (text[i] != '1' || text[i + 1] < '0' || text[i + 1] > '3' || text[i + 2] != '\0') {
+            return false;
+        }
+        value = 10 + (text[i + 1] - '0');
+    }
+    *degree = value;
+    *alteration = shift;
+    return true;
+}
+
+/* The links a material names: {"type": "variant-of" or "rotation-of", "target": id}. Other types are not read. */
+static KnowledgeStatus read_material_links(Slot *slot, const cJSON *entry, const char *path, char *message, size_t message_size) {
+    const cJSON *relations = member(entry, "relations");
+    if (relations == NULL) {
+        return KNOWLEDGE_OK;
+    }
+    if (!cJSON_IsArray(relations)) {
+        fail(message, message_size, path, slot->entry.id, "relations", "not an array");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    const cJSON *item;
+    cJSON_ArrayForEach(item, relations) {
+        const char *type = cJSON_IsObject(item) ? string_of(member(item, "type")) : NULL;
+        const char *target = cJSON_IsObject(item) ? string_of(member(item, "target")) : NULL;
+        if (type == NULL || target == NULL) {
+            fail(message, message_size, path, slot->entry.id, "relations", "an entry has no type and target");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        const char **place = strcmp(type, "variant-of") == 0    ? &slot->variant_target
+                             : strcmp(type, "rotation-of") == 0 ? &slot->rotation_target
+                                                                : NULL;
+        if (place == NULL) {
+            continue;
+        }
+        if (*place != NULL) {
+            fail(message, message_size, path, slot->entry.id, "relations", "more than one entry of the same type");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        *place = own(slot, target);
+        if (*place == NULL) {
+            return KNOWLEDGE_ERR_ALLOC;
+        }
+    }
+    return KNOWLEDGE_OK;
+}
+
+/* The details of a K1 unordered material: steps and descending steps (read by the caller's steps), key word, family, brightness. */
+static KnowledgeStatus read_material_details(Slot *slot, const cJSON *entry, const cJSON *content, const char *path, char *message,
+                                             size_t message_size) {
+    const char *id = slot->entry.id;
+    PitchMaterial *material = &slot->material;
+    const cJSON *key_word = member(content, "key_word");
+    material->key_word = slot->entry.name;
+    if (key_word != NULL) {
+        const char *text = string_of(key_word);
+        if (text == NULL || !lowercase_words(text, ' ')) {
+            fail(message, message_size, path, id, "content.key_word", "not lowercase words");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        material->key_word = own(slot, text);
+        if (material->key_word == NULL) {
+            return KNOWLEDGE_ERR_ALLOC;
+        }
+    }
+    const cJSON *family = member(content, "family");
+    if (family != NULL) {
+        const char *text = string_of(family);
+        if (text == NULL || !lowercase_words(text, '-')) {
+            fail(message, message_size, path, id, "content.family", "not lowercase words joined by hyphens");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        material->family = own(slot, text);
+        if (material->family == NULL) {
+            return KNOWLEDGE_ERR_ALLOC;
+        }
+    }
+    const cJSON *rank = member(content, "brightness_rank");
+    if (rank != NULL) {
+        if (!is_integer(rank)) {
+            fail(message, message_size, path, id, "content.brightness_rank", "not an integer");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        if (material->family == NULL || strcmp(material->family, "diatonic") != 0) {
+            fail(message, message_size, path, id, "content.brightness_rank", "needs the family \"diatonic\"");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        material->has_brightness = true;
+        material->brightness_rank = rank->valueint;
+    }
+    const cJSON *notes = member(content, "color_notes");
+    if (notes != NULL) {
+        int count = cJSON_IsArray(notes) ? cJSON_GetArraySize(notes) : -1;
+        if (count < 0 || count > MATERIAL_STEP_MAX) {
+            fail(message, message_size, path, id, "content.color_notes", "not an array of 0 to 12 color notes");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        const cJSON *item;
+        cJSON_ArrayForEach(item, notes) {
+            const char *text = string_of(item);
+            size_t at = material->color_note_count;
+            if (text == NULL || !read_color_note(text, &material->color_notes[at].degree, &material->color_notes[at].alteration)) {
+                fail(message, message_size, path, id, "content.color_notes", "not a color note such as \"b3\" or \"#4\"");
+                return KNOWLEDGE_ERR_FIELD;
+            }
+            material->color_note_count++;
+        }
+    }
+    return read_material_links(slot, entry, path, message, message_size);
+}
+
+static bool chord_role(const char *text, ChordMemberRole *role) {
+    static const struct {
+        const char *name;
+        ChordMemberRole role;
+    } ROLES[] = {{"root", CHORD_MEMBER_ROOT},
+                 {"third", CHORD_MEMBER_THIRD},
+                 {"fifth", CHORD_MEMBER_FIFTH},
+                 {"seventh", CHORD_MEMBER_SEVENTH},
+                 {"ninth", CHORD_MEMBER_NINTH},
+                 {"eleventh", CHORD_MEMBER_ELEVENTH},
+                 {"thirteenth", CHORD_MEMBER_THIRTEENTH},
+                 {"added-second", CHORD_MEMBER_ADDED_SECOND},
+                 {"added-sixth", CHORD_MEMBER_ADDED_SIXTH},
+                 {"suspended-fourth", CHORD_MEMBER_SUSPENDED_FOURTH}};
+    for (size_t i = 0; i < sizeof(ROLES) / sizeof(ROLES[0]); i++) {
+        if (strcmp(text, ROLES[i].name) == 0) {
+            *role = ROLES[i].role;
+            return true;
+        }
+    }
+    return false;
+}
+
+/* K2: content.members, 1 to 8 members, the first the root at 0, each a role and 0 to 23 semitones. */
+static KnowledgeStatus read_chord_type(Slot *slot, const cJSON *entry, const char *path, char *message, size_t message_size) {
+    const char *id = slot->entry.id;
+    const cJSON *content = member(entry, "content");
+    const cJSON *members = cJSON_IsObject(content) ? member(content, "members") : NULL;
+    if (members == NULL) {
+        fail(message, message_size, path, id, "content.members", "missing");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    int count = cJSON_IsArray(members) ? cJSON_GetArraySize(members) : -1;
+    if (count < 1 || count > CHORD_TYPE_MEMBER_MAX) {
+        fail(message, message_size, path, id, "content.members", "not 1 to 8 members");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    const cJSON *item;
+    cJSON_ArrayForEach(item, members) {
+        const char *role_text = cJSON_IsObject(item) ? string_of(member(item, "role")) : NULL;
+        const cJSON *semitones = cJSON_IsObject(item) ? member(item, "semitones") : NULL;
+        ChordMemberRole role = CHORD_MEMBER_ROOT;
+        if (role_text == NULL || !chord_role(role_text, &role)) {
+            fail(message, message_size, path, id, "content.members", "a member has no known role");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        if (!is_integer(semitones) || semitones->valueint < 0 || semitones->valueint > 23) {
+            fail(message, message_size, path, id, "content.members", "a member's semitones are not an integer from 0 to 23");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        size_t at = slot->chord_type.member_count;
+        if (at == 0 && (role != CHORD_MEMBER_ROOT || semitones->valueint != 0)) {
+            fail(message, message_size, path, id, "content.members", "the first member is not the root at 0");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        slot->chord_type.members[at].role = role;
+        slot->chord_type.members[at].semitones = semitones->valueint;
+        slot->chord_type.member_count++;
+    }
+    return KNOWLEDGE_OK;
+}
+
+static KnowledgeStatus read_anchor(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
+    const cJSON *anchor = member(content, "anchor_default");
+    slot->relation.anchor_default = RELATION_ANCHOR_HOME;
+    if (anchor == NULL) {
+        return KNOWLEDGE_OK;
+    }
+    const char *text = string_of(anchor);
+    if (text != NULL && strcmp(text, "home") == 0) {
+        return KNOWLEDGE_OK;
+    }
+    if (text != NULL && strcmp(text, "previous") == 0) {
+        slot->relation.anchor_default = RELATION_ANCHOR_PREVIOUS;
+        return KNOWLEDGE_OK;
+    }
+    fail(message, message_size, path, slot->entry.id, "content.anchor_default", "not home or previous");
+    return KNOWLEDGE_ERR_FIELD;
+}
+
+static bool in_range(const cJSON *item, int low, int high) {
+    return is_integer(item) && item->valueint >= low && item->valueint <= high;
+}
+
+static KnowledgeStatus read_tonal(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
+    const char *id = slot->entry.id;
+    const cJSON *semitones = member(content, "root_semitones");
+    const cJSON *degree = member(content, "degree");
+    if ((semitones == NULL) == (degree == NULL)) {
+        fail(message, message_size, path, id, "content", "needs exactly one of root_semitones and degree");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    if (semitones != NULL && !in_range(semitones, 0, 11)) {
+        fail(message, message_size, path, id, "content.root_semitones", "not an integer from 0 to 11");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    if (degree != NULL && !in_range(degree, 1, 7)) {
+        fail(message, message_size, path, id, "content.degree", "not an integer from 1 to 7");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    slot->relation.tonal.by_degree = degree != NULL;
+    slot->relation.tonal.root_semitones = semitones != NULL ? semitones->valueint : 0;
+    slot->relation.tonal.degree = degree != NULL ? degree->valueint : 0;
+    const char *material = string_of(member(content, "material"));
+    if (material == NULL) {
+        fail(message, message_size, path, id, "content.material", "missing");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    if (strcmp(material, "same") == 0) {
+        slot->relation.tonal.material = RELATION_MATERIAL_SAME;
+    } else if (strcmp(material, "parallel") == 0) {
+        slot->relation.tonal.material = RELATION_MATERIAL_PARALLEL;
+    } else if (strcmp(material, "diatonic") == 0) {
+        slot->relation.tonal.material = RELATION_MATERIAL_DIATONIC;
+        if (degree == NULL) {
+            fail(message, message_size, path, id, "content.material", "\"diatonic\" needs a degree");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+    } else {
+        slot->relation.tonal.material = RELATION_MATERIAL_ENTRY;
+        slot->material_target = own(slot, material);
+        if (slot->material_target == NULL) {
+            return KNOWLEDGE_ERR_ALLOC;
+        }
+    }
+    return read_anchor(slot, content, path, message, message_size);
+}
+
+static KnowledgeStatus read_modal(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
+    const char *id = slot->entry.id;
+    const cJSON *center = member(content, "center");
+    if (cJSON_IsString(center) && strcmp(center->valuestring, "same") == 0) {
+        slot->relation.modal.same_center = true;
+    } else if (in_range(center, 0, 11)) {
+        slot->relation.modal.center = center->valueint;
+    } else {
+        fail(message, message_size, path, id, "content.center", center == NULL ? "missing" : "not \"same\" or an integer from 0 to 11");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    const cJSON *steps = member(content, "brightness_steps");
+    if (!is_integer(steps)) {
+        fail(message, message_size, path, id, "content.brightness_steps", steps == NULL ? "missing" : "not an integer");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    slot->relation.modal.brightness_steps = steps->valueint;
+    return read_anchor(slot, content, path, message, message_size);
+}
+
+static KnowledgeStatus read_neo_riemannian(Slot *slot, const cJSON *content, const char *path, char *message,
+                                           size_t message_size) {
+    const cJSON *moves = member(content, "moves");
+    int count = cJSON_IsArray(moves) ? cJSON_GetArraySize(moves) : -1;
+    if (count < 1 || count > RELATION_MOVE_MAX) {
+        fail(message, message_size, path, slot->entry.id, "content.moves", "not 1 to 8 moves");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    const cJSON *item;
+    cJSON_ArrayForEach(item, moves) {
+        const char *text = string_of(item);
+        if (text == NULL || text[1] != '\0' || (text[0] != 'P' && text[0] != 'L' && text[0] != 'R')) {
+            fail(message, message_size, path, slot->entry.id, "content.moves", "a move is not P, L or R");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        slot->relation.neo_riemannian.moves[slot->relation.neo_riemannian.move_count++] = text[0];
+    }
+    return KNOWLEDGE_OK;
+}
+
+static KnowledgeStatus read_set(Slot *slot, const cJSON *content, const char *path, char *message, size_t message_size) {
+    const cJSON *operation = member(content, "operation");
+    const char *text = string_of(operation);
+    if (text == NULL || (strcmp(text, "T") != 0 && strcmp(text, "I") != 0)) {
+        fail(message, message_size, path, slot->entry.id, "content.operation", "not T or I");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    const cJSON *n = member(content, "n");
+    if (!in_range(n, 0, 11)) {
+        fail(message, message_size, path, slot->entry.id, "content.n", "not an integer from 0 to 11");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    slot->relation.set.inversion = text[0] == 'I';
+    slot->relation.set.n = n->valueint;
+    return KNOWLEDGE_OK;
+}
+
+/* K6: by subtype. A serial entry is kept by its common fields only. */
+static KnowledgeStatus read_relation(Slot *slot, const cJSON *entry, const char *subtype, const char *path, char *message,
+                                     size_t message_size) {
+    const cJSON *content = member(entry, "content");
+    if (subtype == NULL) {
+        fail(message, message_size, path, slot->entry.id, "subtype", "missing");
+        return KNOWLEDGE_ERR_FIELD;
+    }
+    if (strcmp(subtype, "serial") == 0) {
+        slot->relation.family = RELATION_FAMILY_SERIAL;
+        return KNOWLEDGE_OK;
+    }
+    static const struct {
+        const char *subtype;
+        RelationFamily family;
+    } FAMILIES[] = {{"tonal", RELATION_FAMILY_TONAL},
+                    {"modal", RELATION_FAMILY_MODAL},
+                    {"neo-riemannian", RELATION_FAMILY_NEO_RIEMANNIAN},
+                    {"set", RELATION_FAMILY_SET}};
+    for (size_t i = 0; i < sizeof(FAMILIES) / sizeof(FAMILIES[0]); i++) {
+        if (strcmp(subtype, FAMILIES[i].subtype) != 0) {
+            continue;
+        }
+        if (!cJSON_IsObject(content)) {
+            fail(message, message_size, path, slot->entry.id, "content", "missing");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        slot->relation.family = FAMILIES[i].family;
+        switch (FAMILIES[i].family) {
+        case RELATION_FAMILY_TONAL:
+            return read_tonal(slot, content, path, message, message_size);
+        case RELATION_FAMILY_MODAL:
+            return read_modal(slot, content, path, message, message_size);
+        case RELATION_FAMILY_NEO_RIEMANNIAN:
+            return read_neo_riemannian(slot, content, path, message, message_size);
+        default:
+            return read_set(slot, content, path, message, message_size);
+        }
+    }
+    fail(message, message_size, path, slot->entry.id, "subtype", "not tonal, modal, neo-riemannian, set or serial");
+    return KNOWLEDGE_ERR_FIELD;
+}
+
+/* The fields the loaders read, by kind. Fills the slot's material, chord type or relation. */
+static KnowledgeStatus read_details(Slot *slot, const cJSON *entry, const char *path, char *message, size_t message_size) {
+    const char *kind = slot->entry.kind;
+    const char *subtype = slot->entry.subtype;
+    KnowledgeStatus status = read_aliases(slot, entry, path, message, message_size);
+    if (status != KNOWLEDGE_OK) {
+        return status;
+    }
+    if (strcmp(kind, "material") == 0 && subtype != NULL && strcmp(subtype, "unordered") == 0) {
+        const cJSON *content = member(entry, "content");
+        const cJSON *steps = cJSON_IsObject(content) ? member(content, "steps") : NULL;
+        if (steps == NULL) {
+            fail(message, message_size, path, slot->entry.id, "content.steps", "missing");
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        const char *problem = read_steps(steps, slot->material.steps, &slot->material.step_count);
+        if (problem != NULL) {
+            fail(message, message_size, path, slot->entry.id, "content.steps", problem);
+            return KNOWLEDGE_ERR_FIELD;
+        }
+        const cJSON *descending = member(content, "descending_steps");
+        if (descending != NULL) {
+            problem = read_steps(descending, slot->material.descending_steps, &slot->material.descending_step_count);
+            if (problem != NULL) {
+                fail(message, message_size, path, slot->entry.id, "content.descending_steps", problem);
+                return KNOWLEDGE_ERR_FIELD;
+            }
+        }
+        slot->material.id = slot->entry.id;
+        slot->material.name = slot->entry.name;
+        status = read_material_details(slot, entry, content, path, message, message_size);
+        slot->has_material = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "chord-type") == 0) {
+        slot->chord_type.id = slot->entry.id;
+        slot->chord_type.name = slot->entry.name;
+        status = read_chord_type(slot, entry, path, message, message_size);
+        slot->has_chord_type = status == KNOWLEDGE_OK;
+    } else if (strcmp(kind, "relation") == 0) {
+        slot->relation.id = slot->entry.id;
+        slot->relation.name = slot->entry.name;
+        status = read_relation(slot, entry, subtype, path, message, message_size);
+        slot->has_relation = status == KNOWLEDGE_OK;
+    }
+    return status;
+}
+
 /* Reads one entry into a new slot. */
 static KnowledgeStatus read_entry(KnowledgeSnapshot *snapshot, const cJSON *entry, const char *path, bool user, char *message,
                                   size_t message_size) {
@@ -169,82 +670,57 @@ static KnowledgeStatus read_entry(KnowledgeSnapshot *snapshot, const cJSON *entr
         return KNOWLEDGE_ERR_FIELD;
     }
 
-    PitchMaterial material;
-    memset(&material, 0, sizeof(material));
-    bool has_material = strcmp(kind->valuestring, "material") == 0 && subtype != NULL &&
-                        strcmp(subtype->valuestring, "unordered") == 0;
-    if (has_material) {
-        const cJSON *content = member(entry, "content");
-        const cJSON *steps = cJSON_IsObject(content) ? member(content, "steps") : NULL;
-        if (steps == NULL) {
-            fail(message, message_size, path, id, "content.steps", "missing");
-            return KNOWLEDGE_ERR_FIELD;
-        }
-        problem = read_steps(steps, material.steps, &material.step_count);
-        if (problem != NULL) {
-            fail(message, message_size, path, id, "content.steps", problem);
-            return KNOWLEDGE_ERR_FIELD;
-        }
-        const cJSON *descending = member(content, "descending_steps");
-        if (descending != NULL) {
-            problem = read_steps(descending, material.descending_steps, &material.descending_step_count);
-            if (problem != NULL) {
-                fail(message, message_size, path, id, "content.descending_steps", problem);
-                return KNOWLEDGE_ERR_FIELD;
-            }
-        }
-    }
-
     char *text = cJSON_PrintUnformatted(entry);
     if (text == NULL) {
         return KNOWLEDGE_ERR_ALLOC;
-    }
-    if (snapshot->count == snapshot->capacity) {
-        size_t capacity = snapshot->capacity == 0 ? 16 : snapshot->capacity * 2;
-        Slot *grown = realloc(snapshot->slots, capacity * sizeof(Slot));
-        if (grown == NULL) {
-            cJSON_free(text);
-            return KNOWLEDGE_ERR_ALLOC;
-        }
-        snapshot->slots = grown;
-        snapshot->capacity = capacity;
     }
     size_t id_size = strlen(id) + 1;
     size_t kind_size = strlen(kind->valuestring) + 1;
     size_t subtype_size = subtype != NULL ? strlen(subtype->valuestring) + 1 : 0;
     size_t name_size = strlen(name->valuestring) + 1;
+    Slot slot;
+    memset(&slot, 0, sizeof(slot));
     char *strings = malloc(id_size + kind_size + subtype_size + name_size);
     if (strings == NULL) {
         cJSON_free(text);
         return KNOWLEDGE_ERR_ALLOC;
     }
-    Slot *slot = &snapshot->slots[snapshot->count];
-    memset(slot, 0, sizeof(*slot));
-    slot->strings = strings;
-    slot->entry.id = strings;
+    slot.strings = strings;
+    slot.entry.id = strings;
     memcpy(strings, id, id_size);
     strings += id_size;
-    slot->entry.kind = strings;
+    slot.entry.kind = strings;
     memcpy(strings, kind->valuestring, kind_size);
     strings += kind_size;
     if (subtype != NULL) {
-        slot->entry.subtype = strings;
+        slot.entry.subtype = strings;
         memcpy(strings, subtype->valuestring, subtype_size);
         strings += subtype_size;
     }
-    slot->entry.name = strings;
+    slot.entry.name = strings;
     memcpy(strings, name->valuestring, name_size);
-    slot->entry.status = status;
-    slot->entry.version = version->valueint;
-    hex16(fnv(FNV_OFFSET, text), slot->entry.hash);
+    slot.entry.status = status;
+    slot.entry.version = version->valueint;
+    slot.path = path;
+    hex16(fnv(FNV_OFFSET, text), slot.entry.hash);
     cJSON_free(text);
-    if (has_material) {
-        slot->material = material;
-        slot->material.id = slot->entry.id;
-        slot->material.name = slot->entry.name;
-        slot->has_material = true;
+
+    KnowledgeStatus loaded = read_details(&slot, entry, path, message, message_size);
+    if (loaded == KNOWLEDGE_OK && snapshot->count == snapshot->capacity) {
+        size_t capacity = snapshot->capacity == 0 ? 16 : snapshot->capacity * 2;
+        Slot *grown = realloc(snapshot->slots, capacity * sizeof(Slot));
+        if (grown == NULL) {
+            loaded = KNOWLEDGE_ERR_ALLOC;
+        } else {
+            snapshot->slots = grown;
+            snapshot->capacity = capacity;
+        }
     }
-    snapshot->count++;
+    if (loaded != KNOWLEDGE_OK) {
+        slot_release(&slot);
+        return loaded;
+    }
+    snapshot->slots[snapshot->count++] = slot;
     return KNOWLEDGE_OK;
 }
 
@@ -282,6 +758,52 @@ static int compare_slots(const void *a, const void *b) {
     return strcmp(((const Slot *)a)->entry.id, ((const Slot *)b)->entry.id);
 }
 
+static const Slot *find_slot(const KnowledgeSnapshot *snapshot, const char *id);
+
+/* The material an entry names (a link or a relation's material): the slot's, or the problem. */
+static const PitchMaterial *linked_material(const KnowledgeSnapshot *snapshot, const char *target, const char *what,
+                                            char *problem, size_t problem_size) {
+    const Slot *found = find_slot(snapshot, target);
+    if (found == NULL || !found->has_material) {
+        snprintf(problem, problem_size, "%s %s is not a pitch material", what, target);
+        return NULL;
+    }
+    return &found->material;
+}
+
+/* Points each material's links and each relation's material at the entries they name, once every entry is read and sorted. */
+static KnowledgeStatus resolve_links(KnowledgeSnapshot *snapshot, char *message, size_t message_size) {
+    char problem[256];
+    for (size_t i = 0; i < snapshot->count; i++) {
+        Slot *slot = &snapshot->slots[i];
+        const char *field = "relations";
+        if (slot->has_material) {
+            if (slot->variant_target != NULL) {
+                slot->material.variant_of = linked_material(snapshot, slot->variant_target, "variant-of target", problem, sizeof(problem));
+            }
+            if (slot->rotation_target != NULL && (slot->variant_target == NULL || slot->material.variant_of != NULL)) {
+                slot->material.rotation_of = linked_material(snapshot, slot->rotation_target, "rotation-of target", problem, sizeof(problem));
+            }
+            if ((slot->variant_target != NULL && slot->material.variant_of == NULL) ||
+                (slot->rotation_target != NULL && slot->material.rotation_of == NULL)) {
+                fail(message, message_size, slot->path, slot->entry.id, field, problem);
+                return KNOWLEDGE_ERR_FIELD;
+            }
+        }
+        if (slot->has_relation && slot->material_target != NULL) {
+            slot->relation.tonal.material_entry = linked_material(snapshot, slot->material_target, "material", problem, sizeof(problem));
+            if (slot->relation.tonal.material_entry == NULL) {
+                fail(message, message_size, slot->path, slot->entry.id, "content.material", problem);
+                return KNOWLEDGE_ERR_FIELD;
+            }
+        }
+    }
+    for (size_t i = 0; i < snapshot->count; i++) {
+        snapshot->slots[i].path = NULL;
+    }
+    return KNOWLEDGE_OK;
+}
+
 KnowledgeStatus knowledge_snapshot_build(const KnowledgeUserFile *user_files, size_t user_file_count, KnowledgeSnapshot **out,
                                          char *message, size_t message_size) {
     if (message != NULL && message_size > 0) {
@@ -315,6 +837,11 @@ KnowledgeStatus knowledge_snapshot_build(const KnowledgeUserFile *user_files, si
         return status;
     }
     qsort(snapshot->slots, snapshot->count, sizeof(Slot), compare_slots);
+    status = resolve_links(snapshot, message, message_size);
+    if (status != KNOWLEDGE_OK) {
+        knowledge_snapshot_destroy(snapshot);
+        return status;
+    }
     uint64_t hash = FNV_OFFSET;
     for (size_t i = 0; i < snapshot->count; i++) {
         hash = fnv(hash, snapshot->slots[i].entry.id);
@@ -368,4 +895,116 @@ const KnowledgeEntry *knowledge_snapshot_entry(const KnowledgeSnapshot *snapshot
 const PitchMaterial *knowledge_snapshot_material(const KnowledgeSnapshot *snapshot, const char *id) {
     const Slot *slot = find_slot(snapshot, id);
     return slot != NULL && slot->has_material ? &slot->material : NULL;
+}
+
+size_t knowledge_snapshot_material_count(const KnowledgeSnapshot *snapshot) {
+    size_t count = 0;
+    for (size_t i = 0; snapshot != NULL && i < snapshot->count; i++) {
+        count += snapshot->slots[i].has_material ? 1 : 0;
+    }
+    return count;
+}
+
+const PitchMaterial *knowledge_snapshot_material_at(const KnowledgeSnapshot *snapshot, size_t index) {
+    for (size_t i = 0; snapshot != NULL && i < snapshot->count; i++) {
+        if (snapshot->slots[i].has_material && index-- == 0) {
+            return &snapshot->slots[i].material;
+        }
+    }
+    return NULL;
+}
+
+static bool alias_matches(const Slot *slot, const char *word) {
+    for (size_t i = 0; i < slot->alias_count; i++) {
+        if (nocase_equal(slot->aliases[i], word)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+const PitchMaterial *knowledge_snapshot_material_named(const KnowledgeSnapshot *snapshot, const char *word) {
+    if (snapshot == NULL || word == NULL) {
+        return NULL;
+    }
+    for (int level = 0; level < 4; level++) {
+        size_t matches = 0;
+        const Slot *found = NULL;
+        for (size_t i = 0; i < snapshot->count; i++) {
+            const Slot *slot = &snapshot->slots[i];
+            if (!slot->has_material) {
+                continue;
+            }
+            bool hit = level == 0   ? nocase_equal(slot->entry.id, word)
+                       : level == 1 ? nocase_equal(slot->material.key_word, word)
+                       : level == 2 ? nocase_equal(slot->entry.name, word)
+                                    : alias_matches(slot, word);
+            if (hit) {
+                matches++;
+                found = slot;
+            }
+        }
+        if (matches > 0) {
+            return matches == 1 ? &found->material : NULL;
+        }
+    }
+    return NULL;
+}
+
+const ChordType *knowledge_snapshot_chord_type(const KnowledgeSnapshot *snapshot, const char *id) {
+    const Slot *slot = find_slot(snapshot, id);
+    return slot != NULL && slot->has_chord_type ? &slot->chord_type : NULL;
+}
+
+const ChordType *knowledge_snapshot_chord_type_of(const KnowledgeSnapshot *snapshot, unsigned mask_above_root) {
+    if (snapshot == NULL) {
+        return NULL;
+    }
+    unsigned wanted = mask_above_root & ~1u;
+    for (size_t i = 0; i < snapshot->count; i++) {
+        const Slot *slot = &snapshot->slots[i];
+        if (!slot->has_chord_type || slot->entry.status == KNOWLEDGE_STATUS_RETIRED) {
+            continue;
+        }
+        unsigned mask = 0;
+        for (size_t m = 0; m < slot->chord_type.member_count; m++) {
+            mask |= 1u << (slot->chord_type.members[m].semitones % 12);
+        }
+        if ((mask & ~1u) == wanted) {
+            return &slot->chord_type;
+        }
+    }
+    return NULL;
+}
+
+const Relation *knowledge_snapshot_relation(const KnowledgeSnapshot *snapshot, const char *id) {
+    const Slot *slot = find_slot(snapshot, id);
+    return slot != NULL && slot->has_relation ? &slot->relation : NULL;
+}
+
+const Relation *knowledge_snapshot_relation_named(const KnowledgeSnapshot *snapshot, const char *word) {
+    if (snapshot == NULL || word == NULL) {
+        return NULL;
+    }
+    for (int level = 0; level < 3; level++) {
+        size_t matches = 0;
+        const Slot *found = NULL;
+        for (size_t i = 0; i < snapshot->count; i++) {
+            const Slot *slot = &snapshot->slots[i];
+            if (!slot->has_relation) {
+                continue;
+            }
+            bool hit = level == 0   ? nocase_equal(slot->entry.id, word)
+                       : level == 1 ? nocase_equal(slot->entry.name, word)
+                                    : alias_matches(slot, word);
+            if (hit) {
+                matches++;
+                found = slot;
+            }
+        }
+        if (matches > 0) {
+            return matches == 1 ? &found->relation : NULL;
+        }
+    }
+    return NULL;
 }

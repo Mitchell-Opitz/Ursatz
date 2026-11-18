@@ -9,6 +9,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "piece/piece_internal.h"
+#include "util/plan_util.h"
 #include "util/position.h"
 #include "util/util.h"
 
@@ -30,18 +31,16 @@
 #define CONNECTIVE_MAX_SPANS 64
 
 /* The scale a line is written in: major, or harmonic minor (the raised seventh). */
-static bool in_scale(int tonic, bool minor, int pitch) {
-    unsigned scale = standard_tonality_mode_pitch_classes(0, minor ? STANDARD_TONALITY_MODE_HARMONIC_MINOR
-                                                                   : STANDARD_TONALITY_MODE_MAJOR);
-    return (scale >> util_pitch_class(pitch - tonic)) & 1u;
+static bool in_scale(int tonic, const PitchMaterial *material, int pitch) {
+    return (util_scale_mask_raised_seventh(0, material) >> util_pitch_class(pitch - tonic)) & 1u;
 }
 
 /* The next pitch of the scale strictly above (direction 1) or below (-1) the pitch. */
-static int scale_step(int tonic, bool minor, int pitch, int direction) {
+static int scale_step(int tonic, const PitchMaterial *material, int pitch, int direction) {
     int next = pitch;
     do {
         next += direction;
-    } while (!in_scale(tonic, minor, next));
+    } while (!in_scale(tonic, material, next));
     return next;
 }
 
@@ -153,7 +152,17 @@ PieceResult piece_connective_write(PiecePlan *plan, NodeId section) {
     }
     Rational unit = {1, meter.beat_unit};
     Rational bar = position_mul(unit, meter.beats_per_bar);
-    Rational beat = meter.beat_unit == 8 && meter.beats_per_bar % 3 == 0 && meter.beats_per_bar >= 6 ? (Rational){3, 8} : unit;
+    TimeSignature *signature = NULL;
+    Duration beat_length;
+    if (!plan_meter_signature(meter, &signature)) {
+        return PIECE_OK;
+    }
+    DurationResult beat_made = time_signature_beat_length(signature, &beat_length);
+    time_signature_destroy(signature);
+    if (beat_made != DURATION_OK) {
+        return PIECE_OK;
+    }
+    Rational beat = beat_length.value;
     Rational eighth = {1, 8};
     Rational bar_start = position_sub(end, bar);
     Rational rest = position_sub(bar, beat);
@@ -187,12 +196,12 @@ PieceResult piece_connective_write(PiecePlan *plan, NodeId section) {
     /* The line, written backwards from its last note: one scale step from the target, on the side of the downbeat note. */
     AnalysisKey key = plan_lane_span_payload(plan, key_span)->key;
     int tonic = analysis_key_tonic_pitch_class(&key);
-    bool minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
+    const PitchMaterial *material = key.material;
     int side = from > target ? 1 : -1;
     int line[CONNECTIVE_MAX_NOTES];
-    line[count - 1] = scale_step(tonic, minor, target, side);
+    line[count - 1] = scale_step(tonic, material, target, side);
     for (long long i = count - 2; i >= 0; i--) {
-        line[i] = scale_step(tonic, minor, line[i + 1], side);
+        line[i] = scale_step(tonic, material, line[i + 1], side);
     }
     /* The melodic rules: the move into the line and the step into the target (the line itself is the scale, the augmented second of harmonic minor included). */
     int move = line[0] - from;

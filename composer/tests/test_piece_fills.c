@@ -9,6 +9,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/piece.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Theme and progression fills (R-170): a piece structure whose sections are given a composed theme or a progression.
@@ -80,9 +81,10 @@ typedef struct {
     PieceRequest request;
 } Fixture;
 
-static void fixture_init(Fixture *fixture, int tonic, KeyStructureMode mode) {
+static void fixture_init(Fixture *fixture, int tonic, HarmonyMode mode) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->request.key = plan_key_of_pitch_class(tonic, mode);
+    fixture->request.key = test_key_mode(tonic, mode);
+    fixture->request.knowledge = test_knowledge();
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;
     fixture->request.form = "game-loop";
@@ -187,7 +189,7 @@ static size_t motive_notes(const PiecePlan *plan, Sounded *out, size_t max) {
 
 /* A piece in E minor: the D minor theme as an 8-bar body section, then a 2-bar turnaround from the piece's motive. */
 static void theme_structure(Fixture *fixture, const PiecePlan *theme) {
-    fixture_init(fixture, 4, KEY_STRUCTURE_MODE_MINOR);
+    fixture_init(fixture, 4, HARMONY_MODE_MINOR);
     PieceSection *body = add_section(fixture, "a", "A", PIECE_PART_BODY, 32, PIECE_FILL_THEME);
     body->theme_plan = theme;
     add_section(fixture, "t", "T", PIECE_PART_TURNAROUND, 8, PIECE_FILL_EMPTY);
@@ -224,6 +226,7 @@ static void test_theme(void) {
                has_run(snapshot, plan, PLAN_LANE_BASS));
 
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(compose_run(plan, &config, &outcome) == PIECE_OK);
         compose_outcome_destroy(&outcome);
@@ -268,7 +271,7 @@ static void test_theme(void) {
 }
 
 /* Builds the structure's plan with an empty body of this many beats, in this key. */
-static PiecePlan *empty_body(Fixture *fixture, int tonic, KeyStructureMode mode, size_t beats) {
+static PiecePlan *empty_body(Fixture *fixture, int tonic, HarmonyMode mode, size_t beats) {
     PiecePlan *plan;
     fixture_init(fixture, tonic, mode);
     add_section(fixture, "a", "A", PIECE_PART_BODY, beats, PIECE_FILL_EMPTY);
@@ -283,7 +286,7 @@ static void test_refused(void) {
     NodeId sections[4];
 
     /* Another length: the theme is 8 bars, the section 4. */
-    PiecePlan *plan = empty_body(&fixture, 4, KEY_STRUCTURE_MODE_MINOR, 16);
+    PiecePlan *plan = empty_body(&fixture, 4, HARMONY_MODE_MINOR, 16);
     assert(piece_sections(plan, sections, 4) == 1);
     assert(plan_give_section(plan, sections[0], theme, theme_node) == GIVEN_ERR_LENGTH);
     assert(plan_node_state(plan, sections[0]) == PLAN_STATE_CONSTRAINED);
@@ -295,16 +298,16 @@ static void test_refused(void) {
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST);
 
     /* A plan whose section is not realized yet. */
-    PiecePlan *open = empty_body(&fixture, 2, KEY_STRUCTURE_MODE_MINOR, 32);
+    PiecePlan *open = empty_body(&fixture, 2, HARMONY_MODE_MINOR, 32);
     NodeId open_node;
     assert(piece_sections(open, &open_node, 1) == 1);
-    plan = empty_body(&fixture, 4, KEY_STRUCTURE_MODE_MINOR, 32);
+    plan = empty_body(&fixture, 4, HARMONY_MODE_MINOR, 32);
     assert(piece_sections(plan, sections, 4) == 1);
     assert(plan_give_section(plan, sections[0], open, open_node) == GIVEN_ERR_NOT_REALIZED);
     plan_destroy(open);
 
     /* Another mode: the key lanes differ in shape. */
-    PiecePlan *major = empty_body(&fixture, 4, KEY_STRUCTURE_MODE_MAJOR, 32);
+    PiecePlan *major = empty_body(&fixture, 4, HARMONY_MODE_MAJOR, 32);
     NodeId major_node;
     assert(piece_sections(major, &major_node, 1) == 1);
     assert(plan_give_section(major, major_node, theme, theme_node) == GIVEN_ERR_KEY);
@@ -342,7 +345,7 @@ static void test_progression(void) {
         PiecePlan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
-        fixture_init(&fixture, 0, KEY_STRUCTURE_MODE_MAJOR);
+        fixture_init(&fixture, 0, HARMONY_MODE_MAJOR);
         PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 16, PIECE_FILL_PROGRESSION);
         body->numerals = NUMERALS;
         body->numeral_count = 4;
@@ -360,6 +363,7 @@ static void test_progression(void) {
         assert(has_run(snapshot, plan, PLAN_LANE_HARMONY));
 
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         /* The melody of a phrase that ends on V is hard to write (B4): the loop's end is filled in a stage of its own
            now, with other draws, so one seed in ten may still be stuck after the twelve rounds. */
@@ -419,7 +423,7 @@ static void test_partial(void) {
         PiecePlan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
-        fixture_init(&fixture, 0, KEY_STRUCTURE_MODE_MAJOR);
+        fixture_init(&fixture, 0, HARMONY_MODE_MAJOR);
         PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 32, PIECE_FILL_PROGRESSION);
         body->numerals = CHORDS;
         body->numeral_count = 4;
@@ -430,6 +434,7 @@ static void test_partial(void) {
         GivenSnapshot *snapshot = given_snapshot(plan);
         assert(snapshot);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         /* A seed may leave the melody stage stuck on a theme whose fragments are segments of an invented motif (P34 B2). */
         if (compose_run(plan, &config, &outcome) != PIECE_OK) {

@@ -11,6 +11,7 @@
 #include "util/plan_util.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -33,13 +34,13 @@ int main(void) {
     MotiveError error;
     memset(&error, 0, sizeof(error));
     assert(text);
-    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_OK);
     free(text);
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         GrowRequest request;
         memset(&request, 0, sizeof(request));
         request.motive = &motive;
-        request.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+        request.key = test_key(2, "minor");
         request.meter.beats_per_bar = 4;
         request.meter.beat_unit = 4;
         request.bars = 8;
@@ -50,6 +51,7 @@ int main(void) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.basic = &motive;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);

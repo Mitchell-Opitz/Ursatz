@@ -8,6 +8,7 @@
 #include "chain/analysis_chain.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
+#include "test_knowledge.h"
 
 /*
  * The two-voice check of the harmonic span rules (R-379, R-382, R-384), with the values phrases first gives (P41, R-391). The Composer's
@@ -61,15 +62,12 @@ static const Fixture FIXTURES[3] = {
 
 static int measure_of(const MeterMap *map, double at) {
     for (int measure = 1; measure < 400; measure++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
             break;
         }
-        const MusicalTime *start = time_span_start(span);
-        const MusicalTime *end = time_span_end(span);
-        double from = (double)musical_time_numerator(start) / (double)musical_time_denominator(start);
-        double to = (double)musical_time_numerator(end) / (double)musical_time_denominator(end);
-        time_span_destroy(span);
+        double from = (double)span.start.value.num / (double)span.start.value.den;
+        double to = (double)span.end.value.num / (double)span.end.value.den;
         if (from - 1e-9 <= at && at < to - 1e-9) {
             return measure;
         }
@@ -85,20 +83,22 @@ static Run run_fixture(const char *file, bool spans) {
     assert(key_events != NULL);
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p.import.key_signatures.events[i];
-        KeyStructureMode mode = event->mode_byte == 1 ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+        const PitchMaterial *material = event->mode_byte == 1 ? test_materials()->natural_minor : test_materials()->major;
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, mode, &key_events[i].key));
+        assert(analysis_key_from_fifths(event->sharps_flats, material, &key_events[i].key));
     }
     /* the home key: the first key signature's tonic and mode */
     const MidiKeySignatureEvent *first = &p.import.key_signatures.events[0];
-    bool minor = first->mode_byte == 1;
+    bool first_is_minor = first->mode_byte == 1;
     int major_tonic = ((first->sharps_flats * 7) % 12 + 12) % 12;
-    int tonic = minor ? (major_tonic + 9) % 12 : major_tonic;
+    int tonic = first_is_minor ? (major_tonic + 9) % 12 : major_tonic;
 
     AnalysisChainConfig config = analysis_chain_config_default();
+
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
-    config.home_key_index = test_key_index_of(tonic, minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
+    config.home_key_index = test_key_index_of(tonic, first_is_minor ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
     config.harmonic_spans = spans;
     AnalysisChain *chain = NULL;
     assert(analysis_chain_run(&p.set, key_events, key_event_count, &config, &chain) == ANALYSIS_CHAIN_OK);
@@ -112,14 +112,14 @@ static Run run_fixture(const char *file, bool spans) {
         const HarmonyCadenceResult *cadence = &cadences->items[i];
         if (cadence->type == CADENCE_TYPE_HALF) {
             assert(run.half_count < MAX_ITEMS);
-            run.half_measure[run.half_count++] = measure_of(p.set.map, segments->starts[cadence->arrival_first]);
+            run.half_measure[run.half_count++] = measure_of(p.set.map, rational_to_double(segments->starts[cadence->arrival_first]));
         }
         if (cadence->type != CADENCE_TYPE_PERFECT_AUTHENTIC) {
             continue;
         }
         assert(run.pac_count < MAX_ITEMS);
         size_t before = cadence->arrival_first > 0 ? cadence->arrival_first - 1 : 0;
-        run.pac_measure[run.pac_count] = measure_of(p.set.map, segments->starts[cadence->arrival_first]);
+        run.pac_measure[run.pac_count] = measure_of(p.set.map, rational_to_double(segments->starts[cadence->arrival_first]));
         run.bass_on_root[run.pac_count] = cadence->arrival_first > 0 && inputs[before].bass_pitch_class == inputs[before].root_pitch_class;
         run.pac_count++;
     }

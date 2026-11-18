@@ -5,6 +5,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 #define PREFERENCE_SCALE 1000
 
@@ -66,7 +67,7 @@ bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonCon
     }
     context.before_count = at - low;
     for (size_t i = 0; i < context.before_count; i++) {
-        if (!harmony_read_chord(plan, same_owner[low + i], context.key.mode, context.metre.cell_length,
+        if (!harmony_read_chord(plan, same_owner[low + i], harmony_key_mode(&context.key), context.metre.cell_length,
                                 &context.before[i])) {
             return false;
         }
@@ -160,8 +161,8 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
     }
     if (virtual_count == 2) {
         size_t at = context->before_count + skeleton->count;
-        if (!harmony_make_chord(context->key.mode, 5, 0, false, false, 1, &all[at]) ||
-            !harmony_make_chord(context->key.mode, 1, 0, false, false, 1, &all[at + 1])) {
+        if (!harmony_make_chord(harmony_key_mode(&context->key), 5, 0, false, false, 1, &all[at]) ||
+            !harmony_make_chord(harmony_key_mode(&context->key), 1, 0, false, false, 1, &all[at + 1])) {
             free(all);
             verdict->hard = "no cadence to come";
             return true;
@@ -171,7 +172,7 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
     }
 
     /* The cadence is heard only when the skeleton ends the span; otherwise the rest of the span will bring it. */
-    HeardPhrase phrase = {all, total, context->key.mode, context->has_cadence ? context->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC,
+    HeardPhrase phrase = {all, total, harmony_key_mode(&context->key), context->has_cadence ? context->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC,
                           context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL};
     bool ok = harmony_judge(&phrase, &harmony);
     free(all);

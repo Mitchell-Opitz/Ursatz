@@ -3,7 +3,7 @@
 The `plan` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
 
 ```sh
-ursatz-composer plan --form <name> --key <K> [--mode major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --like-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] --out <plan.json> [--format text|json]
+ursatz-composer plan --form <name> --key <K> [--material major|minor] --meter <n/m> [--bars <n>] [--count <n>] [--modulate] [--motive <file> | --from-corpus <dir> --like <file>] [--accompaniment <pattern>] [--texture <name>] [--given-melody <file> | --given-progression "<numerals>" | --like-progression "<numerals>" | --given-bass <file> [--at <L>[:<bar>]] [--cells <n>]]... [--seed <n>] [--style <file>] [--style-weight <n/d>] [--style-without <category>]... [--blend <file>] [--blend-weight <n/d> | --blend-weights <dimension>=<n/d>,...] --out <plan.json> [--format text|json]
 ```
 
 Plans a whole short piece from a form template and writes the plan as JSON. Nothing is composed yet: the
@@ -20,8 +20,8 @@ The command reads the options into a request for `composer_api_plan` ([api.md](a
 | Option | Meaning |
 | --- | --- |
 | `--form <name>` | `binary`, `rounded-binary`, `ternary`, `variations`, `loop` or `layered`. See [piece.md](piece.md) for the sections of each. |
-| `--key <K>` | The tonic (`D`, `F#`, `Bb`), with the mode from `--mode`, or the tonic and the mode in one argument (`"D minor"`, any case). |
-| `--mode <major\|minor>` | The mode when `--key` is a tonic only. Major by default. Not with a `--key` that names its mode. |
+| `--key <K>` | The tonic (`D`, `F#`, `Bb`), with the material from `--material`, or the tonic and the mode in one argument (`"D minor"`, any case). |
+| `--material <major\|minor>` | The material when `--key` is a tonic only. Major by default. Not with a `--key` that names its mode. `--mode` is read as the same option. |
 | `--meter <n/m>` | 2/4, 3/4, 4/4 or 6/8. |
 | `--bars <n>` | The size of the piece in bars. Each form has its own sizes (binary 8 or 16, rounded binary 16 or 24, ternary 12 or 24, variations 16 to 72 in steps of 8, loop 8 or 16, layered 16 to 32 in steps of 8); a size it does not have is refused with the sizes it has. The default is the form's default size ([forms.md](forms.md)). |
 | `--count <n>` | The variations (1 to 8) of `variations` or the layers (2 to 4) of `layered`, instead of `--bars`. With both, they must agree. Refused for the other forms. |

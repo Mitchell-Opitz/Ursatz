@@ -13,6 +13,14 @@
 #include "analysis/harmony/roman_numeral_adapter.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "analysis/voices/outer_voice.h"
+#include "test_knowledge.h"
+
+/* The default config with the snapshot's materials: the key regions estimate has none of its own. */
+static const CommonPracticeKeyRegionsConfig *default_config(void) {
+    static CommonPracticeKeyRegionsConfig config;
+    config = common_practice_key_regions_config_default(test_materials());
+    return &config;
+}
 
 /*
  * Phrase model labels for Mozart, Piano Sonata K. 545, first movement, exposition, against
@@ -211,12 +219,12 @@ static Inputs make_inputs(const WeightedPipeline *p, const MeterMap *map, size_t
     assert(in.inputs != NULL && in.positions != NULL);
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(p->sonorities.items[s].sonority);
-        assert(metrical_position_from_time(map, time_span_start(window), &in.positions[s]) == METRICAL_POSITION_OK);
+        assert(metrical_position_from_time(map, &window->start, &in.positions[s]) == METRICAL_POSITION_OK);
         HarmonySegmentInput *input = &in.inputs[s];
         input->segment.id = p->segment_ids[s];
-        input->segment.span = window;
+        input->segment.span = *window;
         input->segment.position = in.positions[s];
-        input->segment.strength = chain_attack_strength(map, time_span_start(window));
+        input->segment.strength = chain_attack_strength(map, &window->start);
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
     }
@@ -405,14 +413,14 @@ static void test_whole_chain(void) {
     assert(key_segments != NULL);
     for (size_t s = 0; s < count; s++) {
         const TimeSpan *window = sonority_time_window(p.sonorities.items[s].sonority);
-        key_segments[s].start = time_span_start(window);
-        key_segments[s].end = time_span_end(window);
+        key_segments[s].start = window->start;
+        key_segments[s].end = window->end;
         key_segments[s].source = &p.segments[s];
         assert(common_practice_weight_segment(p.segments[s].members, p.segments[s].member_count, &weighting,
                                               &key_segments[s].weights, NULL) == COMMON_PRACTICE_WEIGHTED_OK);
     }
     CommonPracticeKeyRegions regions = {0};
-    assert(key_regions_estimate(key_segments, count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(key_regions_estimate(key_segments, count, map, NULL, 0, default_config(), &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
 
     StandardTonalityKeyRegionInput *region_inputs =
         (StandardTonalityKeyRegionInput *)calloc(regions.region_count, sizeof(StandardTonalityKeyRegionInput));
@@ -421,7 +429,7 @@ static void test_whole_chain(void) {
     assert(region_inputs != NULL && segment_inputs != NULL);
     for (size_t i = 0; i < regions.region_count; i++) {
         region_inputs[i].key = regions.regions[i].key;
-        region_inputs[i].start = time_span_start(regions.regions[i].span);
+        region_inputs[i].start = regions.regions[i].span.start;
         region_inputs[i].uncertainty = regions.regions[i].uncertainty;
     }
     for (size_t s = 0; s < count; s++) {
@@ -434,6 +442,9 @@ static void test_whole_chain(void) {
     size_t tonal_count = 0;
     assert(standard_tonality_build_chord_inputs(segment_inputs, count, region_inputs, regions.region_count,
                                                 &tonal_inputs, &tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK);
+    for (size_t mi = 0; mi < tonal_count; mi++) {
+        tonal_inputs[mi].materials = test_materials();
+    }
     StandardTonalityRomanResult *romans = NULL;
     assert(standard_tonality_build_roman_numerals_with_config(tonal_inputs, tonal_count, NULL, &romans) == STANDARD_TONALITY_ROMAN_OK);
 

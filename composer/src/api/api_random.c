@@ -11,6 +11,7 @@
 
 #include "api_internal.h"
 #include "util/request_parse.h"
+#include "util/util.h"
 
 /* Random motives (docs/api.md): the request of the `random-motive` command. */
 
@@ -29,10 +30,12 @@ static unsigned long mix_seed(unsigned long seed) {
 }
 
 /* Reads the members that make the options, without the style. drawn_mode and drawn_meter are set to what was drawn. */
-static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *out, bool *accompaniment, bool *has_role,
-                                   const char **drawn_mode, const char **drawn_meter, ComposerPreferences *preferences,
-                                   bool *has_preferences, ComposerError *error) {
+static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot *knowledge,
+                                   MotiveRandomOptions *out,
+                                   bool *accompaniment, bool *has_role, const char **drawn_mode, const char **drawn_meter,
+                                   ComposerPreferences *preferences, bool *has_preferences, ComposerError *error) {
     memset(out, 0, sizeof *out);
+    out->knowledge = knowledge;
     *drawn_mode = NULL;
     *drawn_meter = NULL;
     unsigned long count = RANDOM_MOTIVE_COUNT_DEFAULT;
@@ -45,23 +48,20 @@ static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *ou
     out->count = count;
     out->seed = has_seed ? seed : api_default_seed();
     const char *mode_text = NULL;
+    const char *material_member = NULL;
     const char *meter_text = NULL;
     const char *key_text = NULL;
     const char *form_text = NULL;
     const char *strategy_text = NULL;
     const char *role_text = NULL;
     bool present = false;
-    bool has_mode = false;
     bool has_meter = false;
-    if (!api_member_string(request, "mode", &mode_text, &has_mode, error) ||
+    if (!api_read_material(request, NULL, true, &mode_text, &material_member, error) ||
         !api_member_string(request, "meter", &meter_text, &has_meter, error) ||
         !api_member_string(request, "key", &key_text, &present, error)) {
         return COMPOSER_ERR_REQUEST;
     }
     bool has_key = present;
-    if (!has_mode) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode is required: major or minor");
-    }
     if (!has_meter) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "meter is required, as in 4/4 or 6/8");
     }
@@ -74,25 +74,31 @@ static ComposerStatus read_options(const cJSON *request, MotiveRandomOptions *ou
         meter_text = RANDOM_METERS[(mixed >> 16) % 4];
         *drawn_meter = meter_text;
     }
-    if (request_equals_ignore_case(mode_text, "major")) {
-        out->mode = KEY_STRUCTURE_MODE_MAJOR;
-    } else if (request_equals_ignore_case(mode_text, "minor")) {
-        out->mode = KEY_STRUCTURE_MODE_MINOR;
-    } else {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be major or minor, not '%s'", mode_text);
+    {
+        char member_path[32];
+        ApiMaterialKind kind;
+        snprintf(member_path, sizeof member_path, "/%s", material_member);
+        ComposerStatus resolved = api_resolve_material(knowledge, material_member, member_path, mode_text, 0, &out->material,
+                                                       &kind, error);
+        if (resolved != COMPOSER_OK) {
+            return resolved;
+        }
     }
     if (!request_parse_meter(meter_text, &out->meter)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/meter",
                         "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8", meter_text);
     }
     if (has_key) {
-        if (!request_parse_key(key_text, &out->key)) {
+        if (!request_parse_key(key_text, knowledge, &out->key)) {
+            if (api_fail_unsupported_key(error, "/key", knowledge, key_text)) {
+                return COMPOSER_ERR_REQUEST;
+            }
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                             "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                             "for example \"D minor\"",
                             key_text);
         }
-        if (out->key.mode != out->mode) {
+        if (composer_key_is_minor(&out->key) != composer_material_is_minor(out->material)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "key '%s' is not %s, the mode asked for", key_text,
                             mode_text);
         }
@@ -162,7 +168,7 @@ static ComposerStatus read_style(const cJSON *request, ComposerStyle **style, Co
 }
 
 /* {"seed", "motives": [<motive document>]}. NULL on failure. */
-static cJSON *random_document(unsigned long seed, const Motive *motives, size_t count, const char *drawn_mode,
+static cJSON *random_document(unsigned long seed, const Motive *motives, size_t count, const char *drawn_material,
                               const char *drawn_meter, const ComposerPreferences *preferences) {
     cJSON *document = cJSON_CreateObject();
     cJSON *array = document && cJSON_AddNumberToObject(document, "seed", (double)seed)
@@ -184,9 +190,9 @@ static cJSON *random_document(unsigned long seed, const Motive *motives, size_t 
         }
     }
     /* "drawn" names what the seed drew, and is there only when something was. */
-    cJSON *drawn = drawn_mode || drawn_meter ? cJSON_AddObjectToObject(document, "drawn") : NULL;
-    if ((drawn_mode || drawn_meter) &&
-        (!drawn || (drawn_mode && !cJSON_AddStringToObject(drawn, "mode", drawn_mode)) ||
+    cJSON *drawn = drawn_material || drawn_meter ? cJSON_AddObjectToObject(document, "drawn") : NULL;
+    if ((drawn_material || drawn_meter) &&
+        (!drawn || (drawn_material && !cJSON_AddStringToObject(drawn, "material", drawn_material)) ||
          (drawn_meter && !cJSON_AddStringToObject(drawn, "meter", drawn_meter)))) {
         cJSON_Delete(document);
         return NULL;
@@ -199,7 +205,8 @@ static cJSON *random_document(unsigned long seed, const Motive *motives, size_t 
     return document;
 }
 
-static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, ComposerResponse *out) {
+static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot *knowledge, const ComposerJob *job,
+                                  ComposerResponse *out) {
     ComposerError *error = &out->error;
     MotiveRandomOptions options;
     bool accompaniment = false;
@@ -208,7 +215,7 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    ComposerStatus status = read_options(request, knowledge, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     if (status != COMPOSER_OK) {
         return status;
@@ -238,14 +245,15 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     for (size_t i = 0; has_role && i < made; i++) {
         motives[i].accompaniment = accompaniment;
     }
-    cJSON *document = random_document(options.seed, motives, made, drawn_mode, drawn_meter, has_preferences ? &preferences : NULL);
+    cJSON *document = random_document(options.seed, motives, made, drawn_mode ? options.material->id : NULL, drawn_meter, has_preferences ? &preferences : NULL);
     if (!document) {
         return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }
     return api_respond_json(out, document);
 }
 
-ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, ComposerError *error) {
+ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, cJSON *filled,
+                                   ComposerError *error) {
     MotiveRandomOptions options;
     bool accompaniment = false;
     bool has_role = false;
@@ -253,7 +261,7 @@ ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, Composer
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    ComposerStatus status = read_options(request, knowledge, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     ComposerStyle *style = NULL;
     if (status == COMPOSER_OK) {
@@ -267,8 +275,11 @@ ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, Composer
     cJSON_DeleteItemFromObjectCaseSensitive(filled, "seed");
     bool ok = cJSON_AddNumberToObject(filled, "seed", (double)options.seed) != NULL;
     if (drawn_mode) {
+        /* The drawn word goes in the member the request wrote, so the filled request never holds both. */
+        const char *member = cJSON_GetObjectItemCaseSensitive(filled, "material") ? "material" : "mode";
         cJSON_DeleteItemFromObjectCaseSensitive(filled, "mode");
-        ok = ok && cJSON_AddStringToObject(filled, "mode", drawn_mode);
+        cJSON_DeleteItemFromObjectCaseSensitive(filled, "material");
+        ok = ok && cJSON_AddStringToObject(filled, member, drawn_mode);
     }
     if (drawn_meter) {
         cJSON_DeleteItemFromObjectCaseSensitive(filled, "meter");
@@ -277,14 +288,20 @@ ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, Composer
     return ok ? COMPOSER_OK : api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-ComposerStatus composer_api_random_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_random_motive(const ComposerContext *context, const char *request_json,
+                                          const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *request = NULL;
     ComposerStatus status = api_parse_request(request_json, &request, &out->error);
     if (status != COMPOSER_OK) {
         return status;
     }
-    status = make_random(request, job, out);
+    status = make_random(request, context->knowledge, job, out);
     cJSON_Delete(request);
     if (status != COMPOSER_OK) {
         ComposerError error = out->error;

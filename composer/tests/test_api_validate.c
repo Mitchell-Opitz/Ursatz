@@ -11,6 +11,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -64,7 +65,7 @@ static void expect_refused_as(ComposerStatus expected, const char *fixture, cons
                               const char *path, const char *message) {
     char *text = request_text(fixture, edits, count);
     ComposerResponse validated;
-    ComposerStatus status = composer_api_validate("theme", text, &validated);
+    ComposerStatus status = composer_api_validate(test_context(), "theme", text, &validated);
     if (status != expected || strcmp(validated.error.path, path) != 0 || !strstr(validated.error.message, message)) {
         fprintf(stderr, "validate: %s '%s' at '%s', expected '%s' at '%s'\n", test_status_name(status),
                 validated.error.message, validated.error.path, message, path);
@@ -75,7 +76,7 @@ static void expect_refused_as(ComposerStatus expected, const char *fixture, cons
     assert(!validated.json);
 
     ComposerResponse composed;
-    ComposerStatus compose_status = composer_api_theme(text, NULL, &composed);
+    ComposerStatus compose_status = composer_api_theme(test_context(), text, NULL, &composed);
     if (compose_status != status || strcmp(composed.error.path, validated.error.path) != 0 ||
         strcmp(composed.error.message, validated.error.message) != 0) {
         fprintf(stderr, "compose: %s '%s' at '%s'\n", test_status_name(compose_status), composed.error.message,
@@ -92,7 +93,7 @@ static void expect_refused_as(ComposerStatus expected, const char *fixture, cons
 static void expect_valid(const char *fixture, const char *const edits[][2], size_t count) {
     char *text = request_text(fixture, edits, count);
     ComposerResponse response;
-    ComposerStatus status = composer_api_validate("theme", text, &response);
+    ComposerStatus status = composer_api_validate(test_context(), "theme", text, &response);
     if (status != COMPOSER_OK) {
         fprintf(stderr, "validate: %s '%s' at '%s'\n", test_status_name(status), response.error.message, response.error.path);
     }
@@ -273,7 +274,7 @@ static void test_preferences(void) {
 static void test_piece_of_a_form(void) {
     char *text = test_must_read_file(COMPOSER_FIXTURE_DIR "/piece/rounded-binary.json", NULL);
     ComposerResponse response;
-    ComposerStatus status = composer_api_validate("piece", text, &response);
+    ComposerStatus status = composer_api_validate(test_context(), "piece", text, &response);
     assert(status == COMPOSER_OK && response.json);
     free(text);
     cJSON *document = cJSON_Parse(response.json);

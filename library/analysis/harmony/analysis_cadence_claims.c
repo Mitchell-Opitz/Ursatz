@@ -16,7 +16,7 @@ static int measure_of(const HarmonySegment *segment) {
 }
 
 static bool starts_measure(const HarmonySegment *segment) {
-    return duration_numerator(metrical_position_offset(segment->input->segment.position)) == 0;
+    return metrical_position_offset(segment->input->segment.position)->value.num == 0;
 }
 
 /* The first segment that starts `measure` (offset 0), or count when none does. */
@@ -230,9 +230,8 @@ static bool point_of(const HarmonySegment *segments, size_t count, const Harmony
     return false;
 }
 
-static double start_in_whole_notes(const HarmonySegment *segment) {
-    const MusicalTime *time = time_span_start(segment->input->segment.span);
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+static Rational start_in_whole_notes(const HarmonySegment *segment) {
+    return segment->input->segment.span.start.value;
 }
 
 static HarmonyCadenceAnalysisStatus copy_cadences(const HarmonySegment *segments, const HarmonyCadenceConfig *config,
@@ -324,8 +323,8 @@ static HarmonyCadenceAnalysisStatus add_boundaries(const HarmonySegment *segment
                                                    const HarmonyCadenceConfig *config,
                                                    const HarmonyPhrasePoint *points, size_t point_count,
                                                    HarmonyCadences *set) {
-    double *unit_starts = (double *)calloc(point_count + 1, sizeof(double));
-    double *half_starts = (double *)calloc(point_count + 1, sizeof(double));
+    Rational *unit_starts = (Rational *)calloc(point_count + 1, sizeof(Rational));
+    Rational *half_starts = (Rational *)calloc(point_count + 1, sizeof(Rational));
     size_t *half_segments = (size_t *)calloc(point_count + 1, sizeof(size_t));
     if (unit_starts == NULL || half_starts == NULL || half_segments == NULL) {
         free(unit_starts);

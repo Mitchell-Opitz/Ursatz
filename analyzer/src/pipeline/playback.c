@@ -10,7 +10,6 @@
 
 #include "model/events/note_event.h"
 #include "model/time/temporal_anchor.h"
-#include "model/time/time_rational.h"
 #include "util/json_util.h"
 
 #define DEFAULT_QUARTERS_PER_MINUTE 120.0
@@ -39,12 +38,12 @@ static AnalyzerStatus midi_tempo(const TempoMap *map, AnalyzerTempoRegion **out,
     }
     for (size_t i = 0; i < region_count; i++) {
         const TempoMapRegion *region = tempo_map_region(map, i);
-        const MusicalTime *start = region ? tempo_map_region_start(region) : NULL;
         unsigned long microseconds = region ? tempo_map_region_microseconds_per_quarter(region) : 0;
-        if (!start || microseconds == 0 || rational_of_musical_time(start, &regions[i].at) != RATIONAL_OK) {
+        if (!region || microseconds == 0) {
             free(regions);
             return ANALYZER_ERR_LIBRARY;
         }
+        regions[i].at = tempo_map_region_start(region).value;
         regions[i].quarters_per_minute = round_to_milli(MICROSECONDS_PER_MINUTE / (double)microseconds);
     }
     *defaulted = tempo_map_is_defaulted(map);
@@ -143,9 +142,12 @@ static AnalyzerStatus build_notes(const ImportedNotes *imported, AnalyzerPlaybac
         const PitchNumericValue *value = imported->pitch_values[i];
         AnalyzerPlaybackNote *note = &out->notes[i];
         Rational note_end;
-        if (!position || !duration || !value || rational_of_musical_time(position, &note->onset) != RATIONAL_OK ||
-            rational_of_duration(duration, &note->length) != RATIONAL_OK ||
-            rational_add(note->onset, note->length, &note_end) != RATIONAL_OK) {
+        if (!position || !duration || !value) {
+            return ANALYZER_ERR_LIBRARY;
+        }
+        note->onset = position->value;
+        note->length = duration->value;
+        if (rational_add(note->onset, note->length, &note_end) != RATIONAL_OK) {
             return ANALYZER_ERR_LIBRARY;
         }
         if (rational_cmp(note_end, out->end) > 0) {

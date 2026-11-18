@@ -86,18 +86,16 @@ static PitchIdentity *make_expected_pitch(uint8_t midi_note) {
 static void assert_position(const NoteEvent *note, long numerator, unsigned long denominator) {
     const TemporalAnchor *anchor = note_event_temporal_anchor(note);
     const MusicalTime *position = temporal_anchor_position(anchor);
-    MusicalTime *expected = NULL;
-    musical_time_create(numerator, denominator, &expected);
-    assert(musical_time_equals(position, expected));
-    musical_time_destroy(expected);
+    MusicalTime expected;
+    assert(musical_time_make(numerator, (long long)denominator, &expected) == MUSICAL_TIME_OK);
+    assert(musical_time_same(*position, expected));
 }
 
 static void assert_duration(const NoteEvent *note, long numerator, unsigned long denominator) {
     const Duration *duration = note_event_duration(note);
-    Duration *expected = NULL;
-    duration_create(numerator, denominator, &expected);
-    assert(duration_equals(duration, expected));
-    duration_destroy(expected);
+    Duration expected;
+    assert(duration_make(numerator, (long long)denominator, &expected) == DURATION_OK);
+    assert(duration_same(*duration, expected));
 }
 
 static void assert_pitch(const NoteEvent *note, uint8_t midi_note) {
@@ -555,10 +553,9 @@ static void test_import_with_meter_defaults_to_four_four_without_a_time_signatur
     assert(time_signature_bottom_number(meter_map_region_time_signature(region)) == 4);
     assert(meter.conflict_count == 0);
 
-    MusicalTime *quarter = NULL;
-    musical_time_create(1, 4, &quarter);
-    assert(musical_time_equals(meter.end_time, quarter));
-    musical_time_destroy(quarter);
+    MusicalTime quarter;
+    assert(musical_time_make(1, 4, &quarter) == MUSICAL_TIME_OK);
+    assert(musical_time_same(meter.end_time, quarter));
 
     midi_meter_import_destroy(&meter);
     free_import(events, pitch_values, count);

@@ -24,7 +24,7 @@ static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "com
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 
 const char *api_key_name(const AnalysisKey *key, char *out, size_t size) {
-    util_key_name(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, out, size);
+    util_key_name(analysis_key_tonic_pitch_class(key), key->material, out, size);
     return out;
 }
 
@@ -140,7 +140,7 @@ cJSON *api_section_json(const ApiSection *section) {
 
 /* --- the plan of a request ------------------------------------------------------------------------- */
 
-ComposerStatus api_read_plan_text(const cJSON *request, const char *name, char **text, ComposerError *error) {
+ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSON *request, const char *name, char **text, ComposerError *error) {
     char path[64];
     snprintf(path, sizeof path, "/%s", name);
     const cJSON *member = cJSON_GetObjectItemCaseSensitive(request, name);
@@ -154,7 +154,7 @@ ComposerStatus api_read_plan_text(const cJSON *request, const char *name, char *
     }
     PiecePlan *plan = NULL;
     PlanJsonError detail;
-    PlanResult read = plan_from_json(printed, &plan, &detail);
+    PlanResult read = plan_from_json_resolved(knowledge, printed, &plan, &detail);
     if (read != PLAN_OK) {
         if (read == PLAN_ERR_FORMAT && analyzer_document_status(printed) != ANALYZER_DOCUMENT_UNREADABLE) {
             cJSON_free(printed);
@@ -178,9 +178,9 @@ ComposerStatus api_read_plan_text(const cJSON *request, const char *name, char *
     return COMPOSER_OK;
 }
 
-ComposerStatus api_plan_from_text(const char *text, const char *name, PiecePlan **out, ComposerError *error) {
+ComposerStatus api_plan_from_text(const KnowledgeSnapshot *knowledge, const char *text, const char *name, PiecePlan **out, ComposerError *error) {
     PlanJsonError detail;
-    if (plan_from_json(text, out, &detail) != PLAN_OK) {
+    if (plan_from_json_resolved(knowledge, text, out, &detail) != PLAN_OK) {
         char path[64];
         snprintf(path, sizeof path, "/%s", name);
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot read plan: %s", detail.message);

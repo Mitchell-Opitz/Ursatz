@@ -7,7 +7,7 @@ Back to the [docs index](README.md).
 
 ```json
 {"schema": "ursatz-piece-request", "schema_version": 1,
- "key": "D", "mode": "minor", "meter": "4/4",
+ "key": "D", "material": "minor", "meter": "4/4",
  "motive": null,
  "sections": [
   {"id": "intro", "part": "intro", "letter": "I", "beats": 8, "pickup": "0", "cadence": null, "fill": {"kind": "empty"}},
@@ -25,7 +25,7 @@ Back to the [docs index](README.md).
 
 | Member | Meaning |
 | --- | --- |
-| `key`, `mode` | The tonic (or a key like `"D minor"`) and `minor`, `major` or `style`. `style` takes the style's most common mode and needs a `style`. |
+| `key`, `material` | The tonic (or a key like `"D minor"`) and the material: an id, name, key word or alias of a material the Composer writes keys in (major and natural minor), or `style`, which takes the style's most common mode and needs a `style`. The old member `mode` (`major`, `minor`, `style`) is still read (the stored `request.json` files of the GUI use it) and `material` and `mode` together are refused. |
 | `meter` | `2/4`, `3/4`, `4/4` or `6/8`. A form that lists its meters ([forms.md](forms.md)) refuses another at `/request/meter`: `the Minuet form is in 3/4`. |
 | `motive` | `null`, or the piece's basic motive (a degree list as in the [theme request](theme-request.md#motives), melodic). With `null` the basic motive is the own motive of the first motif section, else one invented. It may be as long as the basic idea of every theme section: 2 bars when all are 8 bars, else 1. A longer one is refused at `/motive`. |
 | `accompaniment`, `voicing` | As in the theme request, on every section: `{"pattern": "any" or "block" or "arpeggiated" or "alberti" or "oom-pah"}`, or `"satb"` or `"chorale"`, not both. The pattern `motive` is not available in a piece. |
@@ -59,7 +59,7 @@ of any length that composes; a sentence at the loop's end (nothing after it but 
 | --- | --- | --- |
 | `empty` | | Nothing of its own: made from the piece's basic motive. |
 | `motif` | `motive`, `forms`, `into`, `hybrid`, `construction` | A motive of its own (`null`: the basic motive), saved forms of it for the motives stage (as in the theme request, at most 64 in the request), and for a section of 4 or 8 whole bars the theme it is built into: `into` `sentence` (default), `period` or `hybrid` (with `hybrid` as `--hybrid` writes it). With a `construction` (`"auto"`, or `{"ideas": {...}, "extensions": [...]}` as the [theme request](theme-request.md) gives it) the section is a theme of its whole bars, 3 to 16, with no pickup, built with that construction, whatever its length; a construction on a section of other bars or with a pickup is refused at `/sections/<i>/fill/construction`. Without one any other length is a free phrase. |
-| `theme` | `plan` | A plan the `theme` or `grow` command wrote: its realized lanes are Given to the section, moved and transposed to it. The theme must be as long as the section, in the same meter and mode. In the request file of the `piece` command `plan` is the path of the plan file; in a request to the [API](api/theme-and-piece.md#composer_api_piecerequest_json-job-out) it is the plan object itself, with an optional `source` (the name shown as the section's source), and a path is refused. The command reads the file into the request. |
+| `theme` | `plan` | A plan the `theme` or `grow` command wrote: its realized lanes are Given to the section, moved and transposed to it. The theme must be as long as the section, in the same meter and mode. In the request file of the `piece` command `plan` is the path of the plan file; in a request to the [API](api/theme-and-piece.md#composer_api_piececontext-request_json-job-out) it is the plan object itself, with an optional `source` (the name shown as the section's source), and a path is refused. The command reads the file into the request. |
 | `progression` | `numerals`, `cells` | Roman numerals separated by spaces (`"i iv V i"`), `cells` harmony cells each (a bar when left out; a cell is half a bar in 4/4). The harmony stage fills the rest of the section. |
 
 ## A piece of another form (schema version 2)
@@ -67,7 +67,7 @@ of any length that composes; a sentence at the loop's end (nothing after it but 
 `"schema_version": 2` names a built-in form in `form` (`binary`, `rounded-binary`, `ternary`, `variations`, `loop`,
 `layered` or `game-loop`; [the API serves them](api/vocabulary-and-validation.md#forms-composer_api_formsout)). Version 1 is
 the game loop and refuses a `form` at `/request/form`; a version 2 request without `form`, or with another name, is refused
-there too, with the built-in names. The brief (`key`, `mode`, `meter`, `motive`, `accompaniment`, `style`, `style_weight`,
+there too, with the built-in names. The brief (`key`, `material`, `meter`, `motive`, `accompaniment`, `style`, `style_weight`,
 `without`, `tempo`) is as above. The rest depends on the form:
 
 | Form | Members |
@@ -82,7 +82,7 @@ tried (up to 16), with the plan built again for each, so a modulating piece plan
 
 ## Errors
 
-The `piece` command and the [composer API](api/theme-and-piece.md#composer_api_piecerequest_json-job-out) read the request the same way: the command
+The `piece` command and the [composer API](api/theme-and-piece.md#composer_api_piececontext-request_json-job-out) read the request the same way: the command
 reads the file (and the plan file of each theme fill) into the API request, and a member that is not valid is refused with its
 path in the request (`/request/sections/<i>/cadence`) in the API and as a message and exit 1 in the command. The saved forms
 and motives of a motif fill are inline in both.

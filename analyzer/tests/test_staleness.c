@@ -87,7 +87,7 @@ int main(void) {
     CHECKF(analyzer_document_status("") == ANALYZER_DOCUMENT_UNREADABLE, "empty text");
     CHECKF(analyzer_document_status("{") == ANALYZER_DOCUMENT_UNREADABLE, "not JSON");
     CHECKF(analyzer_document_status("[]") == ANALYZER_DOCUMENT_UNREADABLE, "not an object");
-    CHECKF(analyzer_document_status("{\"schema_version\": 12}") == ANALYZER_DOCUMENT_UNREADABLE, "no metadata");
+    CHECKF(analyzer_document_status("{\"schema_version\": 13}") == ANALYZER_DOCUMENT_UNREADABLE, "no metadata");
     CHECKF(analyzer_document_status("{\"metadata\": {}}") == ANALYZER_DOCUMENT_UNREADABLE, "no schema_version");
     CHECKF(analyzer_document_status("{\"schema_version\": \"9\", \"metadata\": {\"analyzer_version\": \"a\", "
                                     "\"producer_key\": \"b\"}}") == ANALYZER_DOCUMENT_UNREADABLE,

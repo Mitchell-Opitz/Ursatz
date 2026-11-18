@@ -17,6 +17,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * Style blending (style.h, docs/style.md): two style models blended with a weight per dimension.
@@ -226,6 +227,7 @@ static unsigned long long fnv(const char *text) {
 static PiecePlan *sentence_plan(Motive *motive) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -233,7 +235,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
@@ -262,6 +264,7 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, cons
     PiecePlan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.style = style;
     config.style_weight = (ComposerRatio){1, 1};

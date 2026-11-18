@@ -308,13 +308,15 @@ static unsigned char *read_file_body(struct mg_connection *conn, size_t *size, i
 static bool import_key_text(const cJSON *document, char *out, size_t out_size) {
   const cJSON *key = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "motive"), "key");
   const cJSON *tonic = cJSON_GetObjectItemCaseSensitive(key, "tonic_pitch_class");
-  const cJSON *mode = cJSON_GetObjectItemCaseSensitive(key, "mode");
+  const cJSON *material = cJSON_GetObjectItemCaseSensitive(key, "material");
   char name[16];
-  if (!cJSON_IsNumber(tonic) || !cJSON_IsString(mode) ||
-      !ursatz_gui_composer_tonic_name(tonic->valueint, mode->valuestring, name, sizeof(name))) {
+  char word[32];
+  if (!cJSON_IsNumber(tonic) || !cJSON_IsString(material) ||
+      !ursatz_gui_composer_tonic_name(tonic->valueint, material->valuestring, name, sizeof(name)) ||
+      !ursatz_gui_composer_key_word(material->valuestring, word, sizeof(word))) {
     return false;
   }
-  snprintf(out, out_size, "%s %s", name, mode->valuestring);
+  snprintf(out, out_size, "%s %s", name, word);
   return true;
 }
 
@@ -383,7 +385,7 @@ static char *degrees_to_c_notes(const char *degrees, const char *mode, const cha
 }
 
 /* POST /api/materials/motifs/import: the body is a MIDI file; ?meter= and ?key= are optional. Answers
-   {"ok":true,"notes_text":...,"meter":"4/4","key":"C minor","moved_from":"D minor"|null,"pickup":"0",
+   {"ok":true,"notes_text":...,"meter":"4/4","key":"C minor","material":"omt.material.natural-minor","moved_from":"D minor"|null,"pickup":"0",
    "analysis":{...}} and saves nothing. The notes are moved to C; with no key found they are read as C major. */
 static int handle_import_motif(struct mg_connection *conn) {
   char meter[16];
@@ -467,6 +469,15 @@ static int handle_import_motif(struct mg_connection *conn) {
   cJSON_AddStringToObject(answer, "notes_text", final_notes);
   cJSON_AddStringToObject(answer, "meter", meter_text);
   cJSON_AddStringToObject(answer, "key", final_key);
+  /* The material of the key the notes are written in (C major when the file names none). */
+  const cJSON *found_material =
+      cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "motive"), "key"), "material");
+  char material_id[64];
+  if (keyed && cJSON_IsString(found_material)) {
+    cJSON_AddStringToObject(answer, "material", found_material->valuestring);
+  } else if (ursatz_gui_composer_material_of_word("major", material_id, sizeof(material_id))) {
+    cJSON_AddStringToObject(answer, "material", material_id);
+  }
   cJSON_AddBoolToObject(answer, "key_found", keyed);
   if (moved_from) {
     cJSON_AddStringToObject(answer, "moved_from", moved_from);
@@ -660,11 +671,16 @@ static int handle_render(struct mg_connection *conn) {
   return send_render_answer(conn, xml, playback);
 }
 
-/* A motif body must name C as its tonic (R-179): "C major" or "C minor". Bodies without a motif are left alone. */
+/* A motif body is written with C as its tonic (R-179), so it names a material the Composer offers (the old key text "C major"
+   or "C minor" is read as before). Bodies without a motif are left alone. */
 static bool motif_tonic_ok(const cJSON *version_body) {
   const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
   if (!cJSON_IsObject(motif)) {
     return true;
+  }
+  const cJSON *material = cJSON_GetObjectItemCaseSensitive(motif, "material");
+  if (material) {
+    return cJSON_IsString(material) && ursatz_gui_composer_vocabulary_has("materials", material->valuestring);
   }
   const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
   return cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0);
@@ -1313,7 +1329,8 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   in.form = optional_string(motif, "form", &(bool){false});
   in.degrees = optional_string(motif, "degrees", &(bool){false});
   in.meter = optional_string(motif, "meter", &(bool){false});
-  in.key = optional_string(motif, "key", &(bool){false});
+  char motif_key[64];
+  in.key = ursatz_gui_motif_key_text(motif, motif_key, sizeof(motif_key));
   in.pickup = optional_string(motif, "pickup", &(bool){false});
   in.role = optional_string(version_body, "role", &(bool){false});
   if (!in.role) {
@@ -1680,14 +1697,16 @@ static int handle_recognize(struct mg_connection *conn) {
   bool bad = false;
   const char *form = optional_string(source, "form", &bad);
   const char *meter = optional_string(source, "meter", &bad);
-  const char *key = optional_string(source, "key", &bad);
+  char source_key[64];
+  char target_key_text[64];
+  const char *key = ursatz_gui_motif_key_text(source, source_key, sizeof(source_key));
   const char *pickup = optional_string(source, "pickup", &bad);
   const char *target_pickup = optional_string(target, "pickup", &bad);
   const char *source_degrees = optional_string(source, "degrees", &bad);
   const char *target_degrees = optional_string(target, "degrees", &bad);
   const char *target_form = optional_string(target, "form", &bad);
   const char *target_meter = optional_string(target, "meter", &bad);
-  const char *target_key = optional_string(target, "key", &bad);
+  const char *target_key = ursatz_gui_motif_key_text(target, target_key_text, sizeof(target_key_text));
   if (bad || !form || !meter || !source_degrees || !target_degrees ||
       (target_form && strcmp(form, target_form) != 0) || (target_meter && strcmp(meter, target_meter) != 0) ||
       (key ? !target_key || strcmp(key, target_key) != 0 : target_key != NULL)) {
@@ -1888,7 +1907,7 @@ static int handle_variant_save(struct mg_connection *conn, const char *id) {
   cJSON *new_motif = cJSON_CreateObject();
   cJSON *derived = derived_record(id, version->valueint, variant, flag);
   const cJSON *role = cJSON_GetObjectItemCaseSensitive(motif, "role");
-  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+  const cJSON *material = cJSON_GetObjectItemCaseSensitive(motif, "material");
   const cJSON *meter = cJSON_GetObjectItemCaseSensitive(motif, "meter");
   const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(motif, "pickup");
   cJSON *analysis = cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(variant, "motive"), 1);
@@ -1897,8 +1916,8 @@ static int handle_variant_save(struct mg_connection *conn, const char *id) {
             cJSON_AddStringToObject(new_motif, "role", role->valuestring) &&
             cJSON_AddStringToObject(new_motif, "form", form) && cJSON_AddStringToObject(new_motif, "notes", text) &&
             cJSON_AddStringToObject(new_motif, "meter", meter->valuestring) &&
-            (cJSON_IsString(key) ? cJSON_AddStringToObject(new_motif, "key", key->valuestring) != NULL
-                                 : cJSON_AddNullToObject(new_motif, "key") != NULL) &&
+            (cJSON_IsString(material) ? cJSON_AddStringToObject(new_motif, "material", material->valuestring) != NULL
+                                      : cJSON_AddNullToObject(new_motif, "material") != NULL) &&
             cJSON_AddStringToObject(new_motif, "pickup", pickup->valuestring) &&
             set_variant_motif_members(new_motif, variant) && cJSON_AddItemToObject(new_motif, "analysis", analysis) &&
             cJSON_AddStringToObject(new_motif, "degrees", variant_text(variant, form, true)) &&
@@ -2568,9 +2587,10 @@ static int handle_update_use(struct mg_connection *conn, const char *id, const c
   return send_ok_with(conn, "item", item);
 }
 
-/* POST /api/materials/motifs/random {mode, meter, key?, form?, style_id?, count?, seed?}: random motives from the
-   Composer; nothing is saved. mode and meter may be "random": the Composer draws them from the seed and says what it
-   drew as "drawn". The answer is the Composer's document plus "ok". */
+/* POST /api/materials/motifs/random {material, meter, key?, form?, style_id?, count?, seed?}: random motives from the
+   Composer; nothing is saved. material (a material's id; the old member mode, a key word, is read as before) and meter may
+   be "random": the Composer draws them from the seed and says what it drew as "drawn". The answer is the Composer's document
+   plus "ok". */
 static int handle_random_motifs(struct mg_connection *conn) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -2578,7 +2598,9 @@ static int handle_random_motifs(struct mg_connection *conn) {
     return status;
   }
   bool bad = false;
-  const char *mode = optional_string(body, "mode", &bad);
+  const char *material = optional_string(body, "material", &bad);
+  const char *old_mode = optional_string(body, "mode", &bad);
+  const char *mode = material ? material : old_mode;
   const char *meter = optional_string(body, "meter", &bad);
   const char *key = optional_string(body, "key", &bad);
   const char *form = optional_string(body, "form", &bad);
@@ -2601,7 +2623,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   if (role && role[0] == '\0') {
     role = NULL;
   }
-  bool valid = !bad && mode && (!role || ursatz_gui_motif_role_option(role)) && meter &&
+  bool valid = !bad && mode && !(material && old_mode) && (!role || ursatz_gui_motif_role_option(role)) && meter &&
                (!form || strcmp(form, "full") == 0 || strcmp(form, "rhythm") == 0 || strcmp(form, "contour") == 0) &&
                (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
                                 count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
@@ -2610,7 +2632,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   if (!valid) {
     cJSON_Delete(body);
     return send_failure(conn, 400,
-                        "mode and meter are required, form full, rhythm or contour, role melodic or accompaniment, "
+                        "material and meter are required, form full, rhythm or contour, role melodic or accompaniment, "
                         "count 1 to 16 and seed a whole number from 0");
   }
   char style_path[1024] = "";
@@ -2619,7 +2641,8 @@ static int handle_random_motifs(struct mg_connection *conn) {
     return send_failure(conn, 400, "unknown style");
   }
   cJSON *request = cJSON_CreateObject();
-  bool built = request && cJSON_AddStringToObject(request, "mode", mode) && cJSON_AddStringToObject(request, "meter", meter) &&
+  bool built = request && cJSON_AddStringToObject(request, material ? "material" : "mode", mode) &&
+               cJSON_AddStringToObject(request, "meter", meter) &&
                (!key || cJSON_AddStringToObject(request, "key", key)) &&
                cJSON_AddStringToObject(request, "form", form ? form : "full") &&
                (!role || cJSON_AddStringToObject(request, "role", role)) &&

@@ -37,6 +37,7 @@ typedef struct {
     unsigned attacks;
     int measure;
     double beat;
+    Rational first; /* where the run's first note is attacked, in whole notes: orders the tuplets of one measure */
     MeterType meter;
     bool borrowed;
     bool has_level;

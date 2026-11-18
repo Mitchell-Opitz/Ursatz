@@ -10,26 +10,24 @@
 #include "model/time/musical_time.h"
 #include "model/time/time_span.h"
 
-static TimeSpan *make_span(long start_num, long end_num, unsigned long den) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    assert(musical_time_create(start_num, den, &start) == MUSICAL_TIME_OK);
-    assert(musical_time_create(end_num, den, &end) == MUSICAL_TIME_OK);
-    TimeSpan *span = NULL;
-    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+static TimeSpan make_span(long start_num, long end_num, unsigned long den) {
+    MusicalTime start;
+    MusicalTime end;
+    assert(musical_time_make(start_num, den, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make(end_num, den, &end) == MUSICAL_TIME_OK);
+    TimeSpan span;
+    assert(time_span_make(start, end, &span) == TIME_SPAN_OK);
     return span;
 }
 
-static AnalysisNote note_of(const char *id, const TimeSpan *span, int midi) {
+static AnalysisNote note_of(const char *id, TimeSpan span, int midi) {
     AnalysisNote note = {id, NULL, span, midi, NULL, NULL, ANALYSIS_INDEX_NONE, ANALYSIS_INDEX_NONE, 1.0};
     return note;
 }
 
 static void test_note_valid(void) {
-    TimeSpan *span = make_span(0, 1, 4);
-    TimeSpan *empty = make_span(1, 1, 4);
+    TimeSpan span = make_span(0, 1, 4);
+    TimeSpan empty = make_span(1, 1, 4);
     AnalysisNote ok = note_of("n1", span, 60);
     assert(analysis_note_valid(&ok));
 
@@ -44,7 +42,7 @@ static void test_note_valid(void) {
 
     AnalysisNote no_id = note_of(NULL, span, 60);
     assert(!analysis_note_valid(&no_id));
-    AnalysisNote no_span = note_of("n1", NULL, 60);
+    AnalysisNote no_span = note_of("n1", (TimeSpan){0}, 60);
     assert(!analysis_note_valid(&no_span));
     AnalysisNote zero_length = note_of("n1", empty, 60);
     assert(!analysis_note_valid(&zero_length));
@@ -57,13 +55,11 @@ static void test_note_valid(void) {
     assert(!analysis_note_valid(&under));
     assert(!analysis_note_valid(NULL));
 
-    time_span_destroy(span);
-    time_span_destroy(empty);
 }
 
 static void test_note_compare(void) {
-    TimeSpan *early = make_span(0, 1, 4);
-    TimeSpan *late = make_span(1, 2, 4);
+    TimeSpan early = make_span(0, 1, 4);
+    TimeSpan late = make_span(1, 2, 4);
     AnalysisNote a = note_of("a", early, 60);
     AnalysisNote b = note_of("b", late, 50);
     assert(analysis_note_compare(&a, &b) < 0);
@@ -83,13 +79,11 @@ static void test_note_compare(void) {
     assert(items[0].note_id[0] == 'a' && items[1].note_id[0] == 'a' && items[2].note_id[0] == 'b' &&
            items[3].note_id[0] == 'b');
 
-    time_span_destroy(early);
-    time_span_destroy(late);
 }
 
 static void test_note_set_valid(void) {
-    TimeSpan *s0 = make_span(0, 1, 4);
-    TimeSpan *s1 = make_span(1, 2, 4);
+    TimeSpan s0 = make_span(0, 1, 4);
+    TimeSpan s1 = make_span(1, 2, 4);
     EntityID *id = NULL;
     MeterMap *map = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK);
@@ -116,8 +110,6 @@ static void test_note_set_valid(void) {
     assert(!analysis_note_set_valid(NULL));
 
     meter_map_destroy(map);
-    time_span_destroy(s0);
-    time_span_destroy(s1);
 }
 
 int main(void) {

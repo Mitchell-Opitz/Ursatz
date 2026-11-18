@@ -1,4 +1,5 @@
 #include "listen.h"
+#include "cli_context.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -29,7 +30,7 @@ typedef struct {
     const char *seed_text;
     const char *out_dir;
     const char *settings_path;
-    const char *mode_text;
+    const char *material_text;
     const char *meter_text;
     const char *style_path;
     const char *tempo_text;
@@ -69,7 +70,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --seed <n>           whole number from 0 for the first sample (default 1)\n");
     fprintf(out, "  --settings <file>    a preferences document (docs/preferences.md); absent: none is sent\n");
     fprintf(out, "  --print-settings     print the default preferences document and exit\n");
-    fprintf(out, "  --mode <mode>        major (default) or minor\n");
+    fprintf(out, "  --material <word>    major (default) or minor (--mode is the same option)\n");
     fprintf(out, "  --meter <n/m>        beats over a beat unit (default 4/4)\n");
     fprintf(out, "  --style <file>       a style model file: draw 8 candidates for each motif and keep the closest; themes prefer it too\n");
     fprintf(out, "  --blend <file>       themes: a second style model file, blended with --style (needs --style)\n");
@@ -115,8 +116,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->out_dir;
         } else if (strcmp(arg, "--settings") == 0) {
             target = &options->settings_path;
-        } else if (strcmp(arg, "--mode") == 0) {
-            target = &options->mode_text;
+        } else if (strcmp(arg, "--material") == 0 || strcmp(arg, "--mode") == 0) {
+            target = &options->material_text;
         } else if (strcmp(arg, "--meter") == 0) {
             target = &options->meter_text;
         } else if (strcmp(arg, "--style") == 0) {
@@ -209,11 +210,11 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to %lu, not '%s'", LISTEN_SEED_MAX,
                         options->seed_text);
     }
-    if (!options->mode_text) {
-        options->mode_text = "major";
+    if (!options->material_text) {
+        options->material_text = "major";
     }
-    if (strcmp(options->mode_text, "major") != 0 && strcmp(options->mode_text, "minor") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "--mode must be major or minor, not '%s'", options->mode_text);
+    if (strcmp(options->material_text, "major") != 0 && strcmp(options->material_text, "minor") != 0) {
+        return cli_fail(CLI_EXIT_USAGE, "--material must be major or minor, not '%s'", options->material_text);
     }
     options->meter_given = options->meter_text != NULL;
     if (!options->meter_text) {
@@ -293,7 +294,7 @@ static int write_sample_file(const Options *options, unsigned long index, const 
 static int print_default_settings(void) {
     ComposerResponse response;
     memset(&response, 0, sizeof response);
-    if (composer_api_vocabulary(&response) != COMPOSER_OK) {
+    if (composer_api_vocabulary(cli_context(), &response) != COMPOSER_OK) {
         composer_response_destroy(&response);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read the vocabulary");
     }
@@ -371,7 +372,7 @@ static char *seed_text(unsigned long seed, char *buffer, size_t size) {
 static cJSON *random_motive_request(const Options *options, unsigned long seed, const cJSON *preferences) {
     char number[32];
     cJSON *request = cJSON_CreateObject();
-    bool ok = request && cJSON_AddStringToObject(request, "mode", options->mode_text) &&
+    bool ok = request && cJSON_AddStringToObject(request, "material", options->material_text) &&
               cJSON_AddStringToObject(request, "meter", options->meter_text) &&
               cJSON_AddStringToObject(request, "strategy", options->strategy_text) && cJSON_AddNumberToObject(request, "count", 1) &&
               cJSON_AddStringToObject(request, "seed", seed_text(seed, number, sizeof number)) &&
@@ -402,8 +403,8 @@ static cJSON *render_request(const Options *options, const cJSON *motive) {
 }
 
 /* Calls an API entry with the request object (consumed). */
-static ComposerStatus call(ComposerStatus (*entry)(const char *, const ComposerJob *, ComposerResponse *), cJSON *request,
-                           ComposerResponse *response) {
+static ComposerStatus call(ComposerStatus (*entry)(const ComposerContext *, const char *, const ComposerJob *, ComposerResponse *),
+                           cJSON *request, ComposerResponse *response) {
     memset(response, 0, sizeof *response);
     char *text = request ? cJSON_PrintUnformatted(request) : NULL;
     cJSON_Delete(request);
@@ -412,7 +413,7 @@ static ComposerStatus call(ComposerStatus (*entry)(const char *, const ComposerJ
         snprintf(response->error.message, sizeof response->error.message, "out of memory");
         return COMPOSER_ERR_ALLOC;
     }
-    ComposerStatus status = entry(text, NULL, response);
+    ComposerStatus status = entry(cli_context(), text, NULL, response);
     cJSON_free(text);
     return status;
 }
@@ -492,7 +493,7 @@ static bool add_sample(cJSON *request, unsigned long seed, const cJSON *preferen
 /* The motif as the `motive` command reads it: the motive document {"motive", "analysis"} the API answers with, in key C. */
 static int read_motif_file(const Options *options, cJSON **document) {
     char key[16];
-    snprintf(key, sizeof key, "C %s", options->mode_text);
+    snprintf(key, sizeof key, "C %s", options->material_text);
     MotiveInput input;
     memset(&input, 0, sizeof input);
     input.path = options->motif_path;
@@ -566,7 +567,7 @@ static cJSON *theme_request_from_motive(const Options *options, const cJSON *doc
     }
     ok = cJSON_AddStringToObject(request, "schema", "ursatz-theme-request") && cJSON_AddNumberToObject(request, "schema_version", 2) &&
          cJSON_AddStringToObject(request, "into", options->into_text) && cJSON_AddStringToObject(request, "key", "C") &&
-         cJSON_AddStringToObject(request, "mode", options->mode_text) && cJSON_AddStringToObject(request, "meter", meter_text) &&
+         cJSON_AddStringToObject(request, "material", options->material_text) && cJSON_AddStringToObject(request, "meter", meter_text) &&
          cJSON_AddNumberToObject(request, "bars", options->bars_text[0] - '0') &&
          cJSON_AddStringToObject(request, "development", options->development_text) &&
          cJSON_AddStringToObject(entry, "id", "M1") && cJSON_AddStringToObject(entry, "form", "full") &&
@@ -656,7 +657,7 @@ static int validate_options(const Options *options, const cJSON *preferences) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     memset(&response, 0, sizeof response);
-    ComposerStatus status = composer_api_validate("random_motive", text, &response);
+    ComposerStatus status = composer_api_validate(cli_context(), "random_motive", text, &response);
     cJSON_free(text);
     int result = 0;
     if (status != COMPOSER_OK) {

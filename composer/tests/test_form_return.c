@@ -13,6 +13,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_state.h>
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * Returning sections (form-return, form_return.h): rounded binary, ternary, layered and variations, C major 4/4 with an
@@ -171,7 +172,8 @@ static PieceRequest request_of(const char *kind, size_t bars, size_t count, bool
     request.form = kind;
     request.bars = bars;
     request.count = count;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     if (accompanied) {
@@ -190,6 +192,7 @@ static PieceResult compose(const PieceRequest *request, unsigned long seed, cons
         edit(*plan);
     }
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.melody = melody;
     return compose_run(*plan, &config, outcome);
@@ -453,6 +456,7 @@ static int test_varied(void) {
         ComposeConfig config;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.form = form;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -533,7 +537,7 @@ static const char EMBELLISH_FORM[] =
 typedef struct {
     const char *name;
     int pitch_class;
-    KeyStructureMode mode;
+    HarmonyMode mode;
 } EmbellishRow;
 
 /* A1 keeps every melody note of A at its place and pitch and has more notes; returns the notes it adds. */
@@ -564,12 +568,14 @@ static size_t embellish_row(const FormSpec *form, const EmbellishRow *row, bool 
         ComposeConfig config;
         memset(&request, 0, sizeof(request));
         request.form = form->name;
-        request.key = plan_key_of_pitch_class(row->pitch_class, row->mode);
+        request.key = test_key_mode(row->pitch_class, row->mode);
+        request.knowledge = test_knowledge();
         request.meter.beats_per_bar = 2;
         request.meter.beat_unit = 4;
         request.modulate = true;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.form = form;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -613,8 +619,8 @@ static FormSpec *embellish_form(const char *variation) {
 
 static int test_embellish(void) {
     static const EmbellishRow ROWS[] = {
-        {"G major 2/4", 7, KEY_STRUCTURE_MODE_MAJOR},
-        {"D minor 2/4", 2, KEY_STRUCTURE_MODE_MINOR},
+        {"G major 2/4", 7, HARMONY_MODE_MAJOR},
+        {"D minor 2/4", 2, HARMONY_MODE_MINOR},
     };
     FormSpec *form = embellish_form("embellish");
     int failed = 0;
@@ -653,7 +659,7 @@ static int test_embellish(void) {
 typedef struct {
     const char *name;
     int pitch_class;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
 } SettingRow;
@@ -662,7 +668,8 @@ static PieceRequest setting_request(const SettingRow *row) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = "embellish-form";
-    request.key = plan_key_of_pitch_class(row->pitch_class, row->mode);
+    request.key = test_key_mode(row->pitch_class, row->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = (unsigned)row->beats;
     request.meter.beat_unit = (unsigned)row->unit;
     request.modulate = true;
@@ -694,6 +701,7 @@ static size_t setting_row(const FormSpec *form, const SettingRow *row) {
         ComposeConfig config;
         assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.form = form;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -736,10 +744,10 @@ static PlanAccompanimentPattern built_setting(const char *pattern, const Setting
 
 static int test_setting(void) {
     static const SettingRow ROWS[] = {
-        {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4}, {"A minor 4/4", 9, KEY_STRUCTURE_MODE_MINOR, 4, 4},
-        {"C major 3/4", 0, KEY_STRUCTURE_MODE_MAJOR, 3, 4}, {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, 4},
-        {"G major 2/4", 7, KEY_STRUCTURE_MODE_MAJOR, 2, 4}, {"D minor 2/4", 2, KEY_STRUCTURE_MODE_MINOR, 2, 4},
-        {"C major 6/8", 0, KEY_STRUCTURE_MODE_MAJOR, 6, 8}, {"D minor 6/8", 2, KEY_STRUCTURE_MODE_MINOR, 6, 8},
+        {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4}, {"A minor 4/4", 9, HARMONY_MODE_MINOR, 4, 4},
+        {"C major 3/4", 0, HARMONY_MODE_MAJOR, 3, 4}, {"A minor 3/4", 9, HARMONY_MODE_MINOR, 3, 4},
+        {"G major 2/4", 7, HARMONY_MODE_MAJOR, 2, 4}, {"D minor 2/4", 2, HARMONY_MODE_MINOR, 2, 4},
+        {"C major 6/8", 0, HARMONY_MODE_MAJOR, 6, 8}, {"D minor 6/8", 2, HARMONY_MODE_MINOR, 6, 8},
     };
     FormSpec *form = stand_in_form("setting", ",\"setting\":\"arpeggiated\"");
     int failed = 0;
@@ -767,6 +775,7 @@ static int test_setting(void) {
         request.accompaniment.texture = -1;
         assert(form_build_plan(accompanied, &request, &plan) == PIECE_OK && plan);
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.form = accompanied;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -899,7 +908,7 @@ static const char HOME_FORM[] =
 typedef struct {
     const char *name;
     int pitch_class;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
 } HomeRow;
@@ -928,7 +937,7 @@ static void check_home(const PiecePlan *plan, NodeId source, NodeId section, con
     assert(keys_under(plan, source, &source_key, 1) == 1);
     size_t key_count = keys_under(plan, section, keys, 32);
     for (size_t i = 0; i < key_count; i++) {
-        assert(analysis_key_tonic_pitch_class(&keys[i]) == row->pitch_class && keys[i].mode == row->mode);
+        assert(analysis_key_tonic_pitch_class(&keys[i]) == row->pitch_class && harmony_key_mode(&keys[i]) == row->mode);
     }
     int step = ((row->pitch_class - analysis_key_tonic_pitch_class(&source_key)) % 12 + 12) % 12;
     int shift = step > 6 ? step - 12 : step;
@@ -937,7 +946,7 @@ static void check_home(const PiecePlan *plan, NodeId source, NodeId section, con
     assert(an == bn && an > 0);
     for (size_t i = 0; i < an; i++) {
         int pitch = a[i].pitch + shift;
-        if (row->mode == KEY_STRUCTURE_MODE_MINOR) {
+        if (row->mode == HARMONY_MODE_MINOR) {
             int degree = ((pitch - row->pitch_class) % 12 + 12) % 12;
             pitch -= degree == 4 || degree == 9 ? 1 : 0;
         }
@@ -947,10 +956,10 @@ static void check_home(const PiecePlan *plan, NodeId source, NodeId section, con
 
 static int test_home(void) {
     static const HomeRow ROWS[] = {
-        {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4},
-        {"A minor 4/4", 9, KEY_STRUCTURE_MODE_MINOR, 4, 4},
-        {"G major 2/4", 7, KEY_STRUCTURE_MODE_MAJOR, 2, 4},
-        {"D minor 2/4", 2, KEY_STRUCTURE_MODE_MINOR, 2, 4},
+        {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4},
+        {"A minor 4/4", 9, HARMONY_MODE_MINOR, 4, 4},
+        {"G major 2/4", 7, HARMONY_MODE_MAJOR, 2, 4},
+        {"D minor 2/4", 2, HARMONY_MODE_MINOR, 2, 4},
     };
     FormSpec *form = NULL;
     FormSpecError error;
@@ -971,12 +980,14 @@ static int test_home(void) {
                 ComposeConfig config;
                 memset(&request, 0, sizeof(request));
                 request.form = form->name;
-                request.key = plan_key_of_pitch_class(ROWS[r].pitch_class, ROWS[r].mode);
+                request.key = test_key_mode(ROWS[r].pitch_class, ROWS[r].mode);
+                request.knowledge = test_knowledge();
                 request.meter.beats_per_bar = ROWS[r].beats;
                 request.meter.beat_unit = ROWS[r].unit;
                 request.modulate = true;
                 assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
                 memset(&config, 0, sizeof(config));
+                config.knowledge = test_knowledge();
                 config.seed = seed + extra;
                 config.form = form;
                 done = compose_run(plan, &config, &outcome) == PIECE_OK;

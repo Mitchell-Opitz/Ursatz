@@ -5,6 +5,8 @@
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
 
+#include "support/test_knowledge.h"
+
 static PlanMeter meter(int beats, int unit) {
     PlanMeter result = {beats, unit, 0};
     return result;
@@ -49,12 +51,12 @@ static void test_names(void) {
 
 /* The schemas whose data makes chords are available, the modulating ones and the inconsistent ones are not. */
 static void test_availability(void) {
-    assert(harmony_schema_available(GALANT_SCHEMA_ROMANESCA, KEY_STRUCTURE_MODE_MAJOR));
-    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, KEY_STRUCTURE_MODE_MAJOR));
-    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, KEY_STRUCTURE_MODE_MINOR));
-    assert(!harmony_schema_available(GALANT_SCHEMA_MODULATING_PRINNER, KEY_STRUCTURE_MODE_MAJOR));
-    assert(!harmony_schema_available(GALANT_SCHEMA_QUIESCENZA, KEY_STRUCTURE_MODE_MAJOR));
-    assert(!harmony_schema_available(GALANT_SCHEMA_COUNT, KEY_STRUCTURE_MODE_MAJOR));
+    assert(harmony_schema_available(GALANT_SCHEMA_ROMANESCA, test_materials()->major));
+    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, test_materials()->major));
+    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, test_materials()->natural_minor));
+    assert(!harmony_schema_available(GALANT_SCHEMA_MODULATING_PRINNER, test_materials()->major));
+    assert(!harmony_schema_available(GALANT_SCHEMA_QUIESCENZA, test_materials()->major));
+    assert(!harmony_schema_available(GALANT_SCHEMA_COUNT, test_materials()->major));
 }
 
 int main(void) {

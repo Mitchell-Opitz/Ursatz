@@ -38,12 +38,10 @@ static NoteEvent *make_note_with_spelling(const char *id, long on_n, unsigned lo
                                            PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_A, PITCH_LETTER_B};
     static const int ACCIDENTAL[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
 
-    MusicalTime *position = NULL;
-    assert(musical_time_create(on_n, on_d, &position) == MUSICAL_TIME_OK);
-    TemporalAnchor *anchor = NULL;
-    assert(temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK);
-    Duration *duration = NULL;
-    assert(duration_create(dur_n, dur_d, &duration) == DURATION_OK);
+    MusicalTime position;
+    assert(musical_time_make(on_n, (long long)on_d, &position) == MUSICAL_TIME_OK);
+    Duration duration;
+    assert(duration_make(dur_n, (long long)dur_d, &duration) == DURATION_OK);
     PitchIdentity *pitch = NULL;
     assert(pitch_identity_create("pitch", 6, &pitch) == PITCH_IDENTITY_OK);
     PitchSpelling *spelling = NULL;
@@ -54,7 +52,7 @@ static NoteEvent *make_note_with_spelling(const char *id, long on_n, unsigned lo
     ProvenanceReference *provenance = NULL;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
     NoteEvent *note = NULL;
-    assert(note_event_create(make_id(id), anchor, duration, pitch, spelling, NULL, provenance, &note) ==
+    assert(note_event_create(make_id(id), position, duration, pitch, spelling, NULL, provenance, &note) ==
            NOTE_EVENT_OK);
     return note;
 }
@@ -79,22 +77,19 @@ typedef struct {
 
 static MeterMap *build_map(const Change *changes, size_t count) {
     TimeSignature *signatures[4];
-    MusicalTime *starts[4];
     MeterMapChangePoint points[4];
     for (size_t i = 0; i < count; i++) {
         NoteValue *unit = NULL;
         assert(note_value_create(changes[i].bottom_exponent, &unit) == NOTE_VALUE_OK);
         assert(time_signature_create(changes[i].top, unit, &signatures[i]) == TIME_SIGNATURE_OK);
         note_value_destroy(unit);
-        assert(musical_time_create(changes[i].start_n, changes[i].start_d, &starts[i]) == MUSICAL_TIME_OK);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        assert(musical_time_make(changes[i].start_n, (long long)changes[i].start_d, &points[i].start) == MUSICAL_TIME_OK);
     }
     MeterMap *map = NULL;
     assert(meter_map_create(make_id("map"), points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
@@ -106,22 +101,21 @@ typedef struct {
     unsigned long d;
 } StubBeat;
 
-static bool stub_provider(const MeterMap *map, int measure, void *context, MusicalTime ***out_starts,
+static bool stub_provider(const MeterMap *map, int measure, void *context, MusicalTime **out_starts,
                           size_t *out_count) {
     const StubBeat *beat = (const StubBeat *)context;
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    Rational at = test_rational_of_time(time_span_start(span));
-    Rational end = test_rational_of_time(time_span_end(span));
-    time_span_destroy(span);
+    Rational at = span.start.value;
+    Rational end = span.end.value;
 
     Rational step = rational_ratio((unsigned long long)beat->n, beat->d);
-    MusicalTime **starts = (MusicalTime **)calloc(64, sizeof(MusicalTime *));
+    MusicalTime *starts = (MusicalTime *)calloc(64, sizeof(MusicalTime));
     size_t count = 0;
     while (rational_cmp(at, end) < 0 && count < 64) {
-        starts[count++] = musical_time_from_rational_or_null(at);
+        starts[count++] = musical_time_of(at);
         assert(rational_add(at, step, &at) == 0);
     }
     *out_starts = starts;
@@ -129,7 +123,7 @@ static bool stub_provider(const MeterMap *map, int measure, void *context, Music
     return true;
 }
 
-static bool failing_provider(const MeterMap *map, int measure, void *context, MusicalTime ***out_starts,
+static bool failing_provider(const MeterMap *map, int measure, void *context, MusicalTime **out_starts,
                              size_t *out_count) {
     (void)map;
     (void)measure;
@@ -145,16 +139,13 @@ static MeterMap *four_four(void) {
 }
 
 static void assert_window(const AdaptiveSonority *s, long sn, unsigned long sd, long en, unsigned long ed) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    assert(musical_time_create(sn, sd, &start) == MUSICAL_TIME_OK);
-    assert(musical_time_create(en, ed, &end) == MUSICAL_TIME_OK);
+    MusicalTime start;
+    MusicalTime end;
+    assert(musical_time_make(sn, (long long)sd, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make(en, (long long)ed, &end) == MUSICAL_TIME_OK);
     const TimeSpan *window = sonority_time_window(s->sonority);
-    assert(musical_time_equals(time_span_start(window), start));
-    assert(musical_time_equals(time_span_end(window), end));
-    assert(time_span_boundary(window) == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+    assert(musical_time_same(window->start, start));
+    assert(musical_time_same(window->end, end));
 }
 
 static void assert_member(const AdaptiveSonority *s, size_t index, const char *id, bool held) {

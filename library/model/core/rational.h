@@ -9,7 +9,7 @@
  * wraps. A plain value type, no allocation. LLONG_MIN is never a valid numerator or denominator.
  *
  * rational_cmp never multiplies (Euclid's method on the integer parts and remainders), so it cannot
- * overflow. Callers on non-negative MusicalTime or Duration values use the bridges in time/time_rational.h.
+ * overflow. A MusicalTime or Duration holds a Rational: read it as `.value`.
  */
 
 typedef struct {

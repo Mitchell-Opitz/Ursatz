@@ -9,6 +9,7 @@
 
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 #include "ursatz_test.h"
 
 #ifndef COMPOSER_SNAPSHOT_DIR
@@ -28,7 +29,7 @@
 #define FIXTURE(name) COMPOSER_FIXTURE_DIR "/" name
 #define SNAPSHOT(name) COMPOSER_SNAPSHOT_DIR "/" name
 
-typedef ComposerStatus (*Entry)(const char *, const ComposerJob *, ComposerResponse *);
+typedef ComposerStatus (*Entry)(const ComposerContext *, const char *, const ComposerJob *, ComposerResponse *);
 
 static bool quick;
 
@@ -80,7 +81,7 @@ static void write_pair(const char *kind, const char *tag, const char *request, c
 
 static ComposerStatus call(Entry entry, cJSON *request, const ComposerJob *job, ComposerResponse *response, char **printed) {
     *printed = print(request);
-    ComposerStatus status = entry(*printed, job, response);
+    ComposerStatus status = entry(test_context(), *printed, job, response);
     if (status != COMPOSER_OK && !job) {
         fprintf(stderr, "%s: %s\n", test_status_name(status), response->error.message);
     }
@@ -100,7 +101,7 @@ static void succeed(Entry entry, const char *kind, const char *tag, cJSON *reque
 static void expect_refused(Entry entry, cJSON *request, ComposerStatus status, const char *path, const char *message) {
     ComposerResponse response;
     char *printed = print(request);
-    ComposerStatus got = entry(printed, NULL, &response);
+    ComposerStatus got = entry(test_context(), printed, NULL, &response);
     if (got != status || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
         fprintf(stderr, "%s: wanted %s at '%s' with '%s', got %s at '%s': %s\n", printed, test_status_name(status), path,
                 message, test_status_name(got), response.error.path, response.error.message);
@@ -596,7 +597,7 @@ static void test_cancel(void) {
 }
 
 static void test_version(void) {
-    assert(strcmp(composer_api_version(), "1.25") == 0);
+    assert(strcmp(composer_api_version(), "2.0") == 0);
 }
 
 int main(int argc, char **argv) {

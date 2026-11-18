@@ -46,7 +46,7 @@ bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template
     Motive result = *template_motive;
     PlanMeter meter;
     if (!motive_sketch_validate(developed) || !motive_meter_of(developed, &meter) || !time_fits(developed->pickup) ||
-        32 % developed->pickup.den != 0) {
+        !plan_meter_pickup_on_grid(meter, developed->pickup)) {
         return false;
     }
     result.bar = developed->bar;
@@ -60,9 +60,8 @@ bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template
         result.notes[i] = developed->notes[i];
     }
     if (developed->has_scale && (!template_motive->has_scale || developed->tonic_pc != template_motive->tonic_pc ||
-                                 developed->minor != template_motive->minor)) {
-        AnalysisKey moved = plan_key_of_pitch_class(developed->tonic_pc, developed->minor ? KEY_STRUCTURE_MODE_MINOR
-                                                                                           : KEY_STRUCTURE_MODE_MAJOR);
+                                 motive_sketch_minor(developed) != motive_sketch_minor(template_motive))) {
+        AnalysisKey moved = plan_key_of_pitch_class(developed->tonic_pc, developed->material);
         motive_set_key(&result, &moved, MOTIVE_SKETCH_KEY_GIVEN);
     }
     result.chord_count = developed->chord_count;

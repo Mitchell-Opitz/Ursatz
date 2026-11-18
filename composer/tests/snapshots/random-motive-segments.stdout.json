@@ -9,7 +9,7 @@
         },
         "key": {
           "tonic_pitch_class": 9,
-          "mode": "minor"
+          "material": "omt.material.natural-minor"
         },
         "notes": [{
             "midi_pitch": 76,
@@ -80,7 +80,7 @@
         },
         "key": {
           "tonic_pitch_class": 9,
-          "mode": "minor",
+          "material": "omt.material.natural-minor",
           "source": "given"
         },
         "intervals": [{
@@ -320,7 +320,7 @@
         },
         "key": {
           "tonic_pitch_class": 9,
-          "mode": "minor"
+          "material": "omt.material.natural-minor"
         },
         "notes": [{
             "midi_pitch": 69,
@@ -391,7 +391,7 @@
         },
         "key": {
           "tonic_pitch_class": 9,
-          "mode": "minor",
+          "material": "omt.material.natural-minor",
           "source": "given"
         },
         "intervals": [{
@@ -613,7 +613,7 @@
         },
         "key": {
           "tonic_pitch_class": 9,
-          "mode": "minor"
+          "material": "omt.material.natural-minor"
         },
         "notes": [{
             "midi_pitch": 76,
@@ -684,7 +684,7 @@
         },
         "key": {
           "tonic_pitch_class": 9,
-          "mode": "minor",
+          "material": "omt.material.natural-minor",
           "source": "given"
         },
         "intervals": [{

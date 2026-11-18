@@ -11,6 +11,7 @@
 
 #include "model/core/rational.h"
 #include "model/interpretation/key.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/key_vocabulary.h"
 #include "analysis/notes/analysis_key.h"
 #include "theory/vocabulary/key_change_extent.h"
@@ -95,8 +96,8 @@ typedef struct {
 } CommonPracticeKeyChord;
 
 typedef struct {
-    const MusicalTime *start;                  /* the segment's window, in whole notes; borrowed */
-    const MusicalTime *end;
+    MusicalTime start;                         /* the segment's window, in whole notes */
+    MusicalTime end;
     CommonPracticeWeights weights;
     const CommonPracticeSegment *source;       /* the segment's members, or NULL */
     CommonPracticeKeyChord chord;              /* optional: the segment's chord; .present false when not given */
@@ -129,7 +130,7 @@ typedef struct {
     const char *context_id_prefix;             /* default "key-region": region n is "<prefix>-<n>" (from 1) */
     size_t pivot_search_measures;              /* default 2: how far back a pivot chord is looked for */
     double evidence_weight;                    /* default 0.8: the weight of functional chord evidence in a window's score */
-    const MusicalTime *const *phrase_boundaries; /* optional: phrase boundary times, whole notes, any order; borrowed */
+    const MusicalTime *phrase_boundaries;      /* optional: phrase boundary times, whole notes, any order; borrowed array */
     size_t phrase_boundary_count;              /* default 0 */
     size_t snap_reach_measures;                /* default 1: how far an edge may move to a phrase boundary */
     double hold_tolerance;                     /* default 0.05: the weight share outside the old key that allows a switch */
@@ -137,12 +138,13 @@ typedef struct {
     size_t phrase_count;                       /* default 0 */
     const CommonPracticeKeyRepeat *repeats;    /* optional: written-out repeats whose measures share keys; borrowed */
     size_t repeat_count;                       /* default 0 */
+    const CommonPracticeMaterials *materials;  /* the snapshot's four materials, required by key_regions_estimate (BAD_CONFIG without); the window scores read none; borrowed */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
    "key-region", pivot_search_measures 2, evidence_weight 0.8, no phrase boundaries, snap_reach_measures 1, hold_tolerance 0.05,
-   no phrases and no repeats. */
-CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
+   no phrases and no repeats, and `materials` (the snapshot's; may be NULL for a caller that only scores windows). */
+CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(const CommonPracticeMaterials *materials);
 
 typedef enum {
     COMMON_PRACTICE_CADENCE_AUTHENTIC = 0,
@@ -336,7 +338,7 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  */
 
 typedef struct {
-    const MusicalTime *position;   /* whole notes; borrowed */
+    MusicalTime position;          /* whole notes */
     int sharps_flats;              /* -7..7 */
 } CommonPracticeKeySignatureEvent;
 
@@ -353,16 +355,17 @@ typedef enum {
 typedef struct {
     Key *key;                      /* owned */
     int key_index;                 /* 0..23 */
-    TimeSpan *span;                /* owned */
+    TimeSpan span;
     int first_measure;             /* MeterMap measure numbers (the first measure is 1), inclusive */
     int last_measure;
     double uncertainty;            /* [0, 1] */
     CommonPracticeRegionSource source;
 } CommonPracticeKeyRegion;
 
-/* The AnalysisKey of a region's key_index: the tonic spelled as common_practice_key_index_tonic_name spells it, the mode major or minor,
-   id NULL. False, *out untouched, for a NULL argument or an index outside 0..23. */
-bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, AnalysisKey *out);
+/* The AnalysisKey of a region's key_index: the tonic spelled as common_practice_key_index_tonic_name spells it, the mode major or minor and
+   the material of that mode from `materials`, id NULL. False, *out untouched, for a NULL argument or an index outside 0..23. */
+bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, const CommonPracticeMaterials *materials,
+                                             AnalysisKey *out);
 
 typedef struct {
     size_t from_region;            /* indices into regions[]; to_region == from_region + 1 */

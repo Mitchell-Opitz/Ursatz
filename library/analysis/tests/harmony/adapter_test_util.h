@@ -9,6 +9,7 @@
 #include "model/interpretation/chord.h"
 #include "model/interpretation/key.h"
 #include "model/time/musical_time.h"
+#include "test_knowledge.h"
 
 /* Builders for the kernel Chords and Keys the adapter reads. They stand in for a producer such as
    common-practice-minimal, which standard-tonality does not include. */
@@ -53,17 +54,17 @@ static Chord *adapter_test_chord(const char *segment, int root, int bass, const 
     return chord;
 }
 
-static Key *adapter_test_key(const char *name, int tonic, KeyStructureMode mode) {
-    KeyStructure structure = {tonic, mode};
+static Key *adapter_test_key(const char *name, int tonic, CommonPracticeKeyMode mode) {
+    KeyStructure structure = {tonic, common_practice_material(test_materials(), mode)};
     Key *key = NULL;
     assert(key_create_with_structure(adapter_test_interpretation(name, name, 1000000UL), name, &structure, &key) ==
            KEY_OK);
     return key;
 }
 
-static MusicalTime *adapter_test_time(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+static MusicalTime adapter_test_time(long numerator, unsigned long denominator) {
+    MusicalTime time;
+    assert(musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK);
     return time;
 }
 

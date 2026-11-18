@@ -14,6 +14,7 @@
 #include "motive/motive_internal.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -30,10 +31,11 @@
 #define SEEDS 16
 #define THEME_SEEDS 8
 
-static MotiveRandomOptions options_in(int beats, KeyStructureMode mode, unsigned long seed, const MotiveRandomPreferences *preferences) {
+static MotiveRandomOptions options_in(int beats, HarmonyMode mode, unsigned long seed, const MotiveRandomPreferences *preferences) {
     MotiveRandomOptions options;
     memset(&options, 0, sizeof(options));
-    options.mode = mode;
+    options.material = test_material_mode(mode);
+    options.knowledge = test_knowledge();
     options.meter.beats_per_bar = beats;
     options.meter.beat_unit = 4;
     options.form = MOTIVE_SKETCH_FORM_FULL;
@@ -45,7 +47,7 @@ static MotiveRandomOptions options_in(int beats, KeyStructureMode mode, unsigned
 }
 
 static MotiveRandomOptions options_of(int beats, unsigned long seed, const MotiveRandomPreferences *preferences) {
-    return options_in(beats, KEY_STRUCTURE_MODE_MAJOR, seed, preferences);
+    return options_in(beats, HARMONY_MODE_MAJOR, seed, preferences);
 }
 
 static Motive make(int beats, unsigned long seed, const MotiveRandomPreferences *preferences) {
@@ -240,6 +242,7 @@ static void sentence_setup(GrowSetup *setup, GrowBriefText *text, const Motive *
     text->cadence = "PAC";
     text->into = "hybrid";
     memset(setup, 0, sizeof(*setup));
+    setup->knowledge = test_knowledge();
     setup->text = text;
     setup->into = GROW_INTO_HYBRID;
     setup->pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
@@ -297,7 +300,7 @@ static void raised_minimum_is_shown(void) {
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
-    assert(text && motive_from_json(text, NULL, &motive, &error) == MOTIVE_OK);
+    assert(text && motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_OK);
     free(text);
     GrowFidelityTable raised;
     grow_fidelity_table_default(&raised);
@@ -980,7 +983,8 @@ static void rhythm_variety(void) {
             for (unsigned long seed = 500; seed < 560; seed++) {
                 MotiveRandomOptions options = options_of(beats[m], seed, &preferences);
                 options.meter.beat_unit = units[m];
-                options.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+                options.material = test_material_mode(minor ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR);
+                options.knowledge = test_knowledge();
                 size_t count = 0;
                 assert(motive_random(&options, &motives[seed - 500], &count) == MOTIVE_RANDOM_OK && count == 1);
             }
@@ -1196,17 +1200,17 @@ static void syncopation_changes_nothing_else(void) {
 static const int MINOR_SCALE[7] = {9, 11, 0, 2, 4, 5, 7}; /* A natural minor */
 
 /* The pitch classes of the diatonic triad on a degree of C major or A minor; in minor only V's third is raised. */
-static void chord_pcs(KeyStructureMode mode, int degree, int pcs[3]) {
+static void chord_pcs(HarmonyMode mode, int degree, int pcs[3]) {
     for (int t = 0; t < 3; t++) {
         int index = (degree - 1 + 2 * t) % 7;
-        pcs[t] = mode == KEY_STRUCTURE_MODE_MAJOR ? MAJOR_SCALE[index] : MINOR_SCALE[index];
-        if (mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 && t == 1) {
+        pcs[t] = mode == HARMONY_MODE_MAJOR ? MAJOR_SCALE[index] : MINOR_SCALE[index];
+        if (mode == HARMONY_MODE_MINOR && degree == 5 && t == 1) {
             pcs[t] = (pcs[t] + 1) % 12;
         }
     }
 }
 
-static bool in_chord(KeyStructureMode mode, int degree, int pitch) {
+static bool in_chord(HarmonyMode mode, int degree, int pitch) {
     int pcs[3];
     chord_pcs(mode, degree, pcs);
     return pitch_class(pitch) == pcs[0] || pitch_class(pitch) == pcs[1] || pitch_class(pitch) == pcs[2];
@@ -1222,7 +1226,7 @@ static MotiveRandomPreferences plan_of(size_t count, const MotiveRandomPlanChord
 
 /* The motive is on the plan: the chords are its degrees (one to a segment, or at the bar and beat given), every note is a chord
    tone or a non-chord tone that resolves, and every chord tone and every note on a beat is a tone of the chord at its onset. */
-static void check_plan(const Motive *motive, KeyStructureMode mode, int beats, const MotiveRandomPlanChord *plan, size_t count) {
+static void check_plan(const Motive *motive, HarmonyMode mode, int beats, const MotiveRandomPlanChord *plan, size_t count) {
     bool placed = count > 1 && plan[1].bar > 0;
     if (placed) {
         assert(motive->chord_count == count);
@@ -1277,7 +1281,7 @@ static void given_plans(void) {
                 continue;
             }
             for (int m = 0; m < 2; m++) {
-                KeyStructureMode mode = m == 0 ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR;
+                HarmonyMode mode = m == 0 ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR;
                 for (unsigned long seed = 1; seed <= SEEDS; seed++) {
                     MotiveRandomOptions options = options_in(beats, mode, seed, &preferences);
                     Motive motive;

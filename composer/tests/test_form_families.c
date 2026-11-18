@@ -11,6 +11,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_knowledge.h"
 
 /*
  * The rondo and sonata forms, one table of forms (a FormFamily a row) and one test per form:
@@ -67,16 +68,16 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
 } Row;
 
 static const Row ROWS[] = {
-    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4}, {"A minor 4/4", 9, KEY_STRUCTURE_MODE_MINOR, 4, 4},
-    {"C major 3/4", 0, KEY_STRUCTURE_MODE_MAJOR, 3, 4}, {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, 4},
-    {"G major 2/4", 7, KEY_STRUCTURE_MODE_MAJOR, 2, 4}, {"D minor 2/4", 2, KEY_STRUCTURE_MODE_MINOR, 2, 4},
-    {"C major 6/8", 0, KEY_STRUCTURE_MODE_MAJOR, 6, 8}, {"D minor 6/8", 2, KEY_STRUCTURE_MODE_MINOR, 6, 8},
+    {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4}, {"A minor 4/4", 9, HARMONY_MODE_MINOR, 4, 4},
+    {"C major 3/4", 0, HARMONY_MODE_MAJOR, 3, 4}, {"A minor 3/4", 9, HARMONY_MODE_MINOR, 3, 4},
+    {"G major 2/4", 7, HARMONY_MODE_MAJOR, 2, 4}, {"D minor 2/4", 2, HARMONY_MODE_MINOR, 2, 4},
+    {"C major 6/8", 0, HARMONY_MODE_MAJOR, 6, 8}, {"D minor 6/8", 2, HARMONY_MODE_MINOR, 6, 8},
 };
 #define ROW_COUNT (sizeof(ROWS) / sizeof(ROWS[0]))
 
@@ -222,8 +223,8 @@ static AnalysisKey key_at(const KeyLane *lane, Rational time) {
     return lane->key[0];
 }
 
-static bool is_key(AnalysisKey key, int tonic, KeyStructureMode mode) {
-    return analysis_key_tonic_pitch_class(&key) == ((tonic % 12) + 12) % 12 && key.mode == mode;
+static bool is_key(AnalysisKey key, int tonic, HarmonyMode mode) {
+    return analysis_key_tonic_pitch_class(&key) == ((tonic % 12) + 12) % 12 && harmony_key_mode(&key) == mode;
 }
 
 /* The key difference in semitones from -5 to 6 a section returned in another key is moved by. */
@@ -292,21 +293,21 @@ static void check_second(const PiecePlan *plan, const KeyLane *lane, NodeId sect
     PlanSpan span = plan_node_span(plan, section);
     Rational end;
     assert(plan_span_end(span, &end) == PLAN_OK);
-    const bool major = row->mode == KEY_STRUCTURE_MODE_MAJOR;
+    const bool major = row->mode == HARMONY_MODE_MAJOR;
     const AnalysisKey first = key_at(lane, span.start);
-    assert(is_key(first, row->tonic + (major ? 9 : 8), major ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR) ||
+    assert(is_key(first, row->tonic + (major ? 9 : 8), major ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR) ||
            is_key(first, row->tonic + 5, row->mode));
     for (size_t i = 0; i < lane->count; i++) {
         Rational lane_end;
         assert(plan_span_end(lane->span[i], &lane_end) == PLAN_OK);
         if (rational_cmp(lane->span[i].start, end) < 0 && rational_cmp(lane_end, span.start) > 0) {
-            assert(is_key(lane->key[i], analysis_key_tonic_pitch_class(&first), first.mode));
+            assert(is_key(lane->key[i], analysis_key_tonic_pitch_class(&first), harmony_key_mode(&first)));
         }
     }
 }
 
 /* One key throughout, the given one. */
-static void check_one_key(const PiecePlan *plan, const KeyLane *lane, NodeId section, int tonic, KeyStructureMode mode) {
+static void check_one_key(const PiecePlan *plan, const KeyLane *lane, NodeId section, int tonic, HarmonyMode mode) {
     PlanSpan span = plan_node_span(plan, section);
     Rational end;
     assert(plan_span_end(span, &end) == PLAN_OK);
@@ -356,11 +357,11 @@ static void check_rondo(const PiecePlan *plan, const FormFamily *family, const R
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(sections_of(plan, sections) == family->count);
     const KeyLane lane = read_lane(plan);
-    const bool minor = row->mode == KEY_STRUCTURE_MODE_MINOR;
-    const int region = minor ? row->tonic + 3 : row->tonic + 7;
+    const bool is_minor = row->mode == HARMONY_MODE_MINOR;
+    const int region = is_minor ? row->tonic + 3 : row->tonic + 7;
     /* B is in the region from its first bar, V major or III. */
     const AnalysisKey at_b = key_at(&lane, plan_node_span(plan, sections[family->b]).start);
-    assert(is_key(at_b, region, KEY_STRUCTURE_MODE_MAJOR));
+    assert(is_key(at_b, region, HARMONY_MODE_MAJOR));
     /* R and R1 start in the home key. */
     assert(is_key(key_at(&lane, plan_node_span(plan, sections[family->r]).start), row->tonic, row->mode));
     if (family->r1 != NONE) {
@@ -377,7 +378,7 @@ static void check_rondo(const PiecePlan *plan, const FormFamily *family, const R
     /* B1 is in the tonic major, its melody is B's moved by the key difference, and the section after it is home. */
     if (family->b1 != NONE) {
         const AnalysisKey at_b1 = key_at(&lane, plan_node_span(plan, sections[family->b1]).start);
-        assert(is_key(at_b1, row->tonic, KEY_STRUCTURE_MODE_MAJOR));
+        assert(is_key(at_b1, row->tonic, HARMONY_MODE_MAJOR));
         check_moved(plan, sections[family->b], sections[family->b1], shift_between(at_b, at_b1));
         assert(is_key(key_at(&lane, plan_node_span(plan, sections[family->b1 + 1]).start), row->tonic, row->mode));
     }
@@ -404,9 +405,9 @@ static void check_rondo(const PiecePlan *plan, const FormFamily *family, const R
     }
     /* The sonata rondo's P is in the development key and S in the sequence key; S's melody is P's moved. */
     if (family->p != NONE) {
-        const bool major = row->mode == KEY_STRUCTURE_MODE_MAJOR;
-        check_one_key(plan, &lane, sections[family->p], row->tonic + (major ? 9 : 5), KEY_STRUCTURE_MODE_MINOR);
-        check_one_key(plan, &lane, sections[family->s], row->tonic + (major ? 2 : 7), KEY_STRUCTURE_MODE_MINOR);
+        const bool major = row->mode == HARMONY_MODE_MAJOR;
+        check_one_key(plan, &lane, sections[family->p], row->tonic + (major ? 9 : 5), HARMONY_MODE_MINOR);
+        check_one_key(plan, &lane, sections[family->s], row->tonic + (major ? 2 : 7), HARMONY_MODE_MINOR);
         check_moved(plan, sections[family->p], sections[family->s],
                     shift_between(key_at(&lane, plan_node_span(plan, sections[family->p]).start),
                                   key_at(&lane, plan_node_span(plan, sections[family->s]).start)));
@@ -419,23 +420,23 @@ static void check_sonatina(const PiecePlan *plan, const FormFamily *family, cons
     NodeId s[SONATINA_SECTIONS];
     assert(sections_of(plan, s) == family->count);
     const KeyLane lane = read_lane(plan);
-    const bool minor = row->mode == KEY_STRUCTURE_MODE_MINOR;
+    const bool is_minor = row->mode == HARMONY_MODE_MINOR;
     const bool major_recap = family->major_recap;
-    const int region = minor ? row->tonic + 3 : row->tonic + 7;
-    const int elaboration = minor ? row->tonic + 8 : row->tonic + 5;
+    const int region = is_minor ? row->tonic + 3 : row->tonic + 7;
+    const int elaboration = is_minor ? row->tonic + 8 : row->tonic + 5;
     /* B, C1 and C2 are in the subordinate key throughout. */
-    check_one_key(plan, &lane, s[B], region, KEY_STRUCTURE_MODE_MAJOR);
-    check_one_key(plan, &lane, s[C1], region, KEY_STRUCTURE_MODE_MAJOR);
-    check_one_key(plan, &lane, s[C2], region, KEY_STRUCTURE_MODE_MAJOR);
+    check_one_key(plan, &lane, s[B], region, HARMONY_MODE_MAJOR);
+    check_one_key(plan, &lane, s[C1], region, HARMONY_MODE_MAJOR);
+    check_one_key(plan, &lane, s[C2], region, HARMONY_MODE_MAJOR);
     const AnalysisKey at_b = key_at(&lane, plan_node_span(plan, s[B]).start);
     /* E: the elaboration key, B embellished and moved. */
-    check_one_key(plan, &lane, s[E], elaboration, KEY_STRUCTURE_MODE_MAJOR);
+    check_one_key(plan, &lane, s[E], elaboration, HARMONY_MODE_MAJOR);
     const PlanConstraint *back = return_of(plan, s[E]);
     assert(back && back->params.section_return.variation == PLAN_RETURN_EMBELLISH && back->params.section_return.section == s[B]);
     check_embellished(plan, s[B], s[E], shift_between(at_b, key_at(&lane, plan_node_span(plan, s[E]).start)));
     /* P and S: the development and sequence keys; S's melody is P's moved. */
-    check_one_key(plan, &lane, s[P], row->tonic + (minor ? 5 : 9), KEY_STRUCTURE_MODE_MINOR);
-    check_one_key(plan, &lane, s[S], row->tonic + (minor ? 7 : 2), KEY_STRUCTURE_MODE_MINOR);
+    check_one_key(plan, &lane, s[P], row->tonic + (is_minor ? 5 : 9), HARMONY_MODE_MINOR);
+    check_one_key(plan, &lane, s[S], row->tonic + (is_minor ? 7 : 2), HARMONY_MODE_MINOR);
     check_copy(plan, s[P], s[S], shift_between(key_at(&lane, plan_node_span(plan, s[P]).start), key_at(&lane, plan_node_span(plan, s[S]).start)),
                false, 0);
     /* R starts home; A1 and T1 are home throughout. */
@@ -450,14 +451,14 @@ static void check_sonatina(const PiecePlan *plan, const FormFamily *family, cons
         assert(again && again->params.section_return.section == sources[i]);
         if (major_recap) {
             assert(again->params.section_return.variation == PLAN_RETURN_EXACT && !again->params.section_return.across_modes);
-            check_one_key(plan, &lane, copies[i], row->tonic, KEY_STRUCTURE_MODE_MAJOR);
+            check_one_key(plan, &lane, copies[i], row->tonic, HARMONY_MODE_MAJOR);
         } else {
             assert(again->params.section_return.variation == PLAN_RETURN_REHARMONIZE && again->params.section_return.across_modes);
             check_one_key(plan, &lane, copies[i], row->tonic, row->mode);
         }
         const int shift = shift_between(key_at(&lane, plan_node_span(plan, sources[i]).start),
                                         key_at(&lane, plan_node_span(plan, copies[i]).start));
-        check_copy(plan, sources[i], copies[i], shift, !major_recap && minor, row->tonic);
+        check_copy(plan, sources[i], copies[i], shift, !major_recap && is_minor, row->tonic);
     }
     /* C4 starts in the home key; K ends on the tonic. */
     assert(is_key(key_at(&lane, plan_node_span(plan, s[C4]).start), row->tonic, row->mode));
@@ -472,13 +473,15 @@ static bool compose_try(const FormFamily *family, const Row *row, unsigned long 
     ComposeConfig config;
     memset(&request, 0, sizeof(request));
     request.form = family->name;
-    request.key = plan_key_of_pitch_class(row->tonic, row->mode);
+    request.key = test_key_mode(row->tonic, row->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = (unsigned)row->beats;
     request.meter.beat_unit = (unsigned)row->unit;
     request.modulate = true;
     request.seed = seed;
     assert(piece_build_plan(&request, &plan) == PIECE_OK && plan);
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     PieceResult ran = compose_run(plan, &config, &outcome);
     if (ran == PIECE_OK) {

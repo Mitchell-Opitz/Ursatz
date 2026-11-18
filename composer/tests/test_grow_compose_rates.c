@@ -11,6 +11,7 @@
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -47,7 +48,7 @@ static Motive load_motive(const char *path) {
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
-    MotiveResult result = motive_from_json(text, NULL, &motive, &error);
+    MotiveResult result = motive_from_json(text, test_motive_options(), &motive, &error);
     if (result != MOTIVE_OK) {
         fprintf(stderr, "%s: cannot read the motif at %s: %s\n", path, error.location, error.message);
     }
@@ -100,6 +101,7 @@ int main(int argc, char **argv) {
                     text.cadence = "PAC";
                     GrowSetup setup;
                     memset(&setup, 0, sizeof(setup));
+                    setup.knowledge = test_knowledge();
                     setup.text = &text;
                     setup.into = b == 1 ? GROW_INTO_PERIOD : GROW_INTO_HYBRID;
                     setup.pairing.beginning = (PlanThemeBeginning)b;

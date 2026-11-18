@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * MusicXML input: format choice, the notated metadata, a pickup, multi-part
@@ -43,7 +44,7 @@ static cJSON *analyze(const char *path, ImportedNotes *notes_out) {
     ImportedNotes notes;
     assert(input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK);
     AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, &report));
+    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
     analysis_report_destroy(&report);
@@ -136,7 +137,7 @@ static void test_notated_metadata_and_pickup(void) {
     const cJSON *regions = test_json_require(test_json_require(document, "keys"), "regions");
     assert(cJSON_GetArraySize(regions) >= 1);
     assert(strcmp(string(cJSON_GetArrayItem(regions, 0), "tonic"), "C") == 0);
-    assert(strcmp(string(cJSON_GetArrayItem(regions, 0), "mode"), "major") == 0);
+    assert(strcmp(string(cJSON_GetArrayItem(regions, 0), "material"), "omt.material.major") == 0);
     cJSON_Delete(document);
 }
 

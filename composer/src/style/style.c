@@ -343,12 +343,12 @@ static bool mode_value(const char *text, unsigned long *out) {
     return false;
 }
 
-bool composer_style_mode(const ComposerStyle *style, bool *minor) {
+bool composer_style_mode(const ComposerStyle *style, const CommonPracticeMaterials *materials, const PitchMaterial **material) {
     unsigned long value = 0;
-    if (!minor || !most_common_label(find_category(style, STYLE_CATEGORY_MODE), mode_value, &value)) {
+    if (!materials || !material || !most_common_label(find_category(style, STYLE_CATEGORY_MODE), mode_value, &value)) {
         return false;
     }
-    *minor = value == 1;
+    *material = value == 1 ? materials->natural_minor : materials->major;
     return true;
 }
 

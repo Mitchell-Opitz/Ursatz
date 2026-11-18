@@ -3,7 +3,7 @@
 The `random-motive` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
 
 ```sh
-ursatz-composer random-motive --mode <major|minor> --meter <n/m> [--key <key>] [--form <full|rhythm|contour>] [--strategy <segments|drawn>] [--role <melodic|accompaniment>] [--style <file>] [--style-without <category>]... [--count <n>] [--seed <n>] [--json]
+ursatz-composer random-motive --material <major|minor> --meter <n/m> [--key <key>] [--form <full|rhythm|contour>] [--strategy <segments|drawn>] [--role <melodic|accompaniment>] [--style <file>] [--style-without <category>]... [--count <n>] [--seed <n>] [--json]
 ```
 
 Makes random motives from a mode and a meter. Every motive keeps the hard melodic rules of standard counterpoint, the ones motive invention keeps, and the same options and seed always give the same motives.
@@ -67,20 +67,20 @@ The motive is heard in I throughout, so suspension, retardation and anticipation
 
 The command is a wrapper of the [composer API](api.md): it reads its arguments into a request, calls
 `composer_api_random_motive` and prints the response JSON, or the text lines made from it. The request members have the
-options' names and values (`mode`, `meter`, `key`, `form`, `strategy`, `role`, `style`, `style_without`, `count`, `seed`).
+options' names and values (`material`, `meter`, `key`, `form`, `strategy`, `role`, `style`, `style_without`, `count`, `seed`).
 
-**Random mode and meter.** With `--mode random` or `--meter random` the seed draws the value, by the rule the GUI used
+**Random material and meter.** With `--material random` or `--meter random` the seed draws the value, by the rule the GUI used
 before the Composer drew: `m = ((seed + 1) * 2654435761) mod 2^32`; the mode is major when `(m >> 8)` is even and minor when
 it is odd; the meter is `4/4`, `3/4`, `2/4` or `6/8` for `(m >> 16) mod 4` of 0, 1, 2 and 3. The JSON output then has
-`"drawn": {"mode", "meter"}` (only what was drawn) and the text output a `Drawn:` line.
+`"drawn": {"material", "meter"}` (only what was drawn; the material is an id) and the text output a `Drawn:` line.
 
 ## Options
 
 | Option | Meaning |
 | --- | --- |
-| `--mode <mode>` | `major`, `minor` or `random`. Required. `random` is drawn from the seed (below). Church modes are not planned. |
+| `--material <material>` | `major`, `minor` or `random`. Required (`--mode` is read as the same option). `random` is drawn from the seed (below). Church modes are not planned. |
 | `--meter <n/m>` | Beats over a beat unit, as in `4/4` or `6/8`, or `random`. Required. `random` is drawn from the seed (below). |
-| `--key <key>` | For example `"D minor"`. Its mode must be `--mode`. Without it the motive is made in C major or A minor and carries that key, so it can be stored. |
+| `--key <key>` | For example `"D minor"`. Its mode must be `--material`. Without it the motive is made in C major or A minor and carries that key, so it can be stored. |
 | `--form <form>` | `full` (pitches and rhythm, the default), `rhythm` (the rhythm of a full motive) or `contour` (its contour, in quarter notes with no pickup). These are read as the [motive command](cli-motive.md) reads them. |
 | `--strategy <name>` | `segments` (the default) or `drawn`: how the motive is made (above). |
 | `--role <role>` | `melodic` (the default) or `accompaniment`: the role every motive of the run is given. |

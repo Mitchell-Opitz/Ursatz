@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+#include "model/core/rational.h"
+
 static bool is_triplet(const Tuplet *tuplet) {
     return tuplet != NULL && tuplet_actual(tuplet) == 3 && tuplet_normal(tuplet) == 2;
 }
@@ -15,25 +17,26 @@ bool standard_meter_tuplet_borrowed(const Tuplet *tuplet, MeterType type) {
 }
 
 bool standard_meter_tuplet_level(const TimeSignature *time_signature, const Duration *span, TupletLevel *out) {
-    if (time_signature == NULL || span == NULL || duration_numerator(span) == 0) {
+    if (time_signature == NULL || span == NULL || span->value.num == 0) {
         return false;
     }
-    Duration *beat = NULL;
+    Duration beat;
     if (!standard_meter_beat_duration(time_signature, &beat)) {
         return false;
     }
 
-    /* span / beat = (span_n * beat_d) / (span_d * beat_n) */
-    unsigned long up = (unsigned long)duration_numerator(span) * duration_denominator(beat);
-    unsigned long down = duration_denominator(span) * (unsigned long)duration_numerator(beat);
-    duration_destroy(beat);
+    /* span / beat as a checked, reduced Rational: overflow is a refusal, never a wrapped product. */
+    Rational ratio;
+    if (rational_div(span->value, beat.value, &ratio) != RATIONAL_OK) {
+        return false;
+    }
 
     bool ok = true;
-    if (up == down) {
+    if (ratio.num == ratio.den) {
         *out = TUPLET_LEVEL_BEAT;
-    } else if (up > down && up % down == 0) {
+    } else if (ratio.num > ratio.den && ratio.den == 1) {
         *out = TUPLET_LEVEL_MULTI_BEAT;
-    } else if (up < down && down % up == 0) {
+    } else if (ratio.num < ratio.den && ratio.num == 1) {
         *out = TUPLET_LEVEL_SUBDIVISION; /* the beat is a whole number of spans */
     } else {
         ok = false;

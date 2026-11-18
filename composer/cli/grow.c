@@ -24,7 +24,7 @@ typedef struct {
     const char *into;
     const char *hybrid;
     const char *key;
-    const char *mode;
+    const char *material;
     const char *meter;
     const char *bars;
     const char *cadence;
@@ -64,8 +64,8 @@ static void print_help(FILE *out) {
     fprintf(out, "  --into <form>        sentence (presentation + continuation), period (antecedent + consequent) or\n");
     fprintf(out, "                       hybrid (any other pairing, named with --hybrid)\n");
     fprintf(out, "  --key <key>          tonic and mode in one argument (\"D minor\", \"F# major\"); any case\n");
-    fprintf(out, "  --mode <mode>        major, minor or style: replaces the mode of --key (the key may then be a tonic alone). style\n");
-    fprintf(out, "                       takes the style's most common mode and needs --style with a mode category\n");
+    fprintf(out, "  --material <word>    major, minor or style: replaces the material of --key (the key may then be a tonic alone). style\n");
+    fprintf(out, "                       takes the style's most common mode and needs --style with a mode category (--mode is the same option)\n");
     fprintf(out, "  --meter <n/m>        2/4, 3/4, 4/4 or 6/8; the motive must fit in one bar of it\n\n");
     fprintf(out, "Options:\n");
     fprintf(out, "  --hybrid <b>+<e>     with --into hybrid only: the beginning (presentation, antecedent or cbi, a compound\n");
@@ -154,8 +154,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->hybrid;
         } else if (strcmp(arg, "--key") == 0) {
             target = &options->key;
-        } else if (strcmp(arg, "--mode") == 0) {
-            target = &options->mode;
+        } else if (strcmp(arg, "--material") == 0 || strcmp(arg, "--mode") == 0) {
+            target = &options->material;
         } else if (strcmp(arg, "--meter") == 0) {
             target = &options->meter;
         } else if (strcmp(arg, "--bars") == 0) {
@@ -274,7 +274,7 @@ static bool explain_as_json(const char *path) {
 static bool add_members(const Options *options, cJSON *request) {
     bool ok = cJSON_AddStringToObject(request, "into", options->into) && cJSON_AddStringToObject(request, "meter", options->meter) &&
               (!options->hybrid || cJSON_AddStringToObject(request, "hybrid", options->hybrid)) &&
-              (!options->mode || cJSON_AddStringToObject(request, "mode", options->mode)) &&
+              (!options->material || cJSON_AddStringToObject(request, "material", options->material)) &&
               (!options->bars || cJSON_AddStringToObject(request, "bars", options->bars)) &&
               (!options->cadence || cJSON_AddStringToObject(request, "cadence", options->cadence)) &&
               (!options->first_cadence || cJSON_AddStringToObject(request, "first_cadence", options->first_cadence)) &&
@@ -323,7 +323,7 @@ int run_grow(int argc, char **argv) {
         return status;
     }
 
-    /* The motive: a file read into the request, or a passage of a corpus. A tonic alone with --mode is completed for a MIDI
+    /* The motive: a file read into the request, or a passage of a corpus. A tonic alone with --material is completed for a MIDI
        file, which is read before the API sees the brief. */
     cJSON *request = NULL;
     MotiveFile file;
@@ -350,9 +350,9 @@ int run_grow(int argc, char **argv) {
         input.meter_text = options.meter;
         input.key_text = options.key;
         input.extras = options.extras;
-        if (options.mode && !strpbrk(options.key, " \t")) {
-            bool concrete = cli_equals_ignore_case(options.mode, "major") || cli_equals_ignore_case(options.mode, "minor");
-            input.key_text = concrete && snprintf(key_with_mode, sizeof key_with_mode, "%s %s", options.key, options.mode) <
+        if (options.material && !strpbrk(options.key, " \t")) {
+            bool concrete = cli_equals_ignore_case(options.material, "major") || cli_equals_ignore_case(options.material, "minor");
+            input.key_text = concrete && snprintf(key_with_mode, sizeof key_with_mode, "%s %s", options.key, options.material) <
                                              (int)sizeof key_with_mode
                                  ? key_with_mode
                                  : NULL;

@@ -16,6 +16,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The melody of the report, for Bach 114 (Minuet in G, BWV Anh. 114).
@@ -49,7 +50,7 @@
 /* A note's onset in whole notes and its pitch as a MIDI note number. */
 static double onset_of(const ImportedNotes *notes, size_t index) {
     const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(notes->events[index]));
-    return (double)musical_time_numerator(start) / (double)musical_time_denominator(start);
+    return (double)start->value.num / (double)start->value.den;
 }
 
 static long pitch_of(const ImportedNotes *notes, size_t index) {
@@ -375,7 +376,7 @@ int main(int argc, char **argv) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
     ImportedNotes notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
+    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }

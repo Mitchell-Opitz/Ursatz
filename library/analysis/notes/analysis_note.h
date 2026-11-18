@@ -26,7 +26,7 @@
 typedef struct {
     const char *note_id;
     const NoteEvent *event;
-    const TimeSpan *span;
+    TimeSpan span;
     int midi;
     const PitchSpelling *spelling;
     const char *voice_id;
@@ -41,7 +41,7 @@ typedef struct {
     const MeterMap *map;
 } AnalysisNoteSet;
 
-/* Non-NULL id and span, a span that ends after it starts, midi -1 or 0 to 127, confidence in [0, 1]. */
+/* Non-NULL id, a span that ends after it starts, midi -1 or 0 to 127, confidence in [0, 1]. */
 bool analysis_note_valid(const AnalysisNote *note);
 
 /* For qsort over AnalysisNote: span start, then midi, then note_id. */

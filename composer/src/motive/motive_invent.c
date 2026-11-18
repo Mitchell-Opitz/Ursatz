@@ -1,5 +1,6 @@
 #include <ursatz_composer/motive_develop.h>
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,8 @@
 
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
+#include "util/plan_util.h"
+#include "util/util.h"
 
 /*
  * Motive invention: a Fill operator for the Constrained one-bar melody span of a motive node that carries an
@@ -78,7 +81,7 @@ static bool read_invent_request(const PiecePlan *plan, FillTarget target, const 
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &lane, 1) > 0) {
         out->meter = plan_lane_span_payload(plan, lane)->meter;
     }
-    out->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    out->key = plan_key_of_pitch_class(0, context->materials != NULL ? context->materials->major : NULL);
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &lane, 1) > 0) {
         out->key = plan_lane_span_payload(plan, lane)->key;
     } else if (context->has_key) {
@@ -123,10 +126,20 @@ static bool add_duration(Rhythm *rhythm, long num, unsigned long den) {
 }
 
 static bool draw_rhythm(const PlanMeter *meter, FillRng *rng, Rhythm *out) {
-    bool compound = meter->beat_unit == 8 && meter->beats_per_bar % 3 == 0 && meter->beats_per_bar > 3;
-    size_t units = compound ? (size_t)meter->beats_per_bar / 3 : (size_t)meter->beats_per_bar;
-    long unit_num = compound ? 3 : 1;
-    unsigned long unit_den = (unsigned long)meter->beat_unit;
+    TimeSignature *signature = NULL;
+    Duration beat;
+    if (!plan_meter_signature(*meter, &signature)) {
+        return false;
+    }
+    bool compound = time_signature_is_compound(signature);
+    size_t units = time_signature_group_count(signature);
+    DurationResult beat_made = time_signature_beat_length(signature, &beat);
+    time_signature_destroy(signature);
+    if (beat_made != DURATION_OK || beat.value.num > LONG_MAX || beat.value.den > LONG_MAX) {
+        return false;
+    }
+    long unit_num = (long)beat.value.num;
+    unsigned long unit_den = (unsigned long)beat.value.den;
     if (units == 0 || units > MAX_UNITS) {
         return false;
     }

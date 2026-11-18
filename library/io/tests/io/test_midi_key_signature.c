@@ -167,10 +167,9 @@ static void assert_signature(const KeySignature *key_signature, const char *lett
 }
 
 static void assert_position(const MidiKeySignatureEvent *event, long numerator, unsigned long denominator) {
-    MusicalTime *expected = NULL;
-    assert(musical_time_create(numerator, denominator, &expected) == MUSICAL_TIME_OK);
-    assert(musical_time_equals(event->position, expected));
-    musical_time_destroy(expected);
+    MusicalTime expected;
+    assert(musical_time_make(numerator, (long long)denominator, &expected) == MUSICAL_TIME_OK);
+    assert(musical_time_same(event->position, expected));
 }
 
 static void test_build_all_fifteen_values(void) {
@@ -452,7 +451,7 @@ static void check_corpus_file(const char *name) {
     assert(test_midi_import_key_signatures(data, (size_t)length, &events) == MIDI_IMPORT_OK);
     for (size_t i = 0; i < events.count; i++) {
         assert(events.events[i].sharps_flats >= -7 && events.events[i].sharps_flats <= 7);
-        assert(events.events[i].key_signature != NULL && events.events[i].position != NULL);
+        assert(events.events[i].key_signature != NULL);
         assert(i == 0 || events.events[i - 1].tick <= events.events[i].tick);
     }
     midi_key_signature_events_destroy(&events);

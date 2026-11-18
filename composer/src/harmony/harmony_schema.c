@@ -9,6 +9,7 @@
 #include <theory/tonality/roman_numeral_rules.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 #define DEFAULT_PREFERENCE 250
 #define PREFERENCE_LIMIT 1000000
@@ -65,7 +66,7 @@ static bool bass_accepts(const AnalysisKey *key, const PhraseChord *chord, const
     if (!harmony_chord_bass_pc(key, chord, &pc)) {
         return false;
     }
-    PitchSpelling *pitch = harmony_spell_pitch(key, harmony_member_degree(key->mode, chord), 48 + pc);
+    PitchSpelling *pitch = harmony_spell_pitch(key, harmony_member_degree(harmony_key_mode(key), chord), 48 + pc);
     PitchSpelling *tonic = harmony_spell_tonic(key, 3);
     GalantPitchDegree actual;
     bool ok = pitch && tonic && galant_degree_of(pitch, tonic, &actual) && galant_degree_allows(wanted, &actual);
@@ -76,7 +77,7 @@ static bool bass_accepts(const AnalysisKey *key, const PhraseChord *chord, const
 
 /* The chord of one stage, one cell long, or false when the data does not make one consistent chord. */
 static bool derive_stage(const AnalysisKey *key, const GalantStage *stage, PhraseChord *out) {
-    KeyStructureMode mode = key->mode;
+    HarmonyMode mode = harmony_key_mode(key);
     bool seventh;
     int inversion;
     if (!read_figures(stage->figures, &seventh, &inversion)) {
@@ -101,7 +102,7 @@ static bool derive_stage(const AnalysisKey *key, const GalantStage *stage, Phras
         }
         applied.target = standard_tonality_roman_numeral_degree_of(slash + 1, strlen(slash + 1));
         if (!harmony_applied_quality_kind(applied.quality, &applied.kind) ||
-            !harmony_applied_valid(harmony_mode_of(mode), &applied) ||
+            !harmony_applied_valid(mode, &applied) ||
             !harmony_roman_format_applied_inverted(mode, &applied, inversion, out->roman)) {
             return false;
         }
@@ -118,7 +119,7 @@ static bool derive_stage(const AnalysisKey *key, const GalantStage *stage, Phras
         return false;
     }
     /* A lower-case vii in a minor key is the diminished chord on the raised seventh degree. */
-    bool leading = mode == KEY_STRUCTURE_MODE_MINOR && strcmp(stage->numeral, "vii") == 0;
+    bool leading = mode == HARMONY_MODE_MINOR && strcmp(stage->numeral, "vii") == 0;
     bool made = leading ? (!seventh && harmony_make_leading_tone(mode, inversion, 1, out))
                         : harmony_make_chord(mode, degree, inversion, seventh, false, 1, out);
     return made && bass_accepts(key, out, &stage->bass);
@@ -154,10 +155,10 @@ bool harmony_schema_find(const char *name, GalantSchemaId *id) {
     return false;
 }
 
-bool harmony_schema_available(GalantSchemaId id, KeyStructureMode mode) {
+bool harmony_schema_available(GalantSchemaId id, const PitchMaterial *material) {
     const GalantPrototype *prototype = galant_prototype(id);
     PhraseChord chords[GALANT_MAX_STAGES];
-    AnalysisKey key = plan_key_of_pitch_class(0, mode);
+    AnalysisKey key = plan_key_of_pitch_class(0, material);
     return prototype && derive_schema(&key, prototype, chords);
 }
 

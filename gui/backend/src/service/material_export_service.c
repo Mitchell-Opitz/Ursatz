@@ -10,6 +10,7 @@
 #include <ursatz_analyzer/text_export.h>
 
 #include "composer_client.h"
+#include "knowledge_service.h"
 #include "material_service.h"
 #include "motif_service.h"
 #include "util/json_util.h"
@@ -141,6 +142,25 @@ static void add_text_member(Build *build, FactList *list, const char *name, cons
   }
 }
 
+/* The fact `key` of a motif: the key text its notes are written in ("C major"), from its material. */
+static void add_motif_key(Build *build, FactList *list, const cJSON *motif) {
+  char text[64];
+  if (ursatz_gui_motif_key_text(motif, text, sizeof(text))) {
+    add_fact(build, list, "key", format(build, "%s", text));
+  }
+}
+
+/* The fact `mode` of a piece structure: the key word of its material ("major"), or "style". */
+static void add_structure_mode(Build *build, FactList *list, const cJSON *structure) {
+  const cJSON *material = cJSON_GetObjectItemCaseSensitive(structure, "material");
+  char word[32];
+  if (cJSON_IsString(material) && ursatz_gui_composer_material_word(material->valuestring, word, sizeof(word))) {
+    add_fact(build, list, "mode", format(build, "%s", word));
+  } else if (!cJSON_IsString(material)) {
+    add_text_member(build, list, "mode", structure, "mode");
+  }
+}
+
 /* A string or a number of a store member as text; NULL for anything else or an empty string. */
 static const char *scalar_text(Build *build, const cJSON *value) {
   if (cJSON_IsString(value)) {
@@ -269,7 +289,7 @@ static void add_motif_facts(Build *build, FactList *facts, const cJSON *motif) {
   add_text_member(build, facts, "role", motif, "role");
   add_text_member(build, facts, "form", motif, "form");
   add_text_member(build, facts, "meter", motif, "meter");
-  add_text_member(build, facts, "key", motif, "key");
+  add_motif_key(build, facts, motif);
   add_text_member(build, facts, "pickup", motif, "pickup");
   add_text_member(build, facts, "notes", motif, "notes");
   const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(motif, "analysis"), "analysis");
@@ -511,7 +531,7 @@ static void build_piece(Build *build, const char *id, int version, const cJSON *
       add_text_member(build, &build->material_facts, "form", structure, "form");
     }
     add_text_member(build, &build->material_facts, "key", structure, "key");
-    add_text_member(build, &build->material_facts, "mode", structure, "mode");
+    add_structure_mode(build, &build->material_facts, structure);
     add_text_member(build, &build->material_facts, "meter", structure, "meter");
     const cJSON *section = NULL;
     cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(structure, "sections")) {
@@ -594,6 +614,7 @@ static UrsatzGuiMaterialExportResult write_text(Build *build, const char *kind, 
       .fact_count = build->material_facts.count,
       .sections = sections,
       .section_count = build->draft_count,
+      .knowledge = ursatz_gui_knowledge(),
   };
   AnalyzerStatus status = analyzer_text_export_material(&material, text);
   free(sections);

@@ -12,7 +12,6 @@
 #include "model/time/duration.h"
 #include "model/time/meter_map.h"
 #include "model/time/metrical_position.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_signature.h"
 #include "model/time/time_span.h"
 
@@ -46,7 +45,7 @@ static int roman_degree(const char *letters, size_t length) {
 }
 
 /* "G:", "a:", "Bb:", "f#:", "B-:" -> true with the tonic and mode. */
-static bool parse_key_token(const char *token, int *tonic, bool *minor) {
+static bool parse_key_token(const char *token, int *tonic, bool *is_minor) {
     static const int LETTER_PC[7] = {9, 11, 0, 2, 4, 5, 7}; /* a b c d e f g */
     char letter = token[0];
     if (!isalpha((unsigned char)letter) || tolower((unsigned char)letter) < 'a' || tolower((unsigned char)letter) > 'g') {
@@ -62,7 +61,7 @@ static bool parse_key_token(const char *token, int *tonic, bool *minor) {
         return false;
     }
     *tonic = ((pc % 12) + 12) % 12;
-    *minor = islower((unsigned char)letter) != 0;
+    *is_minor = islower((unsigned char)letter) != 0;
     return true;
 }
 
@@ -189,7 +188,7 @@ typedef struct {
     size_t chord_capacity;
 } Builder;
 
-static bool push_key(Builder *b, MusicalTime *time, int measure, int tonic, bool minor) {
+static bool push_key(Builder *b, MusicalTime time, int measure, int tonic, bool is_minor) {
     RomanTextAnalysis *out = b->out;
     if (out->key_count == b->key_capacity) {
         size_t capacity = b->key_capacity == 0 ? 8 : b->key_capacity * 2;
@@ -204,7 +203,7 @@ static bool push_key(Builder *b, MusicalTime *time, int measure, int tonic, bool
     key->time = time;
     key->measure = measure;
     key->tonic_pitch_class = tonic;
-    key->minor = minor;
+    key->is_minor = is_minor;
     return true;
 }
 
@@ -263,21 +262,14 @@ bool romantext_beat_offset(unsigned top, unsigned bottom, long beat_thousandths,
 /* The time at `offset` (whole notes) into `measure` of the map: the measure's start plus the offset. A pickup (measure
    0 of a map with one) counts its offset from where a full measure would have started. False when the measure or the
    offset is not in the map. */
-static bool position_time(const MeterMap *map, int measure, const Duration *offset_duration, MusicalTime **out) {
-    TimeSpan *span = NULL;
+static bool position_time(const MeterMap *map, int measure, Duration offset_duration, MusicalTime *out) {
+    TimeSpan span;
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    Rational start = {0, 1};
-    Rational end = {0, 1};
-    Rational offset = {0, 1};
-    bool read = rational_of_musical_time(time_span_start(span), &start) == RATIONAL_OK &&
-                rational_of_musical_time(time_span_end(span), &end) == RATIONAL_OK &&
-                rational_of_duration(offset_duration, &offset) == RATIONAL_OK;
-    time_span_destroy(span);
-    if (!read) {
-        return false;
-    }
+    Rational start = span.start.value;
+    Rational end = span.end.value;
+    Rational offset = offset_duration.value;
 
     Rational length = {0, 1};
     Rational into_span = offset;
@@ -286,16 +278,14 @@ static bool position_time(const MeterMap *map, int measure, const Duration *offs
     }
     if (measure == 0 && meter_map_has_pickup(map)) {
         const TimeSignature *reading = NULL;
-        Duration *measure_duration = NULL;
+        Duration measure_duration;
         if (metrical_position_reading_signature(map, 0, &reading) != METRICAL_POSITION_OK ||
             time_signature_measure_duration(reading, &measure_duration) != DURATION_OK) {
             return false;
         }
-        Rational full = {0, 1};
-        bool full_read = rational_of_duration(measure_duration, &full) == RATIONAL_OK;
-        duration_destroy(measure_duration);
+        Rational full = measure_duration.value;
         Rational base = {0, 1};
-        if (!full_read || rational_cmp(length, full) > 0 || rational_sub(full, length, &base) != 0 ||
+        if (rational_cmp(length, full) > 0 || rational_sub(full, length, &base) != 0 ||
             rational_cmp(offset, base) < 0 || rational_cmp(offset, full) >= 0 ||
             rational_sub(offset, base, &into_span) != 0) {
             return false;
@@ -305,11 +295,15 @@ static bool position_time(const MeterMap *map, int measure, const Duration *offs
     }
 
     Rational time = {0, 1};
-    return rational_add(start, into_span, &time) == 0 && musical_time_from_rational(time, out) == TIME_RATIONAL_OK;
+    if (rational_add(start, into_span, &time) != 0) {
+        return false;
+    }
+    *out = musical_time_of(time);
+    return true;
 }
 
 /* The time of (measure, beat in thousandths) on a MeterMap. */
-static bool meter_map_time_at(const void *context, int measure, long thousandths, MusicalTime **time) {
+static bool meter_map_time_at(const void *context, int measure, long thousandths, MusicalTime *time) {
     const MeterMap *map = (const MeterMap *)context;
     const TimeSignature *signature = NULL;
     if (metrical_position_reading_signature(map, measure, &signature) != METRICAL_POSITION_OK) {
@@ -321,13 +315,11 @@ static bool meter_map_time_at(const void *context, int measure, long thousandths
                                thousandths, &numerator, &denominator)) {
         return false;
     }
-    Duration *offset = NULL;
-    if (duration_create(numerator, denominator, &offset) != DURATION_OK) {
+    Duration offset;
+    if (duration_make(numerator, (long long)denominator, &offset) != DURATION_OK) {
         return false;
     }
-    bool converted = position_time(map, measure, offset, time);
-    duration_destroy(offset);
-    return converted;
+    return position_time(map, measure, offset, time);
 }
 
 RomanTextGrid romantext_meter_map_grid(const MeterMap *map) {
@@ -335,9 +327,8 @@ RomanTextGrid romantext_meter_map_grid(const MeterMap *map) {
     return grid;
 }
 
-static bool before(const MusicalTime *a, const MusicalTime *b) {
-    return musical_time_numerator(a) * (long)musical_time_denominator(b) <
-           musical_time_numerator(b) * (long)musical_time_denominator(a);
+static bool before(MusicalTime a, MusicalTime b) {
+    return musical_time_cmp(a, b) < 0;
 }
 
 static bool starts_with(const char *line, const char *prefix) {
@@ -446,7 +437,7 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
             const char *token = tokens[i];
             long beat_value = 0;
             int tonic = 0;
-            bool minor = false;
+            bool is_minor = false;
             if (parse_beat_token(token, &beat_value)) {
                 beat = beat_value;
                 continue;
@@ -454,15 +445,14 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
             if (is_ignored_token(token)) {
                 continue;
             }
-            MusicalTime *time = NULL;
-            if (parse_key_token(token, &tonic, &minor)) {
+            MusicalTime time = musical_time_of(rational_ratio(0, 1));
+            if (parse_key_token(token, &tonic, &is_minor)) {
                 if (!grid->time_at(grid->context, measure, beat, &time)) {
                     set_error(out, "line %d: position of \"%s\" is outside the score's measures", line_number, token);
                     status = ROMANTEXT_ERR_BAD_POSITION;
                     break;
                 }
-                if (!push_key(&builder, time, measure, tonic, minor)) {
-                    musical_time_destroy(time);
+                if (!push_key(&builder, time, measure, tonic, is_minor)) {
                     status = ROMANTEXT_ERR_ALLOC;
                 }
                 continue;
@@ -474,13 +464,11 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
             }
             if (out->chord_count > 0 && before(time, out->chords[out->chord_count - 1].time)) {
                 set_error(out, "line %d: \"%s\" is before the chord that precedes it", line_number, token);
-                musical_time_destroy(time);
                 status = ROMANTEXT_ERR_BAD_POSITION;
                 break;
             }
             RomanTextChord *chord = push_chord(&builder);
             if (chord == NULL) {
-                musical_time_destroy(time);
                 status = ROMANTEXT_ERR_ALLOC;
                 break;
             }
@@ -492,7 +480,7 @@ RomanTextStatus romantext_parse(const char *text, const RomanTextGrid *grid, Rom
                 const RomanTextKey *key = &out->keys[out->key_count - 1];
                 chord->key_index = out->key_count - 1;
                 chord->tonic_pitch_class = key->tonic_pitch_class;
-                chord->minor = key->minor;
+                chord->is_minor = key->is_minor;
             }
             if (!chord->supported) {
                 out->unsupported_count++;
@@ -540,12 +528,6 @@ void romantext_destroy(RomanTextAnalysis *analysis) {
     if (analysis == NULL) {
         return;
     }
-    for (size_t i = 0; i < analysis->key_count; i++) {
-        musical_time_destroy(analysis->keys[i].time);
-    }
-    for (size_t i = 0; i < analysis->chord_count; i++) {
-        musical_time_destroy(analysis->chords[i].time);
-    }
     free(analysis->keys);
     free(analysis->chords);
     analysis->keys = NULL;
@@ -562,19 +544,19 @@ static int wrap12(int v) {
     return ((v % 12) + 12) % 12;
 }
 
-static int scale_step(int tonic, bool minor, int degree, int alteration) {
-    const int *scale = minor ? MINOR_SCALE : MAJOR_SCALE;
+static int scale_step(int tonic, bool is_minor, int degree, int alteration) {
+    const int *scale = is_minor ? MINOR_SCALE : MAJOR_SCALE;
     return wrap12(tonic + scale[degree - 1] + alteration);
 }
 
 size_t romantext_expected_chord(const RomanTextChord *c, int *root, int intervals[4]) {
     int tonic = c->tonic_pitch_class;
-    bool minor = c->minor;
+    bool is_minor = c->is_minor;
     int local_tonic = tonic;
-    bool local_minor = minor;
+    bool local_minor = is_minor;
     bool dominant_like = false;
     if (c->applied) {
-        local_tonic = scale_step(tonic, minor, c->target_degree, c->target_alteration);
+        local_tonic = scale_step(tonic, is_minor, c->target_degree, c->target_alteration);
         local_minor = !c->target_upper;
     }
     if (c->applied && (c->degree == 5 || c->degree == 7)) {
@@ -624,5 +606,5 @@ size_t romantext_expected_chord(const RomanTextChord *c, int *root, int interval
 
 
 bool romantext_is_raised_sixth_diminished(const RomanTextChord *chord) {
-    return chord->minor && !chord->applied && chord->degree == 6 && chord->alteration == 1 && chord->marker == 'o';
+    return chord->is_minor && !chord->applied && chord->degree == 6 && chord->alteration == 1 && chord->marker == 'o';
 }

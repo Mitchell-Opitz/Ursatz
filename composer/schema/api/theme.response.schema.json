@@ -80,7 +80,7 @@
       "type": "object",
       "required": [
         "tempo",
-        "mode",
+        "material",
         "density",
         "without"
       ],
@@ -109,17 +109,17 @@
           },
           "additionalProperties": false
         },
-        "mode": {
+        "material": {
           "type": "object",
           "required": [
-            "mode",
+            "material",
             "from"
           ],
           "properties": {
-            "mode": {
+            "material": {
               "enum": [
-                "major",
-                "minor"
+                "omt.material.major",
+                "omt.material.natural-minor"
               ]
             },
             "from": {

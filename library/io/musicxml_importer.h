@@ -43,7 +43,7 @@
  * detects a pickup only from a short first region, so the importer ends that region at the pickup's length). The
  * measure numbers, and where every barline falls, come from the MeterMap and the time signatures alone: a measure
  * of the document whose length differs from its signature's (other than an implicit one) cannot be represented
- * and is a warning. Additive meters (3+2) are summed, with a warning; senza-misura and beat types that are not
+ * and is a warning. An additive meter (3+2) is read as beat groups (time_signature_create_grouped); one with more than 16 groups or a group above 16 units is summed, with a warning; senza-misura and beat types that are not
  * a power of two are skipped.
  *
  * Keys. Each <key> gives a key-signature event {KeySignature, mode hint, position}, the same entry shape as
@@ -121,7 +121,7 @@ typedef enum {
 typedef struct {
     KeySignature *key_signature;  /* owned: built as midi_key_signature_build builds it */
     MusicXmlModeHint mode_hint;   /* next to the signature, never part of it */
-    MusicalTime *position;        /* owned; whole notes */
+    MusicalTime position;         /* whole notes */
     int8_t sharps_flats;          /* the raw <fifths>, -7..7 */
     size_t part_index;            /* the lowest part that declared it */
 } MusicXmlKeySignatureEvent;
@@ -140,7 +140,10 @@ typedef struct {
     int *staff;                          /* owned; parallel to events: the <staff> number, 1 when none */
     MusicXmlPart *parts;                 /* owned; in document order */
     size_t part_count;
-    MeterMap *meter_map;                 /* owned */
+    MeterMap *meter_map;                 /* owned: the movement's map, the lowest part's where parts disagree */
+    MeterMap **part_meter_maps;          /* owned; NULL when every part follows meter_map, else part_count entries in
+                                            part order: a part's own map where it differs from meter_map, NULL where it
+                                            follows it (meter_map_position_of takes whichever map governs a part) */
     TempoMap *tempo_map;                 /* owned */
     TempoMarking **tempo_markings;       /* owned; in time order */
     size_t *tempo_marking_part;          /* owned; parallel to tempo_markings */

@@ -5,39 +5,28 @@
 #include <stdio.h>
 #include <string.h>
 
-static TimeSpan *make_time_span(long start_num, unsigned long start_den, long end_num, unsigned long end_den) {
-    MusicalTime *start = NULL;
-    musical_time_create(start_num, start_den, &start);
-    MusicalTime *end = NULL;
-    musical_time_create(end_num, end_den, &end);
+static TimeSpan make_time_span(long start_num, long start_den, long end_num, long end_den) {
+    MusicalTime start;
+    assert(musical_time_make(start_num, start_den, &start) == MUSICAL_TIME_OK);
+    MusicalTime end;
+    assert(musical_time_make(end_num, end_den, &end) == MUSICAL_TIME_OK);
 
-    TimeSpan *span = NULL;
-    time_span_create(start, end, TIME_SPAN_BOUNDARY_CLOSED, &span);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+    TimeSpan span;
+    assert(time_span_make(start, end, &span) == TIME_SPAN_OK);
     return span;
 }
 
 static void test_create_for_time_span_rejects_null_marking(void) {
-    TimeSpan *span = make_time_span(0, 1, 1, 1);
+    TimeSpan span = make_time_span(0, 1, 1, 1);
 
     Dynamics *dynamics = NULL;
     DynamicsResult r = dynamics_create_for_time_span(NULL, span, &dynamics);
     assert(r == DYNAMICS_ERR_NULL_MARKING);
     assert(dynamics == NULL);
-
-    time_span_destroy(span);
-}
-
-static void test_create_for_time_span_rejects_null_time_span(void) {
-    Dynamics *dynamics = NULL;
-    DynamicsResult r = dynamics_create_for_time_span("cresc.", NULL, &dynamics);
-    assert(r == DYNAMICS_ERR_NULL_TIME_SPAN);
-    assert(dynamics == NULL);
 }
 
 static void test_create_for_time_span_accepts_valid(void) {
-    TimeSpan *span = make_time_span(0, 1, 1, 1);
+    TimeSpan span = make_time_span(0, 1, 1, 1);
 
     Dynamics *dynamics = NULL;
     DynamicsResult r = dynamics_create_for_time_span("cresc.", span, &dynamics);
@@ -46,14 +35,15 @@ static void test_create_for_time_span_accepts_valid(void) {
     assert(strcmp(dynamics_marking(dynamics), "cresc.") == 0);
     assert(dynamics_target_kind(dynamics) == DYNAMICS_TARGET_TIME_SPAN);
     assert(dynamics_target_event_id(dynamics) == NULL);
-    assert(dynamics_target_time_span(dynamics) == span);
+    const TimeSpan *held = dynamics_target_time_span(dynamics);
+    assert(held->start.value.num == 0);
+    assert(held->end.value.num == 1 && held->end.value.den == 1);
 
     dynamics_destroy(dynamics);
 }
 
 int main(void) {
     test_create_for_time_span_rejects_null_marking();
-    test_create_for_time_span_rejects_null_time_span();
     test_create_for_time_span_accepts_valid();
     printf("test_dynamics: ok\n");
     return 0;

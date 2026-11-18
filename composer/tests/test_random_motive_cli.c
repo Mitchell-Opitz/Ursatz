@@ -57,6 +57,10 @@ static size_t count_of(const char *text, const char *needle) {
 static void test_seeds(void) {
     char *first = output_of("--mode minor --meter 3/4 --count 4 --seed 9");
     assert(strncmp(first, "Seed: 9\n", 8) == 0);
+    /* --material is the option and --mode its alias: the same words give the same motives. */
+    char *by_material = output_of("--material minor --meter 3/4 --count 4 --seed 9");
+    assert(strcmp(first, by_material) == 0);
+    free(by_material);
     assert(count_of(first, "\nMotive ") == 4 && count_of(first, "  degrees: ") == 4);
     char *again = output_of("--mode minor --meter 3/4 --count 4 --seed 9");
     assert(strcmp(first, again) == 0);
@@ -94,7 +98,7 @@ static void test_json(void) {
     char *out = output_of("--mode minor --meter 3/4 --key \"D minor\" --count 2 --seed 3 --json");
     assert(strncmp(out, "{\n  \"seed\": 3,\n  \"motives\": [", 29) == 0);
     assert(count_of(out, "\"notes_text\"") == 2 && count_of(out, "\"degrees_text\"") == 2);
-    assert(count_of(out, "\"tonic_pitch_class\": 2") == 4 && count_of(out, "\"mode\": \"minor\"") == 4);
+    assert(count_of(out, "\"tonic_pitch_class\": 2") == 4 && count_of(out, "\"material\": \"omt.material.natural-minor\"") == 4);
     assert(count_of(out, "\"beats_per_bar\": 3") == 2);
     /* Each motive carries its base harmony (I, proposed) and a tone label for each note. */
     assert(count_of(out, "\"base_harmony\"") == 2 && count_of(out, "\"text\": \"I\"") >= 2);
@@ -125,9 +129,9 @@ static void test_style(void) {
 }
 
 static void test_bad_arguments(void) {
-    expect_failure("--meter 4/4", 1, "random-motive needs --mode and --meter");
-    expect_failure("--mode major", 1, "random-motive needs --mode and --meter");
-    expect_failure("--mode dorian --meter 4/4", 1, "--mode must be major or minor, not 'dorian'");
+    expect_failure("--meter 4/4", 1, "random-motive needs --material and --meter");
+    expect_failure("--mode major", 1, "random-motive needs --material and --meter");
+    expect_failure("--mode dorian --meter 4/4", 1, "the Composer writes major and minor keys; 'dorian' is not one of them");
     expect_failure("--mode major --meter 4", 1, "meter '4' is not a meter");
     expect_failure("--mode major --meter 4/4 --key \"D minor\"", 1, "key 'D minor' is not major");
     expect_failure("--mode major --meter 4/4 --key H", 1, "unknown key 'H'");

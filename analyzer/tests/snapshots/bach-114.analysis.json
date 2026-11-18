@@ -1,5 +1,5 @@
 {
-	"schema_version":	12,
+	"schema_version":	13,
 	"metadata":	{
 		"source_file":	"Bach 114.mid",
 		"note_count":	430,
@@ -87,7 +87,7 @@
 				"uncertainty":	0.76562120435393533,
 				"index":	0,
 				"tonic":	"G",
-				"mode":	"major",
+				"material":	"omt.material.major",
 				"measures":	{
 					"first":	1,
 					"last":	24
@@ -33048,7 +33048,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -33352,7 +33352,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",
@@ -33656,7 +33656,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/2",
@@ -33960,7 +33960,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"3/4",
@@ -34264,7 +34264,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -34568,7 +34568,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",
@@ -34872,7 +34872,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/2",
@@ -35176,7 +35176,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"3/4",
@@ -35374,7 +35374,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -35572,7 +35572,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",
@@ -35770,7 +35770,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/2",
@@ -35968,7 +35968,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"3/4",
@@ -36166,7 +36166,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"3/4",
@@ -36364,7 +36364,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -36769,7 +36769,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",
@@ -36967,7 +36967,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -37165,7 +37165,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",
@@ -37363,7 +37363,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/2",
@@ -37561,7 +37561,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"3/4",
@@ -37759,7 +37759,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -37957,7 +37957,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",
@@ -38155,7 +38155,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/2",
@@ -38454,7 +38454,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/2",
@@ -38652,7 +38652,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"3/4",
@@ -38850,7 +38850,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -39048,7 +39048,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",
@@ -39246,7 +39246,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/2",
@@ -39444,7 +39444,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"3/4",
@@ -39642,7 +39642,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -39840,7 +39840,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",
@@ -40038,7 +40038,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/2",
@@ -40236,7 +40236,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"3/4",
@@ -40434,7 +40434,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -40632,7 +40632,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",
@@ -40810,7 +40810,7 @@
 						"duration":	"1/16"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"0/1",
@@ -40998,7 +40998,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	7,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"1/1",
 				"beat":	"1/4",
 				"pickup":	"1/4",

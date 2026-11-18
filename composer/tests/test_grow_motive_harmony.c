@@ -14,6 +14,7 @@
 #include "util/plan_util.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -38,7 +39,7 @@ static Motive load_motive(const char *path) {
     MotiveError error;
     memset(&error, 0, sizeof(error));
     assert(text);
-    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_OK);
     free(text);
     return motive;
 }
@@ -97,13 +98,13 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, bool sentenc
     request.bars = 8;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     if (sentence) {
-        request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+        request.key = test_key(0, "major");
         request.meter.beats_per_bar = 6;
         request.meter.beat_unit = 8;
         request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
         request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     } else {
-        request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+        request.key = test_key(9, "minor");
         request.meter.beats_per_bar = 3;
         request.meter.beat_unit = 4;
         request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
@@ -116,6 +117,7 @@ static PiecePlan *compose(const Motive *motive, unsigned long seed, bool sentenc
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.basic = motive;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
@@ -249,11 +251,12 @@ int main(void) {
     Motive chordless;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
     options.has_key = true;
-    options.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    options.key = test_key(2, "minor");
     assert(motive_from_degrees_text("1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e", &options, &chordless, NULL) == MOTIVE_OK);
     assert(chordless.chord_count == 0);
     size_t chordless_runs = 0;
@@ -271,6 +274,7 @@ int main(void) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         config.basic = &chordless;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);

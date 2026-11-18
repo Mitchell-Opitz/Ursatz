@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The rhythm and meter of the report.
@@ -52,7 +53,7 @@ static bool analyze(const char *path, Analysis *analysis) {
     if (midi_pipeline_import_file(path, &analysis->notes) != MIDI_PIPELINE_OK) {
         return false;
     }
-    if (!run_analysis_pipeline(&analysis->notes, &analysis->report)) {
+    if (!run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report)) {
         imported_notes_destroy(&analysis->notes);
         return false;
     }

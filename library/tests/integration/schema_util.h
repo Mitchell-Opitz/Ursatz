@@ -24,9 +24,6 @@
 
 typedef struct {
     GalantSegmentList list;
-    TimeSpan **spans; /* owned */
-    size_t span_count;
-    size_t span_capacity;
     char **ids; /* the segment ids the list borrows */
     size_t id_count;
 } SchemaBuild;
@@ -38,27 +35,11 @@ static inline void schema_build_init(SchemaBuild *build) {
 
 static inline void schema_build_destroy(SchemaBuild *build) {
     galant_segments_destroy(&build->list);
-    for (size_t i = 0; i < build->span_count; i++) {
-        time_span_destroy(build->spans[i]);
-    }
-    free(build->spans);
     for (size_t i = 0; i < build->id_count; i++) {
         free(build->ids[i]);
     }
     free(build->ids);
     memset(build, 0, sizeof(*build));
-}
-
-static inline const TimeSpan *schema_build_span(SchemaBuild *build, const MusicalTime *start, const MusicalTime *end) {
-    if (build->span_count == build->span_capacity) {
-        build->span_capacity = build->span_capacity == 0 ? 256 : build->span_capacity * 2;
-        build->spans = (TimeSpan **)realloc(build->spans, build->span_capacity * sizeof(TimeSpan *));
-        assert(build->spans != NULL);
-    }
-    TimeSpan *span = NULL;
-    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
-    build->spans[build->span_count++] = span;
-    return span;
 }
 
 static inline GalantPitchDegree schema_degree_of_offset(int semitones) {
@@ -133,12 +114,11 @@ static inline void schema_build_from_fixture(SchemaBuild *build, const Fixture *
         const FixtureSegment *f = &fixture->segments[i];
         long start = schema_eighths(f->measure, f->beat);
         long end = start + (long)(f->length * 2.0 + 0.5);
-        MusicalTime *from = NULL;
-        MusicalTime *to = NULL;
-        assert(musical_time_create(start, 8, &from) == MUSICAL_TIME_OK && musical_time_create(end, 8, &to) == MUSICAL_TIME_OK);
-        const TimeSpan *span = schema_build_span(build, from, to);
-        musical_time_destroy(from);
-        musical_time_destroy(to);
+        MusicalTime from;
+        MusicalTime to;
+        TimeSpan span;
+        assert(musical_time_make(start, 8, &from) == MUSICAL_TIME_OK && musical_time_make(end, 8, &to) == MUSICAL_TIME_OK);
+        assert(time_span_make(from, to, &span) == TIME_SPAN_OK);
 
         GalantSegment segment;
         memset(&segment, 0, sizeof(segment));
@@ -294,13 +274,12 @@ static inline void schema_beat_length(const MeterMap *map, const MusicalTime *ti
         return;
     }
     const TimeSignature *signature = meter_map_region_time_signature(region);
-    Duration *unit = NULL;
+    Duration unit;
     if (signature == NULL || time_signature_unit_duration(signature, &unit) != DURATION_OK) {
         return;
     }
-    long n = duration_numerator(unit);
-    unsigned long d = duration_denominator(unit);
-    duration_destroy(unit);
+    long n = (long)unit.value.num;
+    unsigned long d = (unsigned long)unit.value.den;
     unsigned top = time_signature_top_number(signature);
     if ((top == 6 || top == 9 || top == 12) && time_signature_bottom_number(signature) >= 8) {
         n *= 3;
@@ -322,7 +301,7 @@ static inline void schema_where(const MeterMap *map, const MusicalTime *time, in
     schema_beat_length(map, time, &n, &d);
     const Duration *offset = metrical_position_offset(position);
     *measure = metrical_position_measure(position);
-    *beat = 1.0 + ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / ((double)n / (double)d);
+    *beat = 1.0 + ((double)offset->value.num / (double)offset->value.den) / ((double)n / (double)d);
     metrical_position_destroy(position);
 }
 

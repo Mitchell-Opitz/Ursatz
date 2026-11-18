@@ -16,8 +16,10 @@
 #include "api_grow.h"
 #include "api_vocabulary.h"
 #include "api_workflow.h"
+#include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
 #include "util/request_parse.h"
+#include "util/util.h"
 
 /*
  * `plan` as a composer API entry (docs/cli-plan.md): the plan of a whole short piece from a form template, with the
@@ -61,7 +63,8 @@ typedef struct {
     const cJSON *root;
     const char *form_text;
     const char *key_text;
-    const char *mode_text;
+    const char *material_text;
+    const char *material_member;
     const char *meter_text;
     bool modulate;
     const cJSON *motive;
@@ -99,6 +102,7 @@ typedef struct {
     PlanSource source;
     char *notices[MAX_NOTICES];
     size_t notice_count;
+    const KnowledgeSnapshot *knowledge; /* the call context's */
 } PlanBuild;
 
 /* --- reading the request --------------------------------------------------------------------------- */
@@ -219,7 +223,7 @@ static ComposerStatus read_request(PlanBuild *state, ComposerError *error) {
     bool present = false;
     if (!api_member_string(root, "form", &state->form_text, &present, error) ||
         !api_member_string(root, "key", &state->key_text, &present, error) ||
-        !api_member_string(root, "mode", &state->mode_text, &present, error) ||
+        !api_read_material(root, NULL, false, &state->material_text, &state->material_member, error) ||
         !api_member_string(root, "meter", &state->meter_text, &present, error) ||
         !api_member_bool(root, "modulate", &state->modulate, &present, error) ||
         !api_member_string(root, "corpus", &state->from_corpus, &present, error) ||
@@ -271,7 +275,8 @@ static ComposerStatus read_request(PlanBuild *state, ComposerError *error) {
 
 /* The cells of a bar of the meter, which the harmony operators place chords on (harmony_rhythm.c). */
 static unsigned long cells_in_bar(const PlanMeter *meter) {
-    return (meter->beat_unit == 4 && meter->beats_per_bar == 4) || meter->beat_unit == 8 ? 2 : 1;
+    size_t cells = 1;
+    return harmony_rhythm_cells_per_bar(meter, &cells) ? (unsigned long)cells : 1;
 }
 
 /* "B", "B:3", "A'" and "A':5": the section's letter and the bar (from 1) of it. */
@@ -357,19 +362,29 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
         }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/form", "unknown form '%s'; the forms are %s", state->form_text, names);
     }
-    /* The key is a tonic, with the mode from "mode" (major by default), or tonic and mode together. */
+    /* The key is a tonic, with the material from "material" (major by default), or tonic and key word together. */
     bool has_mode_in_key = strchr(state->key_text, ' ') != NULL;
-    if (has_mode_in_key && state->mode_text) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "key '%s' names a mode already; leave out mode", state->key_text);
+    char member_path[32];
+    snprintf(member_path, sizeof member_path, "/%s", state->material_member);
+    if (has_mode_in_key && state->material_text) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, member_path, "key '%s' names a mode already; leave out %s",
+                        state->key_text, state->material_member);
     }
-    if (state->mode_text && api_choice_find_ignore_case(API_MODES, state->mode_text) < 0) {
-        char modes[64];
-        api_choice_list(API_MODES, modes, sizeof modes);
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be %s, not '%s'", modes, state->mode_text);
+    const PitchMaterial *picked = NULL;
+    if (state->material_text) {
+        ApiMaterialKind kind;
+        ComposerStatus resolved = api_resolve_material(state->knowledge, state->material_member, member_path,
+                                                       state->material_text, 0, &picked, &kind, error);
+        if (resolved != COMPOSER_OK) {
+            return resolved;
+        }
     }
     if (snprintf(state->key_request, sizeof(state->key_request), has_mode_in_key ? "%s" : "%s %s", state->key_text,
-                 state->mode_text ? state->mode_text : "major") >= (int)sizeof(state->key_request) ||
-        !request_parse_key(state->key_request, &state->key)) {
+                 picked ? picked->key_word : "major") >= (int)sizeof(state->key_request) ||
+        !request_parse_key(state->key_request, state->knowledge, &state->key)) {
+        if (api_fail_unsupported_key(error, "/key", state->knowledge, state->key_request)) {
+            return COMPOSER_ERR_REQUEST;
+        }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\" with mode "
                         "\"minor\", or \"D minor\"",
@@ -519,7 +534,7 @@ static ComposerStatus read_motive(const PlanBuild *state, const cJSON *motive, c
         cJSON_Delete(request);
         return api_fail_alloc(error);
     }
-    ComposerStatus status = api_read_motive(request, base, out, NULL, error);
+    ComposerStatus status = api_read_motive(request, base, state->knowledge, out, NULL, error);
     cJSON_Delete(request);
     return status;
 }
@@ -706,7 +721,8 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
     ComposerStatus status = motive ? COMPOSER_OK : api_fail_alloc(error);
     if (status == COMPOSER_OK && state->like_path) {
         CorpusSeedResult result =
-            corpus_seed_motive(state->from_corpus, state->like_path, &state->meter, &state->key, state->seed, &state->seed_found);
+            corpus_seed_motive(state->knowledge, state->from_corpus, state->like_path, &state->meter, &state->key, state->seed,
+                               &state->seed_found);
         if (result == CORPUS_SEED_OK) {
             add_notice(state, &state->seed_found, state->from_corpus);
             status = seed_source(&state->seed_found, &state->source, error);
@@ -724,7 +740,8 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
         if (!given->from_corpus) {
             continue;
         }
-        CorpusSeedResult result = corpus_seed_progression(state->from_corpus, given->numerals, state->key.mode, &given->found);
+        CorpusSeedResult result =
+            corpus_seed_progression(state->knowledge, state->from_corpus, given->numerals, harmony_key_mode(&state->key), &given->found);
         if (result != CORPUS_SEED_OK) {
             char path[64];
             snprintf(path, sizeof path, "/given/%zu", i);
@@ -778,6 +795,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
     request.accompaniment = state->accompaniment;
     request.modulate = state->modulate;
     request.seed = state->seed;
+    request.knowledge = state->knowledge;
     request.given_melodies = state->given_melodies;
     if (state->style_path) {
         request.has_style = true;
@@ -826,11 +844,20 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
     return COMPOSER_OK;
 }
 
-ComposerStatus composer_api_plan(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_plan(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out) {
     (void)job;
     memset(out, 0, sizeof *out);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     PlanBuild *state = calloc(1, sizeof(*state));
     PiecePlan *plan = NULL;
+    if (state) {
+        state->knowledge = context->knowledge;
+    }
     ComposerStatus status = state ? api_parse_request(request_json, (cJSON **)&state->root, &out->error) : api_fail_alloc(&out->error);
     if (status == COMPOSER_OK) {
         status = read_request(state, &out->error);

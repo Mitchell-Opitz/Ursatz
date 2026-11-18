@@ -13,7 +13,7 @@ lanes, and `notes` is the note payload of a melody lane, with times as in the co
 | Key | Content |
 | --- | --- |
 | `meter` | Optional. `beats_per_bar` (1 to 64), `beat_unit` (1, 2, 4, 8 or 16) and optionally `bars_per_hyperbar`. |
-| `key` | Optional. `tonic_pitch_class` (0 to 11) and `mode` (`major` or `minor`). |
+| `key` | Optional. `tonic_pitch_class` (0 to 11) and `material` (an id, name, key word or alias of a material the Composer writes keys in: `major`, `minor`), or the old `mode` (`major` or `minor`); the two together are refused at `key.mode`. |
 | `notes` | A non-empty array of at most 64 `{"midi_pitch": 0 to 127, "offset": <time>, "duration": <time>}`. `offset` is measured from the start of the motive, so a gap between notes is a rest and a first note after 0 is a leading rest. Notes are in order and do not overlap. A tie is one note as long as both. |
 | `form` | Optional, `full` (the default), `rhythm` or `contour`. A rhythm keeps only the durations and onsets (every note sounds on one pitch); a contour only the heights of the notes in relation to each other (even quarters). Written only when it is not `full`. |
 | `pickup` | Optional. A time in whole notes: the length before the first barline, shorter than one bar. The notes still start at 0; bars and beats are counted from the barline. Written only when it is not 0. |
@@ -59,7 +59,7 @@ document above) and an `analysis` member (and, from `motive --render-key`, `--mi
 | `rhythm_text`, `contour_text` | Only for the form: the rhythm list (`x:q x:e`) of a `rhythm` motive, the contour list (`0 2 1 3`) of a `contour` motive. |
 | `note_count` | The number of notes. |
 | `length`, `bars` | The motive's length in whole notes, and as a number of bars of its meter. Times. |
-| `key` | `null` without a key. Otherwise `tonic_pitch_class`, `mode` and `source`: `given` or `inferred`. |
+| `key` | `null` without a key. Otherwise `tonic_pitch_class`, `material` (the id of the key's material, `omt.material.major` or `omt.material.natural-minor`; API 2.0 wrote `mode`, `"major"` or `"minor"`, before) and `source`: `given` or `inferred`. |
 | `intervals` | `null` for a rhythm or a contour. Otherwise one per pair of neighboring notes: `semitones` (signed) and `steps` (signed diatonic steps in the key, `null` without a key). |
 | `contour` | `null` for a rhythm. Otherwise `shape` (`single note`, `level`, `ascending`, `descending`, `arch`, `valley` or `wave`) and `directions`, one of `up`, `down` and `same` per interval. |
 | `rhythm` | `null` for a contour. Otherwise one per note: `onset`, `duration`, `bar` (the first full bar is 0, and a pickup's notes are in bar -1), `beat` (the position in the bar in beats of the beat unit, 0 is the downbeat; a time), `on_beat`, `dotted` (the duration is 3 or 7 over a power of two) and `rest_before` (a time). |

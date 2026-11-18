@@ -7,7 +7,6 @@
 #include "model/core/rational.h"
 #include "model/identity/entity_id.h"
 #include "model/time/duration.h"
-#include "model/time/time_rational.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_signature.h"
@@ -108,33 +107,25 @@ static int rational_distance(Rational a, Rational b, Rational *out) {
 /* The beat that holds time t: a simple meter's beat is its bottom unit, a compound meter's (6, 9 or 12 over 8 or 16)
    is three of them. A short measure's last beat ends at its barline. */
 static ScoreQuantizeResult locate_beat(const MeterMap *meter, Rational t, Span *beat) {
-    MusicalTime *time = NULL;
-    if (musical_time_from_rational(t, &time) != TIME_RATIONAL_OK) {
-        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
-    }
+    MusicalTime time = musical_time_of(t);
     int index = 0;
-    MeterMapResult status = meter_map_measure_index_at(meter, time, &index);
-    musical_time_destroy(time);
-    TimeSpan *span = NULL;
+    MeterMapResult status = meter_map_measure_index_at(meter, &time, &index);
+    TimeSpan span;
     if (status != METER_MAP_OK || meter_map_measure_span(meter, index, &span) != METER_MAP_OK) {
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
     }
-    Rational measure_start;
-    Rational measure_end;
-    bool converted = rational_of_musical_time(time_span_start(span), &measure_start) == RATIONAL_OK &&
-                     rational_of_musical_time(time_span_end(span), &measure_end) == RATIONAL_OK;
-    time_span_destroy(span);
-    if (!converted) {
-        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
-    }
+    Rational measure_start = span.start.value;
+    Rational measure_end = span.end.value;
     const MeterMapRegion *region = NULL;
     if (meter_map_region_of_measure(meter, index, &region) != METER_MAP_OK) {
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
     }
     const TimeSignature *signature = meter_map_region_time_signature(region);
-    unsigned top = time_signature_top_number(signature);
-    unsigned bottom = time_signature_bottom_number(signature);
-    Rational len = (top > 3 && top % 3 == 0 && bottom >= 8) ? rational_ratio(3, bottom) : rational_ratio(1, bottom);
+    Duration beat_length;
+    if (time_signature_beat_length(signature, &beat_length) != DURATION_OK) {
+        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+    }
+    Rational len = beat_length.value;
 
     Rational offset;
     Rational beats;
@@ -290,13 +281,12 @@ static ScoreQuantizeResult fill_items(Item *items, NoteEvent *const *events, siz
         items[i].voice = voice != NULL ? entity_id_value(voice_reference_target_id(voice)) : NULL;
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
         const Duration *duration = note_event_duration(events[i]);
-        if (musical_time_numerator(position) < 0 || duration_numerator(duration) <= 0) {
+        if (position->value.num < 0 || duration->value.num <= 0) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
-        Rational length;
-        if (rational_of_musical_time(position, &items[i].start) != RATIONAL_OK ||
-            rational_of_duration(duration, &length) != RATIONAL_OK ||
-            rational_add(items[i].start, length, &items[i].end) != RATIONAL_OK) {
+        Rational length = duration->value;
+        items[i].start = position->value;
+        if (rational_add(items[i].start, length, &items[i].end) != RATIONAL_OK) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
         ScoreQuantizeResult located = locate_beat(meter, items[i].start, &items[i].beat);

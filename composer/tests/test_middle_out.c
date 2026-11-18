@@ -16,6 +16,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
+#include "support/test_knowledge.h"
 
 /*
  * Given material placed anywhere in a plan (R-071, given.h): the stages grow the form around it and fill the rest, and
@@ -89,6 +90,7 @@ static Line notes_of(const char *text) {
     Motive motive;
     MotiveError error;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -118,7 +120,8 @@ static PieceRequest request_of(const char *form, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.seed = seed;
@@ -368,7 +371,7 @@ static bool cadence_as_planned(const PiecePlan *plan, const ComposeHeard *heard)
 /* The melody's notes that start a bar are tones of the chord there; the chords at the bass notes stand on them. */
 static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
     PlanLaneKind lane = kind == SCENARIO_MELODY ? PLAN_LANE_MELODY : PLAN_LANE_BASS;
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+    AnalysisKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     Rational half = {1, 2}; /* a harmony cell of 4/4 */
     if (kind == SCENARIO_PROGRESSION) {
         return;
@@ -391,7 +394,7 @@ static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
             PlanSpan at = {onset, {1, 4096}};
             assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, at, chords, 2) == 1);
             PhraseChord chord;
-            assert(harmony_read_chord(plan, chords[0], key.mode, half, &chord));
+            assert(harmony_read_chord(plan, chords[0], harmony_key_mode(&key), half, &chord));
             if (lane == PLAN_LANE_MELODY) {
                 unsigned mask;
                 unsigned seventh;
@@ -423,6 +426,7 @@ static Share run_scenario(ScenarioKind kind, unsigned long first, unsigned long 
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         PieceResult result = compose_run(plan, &config, &outcome);
         share.runs++;
@@ -480,6 +484,7 @@ static void test_partial(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
             composed = true;

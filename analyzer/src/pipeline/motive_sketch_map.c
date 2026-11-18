@@ -29,7 +29,7 @@ bool motive_features_to_sketch(const AnalysisMotiveFeatures *features, MotiveSke
     const MotiveSketchNote *last = &sketch->notes[sketch->note_count - 1];
     sketch->has_scale = true;
     sketch->tonic_pc = features->tonic_pc;
-    sketch->minor = features->minor;
+    sketch->material = features->material;
     sketch->bar = fraction(features->bar_numerator, features->bar_denominator);
     sketch->beat = fraction(features->beat_numerator, features->beat_denominator);
     Rational position = fraction(features->pickup_numerator, features->pickup_denominator);

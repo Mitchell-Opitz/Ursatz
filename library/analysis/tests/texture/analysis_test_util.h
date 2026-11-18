@@ -24,21 +24,15 @@ typedef struct {
     AnalysisNote *notes;
     char **ids;
     size_t capacity;
-    TimeSpan **spans;
-    size_t span_count;
     int next_id;
 } Piece;
 
-static inline const TimeSpan *piece_span(Piece *piece, long sn, unsigned long sd, long en, unsigned long ed) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    TimeSpan *span = NULL;
-    assert(musical_time_create(sn, sd, &start) == MUSICAL_TIME_OK && musical_time_create(en, ed, &end) == MUSICAL_TIME_OK);
-    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
-    piece->spans = (TimeSpan **)realloc(piece->spans, (piece->span_count + 1) * sizeof(TimeSpan *));
-    piece->spans[piece->span_count++] = span;
+static inline TimeSpan whole_span(long sn, unsigned long sd, long en, unsigned long ed) {
+    MusicalTime start;
+    MusicalTime end;
+    TimeSpan span;
+    assert(musical_time_make(sn, (long long)sd, &start) == MUSICAL_TIME_OK && musical_time_make(en, (long long)ed, &end) == MUSICAL_TIME_OK);
+    assert(time_span_make(start, end, &span) == TIME_SPAN_OK);
     return span;
 }
 
@@ -47,16 +41,15 @@ static inline void piece_init(Piece *piece, unsigned top, int unit_exponent) {
     *piece = (Piece){0};
     NoteValue *unit = NULL;
     TimeSignature *signature = NULL;
-    MusicalTime *zero = NULL;
+    MusicalTime zero;
     EntityID *id = NULL;
     assert(note_value_create(unit_exponent, &unit) == NOTE_VALUE_OK);
     assert(time_signature_create(top, unit, &signature) == TIME_SIGNATURE_OK);
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
     assert(entity_id_create("test-meter-map", &id) == ENTITY_ID_OK);
     MeterMapChangePoint point = {signature, zero};
     assert(meter_map_create(id, &point, 1, &piece->map) == METER_MAP_OK);
     note_value_destroy(unit);
-    musical_time_destroy(zero);
     time_signature_destroy(signature);
     piece->input.map = piece->map;
 }
@@ -76,7 +69,7 @@ static inline void piece_note(Piece *piece, size_t track, size_t voice, long pit
     piece->ids[at] = (char *)malloc(strlen(id) + 1);
     assert(piece->ids[at] != NULL);
     strcpy(piece->ids[at], id);
-    AnalysisNote note = {piece->ids[at], NULL, piece_span(piece, sn, sd, en, ed), (int)pitch, NULL, NULL, track, voice, confidence};
+    AnalysisNote note = {piece->ids[at], NULL, whole_span(sn, sd, en, ed), (int)pitch, NULL, NULL, track, voice, confidence};
     piece->notes[at] = note;
     piece->input.notes = piece->notes;
     piece->input.count = at + 1;
@@ -88,10 +81,6 @@ static inline void piece_destroy(Piece *piece) {
     }
     free(piece->ids);
     free(piece->notes);
-    for (size_t i = 0; i < piece->span_count; i++) {
-        time_span_destroy(piece->spans[i]);
-    }
-    free(piece->spans);
     meter_map_destroy(piece->map);
 }
 

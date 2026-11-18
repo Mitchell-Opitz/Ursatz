@@ -108,7 +108,7 @@ static bool voice_resolves(const VoicingContext *context, size_t chord, const in
         return true;
     }
     if (!before->applied) {
-        resolution.mode = harmony_mode_of(context->key.mode);
+        resolution.mode = harmony_key_mode(&context->key);
         resolution.from = before->chord;
         resolution.to = after->applied ? (HarmonyChord){0} : after->chord;
         if (after->applied) {
@@ -116,17 +116,17 @@ static bool voice_resolves(const VoicingContext *context, size_t chord, const in
         }
     } else {
         bool leading = before->applied_chord.kind == APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE;
-        bool minor;
+        bool minor_target;
         if (after->applied || after->chord.degree != before->applied_chord.target) {
             return true;
         }
         /* The target's triad is minor when its third is three semitones above its root. */
-        minor = context->tone_count[chord] >= 2 && (context->pcs[chord][1] - context->pcs[chord][0] + 12) % 12 == 3;
-        resolution.mode = minor ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+        minor_target = context->tone_count[chord] >= 2 && (context->pcs[chord][1] - context->pcs[chord][0] + 12) % 12 == 3;
+        resolution.mode = minor_target ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
         resolution.from.degree = leading ? 7 : 5;
         resolution.from.inversion = before->applied_inversion;
         resolution.from.seventh = context->tone_count[chord - 1] == 4;
-        resolution.from.leading_tone = leading && minor;
+        resolution.from.leading_tone = leading && minor_target;
         resolution.from.half_diminished = leading && before->applied_chord.quality == HARMONY_APPLIED_HALF_DIMINISHED_SEVENTH;
         resolution.to.degree = 1;
         resolution.to.inversion = after->chord.inversion;

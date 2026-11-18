@@ -8,19 +8,16 @@
 
 static void test_beat_grid(void) {
     TimeSignature *six_eight = make_signature(6, 3);
-    Duration *start = NULL;
+    Duration start;
     assert(standard_meter_beat_start(six_eight, 0, &start));
-    assert_duration(start, 0, 1);
-    duration_destroy(start);
+    assert_duration(&start, 0, 1);
     assert(standard_meter_beat_start(six_eight, 1, &start));
-    assert_duration(start, 3, 8);
-    duration_destroy(start);
+    assert_duration(&start, 3, 8);
     assert(standard_meter_beat_start(six_eight, 2, &start)); /* the end of the measure */
-    assert_duration(start, 3, 4);
-    duration_destroy(start);
-    start = NULL;
+    assert_duration(&start, 3, 4);
+    start = (Duration){{7, 9}};
     assert(!standard_meter_beat_start(six_eight, 3, &start));
-    assert(start == NULL);
+    assert_duration(&start, 7, 9); /* untouched */
 
     TimeSignature *five_eight = make_signature(5, 3);
     assert(!standard_meter_beat_start(five_eight, 0, &start));

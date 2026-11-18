@@ -1,4 +1,5 @@
 #include "cli_options.h"
+#include "cli_context.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -64,10 +65,30 @@ bool cli_equals_ignore_case(const char *a, const char *b) {
     return *a == *b;
 }
 
+const char *cli_material_word(const char *id, char *out, size_t size) {
+    ComposerResponse response;
+    memset(&response, 0, sizeof response);
+    snprintf(out, size, "%s", id ? id : "");
+    if (id && composer_api_vocabulary(cli_context(), &response) == COMPOSER_OK) {
+        cJSON *document = cJSON_Parse(response.json);
+        const cJSON *entry = NULL;
+        cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(document, "materials")) {
+            const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
+            const cJSON *label = cJSON_GetObjectItemCaseSensitive(entry, "label");
+            if (cJSON_IsString(value) && cJSON_IsString(label) && strcmp(value->valuestring, id) == 0) {
+                snprintf(out, size, "%s", label->valuestring);
+            }
+        }
+        cJSON_Delete(document);
+    }
+    composer_response_destroy(&response);
+    return out;
+}
+
 long cli_limit(const char *name) {
     ComposerResponse response;
     long value = 0;
-    if (composer_api_vocabulary(&response) == COMPOSER_OK) {
+    if (composer_api_vocabulary(cli_context(), &response) == COMPOSER_OK) {
         cJSON *document = cJSON_Parse(response.json);
         const cJSON *item = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "limits"), name);
         value = cJSON_IsNumber(item) ? (long)item->valuedouble : 0;
@@ -93,7 +114,7 @@ int cli_fail(int status, const char *format, ...) {
 
 int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *input_name) {
     static const char *const OPTIONS[] = {"format", "form", "harmony", "feature", "role", "tone", "tempo",
-                                          "count", "seed", "distance", "function", "depth", "mode", "suggest",
+                                          "count", "seed", "distance", "function", "depth", "mode", "material", "suggest",
                                           "into", "hybrid", "bars", "cadence", "first_cadence", "accompaniment", "texture",
                                           "voicing", "style_weight", "blend_weight", "blend_weights", "blend", "key", "candidates", "style", "at", "cells", "like", "like_progression", "style_without",
                                           "embellish", "schema", "sequence", "species", "op", "by", "degree", "axis", "interval", "amount",
@@ -143,7 +164,7 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
         {"midi and musicxml write the bass line (harmony makes no sound yet), so they cannot be used with bass false",
          "--midi and --musicxml write the bass line (harmony makes no sound yet), so they cannot be used with --no-bass"},
         {"(list_schemas lists them)", "(see --list-schemas)"},
-        {"give a tonic alone with mode", "give a tonic alone with --mode"},
+        {"give a tonic alone with material", "give a tonic alone with --material"},
         {"harmony, features and role describe a motive input", "--harmony, --feature and --role describe a motive file"},
         {"each_op takes no chain, count, distance or functions", "--each-op takes no --chain, --count, --distance or --function"},
         {"a distance takes random chains, not a chain", "--distance takes random chains, not --chain"},
@@ -159,11 +180,11 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
          "texture",
          "and --texture chorale write the inner voices themselves; they cannot be combined with --accompaniment or another "
          "--texture"},
-        {"leave out mode", "leave out --mode"},
+        {"leave out material", "leave out --material"},
         {"no size of count ", "no size of --count "},
         {" with count ", " with --count "},
         {"(or count ", "(or --count "},
-        {"with mode \"minor\"", "with --mode minor"},
+        {"with mode \"minor\"", "with --material minor"},
         {"needs a style: give style or", "needs a style: give --style or"},
         {"needs an at:", "needs an --at:"},
         {"needs corpus <dir>", "needs --from-corpus <dir>"},
@@ -251,7 +272,7 @@ int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *
     cJSON_Delete(request);
     ComposerResponse response;
     memset(&response, 0, sizeof response);
-    ComposerStatus status = printed ? composer_api_export(printed, NULL, &response) : COMPOSER_ERR_ALLOC;
+    ComposerStatus status = printed ? composer_api_export(cli_context(), printed, NULL, &response) : COMPOSER_ERR_ALLOC;
     cJSON_free(printed);
     ok = status == COMPOSER_OK && response.plan_json &&
          cli_write_bytes(temporary, response.plan_json, strlen(response.plan_json));
@@ -286,7 +307,7 @@ int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, b
     if (!printed) {
         return cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
     }
-    ComposerStatus status = composer_api_export(printed, NULL, out);
+    ComposerStatus status = composer_api_export(cli_context(), printed, NULL, out);
     cJSON_free(printed);
     return status == COMPOSER_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
 }

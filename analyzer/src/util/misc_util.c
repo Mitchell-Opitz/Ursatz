@@ -28,27 +28,20 @@ EntityID *entity_id_copy(const EntityID *id) {
     return entity_id_create(entity_id_value(id), &copy) == ENTITY_ID_OK ? copy : NULL;
 }
 
-MusicalTime *notes_last_end(const NoteEvent *const *events, size_t count) {
-    MusicalTime *latest = NULL;
+bool notes_last_end(const NoteEvent *const *events, size_t count, MusicalTime *out) {
+    MusicalTime latest = musical_time_of(rational_ratio(0, 1));
     for (size_t i = 0; i < count; i++) {
-        MusicalTime *end = NULL;
-        if (musical_time_add(temporal_anchor_position(note_event_temporal_anchor(events[i])),
-                             note_event_duration(events[i]), &end) != MUSICAL_TIME_OK) {
-            musical_time_destroy(latest);
-            return NULL;
+        MusicalTime end;
+        if (musical_time_plus(*temporal_anchor_position(note_event_temporal_anchor(events[i])),
+                              *note_event_duration(events[i]), &end) != MUSICAL_TIME_OK) {
+            return false;
         }
-        if (!latest || musical_time_numerator(end) * (long)musical_time_denominator(latest) >
-                           musical_time_numerator(latest) * (long)musical_time_denominator(end)) {
-            musical_time_destroy(latest);
+        if (musical_time_cmp(end, latest) > 0) {
             latest = end;
-        } else {
-            musical_time_destroy(end);
         }
     }
-    if (!latest && musical_time_create(0, 1, &latest) != MUSICAL_TIME_OK) {
-        return NULL;
-    }
-    return latest;
+    *out = latest;
+    return true;
 }
 
 uint64_t fnv1a_bytes(uint64_t hash, const void *data, size_t length) {

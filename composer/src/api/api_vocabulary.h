@@ -24,15 +24,11 @@ typedef struct {
 size_t api_choice_count(const ApiChoice *table);
 /* The index of the entry whose value is text (exactly), or -1. */
 int api_choice_find(const ApiChoice *table, const char *text);
-/* As api_choice_find, ignoring the case of text (how the readers compare a mode, an archetype, a pattern). */
-int api_choice_find_ignore_case(const ApiChoice *table, const char *text);
 /* The values as a message lists them: "a, b or c". */
 void api_choice_list(const ApiChoice *table, char *out, size_t size);
 /* The values joined for a message: separator between entries, last_separator before the last ("a, b or c"). */
 void api_choice_join(const ApiChoice *table, const char *separator, const char *last_separator, char *out, size_t size);
 
-extern const ApiChoice API_MODES[];            /* major, minor */
-extern const ApiChoice API_PIECE_MODES[];      /* major, minor, style */
 extern const ApiChoice API_METERS[];           /* 2/4, 3/4, 4/4, 6/8 */
 extern const ApiChoice API_FUNCTIONS[];        /* beginning, continuation, contrast, cadential */
 extern const ApiChoice API_DISTANCES[];        /* close, medium, far */
@@ -69,6 +65,6 @@ ComposerStatus api_fail_meter(ComposerError *error, const char *path, const char
 bool api_theme_cadence_ok(int cadence_type);
 
 /* Writes the vocabulary document into root (composer_api_vocabulary's json); false on out of memory. */
-bool api_vocabulary_build(cJSON *root);
+bool api_vocabulary_build(cJSON *root, const CommonPracticeMaterials *materials);
 
 #endif

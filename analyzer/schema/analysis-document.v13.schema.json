@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/analysis-document.v12.schema.json",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/analysis-document.v13.schema.json",
   "title": "Ursatz-Analyzer analysis document",
   "description": "Structured analysis of one piece. One top-level section per analysis area; unfilled sections are empty arrays, or null for singular sections.",
   "type": "object",
@@ -33,7 +33,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 12
+      "const": 13
     },
     "metadata": {
       "$ref": "#/$defs/metadata"
@@ -319,11 +319,11 @@
         { "$ref": "#/$defs/claim" },
         {
           "type": "object",
-          "required": ["index", "tonic", "mode", "measures", "source"],
+          "required": ["index", "tonic", "material", "measures", "source"],
           "properties": {
             "index": { "type": "integer", "minimum": 0 },
             "tonic": { "type": "string" },
-            "mode": { "enum": ["major", "minor"] },
+            "material": { "$ref": "#/$defs/material_id" },
             "measures": {
               "type": "object",
               "required": ["first", "last"],
@@ -623,11 +623,16 @@
         }
       ]
     },
+    "material_id": {
+      "type": "string",
+      "pattern": "^(user|[a-z0-9]+(-[a-z0-9]+)*)\\.material\\.[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "The id of the pitch material (K1) the key reads its scale from, as the knowledge snapshot of the analysis names it."
+    },
     "motive_fraction": { "type": "string", "pattern": "^[0-9]+/[1-9][0-9]*$" },
     "motive_degree": { "enum": ["1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"] },
     "motive_features": {
       "type": "object",
-      "required": ["notes", "tonic_pc", "minor", "bar", "beat", "pickup", "degrees", "intervals", "steps", "rhythm",
+      "required": ["notes", "tonic_pc", "material", "bar", "beat", "pickup", "degrees", "intervals", "steps", "rhythm",
                    "ncts", "fingerprint"],
       "properties": {
         "notes": {
@@ -645,7 +650,7 @@
           }
         },
         "tonic_pc": { "type": "integer", "minimum": 0, "maximum": 11 },
-        "minor": { "type": "boolean" },
+        "material": { "$ref": "#/$defs/material_id" },
         "bar": { "$ref": "#/$defs/motive_fraction" },
         "beat": { "$ref": "#/$defs/motive_fraction" },
         "pickup": { "$ref": "#/$defs/motive_fraction" },

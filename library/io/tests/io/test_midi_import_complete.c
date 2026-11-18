@@ -214,10 +214,9 @@ static File fixture_type1(void) {
 }
 
 static void assert_time(const MusicalTime *time, long numerator, unsigned long denominator) {
-    MusicalTime *expected = NULL;
-    assert(musical_time_create(numerator, denominator, &expected) == MUSICAL_TIME_OK);
-    assert(musical_time_equals(time, expected));
-    musical_time_destroy(expected);
+    MusicalTime expected;
+    assert(musical_time_make(numerator, (long long)denominator, &expected) == MUSICAL_TIME_OK);
+    assert(musical_time_same(*time, expected));
 }
 
 static void assert_program(const MidiProgramChange *change, uint64_t tick, unsigned char channel,
@@ -225,7 +224,7 @@ static void assert_program(const MidiProgramChange *change, uint64_t tick, unsig
     assert(change->tick == tick);
     assert(change->channel == channel);
     assert(change->program == program);
-    assert_time(change->time, (long)tick, 4 * DIVISION);
+    assert_time(&change->time, (long)tick, 4 * DIVISION);
 }
 
 static void test_type0(void) {
@@ -252,7 +251,7 @@ static void test_type0(void) {
     assert(!meter_map_is_defaulted(import.meter.meter_map));
     const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(import.meter.meter_map, 0));
     assert(time_signature_top_number(signature) == 3 && time_signature_bottom_number(signature) == 4);
-    assert_time(import.meter.end_time, 960, 4 * DIVISION);
+    assert_time(&import.meter.end_time, 960, 4 * DIVISION);
 
     assert(tempo_map_region_count(import.tempo.tempo_map) == 1);
     assert(tempo_map_region_microseconds_per_quarter(tempo_map_region(import.tempo.tempo_map, 0)) == 600000);

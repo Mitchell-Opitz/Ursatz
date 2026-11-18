@@ -1,4 +1,5 @@
 #include "piece.h"
+#include "cli_context.h"
 
 #include <errno.h>
 #include <stdbool.h>
@@ -604,8 +605,8 @@ int run_piece(int argc, char **argv) {
         return status;
     }
     ComposerResponse response;
-    ComposerStatus api_status = options.variations ? composer_api_piece_variations(text, NULL, &response)
-                                                   : composer_api_piece(text, NULL, &response);
+    ComposerStatus api_status = options.variations ? composer_api_piece_variations(cli_context(), text, NULL, &response)
+                                                   : composer_api_piece(cli_context(), text, NULL, &response);
     cJSON_free(text);
     if (api_status != COMPOSER_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);

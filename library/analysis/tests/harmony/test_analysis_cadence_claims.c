@@ -14,7 +14,6 @@ typedef struct {
     HarmonySegmentInput inputs[PIECE_MAX];
     char ids[PIECE_MAX][16];
     char key_ref[8];
-    TimeSpan *spans[PIECE_MAX];
     MetricalPosition *positions[PIECE_MAX];
     size_t count;
 } Piece;
@@ -43,7 +42,6 @@ static void piece_init(Piece *p) {
 
 static void piece_destroy(Piece *p) {
     for (size_t i = 0; i < p->count; i++) {
-        time_span_destroy(p->spans[i]);
         metrical_position_destroy(p->positions[i]);
     }
 }
@@ -55,21 +53,19 @@ static void put(Piece *p, int measure, int beat, int beats, Chord chord) {
     HarmonySegmentInput *in = &p->inputs[n];
     long from = (long)(measure - 1) * 4 + (beat - 1);
     snprintf(p->ids[n], sizeof(p->ids[n]), "seg-%zu", n);
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    assert(musical_time_create(from, 4, &start) == MUSICAL_TIME_OK);
-    assert(musical_time_create(from + beats, 4, &end) == MUSICAL_TIME_OK);
-    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &p->spans[n]) == TIME_SPAN_OK);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
-    Duration *offset = NULL;
-    assert(duration_create((long)(beat - 1), 4, &offset) == DURATION_OK);
+    MusicalTime start;
+    MusicalTime end;
+    assert(musical_time_make(from, 4, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make(from + beats, 4, &end) == MUSICAL_TIME_OK);
+    TimeSpan span;
+    assert(time_span_make(start, end, &span) == TIME_SPAN_OK);
+    Duration offset;
+    assert(duration_make((long)(beat - 1), 4, &offset) == DURATION_OK);
     assert(metrical_position_create(measure, offset, &p->positions[n]) == METRICAL_POSITION_OK);
-    duration_destroy(offset);
 
     memset(in, 0, sizeof(*in));
     in->segment.id = p->ids[n];
-    in->segment.span = p->spans[n];
+    in->segment.span = span;
     in->segment.position = p->positions[n];
     in->segment.strength = fixture_strength(beat);
     in->degree = chord.degree;
@@ -95,7 +91,7 @@ static size_t index_of(const Piece *p, int measure, int beat) {
     for (size_t i = 0; i < p->count; i++) {
         const Duration *offset = metrical_position_offset(p->inputs[i].segment.position);
         if (metrical_position_measure(p->inputs[i].segment.position) == measure &&
-            duration_numerator(offset) * 4 == (long)(beat - 1) * duration_denominator(offset)) {
+            offset->value.num * 4 == (long long)(beat - 1) * offset->value.den) {
             return i;
         }
     }
@@ -176,7 +172,7 @@ static void test_half_reading_before_an_authentic_cadence(void) {
     const HarmonyCadenceResult *h = &r.readings.items[0];
     assert(h->type == CADENCE_TYPE_HALF && h->share == 1000 && !h->alternative.present);
     assert(h->arrival_first == index_of(&r.piece, 4, 1) && h->arrival_last == index_of(&r.piece, 4, 3));
-    assert(h->cadence != NULL && h->interpretation != NULL && h->span != NULL);
+    assert(h->cadence != NULL && h->interpretation != NULL);
     run_destroy(&r);
 }
 
@@ -439,7 +435,7 @@ static void test_null_arguments_and_no_points(void) {
            HARMONY_CADENCE_ANALYSIS_OK && out.count == 0);
 
     HarmonyCadenceConfig bad = harmony_cadence_config_default();
-    bad.beat_length = -1.0;
+    bad.beat_length = rational_ratio(-1, 1);
     assert(harmony_analysis_half_readings(r.segments, n, &bad, &r.found, &out) == HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
     assert(harmony_analysis_claim_cadences(r.segments, n, &bad, &r.found, &r.readings, &point, 1, &out) ==
            HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);

@@ -99,7 +99,7 @@ static void test_homophony_of_block_chords(void) {
     assert(near(analysis.windows.items[0].synchrony, 1.0) && analysis.classes[0].features.rhythmic_unison);
     assert(near(analysis.classes[0].margin, 1.0) && near(analysis.passages[0].claim.confidence, 1.0));
     assert(analysis.passages[0].texture != NULL && strcmp(texture_label(analysis.passages[0].texture), "homorhythm") == 0);
-    assert(analysis.passages[0].span != NULL && analysis.change_count == 0);
+    assert(analysis.change_count == 0);
     standard_texture_analysis_destroy(&analysis);
     piece_destroy(&piece);
 }

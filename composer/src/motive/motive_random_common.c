@@ -176,6 +176,7 @@ bool motive_random_apply_form(const MotiveRandomOptions *options, const Motive *
     }
     MotiveOptions read;
     memset(&read, 0, sizeof(read));
+    read.knowledge = options->knowledge;
     read.has_meter = true;
     read.meter = motive_meter(full);
     read.has_key = true;

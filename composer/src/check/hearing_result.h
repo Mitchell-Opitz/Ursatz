@@ -17,9 +17,9 @@
  * The options every hearing of the Composer's music uses: analyzer_hearing_options_default with harmonic_spans false. The
  * Composer hears one chord per segment, the reading its compose rates and baselines were recorded on; on harmonic spans the
  * Analyzer misreads the two-voice texture the Composer renders at cadences until P40 and P41 (R-378, R-379), and P41 turns
- * spans on here.
+ * spans on here. The options carry `knowledge`, the snapshot the Analyzer reads its materials from (it outlives the result).
  */
-AnalyzerHearingOptions hearing_analyzer_options(void);
+AnalyzerHearingOptions hearing_analyzer_options(const KnowledgeSnapshot *knowledge);
 
 /*
  * The Analyzer's result over the notes that start inside span, heard with the options hearing_analyzer_options gives. *out is borrowed: valid until hearing_destroy, never released by the caller. The same span gives the same

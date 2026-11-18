@@ -4,7 +4,7 @@ The structure of the analysis JSON document: top level, metadata, meter, sources
 
 `ursatz-analyzer` writes `<stem>.analysis.json` next to each input file (see the README). It is the structured, versioned output that the Composer, the
 GUI and corpus statistics read. The JSON Schema is
-[`schema/analysis-document.v12.schema.json`](../schema/analysis-document.v12.schema.json)
+[`schema/analysis-document.v13.schema.json`](../schema/analysis-document.v13.schema.json)
 (draft 2020-12). The library renders it with `analysis_document_render_result` from
 `<ursatz_analyzer/analysis_document.h>`. The document is an export of an `AnalyzerResult`
 (see [analysis-result.md](analysis-result.md)).
@@ -14,9 +14,9 @@ newline. The same input and build always give the same bytes.
 
 ## Top level
 
-| Key | Type | v12 content |
+| Key | Type | v13 content |
 | --- | --- | --- |
-| `schema_version` | integer | Always `11`. |
+| `schema_version` | integer | Always `13`. |
 | `metadata` | object | Filled. See below. |
 | `meter` | meter claim | Filled. See below. |
 | `keys` | object | Filled: the key regions, the home key and the opening and closing regions. See below. |

@@ -16,7 +16,8 @@ add_subdirectory(${URSATZ_ROOT}/analyzer analyzer)
 add_subdirectory(${URSATZ_ROOT}/composer composer)
 
 add_executable(consumer consumer.c)
-target_link_libraries(consumer PRIVATE ursatz_composer cjson)
+# The consumer builds the knowledge snapshot the call context holds, so it links the library's theory itself.
+target_link_libraries(consumer PRIVATE ursatz_composer ursatz_theory cjson)
 target_compile_options(consumer PRIVATE -Wall -Wextra -Wpedantic)
 
 # Each of these must fail to compile, because the Composer links its libraries PRIVATE and installs one public header.

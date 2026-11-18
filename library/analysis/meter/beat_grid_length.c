@@ -3,7 +3,6 @@
 #include <stdlib.h>
 
 #include "model/time/meter_arithmetic.h"
-#include "model/time/time_rational.h"
 
 bool beat_grid_beat_length(void *context, Rational at, Rational *out) {
     const BeatGridContext *grid = (const BeatGridContext *)context;
@@ -14,26 +13,19 @@ bool beat_grid_beat_length(void *context, Rational at, Rational *out) {
         return false;
     }
 
-    MusicalTime **starts = NULL;
+    MusicalTime *starts = NULL;
     size_t count = 0;
     if (!grid->provider(grid->map, measure, grid->provider_context, &starts, &count) || count == 0) {
         return false;
     }
     bool found = false;
     for (size_t k = 0; k < count && !found; k++) {
-        Rational beat_start;
-        Rational beat_end = measure_end;
-        if (rational_of_musical_time(starts[k], &beat_start) != RATIONAL_OK ||
-            (k + 1 < count && rational_of_musical_time(starts[k + 1], &beat_end) != RATIONAL_OK)) {
-            break;
-        }
+        Rational beat_start = starts[k].value;
+        Rational beat_end = k + 1 < count ? starts[k + 1].value : measure_end;
         if (rational_cmp(beat_start, at) <= 0 && rational_cmp(at, beat_end) < 0) {
             found = rational_sub(beat_end, beat_start, out) == RATIONAL_OK;
             break;
         }
-    }
-    for (size_t k = 0; k < count; k++) {
-        musical_time_destroy(starts[k]);
     }
     free(starts);
     return found;

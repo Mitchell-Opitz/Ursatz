@@ -65,12 +65,12 @@ bool motive_stage_read(MotiveStage *stage, const ChainInput *input, const Analys
    and of its last note, and the idea of that phrase which does. The motive stage reads its own phrases and ideas, from
    the same cadences, so the occurrence is placed against the report's by time. Both stay unset for an occurrence
    that crosses a boundary. */
-static void link_occurrence(const AnalysisReport *report, const MusicalTime *first_start, const MusicalTime *last_start,
+static void link_occurrence(const AnalysisReport *report, MusicalTime first_start, MusicalTime last_start,
                             AnalysisMotiveOccurrence *occurrence) {
-    long long first_n = musical_time_numerator(first_start);
-    long long first_d = (long long)musical_time_denominator(first_start);
-    long long last_n = musical_time_numerator(last_start);
-    long long last_d = (long long)musical_time_denominator(last_start);
+    long long first_n = first_start.value.num;
+    long long first_d = first_start.value.den;
+    long long last_n = last_start.value.num;
+    long long last_d = last_start.value.den;
     for (size_t p = 0; p < report->phrase_count; p++) {
         const AnalysisPhrase *phrase = &report->phrases[p];
         long long end_d = (long long)phrase->end_denominator;
@@ -107,18 +107,18 @@ static bool collect_occurrence(const MotiveStage *stage, const AnalysisReport *r
     }
     size_t first = (size_t)claim->note_first;
     size_t last = first + (size_t)claim->note_count - 1;
-    const MusicalTime *start = time_span_start(form->built.input.notes[first].span);
-    const MusicalTime *last_start = time_span_start(form->built.input.notes[last].span);
-    const MusicalTime *end = time_span_end(form->built.input.notes[last].span);
+    const MusicalTime start = form->built.input.notes[first].span.start;
+    const MusicalTime last_start = form->built.input.notes[last].span.start;
+    const MusicalTime end = form->built.input.notes[last].span.end;
     occurrence->index = index;
-    occurrence->start_numerator = musical_time_numerator(start);
-    occurrence->start_denominator = musical_time_denominator(start);
-    occurrence->end_numerator = musical_time_numerator(end);
-    occurrence->end_denominator = musical_time_denominator(end);
+    occurrence->start_numerator = (long)start.value.num;
+    occurrence->start_denominator = (unsigned long)start.value.den;
+    occurrence->end_numerator = (long)end.value.num;
+    occurrence->end_denominator = (unsigned long)end.value.den;
     occurrence->first_measure = claim->first_measure;
     occurrence->first_beat = claim->first_beat;
     link_occurrence(report, start, last_start, occurrence);
-    if (meter_map_measure_index_at(form->built.input.map, last_start, &occurrence->last_measure) != METER_MAP_OK) {
+    if (meter_map_measure_index_at(form->built.input.map, &last_start, &occurrence->last_measure) != METER_MAP_OK) {
         return false;
     }
     occurrence->kind = motive_occurrence_kind_name((MotiveOccurrenceKind)claim->kind);
@@ -174,11 +174,11 @@ static bool note_timing(const ImportedNotes *notes, size_t index, Rational *star
     }
     const MusicalTime *time = temporal_anchor_position(note_event_temporal_anchor(notes->events[index]));
     const Duration *length = note_event_duration(notes->events[index]);
-    if (musical_time_numerator(time) < 0 || duration_numerator(length) <= 0) {
+    if (time->value.num < 0 || length->value.num <= 0) {
         return false;
     }
-    *start = msk_make((unsigned long long)musical_time_numerator(time), musical_time_denominator(time));
-    *duration = msk_make((unsigned long long)duration_numerator(length), duration_denominator(length));
+    *start = msk_make((unsigned long long)time->value.num, (unsigned long long)time->value.den);
+    *duration = msk_make((unsigned long long)length->value.num, (unsigned long long)length->value.den);
     *pitch = (int)pitch_numeric_value_position_numerator(notes->pitch_values[index]);
     return true;
 }
@@ -207,15 +207,11 @@ static bool collect_occurrence_degrees(const ImportedNotes *notes, const Analysi
    the following region's. */
 static bool meter_at(const MeterMap *map, Rational start, Rational *bar, Rational *beat,
                      Rational *position) {
-    MusicalTime *time = NULL;
-    if (musical_time_create((long)start.num, (unsigned long)start.den, &time) != MUSICAL_TIME_OK) {
-        return false;
-    }
+    MusicalTime time = musical_time_of(start);
     int measure = 0;
     const MeterMapRegion *region = NULL;
-    bool ok = meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK &&
+    bool ok = meter_map_measure_index_at(map, &time, &measure) == METER_MAP_OK &&
               meter_map_region_of_measure(map, measure, &region) == METER_MAP_OK;
-    musical_time_destroy(time);
     Rational measure_start;
     Rational measure_end;
     if (!ok || meter_map_measure_bounds(map, measure, &measure_start, &measure_end) != METER_MAP_OK) {
@@ -229,15 +225,14 @@ static bool meter_at(const MeterMap *map, Rational start, Rational *bar, Rationa
     } else {
         reference_region = region;
     }
-    Duration *bar_duration = NULL;
+    Duration bar_duration;
     Rational beat_length;
     if (time_signature_measure_duration(meter_map_region_time_signature(reference_region), &bar_duration) !=
             DURATION_OK ||
         meter_map_beat_length(map, reference, &beat_length) != METER_MAP_OK) {
         return false;
     }
-    *bar = msk_make((unsigned long long)duration_numerator(bar_duration), duration_denominator(bar_duration));
-    duration_destroy(bar_duration);
+    *bar = msk_make((unsigned long long)bar_duration.value.num, (unsigned long long)bar_duration.value.den);
     *beat = beat_length;
     if (pickup) {
         Rational remaining = msk_sub(measure_end, start);
@@ -311,7 +306,7 @@ static bool collect_features(const MotiveStage *stage, const ImportedNotes *note
             first_start = start;
             const AnalysisKeyRegion *region = region_at(report, (long long)start.num, (long long)start.den);
             features->tonic_pc = region->tonic_pitch_class;
-            features->minor = !region->is_major;
+            features->material = region->material;
         }
         Rational onset = msk_sub(start, first_start);
         if (!msk_ok(onset)) {

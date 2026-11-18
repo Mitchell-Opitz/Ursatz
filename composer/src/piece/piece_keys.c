@@ -7,61 +7,79 @@
 #include <theory/harmony/harmony_chord.h>
 #include <theory/harmony/harmony_key_change.h>
 #include <theory/harmony/harmony_related_key.h>
+#include <theory/knowledge/knowledge_snapshot.h>
+#include <theory/tonality/region_relation.h>
 #include <theory/vocabulary/cadence_type.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_hear.h>
+#include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 #include "check/hearing.h"
 #include "form/form_internal.h"
 #include "util/plan_util.h"
 #include "util/util.h"
 
-/* A key lane span before it is added: its key and where it lies. */
+/* A key lane span before it is added: its key, the relation that reached it from home (NULL for home) and where it lies. */
 typedef struct {
     PlanSpan span;
     AnalysisKey key;
+    const char *relation;
 } KeySegment;
 
 #define MAX_SEGMENTS (2 * FORM_SPEC_MAX_SECTIONS + 1)
 
-static HarmonyMode mode_of(KeyStructureMode mode) {
-    return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+/* The relation entry each degree of a region names (R-596); index 0 is unused. */
+static const char *const DEGREE_RELATIONS[8] = {NULL,
+                                                "omt.relation.parallel",
+                                                "omt.relation.supertonic",
+                                                "omt.relation.mediant",
+                                                "omt.relation.subdominant",
+                                                "omt.relation.dominant",
+                                                "omt.relation.submediant",
+                                                "omt.relation.subtonic"};
+
+/* The key the relation of a degree (1 to 7) reaches from the home key, resolved by the snapshot against the home key's region. */
+static bool resolve_degree(const KnowledgeSnapshot *knowledge, AnalysisKey home, int degree, AnalysisKey *out, const char **relation_id) {
+    if (!knowledge || degree < 1 || degree > 7 || home.material == NULL) {
+        return false;
+    }
+    const Relation *relation = knowledge_snapshot_relation(knowledge, DEGREE_RELATIONS[degree]);
+    Region anchor = region_tonal(analysis_key_tonic_pitch_class(&home), home.material);
+    Region found;
+    if (!relation || region_resolve(knowledge, relation, &anchor, &found, NULL, 0) != REGION_RELATION_OK ||
+        found.kind != REGION_TONAL_MODAL) {
+        return false;
+    }
+    *out = plan_key_of_pitch_class(found.center, found.material);
+    *relation_id = DEGREE_RELATIONS[degree];
+    return true;
 }
 
 /*
  * The key of a region of the home key (R-485): one of the region's degrees for the home key's mode, drawn from the list
- * (one draw of rng whatever the degree is). Degree 1 is the home key's parallel key, the other mode on the same tonic;
- * any other is the closely related key of standard-harmony on that degree. False when the draw is not a key
- * standard-harmony calls closely related.
+ * (one draw of rng whatever the degree is), resolved through the degree's relation entry (R-596). Degree 1 is the home key's
+ * parallel key, the other mode on the same tonic; any other is the key the triad on that degree makes, closely related for the
+ * degrees the forms list. False when the relation refuses the degree.
  */
-bool piece_region_key(AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
-    bool minor = home.mode == KEY_STRUCTURE_MODE_MINOR;
-    const int *degrees = minor ? region->minor : region->major;
-    size_t count = minor ? region->minor_count : region->major_count;
-    HarmonyMode home_mode = mode_of(home.mode);
-    HarmonyRelatedKey related;
-    int semitone;
+static bool region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out,
+                       const char **relation_id) {
+    bool is_minor = composer_key_is_minor(&home);
+    const int *degrees = is_minor ? region->minor : region->major;
+    size_t count = is_minor ? region->minor_count : region->major_count;
     int degree = degrees[fill_rng_below(rng, count)];
-    if (degree == 1) {
-        *out = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home), minor ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR);
-        return true;
-    }
-    if (!harmony_related_key_of(home_mode, degree, &related) || !harmony_key_is_closely_related(home_mode, &related)) {
-        return false;
-    }
-    semitone = harmony_related_key_semitone(home_mode, &related);
-    if (semitone < 0) {
-        return false;
-    }
-    *out = plan_key_of_pitch_class((analysis_key_tonic_pitch_class(&home) + semitone) % 12, related.mode == HARMONY_MODE_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
-    return true;
+    return resolve_degree(knowledge, home, degree, out, relation_id);
+}
+
+bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
+    const char *relation_id;
+    return region_key(knowledge, home, region, rng, out, &relation_id);
 }
 
 /* A region a section's keys name has no degree 1: the parallel key is for the parts of a compound form. */
-static bool region_has_degree_one(const FormRegion *region, bool minor) {
-    const int *degrees = minor ? region->minor : region->major;
-    size_t count = minor ? region->minor_count : region->major_count;
+static bool region_has_degree_one(const FormRegion *region, bool is_minor) {
+    const int *degrees = is_minor ? region->minor : region->major;
+    size_t count = is_minor ? region->minor_count : region->major_count;
     for (size_t i = 0; i < count; i++) {
         if (degrees[i] == 1) {
             return true;
@@ -76,27 +94,35 @@ static bool region_has_degree_one(const FormRegion *region, bool minor) {
  * the draw is fill_rng_below(rng, 3), 0 staying home unless the form always modulates (R-493), then one pick per
  * region in the order the form lists them.
  */
-static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKey home, FillRng *rng, PieceSectionKeys *keys,
+static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size, AnalysisKey home, FillRng *rng,
+                      PieceSectionKeys *keys,
                       bool *modulates) {
     AnalysisKey away[FORM_SPEC_MAX_REGIONS];
+    const char *away_relation[FORM_SPEC_MAX_REGIONS];
     bool can = false;
     *modulates = false;
     for (size_t i = 0; i < size->section_count; i++) {
         keys[i].start = home;
         keys[i].end = home;
+        keys[i].start_relation = NULL;
+        keys[i].end_relation = NULL;
         can = can || size->sections[i].key_start != FORM_SPEC_HOME || size->sections[i].key_end != FORM_SPEC_HOME;
         /* A section in the parallel mode (R-499) is on the home tonic in the other mode: no draw, and modulates stays as it is. */
         if (size->sections[i].parallel) {
-            keys[i].start = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home),
-                                                    home.mode == KEY_STRUCTURE_MODE_MINOR ? KEY_STRUCTURE_MODE_MAJOR
-                                                                                          : KEY_STRUCTURE_MODE_MINOR);
+            if (!resolve_degree(knowledge, home, 1, &keys[i].start, &keys[i].start_relation)) {
+                return false;
+            }
             keys[i].end = keys[i].start;
+            keys[i].end_relation = keys[i].start_relation;
         }
         /* A section in the tonic major (R-517) is on the home tonic in its major key: home in a major piece, the parallel major in a
          * minor one. No draw, so the draws after it are unchanged. */
-        if (size->sections[i].tonic_major && home.mode == KEY_STRUCTURE_MODE_MINOR) {
-            keys[i].start = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(&home), KEY_STRUCTURE_MODE_MAJOR);
+        if (size->sections[i].tonic_major && composer_key_is_minor(&home)) {
+            if (!resolve_degree(knowledge, home, 1, &keys[i].start, &keys[i].start_relation)) {
+                return false;
+            }
             keys[i].end = keys[i].start;
+            keys[i].end_relation = keys[i].start_relation;
         }
     }
     if (!rng || !can) {
@@ -109,16 +135,18 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
     }
     for (size_t r = 0; r < form->region_count; r++) {
         const FormRegion *region = &form->regions[r];
-        if (region_has_degree_one(region, home.mode == KEY_STRUCTURE_MODE_MINOR) || !piece_region_key(home, region, rng, &away[r])) {
+        if (region_has_degree_one(region, composer_key_is_minor(&home)) || !region_key(knowledge, home, region, rng, &away[r], &away_relation[r])) {
             return false;
         }
     }
     for (size_t i = 0; i < size->section_count; i++) {
         if (size->sections[i].key_start != FORM_SPEC_HOME) {
             keys[i].start = away[size->sections[i].key_start];
+            keys[i].start_relation = away_relation[size->sections[i].key_start];
         }
         if (size->sections[i].key_end != FORM_SPEC_HOME) {
             keys[i].end = away[size->sections[i].key_end];
+            keys[i].end_relation = away_relation[size->sections[i].key_end];
         }
     }
     *modulates = true;
@@ -126,7 +154,7 @@ static bool draw_keys(const FormSpec *form, const FormSpecSize *size, AnalysisKe
 }
 
 /* Adds a segment, joined to the one before it when that is in the same key and ends where this one starts. */
-static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, AnalysisKey key) {
+static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, AnalysisKey key, const char *relation) {
     if (*count > 0 && analysis_key_equals(&segments[*count - 1].key, &key)) {
         Rational end;
         PieceResult result = piece_result_of_plan(plan_span_end(segments[*count - 1].span, &end));
@@ -141,6 +169,7 @@ static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan sp
     }
     segments[*count].span = span;
     segments[*count].key = key;
+    segments[*count].relation = relation;
     (*count)++;
     return PIECE_OK;
 }
@@ -148,7 +177,7 @@ static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan sp
 /* A section whose key changes halfway has its first half in the key it starts in and its second in the key it ends in. */
 static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpan span, const PieceSectionKeys *keys) {
     if (analysis_key_equals(&keys->start, &keys->end)) {
-        return push_segment(segments, count, span, keys->start);
+        return push_segment(segments, count, span, keys->start, keys->start_relation);
     }
     PlanSpan first;
     PlanSpan second;
@@ -160,9 +189,9 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
     second.length = first.length;
     result = piece_result_of_plan(plan_result_of_rational(rational_add(span.start, first.length, &second.start)));
     if (result == PIECE_OK) {
-        result = push_segment(segments, count, first, keys->start);
+        result = push_segment(segments, count, first, keys->start, keys->start_relation);
     }
-    return result == PIECE_OK ? push_segment(segments, count, second, keys->end) : result;
+    return result == PIECE_OK ? push_segment(segments, count, second, keys->end, keys->end_relation) : result;
 }
 
 /* The KEY constraint of the section, replaced by the key it ends in. */
@@ -180,7 +209,8 @@ static PieceResult set_section_key(PiecePlan *plan, NodeId section, AnalysisKey 
     return PIECE_ERR_BAD_REQUEST;
 }
 
-PieceResult piece_plan_keys(PiecePlan *plan, const FormSpec *spec, const FormSpecSize *size, FillRng *rng, PieceKeyPlan *out) {
+PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *spec, const FormSpecSize *size,
+                            FillRng *rng, PieceKeyPlan *out) {
     if (!plan || !spec || !size || !out) {
         return PIECE_ERR_NULL;
     }
@@ -210,7 +240,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, const FormSpec *spec, const FormSpe
     }
     AnalysisKey home = home_key->params.key;
     out->count = count;
-    if (!draw_keys(spec, size, home, rng, out->sections, &out->modulates)) {
+    if (!draw_keys(knowledge, spec, size, home, rng, out->sections, &out->modulates)) {
         return PIECE_ERR_BAD_REQUEST;
     }
 
@@ -221,7 +251,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, const FormSpec *spec, const FormSpe
         result = section_segments(segments, &segment_count, plan_node_span(plan, sections[i]), &out->sections[i]);
     }
     if (result == PIECE_OK) {
-        result = push_segment(segments, &segment_count, plan_node_span(plan, material), home);
+        result = push_segment(segments, &segment_count, plan_node_span(plan, material), home, NULL);
     }
     for (size_t i = 0; result == PIECE_OK && i < segment_count; i++) {
         PlanLanePayload payload;
@@ -229,6 +259,10 @@ PieceResult piece_plan_keys(PiecePlan *plan, const FormSpec *spec, const FormSpe
         memset(&payload, 0, sizeof(payload));
         payload.key = segments[i].key;
         result = piece_result_of_plan(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, segments[i].span, &payload, &id));
+        if (result == PIECE_OK && segments[i].relation) {
+            result = piece_result_of_plan(
+                plan_lane_span_set_key_relation(plan, id, segments[i].relation, PLAN_KEY_ANCHOR_HOME, true));
+        }
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
     }
     for (size_t i = 0; result == PIECE_OK && i < count; i++) {
@@ -266,8 +300,8 @@ static bool read_key_lane(const PiecePlan *plan, KeyLane *lane) {
 
 /* Whether the key is the home key's or one of its closely related keys. */
 static bool related_to_home(AnalysisKey home, AnalysisKey key) {
-    HarmonyMode home_mode = mode_of(home.mode);
-    HarmonyMode mode = mode_of(key.mode);
+    HarmonyMode home_mode = harmony_key_mode(&home);
+    HarmonyMode mode = harmony_key_mode(&key);
     if (analysis_key_equals(&home, &key)) {
         return true;
     }
@@ -287,7 +321,7 @@ static bool related_to_home(AnalysisKey home, AnalysisKey key) {
 }
 
 /* Adds the authentic arrivals heard in `span`. False when the span is not readable. */
-static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanSpan span, double *arrivals,
+static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanSpan span, Rational *arrivals,
                           size_t *arrival_count) {
     FormHeard heard;
     if (form_hear_in(hearing, plan, span, &heard) != FORM_HEAR_OK) {
@@ -297,7 +331,7 @@ static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanS
         int type = heard.cadences[i].type;
         if (type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
             type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) {
-            arrivals[(*arrival_count)++] = rational_to_double(heard.cadences[i].arrival);
+            arrivals[(*arrival_count)++] = heard.cadences[i].arrival;
         }
     }
     form_heard_destroy(&heard);
@@ -310,7 +344,7 @@ static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanS
  * from the change, in its new key. False when a section is not readable.
  */
 static bool authentic_arrivals(ComposerHearing *hearing, const PiecePlan *plan, const KeyLane *lane, const NodeId *sections,
-                               size_t count, double *arrivals, size_t *arrival_count) {
+                               size_t count, Rational *arrivals, size_t *arrival_count) {
     *arrival_count = 0;
     for (size_t s = 0; s < count; s++) {
         PlanSpan whole = plan_node_span(plan, sections[s]);
@@ -370,7 +404,7 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
         }
     }
     KeyLane lane;
-    double arrivals[MAX_ARRIVALS + 1];
+    Rational arrivals[MAX_ARRIVALS + 1];
     size_t arrival_count;
     if (section_count == 0 || piece_end.num == 0 || !read_key_lane(plan, &lane) ||
         !authentic_arrivals(hearing, plan, &lane, sections, section_count, arrivals, &arrival_count)) {
@@ -422,7 +456,7 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
         KeyChangeExtent length_extent;
         KeyChangeExtent extent;
         if (!harmony_key_change_classify(&change, &length_extent) ||
-            !harmony_key_change_confirm(length_extent, rational_to_double(lane.span[k].start), rational_to_double(region_end), arrivals,
+            !harmony_key_change_confirm(length_extent, lane.span[k].start, region_end, arrivals,
                                         arrival_count, &extent)) {
             return false;
         }

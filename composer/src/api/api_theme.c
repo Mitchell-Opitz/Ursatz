@@ -19,7 +19,9 @@
 #include "api_internal.h"
 #include "api_vocabulary.h"
 #include "grow/grow_internal.h"
+#include "util/plan_util.h"
 #include "util/request_parse.h"
+#include "util/util.h"
 
 /*
  * The theme request (docs/theme-request.md, schema "ursatz-theme-request" version 2) as an API entry: the motives of the
@@ -233,6 +235,11 @@ static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, 
     if (rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar_length) != RATIONAL_OK) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "the meter has no bar length");
     }
+    Rational beat;
+    Rational division;
+    if (!plan_meter_grid(*meter, &beat, &division)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "the meter has no rhythmic grid");
+    }
     bool seen[GROW_EXT_CHORDS / 2 + 1] = {false};
     const cJSON *entry = NULL;
     size_t index = 0;
@@ -273,11 +280,10 @@ static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, 
         }
         for (size_t c = 0; c < count; c++) {
             const MotiveSketchChord *chord = &parsed[c];
-            Rational half_beats;
+            Rational divisions;
             Rational end = bar_length;
-            /* An onset is a multiple of half a beat of the beat unit, inside the bar. */
-            if (rational_make(chord->onset.num * 2 * meter->beat_unit, chord->onset.den, &half_beats) != RATIONAL_OK ||
-                half_beats.den != 1) {
+            /* An onset is a whole number of the meter's division (half a beat, a third in a compound meter). */
+            if (rational_div(chord->onset, division, &divisions) != RATIONAL_OK || divisions.den != 1) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: a chord starts on a beat or a half beat",
                                 bar);
             }
@@ -309,7 +315,7 @@ static ComposerStatus read_chords(GrowMaterial *material, const cJSON *request, 
             harmony.inversion = chord->inversion;
             harmony.seventh = chord->seventh;
             size_t at = material->chord_count;
-            if (!harmony_roman_format(key->mode, &harmony, material->chord_numerals[at])) {
+            if (!harmony_roman_format(harmony_key_mode(key), &harmony, material->chord_numerals[at])) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, path, "chords bar %ld: that chord does not exist in the key", bar);
             }
             if (c + 1 < count) {
@@ -380,7 +386,7 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
         snprintf(what, sizeof(what), "motive '%s'", theme->slot_motive_id[s]);
         motive_path(path, sizeof path, theme->slot_motive_index[s]);
         Motive *target = s == GROW_SLOT_BASIC ? &material->basic : &material->slot_motives[s];
-        status = api_read_degrees_motive(what, path, theme->slot_motive[s], NULL, &setup->meter, &setup->key, target, error);
+        status = api_read_degrees_motive(setup->knowledge, what, path, theme->slot_motive[s], NULL, &setup->meter, &setup->key, target, error);
         if (status != COMPOSER_OK) {
             return status;
         }
@@ -400,7 +406,7 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
                             grow_idea_name((GrowIdea)idea), grow_idea_name((GrowIdea)idea));
         }
         snprintf(what, sizeof(what), "motive '%s'", theme->idea_motive_id[idea]);
-        status = api_read_degrees_motive(what, path, theme->idea_motive[idea], NULL, &setup->meter, &setup->key,
+        status = api_read_degrees_motive(setup->knowledge, what, path, theme->idea_motive[idea], NULL, &setup->meter, &setup->key,
                                          &material->idea_motives[idea], error);
         if (status != COMPOSER_OK) {
             return status;
@@ -412,7 +418,7 @@ static ComposerStatus load_material(GrowMaterial *material, const ThemeRequest *
         material->has_idea[idea] = true;
     }
     if (theme->accompaniment_motive) {
-        status = api_read_degrees_motive("the accompaniment motive", "/accompaniment/motive", theme->accompaniment_motive,
+        status = api_read_degrees_motive(setup->knowledge, "the accompaniment motive", "/accompaniment/motive", theme->accompaniment_motive,
                                          "accompaniment", &setup->meter, &setup->key, &material->accompaniment_motive, error);
         if (status != COMPOSER_OK) {
             return status;
@@ -442,7 +448,8 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
     const char *into;
     const char *hybrid;
     const char *key;
-    const char *mode;
+    const char *material;
+    const char *material_member;
     const char *meter;
     const char *cadence;
     const char *first_cadence;
@@ -453,7 +460,7 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
     if (!api_request_string(request, "", "into", true, &into, error) ||
         !api_request_string(request, "", "development", false, &development, error) ||
         !api_request_string(request, "", "hybrid", false, &hybrid, error) ||
-        !api_request_string(request, "", "key", true, &key, error) || !api_request_string(request, "", "mode", true, &mode, error) ||
+        !api_request_string(request, "", "key", true, &key, error) || !api_read_material(request, "", true, &material, &material_member, error) ||
         !api_request_string(request, "", "meter", true, &meter, error) ||
         !api_request_string(request, "", "cadence", false, &cadence, error) ||
         !api_request_string(request, "", "first_cadence", false, &first_cadence, error) ||
@@ -469,7 +476,8 @@ static ComposerStatus read_brief(ThemeRequest *theme, const cJSON *request, Them
     text->into = into;
     text->hybrid = hybrid;
     text->key = key;
-    text->mode = mode;
+    text->material = material;
+    text->material_member = material_member;
     text->meter = meter;
     text->cadence = cadence;
     text->first_cadence = first_cadence;
@@ -748,10 +756,18 @@ static ComposerStatus theme_prepare(ThemeState *state, const ComposerJob *job, A
     return COMPOSER_OK;
 }
 
-ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_theme(const ComposerContext *context, const char *request_json,
+                                  const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     ThemeState state;
     memset(&state, 0, sizeof(state));
+    state.setup.knowledge = context->knowledge;
+    state.setup.materials = &materials;
     ApiOutputOptions outputs;
     ComposerStatus status = api_parse_request(request_json, &state.request, &out->error);
     if (status == COMPOSER_OK) {
@@ -801,9 +817,12 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
     return status;
 }
 
-ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error) {
+ComposerStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *request,
+                                  ComposerError *error) {
     ThemeState state;
     memset(&state, 0, sizeof(state));
+    state.setup.knowledge = knowledge;
+    state.setup.materials = materials;
     ApiOutputOptions outputs;
     memset(&outputs, 0, sizeof(outputs));
     state.request = cJSON_Duplicate(request, true);

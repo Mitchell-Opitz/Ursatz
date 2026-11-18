@@ -592,15 +592,14 @@ VoiceSeparationResult voice_separate(NoteEvent *const *notes, PitchNumericValue 
         }
         long numerator = pitch_numeric_value_position_numerator(pitch_values[i]);
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(notes[i]));
-        if (numerator < 0 || musical_time_numerator(position) < 0) {
+        if (numerator < 0 || position->value.num < 0) {
             failure = VOICE_SEPARATION_ERR_UNSUPPORTED_PITCH;
             break;
         }
         facts[i].id = entity_id_value(note_event_id(notes[i]));
-        Rational length;
-        if (rational_of_musical_time(position, &facts[i].onset) != RATIONAL_OK ||
-            rational_of_duration(note_event_duration(notes[i]), &length) != RATIONAL_OK ||
-            rational_add(facts[i].onset, length, &facts[i].release) != RATIONAL_OK) {
+        Rational length = note_event_duration(notes[i])->value;
+        facts[i].onset = position->value;
+        if (rational_add(facts[i].onset, length, &facts[i].release) != RATIONAL_OK) {
             failure = VOICE_SEPARATION_ERR_OVERFLOW;
             break;
         }

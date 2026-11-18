@@ -115,7 +115,9 @@ static StandardMeterAnalysisStatus read_phrase(const StandardMeterInput *input, 
     int first = 0;
     int last = 0;
     int counted = meter_map_has_pickup(input->map) ? 1 : meter_map_first_measure_number(input->map);
-    if (!score_time_span(phrase->span, &start, &end) || meter_map_measure_of(input->map, start, &first) != METER_MAP_OK ||
+    start = phrase->span.start.value;
+    end = phrase->span.end.value;
+    if (meter_map_measure_of(input->map, start, &first) != METER_MAP_OK ||
         meter_map_last_measure_touched(input->map, end, &last) != METER_MAP_OK) {
         return STANDARD_METER_ANALYSIS_OK;
     }
@@ -129,11 +131,11 @@ static StandardMeterAnalysisStatus read_phrase(const StandardMeterInput *input, 
 
     bool elided = phrase->elided_with_next && index + 1 < input->phrase_count;
     int arrival = -1;
-    if (!elided && phrase->cadence_arrival != NULL) {
+    if (!elided && phrase->has_cadence_arrival) {
         Rational arrival_start;
         int arrival_measure = 0;
-        if (score_time_span(phrase->cadence_arrival, &arrival_start, NULL) &&
-            meter_map_measure_of(input->map, arrival_start, &arrival_measure) == METER_MAP_OK && arrival_measure >= first &&
+        arrival_start = phrase->cadence_arrival.start.value;
+        if (meter_map_measure_of(input->map, arrival_start, &arrival_measure) == METER_MAP_OK && arrival_measure >= first &&
             arrival_measure <= last) {
             arrival = arrival_measure - first;
         }

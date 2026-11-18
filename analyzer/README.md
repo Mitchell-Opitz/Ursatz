@@ -44,7 +44,7 @@ ursatz-analyzer [--json] [--input-format midi|musicxml] [--meter <n/d>] [--value
 
 Writes one file next to the input file, `<stem>.analysis.json`: the analysis document. See
 [docs/analysis-document.md](docs/analysis-document.md) and the
-[schema](schema/analysis-document.v12.schema.json).
+[schema](schema/analysis-document.v13.schema.json).
 
 `--json` is the default and may be given. `--input-format` forces the input format (see [Input formats](docs/input.md#input-formats)). Flags can come before or
 after the path. Exits 1 with a message on an unknown flag, a

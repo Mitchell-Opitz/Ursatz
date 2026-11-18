@@ -16,7 +16,7 @@ A minimal client in C is in [Using the API from C](#using-the-api-from-c).
 ## Versioning
 
 `COMPOSER_API_VERSION_MAJOR` and `COMPOSER_API_VERSION_MINOR`; `composer_api_version()` gives `"<major>.<minor>"`. This
-is API 1.19 (1.0 was the first stable API, R-268). 1.19 adds to the settings document's `melody` group `closure` (`final`, `first`), `rhythm_repeat_bars`, `leaps` and `register`, to its `development` group `contrast` (`distance` with `similar` and `distant`, `new_material`), and to the vocabulary's `limits.preferences` `rhythm_repeat_bars_max`; the theme request now passes the `contrast` settings and the `motif` group to the grow run (a theme's drawn rhythms and new material), and a theme's `slots` rows gain the sources `distant` and `new`; every new member is off by default (R-422). 1.18 lets the theme and grow requests take `bars` 3 to 16 and a `construction` (R-468, R-469), puts `construction` in each theme of the theme and grow responses (and at the root when the request gave one), and adds `theme_bars_regular` and `theme_extensions` to the vocabulary and the lengths 3 to 16 to `theme_bars`; a request without them answers as before, with `"construction": null` in each theme. 1.17 adds to the settings document's `motif` group `syncopation_one_in`, `syncopation_types`, `syncopation_levels`, `skips_per_motif` and `plan`, to its `development` group `continuation` (`every_segment`, `fragment_lengths`, `diminish`, `liquidate`, `faster_harmony`) and `basic_as_written`, and to the vocabulary's `limits.preferences` `syncopation_one_in_max`, `skips_per_motif_max`, `plan_chords_max` and `plan_beat_max`; a given plan that does not fit the meter is refused by a random motive run at `/preferences/motif/plan`; every new member is off by default (R-422). 1.16 adds the section hearing, pedal and changes of piece rows and the forms entry's pedal. 1.15 adds to the settings document's `motif` group the five rhythm entries of `durations` (`quarter_beats`, `long_short`, `short_long`, `triplet`, `triplet_two_beats`), `compound_beats`, `endings`, `long_nct_one_in` and the four `long_nct_*` lists, and to the vocabulary's `limits.preferences` the `long_nct_one_in_max`; triplet values also read and write in the motive texts. 1.14 lets the piece entries compose, regenerate and vary a piece of any built-in form: the piece request takes `schema_version` 2 with `form`, `bars`, `count` and `modulate`, the request takes `musicxml_versions`, and the result names its versions (`versions`, `plans`, a variation's entry) by the form's version names (`piece` for a form with sizes) with the rows of its sections; a game loop request answers as before. 1.13 adds the `composer_api_forms` entry, which serves the built-in forms (their sections, sizes, cadences, keys and theme slots, and the roles of the game loop), and, in the vocabulary, `required` on each `theme_slots` entry and `beginning` and `ending` on the `piece_intos` entries that have one pairing. 1.12 adds nine optional listening settings to the `motif` group of the preferences document (`accented_one_in`, `accented_types`, `avoid_repeats`, `leaps_per_motif`, `leap_recovery`, `pickup_from_accent`, `contrast_fidelity_min`, `long_on_weak`, `final_long`; all off by default) and their two limits, `accented_one_in_max` and `leaps_per_motif_max`, to the vocabulary. 1.11 added the optional `preferences` member to the random motive and theme requests and responses, and the default `preferences` document and its limits to the vocabulary ([preferences.md](preferences.md)).
+is API 2.0 (1.0 was the first stable API, R-268). 2.0 names materials (R-597): replies say `material` (an id) where they said `mode`, and the vocabulary lists `materials` ([members](api/vocabulary-and-validation.md#api-20-materials)); requests take `material`, the command line `--material`. 1.19 adds to the settings document's `melody` group `closure` (`final`, `first`), `rhythm_repeat_bars`, `leaps` and `register`, to its `development` group `contrast` (`distance` with `similar` and `distant`, `new_material`), and to the vocabulary's `limits.preferences` `rhythm_repeat_bars_max`; the theme request now passes the `contrast` settings and the `motif` group to the grow run (a theme's drawn rhythms and new material), and a theme's `slots` rows gain the sources `distant` and `new`; every new member is off by default (R-422). 1.18 lets the theme and grow requests take `bars` 3 to 16 and a `construction` (R-468, R-469), puts `construction` in each theme of the theme and grow responses (and at the root when the request gave one), and adds `theme_bars_regular` and `theme_extensions` to the vocabulary and the lengths 3 to 16 to `theme_bars`; a request without them answers as before, with `"construction": null` in each theme. 1.17 adds to the settings document's `motif` group `syncopation_one_in`, `syncopation_types`, `syncopation_levels`, `skips_per_motif` and `plan`, to its `development` group `continuation` (`every_segment`, `fragment_lengths`, `diminish`, `liquidate`, `faster_harmony`) and `basic_as_written`, and to the vocabulary's `limits.preferences` `syncopation_one_in_max`, `skips_per_motif_max`, `plan_chords_max` and `plan_beat_max`; a given plan that does not fit the meter is refused by a random motive run at `/preferences/motif/plan`; every new member is off by default (R-422). 1.16 adds the section hearing, pedal and changes of piece rows and the forms entry's pedal. 1.15 adds to the settings document's `motif` group the five rhythm entries of `durations` (`quarter_beats`, `long_short`, `short_long`, `triplet`, `triplet_two_beats`), `compound_beats`, `endings`, `long_nct_one_in` and the four `long_nct_*` lists, and to the vocabulary's `limits.preferences` the `long_nct_one_in_max`; triplet values also read and write in the motive texts. 1.14 lets the piece entries compose, regenerate and vary a piece of any built-in form: the piece request takes `schema_version` 2 with `form`, `bars`, `count` and `modulate`, the request takes `musicxml_versions`, and the result names its versions (`versions`, `plans`, a variation's entry) by the form's version names (`piece` for a form with sizes) with the rows of its sections; a game loop request answers as before. 1.13 adds the `composer_api_forms` entry, which serves the built-in forms (their sections, sizes, cadences, keys and theme slots, and the roles of the game loop), and, in the vocabulary, `required` on each `theme_slots` entry and `beginning` and `ending` on the `piece_intos` entries that have one pairing. 1.12 adds nine optional listening settings to the `motif` group of the preferences document (`accented_one_in`, `accented_types`, `avoid_repeats`, `leaps_per_motif`, `leap_recovery`, `pickup_from_accent`, `contrast_fidelity_min`, `long_on_weak`, `final_long`; all off by default) and their two limits, `accented_one_in_max` and `leaps_per_motif_max`, to the vocabulary. 1.11 added the optional `preferences` member to the random motive and theme requests and responses, and the default `preferences` document and its limits to the vocabulary ([preferences.md](preferences.md)).
 
 **Compatibility rule.** The MAJOR version changes on any removed or changed member or entry: an entry that goes, a request
 or response member that goes, changes meaning or type, or a value a member took that is refused now. The MINOR version
@@ -25,7 +25,7 @@ version a client written against 1.0 keeps working with 1.n, if it ignores respo
 version (`composer_api_versions`, the project version) is separate: it follows the releases, not the API.
 
 Every request may carry `"api_version": <major>`. A different major is refused with `COMPOSER_ERR_REQUEST` and the path
-`/api_version`. A request without it is taken as the major of the library.
+`/api_version` (`api_version must be 2`), so `"api_version": 1` is refused now. A request without it is taken as the major of the library.
 
 ## Status
 
@@ -45,6 +45,29 @@ the CLI's own (the API writes none) and stays 3 where it was 3 (`export` has alw
 
 On any failure `ComposerResponse.error` holds `message` and `path`, the JSON Pointer of the request member at fault
 (`"/tempo"`, `"/plan/form/children/1"`), or `""` when no member is at fault. Nothing else is set.
+
+## The call context
+
+Every entry that composes or reads music takes a `const ComposerContext *context` first. The context holds one member, `knowledge`,
+the knowledge snapshot (`theory/knowledge/knowledge_snapshot.h`) the call reads: the pitch materials, the relations and the chord
+types. The caller builds the snapshot once with the library's `knowledge_snapshot_build` (the embedded entries, with any user files)
+and keeps it alive for the calls and for every plan, motive and key made from it; a snapshot is read-only, so calls on several
+threads may share one. The Composer holds no copy of the knowledge and no table of scales of its own: a key is a tonic and a
+material of the snapshot, a key text is a tonic and the word of a material (`"D minor"`: the key word, name, id or alias of the
+entry, in any case), and the scale, the third and the signature of a key are read from the material.
+
+A NULL context, a context with a NULL `knowledge`, or a snapshot that lacks one of the four materials of common practice
+(`omt.material.major`, `.natural-minor`, `.harmonic-minor`, `.melodic-minor`) is `COMPOSER_ERR_REQUEST` with the message `a knowledge
+snapshot is required` (or the missing id), and the path `""`. The entries that take none are `composer_api_version`,
+`composer_api_versions`, `composer_api_variant_operations` and `composer_api_forms`, which read no key.
+
+The Composer composes in the major and the natural minor. A key text that names another material the snapshot knows (`"C dorian"`,
+`"C harmonic minor"`) is refused at its member with `the Composer writes major and minor keys; '<word>' is not one of them`; a text
+that names no material is refused as an unknown key, as before. Every request that took a `mode` takes a `material` in its place: an id, name, key word or alias of a material the snapshot knows
+(`omt.material.natural-minor`, `minor`, `natural minor`), `style` where the request offers it today and `random` for the random
+motive. The old `mode` member is read as before; the two together are refused at `/mode`. The versions of the request kinds do not change; the replies say `material` (API 2.0). A plan file names a key by `tonic` and `material` (plan format 3), or by a tonic and a mode (formats 1 and 2),
+which the reader maps to the snapshot's major and natural minor ([plan-format.md](plan-format.md#format-versions)).
+The command line builds one snapshot per process.
 
 ## Memory
 
@@ -169,20 +192,30 @@ This grows a theme from a motive and writes its MIDI file:
 
 ```c
 #include <stdio.h>
+#include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/composer_api.h>
 
 int main(void) {
     const char *request =
         "{\"schema\": \"ursatz-theme-request\", \"schema_version\": 2,"
-        " \"into\": \"sentence\", \"key\": \"D\", \"mode\": \"minor\", \"meter\": \"4/4\", \"bars\": 8, \"cadence\": \"PAC\","
+        " \"into\": \"sentence\", \"key\": \"D\", \"material\": \"minor\", \"meter\": \"4/4\", \"bars\": 8, \"cadence\": \"PAC\","
         " \"motives\": [{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:q 3:e 5:e 1':h\"}],"
         " \"slots\": {\"basic\": \"A\"}, \"seed\": 1, \"midi\": true}";
 
+    KnowledgeSnapshot *knowledge = NULL;
+    char message[256];
+    if (knowledge_snapshot_build(NULL, 0, &knowledge, message, sizeof(message)) != KNOWLEDGE_OK) {
+        fprintf(stderr, "%s\n", message);
+        return 1;
+    }
+    ComposerContext context = {knowledge};
+
     ComposerResponse response;
-    ComposerStatus status = composer_api_theme(request, NULL, &response);
+    ComposerStatus status = composer_api_theme(&context, request, NULL, &response);
     if (status != COMPOSER_OK) {
         fprintf(stderr, "status %d: %s (at '%s')\n", (int)status, response.error.message, response.error.path);
         composer_response_destroy(&response);
+        knowledge_snapshot_destroy(knowledge);
         return 1;
     }
     printf("%s\n", response.json);   /* the theme document */
@@ -192,6 +225,7 @@ int main(void) {
         fclose(file);
     }
     composer_response_destroy(&response);
+    knowledge_snapshot_destroy(knowledge);
     return 0;
 }
 ```

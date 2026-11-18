@@ -9,7 +9,6 @@
 #include <model/time/musical_time.h>
 #include <model/time/note_value.h>
 #include <model/time/time_signature.h>
-#include <model/time/time_rational.h>
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
@@ -31,7 +30,7 @@
 static bool meter_map_of(const PlanMeter *meter, MeterMap **out) {
     NoteValue *unit = NULL;
     TimeSignature *signature = NULL;
-    MusicalTime *zero = NULL;
+    MusicalTime zero = musical_time_of(rational_ratio(0, 1));
     EntityID *id = NULL;
     int exponent = 0;
     bool ok = false;
@@ -43,7 +42,7 @@ static bool meter_map_of(const PlanMeter *meter, MeterMap **out) {
     }
     if (note_value_create(exponent, &unit) == NOTE_VALUE_OK &&
         time_signature_create((unsigned)meter->beats_per_bar, unit, &signature) == TIME_SIGNATURE_OK &&
-        musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK && entity_id_create("composer-accompaniment-meter", &id) == ENTITY_ID_OK) {
+        entity_id_create("composer-accompaniment-meter", &id) == ENTITY_ID_OK) {
         MeterMapChangePoint point = {signature, zero};
         ok = meter_map_create(id, &point, 1, out) == METER_MAP_OK;
         if (!ok) {
@@ -52,7 +51,6 @@ static bool meter_map_of(const PlanMeter *meter, MeterMap **out) {
     }
     note_value_destroy(unit);
     time_signature_destroy(signature);
-    musical_time_destroy(zero);
     return ok;
 }
 
@@ -75,7 +73,8 @@ static bool add_note(RenderNote *notes, size_t *count, const AccompContext *cont
     return rational_cmp(note->duration, (Rational){0, 1}) > 0;
 }
 
-bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate, bool *heard) {
+bool accomp_hear(const AccompContext *context, const KnowledgeSnapshot *knowledge, const AccompCandidate *candidate,
+                 bool *heard) {
     bool ok = context->texture >= 0 && context->texture < (int)STANDARD_TEXTURE_COUNT;
     if (!ok) {
         return false;
@@ -121,9 +120,9 @@ bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate,
         input.midi = midi;
         input.meter = map;
         input.streams = rendered.part_index;
-        AnalyzerHearingOptions options = hearing_analyzer_options();
+        AnalyzerHearingOptions options = hearing_analyzer_options(knowledge);
         options.analysis.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
-        ok = analyzer_hear(&input, &options, &result) == ANALYZER_OK;
+        ok = ok && knowledge && analyzer_hear(&input, &options, &result) == ANALYZER_OK;
     }
     const StandardTextureAnalysis *analysis = ok ? analysis_chain_texture(analyzer_result_chain(result)) : NULL;
     ok = ok && analysis;

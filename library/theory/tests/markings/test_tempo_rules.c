@@ -60,13 +60,12 @@ static void test_modifiers(void) {
 
 /* Quarter = 60 is sixty quarters a minute: one per second. */
 static void test_metronome(void) {
-    Duration *quarter = NULL;
-    assert(duration_create(1, 4, &quarter) == DURATION_OK);
+    Duration quarter;
+    assert(duration_make(1, 4, &quarter) == DURATION_OK);
     MetronomeMarking *sixty = NULL, *hundred_twenty = NULL;
-    assert(metronome_marking_create(quarter, 60, 1, &sixty) == METRONOME_MARKING_OK);
-    assert(metronome_marking_create(quarter, 120, 1, &hundred_twenty) == METRONOME_MARKING_OK);
+    assert(metronome_marking_create(&quarter, 60, 1, &sixty) == METRONOME_MARKING_OK);
+    assert(metronome_marking_create(&quarter, 120, 1, &hundred_twenty) == METRONOME_MARKING_OK);
 
-    duration_destroy(quarter);
     metronome_marking_destroy(sixty);
     metronome_marking_destroy(hundred_twenty);
 }

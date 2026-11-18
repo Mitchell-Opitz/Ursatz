@@ -8,6 +8,7 @@
 #include <ursatz_analyzer/musicxml_pipeline.h>
 
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The tempo and dynamics markings of the report, on a constructed score (tests/musicxml/markings.musicxml, four
@@ -25,7 +26,7 @@ static bool starts_measure(long numerator, unsigned long denominator, int measur
 static bool analyze(const char *dir, const char *name, ImportedNotes *notes, AnalysisReport *report) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", dir, name);
-    if (musicxml_pipeline_import_file(path, notes) != MUSICXML_PIPELINE_OK || !run_analysis_pipeline(notes, report)) {
+    if (musicxml_pipeline_import_file(path, notes) != MUSICXML_PIPELINE_OK || !run_analysis_pipeline(notes, test_knowledge(), report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return false;

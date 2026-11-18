@@ -3,7 +3,7 @@
 The `counterpoint` command of the Composer command line, with its options and output. Back to the [docs index](README.md).
 
 ```sh
-ursatz-composer counterpoint <line> --species <1-4> [--above|--below] --key <key> --meter <n/m> [--mode <major|minor>] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format text|json]
+ursatz-composer counterpoint <line> --species <1-4> [--above|--below] --key <key> --meter <n/m> [--material <major|minor>] [--seed <n>] [--suggest <n>] [--out <file.json>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--plain-midi] [--format text|json]
 ```
 
 Writes a counter-melody against `<line>` in the first, second, third or fourth species and checks it with
@@ -20,7 +20,7 @@ The command is a wrapper of the [composer API](api.md): it reads its arguments a
 | `--species <1-4>` | 1 note against 1, 2 against 1, 4 against 1, or syncopated half notes tied over the barline. Species 2 to 4 need a cantus firmus: one whole note a bar, three bars or more; species 3 a meter of four beats. |
 | `--below` | The line is the melody and the counter-melody sings below it. The default. |
 | `--above` | The line is the bass and the counter-melody sings above it. |
-| `--key <key>` | Tonic and mode in one argument (`"D minor"`), or a tonic with `--mode`. |
+| `--key <key>` | Tonic and mode in one argument (`"D minor"`), or a tonic with `--material` (`--mode` is read as the same option). |
 | `--seed <n>` | Whole number from 0. By default one is derived from the clock; the seed used is printed. |
 | `--suggest <n>` | 1 to 16 different counter-melodies. With files, number k goes to `<name>-k.<extension>`. |
 | `--out <file.json>` | Write the plan as JSON. |

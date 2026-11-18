@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Themes and expansions: two constructed pieces the library hears as a sentence and as a period, a third as a compound
@@ -43,7 +44,7 @@ static void check_claim(const cJSON *claim, size_t note_count) {
 static bool analyze(const char *path, bool midi, ImportedNotes *notes, AnalysisReport *report, cJSON **document) {
     bool imported = midi ? midi_pipeline_import_file(path, notes) == MIDI_PIPELINE_OK
                          : musicxml_pipeline_import_file(path, notes) == MUSICXML_PIPELINE_OK;
-    if (!imported || !run_analysis_pipeline(notes, report)) {
+    if (!imported || !run_analysis_pipeline(notes, test_knowledge(), report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return false;

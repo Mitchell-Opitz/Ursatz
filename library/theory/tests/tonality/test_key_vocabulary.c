@@ -6,6 +6,7 @@
 #include "model/interpretation/key.h"
 #include "theory/tonality/key_vocabulary.h"
 #include "interpretation_test_access.h"
+#include "test_knowledge.h"
 
 /*
  * Construction tests: one major key and one minor key, confirming each
@@ -18,7 +19,7 @@ static void check_key(CommonPracticeKeyMode mode, const char *tonic_name, const 
     assert(entity_id_create(context_id_value, &context_id) == ENTITY_ID_OK);
 
     Key *key;
-    assert(common_practice_build_key(mode, tonic_name, context_id, &key) == KEY_OK);
+    assert(common_practice_build_key(common_practice_material(test_materials(), mode), tonic_name, context_id, &key) == KEY_OK);
     assert(strcmp(key_label(key), expected_label) == 0);
     assert(interpretation_framework_reference(key_interpretation(key)) != NULL);
 

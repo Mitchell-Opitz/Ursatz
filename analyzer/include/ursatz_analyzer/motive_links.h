@@ -7,6 +7,7 @@
 #include "analysis/motive/motive_link.h"
 #include "analysis/motive/motive_relation.h"
 #include "analysis/motive/motive_variant_recognition.h"
+#include "theory/knowledge/knowledge_snapshot.h"
 
 /*
  * Motive links: which motive families of different pieces are variants of one another (R-154). A family's prototype
@@ -35,7 +36,11 @@ typedef enum {
     MOTIVE_LINKS_ERR_ALLOC
 } MotiveLinksResult;
 
-MotiveLinkScope *motive_link_scope_create(void);
+/*
+ * An empty scope that reads the materials of the documents it adds from knowledge. The snapshot is borrowed and must outlive the
+ * scope: a family's sketch points to its material. NULL for a NULL snapshot or on allocation failure.
+ */
+MotiveLinkScope *motive_link_scope_create(const KnowledgeSnapshot *knowledge);
 void motive_link_scope_destroy(MotiveLinkScope *scope);
 
 /*

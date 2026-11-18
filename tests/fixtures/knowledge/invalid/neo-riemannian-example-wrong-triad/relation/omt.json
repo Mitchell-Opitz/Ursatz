@@ -1,0 +1,33 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.relation.neo-riemannian-r",
+      "kind": "relation",
+      "subtype": "neo-riemannian",
+      "name": "neo riemannian r",
+      "content": {
+        "moves": [
+          "R"
+        ]
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "C major",
+          "target": "A major"
+        }
+      ]
+    }
+  ]
+}

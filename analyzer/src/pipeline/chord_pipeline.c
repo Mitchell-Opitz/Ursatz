@@ -156,7 +156,10 @@ bool identify_pivot_chords(const Segmentation *segmentation, const AnalysisKeyRe
         }
         /* The library reads the pivot in the old key and its own mode, as key_regions_estimate does when it finds
            the pivot. */
-        CommonPracticeKeyMode mode = old_region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR;
+        CommonPracticeKeyMode mode;
+        if (!common_practice_key_mode_of(old_region->material, &mode)) {
+            continue;
+        }
         CommonPracticeWeightedResult result = {0};
         if (common_practice_identify_weighted(&segmentation->library_segments[change->pivot_entry],
                                               old_region->tonic_pitch_class, mode, NULL, &result) !=

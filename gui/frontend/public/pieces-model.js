@@ -1,7 +1,7 @@
 /* Pieces view (P17): the piece form state, the version body it makes, its structure problems, the strip timeline,
  * the compose request and the rows of a result. No DOM; pieces-view.js renders from these. Needs themes-model.js for
  * the brief, the switches and the shared lists. The form state is
- *   {id, uses, form, key, mode, meter, tempo, bars, count, modulate, sections: [{id, part, letter, beats, pickup, cadence, fill}],
+ *   {id, uses, form, key, material, meter, tempo, bars, count, modulate, sections: [{id, part, letter, beats, pickup, cadence, fill}],
  *    motive: {item_id, version} | null, pool, accompaniment: {kind, pattern}, picks: [...], switches: {...},
  *    weight, check, seed}
  * with form the name of a Composer form (game-loop when a body names none), bars and count the size of a sized form (0 and 0
@@ -19,7 +19,7 @@
   const DEFAULT_FORM = "game-loop";
   const cadences = () => Vocab.values("cadences");
   const fillKinds = () => Vocab.list("fill_kinds");
-  const modes = () => Themes.MODES;
+  const materials = () => Vocab.list("piece_materials");
   const meters = () => Themes.METERS;
   const pools = () => Themes.POOLS;
   const weights = () => Themes.WEIGHTS;
@@ -54,7 +54,7 @@
       uses: [],
       form: DEFAULT_FORM,
       key: "C",
-      mode: "major",
+      material: (materials()[0] || {}).value || "",
       meter: "4/4",
       tempo: "",
       bars: 0,
@@ -513,7 +513,7 @@
     const s = state || emptyState();
     const acc = s.accompaniment || { kind: "none" };
     const form = formOf(s.form);
-    const structure = { form: form ? form.name : DEFAULT_FORM, key: text(s.key), mode: s.mode, meter: s.meter };
+    const structure = { form: form ? form.name : DEFAULT_FORM, key: text(s.key), material: s.material, meter: s.meter };
     if (isSized(form)) {
       structure.bars = Number(s.bars) || 0;
       structure.count = Number(s.count) || 0;
@@ -548,8 +548,8 @@
     if (typeof structure.key === "string" && structure.key !== "") {
       state.key = structure.key;
     }
-    if (modes().some((entry) => entry.value === structure.mode)) {
-      state.mode = structure.mode;
+    if (materials().some((entry) => entry.value === structure.material)) {
+      state.material = structure.material;
     }
     if (meters().includes(structure.meter)) {
       state.meter = structure.meter;
@@ -663,7 +663,7 @@
       return "";
     }
     const into = form.into === "hybrid" && form.hybrid ? `hybrid (${form.hybrid})` : form.into;
-    return `${into} in ${form.key} ${form.mode}, ${form.meter}, ${form.bars} bars`;
+    return `${into} in ${form.key} ${Vocab.materialWord(form.material)}, ${form.meter}, ${form.bars} bars`;
   }
 
   /* True when the theme version body was composed (it has a result). */
@@ -759,7 +759,7 @@
   function formProblems(state, options) {
     const s = state || emptyState();
     const problems = structureProblems(s, options);
-    if (s.mode === "style" && Themes.briefFromPicks(s.picks) === null) {
+    if (s.material === "style" && Themes.briefFromPicks(s.picks) === null) {
       problems.push("The mode from the brief needs a brief.");
     }
     return problems;
@@ -769,7 +769,8 @@
    * about; anything under /sections marks the section list. */
   const FIELD_PATHS = [
     ["/key", "key"],
-    ["/mode", "mode"],
+    ["/material", "material"],
+    ["/mode", "material"],
     ["/meter", "meter"],
     ["/tempo", "tempo"],
     ["/seed", "seed"],
@@ -1137,7 +1138,7 @@
     const versions = summary.versions && typeof summary.versions === "object" ? summary.versions : {};
     const brief = summary.brief || {};
     const tempo = brief.tempo || {};
-    const mode = brief.mode || {};
+    const mode = brief.material ? { mode: Vocab.keyWord(brief.material.material), from: brief.material.from } : brief.mode || {};
     const without = Array.isArray(brief.without) ? brief.without : [];
     const loop = summary.loop && typeof summary.loop === "object" ? summary.loop : null;
     const pieces = r.brief && typeof r.brief === "object" ? r.brief : {};
@@ -1205,8 +1206,8 @@
     get INTOS() {
       return Themes.INTOS;
     },
-    get MODES() {
-      return Themes.MODES;
+    get MATERIALS() {
+      return Themes.MATERIALS;
     },
     get METERS() {
       return Themes.METERS;

@@ -12,12 +12,12 @@ static int mod_int(int value, int modulus) {
 }
 
 static int semitones_of(GalantPitchDegree degree) {
-    return standard_tonality_degree_semitone(STANDARD_TONALITY_MODE_MAJOR, degree.degree) + degree.alteration;
+    return standard_tonality_natural_degree_semitone(degree.degree) + degree.alteration;
 }
 
 /* The degree on letter distance `letter` (0 to 6) at `semitones` above the tonic (octaves dropped). */
 static GalantPitchDegree make_degree(int letter, int semitones) {
-    int alteration = mod_int(semitones - standard_tonality_degree_semitone(STANDARD_TONALITY_MODE_MAJOR, letter + 1), 12);
+    int alteration = mod_int(semitones - standard_tonality_natural_degree_semitone(letter + 1), 12);
     if (alteration >= 6) {
         alteration -= 12;
     }
@@ -55,11 +55,8 @@ static bool degree_ok(GalantPitchDegree degree) {
     return degree.degree >= 1 && degree.degree <= 7 && degree.alteration >= -2 && degree.alteration <= 2;
 }
 
-static bool starts_before(const TimeSpan *a, const TimeSpan *b) {
-    const MusicalTime *x = time_span_start(a);
-    const MusicalTime *y = time_span_start(b);
-    return (long long)musical_time_numerator(x) * (long long)musical_time_denominator(y) <
-           (long long)musical_time_numerator(y) * (long long)musical_time_denominator(x);
+static bool starts_before(TimeSpan a, TimeSpan b) {
+    return musical_time_cmp(a.start, b.start) < 0;
 }
 
 GalantAnalysisStatus galant_segments_add(GalantSegmentList *list, const GalantSegment *segment) {
@@ -67,7 +64,7 @@ GalantAnalysisStatus galant_segments_add(GalantSegmentList *list, const GalantSe
         return GALANT_ANALYSIS_ERR_NULL_ARGUMENT;
     }
     if (segment->segment.id == NULL || segment->segment.id[0] == '\0' || strlen(segment->segment.id) >= GALANT_ANALYSIS_ID_MAX ||
-        memchr(segment->key_id, '\0', GALANT_ANALYSIS_ID_MAX) == NULL || !time_span_is_valid(segment->segment.span) ||
+        memchr(segment->key_id, '\0', GALANT_ANALYSIS_ID_MAX) == NULL || !time_span_holds(segment->segment.span) ||
         !beat_strength_valid(segment->segment.strength) || segment->beat_numerator <= 0 || segment->beat_denominator == 0 ||
         !degree_ok(segment->key) || (segment->has_bass && !degree_ok(segment->bass)) ||
         (segment->has_soprano && !degree_ok(segment->soprano)) || (segment->has_numeral && !degree_ok(segment->root)) ||

@@ -9,6 +9,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * End-to-end test: a hand-constructed SMF type 0 fixture (same
@@ -73,7 +74,7 @@ int main(void) {
     assert(notes.count == 11);
 
     AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, &report));
+    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     assert(report.key_region_count > 0);
     /* Harmonic spans: D F A read as one ii, and the B with the closing C E G D as one iii; three chords where the
        sonority segmentation gave six. */

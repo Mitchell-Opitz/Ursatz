@@ -43,9 +43,9 @@ typedef struct {
     Rational duration;
 } FigureNote;
 
-/* The melody of the section the target returns, moved by shift (and mapped into to_mode when mode_change), in order of onset. NULL when it holds no note. */
+/* The melody of the section the target returns, moved by shift (and mapped into to_material when mode_change), in order of onset. NULL when it holds no note. */
 FigureSourceNote *form_figure_read_melody(const PiecePlan *plan, NodeId source, int shift, bool mode_change, int tonic,
-                                          KeyStructureMode to_mode, size_t *count);
+                                          const PitchMaterial *to_material, size_t *count);
 bool form_figure_has_pitch_class(unsigned mask, int pitch);
 /* The section as the figure reads it; NULL when it is not a figurate return or cannot be read. */
 FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section);

@@ -1,0 +1,173 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.relation.supertonic", "kind": "relation", "subtype": "tonal", "name": "supertonic",
+      "content": {"degree": 2, "material": "diatonic", "anchor_default": "home", "reached_by": ["pivot", "direct"]},
+      "citations": [{"source": "omt", "part": "IV", "chapter": 15, "example": 4, "note": "the key on this degree of the home key's scale, a closely related key, reached through a pivot chord or directly"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "D minor"},
+                   {"anchor": "Eb major", "target": "F minor"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.mediant", "kind": "relation", "subtype": "tonal", "name": "mediant",
+      "aliases": ["relative major"],
+      "content": {"degree": 3, "material": "diatonic", "anchor_default": "home", "reached_by": ["pivot", "direct"]},
+      "citations": [{"source": "omt", "part": "IV", "chapter": 15, "example": 4, "note": "the key on this degree of the home key's scale, a closely related key, reached through a pivot chord or directly"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "E minor"},
+                   {"anchor": "C minor", "target": "Eb major"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.subdominant", "kind": "relation", "subtype": "tonal", "name": "subdominant",
+      "content": {"degree": 4, "material": "diatonic", "anchor_default": "home", "reached_by": ["pivot", "direct"]},
+      "citations": [{"source": "omt", "part": "IV", "chapter": 15, "example": 4, "note": "the key on this degree of the home key's scale, a closely related key, reached through a pivot chord or directly"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "F major"},
+                   {"anchor": "C minor", "target": "F minor"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.dominant", "kind": "relation", "subtype": "tonal", "name": "dominant",
+      "content": {"degree": 5, "material": "diatonic", "anchor_default": "home", "reached_by": ["pivot", "direct"]},
+      "citations": [{"source": "omt", "part": "IV", "chapter": 15, "example": 4, "note": "the key on this degree of the home key's scale, a closely related key, reached through a pivot chord or directly"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "G major"},
+                   {"anchor": "C minor", "target": "G minor"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.submediant", "kind": "relation", "subtype": "tonal", "name": "submediant",
+      "aliases": ["relative minor"],
+      "content": {"degree": 6, "material": "diatonic", "anchor_default": "home", "reached_by": ["pivot", "direct"]},
+      "citations": [{"source": "omt", "part": "IV", "chapter": 15, "example": 4, "note": "the key on this degree of the home key's scale, a closely related key, reached through a pivot chord or directly"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "A minor"},
+                   {"anchor": "C minor", "target": "Ab major"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.subtonic", "kind": "relation", "subtype": "tonal", "name": "subtonic",
+      "content": {"degree": 7, "material": "diatonic", "anchor_default": "home", "reached_by": ["pivot", "direct"]},
+      "citations": [{"source": "omt", "part": "IV", "chapter": 15, "example": 4, "note": "the key on this degree of the home key's scale, a closely related key, reached through a pivot chord or directly"}],
+      "status": "active",
+      "examples": [{"anchor": "C minor", "target": "Bb major"},
+                   {"anchor": "A minor", "target": "G major"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.parallel", "kind": "relation", "subtype": "tonal", "name": "parallel",
+      "aliases": ["parallel key"],
+      "content": {"root_semitones": 0, "material": "parallel", "anchor_default": "home"},
+      "citations": [{"source": "omt", "part": "V", "chapter": 1, "note": "the key on the same tonic with the other mode: major and minor swap"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "C minor"},
+                   {"anchor": "A minor", "target": "A major"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.chromatic-mediant", "kind": "relation", "subtype": "tonal", "name": "chromatic mediant",
+      "content": {"root_semitones": 4, "material": "same", "anchor_default": "home", "reached_by": ["common-tone", "chromatic"]},
+      "citations": [{"source": "omt", "part": "V", "chapter": 6, "example": 8, "note": "a key whose tonic is a third from the home tonic and whose chord shares a note with the home chord, in the same mode as the home key"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "E major"},
+                   {"anchor": "C minor", "target": "E minor"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.chromatic-mediant-lowered", "kind": "relation", "subtype": "tonal", "name": "lowered chromatic mediant",
+      "content": {"root_semitones": 3, "material": "same", "anchor_default": "home", "reached_by": ["common-tone", "chromatic"]},
+      "citations": [{"source": "omt", "part": "V", "chapter": 6, "example": 8, "note": "a key whose tonic is a third from the home tonic and whose chord shares a note with the home chord, in the same mode as the home key"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "Eb major"},
+                   {"anchor": "C minor", "target": "Eb minor"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.chromatic-submediant", "kind": "relation", "subtype": "tonal", "name": "chromatic submediant",
+      "aliases": ["flat submediant", "lowered submediant"],
+      "content": {"root_semitones": 8, "material": "same", "anchor_default": "home", "reached_by": ["common-tone", "chromatic"]},
+      "citations": [{"source": "omt", "part": "V", "chapter": 6, "example": 8, "note": "a key whose tonic is a third from the home tonic and whose chord shares a note with the home chord, in the same mode as the home key"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "Ab major"},
+                   {"anchor": "C minor", "target": "Ab minor"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.chromatic-submediant-raised", "kind": "relation", "subtype": "tonal", "name": "raised chromatic submediant",
+      "content": {"root_semitones": 9, "material": "same", "anchor_default": "home", "reached_by": ["common-tone", "chromatic"]},
+      "citations": [{"source": "omt", "part": "V", "chapter": 6, "example": 8, "note": "a key whose tonic is a third from the home tonic and whose chord shares a note with the home chord, in the same mode as the home key"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "A major"},
+                   {"anchor": "C minor", "target": "A minor"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.one-step-brighter", "kind": "relation", "subtype": "modal", "name": "one step brighter",
+      "content": {"center": "same", "brightness_steps": 1, "anchor_default": "home"},
+      "citations": [{"source": "omt", "part": "I", "chapter": 14, "example": 1, "note": "the same tonic with the mode moved along the brightness ranking of the seven modes"}],
+      "status": "active",
+      "examples": [{"anchor": "C minor", "target": "C dorian"},
+                   {"anchor": "C major", "target": "C lydian"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.two-steps-brighter", "kind": "relation", "subtype": "modal", "name": "two steps brighter",
+      "content": {"center": "same", "brightness_steps": 2, "anchor_default": "home"},
+      "citations": [{"source": "omt", "part": "I", "chapter": 14, "example": 1, "note": "the same tonic with the mode moved along the brightness ranking of the seven modes"}],
+      "status": "active",
+      "examples": [{"anchor": "C minor", "target": "C mixolydian"},
+                   {"anchor": "C dorian", "target": "C major"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.one-step-darker", "kind": "relation", "subtype": "modal", "name": "one step darker",
+      "content": {"center": "same", "brightness_steps": -1, "anchor_default": "home"},
+      "citations": [{"source": "omt", "part": "I", "chapter": 14, "example": 1, "note": "the same tonic with the mode moved along the brightness ranking of the seven modes"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "C mixolydian"},
+                   {"anchor": "C minor", "target": "C phrygian"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.two-steps-darker", "kind": "relation", "subtype": "modal", "name": "two steps darker",
+      "content": {"center": "same", "brightness_steps": -2, "anchor_default": "home"},
+      "citations": [{"source": "omt", "part": "I", "chapter": 14, "example": 1, "note": "the same tonic with the mode moved along the brightness ranking of the seven modes"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "C dorian"},
+                   {"anchor": "C minor", "target": "C locrian"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.neo-riemannian-p", "kind": "relation", "subtype": "neo-riemannian", "name": "neo-Riemannian P",
+      "content": {"moves": ["P"]},
+      "citations": [{"source": "omt", "part": "V", "chapter": 14, "note": "parallel: the root and fifth stay and the third moves a half step, giving the triad of the other mode on the same root"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "C minor"},
+                   {"anchor": "C minor", "target": "C major"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.neo-riemannian-l", "kind": "relation", "subtype": "neo-riemannian", "name": "neo-Riemannian L",
+      "content": {"moves": ["L"]},
+      "citations": [{"source": "omt", "part": "V", "chapter": 14, "note": "leading-tone exchange: one note moves a half step, giving the triad of the other mode whose root is a third away"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "E minor"},
+                   {"anchor": "C minor", "target": "Ab major"}],
+      "version": 1
+    },
+    {
+      "id": "omt.relation.neo-riemannian-r", "kind": "relation", "subtype": "neo-riemannian", "name": "neo-Riemannian R",
+      "content": {"moves": ["R"]},
+      "citations": [{"source": "omt", "part": "V", "chapter": 14, "note": "relative: one note moves a whole step, giving the relative triad of the other mode"}],
+      "status": "active",
+      "examples": [{"anchor": "C major", "target": "A minor"},
+                   {"anchor": "C minor", "target": "Eb major"}],
+      "version": 1
+    }
+  ]
+}

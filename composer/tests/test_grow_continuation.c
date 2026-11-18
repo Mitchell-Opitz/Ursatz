@@ -13,6 +13,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -48,7 +49,7 @@ static Motive load_motive(const char *path) {
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
-    MotiveResult result = motive_from_json(text, NULL, &motive, &error);
+    MotiveResult result = motive_from_json(text, test_motive_options(), &motive, &error);
     if (result != MOTIVE_OK) {
         fprintf(stderr, "%s: cannot read the motif at %s: %s\n", path, error.location, error.message);
     }
@@ -87,6 +88,7 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, const Grow
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.basic = motive;
     config.context.basic_as_written = as_written;
@@ -330,6 +332,7 @@ static void test_cut_departs(void) {
         text.cadence = "PAC";
         text.into = "sentence";
         memset(&setup, 0, sizeof(setup));
+        setup.knowledge = test_knowledge();
         setup.text = &text;
         setup.into = GROW_INTO_SENTENCE;
         setup.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
@@ -523,6 +526,7 @@ static void test_rates(void) {
                 text.cadence = "PAC";
                 text.into = "sentence";
                 memset(&setup, 0, sizeof(setup));
+                setup.knowledge = test_knowledge();
                 setup.text = &text;
                 setup.into = GROW_INTO_SENTENCE;
                 setup.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;

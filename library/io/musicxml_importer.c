@@ -21,11 +21,11 @@
 #include "model/pitch/tuning_system.h"
 #include "model/time/duration.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/time/meter_map.h"
 #include "model/time/note_value.h"
 #include "model/time/tempo_map.h"
 #include "model/time/time_span.h"
+#include "model/time/tuplet.h"
 #include "model/events/dynamics.h"
 #include "model/events/tempo_marking.h"
 #include "model/time/metronome_marking.h"
@@ -55,6 +55,8 @@ typedef struct {
     size_t order;    /* document order within the part */
     char voice[32];  /* the notated <voice>, or "" */
     int staff;       /* the <staff>, 1 when none */
+    unsigned tuplet_actual; /* <time-modification>: actual notes in the time of normal, 0 and 0 when none */
+    unsigned tuplet_normal;
 } XNote;
 
 typedef struct {
@@ -66,6 +68,8 @@ typedef struct {
     Rational position;
     unsigned beats;
     int exponent;       /* the beat unit is 2^-exponent of a whole note: 0 whole, 2 quarter, 3 eighth */
+    size_t group_count; /* the beat groups of an additive "3+2", else 0 for the signature's default groups */
+    unsigned groups[TIME_SIGNATURE_MAX_GROUPS];
     size_t part;
 } TimeEvent;
 
@@ -355,6 +359,25 @@ static bool advance(Ctx *ctx, PartState *state, Rational by) {
     return true;
 }
 
+/* <time-modification> is the notated tuplet: <actual-notes> in the time of <normal-notes>. One that is not a Tuplet
+   (counts outside 2 to 64 and 1 to 64, or equal) is warned about and left off; the duration stays exact. */
+static void read_time_modification(Ctx *ctx, ezxml_t note, XNote *parsed) {
+    ezxml_t modification = ezxml_child(note, "time-modification");
+    if (modification == NULL) {
+        return;
+    }
+    long actual = 0;
+    long normal = 0;
+    if (!read_long(ezxml_child(modification, "actual-notes"), &actual) ||
+        !read_long(ezxml_child(modification, "normal-notes"), &normal) || actual < TUPLET_MIN_ACTUAL ||
+        actual > TUPLET_MAX_COUNT || normal < 1 || normal > TUPLET_MAX_COUNT || actual == normal) {
+        warn(ctx, "<time-modification> is not a tuplet ratio; left off");
+        return;
+    }
+    parsed->tuplet_actual = (unsigned)actual;
+    parsed->tuplet_normal = (unsigned)normal;
+}
+
 static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, ezxml_t note) {
     bool is_chord = ezxml_child(note, "chord") != NULL;
     bool is_grace = ezxml_child(note, "grace") != NULL;
@@ -409,6 +432,7 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
     }
     parsed.staff = (int)staff;
     parsed.midi += state->transpose;
+    read_time_modification(ctx, note, &parsed);
 
     if (length.num == 0) {
         warn(ctx, "note with a zero duration skipped");
@@ -434,6 +458,10 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
                     return false;
                 }
                 open->duration = extended;
+                if (open->tuplet_actual != parsed.tuplet_actual || open->tuplet_normal != parsed.tuplet_normal) {
+                    open->tuplet_actual = 0; /* tied to a note written another way: no one ratio describes it */
+                    open->tuplet_normal = 0;
+                }
                 if (tie_start) {
                     ctx->ties[t].end = end;
                 } else {
@@ -499,7 +527,7 @@ static bool grow(Ctx *ctx, void **array, size_t *capacity, size_t count, size_t 
     return true;
 }
 
-/* <time>: <beats> (a whole number, or "3+2") and <beat-type> (a power of two). */
+/* <time>: <beats> (a whole number, or "3+2", the beat groups) and <beat-type> (a power of two). */
 static bool handle_time(Ctx *ctx, PartState *state, ezxml_t time) {
     if (ezxml_child(time, "senza-misura") != NULL) {
         return true;
@@ -512,6 +540,9 @@ static bool handle_time(Ctx *ctx, PartState *state, ezxml_t time) {
         return true;
     }
     unsigned long beats = 0;
+    unsigned groups[TIME_SIGNATURE_MAX_GROUPS];
+    size_t group_count = 0;
+    bool groupable = true; /* every part fits a beat group and there are few enough of them */
     bool additive = false;
     bool valid = true;
     for (const char *cursor = beats_text; *cursor != '\0' && valid;) {
@@ -522,6 +553,11 @@ static bool handle_time(Ctx *ctx, PartState *state, ezxml_t time) {
             break;
         }
         beats += (unsigned long)part;
+        if (group_count < TIME_SIGNATURE_MAX_GROUPS && part <= TIME_SIGNATURE_MAX_GROUP_UNITS) {
+            groups[group_count++] = (unsigned)part;
+        } else {
+            groupable = false;
+        }
         cursor = end;
         if (*cursor == '+') {
             additive = true;
@@ -543,16 +579,22 @@ static bool handle_time(Ctx *ctx, PartState *state, ezxml_t time) {
         warn(ctx, "time signature %s/%ld skipped (not a whole number of beats over a power of two)", beats_text, beat_type);
         return true;
     }
-    if (additive) {
-        warn(ctx, "additive meter %s/%ld summed to %lu/%ld", beats_text, beat_type, beats, beat_type);
+    if (additive && !groupable) {
+        warn(ctx, "additive meter %s/%ld summed to %lu/%ld (beat groups are 1 to %d of up to %d units)", beats_text,
+             beat_type, beats, beat_type, TIME_SIGNATURE_MAX_GROUPS, TIME_SIGNATURE_MAX_GROUP_UNITS);
     }
     if (!grow(ctx, (void **)&ctx->times, &ctx->time_capacity, ctx->time_count, sizeof(TimeEvent))) {
         return false;
     }
     TimeEvent *event = &ctx->times[ctx->time_count++];
+    memset(event, 0, sizeof(*event));
     event->position = state->cursor;
     event->beats = (unsigned)beats;
     event->exponent = exponent;
+    if (additive && groupable) {
+        event->group_count = group_count;
+        memcpy(event->groups, groups, group_count * sizeof(unsigned));
+    }
     event->part = ctx->current_part;
     state->has_signature = true;
     state->measure_length = rational_ratio(beats, 1ull << exponent);
@@ -923,9 +965,7 @@ static int compare_items(const void *a, const void *b) {
 static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const TuningSystem *tuning, NoteEvent **out_event,
                         PitchNumericValue **out_value) {
     EntityID *id = NULL;
-    MusicalTime *position = NULL;
-    TemporalAnchor *anchor = NULL;
-    Duration *duration = NULL;
+    Duration duration;
     PitchNumericValue *numeric = NULL;
     PitchIdentity *pitch = NULL;
     PitchSpelling *spelling = NULL;
@@ -939,11 +979,9 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
     snprintf(id_text, sizeof(id_text), "musicxml-%s-%zu", part_id, note->order);
     char voice_text[128];
     snprintf(voice_text, sizeof(voice_text), "musicxml-voice-%s-%s", part_id, note->voice);
-    position = musical_time_from_rational_or_null(note->onset);
     bool fits = note->duration.num <= (unsigned long long)LONG_MAX && note->duration.den <= (unsigned long long)ULONG_MAX;
-    bool ok = position != NULL && fits && entity_id_create(id_text, &id) == ENTITY_ID_OK &&
-              temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK &&
-              duration_create((long)note->duration.num, (unsigned long)note->duration.den, &duration) == DURATION_OK &&
+    bool ok = fits && entity_id_create(id_text, &id) == ENTITY_ID_OK &&
+              duration_make((long long)note->duration.num, (long long)note->duration.den, &duration) == DURATION_OK &&
               pitch_numeric_value_create(tuning, note->midi, 1, &numeric) == PITCH_NUMERIC_VALUE_OK &&
               pitch_numeric_value_to_identity(numeric, &pitch) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK &&
               pitch_spelling_create(note->letter, note->accidental, note->octave, &spelling) == PITCH_SPELLING_OK &&
@@ -958,20 +996,24 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
                 voice_id = NULL; /* owned by the voice reference */
             }
         }
-        ok = ok && note_event_create(id, anchor, duration, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK;
+        ok = ok && note_event_create(id, musical_time_of(note->onset), duration, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK;
+        if (ok) {
+            /* the event owns id, pitch, spelling, voice and provenance now */
+            id = NULL; pitch = NULL; spelling = NULL; voice = NULL; provenance = NULL;
+            if (note->tuplet_actual != 0 && note_event_set_tuplet(event, note->tuplet_actual, note->tuplet_normal) != NOTE_EVENT_OK) {
+                note_event_destroy(event);
+                event = NULL;
+                ok = false;
+            }
+        }
     }
     if (!ok) {
-        if (!fits || position == NULL) {
+        if (!fits) {
             fail(ctx, MUSICXML_IMPORT_ERR_OVERFLOW, "a note's position or duration does not fit");
         } else {
             fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory");
         }
         entity_id_destroy(id);
-        temporal_anchor_destroy(anchor);
-        if (anchor == NULL) {
-            musical_time_destroy(position);
-        }
-        duration_destroy(duration);
         pitch_identity_destroy(pitch);
         pitch_spelling_destroy(spelling);
         pitch_numeric_value_destroy(numeric);
@@ -1008,6 +1050,10 @@ void musicxml_import_destroy(MusicXmlImport *import) {
     }
     free(import->parts);
     meter_map_destroy(import->meter_map);
+    for (size_t i = 0; import->part_meter_maps != NULL && i < import->part_count; i++) {
+        meter_map_destroy(import->part_meter_maps[i]);
+    }
+    free(import->part_meter_maps);
     tempo_map_destroy(import->tempo_map);
     for (size_t i = 0; i < import->tempo_marking_count; i++) {
         tempo_marking_destroy(import->tempo_markings[i]);
@@ -1022,7 +1068,6 @@ void musicxml_import_destroy(MusicXmlImport *import) {
     free(import->dynamics_staff);
     for (size_t i = 0; i < import->key_signature_count; i++) {
         key_signature_destroy(import->key_signatures[i].key_signature);
-        musical_time_destroy(import->key_signatures[i].position);
     }
     free(import->key_signatures);
     clear_import(import);
@@ -1051,44 +1096,41 @@ static int compare_key_events(const void *a, const void *b) {
 }
 
 static bool same_signature(const TimeEvent *a, const TimeEvent *b) {
-    return a->beats == b->beats && a->exponent == b->exponent;
+    return a->beats == b->beats && a->exponent == b->exponent && a->group_count == b->group_count &&
+           memcmp(a->groups, b->groups, a->group_count * sizeof(unsigned)) == 0;
 }
 
-static bool build_meter_map(Ctx *ctx) {
-    MusicXmlImport *out = ctx->out;
+/* The meter map of the time events (sorted by position, then part): one signature per position, the lowest part's wins a
+   conflict, and a pickup's region ended where the pickup ends. `report` says whether to warn about what it drops (the
+   movement's map does; a part's own map has only its own events). *out is NULL on ERR_ALLOC. */
+static MeterMapResult map_of_events(Ctx *ctx, const TimeEvent *events, size_t count, bool report, const char *name,
+                                    MeterMap **out) {
     EntityID *map_id = NULL;
-    if (entity_id_create("musicxml-meter-map", &map_id) != ENTITY_ID_OK) {
-        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+    if (entity_id_create(name, &map_id) != ENTITY_ID_OK) {
+        return METER_MAP_ERR_ALLOC;
     }
-    if (ctx->time_count == 0) {
-        if (meter_map_create_defaulted(map_id, &out->meter_map) != METER_MAP_OK) {
-            entity_id_destroy(map_id);
-            return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
-        }
-        return true;
-    }
-
-    qsort(ctx->times, ctx->time_count, sizeof(TimeEvent), compare_time_events);
-    /* the signatures kept: one per position (the lowest part's wins a conflict), plus the pickup's end */
-    TimeEvent *kept = (TimeEvent *)calloc(ctx->time_count + 1, sizeof(TimeEvent));
+    /* the signatures kept: one per position, plus the pickup's end */
+    TimeEvent *kept = (TimeEvent *)calloc(count + 1, sizeof(TimeEvent));
     if (kept == NULL) {
         entity_id_destroy(map_id);
-        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+        return METER_MAP_ERR_ALLOC;
     }
     size_t kept_count = 0;
-    for (size_t i = 0; i < ctx->time_count; i++) {
-        if (kept_count > 0 && rational_cmp(kept[kept_count - 1].position, ctx->times[i].position) == 0) {
-            if (!same_signature(&kept[kept_count - 1], &ctx->times[i])) {
+    for (size_t i = 0; i < count; i++) {
+        if (kept_count > 0 && rational_cmp(kept[kept_count - 1].position, events[i].position) == 0) {
+            if (report && !same_signature(&kept[kept_count - 1], &events[i])) {
                 warn(ctx, "parts disagree about the time signature at one position; part %zu's is used",
                      kept[kept_count - 1].part);
             }
             continue;
         }
-        kept[kept_count++] = ctx->times[i];
+        kept[kept_count++] = events[i];
     }
     if (ctx->has_pickup) {
         if (kept[0].position.num != 0) {
-            warn(ctx, "the implicit first measure is not read as a pickup: no time signature starts the piece");
+            if (report) {
+                warn(ctx, "the implicit first measure is not read as a pickup: no time signature starts the piece");
+            }
         } else if (kept_count == 1 || rational_cmp(kept[1].position, ctx->pickup_length) > 0) {
             /* nothing ends the pickup's region where the pickup ends: end it there, with the same signature, which
                is what the MeterMap reads as a short first region (a pickup) */
@@ -1102,32 +1144,109 @@ static bool build_meter_map(Ctx *ctx) {
     }
 
     MeterMapChangePoint *points = (MeterMapChangePoint *)calloc(kept_count, sizeof(MeterMapChangePoint));
-    MusicalTime **starts = (MusicalTime **)calloc(kept_count, sizeof(MusicalTime *));
     TimeSignature **signatures = (TimeSignature **)calloc(kept_count, sizeof(TimeSignature *));
-    bool ok = points != NULL && starts != NULL && signatures != NULL;
+    bool ok = points != NULL && signatures != NULL;
     for (size_t i = 0; i < kept_count && ok; i++) {
         NoteValue *unit = NULL;
-        starts[i] = musical_time_from_rational_or_null(kept[i].position);
-        ok = starts[i] != NULL && note_value_create(kept[i].exponent, &unit) == NOTE_VALUE_OK &&
-             time_signature_create(kept[i].beats, unit, &signatures[i]) == TIME_SIGNATURE_OK;
+        ok = note_value_create(kept[i].exponent, &unit) == NOTE_VALUE_OK &&
+             (kept[i].group_count > 0
+                  ? time_signature_create_grouped(kept[i].groups, kept[i].group_count, unit, &signatures[i])
+                  : time_signature_create(kept[i].beats, unit, &signatures[i])) == TIME_SIGNATURE_OK;
         note_value_destroy(unit);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = musical_time_of(kept[i].position);
     }
-    ok = ok && meter_map_create(map_id, points, kept_count, &out->meter_map) == METER_MAP_OK;
-    for (size_t i = 0; starts != NULL && signatures != NULL && i < kept_count; i++) {
-        musical_time_destroy(starts[i]);
+    ok = ok && meter_map_create(map_id, points, kept_count, out) == METER_MAP_OK;
+    for (size_t i = 0; signatures != NULL && i < kept_count; i++) {
         time_signature_destroy(signatures[i]);
     }
-    free(starts);
     free(signatures);
     free(points);
     free(kept);
     if (!ok) {
         entity_id_destroy(map_id);
-        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "the time signatures could not form a meter map") == MUSICXML_IMPORT_OK;
+        return METER_MAP_ERR_ALLOC;
+    }
+    return METER_MAP_OK;
+}
+
+/* Whether two meter maps lay the same regions: the same starts, signatures and pickup. */
+static bool maps_agree(const MeterMap *a, const MeterMap *b) {
+    if (meter_map_region_count(a) != meter_map_region_count(b)) {
+        return false;
+    }
+    for (size_t i = 0; i < meter_map_region_count(a); i++) {
+        const MeterMapRegion *x = meter_map_region(a, i);
+        const MeterMapRegion *y = meter_map_region(b, i);
+        if (musical_time_cmp(meter_map_region_start(x), meter_map_region_start(y)) != 0 ||
+            !time_signature_equals(meter_map_region_time_signature(x), meter_map_region_time_signature(y)) ||
+            meter_map_region_is_pickup(x) != meter_map_region_is_pickup(y)) {
+            return false;
+        }
     }
     return true;
+}
+
+/* Each part's own meter map where it differs from the movement's: one entry per part, NULL for a part that follows the
+   movement's map or declares no time signature; the array stays NULL when every part follows it. times is sorted. */
+static bool build_part_meter_maps(Ctx *ctx) {
+    MusicXmlImport *out = ctx->out;
+    MeterMap **maps = (MeterMap **)calloc(out->part_count > 0 ? out->part_count : 1, sizeof(MeterMap *));
+    TimeEvent *own = (TimeEvent *)calloc(ctx->time_count, sizeof(TimeEvent));
+    bool ok = maps != NULL && own != NULL;
+    bool any = false;
+    for (size_t part = 0; part < out->part_count && ok; part++) {
+        size_t own_count = 0;
+        for (size_t i = 0; i < ctx->time_count; i++) {
+            if (ctx->times[i].part == part) {
+                own[own_count++] = ctx->times[i];
+            }
+        }
+        if (own_count == 0) {
+            continue;
+        }
+        char name[64];
+        snprintf(name, sizeof(name), "musicxml-meter-map-part-%zu", part);
+        MeterMap *map = NULL;
+        ok = map_of_events(ctx, own, own_count, false, name, &map) == METER_MAP_OK;
+        if (ok && maps_agree(map, out->meter_map)) {
+            meter_map_destroy(map);
+        } else if (ok) {
+            maps[part] = map;
+            any = true;
+        }
+    }
+    free(own);
+    if (!ok || !any) {
+        for (size_t part = 0; maps != NULL && part < out->part_count; part++) {
+            meter_map_destroy(maps[part]);
+        }
+        free(maps);
+        return ok || fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "the time signatures could not form a meter map") == MUSICXML_IMPORT_OK;
+    }
+    out->part_meter_maps = maps;
+    return true;
+}
+
+static bool build_meter_map(Ctx *ctx) {
+    MusicXmlImport *out = ctx->out;
+    if (ctx->time_count == 0) {
+        EntityID *map_id = NULL;
+        if (entity_id_create("musicxml-meter-map", &map_id) != ENTITY_ID_OK) {
+            return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+        }
+        if (meter_map_create_defaulted(map_id, &out->meter_map) != METER_MAP_OK) {
+            entity_id_destroy(map_id);
+            return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
+        }
+        return true;
+    }
+
+    qsort(ctx->times, ctx->time_count, sizeof(TimeEvent), compare_time_events);
+    if (map_of_events(ctx, ctx->times, ctx->time_count, true, "musicxml-meter-map", &out->meter_map) != METER_MAP_OK) {
+        return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "the time signatures could not form a meter map") == MUSICXML_IMPORT_OK;
+    }
+    return build_part_meter_maps(ctx);
 }
 
 static bool build_key_signatures(Ctx *ctx) {
@@ -1145,22 +1264,18 @@ static bool build_key_signatures(Ctx *ctx) {
         bool duplicate = false;
         for (size_t k = 0; k < out->key_signature_count && !duplicate; k++) {
             const MusicXmlKeySignatureEvent *seen = &out->key_signatures[k];
-            MusicalTime *position = musical_time_from_rational_or_null(event->position);
-            duplicate = position != NULL && musical_time_equals(seen->position, position) &&
+            duplicate = musical_time_same(seen->position, musical_time_of(event->position)) &&
                         seen->sharps_flats == event->fifths && seen->mode_hint == event->hint;
-            musical_time_destroy(position);
         }
         if (duplicate) {
             continue;
         }
         MusicXmlKeySignatureEvent *slot = &out->key_signatures[out->key_signature_count];
-        slot->position = musical_time_from_rational_or_null(event->position);
+        slot->position = musical_time_of(event->position);
         slot->sharps_flats = (int8_t)event->fifths;
         slot->mode_hint = event->hint;
         slot->part_index = event->part;
-        if (slot->position == NULL || midi_key_signature_build(event->fifths, &slot->key_signature) != MIDI_KEY_SIGNATURE_BUILD_OK) {
-            musical_time_destroy(slot->position);
-            slot->position = NULL;
+        if (midi_key_signature_build(event->fifths, &slot->key_signature) != MIDI_KEY_SIGNATURE_BUILD_OK) {
             return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory") == MUSICXML_IMPORT_OK;
         }
         out->key_signature_count++;
@@ -1220,9 +1335,8 @@ static bool build_tempo_map(Ctx *ctx) {
     qsort(ctx->tempos, ctx->tempo_count, sizeof(TempoEvent), compare_tempo_events);
     TempoEvent *kept = (TempoEvent *)calloc(ctx->tempo_count, sizeof(TempoEvent));
     TempoMapChangePoint *points = (TempoMapChangePoint *)calloc(ctx->tempo_count, sizeof(TempoMapChangePoint));
-    MusicalTime **starts = (MusicalTime **)calloc(ctx->tempo_count, sizeof(MusicalTime *));
     size_t kept_count = 0;
-    bool ok = kept != NULL && points != NULL && starts != NULL;
+    bool ok = kept != NULL && points != NULL;
     for (size_t i = 0; i < ctx->tempo_count && ok; i++) {
         if (kept_count > 0 && rational_cmp(kept[kept_count - 1].position, ctx->tempos[i].position) == 0) {
             if (kept[kept_count - 1].microseconds_per_quarter != ctx->tempos[i].microseconds_per_quarter) {
@@ -1233,16 +1347,10 @@ static bool build_tempo_map(Ctx *ctx) {
         kept[kept_count++] = ctx->tempos[i];
     }
     for (size_t i = 0; i < kept_count && ok; i++) {
-        starts[i] = musical_time_from_rational_or_null(kept[i].position);
-        ok = starts[i] != NULL;
-        points[i].start = starts[i];
+        points[i].start = musical_time_of(kept[i].position);
         points[i].microseconds_per_quarter = kept[i].microseconds_per_quarter;
     }
     TempoMapResult made = ok ? tempo_map_create(map_id, points, kept_count, &out->tempo_map) : TEMPO_MAP_ERR_ALLOC;
-    for (size_t i = 0; starts != NULL && i < kept_count; i++) {
-        musical_time_destroy(starts[i]);
-    }
-    free(starts);
     free(points);
     free(kept);
     if (made != TEMPO_MAP_OK) {
@@ -1266,27 +1374,21 @@ static bool build_tempo_markings(Ctx *ctx) {
     }
     for (size_t i = 0; i < ctx->marking_count; i++) {
         const MarkingEvent *event = &ctx->markings[i];
-        MusicalTime *position = musical_time_from_rational_or_null(event->position);
         TemporalAnchor *anchor = NULL;
-        Duration *unit = NULL;
+        Duration unit;
         MetronomeMarking *metronome = NULL;
-        bool ok = position != NULL && temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK;
+        bool ok = temporal_anchor_create(musical_time_of(event->position), &anchor) == TEMPORAL_ANCHOR_OK;
         if (ok && event->has_metronome) {
-            ok = event->beat_unit.num <= (unsigned long long)LONG_MAX && event->beat_unit.den <= (unsigned long long)ULONG_MAX &&
-                 duration_create((long)event->beat_unit.num, (unsigned long)event->beat_unit.den, &unit) == DURATION_OK &&
-                 metronome_marking_create(unit, event->bpm_numerator, event->bpm_denominator, &metronome) ==
+            ok = event->beat_unit.num <= (unsigned long long)LLONG_MAX && event->beat_unit.den <= (unsigned long long)LLONG_MAX &&
+                 duration_make((long long)event->beat_unit.num, (long long)event->beat_unit.den, &unit) == DURATION_OK &&
+                 metronome_marking_create(&unit, event->bpm_numerator, event->bpm_denominator, &metronome) ==
                      METRONOME_MARKING_OK;
         }
-        duration_destroy(unit);
         TempoMarking *marking = NULL;
         ok = ok && tempo_marking_create(anchor, event->has_text ? event->text : NULL, metronome, &marking) ==
                        TEMPO_MARKING_OK;
         if (!ok) {
-            if (anchor != NULL) {
-                temporal_anchor_destroy(anchor);
-            } else {
-                musical_time_destroy(position);
-            }
+            temporal_anchor_destroy(anchor);
             metronome_marking_destroy(metronome);
             return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "a tempo marking could not be built") == MUSICXML_IMPORT_OK;
         }
@@ -1323,17 +1425,11 @@ static bool build_dynamics(Ctx *ctx) {
             warn(ctx, "dynamic marking %s has no extent (it is at or after the end of the part); skipped", event->name);
             continue;
         }
-        MusicalTime *from = musical_time_from_rational_or_null(event->position);
-        MusicalTime *to = musical_time_from_rational_or_null(end);
-        TimeSpan *span = NULL;
+        TimeSpan span;
         Dynamics *dynamics = NULL;
-        bool ok = from != NULL && to != NULL &&
-                  time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK;
-        musical_time_destroy(from);
-        musical_time_destroy(to);
-        ok = ok && dynamics_create_for_time_span(event->name, span, &dynamics) == DYNAMICS_OK;
+        bool ok = time_span_make(musical_time_of(event->position), musical_time_of(end), &span) == TIME_SPAN_OK &&
+                  dynamics_create_for_time_span(event->name, span, &dynamics) == DYNAMICS_OK;
         if (!ok) {
-            time_span_destroy(span);
             return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "a dynamic marking could not be built") == MUSICXML_IMPORT_OK;
         }
         out->dynamics[out->dynamics_count] = dynamics;

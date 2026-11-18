@@ -41,7 +41,6 @@ typedef struct {
 static void destroy_phrase(StandardFormPhrase *phrase) {
     interpretation_destroy(phrase->interpretation);
     phrase_occurrence_destroy(phrase->occurrence);
-    time_span_destroy(phrase->span);
     memset(phrase, 0, sizeof(*phrase));
 }
 
@@ -57,28 +56,17 @@ void standard_form_phrases_destroy(StandardFormPhrases *phrases) {
     phrases->count = 0;
 }
 
-/* A new left-closed TimeSpan [start, end) the caller destroys, or NULL. */
-static TimeSpan *make_span(Rational start, Rational end) {
-    MusicalTime *from = NULL;
-    MusicalTime *to = NULL;
-    TimeSpan *span = NULL;
-    if (start.num >= 0 && end.num >= 0 && musical_time_create((long)start.num, (unsigned long)start.den, &from) == MUSICAL_TIME_OK &&
-        musical_time_create((long)end.num, (unsigned long)end.den, &to) == MUSICAL_TIME_OK) {
-        if (time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
-            span = NULL;
-        }
-    }
-    musical_time_destroy(from);
-    musical_time_destroy(to);
-    return span;
+/* The left-closed TimeSpan [start, end); false for a negative start or end, or an end before the start. */
+static bool make_span(Rational start, Rational end, TimeSpan *out) {
+    return start.num >= 0 && end.num >= 0 && time_span_make(musical_time_of(start), musical_time_of(end), out) == TIME_SPAN_OK;
 }
 
 /* The end of the arrival chord snapped to a beat, and the measure it falls in (the last measure the arrival touches). */
 static bool arrival_end(const StandardFormInput *input, const StandardFormCadence *cadence, Rational *snapped,
                         int *measure) {
     Rational end;
-    if (!score_time_span(cadence->arrival, NULL, &end) ||
-        meter_map_last_measure_touched(input->map, end, measure) != METER_MAP_OK ||
+    end = cadence->arrival.end.value;
+    if (meter_map_last_measure_touched(input->map, end, measure) != METER_MAP_OK ||
         meter_map_snap_to_beat(input->map, *measure, end, snapped) != METER_MAP_OK) {
         return false;
     }
@@ -119,8 +107,7 @@ static StandardFormAnalysisStatus build_phrase(const StandardFormInput *input, c
         claim->note_first = claim->note_end;
     }
     phrase->uncertainty = uncertainty;
-    phrase->span = make_span(start_time, end_time);
-    if (phrase->span == NULL) {
+    if (!make_span(start_time, end_time, &phrase->span)) {
         return STANDARD_FORM_ANALYSIS_ERR_METER;
     }
     size_t count = (size_t)(claim->note_end - claim->note_first);
@@ -243,8 +230,9 @@ static StandardFormAnalysisStatus segment_phrases(const StandardFormInput *input
     int first_measure = 0;
     int last_measure = 0;
     for (size_t i = 0; i < input->note_count; i++) {
-        if (!score_time_span(input->notes[i].span, &extents[i].start, &extents[i].end) ||
-            meter_map_measure_of(input->map, extents[i].start, &extents[i].first_measure) != METER_MAP_OK ||
+        extents[i].start = input->notes[i].span.start.value;
+        extents[i].end = input->notes[i].span.end.value;
+        if (meter_map_measure_of(input->map, extents[i].start, &extents[i].first_measure) != METER_MAP_OK ||
             meter_map_last_measure_touched(input->map, extents[i].end, &extents[i].last_measure) != METER_MAP_OK) {
             free(extents);
             return STANDARD_FORM_ANALYSIS_ERR_METER;
@@ -314,7 +302,8 @@ static StandardFormAnalysisStatus segment_phrases(const StandardFormInput *input
         }
         Rational start;
         int measure = 0;
-        if (!score_time_span(cadence->arrival, &start, NULL) || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
+        start = cadence->arrival.start.value;
+        if (meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
             status = STANDARD_FORM_ANALYSIS_ERR_METER;
             break;
         }
@@ -428,8 +417,8 @@ static StandardFormAnalysisStatus segment_phrases(const StandardFormInput *input
                 const StandardFormCadence *post = &input->cadences[c];
                 Rational start;
                 int measure = 0;
-                if (!post->post_cadential || !score_time_span(post->arrival, &start, NULL) ||
-                    meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK || measure < points[k].measure ||
+                start = post->arrival.start.value;
+                if (!post->post_cadential || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK || measure < points[k].measure ||
                     measure >= next_boundary) {
                     continue;
                 }

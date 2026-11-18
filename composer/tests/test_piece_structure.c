@@ -12,6 +12,7 @@
 
 #include "util/plan_util.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Piece structures (R-169, R-170): the checks, the default cadences, and the plans and composed runs of structures
@@ -40,7 +41,8 @@ typedef struct {
 
 static void fixture_init(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    fixture->request.key = test_key(0, "major");
+    fixture->request.knowledge = test_knowledge();
     fixture->request.meter.beats_per_bar = 4;
     fixture->request.meter.beat_unit = 4;
     fixture->request.form = "game-loop";
@@ -137,13 +139,36 @@ static void test_checks(void) {
     add_section(&fixture, "a", "A", PIECE_PART_BODY, 0, PIECE_FILL_EMPTY);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
-    /* Pickups: a quarter is fine, a bar is not, a triplet sixteenth is not a multiple of 1/32. */
+    /* Pickups: a quarter is fine, a bar is not, a triplet eighth (1/12) is on the 4/4 grid, 1/64 is not. */
     fixture_init(&fixture);
     PieceSection *section = add_section(&fixture, "a", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
     assert(rational_make(1, 4, &section->pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_OK);
     assert(rational_make(1, 1, &section->pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+    assert(rational_make(1, 12, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(rational_make(1, 64, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+    /* every multiple of 1/32 is still on the grid; a triplet of the beat is too; 1/24 and 1/48 are on no level */
+    assert(rational_make(3, 32, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(rational_make(1, 6, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(rational_make(1, 24, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+    assert(rational_make(1, 48, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
+
+    /* in 6/8 the division is an eighth: a dotted eighth is on the grid, a triplet eighth (1/12) is not */
+    fixture_init(&fixture);
+    fixture.request.meter.beats_per_bar = 6;
+    fixture.request.meter.beat_unit = 8;
+    section = add_section(&fixture, "a", "A", PIECE_PART_BODY, 12, PIECE_FILL_EMPTY);
+    assert(rational_make(3, 16, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
+    assert(rational_make(1, 32, &section->pickup) == RATIONAL_OK);
+    assert(piece_request_check(&fixture.request) == PIECE_OK);
     assert(rational_make(1, 12, &section->pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
@@ -276,7 +301,7 @@ static bool cadence_heard(const PiecePlan *plan, NodeId section) {
     CadenceType heard;
     bool at_end;
     return cadence && key &&
-           harmony_hear_cadence(plan, plan_node_span(plan, section), key->params.key.mode, cadence->params.cadence,
+           harmony_hear_cadence(plan, plan_node_span(plan, section), harmony_key_mode(&key->params.key), cadence->params.cadence,
                                 &heard, &at_end) &&
            at_end && heard == cadence->params.cadence;
 }
@@ -296,6 +321,7 @@ static Sweep compose_seeds(Fixture *fixture) {
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(piece_build_plan(&fixture->request, &plan) == PIECE_OK);
         PieceResult ran = compose_run(plan, &config, &outcome);
@@ -396,6 +422,7 @@ static void free_phrase(size_t beats, size_t expected_ideas, const size_t *idea_
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -434,7 +461,8 @@ static void test_free(void) {
 static void test_minor_half_free(void) {
     Fixture fixture;
     fixture_init(&fixture);
-    fixture.request.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    fixture.request.key = test_key(2, "minor");
+    fixture.request.knowledge = test_knowledge();
     PieceSection *a = add_section(&fixture, "a", "A", PIECE_PART_BODY, 32, PIECE_FILL_MOTIF);
     a->has_into = true;
     a->into = PLAN_ARCHETYPE_SENTENCE;
@@ -456,6 +484,7 @@ static void test_minor_half_free(void) {
     ComposeConfig config;
     ComposeOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     PieceResult ran = compose_run(plan, &config, &outcome);
     assert(ran == PIECE_OK);
@@ -473,7 +502,7 @@ static void test_minor_half_free(void) {
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     Motive motive;
 } FunctionRow;
@@ -481,11 +510,13 @@ typedef struct {
 /* Intro 4 bars; body A 8 bars, T 8 bars (transition), B 8 bars with a motive of its own; turnaround 4 bars; ending K 8 bars (coda). */
 static void function_structure(Fixture *fixture, FunctionRow *row) {
     fixture_init(fixture);
-    fixture->request.key = plan_key_of_pitch_class(row->tonic, row->mode);
+    fixture->request.key = test_key_mode(row->tonic, row->mode);
+    fixture->request.knowledge = test_knowledge();
     fixture->request.meter.beats_per_bar = row->beats;
     size_t bar = (size_t)row->beats;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter = fixture->request.meter;
     options.has_key = true;
@@ -635,8 +666,8 @@ static void function_refusals(const FunctionRow *row, const PiecePlan *loop_plan
 
 static void test_functions(void) {
     static FunctionRow rows[2];
-    rows[0] = (FunctionRow){.name = "C major 4/4", .tonic = 0, .mode = KEY_STRUCTURE_MODE_MAJOR, .beats = 4};
-    rows[1] = (FunctionRow){.name = "A minor 3/4", .tonic = 9, .mode = KEY_STRUCTURE_MODE_MINOR, .beats = 3};
+    rows[0] = (FunctionRow){.name = "C major 4/4", .tonic = 0, .mode = HARMONY_MODE_MAJOR, .beats = 4};
+    rows[1] = (FunctionRow){.name = "A minor 3/4", .tonic = 9, .mode = HARMONY_MODE_MINOR, .beats = 3};
     for (size_t r = 0; r < 2; r++) {
         FunctionRow *row = &rows[r];
         Fixture fixture;
@@ -651,6 +682,7 @@ static void test_functions(void) {
             ComposeConfig config;
             ComposeOutcome outcome;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             config.seed = seed;
             assert(piece_build_plan(&fixture.request, &loop_plan) == PIECE_OK);
             PieceResult ran = compose_run(loop_plan, &config, &outcome);

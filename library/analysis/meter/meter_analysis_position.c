@@ -9,15 +9,19 @@
 #include "model/time/duration.h"
 #include "model/time/metrical_position.h"
 #include "model/time/score_time.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_signature.h"
 
-static bool time_of(Rational q, MusicalTime **out) {
-    return q.num >= 0 && musical_time_create((long)q.num, (unsigned long)q.den, out) == MUSICAL_TIME_OK;
+static bool time_of(Rational q, MusicalTime *out) {
+    if (q.num < 0) {
+        return false;
+    }
+    *out = musical_time_of(q);
+    return true;
 }
 
 static bool rational_of_length(const Duration *duration, Rational *out) {
-    return rational_make(duration_numerator(duration), (long long)duration_denominator(duration), out) == RATIONAL_OK;
+    *out = duration->value;
+    return true;
 }
 
 bool standard_meter_measure_grid(const MeterMap *map, int index, StandardMeterMeasureGrid *grid) {
@@ -28,27 +32,21 @@ bool standard_meter_measure_grid(const MeterMap *map, int index, StandardMeterMe
     if (metrical_position_reading_signature(map, index, &signature) != METRICAL_POSITION_OK) {
         return false;
     }
-    Duration *beat = NULL;
+    Duration beat;
     unsigned beats = 0;
     if (!standard_meter_beat_grid(signature, &beat, &beats)) {
-        duration_destroy(beat);
         return false;
     }
-    bool beat_ok = rational_of_length(beat, &grid->beat);
-    duration_destroy(beat);
-    if (!beat_ok) {
-        return false;
-    }
+    grid->beat = beat.value;
     grid->beats = beats;
     grid->division = standard_meter_type(signature) == METER_TYPE_COMPOUND ? 3 : 2;
 
-    MusicalTime *at = NULL;
+    MusicalTime at;
     MetricalPosition *position = NULL;
     if (!time_of(grid->start, &at)) {
         return false;
     }
-    bool ok = metrical_position_from_time(map, at, &position) == METRICAL_POSITION_OK;
-    musical_time_destroy(at);
+    bool ok = metrical_position_from_time(map, &at, &position) == METRICAL_POSITION_OK;
     if (!ok) {
         return false;
     }
@@ -60,12 +58,11 @@ bool standard_meter_measure_grid(const MeterMap *map, int index, StandardMeterMe
 }
 
 static bool position_at(const MeterMap *map, Rational time, MetricalPosition **position, const TimeSignature **signature) {
-    MusicalTime *at = NULL;
+    MusicalTime at;
     if (map == NULL || !time_of(time, &at)) {
         return false;
     }
-    bool ok = metrical_position_from_time(map, at, position) == METRICAL_POSITION_OK;
-    musical_time_destroy(at);
+    bool ok = metrical_position_from_time(map, &at, position) == METRICAL_POSITION_OK;
     if (!ok) {
         return false;
     }
@@ -94,17 +91,16 @@ bool standard_meter_beat_of(const MeterMap *map, Rational time, int *measure, do
     if (measure == NULL || beat == NULL || !position_at(map, time, &position, &signature)) {
         return false;
     }
-    Duration *unit = NULL;
+    Duration unit;
     unsigned beats = 0;
     bool ok = standard_meter_beat_grid(signature, &unit, &beats);
     Rational length;
     Rational offset;
-    ok = ok && rational_of_length(unit, &length) && rational_of_length(metrical_position_offset(position), &offset);
+    ok = ok && rational_of_length(&unit, &length) && rational_of_length(metrical_position_offset(position), &offset);
     if (ok) {
         *measure = metrical_position_measure(position);
         *beat = 1.0 + rational_to_double(offset) / rational_to_double(length);
     }
-    duration_destroy(unit);
     metrical_position_destroy(position);
     return ok;
 }

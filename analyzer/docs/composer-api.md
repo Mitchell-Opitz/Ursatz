@@ -15,7 +15,7 @@ is not checked by the Analyzer: use standard-counterpoint.
 ## Hear events
 
 ```c
-AnalyzerHearing hearing = {events, count, midi, meter, has_key, tonic_pitch_class, key_minor, streams};
+AnalyzerHearing hearing = {events, count, midi, meter, has_key, tonic_pitch_class, key_material, streams};
 AnalyzerHearingOptions options = analyzer_hearing_options_default(); /* all stages, no document */
 AnalyzerResult *result = NULL;
 if (analyzer_hear(&hearing, &options, &result) == ANALYZER_OK) {
@@ -26,7 +26,7 @@ if (analyzer_hear(&hearing, &options, &result) == ANALYZER_OK) {
 
 Everything in the hearing is borrowed and must outlive the result: no `NoteEvent` is copied, and the result's chain
 notes point at the caller's events. Only arrays of the hearing's own are built (pointers to the events, a numeric pitch
-per event, the streams). `meter` `NULL` is 4/4. `has_key` gives a key signature event at time 0 (tonic 0 to 11, C is 0). `streams` has one stream
+per event, the streams). `meter` `NULL` is 4/4. `has_key` gives a key signature event at time 0 (tonic 0 to 11, C is 0) of the pitch material `key_material` (a material of the snapshot in the options, `NULL` with `has_key` false). `streams` has one stream
 (voice line or part) per event; `NULL` puts every event in stream 0.
 
 `midi` holds one MIDI note number (0 to 127) per event. Ursatz has no call that reads a MIDI number from an event's

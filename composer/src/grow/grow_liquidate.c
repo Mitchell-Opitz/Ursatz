@@ -12,6 +12,7 @@
 #include "harmony/harmony_internal.h"
 #include <ursatz_composer/constraint.h>
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 /*
  * A liquidation (R-494): four bars at home over a dominant pedal that take the pattern apart. Five ideas: the basic idea
@@ -169,7 +170,7 @@ bool grow_liquidate_applies(const PiecePlan *plan, FillTarget target) {
 /* ------------------------------------------------------------- the made motives */
 
 static bool minor_key(const AnalysisKey *key) {
-    return key->mode == KEY_STRUCTURE_MODE_MINOR;
+    return composer_key_is_minor(key);
 }
 
 /* The pitch of the step `position` of the key's scale (7 to an octave), the seventh raised in minor (the harmonic minor). */

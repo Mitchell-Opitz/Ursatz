@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 700
 
 #include "theme_service.h"
+#include "knowledge_service.h"
 
 #include <dirent.h>
 #include <limits.h>
@@ -241,21 +242,27 @@ UrsatzGuiThemeResult ursatz_gui_theme_add_pool(const cJSON *list, const char *sl
     return URSATZ_GUI_THEME_OK;
 }
 
+/* The material of a theme form as text: its id (or style), or the old mode word of a body not migrated; NULL when it has none. */
+static const char *form_material(const cJSON *form) {
+    const cJSON *material = cJSON_GetObjectItemCaseSensitive(form, "material");
+    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(form, "mode");
+    return cJSON_IsString(material) ? material->valuestring : cJSON_IsString(mode) ? mode->valuestring : NULL;
+}
+
 /* What the request needs from the theme, checked before anything is made. */
 static bool composable(const cJSON *theme, bool has_brief, char *message, size_t message_size) {
     const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
     if (!cJSON_IsObject(form) || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "into")) ||
-        !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "mode")) ||
-        !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "meter"))) {
-        ursatz_gui_copy_message(message, message_size, "the theme form needs into, mode and meter");
+        !form_material(form) || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "meter"))) {
+        ursatz_gui_copy_message(message, message_size, "the theme form needs into, material and meter");
         return false;
     }
     if (strcmp(ursatz_gui_json_string(form, "into"), "hybrid") == 0 && !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(form, "hybrid"))) {
         ursatz_gui_copy_message(message, message_size, "a hybrid theme form needs hybrid");
         return false;
     }
-    if (strcmp(ursatz_gui_json_string(form, "mode"), "style") == 0 && !has_brief) {
-        ursatz_gui_copy_message(message, message_size, "the mode style needs a brief");
+    if (strcmp(form_material(form), "style") == 0 && !has_brief) {
+        ursatz_gui_copy_message(message, message_size, "the material style needs a brief");
         return false;
     }
     const cJSON *required = cJSON_GetArrayItem(ursatz_gui_composer_vocabulary_list("theme_slots"),
@@ -400,7 +407,7 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *style_p
     bool ok = result == URSATZ_GUI_THEME_OK && cJSON_AddStringToObject(request, "schema", "ursatz-theme-request") &&
               cJSON_AddNumberToObject(request, "schema_version", 2) &&
               cJSON_AddStringToObject(request, "key", "C");
-    static const char *const form_members[] = {"into", "hybrid", "mode", "meter", "bars", "cadence", "first_cadence", "development", "construction"};
+    static const char *const form_members[] = {"into", "hybrid", "material", "mode", "meter", "bars", "cadence", "first_cadence", "development", "construction"};
     for (size_t i = 0; ok && i < sizeof(form_members) / sizeof(form_members[0]); i++) {
         ok = ursatz_gui_json_add_copy_if(request, form, form_members[i]);
     }
@@ -581,7 +588,7 @@ static UrsatzGuiThemeResult run_theme(const UrsatzGuiComposeRun *run, cJSON **ou
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = composer_api_theme(text, run->job, &response);
+    ComposerStatus status = composer_api_theme(ursatz_gui_composer_context(), text, run->job, &response);
     free(text);
     UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
     cJSON *document = NULL;
@@ -701,7 +708,7 @@ UrsatzGuiThemeResult ursatz_gui_theme_validate(const cJSON *body, bool *complete
         return URSATZ_GUI_THEME_OK;
     }
     const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
-    if (has_brief && strcmp(ursatz_gui_json_string(form, "mode"), "style") == 0) {
+    if (has_brief && strcmp(form_material(form), "style") == 0) {
         /* The style of the brief is built only when composing. */
         ursatz_gui_copy_message(message, message_size, "");
         return URSATZ_GUI_THEME_OK;

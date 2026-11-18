@@ -48,10 +48,10 @@ static Item *items_of(NoteEvent *const *events, size_t count) {
     for (size_t i = 0; i < count; i++) {
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
         const Duration *duration = note_event_duration(events[i]);
-        items[i].pos_n = musical_time_numerator(position);
-        items[i].pos_d = musical_time_denominator(position);
-        items[i].dur_n = duration_numerator(duration);
-        items[i].dur_d = duration_denominator(duration);
+        items[i].pos_n = (long)position->value.num;
+        items[i].pos_d = (unsigned long)position->value.den;
+        items[i].dur_n = (long)duration->value.num;
+        items[i].dur_d = (unsigned long)duration->value.den;
         items[i].midi = midi_of(events[i]);
     }
     qsort(items, count, sizeof(Item), compare_items);
@@ -176,7 +176,7 @@ static void test_midi_without_staves(const char *name) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitches = NULL;
     size_t count = 0;
-    MidiMeterImport meter = {NULL, NULL, NULL, 0};
+    MidiMeterImport meter = {NULL, {{0, 1}}, NULL, 0};
     assert(test_midi_import_parts(data, size, &events, &pitches, &count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(count > 0);
     score.events = events;

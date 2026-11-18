@@ -97,7 +97,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
  * {item_id, version, copy}. A body carries its own type's member ("motif",
  * "theme" or "piece") and no other:
  *   motif: role (melodic | accompaniment), form (full | rhythm | contour),
- *     notes (1 to 4000 characters), meter ("n/m"), key (null or a string),
+ *     notes (1 to 4000 characters), meter ("n/m"), material (null or the id of a material, "omt.material.major"; a motif is in C),
  *     pickup (beats, "n" or "n/d"), features [{label 1 to 8 characters,
  *     first, last with 0 <= first <= last}], analysis (null or an object),
  *     derived (null or {source_item, source_version, operations, seed, kind,
@@ -106,7 +106,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
  *   theme: form (null, a string or an object) and slots (an array). A body with a form object, a slot written as
  *     {slot, item_id, version} or any of pool, accompaniment, brief, style_weight, without, tempo, check, seed and
  *     result is a composable theme (R-167):
- *       form {into, hybrid, key, mode (major | minor | style), meter, bars (4 | 8), cadence, first_cadence}, each
+ *       form {into, hybrid, material (a material's id | style), meter, bars (4 | 8), cadence, first_cadence}, each
  *       member null or as the Composer routes take it; slots [{slot (basic | contrasting | continuation | cadential),
  *       item_id, version}] with basic once and each slot at most once; pool (approved-and-unflagged | approved |
  *       none); accompaniment (null, {pattern} or {pattern: "motive", item_id, version}); brief (null or {scopes,
@@ -115,7 +115,10 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
  *     Any other theme is a placeholder and stays valid. Creating or adding a version checks that each slot names a
  *     melodic motif of form full at an existing version and the accompaniment motive an accompaniment motif, and
  *     replaces the body's uses of those items by one use for each version named.
- *   piece: structure (null, a string, an object or an array).
+ *   piece: structure (null, a string, an object or an array); an object has key (the tonic), material (a material's id |
+ *     style), meter and the form's own members.
+ *   The old members are read: a motif's key "C major" or "C minor", a theme form's or a piece structure's mode (major, minor,
+ *   style). ursatz_gui_material_body_migrate gives the new ones, and every body read from the store or saved has them.
  */
 UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, const cJSON *body, char *error,
                                                            size_t error_size);
@@ -126,6 +129,13 @@ UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, cons
  * or version. Caller-owned.
  */
 UrsatzGuiMaterialResult ursatz_gui_material_body_with_uses(const cJSON *body, cJSON **out);
+
+/*
+ * Writes the members of a body as the store keeps them: a motif's `material` (the id) for its key text "C major" or
+ * "C minor", a theme form's and a piece structure's `material` for their `mode` word, in the uses' copies too. A member
+ * already new wins, and a value that names no material stays as it was. In place; a body that is not an object is left alone.
+ */
+void ursatz_gui_material_body_migrate(cJSON *body);
 
 /* --- items and versions -------------------------------------------------- */
 

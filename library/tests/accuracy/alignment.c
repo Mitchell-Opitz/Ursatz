@@ -3,7 +3,6 @@
 #include "model/events/note_event.h"
 #include "model/pitch/pitch_spelling.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/time/temporal_anchor.h"
 #include "../rational_test_util.h"
 
@@ -24,7 +23,7 @@ double alignment_root_share(const RomanTextAnalysis *analysis, const MusicXmlImp
         int root = 0;
         int intervals[4];
         romantext_expected_chord(chord, &root, intervals);
-        Rational at = test_rational_of_time(chord->time);
+        Rational at = test_rational_of_time(&chord->time);
         bool found = false;
         for (size_t i = 0; i < score->count && !found; i++) {
             Rational onset = test_rational_of_time(temporal_anchor_position(note_event_temporal_anchor(score->events[i])));

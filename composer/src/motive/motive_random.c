@@ -8,6 +8,7 @@
 #include <ursatz_composer/motive_analysis.h>
 
 #include "motive/motive_random_internal.h"
+#include "util/util.h"
 
 /*
  * Random motives: a rhythm drawn in half-beats, then a frame of chord tones of I (a walk on the tonic triad) on the beats
@@ -176,7 +177,7 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
         return MOTIVE_RANDOM_ERR_NULL;
     }
     *out_count = 0;
-    if ((options->mode != KEY_STRUCTURE_MODE_MAJOR && options->mode != KEY_STRUCTURE_MODE_MINOR) ||
+    if (!composer_material_valid(options->material) ||
         (options->form != MOTIVE_SKETCH_FORM_FULL && options->form != MOTIVE_SKETCH_FORM_RHYTHM &&
          options->form != MOTIVE_SKETCH_FORM_CONTOUR) ||
         (options->strategy != MOTIVE_RANDOM_STRATEGY_SEGMENTS && options->strategy != MOTIVE_RANDOM_STRATEGY_DRAWN) ||
@@ -190,11 +191,11 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
     AnalysisKey key;
     if (options->has_key) {
         key = options->key;
-        if (key.mode != options->mode || analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
+        if (composer_key_is_minor(&key) != composer_material_is_minor(options->material) || analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
             return MOTIVE_RANDOM_ERR_KEY;
         }
     } else {
-        key = plan_key_of_pitch_class(options->mode == KEY_STRUCTURE_MODE_MAJOR ? 0 : 9, options->mode);
+        key = plan_key_of_pitch_class(composer_material_is_minor(options->material) ? 9 : 0, options->material);
     }
 
     /* A given chord plan that can never fit is refused before anything is drawn. */

@@ -60,12 +60,10 @@ static inline void test_notes_add_exact(TestNotes *notes, long position_numerato
     snprintf(id_text, sizeof(id_text), "test-note-%zu", notes->count);
     EntityID *id = NULL;
     assert(entity_id_create(id_text, &id) == ENTITY_ID_OK);
-    MusicalTime *position = NULL;
-    assert(musical_time_create(position_numerator, position_denominator, &position) == MUSICAL_TIME_OK);
-    TemporalAnchor *anchor = NULL;
-    assert(temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK);
-    Duration *duration = NULL;
-    assert(duration_create(duration_numerator, duration_denominator, &duration) == DURATION_OK);
+    MusicalTime position;
+    assert(musical_time_make(position_numerator, (long long)position_denominator, &position) == MUSICAL_TIME_OK);
+    Duration duration;
+    assert(duration_make(duration_numerator, (long long)duration_denominator, &duration) == DURATION_OK);
     PitchNumericValue *numeric = NULL;
     assert(pitch_numeric_value_create(notes->tuning, pitch_numerator, pitch_denominator, &numeric) ==
            PITCH_NUMERIC_VALUE_OK);
@@ -80,7 +78,7 @@ static inline void test_notes_add_exact(TestNotes *notes, long position_numerato
     ProvenanceReference *provenance = NULL;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
     NoteEvent *event = NULL;
-    assert(note_event_create(id, anchor, duration, pitch, NULL, voice_reference, provenance, &event) == NOTE_EVENT_OK);
+    assert(note_event_create(id, position, duration, pitch, NULL, voice_reference, provenance, &event) == NOTE_EVENT_OK);
     notes->events[notes->count] = event;
     notes->pitches[notes->count] = numeric;
     notes->count++;
@@ -124,9 +122,9 @@ static inline EntityID *test_id(const char *value) {
     return id;
 }
 
-static inline MusicalTime *test_time(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+static inline MusicalTime test_time_value(long long numerator, long long denominator) {
+    MusicalTime time;
+    assert(musical_time_make(numerator, denominator, &time) == MUSICAL_TIME_OK);
     return time;
 }
 
@@ -140,20 +138,17 @@ typedef struct {
 
 static inline MeterMap *test_meter_map(const TestMeterChange *changes, size_t count) {
     TimeSignature *signatures[16];
-    MusicalTime *starts[16];
     MeterMapChangePoint points[16];
     assert(count <= 16);
     for (size_t i = 0; i < count; i++) {
         signatures[i] = test_time_signature(changes[i].top, changes[i].bottom);
-        starts[i] = test_time(changes[i].start_numerator, changes[i].start_denominator);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = test_time_value(changes[i].start_numerator, (long long)changes[i].start_denominator);
     }
     MeterMap *map = NULL;
     assert(meter_map_create(test_id("test-meter-map"), points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
@@ -165,19 +160,15 @@ typedef struct {
 } TestTempoChange;
 
 static inline TempoMap *test_tempo_map(const TestTempoChange *changes, size_t count) {
-    MusicalTime *starts[16];
     TempoMapChangePoint points[16];
     assert(count <= 16);
     for (size_t i = 0; i < count; i++) {
-        starts[i] = test_time(changes[i].start_numerator, changes[i].start_denominator);
-        points[i].start = starts[i];
+        points[i].start = test_time_value(changes[i].start_numerator, (long long)changes[i].start_denominator);
         points[i].microseconds_per_quarter = changes[i].microseconds_per_quarter;
+        points[i].kind = TEMPO_MAP_CHANGE_ABSOLUTE;
     }
     TempoMap *map = NULL;
     assert(tempo_map_create(test_id("test-tempo-map"), points, count, &map) == TEMPO_MAP_OK);
-    for (size_t i = 0; i < count; i++) {
-        musical_time_destroy(starts[i]);
-    }
     return map;
 }
 
@@ -268,10 +259,10 @@ static inline TestNoteFact *test_facts_of(NoteEvent *const *events, PitchNumeric
     for (size_t i = 0; i < count; i++) {
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
         const Duration *duration = note_event_duration(events[i]);
-        facts[i].position_numerator = musical_time_numerator(position);
-        facts[i].position_denominator = musical_time_denominator(position);
-        facts[i].duration_numerator = duration_numerator(duration);
-        facts[i].duration_denominator = duration_denominator(duration);
+        facts[i].position_numerator = (long)position->value.num;
+        facts[i].position_denominator = (unsigned long)position->value.den;
+        facts[i].duration_numerator = (long)duration->value.num;
+        facts[i].duration_denominator = (unsigned long)duration->value.den;
         facts[i].pitch = pitch_numeric_value_position_numerator(pitches[i]);
     }
     qsort(facts, count, sizeof(TestNoteFact), test_compare_facts);
@@ -320,10 +311,13 @@ static inline void test_assert_same_meter(const MeterMap *a, const MeterMap *b) 
         const MeterMapRegion *x = meter_map_region(a, i);
         const MeterMapRegion *y = meter_map_region(b, i);
         assert(time_signature_equals(meter_map_region_time_signature(x), meter_map_region_time_signature(y)));
-        assert(musical_time_equals(meter_map_region_start(x), meter_map_region_start(y)));
-        assert((meter_map_region_end(x) == NULL) == (meter_map_region_end(y) == NULL));
-        if (meter_map_region_end(x) != NULL) {
-            assert(musical_time_equals(meter_map_region_end(x), meter_map_region_end(y)));
+        assert(musical_time_same(meter_map_region_start(x), meter_map_region_start(y)));
+        MusicalTime end_x;
+        MusicalTime end_y;
+        bool closed_x = meter_map_region_end(x, &end_x);
+        assert(closed_x == meter_map_region_end(y, &end_y));
+        if (closed_x) {
+            assert(musical_time_same(end_x, end_y));
         }
         assert(meter_map_region_first_measure_number(x) == meter_map_region_first_measure_number(y));
         assert(meter_map_region_is_pickup(x) == meter_map_region_is_pickup(y));
@@ -337,7 +331,7 @@ static inline void test_assert_same_tempo(const TempoMap *a, const TempoMap *b) 
         const TempoMapRegion *x = tempo_map_region(a, i);
         const TempoMapRegion *y = tempo_map_region(b, i);
         assert(tempo_map_region_microseconds_per_quarter(x) == tempo_map_region_microseconds_per_quarter(y));
-        assert(musical_time_equals(tempo_map_region_start(x), tempo_map_region_start(y)));
+        assert(musical_time_same(tempo_map_region_start(x), tempo_map_region_start(y)));
     }
 }
 
@@ -379,7 +373,7 @@ static inline void test_round_trip(NoteEvent *const *events, PitchNumericValue *
     NoteEvent **back_events = NULL;
     PitchNumericValue **back_pitches = NULL;
     size_t back_count = 0;
-    MidiMeterImport meter = {NULL, NULL, NULL, 0};
+    MidiMeterImport meter = {NULL, {{0, 1}}, NULL, 0};
     assert(test_midi_import_parts(data, size, &back_events, &back_pitches, &back_count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(back_count == count);
     TestNoteFact *original_facts = test_facts_of(events, pitches, count);
@@ -424,7 +418,7 @@ static inline void test_round_trip(NoteEvent *const *events, PitchNumericValue *
     assert(test_midi_import_key_signatures(data, size, &back_keys) == MIDI_IMPORT_OK);
     assert(back_keys.count == key_count);
     for (size_t i = 0; i < key_count; i++) {
-        assert(musical_time_equals(back_keys.events[i].position, keys[i].position));
+        assert(musical_time_same(back_keys.events[i].position, keys[i].position));
         assert(back_keys.events[i].sharps_flats == keys[i].sharps_flats);
         assert(back_keys.events[i].mode_byte == keys[i].mode_byte);
     }

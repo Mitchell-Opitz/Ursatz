@@ -6,7 +6,6 @@
 
 #include "analysis/voices/outer_voice.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 
 /*
  * Internal to outer-voice extraction: the steps as separate functions so each has its own unit tests. Not

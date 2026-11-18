@@ -5,19 +5,18 @@
 #include <string.h>
 
 static TemporalAnchor *anchor_at(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+    MusicalTime time;
+    assert(musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK);
     TemporalAnchor *anchor = NULL;
     assert(temporal_anchor_create(time, &anchor) == TEMPORAL_ANCHOR_OK);
     return anchor;
 }
 
 static MetronomeMarking *quarter_equals(unsigned long bpm) {
-    Duration *quarter = NULL;
-    assert(duration_create(1, 4, &quarter) == DURATION_OK);
+    Duration quarter;
+    assert(duration_make(1, 4, &quarter) == DURATION_OK);
     MetronomeMarking *m = NULL;
-    assert(metronome_marking_create(quarter, bpm, 1, &m) == METRONOME_MARKING_OK);
-    duration_destroy(quarter);
+    assert(metronome_marking_create(&quarter, bpm, 1, &m) == METRONOME_MARKING_OK);
     return m;
 }
 
@@ -63,8 +62,8 @@ static void test_text_and_metronome(void) {
     assert(tempo_marking_create(anchor_at(3, 1), "allegro", quarter_equals(120), &marking) == TEMPO_MARKING_OK);
     assert(tempo_marking_has_text(marking) && tempo_marking_has_metronome_marking(marking));
     const MusicalTime *position = temporal_anchor_position(tempo_marking_temporal_anchor(marking));
-    assert(musical_time_numerator(position) == 3);
-    assert(musical_time_denominator(position) == 1);
+    assert(position->value.num == 3);
+    assert(position->value.den == 1);
     tempo_marking_destroy(marking);
 }
 

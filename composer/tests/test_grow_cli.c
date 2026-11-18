@@ -16,6 +16,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The `grow` command, run as a process: each form and a hybrid from the D minor motive fixture, the files it writes
@@ -416,8 +417,8 @@ static void test_style_without(void) {
 
 /* --mode style needs a style (and a mode in it); the other modes replace the key's. */
 static void test_mode(void) {
-    expect_failure(BASE " --into sentence --mode style", 1, "--mode style needs --style");
-    expect_failure(BASE " --into sentence --mode dorian", 1, "--mode must be major, minor or style");
+    expect_failure(BASE " --into sentence --mode style", 1, "--material style needs --style");
+    expect_failure(BASE " --into sentence --mode dorian", 1, "the Composer writes major and minor keys");
     char *out = output_of(FIXTURE("motive_d_minor.txt") " --key D --mode major --meter 4/4 --into sentence --seed 1");
     assert(strstr(out, "key D major") != NULL);
     free(out);
@@ -438,11 +439,12 @@ static Motive notes_motive(const char *text) {
     MotiveOptions options;
     Motive motive;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
     options.has_key = true;
-    options.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    options.key = test_key(2, "minor");
     assert(motive_from_notes_text(text, &options, &motive, NULL) == MOTIVE_OK);
     return motive;
 }
@@ -451,7 +453,7 @@ static GrowRequest library_request(const Motive *basic, PlanThemeBeginning begin
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = basic;
-    request.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    request.key = test_key(2, "minor");
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -511,6 +513,7 @@ static void test_library_slots_and_pool(void) {
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     config.basic = &basic;
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
@@ -549,6 +552,7 @@ static void test_library_slots_and_pool(void) {
     request = library_request(&basic, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION);
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     config.basic = &basic;
     config.pool = &pool;
@@ -596,7 +600,7 @@ static void test_library_bad_slots(void) {
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     other = fits;
-    AnalysisKey other_key = plan_key_of_pitch_class(7, other.minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey other_key = test_key_mode(7, motive_sketch_minor(&other) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR);
     motive_set_key(&other, &other_key, other.key_source);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);

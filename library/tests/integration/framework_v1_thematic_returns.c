@@ -4,6 +4,7 @@
 
 #include "analysis/form/thematic_return_detection.h"
 #include "relationship_test_access.h"
+#include "test_knowledge.h"
 
 /*
  * Framework v1 verification, thematic returns (Mozart K. 545 and Clementi Op. 36 No. 1), and the Bach regression for PR #37.
@@ -66,7 +67,7 @@ static bool fv1_window_of_events(const NoteEvent *const *events, size_t count, c
     }
     PitchIdentity **pitch_ids = (PitchIdentity **)calloc(count, sizeof(PitchIdentity *));
     ContourDirection *directions = (ContourDirection *)calloc(count - 1, sizeof(ContourDirection));
-    Duration **durations = (Duration **)calloc(count, sizeof(Duration *));
+    Duration *durations = (Duration *)calloc(count, sizeof(Duration));
     assert(pitch_ids != NULL && directions != NULL && durations != NULL);
     long previous = 0;
     for (size_t i = 0; i < count; i++) {
@@ -76,12 +77,11 @@ static bool fv1_window_of_events(const NoteEvent *const *events, size_t count, c
             directions[i - 1] = semitone > previous ? CONTOUR_DIRECTION_UP : (semitone < previous ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);
         }
         previous = semitone;
-        const Duration *d = note_event_duration(events[i]);
-        assert(duration_create(duration_numerator(d), duration_denominator(d), &durations[i]) == DURATION_OK);
+        durations[i] = *note_event_duration(events[i]);
     }
     assert(contour_create(pitch_ids, count, directions, count - 1, contour) == CONTOUR_OK);
     assert(rhythmic_pattern_create(durations, count, rhythm) == RHYTHMIC_PATTERN_OK);
-    /* the Contour and the RhythmicPattern own the elements and copy the arrays, which are ours to free */
+    /* the Contour owns the elements and copies the arrays; the pattern copies the durations; the arrays are ours to free */
     free(pitch_ids);
     free(directions);
     free(durations);
@@ -274,7 +274,7 @@ static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
 static void fv1_bach_minimum_window(const Chain *c) {
     /* the note-level soprano of the first strain and its written-out repeat (measures 1-16): at each attack the highest sounding note */
     ChainFormInput soprano;
-    assert(chain_build_motive_input(&c->p.set, analysis_chain_segments(c->chain), 1, 16, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &soprano) ==
+    assert(chain_build_motive_input(&c->p.set, analysis_chain_segments(c->chain), 1, 16, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), NULL, &soprano) ==
            CHAIN_INPUT_OK);
     size_t n = soprano.input.note_count;
     const NoteEvent **events = (const NoteEvent **)calloc(n > 0 ? n : 1, sizeof(NoteEvent *));
@@ -316,7 +316,7 @@ static void fv1_bach_minimum_window(const Chain *c) {
                 same = contour_direction_at(contours[i], k) == contour_direction_at(contours[j], k);
             }
             for (size_t k = 0; k < 3 && same; k++) {
-                same = duration_equals(rhythmic_pattern_duration_at(rhythms[i], k), rhythmic_pattern_duration_at(rhythms[j], k));
+                same = duration_same(*rhythmic_pattern_duration_at(rhythms[i], k), *rhythmic_pattern_duration_at(rhythms[j], k));
             }
             same_shape += same ? 1 : 0;
         }

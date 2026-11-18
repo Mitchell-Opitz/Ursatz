@@ -69,7 +69,7 @@
           form: "full",
           notes: "C4:q",
           meter: "4/4",
-          key: null,
+          material: null,
           pickup: "0",
           harmony: null,
           features: [],
@@ -506,25 +506,25 @@
     return form === "rhythm" ? RHYTHM_HINT : form === "contour" ? CONTOUR_HINT : NOTE_HINT;
   }
 
-  const motifModes = () => Vocab.values("modes");
+  /* The materials a motif can be written in, as the Composer lists them (id and key word); the first is the default. */
+  const motifMaterials = () => Vocab.list("materials");
   const TONIC_HINT = "Write the notes with C as the tonic. A piece sets the real key.";
 
-  /* The mode of a stored key text ("D minor" gives "minor"); "major" when there is none. */
-  function keyMode(key) {
-    const match = /^[A-Ga-g][#b]? (major|minor)$/i.exec(String(key || "").trim());
-    return match ? match[1].toLowerCase() : "major";
+  /* The id of a material the Composer offers for a motif; the default (the first) for anything else. */
+  function motifMaterial(id) {
+    const ids = motifMaterials().map((entry) => entry.value);
+    return ids.includes(id) ? id : ids[0];
   }
 
   /* The editor's field values for a motif body (null for a new motif). */
   function motifFormValues(body) {
     const motif = body && body.motif ? body.motif : {};
-    const storedKey = typeof motif.key === "string" ? motif.key.trim() : "";
     return {
       role: motif.role === "accompaniment" ? "accompaniment" : "melodic",
       form: motif.form || "full",
       notes: typeof motif.notes === "string" ? motif.notes : "",
       meter: typeof motif.meter === "string" ? motif.meter : "4/4",
-      mode: keyMode(storedKey),
+      material: motifMaterial(motif.material),
       pickup: typeof motif.pickup === "string" ? motif.pickup : "0",
       harmony: typeof motif.harmony === "string" ? motif.harmony : "",
       toneOverrides: motif.tone_overrides && typeof motif.tone_overrides === "object" ? { ...motif.tone_overrides } : {},
@@ -549,7 +549,7 @@
     };
   }
 
-  /* The editor's field values for an import answer {notes_text, meter, key, moved_from, pickup}: a full motif. The
+  /* The editor's field values for an import answer {notes_text, meter, material, key, moved_from, pickup}: a full motif. The
    * backend has already moved the notes to C. */
   function importToFormValues(answer) {
     const a = answer || {};
@@ -557,7 +557,7 @@
       form: "full",
       notes: typeof a.notes_text === "string" ? a.notes_text : "",
       meter: typeof a.meter === "string" ? a.meter : "4/4",
-      mode: keyMode(a.key),
+      material: motifMaterial(a.material),
       pickup: typeof a.pickup === "string" ? a.pickup : "0",
     };
   }
@@ -566,7 +566,7 @@
   function importNotice(answer) {
     const a = answer || {};
     if (typeof a.moved_from === "string" && a.moved_from !== "") {
-      return `Moved from ${a.moved_from} to C ${keyMode(a.key)}.`;
+      return `Moved from ${a.moved_from} to C ${Vocab.materialWord(motifMaterial(a.material))}.`;
     }
     return a.key_found === false ? "No key found: read as C major." : "Filled from the MIDI file.";
   }
@@ -599,7 +599,7 @@
 
   /* The editor field a request path of the Composer belongs to (R-276): the note list for /input and /tones. */
   function fieldForPath(path) {
-    const table = [["/meter", "meter"], ["/pickup", "pickup"], ["/harmony", "harmony"], ["/features", "features"], ["/key", "mode"]];
+    const table = [["/meter", "meter"], ["/pickup", "pickup"], ["/harmony", "harmony"], ["/features", "features"], ["/key", "material"]];
     return Req.fieldForPath(path, table, "notes");
   }
 
@@ -654,7 +654,7 @@
         form: values.form,
         notes: String(values.notes).trim(),
         meter: String(values.meter).trim(),
-        key: `C ${motifModes().includes(values.mode) ? values.mode : "major"}`,
+        material: motifMaterial(values.material),
         pickup: String(values.pickup || "").trim() === "" ? "0" : String(values.pickup).trim(),
         harmony: String(values.harmony || "").trim() === "" ? null : String(values.harmony).trim(),
         ...(Object.keys(values.toneOverrides || {}).length > 0 ? { tone_overrides: { ...values.toneOverrides } } : {}),
@@ -672,8 +672,15 @@
   }
 
 
-  /* The POST that renders a motif body to MusicXML and playback in the motif's own key. */
-  function renderRequest(body) {
+  /* The key text the render route takes for a motif ("C minor"): C and the key word of its material, "" when it has none. */
+  function motifKeyText(motif) {
+    const word = motif && typeof motif.material === "string" ? Vocab.keyWord(motif.material) : "";
+    return word === "" ? "" : `C ${word}`;
+  }
+
+  /* The POST that renders a motif body to MusicXML and playback in the motif's own key; keyText ("D minor") renders a
+   * random motif in the key the Composer drew it in. */
+  function renderRequest(body, keyText) {
     const motif = body && body.motif ? body.motif : {};
     const request = {
       form: motif.form || "full",
@@ -682,8 +689,9 @@
       pickup: typeof motif.pickup === "string" && motif.pickup !== "" ? motif.pickup : "0",
       role: motif.role === "accompaniment" ? "accompaniment" : "melodic",
     };
-    if (typeof motif.key === "string" && motif.key !== "") {
-      request.key = motif.key;
+    const key = typeof keyText === "string" && keyText !== "" ? keyText : motifKeyText(motif);
+    if (key !== "") {
+      request.key = key;
     }
     if (typeof motif.harmony === "string" && motif.harmony !== "") {
       request.harmony = motif.harmony;
@@ -699,7 +707,7 @@
   function randomRequest(values) {
     const v = values || {};
     return Req.jsonRequest("POST", "/api/materials/motifs/random", {
-      mode: "random",
+      material: "random",
       meter: "random",
       form: "full",
       count: 1,
@@ -707,10 +715,11 @@
     });
   }
 
-  /* The mode and meter the Composer drew, from the random route's answer, or null when it names neither. */
+  /* The material (its id) and meter the Composer drew, from the random route's answer, or null when it names neither. */
   function drawnSettings(data) {
     const drawn = data && data.drawn && typeof data.drawn === "object" ? data.drawn : null;
-    return drawn && typeof drawn.mode === "string" && typeof drawn.meter === "string" ? { mode: drawn.mode, meter: drawn.meter } : null;
+    const material = drawn && typeof drawn.material === "string" && Vocab.keyWord(drawn.material) !== "" ? drawn.material : "";
+    return material && typeof drawn.meter === "string" ? { material, meter: drawn.meter } : null;
   }
 
   /* The key text of a random candidate's motive ("D minor"), or "" when it has none. */
@@ -727,18 +736,19 @@
   function candidateKeyText(candidate) {
     const key = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.key : null;
     const names = key && Number.isInteger(key.tonic_pitch_class) ? Vocab.entry("pitch_class_names", key.tonic_pitch_class) : null;
-    const tonic = names && typeof key.mode === "string" ? names[key.mode] : null;
-    return tonic ? `${tonic} ${key.mode}` : "";
+    const tonic = names && typeof key.material === "string" && names.names ? names.names[key.material] : null;
+    return tonic ? `${tonic} ${Vocab.keyWord(key.material)}` : "";
   }
 
   /* The motif body to store for a random candidate (an entry of the random route's `motives`). values: the dialog
-   * values {form, meter, key, role}. The backend fills in the analysis and the degrees on save. */
+   * values {form, meter, role}. The material is the Composer's (the key's tonic is in candidateKeyText). The backend fills in the analysis and the degrees on save. */
   function randomCandidateToBody(candidate, values) {
     const v = values || {};
     const analysis = candidate && candidate.motive && candidate.motive.analysis ? candidate.motive.analysis : {};
     const form = v.form === "rhythm" || v.form === "contour" ? v.form : "full";
     const textName = form === "rhythm" ? "rhythm_text" : form === "contour" ? "contour_text" : "notes_text";
-    const key = candidateKeyText(candidate);
+    const keyed = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.key : null;
+    const material = keyed && typeof keyed.material === "string" ? keyed.material : null;
     const segments = analysis.segments && Array.isArray(analysis.segments.items) ? analysis.segments.items : [];
     const baseHarmony = analysis.base_harmony && typeof analysis.base_harmony.text === "string" ? analysis.base_harmony.text : "";
     return {
@@ -748,7 +758,7 @@
         form,
         notes: typeof analysis[textName] === "string" ? analysis[textName] : "",
         meter: String(v.meter || "").trim() || "4/4",
-        key: key === "" ? null : key,
+        material,
         pickup: typeof analysis.pickup === "string" && analysis.pickup !== "" ? analysis.pickup : "0",
         harmony: baseHarmony === "" ? null : baseHarmony,
         features: segments.map((segment) => ({ label: segment.label, first: segment.first, last: segment.last })),
@@ -966,13 +976,14 @@
     buildImportMidiRequest,
     importToFormValues,
     importNotice,
-    get MOTIF_MODES() {
-      return motifModes();
+    get MOTIF_MATERIALS() {
+      return motifMaterials();
     },
+    motifMaterial,
+    motifKeyText,
     fieldForPath,
     validateRequest,
     TONIC_HINT,
-    keyMode,
     motifRoles,
     motifForms,
     motifFormValues,

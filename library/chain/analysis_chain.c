@@ -15,6 +15,7 @@
 #include "analysis/harmony/analysis_cadence_claims.h"
 #include "chain/form_bridge.h"
 #include "chain/kernel_owners.h"
+#include "theory/tonality/common_practice_materials.h"
 
 AnalysisChainConfig analysis_chain_config_default(void) {
     AnalysisChainConfig config;
@@ -22,7 +23,7 @@ AnalysisChainConfig analysis_chain_config_default(void) {
     config.stages = ANALYSIS_CHAIN_STAGE_ALL;
     config.segmentation = adaptive_segmentation_config_default();
     config.weighting = common_practice_weighted_config_default();
-    config.key_regions = common_practice_key_regions_config_default();
+    config.key_regions = common_practice_key_regions_config_default(NULL); /* the chain sets the snapshot's materials */
     config.outer_voices = outer_voice_config_default();
     config.cadences = harmony_cadence_config_default();
     config.form = standard_form_config_default();
@@ -188,9 +189,6 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     standard_form_repeats_destroy(&chain->repeats);
     free(chain->key_phrases);
     free(chain->key_repeats);
-    for (size_t i = 0; i < chain->boundary_count; i++) {
-        musical_time_destroy(chain->boundaries[i]);
-    }
     free(chain->boundaries);
     chain_key_segments_destroy(chain->key_segments);
     if (chain->have_segment_lines) {
@@ -213,15 +211,11 @@ void analysis_chain_destroy(AnalysisChain *chain) {
 
 /* --- the stages --- */
 
-static double time_double(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
-}
-
 /* The region holding the segment that starts at `start` whole notes: the last whose start is not after it. */
-static size_t region_at(const CommonPracticeKeyRegions *regions, double start) {
+static size_t region_at(const CommonPracticeKeyRegions *regions, Rational start) {
     size_t found = 0;
     for (size_t i = 0; i < regions->region_count; i++) {
-        if (time_double(time_span_start(regions->regions[i].span)) <= start + 1e-12) {
+        if (rational_cmp(regions->regions[i].span.start.value, start) <= 0) {
             found = i;
         }
     }
@@ -283,7 +277,7 @@ static bool read_numerals(AnalysisChain *chain) {
     pitch_total = 0;
     for (size_t i = 0; i < p->regions.region_count; i++) {
         p->region_inputs[i].key = p->regions.regions[i].key;
-        p->region_inputs[i].start = time_span_start(p->regions.regions[i].span);
+        p->region_inputs[i].start = p->regions.regions[i].span.start;
         p->region_inputs[i].uncertainty = p->regions.regions[i].uncertainty;
     }
     /* Keys from phrases (R-399): after the pivot of an arrival change the chords are read in the key they cadence into, so the new region's
@@ -293,8 +287,8 @@ static bool read_numerals(AnalysisChain *chain) {
         if (!change->at_arrival || !change->has_pivot || change->pivot_segment + 1 >= count) {
             continue;
         }
-        const MusicalTime *after_pivot = chain->key_segments[change->pivot_segment + 1].start;
-        if (time_double(after_pivot) < time_double(p->region_inputs[change->to_region].start) - 1e-12) {
+        MusicalTime after_pivot = chain->key_segments[change->pivot_segment + 1].start;
+        if (rational_cmp(after_pivot.value, p->region_inputs[change->to_region].start.value) < 0) {
             p->region_inputs[change->to_region].start = after_pivot;
         }
     }
@@ -313,10 +307,15 @@ static bool read_numerals(AnalysisChain *chain) {
     }
     StandardTonalityAppliedConfig applied = standard_tonality_applied_config_default();
     applied.recheck_diatonic = false; /* identified applied chords are read directly, no re-check (R-380) */
-    return standard_tonality_build_chord_inputs(p->segment_inputs, count, p->region_inputs, p->regions.region_count,
-                                                &p->tonal_inputs, &p->tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK &&
-           standard_tonality_build_roman_numerals_with_config(p->tonal_inputs, p->tonal_count, &applied, &p->romans) ==
-               STANDARD_TONALITY_ROMAN_OK;
+    if (standard_tonality_build_chord_inputs(p->segment_inputs, count, p->region_inputs, p->regions.region_count, &p->tonal_inputs,
+                                             &p->tonal_count) != STANDARD_TONALITY_CHORD_INPUT_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < p->tonal_count; i++) {
+        p->tonal_inputs[i].materials = &chain->materials; /* the numerals read the chain's materials */
+    }
+    return standard_tonality_build_roman_numerals_with_config(p->tonal_inputs, p->tonal_count, &applied, &p->romans) ==
+           STANDARD_TONALITY_ROMAN_OK;
 }
 
 static int resolved_home(const AnalysisChain *chain) {
@@ -523,13 +522,14 @@ static AnalysisChainStatus motive_stage(AnalysisChain *chain) {
     int home = chain->home;
     if (home < 0 ||
         chain_build_motive_input(chain->notes, &chain->segs, chain->config.first_measure, last, common_practice_key_index_tonic(home),
-                                 common_practice_key_index_mode(home), &chain->pass.cadences, &chain->motive_input) != CHAIN_INPUT_OK) {
+                                 common_practice_key_index_mode(home), &chain->materials, &chain->pass.cadences, &chain->motive_input) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     chain->have_motive_input = true;
     chain->relation_context.has_key = true;
     chain->relation_context.tonic_pitch_class = common_practice_key_index_tonic(home);
-    chain->relation_context.minor = common_practice_key_index_mode(home) == COMMON_PRACTICE_KEY_MINOR;
+    chain->relation_context.material =
+        common_practice_material(&chain->materials, common_practice_key_index_mode(home));
     const StandardFormInput *input = &chain->motive_input.input;
     if (standard_form_segment_phrases(input, &chain->config.form, chain_form_boundary_detect, NULL, &chain->motive_phrases) !=
         STANDARD_FORM_ANALYSIS_OK) {
@@ -637,7 +637,7 @@ static AnalysisChainStatus melody_stage(AnalysisChain *chain) {
     if (home < 0 ||
         chain_build_melody_line(&chain->voice_segs, chain->voice_segs.count, chain->lines.soprano, &chain->segs, chain->count,
                                 chain->pass.chords, common_practice_key_index_tonic(home), common_practice_key_index_mode(home),
-                                &chain->melody.line) != CHAIN_INPUT_OK) {
+                                &chain->materials, &chain->melody.line) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_MELODY;
     }
     chain->have_melody_line = true;
@@ -702,14 +702,12 @@ static bool scope_count(AnalysisChain *chain) {
     if (chain->config.last_measure <= 0) {
         return chain->count > 0;
     }
-    TimeSpan *last = NULL;
+    TimeSpan last;
     if (meter_map_measure_span(chain->notes->map, chain->config.last_measure, &last) != METER_MAP_OK) {
         return false;
     }
-    double end = time_double(time_span_end(last));
-    time_span_destroy(last);
     size_t count = 0;
-    while (count < chain->segs.count && chain->segs.starts[count] < end - 1e-12) {
+    while (count < chain->segs.count && rational_cmp(chain->segs.starts[count], last.end.value) < 0) {
         count++;
     }
     chain->count = count;
@@ -719,15 +717,14 @@ static bool scope_count(AnalysisChain *chain) {
 /* The repeats and returns of the notes in scope (R-400), found once: every pass's grid follows them. */
 static bool find_chain_repeats(AnalysisChain *chain) {
     const AnalysisNoteSet *set = chain->notes;
-    double end = 0;
+    Rational end = rational_ratio(0, 1);
     bool scoped = chain->config.last_measure > 0;
     if (scoped) {
-        TimeSpan *last = NULL;
+        TimeSpan last;
         if (meter_map_measure_span(set->map, chain->config.last_measure, &last) != METER_MAP_OK) {
             return false;
         }
-        end = time_double(time_span_end(last));
-        time_span_destroy(last);
+        end = last.end.value;
     }
     StandardFormRepeatNote *items = calloc(set->count > 0 ? set->count : 1, sizeof(StandardFormRepeatNote));
     if (items == NULL) {
@@ -736,7 +733,7 @@ static bool find_chain_repeats(AnalysisChain *chain) {
     size_t count = 0;
     for (size_t i = 0; i < set->count; i++) {
         const AnalysisNote *note = &set->notes[i];
-        if (note->midi == ANALYSIS_PITCH_UNKNOWN || (scoped && time_double(time_span_start(note->span)) >= end - 1e-12)) {
+        if (note->midi == ANALYSIS_PITCH_UNKNOWN || (scoped && rational_cmp(note->span.start.value, end) >= 0)) {
             continue;
         }
         items[count].span = note->span;
@@ -861,7 +858,7 @@ static bool valid_config(const AnalysisChainConfig *config) {
 static int segment_measure(const AnalysisChain *chain, size_t index) {
     const TimeSpan *window = sonority_time_window(chain->segs.sonorities.items[index].sonority);
     int measure = 0;
-    return window != NULL && meter_map_measure_index_at(chain->notes->map, time_span_start(window), &measure) == METER_MAP_OK ? measure : -1;
+    return window != NULL && meter_map_measure_index_at(chain->notes->map, &window->start, &measure) == METER_MAP_OK ? measure : -1;
 }
 
 /* The keys one claimed reading of a cadence confirms (R-397): authentic for the perfect, imperfect and unspecified authentic types, half for the
@@ -962,17 +959,12 @@ static bool phrase_boundaries(AnalysisChain *chain) {
     if (phrases->count <= 1) {
         return true;
     }
-    chain->boundaries = calloc(phrases->count, sizeof(MusicalTime *));
+    chain->boundaries = calloc(phrases->count, sizeof(MusicalTime));
     if (chain->boundaries == NULL) {
         return false;
     }
     for (size_t k = 0; k + 1 < phrases->count; k++) {
-        const MusicalTime *end = time_span_end(phrases->items[k].span);
-        if (musical_time_create(musical_time_numerator(end), musical_time_denominator(end), &chain->boundaries[chain->boundary_count]) !=
-            MUSICAL_TIME_OK) {
-            return false;
-        }
-        chain->boundary_count++;
+        chain->boundaries[chain->boundary_count++] = phrases->items[k].span.end;
     }
     return true;
 }
@@ -1014,6 +1006,11 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
     if (!valid_config(config)) {
         return ANALYSIS_CHAIN_ERR_BAD_CONFIG;
     }
+    CommonPracticeMaterials materials;
+    char message[160];
+    if (config->knowledge == NULL || !common_practice_materials_resolve(config->knowledge, &materials, message, sizeof(message))) {
+        return ANALYSIS_CHAIN_ERR_KNOWLEDGE;
+    }
     if (!analysis_note_set_valid(notes) || notes->count == 0) {
         return ANALYSIS_CHAIN_ERR_NOTES;
     }
@@ -1022,6 +1019,10 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
         return ANALYSIS_CHAIN_ERR_ALLOC;
     }
     chain->config = *config;
+    chain->materials = materials;
+    /* Every stage on the chain's path reads the chain's materials, not the stage defaults. */
+    chain->config.key_regions.materials = &chain->materials;
+    chain->config.weighting.materials = &chain->materials;
     if (chain->config.weighting.classifier == NULL) {
         chain->config.weighting.classifier = chain_classify_tones;
     }
@@ -1050,8 +1051,7 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
                 status = ANALYSIS_CHAIN_ERR_FORM;
             } else {
                 /* the boundaries are the phrase ends of the first pass, or, with no form, the caller's own */
-                const MusicalTime *const *boundaries = from_phrases ? (const MusicalTime *const *)chain->boundaries
-                                                                    : chain->config.key_regions.phrase_boundaries;
+                const MusicalTime *boundaries = from_phrases ? chain->boundaries : chain->config.key_regions.phrase_boundaries;
                 size_t boundary_count = from_phrases ? chain->boundary_count : chain->config.key_regions.phrase_boundary_count;
                 pass_destroy(chain);
                 status = run_pass(chain, &(AnalysisChainPass){boundaries, boundary_count, true});
@@ -1113,6 +1113,56 @@ const StandardTonalityChordInput *analysis_chain_chord_inputs(const AnalysisChai
 
 const StandardTonalityRomanResult *analysis_chain_numerals(const AnalysisChain *chain) {
     return chain != NULL ? chain->pass.romans : NULL;
+}
+
+/* The pitch classes sounding in segment `index`, as a 12-bit mask. */
+static unsigned segment_pitch_classes(const CommonPracticeSegment *segment) {
+    unsigned mask = 0;
+    for (size_t i = 0; i < segment->member_count; i++) {
+        mask |= 1u << (((segment->members[i].pitch % 12) + 12) % 12);
+    }
+    return mask;
+}
+
+AnalysisChainStatus analysis_chain_chord_reading(const AnalysisChain *chain, size_t index, ChordReading *out) {
+    if (chain == NULL || out == NULL) {
+        return ANALYSIS_CHAIN_ERR_NULL_ARGUMENT;
+    }
+    const Pass *pass = &chain->pass;
+    if (!chain->have_segs || pass->chords == NULL || index >= chain->count || chain->segs.segments == NULL ||
+        chain->config.knowledge == NULL) {
+        return ANALYSIS_CHAIN_ERR_CHORDS;
+    }
+    const CommonPracticeWeightedResult *result = &pass->chords[index];
+    const CommonPracticeSegment *segment = &chain->segs.segments[index];
+    /* The numerals stage built the chord input: its region's tonic and the bass it read. Without it the bass is the span's. */
+    const StandardTonalityChordInput *input = pass->tonal_inputs != NULL && index < pass->tonal_count ? &pass->tonal_inputs[index] : NULL;
+    bool has_numeral = input != NULL && input->has_numeral;
+    SonorityPitches sonority;
+    memset(&sonority, 0, sizeof(sonority));
+    sonority.span.start.value = chain->segs.starts[index];
+    sonority.span.end.value = chain->segs.ends[index];
+    sonority.pitch_classes = segment_pitch_classes(segment);
+    sonority.bass_pitch_class = has_numeral ? input->bass_pitch_class : -1;
+    int root = -1;
+    if (result->matched && result->best_chord != NULL) {
+        /* a chord the chain found: its tones are the sonority's pitch classes, the leftover tones are not part of the chord */
+        sonority.pitch_classes = common_practice_ranked_chord_mask(&result->best, has_numeral ? input->tonic_pitch_class : 0);
+        root = result->best.root_pitch_class;
+        if (sonority.bass_pitch_class < 0 && segment->has_bass) {
+            sonority.bass_pitch_class = ((segment->bass_pitch % 12) + 12) % 12;
+        }
+    }
+    if (!chord_reading_of_sonority(chain->config.knowledge, sonority, root, out)) {
+        return ANALYSIS_CHAIN_ERR_CHORDS;
+    }
+    /* A cadential six-four embellishes the dominant that follows it. The cadences stage prepared the segments that say so; a run
+       without it reads every chord as functional. There is no mixture or elision reading yet, so borrowed_from stays NULL and
+       there is no expected chord. */
+    if (root >= 0 && pass->prepared != NULL && harmony_cadence_is_cadential_six_four(&pass->prepared[index])) {
+        out->role = CHORD_ROLE_EMBELLISHING;
+    }
+    return ANALYSIS_CHAIN_OK;
 }
 
 const ChainSegments *analysis_chain_voice_segments(const AnalysisChain *chain) {

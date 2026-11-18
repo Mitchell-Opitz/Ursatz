@@ -6,7 +6,6 @@
 
 #include "romantext.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/time/meter_map.h"
 
 /*

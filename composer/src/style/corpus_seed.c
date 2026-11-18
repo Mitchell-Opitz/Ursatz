@@ -7,6 +7,7 @@
 
 #include <cJSON.h>
 #include <model/core/rational.h>
+#include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/tonal_key.h>
 
 #include <ursatz_analyzer/chord_sequence.h>
@@ -157,7 +158,8 @@ static bool same_place(int measure_a, double beat_a, int measure_b, double beat_
 /* --- the key the source was heard in ------------------------------------------------ */
 
 /* The key of the last chord that starts at or before the passage, else of the first chord; false when no chord names one. */
-static bool source_key(const DocumentChord *chords, size_t count, int measure, double beat, AnalysisKey *out) {
+static bool source_key(const KnowledgeSnapshot *knowledge, const DocumentChord *chords, size_t count, int measure,
+                       double beat, AnalysisKey *out) {
     const DocumentChord *found = NULL;
     for (size_t i = 0; i < count; i++) {
         bool before = chords[i].measure < measure || same_place(chords[i].measure, chords[i].beat, measure, beat) ||
@@ -169,7 +171,7 @@ static bool source_key(const DocumentChord *chords, size_t count, int measure, d
             break;
         }
     }
-    return found && request_parse_key(found->key_label, out);
+    return found && request_parse_key(found->key_label, knowledge, out);
 }
 
 /* --- the motive ------------------------------------------------------------------- */
@@ -183,12 +185,8 @@ static int transposition(int pitch, const AnalysisKey *source, const AnalysisKey
     int above = util_pitch_class(pitch - analysis_key_tonic_pitch_class(source));
     int degree = 1;
     int beyond = 0;
-    standard_tonality_degree_at_or_below_semitone(above,
-                                                  source->mode == KEY_STRUCTURE_MODE_MINOR
-                                                      ? STANDARD_TONALITY_MODE_NATURAL_MINOR
-                                                      : STANDARD_TONALITY_MODE_MAJOR,
-                                                  &degree, &beyond);
-    int landed = (analysis_key_tonic_pitch_class(target) + util_scale_semitone(target->mode == KEY_STRUCTURE_MODE_MINOR, degree) + beyond) % 12;
+    standard_tonality_material_degree_at_or_below_semitone(above, source->material, &degree, &beyond);
+    int landed = (analysis_key_tonic_pitch_class(target) + util_scale_semitone(target->material, degree) + beyond) % 12;
     int shift = util_pitch_class(landed - (pitch % 12));
     return shift > 6 ? shift - 12 : shift;
 }
@@ -264,12 +262,13 @@ static void fill_match(const SimilarMatch *match, CorpusSeed *out) {
     out->score_denominator = match->score.similarity.denominator;
 }
 
-static CorpusSeedResult search(const char *corpus_output_dir, const SimilarQuery *query, SimilarResults *results) {
+static CorpusSeedResult search(const char *corpus_output_dir, const KnowledgeSnapshot *knowledge, const SimilarQuery *query,
+                               SimilarResults *results) {
     SimilarOptions options = similar_options_default();
     options.minimum_numerator = CORPUS_SEED_MINIMUM_NUMERATOR;
     options.minimum_denominator = CORPUS_SEED_MINIMUM_DENOMINATOR;
     options.max_results = 10;
-    SimilarResult found = similar_material_find(corpus_output_dir, query, &options, results);
+    SimilarResult found = similar_material_find(corpus_output_dir, knowledge, query, &options, results);
     if (found == SIMILAR_ERR_ALLOC) {
         return CORPUS_SEED_ERR_ALLOC;
     }
@@ -279,14 +278,18 @@ static CorpusSeedResult search(const char *corpus_output_dir, const SimilarQuery
     return results->count == 0 ? CORPUS_SEED_ERR_NO_MATCH : CORPUS_SEED_OK;
 }
 
-CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *passage_path, const PlanMeter *meter,
-                                    const AnalysisKey *key, unsigned long seed, CorpusSeed *out) {
-    if (!corpus_output_dir || !passage_path || !meter || !key || !out || meter->beats_per_bar < 1 ||
+CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir, const char *passage_path,
+                                    const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out) {
+    if (!knowledge || !corpus_output_dir || !passage_path || !meter || !key || !out || meter->beats_per_bar < 1 ||
         meter->beat_unit < 1) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }
+    CommonPracticeMaterials materials;
+    if (!common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
+        return CORPUS_SEED_ERR_ARGUMENT;
+    }
     SimilarQuery query;
-    SimilarResult read = similar_query_from_file(passage_path, &query);
+    SimilarResult read = similar_query_from_file(passage_path, knowledge, &query);
     if (read == SIMILAR_ERR_ALLOC) {
         return CORPUS_SEED_ERR_ALLOC;
     }
@@ -295,7 +298,7 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
     }
     SimilarResults results;
     memset(&results, 0, sizeof(results));
-    CorpusSeedResult status = search(corpus_output_dir, &query, &results);
+    CorpusSeedResult status = search(corpus_output_dir, knowledge, &query, &results);
     similar_query_destroy(&query);
     if (status != CORPUS_SEED_OK) {
         similar_results_destroy(&results);
@@ -327,7 +330,7 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
             size_t chord_count = 0;
             AnalysisKey from;
             if (read_chords(text, document, &chords, &chord_count, &stale) &&
-                source_key(chords, chord_count, match->start_measure, match->start_beat, &from)) {
+                source_key(knowledge, chords, chord_count, match->start_measure, match->start_beat, &from)) {
                 shift = transposition(match->notes[0].pitch, &from, key);
             }
             chords_free(chords, chord_count);
@@ -348,7 +351,7 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
 }
 
 /* Whether the plan can place the numeral under a key of the mode (given.h reads them with these two). */
-static bool numeral_placeable(KeyStructureMode mode, const char *numeral) {
+static bool numeral_placeable(HarmonyMode mode, const char *numeral) {
     HarmonyChord chord;
     HarmonyAppliedChord applied;
     int inversion;
@@ -360,7 +363,7 @@ static bool numeral_placeable(KeyStructureMode mode, const char *numeral) {
  * The numerals of the passage a match is, read from its document: the chords from the one that starts where the match
  * does. false when the document cannot be read, has no chord there, or a numeral cannot be placed under the mode.
  */
-static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *match, size_t wanted, KeyStructureMode mode,
+static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *match, size_t wanted, HarmonyMode mode,
                            CorpusSeed *seeded, size_t *stale) {
     bool ok = false;
     char *text = NULL;
@@ -392,9 +395,9 @@ static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *ma
     return ok;
 }
 
-CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const char *numerals_text, KeyStructureMode mode,
-                                         CorpusSeed *out) {
-    if (!corpus_output_dir || !numerals_text || !out) {
+CorpusSeedResult corpus_seed_progression(const KnowledgeSnapshot *knowledge, const char *corpus_output_dir,
+                                         const char *numerals_text, HarmonyMode mode, CorpusSeed *out) {
+    if (!knowledge || !corpus_output_dir || !numerals_text || !out) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }
     SimilarQuery query;
@@ -416,7 +419,7 @@ CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const ch
     options.max_results = PROGRESSION_CANDIDATES;
     SimilarResults results;
     memset(&results, 0, sizeof(results));
-    SimilarResult found = similar_material_find(corpus_output_dir, &query, &options, &results);
+    SimilarResult found = similar_material_find(corpus_output_dir, knowledge, &query, &options, &results);
     similar_query_destroy(&query);
     CorpusSeedResult status = found == SIMILAR_ERR_ALLOC ? CORPUS_SEED_ERR_ALLOC
                               : found != SIMILAR_OK      ? CORPUS_SEED_ERR_CORPUS

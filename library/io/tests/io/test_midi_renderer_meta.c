@@ -96,12 +96,12 @@ static void test_markers(void) {
     TempoMap *tempo_map = test_tempo_map(tempos, 1);
     MidiKeySignatureEvent keys[1];
     memset(keys, 0, sizeof(keys));
-    keys[0].position = test_time(0, 1);
+    keys[0].position = test_time_value(0, 1);
     keys[0].sharps_flats = -2;
     keys[0].mode_byte = 0;
 
-    MusicalTime *bar_three = test_time(3, 2); /* two bars of 3/4 */
-    MusicalTime *zero = test_time(0, 1);
+    MusicalTime bar_three = test_time_value(3, 2); /* two bars of 3/4 */
+    MusicalTime zero = test_time_value(0, 1);
     const MidiMarker markers[] = {{bar_three, "B"}, {zero, "x"}, {zero, "y"}};
     MidiRenderOptions options;
     memset(&options, 0, sizeof(options));
@@ -127,9 +127,6 @@ static void test_markers(void) {
     free(data);
 
     test_notes_free(&notes);
-    musical_time_destroy(bar_three);
-    musical_time_destroy(zero);
-    musical_time_destroy(keys[0].position);
     meter_map_destroy(meter_map);
     tempo_map_destroy(tempo_map);
 }
@@ -142,7 +139,7 @@ static void test_null_options_equal_empty_options(void) {
     TempoMap *tempo_map = test_tempo_map(tempos, 2);
     MidiKeySignatureEvent keys[1];
     memset(keys, 0, sizeof(keys));
-    keys[0].position = test_time(1, 1);
+    keys[0].position = test_time_value(1, 1);
     keys[0].sharps_flats = 3;
     keys[0].mode_byte = 1;
 
@@ -167,7 +164,6 @@ static void test_null_options_equal_empty_options(void) {
     free(null_data);
 
     test_notes_free(&notes);
-    musical_time_destroy(keys[0].position);
     meter_map_destroy(meter_map);
     tempo_map_destroy(tempo_map);
 }
@@ -189,12 +185,12 @@ static void test_errors(void) {
     TestNotes notes;
     test_notes_init(&notes);
     test_notes_add(&notes, 0, 1, 1, 4, 60, "v1");
-    MusicalTime *zero = test_time(0, 1);
-    MusicalTime *negative = test_time(-1, 4);
-    MusicalTime *off_tick = test_time(1, 7); /* 1920 / 7 ticks */
+    MusicalTime zero = test_time_value(0, 1);
+    MusicalTime negative = test_time_value(-1, 4);
+    MusicalTime off_tick = test_time_value(1, 7); /* 1920 / 7 ticks */
     MidiRenderOptions options;
 
-    /* NULL name, text, position, and counts with NULL arrays */
+    /* NULL name, text, and counts with NULL arrays */
     const MidiTrackName null_name[] = {{"v1", NULL}};
     memset(&options, 0, sizeof(options));
     options.track_names = null_name;
@@ -209,10 +205,6 @@ static void test_errors(void) {
     memset(&options, 0, sizeof(options));
     options.markers = null_text;
     options.marker_count = 1;
-    assert(render_checked(&notes, &options) == MIDI_RENDER_ERR_NULL_ARG);
-
-    const MidiMarker null_position[] = {{NULL, "A"}};
-    options.markers = null_position;
     assert(render_checked(&notes, &options) == MIDI_RENDER_ERR_NULL_ARG);
 
     options.markers = NULL;
@@ -268,9 +260,6 @@ static void test_errors(void) {
         free(huge);
     }
 
-    musical_time_destroy(zero);
-    musical_time_destroy(negative);
-    musical_time_destroy(off_tick);
     test_notes_free(&notes);
 }
 
@@ -289,8 +278,8 @@ static void test_import_ignores_names_and_markers(void) {
     test_notes_add(&notes, 3, 4, 3, 4, 43, "v-bass");
 
     const MidiTrackName names[] = {{"v-melody", "melody"}, {"v-bass", "bass"}};
-    MusicalTime *zero = test_time(0, 1);
-    MusicalTime *bar_three = test_time(3, 2);
+    MusicalTime zero = test_time_value(0, 1);
+    MusicalTime bar_three = test_time_value(3, 2);
     const MidiMarker markers[] = {{zero, "A"}, {bar_three, "B"}};
     MidiRenderOptions options;
     memset(&options, 0, sizeof(options));
@@ -317,12 +306,12 @@ static void test_import_ignores_names_and_markers(void) {
     NoteEvent **plain_events = NULL;
     PitchNumericValue **plain_pitches = NULL;
     size_t plain_count = 0;
-    MidiMeterImport plain_meter = {NULL, NULL, NULL, 0};
+    MidiMeterImport plain_meter = {NULL, {{0, 1}}, NULL, 0};
     assert(test_midi_import_parts(plain, plain_size, &plain_events, &plain_pitches, &plain_count, &plain_meter, NULL) == MIDI_IMPORT_OK);
     NoteEvent **named_events = NULL;
     PitchNumericValue **named_pitches = NULL;
     size_t named_count = 0;
-    MidiMeterImport named_meter = {NULL, NULL, NULL, 0};
+    MidiMeterImport named_meter = {NULL, {{0, 1}}, NULL, 0};
     assert(test_midi_import_parts(named, named_size, &named_events, &named_pitches, &named_count, &named_meter, NULL) == MIDI_IMPORT_OK);
     assert(plain_count == notes.count && named_count == plain_count);
     TestNoteFact *plain_facts = test_facts_of(plain_events, plain_pitches, plain_count);
@@ -369,8 +358,6 @@ static void test_import_ignores_names_and_markers(void) {
 
     free(plain);
     free(named);
-    musical_time_destroy(zero);
-    musical_time_destroy(bar_three);
     test_notes_free(&notes);
     meter_map_destroy(meter_map);
     tempo_map_destroy(tempo_map);

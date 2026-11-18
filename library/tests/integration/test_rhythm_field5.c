@@ -128,46 +128,24 @@ static bool is_annotated_syncopation(const RhythmAnnotation *a, const StandardMe
     return false;
 }
 
-/* The annotated phrases, by measures, as the phrases of the meter input: each phrase and its arrival measure as a span the helper keeps. */
-typedef struct {
-    TimeSpan **spans;
-    size_t count;
-} HandSpans;
-
-static const TimeSpan *hand_span(HandSpans *kept, const MusicalTime *start, const MusicalTime *end) {
-    kept->spans = (TimeSpan **)realloc(kept->spans, (kept->count + 1) * sizeof(TimeSpan *));
-    assert(kept->spans != NULL);
-    assert(time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &kept->spans[kept->count]) == TIME_SPAN_OK);
-    return kept->spans[kept->count++];
-}
-
-static void add_hand_phrase(StandardMeterInput *input, HandSpans *kept, int index, int first, int last, int arrival, bool elided) {
-    TimeSpan *from = NULL;
-    TimeSpan *to = NULL;
-    TimeSpan *cadence = NULL;
+/* The annotated phrases, by measures, as the phrases of the meter input: each phrase and its arrival measure as a span. */
+static void add_hand_phrase(StandardMeterInput *input, int index, int first, int last, int arrival, bool elided) {
+    TimeSpan from;
+    TimeSpan to;
+    TimeSpan cadence;
     assert(meter_map_measure_span(input->map, first, &from) == METER_MAP_OK);
     assert(meter_map_measure_span(input->map, last, &to) == METER_MAP_OK);
-    const TimeSpan *span = hand_span(kept, time_span_start(from), time_span_end(to));
+    TimeSpan span;
+    assert(time_span_make(from.start, to.end, &span) == TIME_SPAN_OK);
     const TimeSpan *arrival_span = NULL;
     if (arrival > 0) {
         assert(meter_map_measure_span(input->map, arrival, &cadence) == METER_MAP_OK);
-        arrival_span = hand_span(kept, time_span_start(cadence), time_span_end(cadence));
+        arrival_span = &cadence;
     }
     char id[32];
     snprintf(id, sizeof(id), "phrase-%d", index);
     assert(standard_meter_input_add_phrase(input, id, span, arrival_span, STANDARD_METER_EXPANSION_NONE, 0, elided) ==
            STANDARD_METER_ANALYSIS_OK);
-    time_span_destroy(from);
-    time_span_destroy(to);
-    time_span_destroy(cadence);
-}
-
-static void hand_spans_destroy(HandSpans *kept) {
-    for (size_t i = 0; i < kept->count; i++) {
-        time_span_destroy(kept->spans[i]);
-    }
-    free(kept->spans);
-    memset(kept, 0, sizeof(*kept));
 }
 
 static bool found_hyperdownbeat(const StandardMeterHypermeter *found, int measure) {
@@ -221,9 +199,8 @@ int main(void) {
     ChainMeterInput build;
     assert(chain_build_meter_input(&p.set, &lines, analysis_chain_segments(p.chain), labels, ra.range_first, ra.range_last, NULL, NULL, NULL,
                                    &build) == CHAIN_INPUT_OK);
-    HandSpans kept = {NULL, 0};
     for (size_t i = 0; i < ra.phrase_count; i++) {
-        add_hand_phrase(&build.input, &kept, (int)i, ra.phrases[i].first, ra.phrases[i].last, ra.phrases[i].arrival, ra.phrases[i].elided);
+        add_hand_phrase(&build.input, (int)i, ra.phrases[i].first, ra.phrases[i].last, ra.phrases[i].arrival, ra.phrases[i].elided);
     }
     printf("  %zu notes, %zu chord changes, %zu annotated phrases\n", build.input.note_count, build.input.chord_change_count,
            build.input.phrase_count);
@@ -334,7 +311,6 @@ int main(void) {
     standard_meter_hypermeter_destroy(&hypermeter);
     standard_meter_hemiolas_destroy(&hemiolas);
     standard_meter_syncopations_destroy(&syncopations);
-    hand_spans_destroy(&kept);
     chain_meter_input_destroy(&build);
     common_practice_weighted_results_destroy(&chords);
     free(labels);

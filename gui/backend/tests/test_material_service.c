@@ -8,6 +8,7 @@
 
 #include "service/material_service.h"
 #include "gui_check.h"
+#include "test_knowledge.h"
 
 #define OK URSATZ_GUI_MATERIAL_OK
 
@@ -356,6 +357,9 @@ static void test_body_validation(void) {
         {"\"key\":\"D\",\"mode\":\"dorian\",\"meter\":\"7/8\"", OK, "a mode and a meter the Composer does not read"},
         {"\"key\":5,\"mode\":\"major\",\"meter\":\"4/4\"", INVALID, "a key that is not text"},
         {"\"key\":\"D\",\"mode\":null,\"meter\":7", INVALID, "a meter that is not text"},
+        {"\"key\":\"D\",\"material\":\"omt.material.natural-minor\",\"meter\":\"4/4\"", OK, "a structure with a material"},
+        {"\"key\":\"D\",\"material\":\"style\",\"meter\":\"4/4\"", OK, "a structure with the material style"},
+        {"\"key\":\"D\",\"material\":5,\"meter\":\"4/4\"", INVALID, "a material that is not text"},
     };
     for (size_t i = 0; i < sizeof(pieces) / sizeof(pieces[0]); i++) {
         char text[512];
@@ -510,6 +514,9 @@ static void test_body_validation(void) {
         {"\"form\":{\"into\":\"hybrid\",\"hybrid\":\"fugue\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a hybrid the Composer does not read"},
         {"\"form\":{\"into\":\"rondo\",\"mode\":\"dorian\",\"cadence\":\"DC\",\"first_cadence\":\"PAC\",\"bars\":6},\"slots\":[{\"slot\":\"basic\",REF}]",
          OK, "an into, mode, cadences and bars the Composer does not read"},
+        {"\"form\":{\"into\":\"sentence\",\"material\":\"omt.material.major\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with a material"},
+        {"\"form\":{\"into\":\"sentence\",\"material\":\"style\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with the material style"},
+        {"\"form\":{\"into\":\"sentence\",\"material\":7},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "a form material that is not text"},
         {"\"form\":{\"into\":\"sentence\",\"meter\":4},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "a meter that is not text"},
         {"\"form\":{\"into\":\"sentence\",\"bars\":\"8\"},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "bars that are not a number"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"tempo\":5", OK, "a tempo under 20"},
@@ -583,6 +590,9 @@ static void test_body_validation(void) {
     expect_motif("key", "null", OK);
     expect_motif("key", "\"A major\"", OK);
     expect_motif("key", "7", INVALID);
+    expect_motif("material", "null", OK);
+    expect_motif("material", "\"omt.material.natural-minor\"", OK);
+    expect_motif("material", "7", INVALID);
     expect_motif("pickup", "\"1/2\"", OK);
     expect_motif("pickup", "\"3\"", OK);
     expect_motif("pickup", "\"-1\"", INVALID);
@@ -1083,6 +1093,193 @@ static void test_op_checks(void) {
     free(home);
 }
 
+
+/* A stored version file as it is on disk, with no migration (caller deletes), NULL when it is not there. */
+static cJSON *stored_body(const char *id, int number) {
+    char path[700];
+    snprintf(path, sizeof(path), "%s/items/%s/v%d.json", g_dir, id, number);
+    char *text = test_read_file(path, NULL);
+    cJSON *body = text ? cJSON_Parse(text) : NULL;
+    free(text);
+    return body;
+}
+
+/* Writes the text as the stored version file, as an old store holds it (the service writes the new members on every save). */
+static void store_old(const char *id, int number, const char *text) {
+    char path[700];
+    snprintf(path, sizeof(path), "%s/items/%s/v%d.json", g_dir, id, number);
+    check_quiet(test_write_file(path, text, strlen(text)), "an old version file is written");
+}
+
+static cJSON *member_of(const cJSON *object, const char *name) {
+    return cJSON_GetObjectItemCaseSensitive(object, name);
+}
+
+/* Bodies with the old members (a motif's key text, a theme form's and a piece structure's mode) are read with the new
+   ones (R-597): the stored file keeps what was written, a read gives `material`, a new version writes it, and a body that
+   has both keeps the new one. */
+static void test_old_and_new_bodies(void) {
+    static const char *const kOldMotif =
+        "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\","
+        "\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}";
+    static const char *const kOldTheme =
+        "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"mode\":\"minor\",\"meter\":\"4/4\"},"
+        "\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]}}";
+    static const char *const kOldPiece =
+        "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"%s\",\"meter\":\"4/4\",\"sections\":["
+        "{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}";
+    char *home = new_project("Old and new");
+    char *motif = new_item("motif", "Old motif", home, kOldMotif);
+    check_quiet(motif != NULL, "an old motif body is saved");
+    cJSON *stored = motif ? stored_body(motif, 1) : NULL;
+    check_quiet(stored && strcmp(str(member_of(stored, "motif"), "material"), "omt.material.natural-minor") == 0 &&
+                    !member_of(member_of(stored, "motif"), "key"),
+                "a save of an old motif body writes the material and no key");
+    cJSON_Delete(stored);
+    if (motif) {
+        store_old(motif, 1, kOldMotif);
+    }
+    cJSON *body = NULL;
+    check_quiet(motif && ursatz_gui_material_item_get_version(motif, 1, &body) == OK, "the old motif is read");
+    const cJSON *read = member_of(body, "motif");
+    check_quiet(strcmp(str(read, "material"), "omt.material.natural-minor") == 0 && !member_of(read, "key"),
+                "a motif key C minor is read as the material natural minor, with no key");
+    stored = motif ? stored_body(motif, 1) : NULL;
+    check_quiet(stored && strcmp(str(member_of(stored, "motif"), "key"), "C minor") == 0 && !member_of(member_of(stored, "motif"), "material"),
+                "the stored file keeps the key text");
+    cJSON_Delete(stored);
+    cJSON *added = NULL;
+    check_quiet(motif && ursatz_gui_material_item_add_version(motif, body, "Saved", &added) == OK && num(added, "current_version") == 2,
+                "the read body is saved as a new version");
+    cJSON_Delete(added);
+    stored = motif ? stored_body(motif, 2) : NULL;
+    check_quiet(stored && strcmp(str(member_of(stored, "motif"), "material"), "omt.material.natural-minor") == 0 &&
+                    !member_of(member_of(stored, "motif"), "key"),
+                "a save writes the material and no key");
+    cJSON_Delete(stored);
+    cJSON_Delete(body);
+
+    /* C major, a null key and a body with both */
+    static const struct {
+        const char *key;
+        const char *material_json;
+        const char *expect;
+    } motifs[] = {
+        {"\"C major\"", NULL, "omt.material.major"},
+        {"null", NULL, NULL},
+        {"\"C major\"", "\"omt.material.natural-minor\"", "omt.material.natural-minor"},
+    };
+    for (size_t i = 0; i < sizeof(motifs) / sizeof(motifs[0]); i++) {
+        cJSON *raw = cJSON_Parse(kOldMotif);
+        cJSON *motif_member = member_of(raw, "motif");
+        cJSON_ReplaceItemInObjectCaseSensitive(motif_member, "key", cJSON_Parse(motifs[i].key));
+        if (motifs[i].material_json) {
+            cJSON_AddItemToObject(motif_member, "material", cJSON_Parse(motifs[i].material_json));
+        }
+        ursatz_gui_material_body_migrate(raw);
+        motif_member = member_of(raw, "motif");
+        const cJSON *material = member_of(motif_member, "material");
+        check_quiet(!member_of(motif_member, "key") && (motifs[i].expect ? strcmp(str(motif_member, "material"), motifs[i].expect) == 0
+                                                                          : cJSON_IsNull(material)),
+                    "a motif key becomes the material, the new member wins, a null key gives a null material");
+        cJSON_Delete(raw);
+    }
+    cJSON *off_c = cJSON_Parse(kOldMotif);
+    cJSON_ReplaceItemInObjectCaseSensitive(member_of(off_c, "motif"), "key", cJSON_CreateString("D minor"));
+    ursatz_gui_material_body_migrate(off_c);
+    check_quiet(strcmp(str(member_of(off_c, "motif"), "key"), "D minor") == 0 && !member_of(member_of(off_c, "motif"), "material"),
+                "a key on another tonic stays as it was");
+    cJSON_Delete(off_c);
+
+    /* a theme form's mode and its copies of the motifs */
+    char old_theme[900];
+    snprintf(old_theme, sizeof(old_theme), kOldTheme, motif);
+    char *theme = new_item("theme", "Old theme", home, old_theme);
+    check_quiet(theme != NULL, "an old theme body is saved");
+    stored = theme ? stored_body(theme, 1) : NULL;
+    check_quiet(stored && strcmp(str(member_of(member_of(stored, "theme"), "form"), "material"), "omt.material.natural-minor") == 0 &&
+                    !member_of(member_of(member_of(stored, "theme"), "form"), "mode"),
+                "a save of an old theme body writes the form material and no mode");
+    cJSON_Delete(stored);
+    if (theme) {
+        /* the old file holds the old copy of the motif in its uses */
+        cJSON *old_file = cJSON_Parse(old_theme);
+        cJSON *use = cJSON_CreateObject();
+        cJSON_AddStringToObject(use, "item_id", motif);
+        cJSON_AddNumberToObject(use, "version", 1);
+        cJSON_AddItemToObject(use, "copy", cJSON_Parse(kOldMotif));
+        cJSON_AddItemToArray(member_of(old_file, "uses"), use);
+        char *old_file_text = cJSON_Print(old_file);
+        store_old(theme, 1, old_file_text);
+        free(old_file_text);
+        cJSON_Delete(old_file);
+    }
+    body = NULL;
+    check_quiet(theme && ursatz_gui_material_item_get_version(theme, 1, &body) == OK, "the old theme is read");
+    const cJSON *form = member_of(member_of(body, "theme"), "form");
+    check_quiet(strcmp(str(form, "material"), "omt.material.natural-minor") == 0 && !member_of(form, "mode") &&
+                    strcmp(str(form, "into"), "sentence") == 0,
+                "a theme form mode minor is read as the material natural minor");
+    const cJSON *copy = member_of(first_use(body), "copy");
+    check_quiet(copy && strcmp(str(member_of(copy, "motif"), "material"), "omt.material.natural-minor") == 0 && !member_of(member_of(copy, "motif"), "key"),
+                "the copies of the motifs are read with the material too");
+    cJSON_Delete(body);
+    stored = theme ? stored_body(theme, 1) : NULL;
+    check_quiet(stored && strcmp(str(member_of(member_of(stored, "theme"), "form"), "mode"), "minor") == 0 &&
+                    !member_of(member_of(member_of(stored, "theme"), "form"), "material"),
+                "the stored theme file keeps the mode word");
+    cJSON_Delete(stored);
+
+    /* a piece structure's mode: major and minor by word, style by itself, a word with no material stays */
+    static const struct {
+        const char *mode;
+        const char *expect;
+    } pieces[] = {
+        {"major", "omt.material.major"},
+        {"minor", "omt.material.natural-minor"},
+        {"style", "style"},
+        {"dorian", NULL},
+    };
+    for (size_t i = 0; i < sizeof(pieces) / sizeof(pieces[0]); i++) {
+        char old_piece[700];
+        snprintf(old_piece, sizeof(old_piece), kOldPiece, pieces[i].mode);
+        char *piece = new_item("piece", "Old piece", home, old_piece);
+        check_quiet(piece != NULL, "an old piece body is saved");
+        body = NULL;
+        check_quiet(piece && ursatz_gui_material_item_get_version(piece, 1, &body) == OK, "the old piece is read");
+        const cJSON *structure = member_of(member_of(body, "piece"), "structure");
+        if (pieces[i].expect) {
+            check_quiet(strcmp(str(structure, "material"), pieces[i].expect) == 0 && !member_of(structure, "mode") &&
+                            strcmp(str(structure, "key"), "D") == 0,
+                        "a piece structure mode is read as its material, the key stays");
+        } else {
+            check_quiet(strcmp(str(structure, "mode"), "dorian") == 0 && !member_of(structure, "material"),
+                        "a piece structure mode that names no material stays as it was");
+        }
+        cJSON_Delete(body);
+        free(piece);
+    }
+    /* a piece and a theme saved with the material, as the pages send them, are read as they are */
+    static const char *const kNewPiece =
+        "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"material\":\"omt.material.major\",\"meter\":\"4/4\",\"sections\":["
+        "{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}";
+    char *fresh = new_item("piece", "New piece", home, kNewPiece);
+    body = NULL;
+    check_quiet(fresh && ursatz_gui_material_item_get_version(fresh, 1, &body) == OK &&
+                    strcmp(str(member_of(member_of(body, "piece"), "structure"), "material"), "omt.material.major") == 0,
+                "a new piece body is read with its material");
+    cJSON_Delete(body);
+    stored = fresh ? stored_body(fresh, 1) : NULL;
+    check_quiet(stored && strcmp(str(member_of(member_of(stored, "piece"), "structure"), "material"), "omt.material.major") == 0 &&
+                    !member_of(member_of(stored, "piece"), "mode") && !member_of(member_of(member_of(stored, "piece"), "structure"), "mode"),
+                "a new piece body is stored with its material and no mode");
+    cJSON_Delete(stored);
+    free(fresh);
+    free(theme);
+    free(motif);
+    free(home);
+}
+
 /* Deletes every project, then the store's directories. */
 static void remove_store(void) {
     cJSON *projects = NULL;
@@ -1103,6 +1300,7 @@ static void remove_store(void) {
 }
 
 int main(void) {
+    test_knowledge();
     snprintf(g_dir, sizeof(g_dir), "%s/materials_%d", URSATZ_GUI_TEST_STORE_DIR, (int)getpid());
     check_quiet(ursatz_gui_material_service_init(g_dir), "init");
 
@@ -1114,6 +1312,7 @@ int main(void) {
     test_forced_delete();
     test_variant_ownership();
     test_op_checks();
+    test_old_and_new_bodies();
 
     remove_store();
     return test_finish("material_service");

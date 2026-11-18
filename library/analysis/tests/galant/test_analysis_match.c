@@ -181,7 +181,7 @@ static void test_a_gap_that_is_too_long(void) {
     galant_schema_matches_destroy(&matches);
     /* the same with a longer allowance */
     GalantMatchConfig longer = galant_match_config_default();
-    longer.max_gap_beats = 3.0;
+    longer.max_gap_beats = rational_ratio(3, 1);
     matches = find_matches(&seq, &longer);
     assert(find_schema(&matches, "prinner") != NULL);
     galant_schema_matches_destroy(&matches);
@@ -292,7 +292,7 @@ static void test_bad_calls(void) {
     assert(galant_schema_match(&seq.list, NULL, NULL) == GALANT_ANALYSIS_ERR_NULL_ARGUMENT);
     assert(galant_schema_match(&seq.list, NULL, &matches) == GALANT_ANALYSIS_OK && matches.count == 0 && matches.items == NULL);
     GalantMatchConfig bad = galant_match_config_default();
-    bad.max_gap_beats = -1.0;
+    bad.max_gap_beats = rational_ratio(-1, 1);
     seq_add(&seq, 0, 2, S, deg(1, 0), deg(1, 0), HOME, 0.0);
     assert(galant_schema_match(&seq.list, &bad, &matches) == GALANT_ANALYSIS_ERR_INVALID);
     /* a segment out of order, a degree out of range, an empty id */

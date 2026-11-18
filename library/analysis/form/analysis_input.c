@@ -72,13 +72,12 @@ static bool grow(void **items, size_t *capacity, size_t count, size_t item_size)
 }
 
 StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *input, const char *id,
-                                                           const TimeSpan *arrival, CadenceType type, int strength_rank,
+                                                           TimeSpan arrival, CadenceType type, int strength_rank,
                                                            bool post_cadential, double uncertainty) {
     if (input == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (arrival == NULL || !cadence_type_valid(type) || !(uncertainty >= 0.0 && uncertainty <= 1.0) ||
-        !score_time_span(arrival, NULL, NULL)) {
+    if (!cadence_type_valid(type) || !(uncertainty >= 0.0 && uncertainty <= 1.0)) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
     if (!grow((void **)&input->cadences, &input->cadence_capacity, input->cadence_count, sizeof(StandardFormCadence))) {
@@ -102,8 +101,8 @@ StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *in
 static int compare_cadences(const void *a, const void *b) {
     Rational left;
     Rational right;
-    score_time_span(((const StandardFormCadence *)a)->arrival, &left, NULL);
-    score_time_span(((const StandardFormCadence *)b)->arrival, &right, NULL);
+    left = ((const StandardFormCadence *)a)->arrival.start.value;
+    right = ((const StandardFormCadence *)b)->arrival.start.value;
     return rational_cmp(left, right);
 }
 
@@ -114,13 +113,13 @@ static bool line_valid(const AnalysisNote *notes, size_t count) {
     }
     for (size_t i = 0; i < count; i++) {
         Rational start;
-        if (!copy_id_valid(notes[i].note_id) || notes[i].midi == ANALYSIS_PITCH_UNKNOWN || notes[i].event == NULL ||
-            notes[i].span == NULL || !score_time_span(notes[i].span, &start, NULL)) {
+        start = notes[i].span.start.value;
+        if (!copy_id_valid(notes[i].note_id) || notes[i].midi == ANALYSIS_PITCH_UNKNOWN || notes[i].event == NULL) {
             return false;
         }
         if (i > 0) {
             Rational previous;
-            score_time_span(notes[i - 1].span, &previous, NULL);
+            previous = notes[i - 1].span.start.value;
             if (rational_cmp(start, previous) < 0) {
                 return false;
             }
@@ -135,8 +134,8 @@ bool standard_form_next_note_step(const AnalysisNote *notes, size_t count, size_
     }
     Rational end;
     Rational next_start;
-    score_time_span(notes[index].span, NULL, &end);
-    score_time_span(notes[index + 1].span, &next_start, NULL);
+    end = notes[index].span.end.value;
+    next_start = notes[index + 1].span.start.value;
     if (rational_cmp(end, next_start) < 0) {
         return false;
     }

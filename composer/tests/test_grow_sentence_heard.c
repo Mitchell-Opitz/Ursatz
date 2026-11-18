@@ -8,6 +8,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_state.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * The grown sentences, heard. The same runs as test_grow_sentence (four keys and meters, 8 and 4 bars, seeds 1 to 10):
@@ -19,17 +20,17 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
     const char *motive;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"D minor 3/4", 2, KEY_STRUCTURE_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
-    {"G major 6/8", 7, KEY_STRUCTURE_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
-    {"F major 2/4", 5, KEY_STRUCTURE_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
+    {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"D minor 3/4", 2, HARMONY_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
+    {"G major 6/8", 7, HARMONY_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
+    {"F major 2/4", 5, HARMONY_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -49,19 +50,21 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     PiecePlan *plan = NULL;
     FormHeard heard;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
     assert(motive_from_notes_text(scenario->motive, &options, &motive, NULL) == MOTIVE_OK);
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter = options.meter;
     request.bars = bars;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(grow_run(plan, &config, &outcome) == GROW_OK);

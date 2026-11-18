@@ -72,7 +72,8 @@ static ComposerStatus export_failure(ComposerError *error, const char *path, Pla
  * The motive as it sounds in the request's "render_key" (its own key without one), and as the files asked for by "midi"
  * and "musicxml", written into out. The failure paths /midi and /musicxml name the file that could not be made.
  */
-static ComposerStatus render_motive(const cJSON *request, const Motive *motive, Motive *rendered, ComposerResponse *out) {
+static ComposerStatus render_motive(const cJSON *request, const KnowledgeSnapshot *knowledge, const Motive *motive,
+                                    Motive *rendered, ComposerResponse *out) {
     *rendered = *motive;
     const char *key_text = NULL;
     bool has_key = false;
@@ -86,7 +87,10 @@ static ComposerStatus render_motive(const cJSON *request, const Motive *motive, 
     }
     if (has_key) {
         AnalysisKey key;
-        if (!request_parse_key(key_text, &key)) {
+        if (!request_parse_key(key_text, knowledge, &key)) {
+            if (api_fail_unsupported_key(error, "/render_key", knowledge, key_text)) {
+                return COMPOSER_ERR_REQUEST;
+            }
             return api_fail(error, COMPOSER_ERR_REQUEST, "/render_key",
                             "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                             "for example \"D minor\"",
@@ -128,14 +132,14 @@ static ComposerStatus render_motive(const cJSON *request, const Motive *motive, 
 }
 
 /* The motive's input: text in the request, or the bytes of a MIDI file when bytes is not NULL. */
-static ComposerStatus analyze_request(const cJSON *request, const unsigned char *bytes, size_t size, bool render,
-                                      const ComposerJob *job, ComposerResponse *out) {
+static ComposerStatus analyze_request(const cJSON *request, const KnowledgeSnapshot *knowledge, const unsigned char *bytes,
+                                      size_t size, bool render, const ComposerJob *job, ComposerResponse *out) {
     if (job_step(job, "motive", 0, 1)) {
         return api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
     }
     Motive motive;
-    ComposerStatus status = bytes ? api_read_motive_bytes(request, "", bytes, size, &motive, NULL, &out->error)
-                                  : api_read_motive(request, "", &motive, NULL, &out->error);
+    ComposerStatus status = bytes ? api_read_motive_bytes(request, "", knowledge, bytes, size, &motive, NULL, &out->error)
+                                  : api_read_motive(request, "", knowledge, &motive, NULL, &out->error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -162,7 +166,7 @@ static ComposerStatus analyze_request(const cJSON *request, const unsigned char 
     }
     Motive rendered;
     if (render) {
-        status = render_motive(request, &motive, &rendered, out);
+        status = render_motive(request, knowledge, &motive, &rendered, out);
         if (status != COMPOSER_OK) {
             return status;
         }
@@ -172,15 +176,20 @@ static ComposerStatus analyze_request(const cJSON *request, const unsigned char 
     return out->json ? COMPOSER_OK : api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-static ComposerStatus run_request(const char *request_json, const unsigned char *bytes, size_t size, bool render,
-                                  const ComposerJob *job, ComposerResponse *out) {
+static ComposerStatus run_request(const ComposerContext *context, const char *request_json, const unsigned char *bytes,
+                                  size_t size, bool render, const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *request = NULL;
     ComposerStatus status = api_parse_request(request_json, &request, &out->error);
     if (status != COMPOSER_OK) {
         return status;
     }
-    status = analyze_request(request, bytes, size, render, job, out);
+    status = analyze_request(request, context->knowledge, bytes, size, render, job, out);
     cJSON_Delete(request);
     if (status != COMPOSER_OK) {
         ComposerError error = out->error;
@@ -190,19 +199,24 @@ static ComposerStatus run_request(const char *request_json, const unsigned char 
     return status;
 }
 
-ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
-    return run_request(request_json, NULL, 0, false, job, out);
+ComposerStatus composer_api_motive(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                   ComposerResponse *out) {
+    return run_request(context, request_json, NULL, 0, false, job, out);
 }
 
-ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, const char *request_json,
-                                             const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_motive_from_midi(const ComposerContext *context, const uint8_t *bytes, size_t size,
+                                             const char *request_json, const ComposerJob *job, ComposerResponse *out) {
     if (!bytes) {
         memset(out, 0, sizeof *out);
-        return api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "the MIDI bytes are missing");
+        ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
+        return context_status != COMPOSER_OK
+                   ? context_status
+                   : api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "the MIDI bytes are missing");
     }
-    return run_request(request_json, bytes, size, false, job, out);
+    return run_request(context, request_json, bytes, size, false, job, out);
 }
 
-ComposerStatus composer_api_motive_render(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
-    return run_request(request_json, NULL, 0, true, job, out);
+ComposerStatus composer_api_motive_render(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                          ComposerResponse *out) {
+    return run_request(context, request_json, NULL, 0, true, job, out);
 }

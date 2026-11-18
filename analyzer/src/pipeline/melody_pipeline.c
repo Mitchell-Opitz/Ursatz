@@ -75,9 +75,11 @@ static const AnalysisKeyRegion *home_region_of(const AnalysisReport *report, int
         return NULL;
     }
     int tonic = common_practice_key_index_tonic(home);
-    bool is_major = common_practice_key_index_mode(home) == COMMON_PRACTICE_KEY_MAJOR;
+    CommonPracticeKeyMode mode = common_practice_key_index_mode(home);
     for (size_t r = 0; r < report->key_region_count; r++) {
-        if (report->key_regions[r].tonic_pitch_class == tonic && report->key_regions[r].is_major == is_major) {
+        CommonPracticeKeyMode region_mode;
+        if (report->key_regions[r].tonic_pitch_class == tonic &&
+            common_practice_key_mode_of(report->key_regions[r].material, &region_mode) && region_mode == mode) {
             return &report->key_regions[r];
         }
     }

@@ -31,7 +31,7 @@ static char *pitch_name_create(int midi, bool prefer_flats) {
 
 /* Fills one outer note from the library's entry for the segment. False on allocation failure. */
 static bool fill_note(const ImportedNotes *notes, const Segment *segment, const OuterVoiceEntry *entry, const AnalysisKeyRegion *region,
-                      AnalysisOuterNote *out) {
+                      const CommonPracticeMaterials *materials, AnalysisOuterNote *out) {
     if (!entry->present) {
         out->status = entry->bridged ? ANALYSIS_OUTER_BRIDGED
                                      : (entry->guarded ? ANALYSIS_OUTER_GUARDED : ANALYSIS_OUTER_ABSENT);
@@ -56,10 +56,10 @@ static bool fill_note(const ImportedNotes *notes, const Segment *segment, const 
     if (!out->pitch_name) {
         return false;
     }
-    if (region) {
-        const char *degree = common_practice_scale_degree_label(
-            pitch_class_of(out->pitch), region->tonic_pitch_class,
-            region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR);
+    CommonPracticeKeyMode mode;
+    if (region && common_practice_key_mode_of(region->material, &mode)) {
+        const char *degree =
+            common_practice_scale_degree_label(pitch_class_of(out->pitch), region->tonic_pitch_class, mode, materials);
         if (degree) {
             out->degree = strdup(degree);
             if (!out->degree) {
@@ -107,7 +107,8 @@ static size_t chord_at(const Segmentation *segmentation, const Segment *voice, s
 /* Fills report->outer_lines: one entry per voice segment. False on allocation failure. */
 static bool collect_outer_lines(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
                                 const ChordEstimate *chords, const AnalysisKeyRegion *regions,
-                                const OuterVoiceLines *lines, AnalysisReport *report) {
+                                const OuterVoiceLines *lines, const CommonPracticeMaterials *materials,
+                                AnalysisReport *report) {
     report->outer_lines = calloc(voices->segment_count, sizeof(*report->outer_lines));
     if (!report->outer_lines) {
         return false;
@@ -126,8 +127,8 @@ static bool collect_outer_lines(const ImportedNotes *notes, const Segmentation *
         chord = chord_at(segmentation, voice, chord);
         out->chord_index = chord;
         const AnalysisKeyRegion *region = chords[chord].in_region ? &regions[chords[chord].region] : NULL;
-        if (!fill_note(notes, voice, &lines->soprano[v], region, &out->soprano) ||
-            !fill_note(notes, voice, &lines->bass[v], region, &out->bass)) {
+        if (!fill_note(notes, voice, &lines->soprano[v], region, materials, &out->soprano) ||
+            !fill_note(notes, voice, &lines->bass[v], region, materials, &out->bass)) {
             return false;
         }
     }
@@ -136,7 +137,7 @@ static bool collect_outer_lines(const ImportedNotes *notes, const Segmentation *
 
 bool collect_outer_voices(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
                           const ChordEstimate *chords, const AnalysisKeyRegion *regions, const OuterVoiceLines *lines,
-                          AnalysisReport *report) {
+                          const CommonPracticeMaterials *materials, AnalysisReport *report) {
     AnalysisReportEntry *entries = report->entries;
     size_t count = segmentation->segment_count;
     for (size_t i = 0; i < count; i++) {
@@ -158,8 +159,8 @@ bool collect_outer_voices(const ImportedNotes *notes, const Segmentation *voices
             continue;
         }
         const AnalysisKeyRegion *region = chords[i].in_region ? &regions[chords[i].region] : NULL;
-        ok = fill_note(notes, &voices->segments[v], &lines->soprano[v], region, &entries[i].soprano) &&
-             fill_note(notes, &voices->segments[v], &lines->bass[v], region, &entries[i].bass);
+        ok = fill_note(notes, &voices->segments[v], &lines->soprano[v], region, materials, &entries[i].soprano) &&
+             fill_note(notes, &voices->segments[v], &lines->bass[v], region, materials, &entries[i].bass);
     }
-    return ok && collect_outer_lines(notes, voices, segmentation, chords, regions, lines, report);
+    return ok && collect_outer_lines(notes, voices, segmentation, chords, regions, lines, materials, report);
 }

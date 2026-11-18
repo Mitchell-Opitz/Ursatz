@@ -4,11 +4,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include "support/test_composer.h"
 
-static const KeyStructureMode MODES[2] = {KEY_STRUCTURE_MODE_MAJOR, KEY_STRUCTURE_MODE_MINOR};
-
-static HarmonyMode harmony_mode_of(KeyStructureMode mode) {
-    return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
-}
+static const HarmonyMode MODES[2] = {HARMONY_MODE_MAJOR, HARMONY_MODE_MINOR};
 
 /* Every chord that can be formatted reads back as the same chord, and no two chords share a numeral. */
 static void test_diatonic_round_trip(void) {
@@ -31,7 +27,7 @@ static void test_diatonic_round_trip(void) {
                             continue;
                         }
                         /* The leading-tone chord of a major key is the chord on 7, with no separate form. */
-                        if (leading && MODES[m] == KEY_STRUCTURE_MODE_MAJOR) {
+                        if (leading && MODES[m] == HARMONY_MODE_MAJOR) {
                             continue;
                         }
                         assert(harmony_roman_format(MODES[m], &chord, roman));
@@ -53,19 +49,19 @@ static void test_diatonic_round_trip(void) {
 
 static void test_known_numerals(void) {
     HarmonyChord chord;
-    assert(harmony_roman_parse(KEY_STRUCTURE_MODE_MAJOR, "I6/4", &chord));
+    assert(harmony_roman_parse(HARMONY_MODE_MAJOR, "I6/4", &chord));
     assert(chord.degree == 1 && chord.inversion == 2 && !chord.seventh && !chord.cadential);
-    assert(harmony_roman_parse(KEY_STRUCTURE_MODE_MAJOR, "V4/3", &chord));
+    assert(harmony_roman_parse(HARMONY_MODE_MAJOR, "V4/3", &chord));
     assert(chord.degree == 5 && chord.inversion == 2 && chord.seventh);
-    assert(harmony_roman_parse(KEY_STRUCTURE_MODE_MINOR, "iv6", &chord));
+    assert(harmony_roman_parse(HARMONY_MODE_MINOR, "iv6", &chord));
     assert(chord.degree == 4 && chord.inversion == 1);
-    assert(harmony_roman_parse(KEY_STRUCTURE_MODE_MAJOR, "ii6/5", &chord));
+    assert(harmony_roman_parse(HARMONY_MODE_MAJOR, "ii6/5", &chord));
     assert(chord.degree == 2 && chord.inversion == 1 && chord.seventh);
-    assert(!harmony_roman_parse(KEY_STRUCTURE_MODE_MAJOR, "V9", &chord));
-    assert(!harmony_roman_parse(KEY_STRUCTURE_MODE_MAJOR, "v", &chord));
-    assert(!harmony_roman_parse(KEY_STRUCTURE_MODE_MAJOR, "V/V", &chord));
-    assert(!harmony_roman_parse(KEY_STRUCTURE_MODE_MAJOR, "", &chord));
-    assert(!harmony_roman_parse(KEY_STRUCTURE_MODE_MAJOR, NULL, &chord));
+    assert(!harmony_roman_parse(HARMONY_MODE_MAJOR, "V9", &chord));
+    assert(!harmony_roman_parse(HARMONY_MODE_MAJOR, "v", &chord));
+    assert(!harmony_roman_parse(HARMONY_MODE_MAJOR, "V/V", &chord));
+    assert(!harmony_roman_parse(HARMONY_MODE_MAJOR, "", &chord));
+    assert(!harmony_roman_parse(HARMONY_MODE_MAJOR, NULL, &chord));
 }
 
 static void test_applied_round_trip(void) {
@@ -79,7 +75,7 @@ static void test_applied_round_trip(void) {
                 applied.target = target;
                 assert(harmony_applied_quality_kind(applied.quality, &applied.kind));
                 char roman[PLAN_ROMAN_NUMERAL_MAX];
-                if (!harmony_applied_valid(harmony_mode_of(MODES[m]), &applied)) {
+                if (!harmony_applied_valid(MODES[m], &applied)) {
                     assert(!harmony_roman_format_applied(MODES[m], &applied, roman));
                     continue;
                 }
@@ -96,10 +92,10 @@ static void test_applied_round_trip(void) {
         assert(formatted > 0);
     }
     HarmonyAppliedChord parsed;
-    assert(test_roman_parse_applied(KEY_STRUCTURE_MODE_MAJOR, "V7/V", &parsed));
+    assert(test_roman_parse_applied(HARMONY_MODE_MAJOR, "V7/V", &parsed));
     assert(parsed.quality == HARMONY_APPLIED_DOMINANT_SEVENTH && parsed.target == 5);
-    assert(!test_roman_parse_applied(KEY_STRUCTURE_MODE_MAJOR, "V", &parsed));
-    assert(!test_roman_parse_applied(KEY_STRUCTURE_MODE_MAJOR, "V/I", &parsed));
+    assert(!test_roman_parse_applied(HARMONY_MODE_MAJOR, "V", &parsed));
+    assert(!test_roman_parse_applied(HARMONY_MODE_MAJOR, "V/I", &parsed));
 }
 
 static void test_inverted_applied(void) {
@@ -114,7 +110,7 @@ static void test_inverted_applied(void) {
                     applied.target = target;
                     assert(harmony_applied_quality_kind(applied.quality, &applied.kind));
                     char roman[PLAN_ROMAN_NUMERAL_MAX];
-                    if (!harmony_applied_valid(harmony_mode_of(MODES[m]), &applied) ||
+                    if (!harmony_applied_valid(MODES[m], &applied) ||
                         !harmony_roman_format_applied_inverted(MODES[m], &applied, inversion, roman)) {
                         continue;
                     }
@@ -133,13 +129,13 @@ static void test_inverted_applied(void) {
     }
     HarmonyAppliedChord parsed;
     int inversion;
-    assert(harmony_roman_parse_applied_inverted(KEY_STRUCTURE_MODE_MAJOR, "V6/5/ii", &parsed, &inversion));
+    assert(harmony_roman_parse_applied_inverted(HARMONY_MODE_MAJOR, "V6/5/ii", &parsed, &inversion));
     assert(parsed.quality == HARMONY_APPLIED_DOMINANT_SEVENTH && parsed.target == 2 && inversion == 1);
-    assert(harmony_roman_parse_applied_inverted(KEY_STRUCTURE_MODE_MAJOR, "V4/2/IV", &parsed, &inversion));
+    assert(harmony_roman_parse_applied_inverted(HARMONY_MODE_MAJOR, "V4/2/IV", &parsed, &inversion));
     assert(parsed.target == 4 && inversion == 3);
-    assert(harmony_roman_parse_applied_inverted(KEY_STRUCTURE_MODE_MAJOR, "V6/vi", &parsed, &inversion));
+    assert(harmony_roman_parse_applied_inverted(HARMONY_MODE_MAJOR, "V6/vi", &parsed, &inversion));
     assert(parsed.quality == HARMONY_APPLIED_MAJOR_TRIAD && inversion == 1);
-    assert(!harmony_roman_parse_applied_inverted(KEY_STRUCTURE_MODE_MAJOR, "V6/4/V", &parsed, &inversion));
+    assert(!harmony_roman_parse_applied_inverted(HARMONY_MODE_MAJOR, "V6/4/V", &parsed, &inversion));
 }
 
 int main(void) {

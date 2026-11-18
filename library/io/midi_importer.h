@@ -47,12 +47,12 @@ typedef enum {
  */
 typedef struct {
     MeterMap *meter_map;      /* owned */
-    MusicalTime *end_time;    /* owned */
+    MusicalTime end_time;
     uint64_t *conflict_ticks; /* owned; NULL when conflict_count is 0 */
     size_t conflict_count;
 } MidiMeterImport;
 
-/* Destroys the MeterMap, the end time and the conflict list. NULL is a no-op. */
+/* Destroys the MeterMap and the conflict list. NULL is a no-op. */
 void midi_meter_import_destroy(MidiMeterImport *meter);
 
 /*
@@ -110,9 +110,9 @@ void midi_tempo_import_destroy(MidiTempoImport *tempo);
  */
 typedef struct {
     uint64_t tick;
-    MusicalTime *time; /* owned */
-    uint8_t channel;   /* 0-15 */
-    uint8_t program;   /* 0-127 */
+    MusicalTime time;
+    uint8_t channel; /* 0-15 */
+    uint8_t program; /* 0-127 */
 } MidiProgramChange;
 
 typedef struct {

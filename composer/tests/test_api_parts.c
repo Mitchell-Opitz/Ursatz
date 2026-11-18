@@ -10,6 +10,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The section functions in the piece entry (P51 B8, R-510): the rows of a main-and-subordinate piece name each section's
@@ -45,7 +46,7 @@ static char *print(cJSON *request) {
 }
 
 static cJSON *composed(const char *printed, ComposerResponse *response) {
-    ComposerStatus status = composer_api_piece(printed, NULL, response);
+    ComposerStatus status = composer_api_piece(test_context(), printed, NULL, response);
     if (status != COMPOSER_OK) {
         fprintf(stderr, "test_api_parts: %s: %s\n", test_status_name(status), response->error.message);
     }
@@ -182,7 +183,7 @@ static void test_refusals(void) {
         assert(cJSON_AddStringToObject(section, "function", VALUES[v]));
         char *printed = print(request);
         ComposerResponse response;
-        ComposerStatus status = composer_api_piece(printed, NULL, &response);
+        ComposerStatus status = composer_api_piece(test_context(), printed, NULL, &response);
         char expected[96];
         snprintf(expected, sizeof expected, "the function must be transition or coda, not '%s'", VALUES[v]);
         assert(status == COMPOSER_ERR_REQUEST);
@@ -209,7 +210,7 @@ static void test_refusals(void) {
     section = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(request, "request"), "sections"), 3);
     assert(cJSON_AddStringToObject(section, "function", "coda"));
     printed = print(request);
-    assert(composer_api_piece(printed, NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_piece(test_context(), printed, NULL, &response) == COMPOSER_ERR_REQUEST);
     composer_response_destroy(&response);
     free(printed);
 }

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "model/interpretation/interpretation.h"
+#include "model/pitch/pitch_material.h"
 
 /*
  * Key (Interpretation): a framework-relative claim naming what a
@@ -41,17 +42,15 @@
 typedef struct Key Key;
 
 /*
- * KeyStructure (optional): the tonic and mode a Key's producer knew, in numbers, so a consumer in another
- * framework can read them without parsing the label. tonic_pitch_class is 0 = C ... 11 = B. The mode is
- * the Key's quality as the producer's vocabulary has it: major, or minor (the natural-minor key; the raised
- * sixth and seventh of minor are a Roman numeral convention, not a different key). A Key built without a
- * structure reports none.
+ * KeyStructure (optional): the tonic and material a Key's producer knew, in numbers, so a consumer in another
+ * framework can read them without parsing the label. tonic_pitch_class is 0 = C ... 11 = B. The material is the pitch
+ * material of the key (a pointer into the knowledge snapshot the key was made from; the snapshot outlives every key made from
+ * it). A consumer that needs the key's quality reads it from the material (pitch_material_third). A Key built without a structure
+ * reports none.
  */
-typedef enum { KEY_STRUCTURE_MODE_MAJOR = 0, KEY_STRUCTURE_MODE_MINOR } KeyStructureMode;
-
 typedef struct {
     int tonic_pitch_class;
-    KeyStructureMode mode;
+    const PitchMaterial *material;
 } KeyStructure;
 
 typedef enum {
@@ -73,7 +72,7 @@ typedef enum {
 KeyResult key_create(Interpretation *interpretation, const char *label, Key **out);
 
 /* As key_create, and the Key also carries *structure (copied). KEY_ERR_BAD_STRUCTURE for a tonic outside
-   0..11 or an invalid mode. */
+   0..11 or a NULL material. */
 KeyResult key_create_with_structure(Interpretation *interpretation, const char *label, const KeyStructure *structure,
                                      Key **out);
 void key_destroy(Key *key);

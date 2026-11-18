@@ -8,6 +8,7 @@
 
 #include "grow/grow_internal.h"
 #include "motive/motive_fidelity.h"
+#include "support/test_knowledge.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
 
@@ -26,7 +27,7 @@ static Motive load_motive(void) {
     MotiveError error;
     memset(&error, 0, sizeof(error));
     assert(text);
-    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_OK);
     free(text);
     return motive;
 }

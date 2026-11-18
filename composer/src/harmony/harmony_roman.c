@@ -1,12 +1,13 @@
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 #include <string.h>
 
 #include <theory/tonality/roman_numeral_grammar.h>
 #include <theory/tonality/triad_in_key_rules.h>
 
-HarmonyMode harmony_mode_of(KeyStructureMode mode) {
-    return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+HarmonyMode harmony_mode_of_material(const PitchMaterial *material) {
+    return composer_material_is_minor(material) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
 }
 
 /*
@@ -15,12 +16,12 @@ HarmonyMode harmony_mode_of(KeyStructureMode mode) {
  * the diminished chord of a major key or on the second degree of a minor key is half-diminished, on the raised seventh
  * fully diminished).
  */
-static StandardTonalityNumeralText numeral_of(KeyStructureMode mode, const HarmonyChord *chord) {
+static StandardTonalityNumeralText numeral_of(HarmonyMode mode, const HarmonyChord *chord) {
     StandardTonalityNumeralText numeral;
     memset(&numeral, 0, sizeof(numeral));
     numeral.degree = chord->degree;
     numeral.inversion = chord->inversion;
-    bool minor_mode = mode == KEY_STRUCTURE_MODE_MINOR;
+    bool minor_mode = mode == HARMONY_MODE_MINOR;
     bool diminished = minor_mode ? (chord->degree == 2 || chord->leading_tone) : chord->degree == 7;
     /* The quality of the triad on the degree: the natural scale's, with the major dominant of the harmonic minor, as
        harmony_applied_label picks the mode. */
@@ -43,7 +44,7 @@ static StandardTonalityNumeralText numeral_of(KeyStructureMode mode, const Harmo
     return numeral;
 }
 
-bool harmony_roman_format(KeyStructureMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+bool harmony_roman_format(HarmonyMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
     if (!chord || !out || !harmony_chord_valid(chord) || chord->half_diminished) {
         return false;
     }
@@ -62,7 +63,7 @@ static bool quality_is_diminished_seventh(StandardTonalityNumeralQuality quality
            quality == STANDARD_TONALITY_NUMERAL_FULLY_DIMINISHED_SEVENTH;
 }
 
-bool harmony_roman_parse(KeyStructureMode mode, const char *roman, HarmonyChord *out) {
+bool harmony_roman_parse(HarmonyMode mode, const char *roman, HarmonyChord *out) {
     StandardTonalityNumeralText numeral;
     if (!roman || !out || !standard_tonality_numeral_parse(roman, &numeral) || numeral.alteration != 0 ||
         numeral.has_target) {
@@ -74,7 +75,7 @@ bool harmony_roman_parse(KeyStructureMode mode, const char *roman, HarmonyChord 
     chord.seventh = standard_tonality_numeral_quality_is_seventh(numeral.quality);
     chord.inversion = numeral.inversion;
     /* The diminished chord on 7 of a minor key is the one on the raised seventh degree. */
-    chord.leading_tone = mode == KEY_STRUCTURE_MODE_MINOR && numeral.degree == 7 &&
+    chord.leading_tone = mode == HARMONY_MODE_MINOR && numeral.degree == 7 &&
                          (numeral.quality == STANDARD_TONALITY_NUMERAL_DIMINISHED ||
                           quality_is_diminished_seventh(numeral.quality));
     if (!harmony_chord_valid(&chord)) {
@@ -90,11 +91,11 @@ bool harmony_roman_parse(KeyStructureMode mode, const char *roman, HarmonyChord 
     return true;
 }
 
-bool harmony_roman_format_applied_inverted(KeyStructureMode mode, const HarmonyAppliedChord *applied, int inversion,
+bool harmony_roman_format_applied_inverted(HarmonyMode mode, const HarmonyAppliedChord *applied, int inversion,
                                            char out[PLAN_ROMAN_NUMERAL_MAX]) {
     char text[PLAN_ROMAN_NUMERAL_MAX];
     /* The figures go between the chord and its target: "V7/V" becomes "V6/5/V". */
-    if (!applied || !out || !harmony_applied_label_inverted(harmony_mode_of(mode), applied, inversion, text, sizeof(text))) {
+    if (!applied || !out || !harmony_applied_label_inverted(mode, applied, inversion, text, sizeof(text))) {
         return false;
     }
     memset(out, 0, PLAN_ROMAN_NUMERAL_MAX);
@@ -102,7 +103,7 @@ bool harmony_roman_format_applied_inverted(KeyStructureMode mode, const HarmonyA
     return true;
 }
 
-bool harmony_roman_parse_applied_inverted(KeyStructureMode mode, const char *roman, HarmonyAppliedChord *out,
+bool harmony_roman_parse_applied_inverted(HarmonyMode mode, const char *roman, HarmonyAppliedChord *out,
                                           int *inversion) {
     if (!roman || !out || !inversion) {
         return false;
@@ -117,7 +118,7 @@ bool harmony_roman_parse_applied_inverted(KeyStructureMode mode, const char *rom
                 applied.quality = (HarmonyAppliedQuality)quality;
                 applied.target = target;
                 if (!harmony_applied_quality_kind(applied.quality, &applied.kind) ||
-                    !harmony_applied_valid(harmony_mode_of(mode), &applied) ||
+                    !harmony_applied_valid(mode, &applied) ||
                     !harmony_roman_format_applied_inverted(mode, &applied, position, label)) {
                     continue;
                 }
@@ -132,7 +133,7 @@ bool harmony_roman_parse_applied_inverted(KeyStructureMode mode, const char *rom
     return false;
 }
 
-bool harmony_roman_format_applied(KeyStructureMode mode, const HarmonyAppliedChord *applied,
+bool harmony_roman_format_applied(HarmonyMode mode, const HarmonyAppliedChord *applied,
                                   char out[PLAN_ROMAN_NUMERAL_MAX]) {
     return harmony_roman_format_applied_inverted(mode, applied, 0, out);
 }

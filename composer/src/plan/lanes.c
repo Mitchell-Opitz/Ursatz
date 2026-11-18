@@ -3,18 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <theory/tonality/common_practice_materials.h>
 #include <theory/tonality/tonal_key.h>
 
 #include "plan/plan_internal.h"
 #include "util/plan_util.h"
 #include "util/util.h"
 
-AnalysisKey plan_key_of_pitch_class(int pitch_class, KeyStructureMode mode) {
-    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, mode};
+AnalysisKey plan_key_of_pitch_class(int pitch_class, const PitchMaterial *material) {
+    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, material};
     PitchLetter letter;
     int accidental;
-    if (standard_tonality_key_tonic_of_pitch_class(util_pitch_class(pitch_class), mode == KEY_STRUCTURE_MODE_MINOR, &letter,
-                                                   &accidental)) {
+    if (standard_tonality_key_tonic_of_pitch_class_material(util_pitch_class(pitch_class), material, &letter, &accidental)) {
         key.tonic_letter = letter;
         key.tonic_accidental = accidental;
     }
@@ -59,6 +59,7 @@ static void remove_entry(PiecePlan *plan, LaneSpan *entry) {
     }
     constraint_list_free(&entry->constraints);
     memset(&entry->payload, 0, sizeof(entry->payload));
+    memset(&entry->key_relation, 0, sizeof(entry->key_relation));
     entry->removed = true;
     plan->removed_lane_span_count++;
 }
@@ -106,7 +107,7 @@ bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePaylo
                payload->meter.bars_per_hyperbar >= 0;
     case PLAN_LANE_KEY:
         return analysis_key_tonic_pitch_class(&payload->key) >= 0 && analysis_key_tonic_pitch_class(&payload->key) <= 11 &&
-               (payload->key.mode == KEY_STRUCTURE_MODE_MAJOR || payload->key.mode == KEY_STRUCTURE_MODE_MINOR);
+               composer_key_valid(&payload->key);
     case PLAN_LANE_HARMONY: {
         size_t length = strnlen(payload->harmony.roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
         return length > 0 && length < PLAN_ROMAN_NUMERAL_MAX;
@@ -186,6 +187,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     entry->owner = owner;
     entry->span = span;
     entry->payload = stored;
+    memset(&entry->key_relation, 0, sizeof(entry->key_relation));
     entry->state = PLAN_STATE_CONSTRAINED;
     entry->removed = false;
     memset(&entry->constraints, 0, sizeof(entry->constraints));
@@ -244,6 +246,31 @@ PlanSpan plan_lane_span_span(const PiecePlan *plan, LaneSpanId id) {
 const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId id) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     return entry ? &entry->payload : NULL;
+}
+
+PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor, bool resolved) {
+    if (!relation) {
+        return PLAN_ERR_NULL;
+    }
+    LaneSpan *entry = plan_lane_span_at(plan, id);
+    if (!entry) {
+        return plan ? PLAN_ERR_NOT_FOUND : PLAN_ERR_NULL;
+    }
+    size_t length = strlen(relation);
+    if (entry->lane != PLAN_LANE_KEY || length == 0 || length >= PLAN_KEY_RELATION_MAX ||
+        (anchor != PLAN_KEY_ANCHOR_HOME && anchor != PLAN_KEY_ANCHOR_PREVIOUS)) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
+    memset(&entry->key_relation, 0, sizeof(entry->key_relation));
+    memcpy(entry->key_relation.relation, relation, length);
+    entry->key_relation.anchor = anchor;
+    entry->key_relation.resolved = resolved;
+    return PLAN_OK;
+}
+
+const PlanKeyRelation *plan_lane_span_key_relation(const PiecePlan *plan, LaneSpanId id) {
+    const LaneSpan *entry = plan_lane_span_at(plan, id);
+    return entry && entry->key_relation.relation[0] != '\0' ? &entry->key_relation : NULL;
 }
 
 static bool matches_lane(const LaneSpan *entry, PlanLaneKind lane, int voice, PlanSpan range) {

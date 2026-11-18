@@ -19,6 +19,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Growing a theme from each of the nine pairings of a beginning and an ending, in four keys and meters, 8 and 4 bars,
@@ -33,17 +34,17 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
     const char *motive;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"D minor 3/4", 2, KEY_STRUCTURE_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
-    {"G major 6/8", 7, KEY_STRUCTURE_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
-    {"F major 2/4", 5, KEY_STRUCTURE_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
+    {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"D minor 3/4", 2, HARMONY_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
+    {"G major 6/8", 7, HARMONY_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
+    {"F major 2/4", 5, HARMONY_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -54,6 +55,7 @@ static Motive make_motive(const Scenario *scenario) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
@@ -66,7 +68,7 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = bars;
@@ -542,6 +544,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     /* The same seed is run twice for two of the seeds, to be sure it gives the same plan and records. */
     int rounds = seed == 1 || seed == 10 ? 2 : 1;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     for (int round = 0; round < rounds; round++) {
         PiecePlan *plan = NULL;
@@ -599,6 +602,7 @@ static void test_first_cadence(void) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);

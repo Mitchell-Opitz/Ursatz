@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include <ursatz_analyzer/analysis_report.h>
+#include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 /*
@@ -13,9 +14,10 @@
  * identification (see pipeline/segmentation.h,
  * pipeline/key_region_pipeline.h and pipeline/chord_pipeline.h),
  * collecting the results into report, which the caller owns (release
- * with analysis_report_destroy). Returns false only on allocation
- * failure.
+ * with analysis_report_destroy). The pitch materials are those of
+ * `knowledge`, which must outlive the report's use of them. Returns false
+ * on allocation failure or when `knowledge` is NULL.
  */
-bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report);
+bool run_analysis_pipeline(const ImportedNotes *notes, const KnowledgeSnapshot *knowledge, AnalysisReport *report);
 
 #endif

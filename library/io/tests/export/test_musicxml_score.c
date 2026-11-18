@@ -1,5 +1,7 @@
 #include "io/tests/export/score_test_util.h"
 
+#include "io/musicxml_importer.h"
+
 /* musicxml_export_write_score: measures from a MeterMap, ties, rests, divisions, staves, parts and markings. */
 
 static char *write_bag(const TestBag *bag, const MeterMap *meter, const MusicXmlExportPart *parts, size_t part_count,
@@ -502,6 +504,60 @@ static void test_flag_follows_the_map(void) {
     bag_free(&bag);
 }
 
+/* An additive meter is written as <beats>3+2</beats> and read back as the groups 3 and 2 (R-587); equal groups are
+   written as the top number. */
+static void test_additive_meter_round_trip(void) {
+    NoteValue *eighth = NULL;
+    assert(note_value_create(3, &eighth) == NOTE_VALUE_OK);
+    unsigned three_two[] = {3, 2};
+    TimeSignature *additive = NULL;
+    assert(time_signature_create_grouped(three_two, 2, eighth, &additive) == TIME_SIGNATURE_OK);
+    MeterMapChangePoint point = {additive, tu_time_value(0, 1)};
+    MeterMap *meter = NULL;
+    assert(meter_map_create(tu_id("tu-additive"), &point, 1, &meter) == METER_MAP_OK);
+    time_signature_destroy(additive);
+    note_value_destroy(eighth);
+
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    char id[16];
+    for (int k = 0; k < 10; k++) {
+        snprintf(id, sizeof(id), "n%d", k);
+        bag_add_note(&bag, id, k, 8, 1, 8, PITCH_LETTER_A, NULL);
+    }
+    char *xml = write_bag(&bag, meter, NULL, 0, false);
+    assert(tu_count(xml, "<beats>3+2</beats>") == 1 && tu_count(xml, "<beat-type>8</beat-type>") == 1);
+    assert(!TU_HAS(xml, "<beats>5</beats>") && tu_count(xml, "<time>") == 1);
+
+    MusicXmlImport import;
+    assert(musicxml_import_buffer(xml, strlen(xml), &import) == MUSICXML_IMPORT_OK);
+    assert(import.warnings.count == 0 && import.part_meter_maps == NULL);
+    assert(!meter_map_is_defaulted(import.meter_map) && meter_map_region_count(import.meter_map) == 1);
+    const TimeSignature *back = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
+    assert(time_signature_top_number(back) == 5 && time_signature_bottom_number(back) == 8);
+    assert(time_signature_group_count(back) == 2 && time_signature_group_at(back, 0) == 3 &&
+           time_signature_group_at(back, 1) == 2);
+    assert(time_signature_equals(back, meter_map_region_time_signature(meter_map_region(meter, 0))));
+    musicxml_import_destroy(&import);
+    free(xml);
+    bag_free(&bag);
+    meter_map_destroy(meter);
+
+    /* plain 5/8 has five groups of one: it is written as 5 and read back the same */
+    const TuMeter plain[] = {{5, 8, 0, 1}};
+    meter = tu_meter_map(plain, 1);
+    bag_add_note(&bag, "n0", 0, 1, 1, 8, PITCH_LETTER_A, NULL);
+    xml = write_bag(&bag, meter, NULL, 0, false);
+    assert(tu_count(xml, "<beats>5</beats>") == 1 && !TU_HAS(xml, "+"));
+    assert(musicxml_import_buffer(xml, strlen(xml), &import) == MUSICXML_IMPORT_OK);
+    back = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
+    assert(time_signature_group_count(back) == 5 && time_signature_equals(back, meter_map_region_time_signature(meter_map_region(meter, 0))));
+    musicxml_import_destroy(&import);
+    free(xml);
+    bag_free(&bag);
+    meter_map_destroy(meter);
+}
+
 static void test_zero_notes(void) {
     TestBag bag;
     memset(&bag, 0, sizeof(bag));
@@ -526,15 +582,13 @@ static void test_key_tempo_marking_and_dynamics(void) {
     TempoMap *tempo_map = tu_tempo_map(tempos, 2);
 
     MusicXmlExportKeySignature keys[2];
-    MusicalTime *key_at_start = tu_time(0, 1);
-    MusicalTime *key_mid = tu_time(1, 4);
     keys[0].sharps_flats = -1;
     keys[0].mode = MUSICXML_EXPORT_MODE_MAJOR;
-    keys[0].position = key_at_start;
+    assert(musical_time_make(0, 1, &keys[0].position) == MUSICAL_TIME_OK);
     keys[0].part_index = 0;
     keys[1].sharps_flats = 2;
     keys[1].mode = MUSICXML_EXPORT_MODE_MINOR;
-    keys[1].position = key_mid;
+    assert(musical_time_make(1, 4, &keys[1].position) == MUSICAL_TIME_OK);
     keys[1].part_index = 0;
 
     TempoMarking *markings[1] = {tu_tempo_marking(0, 1, "Allegro", 1, 4, 120, 1)};
@@ -570,8 +624,6 @@ static void test_key_tempo_marking_and_dynamics(void) {
     assert(!TU_HAS(xml, "<tie"));
     free(xml);
 
-    musical_time_destroy(key_at_start);
-    musical_time_destroy(key_mid);
     tempo_marking_destroy(markings[0]);
     dynamics_destroy(dynamics[0]);
     dynamics_destroy(dynamics[1]);
@@ -660,6 +712,7 @@ int main(void) {
     test_instruments_and_unnamed_part();
     test_default_part_is_unnamed_without_instrument();
     test_flag_follows_the_map();
+    test_additive_meter_round_trip();
     test_zero_notes();
     test_key_tempo_marking_and_dynamics();
     test_marking_inside_a_note_cuts_it();

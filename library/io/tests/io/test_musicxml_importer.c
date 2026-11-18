@@ -11,6 +11,7 @@
 #include "model/pitch/pitch_spelling.h"
 #include "model/events/dynamics.h"
 #include "model/events/tempo_marking.h"
+#include "model/time/meter_arithmetic.h"
 #include "model/time/meter_map.h"
 #include "model/time/metronome_marking.h"
 #include "model/time/tempo_map.h"
@@ -42,8 +43,8 @@ static void assert_note(const MusicXmlImport *import, size_t i, long onset_n, un
                         unsigned long length_d, long midi) {
     const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(import->events[i]));
     const Duration *length = note_event_duration(import->events[i]);
-    assert(equals(musical_time_numerator(onset), musical_time_denominator(onset), onset_n, onset_d));
-    assert(equals(duration_numerator(length), duration_denominator(length), length_n, length_d));
+    assert(equals((long)onset->value.num, (unsigned long)onset->value.den, onset_n, onset_d));
+    assert(equals((long)length->value.num, (unsigned long)length->value.den, length_n, length_d));
     assert(pitch_numeric_value_position_numerator(import->pitch_values[i]) == midi);
     assert(pitch_numeric_value_position_denominator(import->pitch_values[i]) == 1);
 }
@@ -258,20 +259,23 @@ static void test_a_backup_before_the_measure_is_stopped(void) {
 /* --- measures, time signatures and key signatures --- */
 
 static void assert_time(const MusicalTime *time, long numerator, unsigned long denominator) {
-    assert(equals(musical_time_numerator(time), musical_time_denominator(time), numerator, denominator));
+    assert(equals((long)time->value.num, (unsigned long)time->value.den, numerator, denominator));
 }
 
-static MusicalTime *at(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+static void assert_time_value(MusicalTime time, long numerator, unsigned long denominator) {
+    assert_time(&time, numerator, denominator);
+}
+
+static MusicalTime at(long numerator, unsigned long denominator) {
+    MusicalTime time;
+    assert(musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK);
     return time;
 }
 
 static int measure_at(const MeterMap *map, long numerator, unsigned long denominator) {
-    MusicalTime *time = at(numerator, denominator);
+    MusicalTime time = at(numerator, denominator);
     int measure = -99;
-    assert(meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK);
-    musical_time_destroy(time);
+    assert(meter_map_measure_index_at(map, &time, &measure) == METER_MAP_OK);
     return measure;
 }
 
@@ -317,8 +321,8 @@ static void test_a_meter_change(void) {
     assert(time_signature_top_number(first) == 4 && time_signature_bottom_number(first) == 4);
     assert(time_signature_top_number(second) == 3 && time_signature_bottom_number(second) == 4);
     assert(time_signature_top_number(third) == 6 && time_signature_bottom_number(third) == 8);
-    assert_time(meter_map_region_start(meter_map_region(import.meter_map, 1)), 1, 1);
-    assert_time(meter_map_region_start(meter_map_region(import.meter_map, 2)), 7, 4);
+    assert_time_value(meter_map_region_start(meter_map_region(import.meter_map, 1)), 1, 1);
+    assert_time_value(meter_map_region_start(meter_map_region(import.meter_map, 2)), 7, 4);
     assert(measure_at(import.meter_map, 1, 1) == 2 && measure_at(import.meter_map, 7, 4) == 3);
     musicxml_import_destroy(&import);
 }
@@ -328,13 +332,13 @@ static void test_key_signature_events(void) {
     assert(import.count == 6 && import.warnings.count == 0);
     assert(import.key_signature_count == 3); /* the second part's repeat of the first is not a new event */
     const MusicXmlKeySignatureEvent *events = import.key_signatures;
-    assert_time(events[0].position, 0, 1);
+    assert_time(&events[0].position, 0, 1);
     assert(events[0].sharps_flats == 0 && events[0].mode_hint == MUSICXML_MODE_HINT_MAJOR && events[0].part_index == 0);
     assert(key_signature_entry_count(events[0].key_signature) == 0);
-    assert_time(events[1].position, 1, 1);
+    assert_time(&events[1].position, 1, 1);
     assert(events[1].sharps_flats == -3 && events[1].mode_hint == MUSICXML_MODE_HINT_MINOR);
     assert(key_signature_entry_count(events[1].key_signature) == 3); /* B E A flats */
-    assert_time(events[2].position, 2, 1);
+    assert_time(&events[2].position, 2, 1);
     assert(events[2].sharps_flats == 2 && events[2].mode_hint == MUSICXML_MODE_HINT_UNKNOWN);
     assert(key_signature_entry_count(events[2].key_signature) == 2); /* F C sharps */
     musicxml_import_destroy(&import);
@@ -377,9 +381,11 @@ static void test_additive_and_unsupported_meters(void) {
     assert(import_text(DOC("<attributes><divisions>2</divisions><time><beats>3+2</beats><beat-type>8</beat-type></time></attributes>"
                            "<note><rest/><duration>5</duration></note>"),
                        &import) == MUSICXML_IMPORT_OK);
-    assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "additive") != NULL);
+    assert(import.warnings.count == 0);
     const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
     assert(time_signature_top_number(signature) == 5 && time_signature_bottom_number(signature) == 8);
+    assert(time_signature_group_count(signature) == 2 && time_signature_group_at(signature, 0) == 3 &&
+           time_signature_group_at(signature, 1) == 2);
     musicxml_import_destroy(&import);
 
     assert(import_text(DOC("<attributes><divisions>4</divisions><time><beats>4</beats><beat-type>3</beat-type></time></attributes>"
@@ -408,6 +414,46 @@ static void test_parts_that_disagree_about_the_meter(void) {
     assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "disagree") != NULL);
     const TimeSignature *signature = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
     assert(time_signature_top_number(signature) == 4); /* the first part's wins */
+    musicxml_import_destroy(&import);
+}
+
+/* Two parts in 3/4 and 6/8: each part keeps its own map beside the movement's, and meter_map_position_of reads whichever
+   map governs (R-588). Every measure is three quarters long, so the barlines agree and the beats do not. */
+static void test_a_polymeter_keeps_both_maps(void) {
+    MusicXmlImport import = import_fixture("polymeter.musicxml");
+    assert(import.part_count == 2 && import.count == 12);
+    assert(import.warnings.count == 1 && strstr(import.warnings.messages[0], "disagree") != NULL); /* the warning stays */
+    assert(!meter_map_is_defaulted(import.meter_map) && meter_map_region_count(import.meter_map) == 1);
+    const TimeSignature *movement = meter_map_region_time_signature(meter_map_region(import.meter_map, 0));
+    assert(time_signature_top_number(movement) == 3 && time_signature_bottom_number(movement) == 4); /* the lowest part's */
+
+    /* one entry per part: NULL where the part follows the movement's map, its own where it differs */
+    assert(import.part_meter_maps != NULL);
+    assert(import.part_meter_maps[0] == NULL);
+    const MeterMap *own = import.part_meter_maps[1];
+    assert(own != NULL && own != import.meter_map && meter_map_region_count(own) == 1);
+    const TimeSignature *six_eight = meter_map_region_time_signature(meter_map_region(own, 0));
+    assert(time_signature_top_number(six_eight) == 6 && time_signature_bottom_number(six_eight) == 8);
+    assert(time_signature_is_compound(six_eight) && !time_signature_is_compound(movement));
+
+    /* the same time has a different notated position under each map: a quarter in is the second beat of 3/4 and a
+       quarter into the first beat of 6/8, three eighths in is the second beat of 6/8, and the barlines agree */
+    NotatedPosition p;
+    assert(meter_map_position_of(import.meter_map, at(1, 4), &p) == METER_MAP_OK);
+    assert(p.measure == 1 && p.beat == 2 && p.offset.num == 0);
+    assert(meter_map_position_of(own, at(1, 4), &p) == METER_MAP_OK);
+    assert(p.measure == 1 && p.beat == 1 && p.offset.num == 1 && p.offset.den == 4);
+    assert(meter_map_position_of(own, at(3, 8), &p) == METER_MAP_OK);
+    assert(p.measure == 1 && p.beat == 2 && p.offset.num == 0);
+    assert(meter_map_position_of(import.meter_map, at(3, 4), &p) == METER_MAP_OK && p.measure == 2 && p.beat == 1);
+    assert(meter_map_position_of(own, at(3, 4), &p) == METER_MAP_OK && p.measure == 2 && p.beat == 1);
+    assert(meter_map_position_of(own, at(9, 4), &p) == METER_MAP_OK && p.measure == 4 && p.beat == 1);
+    musicxml_import_destroy(&import);
+    assert(import.part_meter_maps == NULL);
+
+    /* parts that declare no meter leave the array NULL */
+    import = import_fixture("two_parts.musicxml");
+    assert(import.part_meter_maps == NULL);
     musicxml_import_destroy(&import);
 }
 
@@ -498,11 +544,11 @@ static void test_tempo_and_metronome(void) {
     const TempoMapRegion *first = tempo_map_region(import.tempo_map, 0);
     const TempoMapRegion *second = tempo_map_region(import.tempo_map, 1);
     const TempoMapRegion *third = tempo_map_region(import.tempo_map, 2);
-    assert_time(tempo_map_region_start(first), 0, 1);
+    assert_time_value(tempo_map_region_start(first), 0, 1);
     assert(tempo_map_region_microseconds_per_quarter(first) == 625000);
-    assert_time(tempo_map_region_start(second), 1, 1);
+    assert_time_value(tempo_map_region_start(second), 1, 1);
     assert(tempo_map_region_microseconds_per_quarter(second) == 1000000);
-    assert_time(tempo_map_region_start(third), 3, 1);
+    assert_time_value(tempo_map_region_start(third), 3, 1);
     assert(tempo_map_region_microseconds_per_quarter(third) == 648649);
     /* the markings: "Allegro" with its metronome in measure 1, and the dotted-quarter metronome alone in measure 3 */
     assert(import.tempo_marking_count == 2);
@@ -552,8 +598,8 @@ static void test_dynamics(void) {
         assert(strcmp(dynamics_marking(import.dynamics[i]), NAMES[i]) == 0);
         assert(dynamics_target_kind(import.dynamics[i]) == DYNAMICS_TARGET_TIME_SPAN);
         const TimeSpan *span = dynamics_target_time_span(import.dynamics[i]);
-        assert_time(time_span_start(span), FROM_N[i], FROM_D[i]);
-        assert_time(time_span_end(span), TO_N[i], TO_D[i]);
+        assert_time(&span->start, FROM_N[i], FROM_D[i]);
+        assert_time(&span->end, TO_N[i], TO_D[i]);
         assert(import.dynamics_part[i] == PART[i] && import.dynamics_staff[i] == STAFF[i]);
     }
     musicxml_import_destroy(&import);
@@ -611,6 +657,7 @@ int main(void) {
     test_measure_length_warnings();
     test_additive_and_unsupported_meters();
     test_parts_that_disagree_about_the_meter();
+    test_a_polymeter_keeps_both_maps();
     test_two_parts();
     test_two_voices_on_one_staff();
     test_two_staves();

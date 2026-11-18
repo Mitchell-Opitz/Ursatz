@@ -10,21 +10,20 @@
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_span.h"
+#include <theory/tonality/common_practice_materials.h>
 
-static bool build_span(const NoteEvent *event, TimeSpan **out) {
-    const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(event));
-    MusicalTime *end = NULL;
-    if (musical_time_add(start, note_event_duration(event), &end) != MUSICAL_TIME_OK) {
+static bool build_span(const NoteEvent *event, TimeSpan *out) {
+    MusicalTime start = *temporal_anchor_position(note_event_temporal_anchor(event));
+    MusicalTime end;
+    if (musical_time_plus(start, *note_event_duration(event), &end) != MUSICAL_TIME_OK) {
         return false;
     }
-    TimeSpanResult result = time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, out);
-    musical_time_destroy(end);
-    return result == TIME_SPAN_OK;
+    return time_span_make(start, end, out) == TIME_SPAN_OK;
 }
 
 static bool fill_note(AnalysisNote *note, const ImportedNotes *notes, size_t i) {
     const NoteEvent *event = notes->events[i];
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (!build_span(event, &span)) {
         return false;
     }
@@ -38,11 +37,7 @@ static bool fill_note(AnalysisNote *note, const ImportedNotes *notes, size_t i) 
     note->track = notes->streams ? notes->streams[i] : ANALYSIS_INDEX_NONE;
     note->voice = ANALYSIS_INDEX_NONE;
     note->voice_confidence = voice ? 1.0 : 0.0;
-    if (!analysis_note_valid(note)) {
-        time_span_destroy(span);
-        return false;
-    }
-    return true;
+    return analysis_note_valid(note);
 }
 
 /* An AnalysisNote with its ImportedNotes index; the note comes first so analysis_note_compare reads it directly. */
@@ -63,7 +58,7 @@ static int find_slot(const void *key, const void *entry) {
     return strcmp((const char *)key, ((const ChainInputSlot *)entry)->id);
 }
 
-static bool build_key_events(const ImportedNotes *notes, ChainInput *out) {
+static bool build_key_events(const ImportedNotes *notes, const CommonPracticeMaterials *materials, ChainInput *out) {
     size_t count = notes->key_signature_events.count;
     out->key_events = calloc(count > 0 ? count : 1, sizeof(AnalysisKeyEvent));
     if (!out->key_events) {
@@ -72,7 +67,9 @@ static bool build_key_events(const ImportedNotes *notes, ChainInput *out) {
     for (size_t i = 0; i < count; i++) {
         const MidiKeySignatureEvent *event = &notes->key_signature_events.events[i];
         out->key_events[i].time = event->position;
-        if (!analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &out->key_events[i].key)) {
+        /* The file's mode hint never reached the chain: every key is the major one. */
+        if (!analysis_key_from_fifths(event->sharps_flats, materials->major,
+                                               &out->key_events[i].key)) {
             return false;
         }
     }
@@ -80,7 +77,7 @@ static bool build_key_events(const ImportedNotes *notes, ChainInput *out) {
     return true;
 }
 
-bool chain_input_build(const ImportedNotes *notes, ChainInput *out) {
+bool chain_input_build(const ImportedNotes *notes, const CommonPracticeMaterials *materials, ChainInput *out) {
     memset(out, 0, sizeof(*out));
     out->set.map = notes->meter.meter_map;
     if (notes->count > 0) {
@@ -96,9 +93,6 @@ bool chain_input_build(const ImportedNotes *notes, ChainInput *out) {
         for (size_t i = 0; i < notes->count; i++) {
             indexed[i].index = i;
             if (!fill_note(&indexed[i].note, notes, i)) {
-                for (size_t j = 0; j < i; j++) {
-                    time_span_destroy((TimeSpan *)indexed[j].note.span);
-                }
                 free(indexed);
                 chain_input_destroy(out);
                 return false;
@@ -116,7 +110,7 @@ bool chain_input_build(const ImportedNotes *notes, ChainInput *out) {
         free(indexed);
         qsort(out->by_id, notes->count, sizeof(ChainInputSlot), compare_slots);
     }
-    if (!build_key_events(notes, out)) {
+    if (!build_key_events(notes, materials, out)) {
         chain_input_destroy(out);
         return false;
     }
@@ -124,9 +118,6 @@ bool chain_input_build(const ImportedNotes *notes, ChainInput *out) {
 }
 
 void chain_input_destroy(ChainInput *input) {
-    for (size_t i = 0; input->notes && i < input->count; i++) {
-        time_span_destroy((TimeSpan *)input->notes[i].span);
-    }
     free(input->notes);
     free(input->order);
     free(input->by_id);

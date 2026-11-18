@@ -14,6 +14,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The form documents (R-416, docs/forms.md).
@@ -620,7 +621,8 @@ static void test_for_plan(void) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
         request.form = FORMS[f].name;
-        request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+        request.key = test_key(0, "major");
+        request.knowledge = test_knowledge();
         request.meter.beats_per_bar = FORMS[f].meters > 0 ? 3 : 4;
         request.meter.beat_unit = 4;
         PiecePlan *plan = NULL;
@@ -884,7 +886,8 @@ static int test_meters(void) {
     PiecePlan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     assert(form_build_plan(form, &request, &plan) == PIECE_ERR_BAD_REQUEST && plan == NULL);
@@ -1105,7 +1108,8 @@ static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, Compo
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     PiecePlan *plan = NULL;
@@ -1113,6 +1117,7 @@ static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, Compo
     assert(built == PIECE_OK && plan);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.form = form;
     *ran = compose_run(plan, &config, outcome);
@@ -1432,7 +1437,7 @@ static void check_pedal_half(const PiecePlan *plan, NodeId section) {
     PhraseChord chords[16];
     PhraseMetre metre;
     size_t read = 0;
-    assert(harmony_read_lane(plan, half, KEY_STRUCTURE_MODE_MAJOR, chords, &read, &metre) && read >= 1 && read <= 16);
+    assert(harmony_read_lane(plan, half, HARMONY_MODE_MAJOR, chords, &read, &metre) && read >= 1 && read <= 16);
     for (size_t i = 0; i < read; i++) {
         const HarmonyChord *chord = &chords[i].chord;
         assert(!chords[i].applied && !chord->leading_tone);
@@ -2063,7 +2068,8 @@ static void test_parts_reader(void) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     PiecePlan *plan = NULL;
@@ -2431,24 +2437,25 @@ static size_t melody_notes(const PiecePlan *plan, Rational from, Rational to, He
     return count;
 }
 
-static bool pitch_in_scale(int tonic, bool minor, int pitch) {
+static bool pitch_in_scale(int tonic, bool is_minor, int pitch) {
     static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
     static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 11};
     int pitch_class = ((pitch - tonic) % 12 + 12) % 12;
     for (int i = 0; i < 7; i++) {
-        if ((minor ? MINOR : MAJOR)[i] == pitch_class) {
+        if ((is_minor ? MINOR : MAJOR)[i] == pitch_class) {
             return true;
         }
     }
     return false;
 }
 
-static PiecePlan *compose_lead(const FormSpec *form, unsigned long seed, int pitch_class, KeyStructureMode mode,
+static PiecePlan *compose_lead(const FormSpec *form, unsigned long seed, int pitch_class, HarmonyMode mode,
                                ComposeOutcome *outcome, PieceResult *ran) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(pitch_class, mode);
+    request.key = test_key_mode(pitch_class, mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.seed = seed;
@@ -2456,6 +2463,7 @@ static PiecePlan *compose_lead(const FormSpec *form, unsigned long seed, int pit
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.form = form;
     *ran = compose_run(plan, &config, outcome);
@@ -2468,7 +2476,7 @@ static PiecePlan *compose_lead(const FormSpec *form, unsigned long seed, int pit
  * seed composed without the connective has it too) as one beat, the rest of the bar is four eighths in the scale of the
  * key, and the last of them is a step from A return's first note. Returns how many composed and how many were written.
  */
-static void lead_sweep(const char *text, int pitch_class, KeyStructureMode mode, int *composed, int *written) {
+static void lead_sweep(const char *text, int pitch_class, HarmonyMode mode, int *composed, int *written) {
     FormSpec *form = NULL;
     FormSpec *plain_form = NULL;
     FormSpecError error;
@@ -2478,7 +2486,7 @@ static void lead_sweep(const char *text, int pitch_class, KeyStructureMode mode,
     free(without);
     *composed = 0;
     *written = 0;
-    bool minor = mode == KEY_STRUCTURE_MODE_MINOR;
+    bool is_minor = mode == HARMONY_MODE_MINOR;
     for (unsigned long seed = 1; seed <= LEAD_SEEDS; seed++) {
         ComposeOutcome outcome;
         ComposeOutcome plain_outcome;
@@ -2523,7 +2531,7 @@ static void lead_sweep(const char *text, int pitch_class, KeyStructureMode mode,
                 for (size_t i = 1; i < count; i++) {
                     Rational offset = add_time(bar_start, add_time(beat, (Rational){(long long)(i - 1), 8}));
                     assert(rational_cmp(bar_notes[i].onset, offset) == 0 && rational_cmp(bar_notes[i].duration, eighth) == 0);
-                    assert(pitch_in_scale(pitch_class, minor, bar_notes[i].midi));
+                    assert(pitch_in_scale(pitch_class, is_minor, bar_notes[i].midi));
                 }
                 /* The last note is a step from A return's first note. */
                 HeardNote next[4];
@@ -2565,7 +2573,8 @@ static void lead_sometimes(const char *text) {
             PieceRequest request;
             memset(&request, 0, sizeof(request));
             request.form = form->name;
-            request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+            request.key = test_key(0, "major");
+            request.knowledge = test_knowledge();
             request.meter.beats_per_bar = 3;
             request.meter.beat_unit = 4;
             request.seed = seed;
@@ -2605,8 +2614,8 @@ static int test_leads(void) {
     static const struct {
         const char *name;
         int pitch_class;
-        KeyStructureMode mode;
-    } KEYS[] = {{"C major", 0, KEY_STRUCTURE_MODE_MAJOR}, {"A minor", 9, KEY_STRUCTURE_MODE_MINOR}};
+        HarmonyMode mode;
+    } KEYS[] = {{"C major", 0, HARMONY_MODE_MAJOR}, {"A minor", 9, HARMONY_MODE_MINOR}};
     int status = 0;
     for (size_t k = 0; k < sizeof(KEYS) / sizeof(KEYS[0]); k++) {
         int composed;
@@ -2654,8 +2663,8 @@ static int test_modulates(void) {
     static const struct {
         const char *name;
         int pitch_class;
-        KeyStructureMode mode;
-    } KEYS[] = {{"C major", 0, KEY_STRUCTURE_MODE_MAJOR}, {"A minor", 9, KEY_STRUCTURE_MODE_MINOR}};
+        HarmonyMode mode;
+    } KEYS[] = {{"C major", 0, HARMONY_MODE_MAJOR}, {"A minor", 9, HARMONY_MODE_MINOR}};
     int status = 0;
     for (size_t k = 0; k < sizeof(KEYS) / sizeof(KEYS[0]); k++) {
         int composed = 0;
@@ -2667,8 +2676,8 @@ static int test_modulates(void) {
             if (ran == PIECE_OK) {
                 NodeId sections[FORM_SPEC_MAX_SECTIONS];
                 assert(piece_sections(plan, sections) == 4);
-                AnalysisKey home = plan_key_of_pitch_class(KEYS[k].pitch_class, KEYS[k].mode);
-                AnalysisKey fifth = plan_key_of_pitch_class(KEYS[k].pitch_class + 7, KEYS[k].mode);
+                AnalysisKey home = test_key_mode(KEYS[k].pitch_class, KEYS[k].mode);
+                AnalysisKey fifth = test_key_mode(KEYS[k].pitch_class + 7, KEYS[k].mode);
                 AnalysisKey p = key_at_start(plan, sections[1]);
                 AnalysisKey s = key_at_start(plan, sections[2]);
                 assert(analysis_key_equals(&p, &fifth));

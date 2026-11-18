@@ -10,6 +10,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
+#include "support/test_knowledge.h"
 
 /*
  * Progress and cancel (docs/api.md, "Jobs"): compose_run on a theme-fill plan with a job that cancels at its third step
@@ -58,7 +59,8 @@ static PiecePlan *theme_fill_plan(void) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 24;
@@ -74,6 +76,7 @@ static void test_cancel(void) {
     ComposerJob job = {on_progress, on_cancelled, &watch};
     ComposeConfig config;
     memset(&config, 0, sizeof config);
+    config.knowledge = test_knowledge();
     config.seed = 3;
     config.job = &job;
     ComposeOutcome outcome;
@@ -111,6 +114,7 @@ static void test_progress(void) {
     ComposerJob job = {on_progress, on_cancelled, &watch};
     ComposeConfig config;
     memset(&config, 0, sizeof config);
+    config.knowledge = test_knowledge();
     config.seed = 3;
     config.job = &job;
     ComposeOutcome outcome;
@@ -128,6 +132,7 @@ static void test_progress(void) {
 static void test_same_plan(void) {
     ComposeConfig config;
     memset(&config, 0, sizeof config);
+    config.knowledge = test_knowledge();
     config.seed = 3;
     ComposeOutcome outcome;
     char *texts[3];

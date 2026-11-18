@@ -3,15 +3,14 @@
 #include <limits.h>
 #include <stdlib.h>
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 
 struct MetricalPosition {
     int measure;
-    Duration *offset;
+    Duration offset;
 };
 
-MetricalPositionResult metrical_position_create(int measure, const Duration *offset, MetricalPosition **out) {
-    if (offset == NULL || out == NULL) {
+MetricalPositionResult metrical_position_create(int measure, Duration offset, MetricalPosition **out) {
+    if (out == NULL) {
         return METRICAL_POSITION_ERR_NULL_ARGUMENT;
     }
 
@@ -19,10 +18,7 @@ MetricalPositionResult metrical_position_create(int measure, const Duration *off
     if (position == NULL) {
         return METRICAL_POSITION_ERR_ALLOC;
     }
-    if (duration_create(duration_numerator(offset), duration_denominator(offset), &position->offset) != DURATION_OK) {
-        free(position);
-        return METRICAL_POSITION_ERR_ALLOC;
-    }
+    position->offset = offset;
     position->measure = measure;
 
     *out = position;
@@ -33,7 +29,6 @@ void metrical_position_destroy(MetricalPosition *position) {
     if (position == NULL) {
         return;
     }
-    duration_destroy(position->offset);
     free(position);
 }
 
@@ -42,16 +37,13 @@ int metrical_position_measure(const MetricalPosition *position) {
 }
 
 const Duration *metrical_position_offset(const MetricalPosition *position) {
-    return position->offset;
+    return &position->offset;
 }
 
 /* Exact arithmetic is core/rational.h; every operation is checked and reports overflow. */
 static int rat_of_time(const MusicalTime *time, Rational *out) {
-    return rational_of_musical_time(time, out) == RATIONAL_OK ? 0 : -1;
-}
-
-static int rat_of_duration(const Duration *duration, Rational *out) {
-    return rational_of_duration(duration, out) == RATIONAL_OK ? 0 : -1;
+    *out = time->value;
+    return 0;
 }
 
 static int fits(Rational r) {
@@ -87,23 +79,17 @@ MetricalPositionResult metrical_position_reading_signature(const MeterMap *map, 
         /* A pickup region that is exactly one measure of its own signature is a short leading
            signature, and the full measure it is the end of is the next region's. One shorter than
            its own measure is a partial first measure of its own signature. */
-        Duration *own = NULL;
+        Duration own;
         if (time_signature_measure_duration(signature, &own) != DURATION_OK) {
-            return METRICAL_POSITION_ERR_ALLOC;
-        }
-        Rational length = {0, 1};
-        Rational start = {0, 1};
-        Rational end = {0, 1};
-        Rational own_length = {0, 1};
-        int failed = rat_of_time(meter_map_region_start(region), &start) != 0 ||
-                     rat_of_time(meter_map_region_end(region), &end) != 0 ||
-                     rat_of_duration(own, &own_length) != 0 || rational_sub(end, start, &length) != RATIONAL_OK;
-        int is_short_leading_signature = failed == 0 && rational_cmp(length, own_length) >= 0;
-        duration_destroy(own);
-        if (failed != 0) {
             return METRICAL_POSITION_ERR_OVERFLOW;
         }
-        if (is_short_leading_signature) {
+        Rational length = {0, 1};
+        MusicalTime end;
+        if (!meter_map_region_end(region, &end) ||
+            rational_sub(end.value, meter_map_region_start(region).value, &length) != RATIONAL_OK) {
+            return METRICAL_POSITION_ERR_OVERFLOW;
+        }
+        if (rational_cmp(length, own.value) >= 0) {
             signature = meter_map_region_time_signature(meter_map_region(map, 1));
         }
     }
@@ -120,16 +106,11 @@ static MetricalPositionResult pickup_base(const MeterMap *map, Rational span_sta
     if (got != METRICAL_POSITION_OK) {
         return got;
     }
-    Duration *measure = NULL;
+    Duration measure;
     if (time_signature_measure_duration(reading, &measure) != DURATION_OK) {
-        return METRICAL_POSITION_ERR_ALLOC;
-    }
-    Rational full = {0, 1};
-    int full_failed = rat_of_duration(measure, &full) != 0;
-    duration_destroy(measure);
-    if (full_failed) {
         return METRICAL_POSITION_ERR_OVERFLOW;
     }
+    Rational full = measure.value;
 
     Rational length = {0, 1};
     if (rational_sub(span_end, span_start, &length) != 0 || rational_cmp(length, full) > 0 ||
@@ -141,14 +122,14 @@ static MetricalPositionResult pickup_base(const MeterMap *map, Rational span_sta
 }
 
 static MetricalPositionResult span_bounds(const MeterMap *map, int measure, Rational *out_start, Rational *out_end) {
-    TimeSpan *span = NULL;
+    TimeSpan span;
     MeterMapResult made = meter_map_measure_span(map, measure, &span);
     if (made != METER_MAP_OK) {
         return meter_map_failure(made);
     }
-    int failed = rat_of_time(time_span_start(span), out_start) != 0 || rat_of_time(time_span_end(span), out_end) != 0;
-    time_span_destroy(span);
-    return failed ? METRICAL_POSITION_ERR_OVERFLOW : METRICAL_POSITION_OK;
+    *out_start = span.start.value;
+    *out_end = span.end.value;
+    return METRICAL_POSITION_OK;
 }
 
 MetricalPositionResult metrical_position_from_time(const MeterMap *map, const MusicalTime *time,
@@ -156,7 +137,7 @@ MetricalPositionResult metrical_position_from_time(const MeterMap *map, const Mu
     if (map == NULL || time == NULL || out == NULL) {
         return METRICAL_POSITION_ERR_NULL_ARGUMENT;
     }
-    if (musical_time_numerator(time) < 0) {
+    if (time->value.num < 0) {
         return METRICAL_POSITION_ERR_TIME_BEFORE_START;
     }
 
@@ -206,11 +187,9 @@ MetricalPositionResult metrical_position_from_time(const MeterMap *map, const Mu
     if (!fits(offset)) {
         return METRICAL_POSITION_ERR_OVERFLOW;
     }
-    Duration *offset_duration = NULL;
-    if (duration_create((long)offset.num, (unsigned long)offset.den, &offset_duration) != DURATION_OK) {
-        return METRICAL_POSITION_ERR_ALLOC;
+    Duration offset_duration;
+    if (duration_of(offset, &offset_duration) != DURATION_OK) {
+        return METRICAL_POSITION_ERR_OVERFLOW;
     }
-    MetricalPositionResult created = metrical_position_create(measure, offset_duration, out);
-    duration_destroy(offset_duration);
-    return created;
+    return metrical_position_create(measure, offset_duration, out);
 }

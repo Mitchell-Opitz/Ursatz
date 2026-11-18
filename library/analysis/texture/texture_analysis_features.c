@@ -891,7 +891,7 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const AnalysisNot
     for (size_t i = 0; i < notes->count; i++) {
         const AnalysisNote *note = &notes->notes[i];
         if (note->note_id == NULL || note->note_id[0] == '\0' || strlen(note->note_id) >= STANDARD_TEXTURE_ID_MAX ||
-            note->midi == ANALYSIS_PITCH_UNKNOWN || !time_span_is_valid(note->span) ||
+            note->midi == ANALYSIS_PITCH_UNKNOWN || !time_span_holds(note->span) ||
             !(note->voice_confidence >= 0.0 && note->voice_confidence <= 1.0)) {
             return STANDARD_TEXTURE_ANALYSIS_ERR_INVALID;
         }
@@ -928,11 +928,8 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const AnalysisNot
     Rational first = rational_ratio(0, 1);
     Rational last = rational_ratio(0, 1);
     for (size_t i = 0; i < notes->count; i++) {
-        Rational onset;
-        Rational release;
-        if (!score_time_span(notes->notes[i].span, &onset, &release)) {
-            continue;
-        }
+        Rational onset = notes->notes[i].span.start.value;
+        Rational release = notes->notes[i].span.end.value;
         snap_time(config, &onset, false);
         snap_time(config, &release, true);
         if (rational_cmp(release, onset) <= 0) {

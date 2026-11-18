@@ -5,7 +5,6 @@
 
 #include "model/core/rational.h"
 #include "model/time/duration.h"
-#include "model/time/time_rational.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 
@@ -33,13 +32,12 @@ static ScoreStavesResult read_note(NoteEvent *event, PitchNumericValue *pitch_va
     }
     const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(event));
     const Duration *duration = note_event_duration(event);
-    if (musical_time_numerator(position) < 0 || duration_numerator(duration) <= 0) {
+    if (position->value.num < 0 || duration->value.num <= 0) {
         return SCORE_STAVES_ERR_INCONSISTENT_INPUT;
     }
-    Rational length;
-    if (rational_of_musical_time(position, &span->start) != RATIONAL_OK ||
-        rational_of_duration(duration, &length) != RATIONAL_OK ||
-        rational_add(span->start, length, &span->end) != RATIONAL_OK) {
+    Rational length = duration->value;
+    span->start = position->value;
+    if (rational_add(span->start, length, &span->end) != RATIONAL_OK) {
         return SCORE_STAVES_ERR_INCONSISTENT_INPUT;
     }
     *pitch = pitch_numeric_value_position_numerator(pitch_value) /

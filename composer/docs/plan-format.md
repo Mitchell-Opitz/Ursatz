@@ -2,10 +2,10 @@
 
 A piece plan is written as JSON text by `plan_to_json` and read from text by `plan_from_json`
 (`<ursatz_composer/plan_json.h>`): text in, text out, and the caller reads and writes the file. The format is the Composer's own: it has a
-name, a version and a JSON Schema ([`schema/plan.v2.schema.json`](../schema/plan.v2.schema.json), JSON Schema 2020-12),
+name, a version and a JSON Schema ([`schema/plan.v3.schema.json`](../schema/plan.v3.schema.json), JSON Schema 2020-12),
 and it is written on library values: a key's tonic is a spelled note name, a chord's function is the library's function
-name, a note may carry its spelling. Writing always gives format version 2 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
-Reading takes version 2 and version 1, the format of every plan saved before it ([Format versions](#format-versions)). Back to the [docs index](README.md).
+name, a note may carry its spelling. Writing always gives format version 3 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
+Reading takes versions 2 and 1, the formats of every plan saved before it, and maps them to materials ([Format versions](#format-versions)). Back to the [docs index](README.md).
 
 The output is pretty-printed with a 2-space indent, in the key order shown below, and ends with a
 newline. The same plan always gives the same bytes.
@@ -30,7 +30,7 @@ These are the library's.
 The file does not change with the types behind it. In memory a time is a library `Rational` (`<core/rational.h>`) in
 whole notes, a span a `Rational` start and length, a cadence a `CadenceType` (the file names PAC, IAC, HC, DC and PC as
 `pac`, `iac`, `hc`, `dc`, `pc`), a harmonic function a `HarmonicFunction` with a `has_function` flag (the file leaves
-`function` out when it is false), a key an `AnalysisKey` (the file writes `tonic`, spelled, and `mode`), and a note a MIDI
+`function` out when it is false), a key an `AnalysisKey` (the file writes `tonic`, spelled, and `material`, the id of a K1 material), and a note a MIDI
 number with an optional spelling (the file writes `spelling` for a spelled note and nothing for an unspelled one).
 
 ## Top level
@@ -120,7 +120,7 @@ Spans in the same lane and voice do not overlap; a span may start where another 
 | Lane | Payload |
 | --- | --- |
 | `meter` | `beats_per_bar`, `beat_unit` (4 is a quarter), `bars_per_hyperbar` (0 for none). |
-| `key` | `tonic` (spelled), `mode` (`major` or `minor`). |
+| `key` | `tonic` (spelled) and `material` (the id of a K1 material, `omt.material.major` or `omt.material.natural-minor`: the Composer writes keys in those two), or `relation` (a K6 id such as `omt.relation.dominant`) and `anchor` (`home` or `previous`), see [Key spans named by a relation](#key-spans-named-by-a-relation). A key may also carry `relation` and `anchor` beside its `tonic` and `material`: the span was reached by that relation, and the key is what it resolved to. |
 | `harmony` | `roman_numeral` (1 to 15 characters), `function` (`tonic`, `predominant` or `dominant`; left out when the chord has none). |
 | `bass`, `melody`, `inner_voice` | `notes`: a non-empty array of `{"midi_pitch": 0 to 127, "spelling": <tonic>, "offset": <time>, "duration": <time>}`; `spelling` is only there for a spelled note (read from MusicXML). `offset` is measured from the start of the span, and a note ends inside the span. An `inner_voice` span may have an empty array: the voice is silent over the span. |
 
@@ -149,22 +149,36 @@ gaps, so the ids of a plan written after `regenerate` can differ from the ids of
   `offset` for a syntax error.
 - A lane claim without a `composer` object is an error.
 
+## Key spans named by a relation
+
+A key span is a key (`tonic` and `material`) or only the way to a key: `{"relation": "omt.relation.dominant", "anchor": "home"}` names the key
+that relation reaches from the plan's home key (`home`, the first key span) or from the span before it (`previous`). The reader keeps such a
+span unresolved; a plan that is composed from (`fill`, `lock`, `regenerate`, `variations`, `harmonize` and the piece entries read their plans with
+`plan_from_json_resolved`) is resolved first by `plan_resolve_key_spans`, which asks the knowledge snapshot's relation (`region_resolve`) for the
+key and fills the span's `tonic` and `material`, leaving `relation` and `anchor` beside them. A span that cannot be resolved (an unknown relation, a
+relation with no key from that anchor, a material the Composer does not compose in) is refused with the relation's message, at
+`keys[<n>].composer.payload.relation`, and nothing is composed. The piece planner writes `relation` and `anchor` `home` on a span whose key came from a
+form region (`parallel`, `supertonic`, `mediant`, `subdominant`, `dominant`, `submediant`, `subtonic`), so a plan says why a span is in its key. The
+section's `key` constraint is always a key: `tonic` and `material`.
+
 ## Format versions
 
-`format_version` 2 is the format this document describes. `schema_version` 1 is the format the Composer wrote before it,
-in the shape of an Ursatz-Analyzer analysis document; `plan_from_json` still reads it (a file with `format` is version 2,
-a file with `schema_version` is version 1) and nothing writes it. What version 1 had that version 2 does not:
+`format_version` 3 is the format this document describes. Version 2 named a key's material by `mode` (`major` or `minor`) in a key span and in the
+`key` constraint; the reader maps `major` to `omt.material.major` and `minor` to `omt.material.natural-minor`. `schema_version` 1 is the format the Composer wrote
+before version 2, in the shape of an Ursatz-Analyzer analysis document; `plan_from_json` still reads it (a file with `format` and `format_version` is
+version 2 or 3, a file with `schema_version` is version 1) and nothing writes it. A plan of any version reads to the same plan, writes as version 3
+and renders the same MIDI. What version 1 had that version 3 does not:
 
 | Version 1 | Read as |
 | --- | --- |
-| `schema_version` 1 | `format_version` 2 once written. |
+| `schema_version` 1 | `format_version` 3 once written. |
 | `metadata`: `source_file`, `analyzer_version`, `ursatz_commit` `"unknown"`, `note_count`, `ticks_per_quarter`, `key_found` | Ignored. `analyzer_version` was the Composer's own version, not an Analyzer's (B-A-10), so the plan has no Analyzer version after reading it. |
 | `cadences`, `phrases`, `motives`, `rhythm`, `voice_leading`, `schemas`, always `[]` | Ignored; version 2 does not write them. |
-| A key's `tonic_pitch_class` (0 to 11) | The tonic the library spells for that pitch class and mode (`standard_tonality_key_tonic_of_pitch_class`: fewest accidentals in the signature, sharps on a tie): 3 minor is `D#`, 6 major is `F#`. |
+| A key's `tonic_pitch_class` (0 to 11) and `mode` | The tonic the library spells for that pitch class and mode (`standard_tonality_key_tonic_of_pitch_class`: fewest accidentals in the signature, sharps on a tie): 3 minor is `D#`, 6 major is `F#`; the mode is read as in version 2. |
 | A chord's `function` of `unknown` | No function (the member is left out in version 2). |
 | A motive ref's `transform` and its members | The relation step ([Motive relation steps](plan-constraints.md#motive-relation-steps)). |
 
-Writing the plan again gives version 2: `plan_from_json` then `plan_to_json` turns any version 1 plan into its version 2
+Writing the plan again gives version 3: `plan_from_json` then `plan_to_json` turns any version 1 or 2 plan into its version 3
 file, and the two render the same MIDI.
 
 ## Analyzer version
@@ -242,7 +256,7 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
         "constraints": [],
         "payload": {
           "tonic": "C",
-          "mode": "major"
+          "material": "omt.material.major"
         }
       }
     }],

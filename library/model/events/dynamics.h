@@ -31,12 +31,11 @@ typedef enum {
     DYNAMICS_OK = 0,
     DYNAMICS_ERR_NULL_MARKING,
     DYNAMICS_ERR_NULL_EVENT_ID,
-    DYNAMICS_ERR_NULL_TIME_SPAN,
     DYNAMICS_ERR_ALLOC
 } DynamicsResult;
 
-/* marking is copied. Takes ownership of time_span on success (destroyed by dynamics_destroy). */
-DynamicsResult dynamics_create_for_time_span(const char *marking, TimeSpan *time_span, Dynamics **out);
+/* marking and time_span are copied. */
+DynamicsResult dynamics_create_for_time_span(const char *marking, TimeSpan time_span, Dynamics **out);
 void dynamics_destroy(Dynamics *dynamics);
 
 const char *dynamics_marking(const Dynamics *dynamics);

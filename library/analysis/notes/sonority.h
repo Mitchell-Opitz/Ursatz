@@ -44,7 +44,6 @@ typedef enum { SONORITY_EVENT_DOMAIN_SYMBOLIC, SONORITY_EVENT_DOMAIN_SOUNDING } 
 
 typedef enum {
     SONORITY_OK = 0,
-    SONORITY_ERR_NULL_TIME_WINDOW,
     SONORITY_ERR_NULL_EVENT_IDS,
     SONORITY_ERR_NULL_EVENT_ID,
     SONORITY_ERR_NULL_VOICE_ID,
@@ -52,7 +51,7 @@ typedef enum {
 } SonorityResult;
 
 /*
- * Takes ownership of time_window, event_ids (and each EntityID it
+ * Copies time_window (a value). Takes ownership of event_ids (and each EntityID it
  * points to), and voice_ids (and each EntityID it points to) on
  * success -- all destroyed by sonority_destroy.
  *
@@ -61,7 +60,7 @@ typedef enum {
  * restriction); if voice_id_count > 0, voice_ids must be non-NULL and
  * no entry may be NULL.
  */
-SonorityResult sonority_create(TimeSpan *time_window, EntityID **event_ids, size_t event_id_count,
+SonorityResult sonority_create(TimeSpan time_window, EntityID **event_ids, size_t event_id_count,
                                 EntityID **voice_ids, size_t voice_id_count, SonorityEventDomain event_domain,
                                 Sonority **out);
 void sonority_destroy(Sonority *sonority);

@@ -265,8 +265,7 @@
    * harmony text of its current result; a line adds ` harmony <text>` after the result notes when there is one. */
   function findingsText(name, motif, checks, order, harmonies) {
     const m = motif || {};
-    const key = typeof m.key === "string" ? m.key : "";
-    const mode = key.includes(" ") ? key.slice(key.lastIndexOf(" ") + 1) : key;
+    const mode = typeof m.material === "string" ? Vocab.materialWord(m.material) : "";
     const marks = checks && typeof checks === "object" ? checks : {};
     const known = Array.isArray(order) ? order : [];
     const rank = (op) => (known.includes(op) ? known.indexOf(op) : known.length);

@@ -3,7 +3,7 @@
 The `listen` command of the Composer command line: a batch of motifs or themes from fixed seeds and one settings file, written as files a listening session plays and reads. Back to the [docs index](README.md).
 
 ```sh
-ursatz-composer listen --what motifs|themes --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--mode major|minor] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy segments|drawn] [--into sentence|period] [--development melody|balanced|theme] [--bars 4|8] [--check] [--motif <file> | --theme-request <file>]
+ursatz-composer listen --what motifs|themes --out-dir <dir> [--count <n>] [--seed <n>] [--settings <file>] [--material major|minor] [--meter <n/m>] [--style <file>] [--blend <file>] [--blend-weight <n/d>] [--blend-weights <list>] [--tempo <bpm>] [--strategy segments|drawn] [--into sentence|period] [--development melody|balanced|theme] [--bars 4|8] [--check] [--motif <file> | --theme-request <file>]
 ursatz-composer listen --print-settings
 ```
 
@@ -19,7 +19,7 @@ ursatz-composer listen --print-settings
 | `--seed <n>` | Whole number from 0 (default 1). Sample `i`, counted from 0, uses the seed `--seed` + `i`. |
 | `--settings <file>` | A preferences document ([preferences.md](preferences.md)); every member is optional. Absent: no `preferences` member is sent and the Composer's defaults apply. A member outside its limits exits 1 with its path (`/melody/keep`). |
 | `--print-settings` | Print the document of the defaults, as the vocabulary serves it, and exit 0. Edit a copy of it into a settings file. |
-| `--mode major\|minor` | Default major. |
+| `--material major\|minor` | Default major. `--mode` is read as the same option. The requests `listen` writes name `material`. |
 | `--meter <n/m>` | Default 4/4. With `--motif`, the meter the motif is read in; absent, the motif's own. |
 | `--style <file>` | A style model file ([style.md](style.md)). Motifs: 8 candidates are drawn for each and the closest kept. Themes: the style is preferred. |
 | `--blend <file>`, `--blend-weight`, `--blend-weights` | Themes: the second style model and its shares, as `grow`'s ([cli-grow.md](cli-grow.md)). Need `--style`. |

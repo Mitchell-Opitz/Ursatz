@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "service/composer_client.h"
+#include "service/knowledge_service.h"
 
 static int write_fixture(const char *folder, const char *name, const char *text) {
   if (!text) {
@@ -38,7 +39,13 @@ int main(int argc, char **argv) {
     fprintf(stderr, "usage: write_frontend_fixtures <output folder>\n");
     return 1;
   }
+  /* The Composer answers through the call context, which holds the backend's knowledge snapshot. */
+  if (!ursatz_gui_knowledge_init()) {
+    fprintf(stderr, "write_frontend_fixtures: the knowledge snapshot cannot be built\n");
+    return 1;
+  }
   int failed = write_fixture(argv[1], "vocabulary.json", ursatz_gui_composer_vocabulary());
   failed |= write_fixture(argv[1], "forms.json", ursatz_gui_composer_forms());
+  ursatz_gui_knowledge_shutdown();
   return failed ? 1 : 0;
 }

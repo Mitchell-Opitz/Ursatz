@@ -15,6 +15,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The joined chord sequence (chord_sequence.h):
@@ -86,7 +87,8 @@ static void check_piece(const char *fixture, const char *slug) {
         return;
     }
     AnalyzerResult *result = NULL;
-    CHECKF(analyzer_analyze(&notes, NULL, &result) == ANALYZER_OK && result, "%s: analyze", slug);
+    AnalyzerOptions options = test_analyzer_options();
+    CHECKF(analyzer_analyze(&notes, &options, &result) == ANALYZER_OK && result, "%s: analyze", slug);
     if (result) {
         AnalyzerChord *chords = NULL;
         size_t count = 0;

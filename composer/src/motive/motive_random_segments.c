@@ -5,6 +5,7 @@
 #include <ursatz_composer/motive_develop.h>
 
 #include "motive/motive_random_internal.h"
+#include "util/util.h"
 
 /*
  * Random motives from segments (docs/cli-random-motive.md): a motive is made of one to three segments (Schoenberg's
@@ -173,7 +174,7 @@ static long step_of(long position) {
 
 /* The alteration of a position on the chord of a degree: in minor, the third of V is raised. */
 static int chord_alteration(const AnalysisKey *key, int degree, long position) {
-    return key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 5 && step_of(position - chord_shift(degree)) == 2 ? 1 : 0;
+    return composer_key_is_minor(key) && degree == 5 && step_of(position - chord_shift(degree)) == 2 ? 1 : 0;
 }
 
 typedef struct {

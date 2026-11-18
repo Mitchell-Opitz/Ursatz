@@ -3,6 +3,7 @@
 
 #include "chain/analysis_chain.h"
 #include "chain/kernel_owners.h"
+#include "theory/tonality/common_practice_materials.h"
 
 /*
  * The fields of an AnalysisChain: analysis_chain.c writes them; tests read the meter results through
@@ -49,7 +50,7 @@ typedef struct {
 /* What a pass of the stages from the keys to the form is given: the phrase ends of the pass before as the key regions' boundaries
    (NULL for none) and whether it is the final pass (the form stage then finds the phrases first, on the grid). */
 typedef struct {
-    const MusicalTime *const *boundaries;
+    const MusicalTime *boundaries;
     size_t boundary_count;
     bool final;
 } AnalysisChainPass;
@@ -79,6 +80,7 @@ extern const AnalysisChainStage analysis_chain_stages[ANALYSIS_CHAIN_STAGE_COUNT
 
 struct AnalysisChain {
     AnalysisChainConfig config;
+    CommonPracticeMaterials materials; /* resolved once from config.knowledge; the stage configs point here */
     ChainRelationContext relation_context; /* the key the motive stage reads generic shapes in */
     unsigned stages;
     const AnalysisNoteSet *notes;
@@ -98,7 +100,7 @@ struct AnalysisChain {
     OuterVoiceLines segment_lines; /* the same lines on the chord segments */
     bool have_segment_lines;
     CommonPracticeKeySegment *key_segments;
-    MusicalTime **boundaries; /* the second pass: the phrase ends of the first, owned copies */
+    MusicalTime *boundaries; /* the second pass: the phrase ends of the first, owned */
     size_t boundary_count;
     int home;
     StandardFormRepeats repeats; /* the written-out repeats and returns, found once in prepare (R-400) */

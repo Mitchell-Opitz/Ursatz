@@ -48,14 +48,13 @@ AdaptiveSegmentationResult segmentation_prepare_notes(NoteEvent *const *notes, s
             return AD_SEGMENTATION_ERR_NO_PITCH;
         }
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(note));
-        if (musical_time_numerator(position) < 0) {
+        if (position->value.num < 0) {
             free(spans);
             return AD_SEGMENTATION_ERR_METER_MAP;
         }
-        Rational length;
-        if (rational_of_musical_time(position, &spans[i].onset) != RATIONAL_OK ||
-            rational_of_duration(note_event_duration(note), &length) != RATIONAL_OK ||
-            rational_add(spans[i].onset, length, &spans[i].release) != RATIONAL_OK) {
+        Rational length = note_event_duration(note)->value;
+        spans[i].onset = position->value;
+        if (rational_add(spans[i].onset, length, &spans[i].release) != RATIONAL_OK) {
             free(spans);
             return AD_SEGMENTATION_ERR_OVERFLOW;
         }
@@ -112,16 +111,6 @@ unsigned segment_pitch_class_set(const NoteSpan *spans, const Segment *segment) 
     return set;
 }
 
-static void free_beat_starts(MusicalTime **starts, size_t count) {
-    if (starts == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        musical_time_destroy(starts[i]);
-    }
-    free(starts);
-}
-
 static AdaptiveSegmentationResult append_segment(SegmentList *list, size_t *capacity, Segment segment) {
     if (list->count == *capacity) {
         size_t grown_capacity = *capacity == 0 ? 64 : *capacity * 2;
@@ -154,40 +143,28 @@ AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_c
     AdaptiveSegmentationResult failure = AD_SEGMENTATION_OK;
 
     for (int measure = meter_map_first_measure_number(map); failure == AD_SEGMENTATION_OK; measure++) {
-        TimeSpan *measure_span = NULL;
+        TimeSpan measure_span;
         if (meter_map_measure_span(map, measure, &measure_span) != METER_MAP_OK) {
             failure = AD_SEGMENTATION_ERR_METER_MAP;
             break;
         }
-        Rational measure_start;
-        Rational measure_end;
-        bool measure_ok = rational_of_musical_time(time_span_start(measure_span), &measure_start) == RATIONAL_OK &&
-                          rational_of_musical_time(time_span_end(measure_span), &measure_end) == RATIONAL_OK;
-        time_span_destroy(measure_span);
-        if (!measure_ok) {
-            failure = AD_SEGMENTATION_ERR_OVERFLOW;
-            break;
-        }
+        Rational measure_start = measure_span.start.value;
+        Rational measure_end = measure_span.end.value;
         if (rational_cmp(measure_start, sounding_end) >= 0) {
             break;
         }
 
-        MusicalTime **starts = NULL;
+        MusicalTime *starts = NULL;
         size_t start_count = 0;
         if (!provider(map, measure, provider_context, &starts, &start_count) || start_count == 0) {
-            free_beat_starts(starts, start_count);
+            free(starts);
             failure = AD_SEGMENTATION_ERR_BEAT_GRID;
             break;
         }
 
         for (size_t beat = 0; beat < start_count && failure == AD_SEGMENTATION_OK; beat++) {
-            Rational beat_start;
-            Rational beat_end = measure_end;
-            if (rational_of_musical_time(starts[beat], &beat_start) != RATIONAL_OK ||
-                (beat + 1 < start_count && rational_of_musical_time(starts[beat + 1], &beat_end) != RATIONAL_OK)) {
-                failure = AD_SEGMENTATION_ERR_OVERFLOW;
-                break;
-            }
+            Rational beat_start = starts[beat].value;
+            Rational beat_end = beat + 1 < start_count ? starts[beat + 1].value : measure_end;
             bool starts_ok = beat > 0 || rational_cmp(beat_start, measure_start) == 0;
             if (!starts_ok || rational_cmp(beat_start, beat_end) >= 0 || rational_cmp(beat_end, measure_end) > 0) {
                 failure = AD_SEGMENTATION_ERR_BEAT_GRID;
@@ -208,7 +185,7 @@ AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_c
                 free(segment.members);
             }
         }
-        free_beat_starts(starts, start_count);
+        free(starts);
     }
 
     if (failure != AD_SEGMENTATION_OK) {
@@ -614,18 +591,8 @@ void adaptive_sonorities_destroy(AdaptiveSonorities *sonorities) {
 /* One AdaptiveSonority for a non-empty segment. */
 static AdaptiveSegmentationResult assemble_one(NoteEvent *const *notes, const Segment *segment,
                                                 AdaptiveSonority *out) {
-    MusicalTime *start = musical_time_from_rational_or_null(segment->start);
-    MusicalTime *end = musical_time_from_rational_or_null(segment->end);
-    if (start == NULL || end == NULL) {
-        musical_time_destroy(start);
-        musical_time_destroy(end);
-        return AD_SEGMENTATION_ERR_OVERFLOW;
-    }
-    TimeSpan *window = NULL;
-    TimeSpanResult span_result = time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &window);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
-    if (span_result != TIME_SPAN_OK) {
+    TimeSpan window;
+    if (time_span_make(musical_time_of(segment->start), musical_time_of(segment->end), &window) != TIME_SPAN_OK) {
         return AD_SEGMENTATION_ERR_ALLOC;
     }
 
@@ -659,10 +626,9 @@ static AdaptiveSegmentationResult assemble_one(NoteEvent *const *notes, const Se
         }
         free(ids);
         free(held);
-        time_span_destroy(window);
         return failure;
     }
-    /* sonority_create took the window and the ids; the array itself is ours. */
+    /* sonority_create copied the window and took the ids; the array itself is ours. */
     free(ids);
     out->sonority = sonority;
     out->held = held;

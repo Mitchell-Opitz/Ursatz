@@ -15,7 +15,6 @@
 #include "theory/meter/segmentation_beat_grid.h"
 #include "model/time/duration.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/time/note_value.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_signature.h"
@@ -58,12 +57,10 @@ static void add_note(Built *set, const TuningSystem *tuning, const char *id, lon
                                            PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_A, PITCH_LETTER_B};
     static const int ACCIDENTAL[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
     assert(set->count < set->capacity);
-    MusicalTime *position = NULL;
-    assert(musical_time_create(on_n, on_d, &position) == MUSICAL_TIME_OK);
-    TemporalAnchor *anchor = NULL;
-    assert(temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK);
-    Duration *duration = NULL;
-    assert(duration_create(dur_n, dur_d, &duration) == DURATION_OK);
+    MusicalTime position;
+    assert(musical_time_make(on_n, (long long)on_d, &position) == MUSICAL_TIME_OK);
+    Duration duration;
+    assert(duration_make(dur_n, (long long)dur_d, &duration) == DURATION_OK);
     PitchIdentity *pitch = NULL;
     assert(pitch_identity_create("pitch", 6, &pitch) == PITCH_IDENTITY_OK);
     PitchSpelling *spelling = NULL;
@@ -71,7 +68,7 @@ static void add_note(Built *set, const TuningSystem *tuning, const char *id, lon
            PITCH_SPELLING_OK);
     ProvenanceReference *provenance = NULL;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
-    assert(note_event_create(make_id(id), anchor, duration, pitch, spelling, NULL, provenance,
+    assert(note_event_create(make_id(id), position, duration, pitch, spelling, NULL, provenance,
                              &set->notes[set->count]) == NOTE_EVENT_OK);
     assert(pitch_numeric_value_create(tuning, midi, 1, &set->values[set->count]) == PITCH_NUMERIC_VALUE_OK);
     set->count++;
@@ -135,12 +132,11 @@ static void test_chorale(void) {
     TimeSignature *signature = NULL;
     assert(time_signature_create(4, quarter, &signature) == TIME_SIGNATURE_OK);
     note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
     MeterMapChangePoint point = {signature, zero};
     assert(meter_map_create(make_id("chorale-meter"), &point, 1, &map) == METER_MAP_OK);
     time_signature_destroy(signature);
-    musical_time_destroy(zero);
 
     VoiceAssignment a = {0};
     assert(voice_separate(set.notes, set.values, set.count, NULL, map, standard_meter_segmentation_beat_grid, NULL,
@@ -212,7 +208,7 @@ static void destroy_imported(Imported *imported) {
 
 static long onset_ticks(const Imported *imported, size_t i) {
     const MusicalTime *at = temporal_anchor_position(note_event_temporal_anchor(imported->events[i]));
-    return musical_time_numerator(at) * 4 * imported->ticks_per_quarter / (long)musical_time_denominator(at);
+    return (long)at->value.num * 4 * imported->ticks_per_quarter / (long)at->value.den;
 }
 
 typedef struct {

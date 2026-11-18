@@ -26,8 +26,10 @@ static const char *XML =
     "<part id=\"P2\"><measure number=\"0\"><note><rest/><duration>99</duration></note></measure></part>"
     "</score-partwise>";
 
-static bool time_is(const MusicalTime *t, long n, unsigned long d) {
-    return musical_time_numerator(t) * (long)d == n * (long)musical_time_denominator(t);
+static bool time_is(MusicalTime t, long n, unsigned long d) {
+    MusicalTime expected;
+    assert(musical_time_make(n, (long long)d, &expected) == MUSICAL_TIME_OK);
+    return musical_time_same(t, expected);
 }
 
 static void test_layout(void) {
@@ -50,22 +52,19 @@ static void test_grid_and_meter_map(void) {
     ScoreLayout layout;
     assert(score_layout_read(XML, strlen(XML), &layout) == SCORE_LAYOUT_OK);
     RomanTextGrid grid = score_layout_grid(&layout);
-    MusicalTime *t = NULL;
+    MusicalTime t = musical_time_of(rational_ratio(0, 1));
     assert(grid.time_at(grid.context, 0, 3000, &t) && time_is(t, 0, 1)); /* the pickup's beat 3 */
-    musical_time_destroy(t);
     assert(!grid.time_at(grid.context, 0, 1000, &t)); /* before the pickup */
     /* measure 2 starts at 1/4 + 3/4 = 1; beat 3 of 3/4 is 1/2 later: 3/2 */
     assert(grid.time_at(grid.context, 2, 3000, &t) && time_is(t, 3, 2));
-    musical_time_destroy(t);
     assert(!grid.time_at(grid.context, 9, 1000, &t));
 
     MeterMap *map = score_layout_meter_map(&layout, "score-layout-test");
     assert(map != NULL && meter_map_has_pickup(map));
     int index = -1;
-    MusicalTime *at = NULL;
-    assert(musical_time_create(1, 1, &at) == MUSICAL_TIME_OK);
-    assert(meter_map_measure_index_at(map, at, &index) == METER_MAP_OK && index == 2);
-    musical_time_destroy(at);
+    MusicalTime at;
+    assert(musical_time_make(1, 1, &at) == MUSICAL_TIME_OK);
+    assert(meter_map_measure_index_at(map, &at, &index) == METER_MAP_OK && index == 2);
     meter_map_destroy(map);
     score_layout_destroy(&layout);
 }

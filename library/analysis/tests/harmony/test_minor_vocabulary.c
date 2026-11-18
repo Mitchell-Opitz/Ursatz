@@ -28,7 +28,8 @@ static CommonPracticeMember note(int pitch) {
     CommonPracticeMember m;
     memset(&m, 0, sizeof(m));
     m.pitch = pitch;
-    m.duration = 1.0;
+    m.duration = rational_ratio(1, 1);
+    m.onset = rational_ratio(0, 1);
     m.strength = BEAT_STRENGTH_STRONG;
     return m;
 }

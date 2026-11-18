@@ -12,6 +12,7 @@
 #include "api_grow.h"
 #include "api_internal.h"
 #include "api_piece.h"
+#include "util/util.h"
 
 /*
  * Variations of one section of a loop plan (docs/api.md): the section is written again from one seed after another (as a
@@ -43,7 +44,7 @@ static ComposerStatus variations_document(const PieceSpec *request, const PieceE
     memset(&brief, 0, sizeof(brief));
     brief.tempo = request->tempo;
     brief.tempo_from = request->tempo_from;
-    brief.minor = request->request.key.mode == KEY_STRUCTURE_MODE_MINOR;
+    brief.material = request->request.key.material;
     brief.mode_from = request->mode_from;
     brief.has_density = composer_style_density(request->style, &brief.density);
     brief.without = request->without;
@@ -120,8 +121,14 @@ static ComposerStatus read_variations(const cJSON *root, PieceEdit *edit, unsign
     return api_piece_read_lanes(cJSON_GetObjectItemCaseSensitive(variations, "lanes"), "/variations/lanes", edit, error);
 }
 
-ComposerStatus composer_api_piece_variations(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_piece_variations(const ComposerContext *context, const char *request_json,
+                                             const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = NULL;
     PieceSpec *request = calloc(1, sizeof(*request));
     PieceEdit edit;
@@ -168,7 +175,7 @@ ComposerStatus composer_api_piece_variations(const char *request_json, const Com
         PlanJsonError plan_error;
         if (!plan_text) {
             status = api_fail_alloc(&out->error);
-        } else if (plan_from_json(plan_text, &original, &plan_error) != PLAN_OK) {
+        } else if (plan_from_json_resolved(context->knowledge, plan_text, &original, &plan_error) != PLAN_OK) {
             status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/from", "cannot read the loop plan: %s", plan_error.message);
         } else {
             original_signature = plan_signature(original);
@@ -176,8 +183,8 @@ ComposerStatus composer_api_piece_variations(const char *request_json, const Com
         }
     }
     if (status == COMPOSER_OK) {
-        status = api_piece_read_request(request, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request", style, plain_midi,
-                                        job, &out->error);
+        status = api_piece_read_request(request, context->knowledge, &materials, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request",
+                                        style, plain_midi, job, &out->error);
     }
     if (status == COMPOSER_OK) {
         status = api_piece_refuse_performed(request, &out->error);

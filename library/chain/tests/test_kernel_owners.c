@@ -12,6 +12,7 @@
 #include "chain/analysis_chain.h"
 #include "analysis/form/analysis_motive_match.h"
 #include "chain/kernel_owners.h"
+#include "test_knowledge.h"
 
 /*
  * The chain's kernel-owner callbacks: the tone classifier gives motive_tone_roles_line's labels; the relation matcher recognizes an
@@ -75,7 +76,7 @@ static void test_equal_and_transposed_shapes(void) {
     const int semis_b[3] = {2, 1, -3};
     StandardFormMotiveShape tonal_proto = shape(true, 3, semis_a, generic_up, gaps, 60);
     StandardFormMotiveShape tonal_cand = shape(true, 3, semis_b, generic_up, gaps, 62);
-    ChainRelationContext key = {true, 0, false};
+    ChainRelationContext key = {true, 0, test_materials()->major};
     assert(chain_match_motive_relation(&tonal_proto, &tonal_cand, &m, &key) && m.kind == MOTIVE_OCCURRENCE_TONAL);
     /* without a key the same shapes are not a transposition of a scale: no match as a tonal one */
     assert(!chain_match_motive_relation(&tonal_proto, &tonal_cand, &m, NULL) || m.kind != MOTIVE_OCCURRENCE_TONAL);
@@ -201,7 +202,8 @@ static void test_relabelling_a_melody_line(void) {
     for (size_t i = 0; i < 3; i++) {
         members[i].note_id = ids[i];
         members[i].pitch = chord[i];
-        members[i].duration = 1.0;
+        members[i].duration = rational_ratio(1, 1);
+        members[i].onset = rational_ratio(0, 1);
         members[i].strength = BEAT_STRENGTH_STRONG;
     }
     CommonPracticeSegment segment = {members, 3, "sonority-1", 0};
@@ -262,6 +264,7 @@ static void test_relabelling_a_melody_line(void) {
 
 static void test_the_chain_injects_by_default(void) {
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     assert(config.weighting.classifier == NULL && config.form.relation_match == NULL); /* set when the chain runs */
 }
 

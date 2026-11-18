@@ -193,6 +193,8 @@ typedef struct {
     int midi_program; /* 0 to 127, or -1 for none */
 } PartInfo;
 
+#define MAX_TUPLET_ACTUAL 15 /* the most notes a written tuplet holds: a hint above it is ignored */
+
 typedef struct {
     size_t index;  /* the input index of the event */
     size_t part;
@@ -204,6 +206,8 @@ typedef struct {
     unsigned long start_d;
     long dur_n;
     unsigned long dur_d;
+    unsigned actual; /* the notated tuplet of the event: actual notes in the time of normal, 0 and 0 for none */
+    unsigned normal;
 } NoteRec;
 
 /* Something written between notes at a position: a key signature now, markings next. Sorted by part, tick, kind. */
@@ -420,12 +424,18 @@ static MusicXmlExportResult gather_notes(Prep *prep) {
         }
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(event));
         const Duration *duration = note_event_duration(event);
-        note->start_n = musical_time_numerator(position);
-        note->start_d = musical_time_denominator(position);
-        note->dur_n = duration_numerator(duration);
-        note->dur_d = duration_denominator(duration);
+        note->start_n = (long)position->value.num;
+        note->start_d = (unsigned long)position->value.den;
+        note->dur_n = (long)duration->value.num;
+        note->dur_d = (unsigned long)duration->value.den;
         if (note->start_n < 0 || note->dur_n <= 0) {
             return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+        }
+        unsigned actual = 0;
+        unsigned normal = 0;
+        if (note_event_tuplet(event, &actual, &normal) && actual <= MAX_TUPLET_ACTUAL) {
+            note->actual = actual;
+            note->normal = normal;
         }
 
         const VoiceReference *voice = note_event_optional_voice(event);
@@ -461,21 +471,18 @@ static MusicXmlExportResult gather_keys(Prep *prep) {
     const MusicXmlExportScore *score = prep->score;
     for (size_t i = 0; i < score->key_signature_count; i++) {
         const MusicXmlExportKeySignature *key = &score->key_signatures[i];
-        if (key->position == NULL) {
-            return MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT;
-        }
         if (key->part_index >= prep->part_count) {
             return MUSICXML_EXPORT_ERR_UNKNOWN_PART;
         }
-        if (key->sharps_flats < -7 || key->sharps_flats > 7 || musical_time_numerator(key->position) < 0) {
+        if (key->sharps_flats < -7 || key->sharps_flats > 7 || key->position.value.num < 0) {
             return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
         }
         Dir *dir = &prep->dirs[prep->dir_count++];
         dir->kind = DIR_KEY;
         dir->part = key->part_index;
         dir->staff = 1;
-        dir->raw_n = musical_time_numerator(key->position);
-        dir->raw_d = musical_time_denominator(key->position);
+        dir->raw_n = (long)key->position.value.num;
+        dir->raw_d = (unsigned long)key->position.value.den;
         dir->source = i;
     }
     return MUSICXML_EXPORT_OK;
@@ -558,8 +565,9 @@ static MusicXmlExportResult gather_tempo(Prep *prep) {
         dir->kind = DIR_TEMPO;
         dir->part = 0;
         dir->staff = 1;
-        dir->raw_n = musical_time_numerator(tempo_map_region_start(region));
-        dir->raw_d = musical_time_denominator(tempo_map_region_start(region));
+        MusicalTime region_start = tempo_map_region_start(region);
+        dir->raw_n = (long)region_start.value.num;
+        dir->raw_d = (unsigned long)region_start.value.den;
         dir->source = i;
     }
     return MUSICXML_EXPORT_OK;
@@ -591,15 +599,15 @@ static MusicXmlExportResult gather_markings(Prep *prep) {
             }
         }
         const MusicalTime *position = temporal_anchor_position(tempo_marking_temporal_anchor(marking));
-        if (musical_time_numerator(position) < 0) {
+        if (position->value.num < 0) {
             return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
         }
         Dir *dir = &prep->dirs[prep->dir_count++];
         dir->kind = DIR_MARKING;
         dir->part = part;
         dir->staff = 1;
-        dir->raw_n = musical_time_numerator(position);
-        dir->raw_d = musical_time_denominator(position);
+        dir->raw_n = (long)position->value.num;
+        dir->raw_d = (unsigned long)position->value.den;
         dir->source = i;
     }
     return MUSICXML_EXPORT_OK;
@@ -609,7 +617,7 @@ static MusicXmlExportResult gather_markings(Prep *prep) {
 static MusicXmlExportResult dynamics_position(const Prep *prep, const Dynamics *dynamics, long *n, unsigned long *d) {
     const MusicalTime *position = NULL;
     if (dynamics_target_kind(dynamics) == DYNAMICS_TARGET_TIME_SPAN) {
-        position = time_span_start(dynamics_target_time_span(dynamics));
+        position = &dynamics_target_time_span(dynamics)->start;
     } else {
         const char *id = entity_id_value(dynamics_target_event_id(dynamics));
         for (size_t i = 0; i < prep->score->count && position == NULL; i++) {
@@ -621,11 +629,11 @@ static MusicXmlExportResult dynamics_position(const Prep *prep, const Dynamics *
             return MUSICXML_EXPORT_ERR_UNKNOWN_EVENT;
         }
     }
-    if (musical_time_numerator(position) < 0) {
+    if (position->value.num < 0) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }
-    *n = musical_time_numerator(position);
-    *d = musical_time_denominator(position);
+    *n = (long)position->value.num;
+    *d = (unsigned long)position->value.den;
     return MUSICXML_EXPORT_OK;
 }
 
@@ -783,13 +791,12 @@ static MusicXmlExportResult build_measures(Prep *prep) {
     if (prep->dir_max_tick >= 0 && prep->dir_max_tick + 1 > covered) {
         covered = prep->dir_max_tick + 1;
     }
-    MusicalTime *extent_time = NULL;
-    if (musical_time_create((long)covered, (unsigned long)(4 * prep->divisions), &extent_time) != MUSICAL_TIME_OK) {
+    MusicalTime extent_time;
+    if (musical_time_make((long)covered, (long long)(4 * prep->divisions), &extent_time) != MUSICAL_TIME_OK) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }
     size_t count = 0;
-    MeterMapResult status = meter_map_measure_count(prep->meter, extent_time, &count);
-    musical_time_destroy(extent_time);
+    MeterMapResult status = meter_map_measure_count(prep->meter, &extent_time, &count);
     if (status != METER_MAP_OK) {
         return from_meter_status(status);
     }
@@ -818,19 +825,16 @@ static MusicXmlExportResult build_measures(Prep *prep) {
 
     long long divisions = prep->divisions;
     for (size_t m = 0; m < count && result == MUSICXML_EXPORT_OK; m++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         status = meter_map_measure_span(prep->meter, prep->first_measure_number + (int)m, &span);
         if (status != METER_MAP_OK) {
             result = from_meter_status(status);
             break;
         }
-        const MusicalTime *start = time_span_start(span);
-        const MusicalTime *end = time_span_end(span);
-        start_n[m] = musical_time_numerator(start);
-        start_d[m] = musical_time_denominator(start);
-        end_n[m] = musical_time_numerator(end);
-        end_d[m] = musical_time_denominator(end);
-        time_span_destroy(span);
+        start_n[m] = (long)span.start.value.num;
+        start_d[m] = (unsigned long)span.start.value.den;
+        end_n[m] = (long)span.end.value.num;
+        end_d[m] = (unsigned long)span.end.value.den;
         long long den = 0;
         TimeStatus time_status = time_denominator(start_n[m], start_d[m], &den);
         if (time_status == TIME_OK && !lcm_into(&divisions, den)) {
@@ -853,8 +857,14 @@ static MusicXmlExportResult build_measures(Prep *prep) {
             const TimeSignature *signature = meter_map_region_time_signature(region);
             unsigned top = time_signature_top_number(signature);
             unsigned bottom = time_signature_bottom_number(signature);
-            beat_d[m] = bottom > 0 ? bottom : 4;
-            beat_n[m] = (top > 3 && top % 3 == 0 && bottom >= 8) ? 3 : 1;
+            Duration beat_length;
+            if (time_signature_beat_length(signature, &beat_length) != DURATION_OK ||
+                beat_length.value.num > LONG_MAX || beat_length.value.den > LONG_MAX) {
+                result = MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+                break;
+            }
+            beat_n[m] = (unsigned long)beat_length.value.num;
+            beat_d[m] = (unsigned long)beat_length.value.den;
             prep->measure_four_four[m] = top == 4 && bottom == 4;
             time_status = time_denominator((long)beat_n[m], beat_d[m], &den);
             if (time_status == TIME_OK && !lcm_into(&divisions, den)) {
@@ -1185,11 +1195,14 @@ static long long next_cut(const long long *cuts, size_t count, long long tick) {
 #define TRIPLET_TYPE_COUNT 7   /* whole to 64th */
 #define MAX_VALUE_DOTS 2
 
-/* A length written as a note: type is 1 (whole) to 8 (128th), dots 0 to 2, triplet when it is 2/3 of the plain value. */
+/* A length written as a note: type is 1 (whole) to 8 (128th), dots 0 to 2, tuplet when it is actual/normal of the plain
+   value (the inferred triplet is 3:2, a hinted one is the note's own ratio). */
 typedef struct {
     int type;
     int dots;
-    bool triplet;
+    bool tuplet;
+    unsigned actual;
+    unsigned normal;
 } NotatedValue;
 
 static const char *const VALUE_TYPE_NAMES[VALUE_TYPE_COUNT] = {"whole", "half", "quarter", "eighth",
@@ -1211,7 +1224,9 @@ static bool classify_value(long long length, long long divisions, bool allow_tri
             if (length * (1LL << k) * DOT_DENOMINATOR[d] == whole * DOT_NUMERATOR[d]) {
                 out->type = k + 1;
                 out->dots = d;
-                out->triplet = false;
+                out->tuplet = false;
+                out->actual = 0;
+                out->normal = 0;
                 return true;
             }
         }
@@ -1221,12 +1236,49 @@ static bool classify_value(long long length, long long divisions, bool allow_tri
             if (length * 3 * (1LL << k) == 2 * whole) {
                 out->type = k + 1;
                 out->dots = 0;
-                out->triplet = true;
+                out->tuplet = true;
+                out->actual = 3;
+                out->normal = 2;
                 return true;
             }
         }
     }
     return false;
+}
+
+/* The value a length of ticks is written as under a notated ratio: its value is length * actual / normal, plain or
+   dotted. False when that is not one. */
+static bool classify_tuplet_value(long long length, long long divisions, unsigned actual, unsigned normal,
+                                  NotatedValue *out) {
+    long long whole = 4 * divisions;
+    if (length <= 0 || actual == 0 || normal == 0) {
+        return false;
+    }
+    for (int k = 0; k < VALUE_TYPE_COUNT; k++) {
+        for (int d = 0; d <= MAX_VALUE_DOTS; d++) {
+            __int128 left = (__int128)length * actual * (1LL << k) * DOT_DENOMINATOR[d];
+            __int128 right = (__int128)whole * DOT_NUMERATOR[d] * normal;
+            if (left == right) {
+                out->type = k + 1;
+                out->dots = d;
+                out->tuplet = true;
+                out->actual = actual;
+                out->normal = normal;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/* The value of a note's or rest's piece: by the note's notated tuplet when it has one and the piece fits it, else as
+   classify_value does (allow_triplet is its beat rule, which a notated tuplet does not need). */
+static bool classify_piece(const Prep *prep, size_t note, long long length, bool allow_triplet, NotatedValue *out) {
+    if (note != REST_SEGMENT && prep->notes[note].actual != 0 &&
+        classify_tuplet_value(length, prep->divisions, prep->notes[note].actual, prep->notes[note].normal, out)) {
+        return true;
+    }
+    return classify_value(length, prep->divisions, allow_triplet, out);
 }
 
 /* The longest writable length of at most max ticks, 0 when there is none that is a whole number of ticks. */
@@ -1281,7 +1333,7 @@ static size_t measure_at(const Prep *prep, long long tick) {
  * A length nothing can write (below a 128th, or not a whole number of ticks) is returned as it is, and written
  * without a <type>.
  */
-static long long next_value_end(const Prep *prep, long long pos, long long to) {
+static long long next_value_end(const Prep *prep, long long pos, long long to, size_t note) {
     size_t m = measure_at(prep, pos);
     long long start = prep->measure_start[m];
     long long beat = prep->measure_beat[m];
@@ -1289,8 +1341,12 @@ static long long next_value_end(const Prep *prep, long long pos, long long to) {
     long long next_beat = start + (offset / beat + 1) * beat;
     long long cap = to;
     NotatedValue crossing;
+    if (note != REST_SEGMENT && prep->notes[note].actual != 0 &&
+        classify_tuplet_value(to - pos, prep->divisions, prep->notes[note].actual, prep->notes[note].normal, &crossing)) {
+        return to; /* written under its own notated tuplet, whole */
+    }
     if ((offset % beat) * 3 == 2 * beat && to - pos == 2 * beat / 3 &&
-        classify_value(2 * beat / 3, prep->divisions, true, &crossing) && crossing.triplet) {
+        classify_value(2 * beat / 3, prep->divisions, true, &crossing) && crossing.tuplet) {
         return pos + 2 * beat / 3;
     }
     if (offset % beat != 0) {
@@ -1331,7 +1387,7 @@ static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long 
         }
         /* each piece between two cuts is cut again into values a note can be written as */
         while (position < next) {
-            long long end = next_value_end(prep, position, next);
+            long long end = next_value_end(prep, position, next, note);
             for (size_t k = 0; k < members; k++) {
                 Segment segment;
                 segment.start = position;
@@ -1448,13 +1504,14 @@ bool musicxml_export_note_xml_id(const char *entity_value, char *out, size_t out
 }
 
 /*
- * Marks the triplet groups of one voice's segments in a measure: a run of two or more triplet-valued notes and rests,
- * back to back inside one beat, opens at its first and closes at its last (chord members follow their first note). A
- * group also closes as soon as its notes and rests fill the 3:2 span of their value, three units of the shortest
- * triplet value in it (three sixteenth-triplet units are an eighth, three eighth-triplet units a beat), so six sixteenth
- * triplets in one beat are two groups. A run that does not fill a span closes where it stops. A run whose shortest
- * triplet value is two thirds of a beat (a quarter-note triplet) may continue into the next beat while it has not
- * filled its three units; every other run stays inside the beat it started in.
+ * Marks the tuplet groups of one voice's segments in a measure: a run of two or more tuplet-valued notes and rests of
+ * one ratio, back to back inside one beat, opens at its first and closes at its last (chord members follow their first
+ * note). A group also closes as soon as its notes and rests fill the span of their ratio, `actual` units of the
+ * shortest value in it (three sixteenth-triplet units are an eighth, three eighth-triplet units a beat, five
+ * sixteenth-quintuplet units a beat), so six sixteenth triplets in one beat are two groups. A run that does not fill a
+ * span closes where it stops. A run whose written value is a beat (a quarter-note triplet, `actual` units of
+ * `normal` / `actual` of a beat) may continue into the next beats while it has not filled its units; every other run
+ * stays inside the beat it started in.
  */
 static void mark_tuplets(const Prep *prep, SegmentList *list) {
     size_t first = 0;
@@ -1462,27 +1519,31 @@ static void mark_tuplets(const Prep *prep, SegmentList *list) {
     size_t length = 0;
     long long run_beat = 0;
     long long filled = 0; /* ticks of the open run */
-    long long unit = 0;   /* the shortest triplet value in the open run, in ticks */
+    long long unit = 0;   /* the shortest tuplet value in the open run, in ticks */
+    unsigned run_actual = 0; /* the ratio of the open run */
+    unsigned run_normal = 0;
     for (size_t i = 0; i <= list->count; i++) {
         Segment *item = i < list->count ? &list->items[i] : NULL;
         if (item != NULL && item->chord) {
             continue;
         }
-        bool triplet = false;
+        bool tuplet = false;
         long long beat_start = 0;
         long long beat_ticks = 0;
         NotatedValue value;
         if (item != NULL && !item->measure_rest &&
-            classify_value(item->end - item->start, prep->divisions, true, &value) && value.triplet) {
+            classify_piece(prep, item->note, item->end - item->start, true, &value) && value.tuplet) {
             size_t m = measure_at(prep, item->start);
-            triplet = true;
+            tuplet = true;
             beat_ticks = prep->measure_beat[m];
             beat_start = prep->measure_start[m] +
                          (item->start - prep->measure_start[m]) / beat_ticks * beat_ticks;
         }
-        bool next_beat_ok =
-            beat_start == run_beat || (unit * 3 == 2 * beat_ticks && beat_start == run_beat + beat_ticks);
-        bool continues = triplet && length > 0 && list->items[last].end == item->start && next_beat_ok;
+        bool next_beat_ok = beat_start == run_beat ||
+                            (unit * run_actual == run_normal * beat_ticks && beat_start > run_beat &&
+                             beat_start < run_beat + run_normal * beat_ticks);
+        bool continues = tuplet && length > 0 && list->items[last].end == item->start && next_beat_ok &&
+                         value.actual == run_actual && value.normal == run_normal;
         if (!continues) {
             if (length >= 2) {
                 list->items[first].tuplet = 1;
@@ -1490,19 +1551,21 @@ static void mark_tuplets(const Prep *prep, SegmentList *list) {
             }
             length = 0;
         }
-        if (triplet) {
+        if (tuplet) {
             long long ticks = item->end - item->start;
             if (length == 0) {
                 first = i;
                 run_beat = beat_start;
                 filled = 0;
                 unit = ticks;
+                run_actual = value.actual;
+                run_normal = value.normal;
             }
             last = i;
             length++;
             filled += ticks;
             unit = ticks < unit ? ticks : unit;
-            if (filled % (3 * unit) == 0) {
+            if (filled % (run_actual * unit) == 0) {
                 if (length >= 2) {
                     list->items[first].tuplet = 1;
                     list->items[last].tuplet = 2;
@@ -1563,7 +1626,7 @@ static void mark_beams(const Prep *prep, SegmentList *list) {
         long long beat_start = 0;
         NotatedValue value;
         if (item != NULL && item->note != REST_SEGMENT && !item->measure_rest &&
-            classify_value(item->end - item->start, prep->divisions, true, &value) && value.type >= 4) {
+            classify_piece(prep, item->note, item->end - item->start, true, &value) && value.type >= 4) {
             size_t m = measure_at(prep, item->start);
             levels = value.type - 3;
             beat_start = prep->measure_start[m] +
@@ -1635,14 +1698,15 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
     }
     xmlbuf_append(buf, "        <voice>%d</voice>\n", voice_number);
     NotatedValue value;
-    if (!segment->measure_rest && classify_value(segment->end - segment->start, prep->divisions, true, &value)) {
+    if (!segment->measure_rest && classify_piece(prep, segment->note, segment->end - segment->start, true, &value)) {
         xmlbuf_append(buf, "        <type>%s</type>\n", VALUE_TYPE_NAMES[value.type - 1]);
         for (int d = 0; d < value.dots; d++) {
             xmlbuf_append(buf, "        <dot/>\n");
         }
-        if (value.triplet) {
-            xmlbuf_append(buf, "        <time-modification>\n          <actual-notes>3</actual-notes>\n"
-                               "          <normal-notes>2</normal-notes>\n        </time-modification>\n");
+        if (value.tuplet) {
+            xmlbuf_append(buf, "        <time-modification>\n          <actual-notes>%u</actual-notes>\n"
+                               "          <normal-notes>%u</normal-notes>\n        </time-modification>\n",
+                          value.actual, value.normal);
         }
     }
     if (prep->parts[part].staff_count > 1) {
@@ -1676,6 +1740,28 @@ typedef struct {
     size_t *pos;
     long long measure_start;
 } DirCtx;
+
+/* The text of <beats>: the top number, or the beat groups joined by "+" ("3+2") when they differ in size. */
+static void write_beats(const TimeSignature *signature, char *out, size_t capacity) {
+    size_t count = time_signature_group_count(signature);
+    bool equal = true;
+    for (size_t i = 1; i < count; i++) {
+        equal = equal && time_signature_group_at(signature, i) == time_signature_group_at(signature, 0);
+    }
+    if (equal) {
+        snprintf(out, capacity, "%u", time_signature_top_number(signature));
+        return;
+    }
+    size_t used = 0;
+    out[0] = '\0';
+    for (size_t i = 0; i < count && used + 1 < capacity; i++) {
+        int written = snprintf(out + used, capacity - used, i == 0 ? "%u" : "+%u", time_signature_group_at(signature, i));
+        if (written < 0 || (size_t)written >= capacity - used) {
+            break;
+        }
+        used += (size_t)written;
+    }
+}
 
 static void write_key(XmlBuf *buf, const MusicXmlExportKeySignature *key, const char *indent) {
     xmlbuf_append(buf, "%s<key>\n%s  <fifths>%d</fifths>\n", indent, indent, key->sharps_flats);
@@ -1925,8 +2011,8 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
         return from_meter_status(status);
     }
     long long region_start = 0;
-    if (time_ticks(musical_time_numerator(meter_map_region_start(region)),
-                   musical_time_denominator(meter_map_region_start(region)), prep->divisions,
+    MusicalTime region_time = meter_map_region_start(region);
+    if (time_ticks((long)region_time.value.num, (unsigned long)region_time.value.den, prep->divisions,
                    &region_start) != TIME_OK) {
         return MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
     }
@@ -1953,10 +2039,12 @@ static MusicXmlExportResult write_attributes(const Prep *prep, XmlBuf *buf, size
     }
     if (has_time) {
         const TimeSignature *signature = meter_map_region_time_signature(region);
+        char beats[TIME_SIGNATURE_MAX_TOP_NUMBER * 3 + 8];
+        write_beats(signature, beats, sizeof(beats));
         xmlbuf_append(buf,
-                      "        <time>\n          <beats>%u</beats>\n          <beat-type>%u</beat-type>\n"
+                      "        <time>\n          <beats>%s</beats>\n          <beat-type>%u</beat-type>\n"
                       "        </time>\n",
-                      time_signature_top_number(signature), time_signature_bottom_number(signature));
+                      beats, time_signature_bottom_number(signature));
     }
     if (has_staves) {
         xmlbuf_append(buf, "        <staves>%d</staves>\n", prep->parts[part].staff_count);

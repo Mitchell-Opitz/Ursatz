@@ -97,7 +97,7 @@ typedef struct {
 static Imported import_track(const TrackBuilder *track) {
     static unsigned char file[8192];
     size_t size = build_smf(file, track);
-    Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
+    Imported imported = {NULL, NULL, 0, {NULL, {{0, 1}}, NULL, 0}};
     assert(test_midi_import_parts(file, size, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     return imported;
 }
@@ -121,22 +121,19 @@ static int measure_of_note(const Imported *imported, size_t note) {
 
 static void assert_measure_span(const Imported *imported, int index, long sn, unsigned long sd, long en,
                                 unsigned long ed) {
-    TimeSpan *span = NULL;
+    TimeSpan span;
     assert(meter_map_measure_span(imported->meter.meter_map, index, &span) == METER_MAP_OK);
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    musical_time_create(sn, sd, &start);
-    musical_time_create(en, ed, &end);
-    assert(musical_time_equals(time_span_start(span), start));
-    assert(musical_time_equals(time_span_end(span), end));
-    musical_time_destroy(start);
-    musical_time_destroy(end);
-    time_span_destroy(span);
+    MusicalTime start;
+    MusicalTime end;
+    assert(musical_time_make(sn, (long long)sd, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make(en, (long long)ed, &end) == MUSICAL_TIME_OK);
+    assert(musical_time_same(span.start, start));
+    assert(musical_time_same(span.end, end));
 }
 
 static size_t measure_count_of(const Imported *imported) {
     size_t count = 0;
-    assert(meter_map_measure_count(imported->meter.meter_map, imported->meter.end_time, &count) == METER_MAP_OK);
+    assert(meter_map_measure_count(imported->meter.meter_map, &imported->meter.end_time, &count) == METER_MAP_OK);
     return count;
 }
 

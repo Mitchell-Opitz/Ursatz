@@ -10,6 +10,7 @@
 #include <ursatz_composer/voicing.h>
 
 #include "accompaniment_check.h"
+#include "support/test_knowledge.h"
 
 /*
  * The voicing operator on short realized progressions, a chord a bar in 4/4: I IV V I, I ii6 V7 I in C major and
@@ -25,7 +26,7 @@
 
 typedef struct {
     const char *name;
-    AnalysisKey key;
+    TestKeySpec key;
     const char *numeral[CHORDS];
     int bass[CHORDS];
     int melody[CHORDS];
@@ -38,7 +39,7 @@ typedef struct {
 
 static const Progression PROGRESSIONS[] = {
     {"I IV V I in C major",
-     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR},
+     {PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR},
      {"I", "IV", "V", "I"},
      {48, 41, 43, 48},
      {76, 72, 71, 72},
@@ -47,7 +48,7 @@ static const Progression PROGRESSIONS[] = {
      {-1, -1, -1, -1},
      {-1, -1, 11, -1}},
     {"I ii6 V7 I in C major",
-     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR},
+     {PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR},
      {"I", "ii6", "V7", "I"},
      {48, 41, 43, 48},
      {76, 74, 71, 72},
@@ -56,7 +57,7 @@ static const Progression PROGRESSIONS[] = {
      {-1, -1, 5, -1},
      {-1, -1, 11, -1}},
     {"i iv6 V i in A minor",
-     {NULL, PITCH_LETTER_A, 0, KEY_STRUCTURE_MODE_MINOR},
+     {PITCH_LETTER_A, 0, HARMONY_MODE_MINOR},
      {"i", "iv6", "V", "i"},
      {45, 41, 52, 45},
      {72, 74, 68, 69},
@@ -96,7 +97,7 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
     assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = progression->key;
+    payload.key = test_key_of(progression->key);
     assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     for (size_t b = 0; b < CHORDS; b++) {

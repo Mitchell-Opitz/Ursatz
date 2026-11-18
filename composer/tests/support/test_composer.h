@@ -53,7 +53,7 @@ const char *test_status_name(ComposerStatus status);
 char *test_motive_json(const Motive *motive);
 
 /* Reads an applied chord's numeral in root position. False for any other text. */
-bool test_roman_parse_applied(KeyStructureMode mode, const char *roman, HarmonyAppliedChord *out);
+bool test_roman_parse_applied(HarmonyMode mode, const char *roman, HarmonyAppliedChord *out);
 
 /* Whether every setting is the default: the written documents of the preferences and of the defaults compare equal. */
 bool test_preferences_are_default(const ComposerPreferences *preferences);

@@ -20,7 +20,8 @@ A scope is a set of pieces in the order they were added. `motive_link_scope_add_
 document's JSON; `motive_link_scope_add_corpus` adds every analyzed piece of a corpus run, in index order, the index path
 as the piece id. A piece id added twice is refused. A document whose motive families have no `features` (written before
 analyzer 0.2.0) is `MOTIVE_LINKS_ERR_NO_FEATURES`: analyze the piece again. The CLI names the piece and says to run the
-corpus again. The scope is the caller's choice (a corpus run, a collection, a subject), so one cache serves them all.
+corpus again. A scope is made with a knowledge snapshot (`motive_link_scope_create`), which gives each document's `features.material` id its
+material; the snapshot outlives the scope. The scope is the caller's choice (a corpus run, a collection, a subject), so one cache serves them all.
 
 Each family is read from its prototype's `features` (see [analysis-document.md](analysis-document.md)) as a melodic
 sketch, without chords, in the key region of the prototype's first note (`motive_features_to_sketch`, the one mapping from features to a sketch; the report builds the same sketch for the

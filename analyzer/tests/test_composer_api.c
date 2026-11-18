@@ -20,6 +20,7 @@
 #include <ursatz_analyzer/style_profile.h>
 
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The API the Composer calls (composer_api.h), through analyzer_hear. A constructed four-voice fragment with a parallel
@@ -27,6 +28,12 @@
  * Mozart 545 is closer to the sonatinas model than to the chorales; the caller's events are not changed. With the argument "smoke" the style models (which analyze two corpora) are skipped, so the
  * valgrind run stays short.
  */
+
+/* The material of a key the test hears: NULL without a key. */
+static const PitchMaterial *key_material_of(bool has_key, bool is_minor) {
+    return has_key ? knowledge_snapshot_material(test_knowledge(), is_minor ? "omt.material.natural-minor" : "omt.material.major")
+                   : NULL;
+}
 
 static void piece_path(char *out, size_t size, const char *file) {
     snprintf(out, size, "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, file);
@@ -43,9 +50,9 @@ static char *fingerprint(const NoteEvent *const *events, size_t count) {
         size_t token_size = 0;
         const unsigned char *token = pitch_identity_token(note_event_pitch(events[i]), &token_size);
         char line[160];
-        int written = snprintf(line, sizeof line, "%s@%ld/%lu+%ld/%lu:", entity_id_value(note_event_id(events[i])),
-                               musical_time_numerator(onset), musical_time_denominator(onset),
-                               duration_numerator(length), duration_denominator(length));
+        int written = snprintf(line, sizeof line, "%s@%lld/%lld+%lld/%lld:", entity_id_value(note_event_id(events[i])),
+                               onset->value.num, onset->value.den,
+                               length->value.num, length->value.den);
         for (size_t k = 0; k < token_size && written > 0 && (size_t)written + 3 < sizeof line; k++) {
             written += snprintf(line + written, sizeof line - (size_t)written, "%02x", token[k]);
         }
@@ -75,9 +82,8 @@ static NoteEvent *make_event(TuningSystem *tuning, size_t number, int midi, long
     char name[32];
     snprintf(name, sizeof name, "fragment-note-%zu", number);
     EntityID *id = NULL;
-    MusicalTime *position = NULL;
-    TemporalAnchor *anchor = NULL;
-    Duration *duration = NULL;
+    MusicalTime position;
+    Duration duration;
     PitchNumericValue *value = NULL;
     PitchIdentity *pitch = NULL;
     ProvenanceReference *provenance = NULL;
@@ -88,15 +94,14 @@ static NoteEvent *make_event(TuningSystem *tuning, size_t number, int midi, long
     PitchLetter letter;
     int accidental;
     pitch_spelling_from_fifths(fifths == 11 ? -1 : fifths, &letter, &accidental);
-    if (entity_id_create(name, &id) != ENTITY_ID_OK || musical_time_create(start_half, 2, &position) != MUSICAL_TIME_OK ||
-        temporal_anchor_create(position, &anchor) != TEMPORAL_ANCHOR_OK ||
-        duration_create(length_half, 2, &duration) != DURATION_OK ||
+    if (entity_id_create(name, &id) != ENTITY_ID_OK || musical_time_make(start_half, 2, &position) != MUSICAL_TIME_OK ||
+        duration_make(length_half, 2, &duration) != DURATION_OK ||
         pitch_numeric_value_create(tuning, midi, 1, &value) != PITCH_NUMERIC_VALUE_OK ||
         pitch_numeric_value_to_identity(value, &pitch) != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK ||
         pitch_spelling_create(letter, accidental, midi / PITCH_SEMITONES_PER_OCTAVE - 1, &spelling) !=
             PITCH_SPELLING_OK ||
         provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK ||
-        note_event_create(id, anchor, duration, pitch, spelling, NULL, provenance, &event) != NOTE_EVENT_OK) {
+        note_event_create(id, position, duration, pitch, spelling, NULL, provenance, &event) != NOTE_EVENT_OK) {
         return NULL;
     }
     pitch_numeric_value_destroy(value);
@@ -143,9 +148,9 @@ static void test_parallel_fifth(void) {
         midi[i] = plan[i].midi;
     }
     char *before = fingerprint((const NoteEvent *const *)events, 8);
-    AnalyzerHearing hearing = {(const NoteEvent *const *)events, 8, midi, NULL, true, 0, false, streams};
+    AnalyzerHearing hearing = {(const NoteEvent *const *)events, 8, midi, NULL, true, 0, key_material_of(true, false), streams};
     AnalyzerResult *heard = NULL;
-    CHECKF(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "hearing");
+    CHECKF(analyzer_hear(&hearing, test_hearing_defaults(), &heard) == ANALYZER_OK && heard, "hearing");
     AnalyzerViolation *violations = NULL;
     size_t count = 0;
     CHECKF(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK, "violations");
@@ -174,18 +179,18 @@ static void test_parallel_fifth(void) {
 /* ---- the argument checks ---- */
 
 static void test_refusals(void) {
-    AnalyzerHearing empty = {NULL, 0, NULL, NULL, false, 0, false, NULL};
+    AnalyzerHearing empty = {NULL, 0, NULL, NULL, false, 0, NULL, NULL};
     AnalyzerResult *heard = NULL;
-    CHECKF(analyzer_hear(&empty, NULL, &heard) == ANALYZER_OK && heard, "an empty hearing");
+    CHECKF(analyzer_hear(&empty, test_hearing_defaults(), &heard) == ANALYZER_OK && heard, "an empty hearing");
     CHECKF(analyzer_result_report(heard)->entry_count == 0, "no chords");
     AnalyzerViolation *violations = NULL;
     size_t count = 7;
     CHECKF(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK && count == 0 && violations == NULL,
            "no violations");
     analyzer_result_destroy(heard);
-    AnalyzerHearing bad_key = {NULL, 0, NULL, NULL, true, 12, false, NULL};
-    CHECKF(analyzer_hear(&bad_key, NULL, &heard) == ANALYZER_ERR_ARGUMENT && heard == NULL, "tonic out of range");
-    CHECKF(analyzer_hear(NULL, NULL, &heard) == ANALYZER_ERR_ARGUMENT, "no hearing");
+    AnalyzerHearing bad_key = {NULL, 0, NULL, NULL, true, 12, key_material_of(true, false), NULL};
+    CHECKF(analyzer_hear(&bad_key, test_hearing_defaults(), &heard) == ANALYZER_ERR_ARGUMENT && heard == NULL, "tonic out of range");
+    CHECKF(analyzer_hear(NULL, test_hearing_defaults(), &heard) == ANALYZER_ERR_ARGUMENT, "no hearing");
 }
 
 /* ---- style distance ---- */
@@ -201,7 +206,7 @@ static StyleModel *corpus_model_without(const char *name, size_t pieces, const c
     char input[1024], output[1024], file[1024];
     snprintf(input, sizeof(input), "%s/%s", URSATZ_CORPORA_DIR, name);
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
-    CorpusRunOptions options = {input, output, false, NULL, NULL};
+    CorpusRunOptions options = {input, output, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
     CHECKF(corpus_run(&options, &summary) == CORPUS_RUN_OK && summary.analyzed == pieces && summary.failed == 0,
            "%s analyzed", name);
@@ -295,10 +300,10 @@ static void test_style_distance(void) {
                                notes.meter.meter_map,
                                notes.key_signature.found,
                                tonic_of(&notes),
-                               notes.key_signature.is_minor,
+                               key_material_of(notes.key_signature.found, notes.key_signature.is_minor),
                                notes.streams};
     AnalyzerResult *analysis = NULL;
-    CHECKF(analyzer_hear(&hearing, NULL, &analysis) == ANALYZER_OK && analysis, "hearing");
+    CHECKF(analyzer_hear(&hearing, test_hearing_defaults(), &analysis) == ANALYZER_OK && analysis, "hearing");
     StyleComparison near_style = {0}, far_style = {0};
     if (sonatinas && chorales) {
         CHECKF(distance(analysis, sonatinas, NULL, 0, &near_style) == ANALYZER_OK, "near");
@@ -339,8 +344,8 @@ static void test_style_distance(void) {
            "tuning system");
     NoteEvent *events[2] = {make_event(tuning, 0, 60, 0, 1), make_event(tuning, 1, 62, 1, 1)};
     const int tiny_midi[2] = {60, 62};
-    AnalyzerHearing tiny = {(const NoteEvent *const *)events, 2, tiny_midi, NULL, false, 0, false, NULL};
-    CHECKF(analyzer_hear(&tiny, NULL, &analysis) == ANALYZER_OK && analysis, "tiny fragment");
+    AnalyzerHearing tiny = {(const NoteEvent *const *)events, 2, tiny_midi, NULL, false, 0, NULL, NULL};
+    CHECKF(analyzer_hear(&tiny, test_hearing_defaults(), &analysis) == ANALYZER_OK && analysis, "tiny fragment");
     StyleComparison tiny_style = {0};
     if (sonatinas) {
         CHECKF(distance(analysis, sonatinas, NULL, 0, &tiny_style) == ANALYZER_OK, "tiny distance");

@@ -10,6 +10,7 @@
 #include "chain/tests/weighted_pipeline.h"
 #include "tests/key_index_test_util.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The repeats and returns the chain finds (R-400). The chain is analysis_chain_run to the form stage,
@@ -33,18 +34,17 @@ static const Piece CLEMENTI = {"Clementi 36", "Clementi 36.mid"};
 static const Piece MOZART = {"Mozart 545", "Mozart 545.mid"};
 
 static double to_double(const MusicalTime *time) {
-    return (double)musical_time_numerator(time) / (double)musical_time_denominator(time);
+    return (double)time->value.num / (double)time->value.den;
 }
 
 static int measure_of(const MeterMap *map, double at) {
     for (int measure = 1; measure < 400; measure++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
             break;
         }
-        double from = to_double(time_span_start(span));
-        double to = to_double(time_span_end(span));
-        time_span_destroy(span);
+        double from = to_double(&span.start);
+        double to = to_double(&span.end);
         if (from - 1e-9 <= at && at < to - 1e-9) {
             return measure;
         }
@@ -60,9 +60,10 @@ static AnalysisChain *run_chain(const Piece *piece, WeightedPipeline *p, Analysi
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p->import.key_signatures.events[i];
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &key_events[i].key));
+        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
     }
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = 1;
     config.home_key_index = test_key_index_of(0, COMMON_PRACTICE_KEY_MAJOR);
@@ -129,7 +130,7 @@ static void check_mozart(void) {
     size_t later_count = 0;
     for (size_t i = 0; i < cadences->count; i++) {
         const HarmonyCadenceResult *c = &cadences->items[i];
-        int measure = measure_of(p.set.map, segments->starts[c->arrival_first]);
+        int measure = measure_of(p.set.map, rational_to_double(segments->starts[c->arrival_first]));
         if (measure >= 57 && measure <= 101) {
             earlier[earlier_count][0] = measure + 45;
             earlier[earlier_count++][1] = c->type;

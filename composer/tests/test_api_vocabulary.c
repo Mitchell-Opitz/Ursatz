@@ -13,6 +13,7 @@
 
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -54,7 +55,7 @@ static const char *value_of(const cJSON *entry) {
 
 /* The response of validate: its "request" object. The caller frees the response. */
 static cJSON *validated(const char *kind, const char *request, ComposerStatus expected, ComposerResponse *response) {
-    ComposerStatus status = composer_api_validate(kind, request, response);
+    ComposerStatus status = composer_api_validate(test_context(), kind, request, response);
     if (status != expected) {
         fprintf(stderr, "%s: status %d (%s) for %s\n", kind, status, response->error.message, request);
     }
@@ -79,7 +80,7 @@ static void accepted(const char *kind, cJSON *request) {
 
 static void refused(const char *kind, const char *request, const char *path) {
     ComposerResponse response;
-    ComposerStatus status = composer_api_validate(kind, request, &response);
+    ComposerStatus status = composer_api_validate(test_context(), kind, request, &response);
     assert(status == COMPOSER_ERR_REQUEST || status == COMPOSER_ERR_UNSATISFIABLE);
     assert(strcmp(response.error.path, path) == 0);
     assert(response.error.message[0]);
@@ -88,7 +89,7 @@ static void refused(const char *kind, const char *request, const char *path) {
 
 static cJSON *random_request(const char *mode, const char *meter) {
     cJSON *request = cJSON_CreateObject();
-    assert(cJSON_AddStringToObject(request, "mode", mode) && cJSON_AddStringToObject(request, "meter", meter));
+    assert(cJSON_AddStringToObject(request, "material", mode) && cJSON_AddStringToObject(request, "meter", meter));
     assert(cJSON_AddNumberToObject(request, "seed", 3));
     return request;
 }
@@ -123,7 +124,7 @@ static cJSON *piece_request(const char *const *parts, size_t count) {
 
 static void test_lists(void) {
     ComposerResponse response;
-    assert(composer_api_vocabulary(&response) == COMPOSER_OK);
+    assert(composer_api_vocabulary(test_context(), &response) == COMPOSER_OK);
     assert(response.json && !response.plan_json && !response.midi && !response.musicxml);
     write_response("vocabulary", &response);
     vocabulary = cJSON_Parse(response.json);
@@ -131,7 +132,7 @@ static void test_lists(void) {
     composer_response_destroy(&response);
     composer_response_destroy(&response);
 
-    static const char *const NAMES[] = {"meters",         "modes",          "piece_modes",   "keys",
+    static const char *const NAMES[] = {"meters",         "materials",      "piece_materials", "keys",
                                         "pitch_class_names", "cadences",    "theme_cadences", "motive_forms",
                                         "random_motive_strategies",
                                         "roles",          "functions",      "distances",     "theme_slots",
@@ -230,7 +231,15 @@ static void test_lists(void) {
     assert(cJSON_GetArraySize(list("cadences")) == 5);
     assert(cJSON_GetArraySize(list("theme_cadences")) == 3);
     assert(strcmp(value_of(cJSON_GetArrayItem(list("cadences"), 0)), "PAC") == 0);
-    assert(cJSON_GetArraySize(list("piece_modes")) == 3 && cJSON_GetArraySize(list("modes")) == 2);
+    assert(cJSON_GetArraySize(list("piece_materials")) == 3 && cJSON_GetArraySize(list("materials")) == 2);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("materials"), 0)), "omt.material.major") == 0 &&
+           strcmp(value_of(cJSON_GetArrayItem(list("materials"), 1)), "omt.material.natural-minor") == 0 &&
+           strcmp(value_of(cJSON_GetArrayItem(list("piece_materials"), 2)), "style") == 0);
+    {
+        const cJSON *names = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(list("pitch_class_names"), 1), "names");
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(names, "omt.material.major")->valuestring, "Db") == 0 &&
+               strcmp(cJSON_GetObjectItemCaseSensitive(names, "omt.material.natural-minor")->valuestring, "C#") == 0);
+    }
     const cJSON *pickups = cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups");
     for (int i = 0; i < 4; i++) {
         const cJSON *offered = cJSON_GetObjectItemCaseSensitive(pickups, value_of(cJSON_GetArrayItem(meters, i)));
@@ -250,7 +259,7 @@ static void test_round_trip(void) {
         accepted("random_motive", request);
         cJSON_Delete(request);
     }
-    cJSON_ArrayForEach(entry, list("modes")) {
+    cJSON_ArrayForEach(entry, list("materials")) {
         cJSON *request = random_request(value_of(entry), "4/4");
         accepted("random_motive", request);
         cJSON_Delete(request);
@@ -319,13 +328,14 @@ static void test_round_trip(void) {
         accepted("piece", request);
         cJSON_Delete(request);
     }
-    cJSON_ArrayForEach(entry, list("piece_modes")) {
+    cJSON_ArrayForEach(entry, list("piece_materials")) {
         if (strcmp(value_of(entry), "style") == 0) {
             continue; /* the mode "style" reads the key and mode from a style model file */
         }
         const char *parts[] = {"body"};
         cJSON *request = piece_request(parts, 1);
-        cJSON_ReplaceItemInObjectCaseSensitive(request, "mode", cJSON_CreateString(value_of(entry)));
+        cJSON_DeleteItemFromObjectCaseSensitive(request, "mode");
+        assert(cJSON_AddStringToObject(request, "material", value_of(entry)));
         accepted("piece", request);
         cJSON_Delete(request);
     }
@@ -383,7 +393,7 @@ static void test_round_trip(void) {
         /* The reader knows the slot: it is not refused as an unknown one (a form that lacks the slot refuses it as a plan). */
         char *text = print(request);
         ComposerResponse response;
-        ComposerStatus status = composer_api_validate("theme", text, &response);
+        ComposerStatus status = composer_api_validate(test_context(), "theme", text, &response);
         assert(status == COMPOSER_OK || strstr(response.error.message, "unknown slot") == NULL);
         composer_response_destroy(&response);
         free(text);
@@ -397,7 +407,7 @@ static void test_round_trip(void) {
         cJSON_ReplaceItemInObjectCaseSensitive(request, "ideas", ideas);
         char *text = print(request);
         ComposerResponse response;
-        ComposerStatus status = composer_api_validate("theme", text, &response);
+        ComposerStatus status = composer_api_validate(test_context(), "theme", text, &response);
         assert(status == COMPOSER_OK || strstr(response.error.message, "unknown idea") == NULL);
         composer_response_destroy(&response);
         free(text);
@@ -470,7 +480,7 @@ static void test_theme_form_lists(void) {
         cJSON_ReplaceItemInObjectCaseSensitive(request, "bars", cJSON_CreateNumber(bars));
         char *text = print(request);
         ComposerResponse response;
-        ComposerStatus status = composer_api_validate("theme", text, &response);
+        ComposerStatus status = composer_api_validate(test_context(), "theme", text, &response);
         assert(status == COMPOSER_OK || strcmp(response.error.path, "/bars") == 0);
         composer_response_destroy(&response);
         free(text);
@@ -524,7 +534,7 @@ static void test_theme_form_lists(void) {
             cJSON_ReplaceItemInObjectCaseSensitive(request, "hybrid", cJSON_CreateString(hybrid));
             char *text = print(request);
             ComposerResponse response;
-            ComposerStatus status = composer_api_validate("theme", text, &response);
+            ComposerStatus status = composer_api_validate(test_context(), "theme", text, &response);
             /* A pairing a sentence or a period already names is refused as such, never as an unknown word. */
             assert(status == COMPOSER_OK || strstr(response.error.message, "hybrid must be a beginning") == NULL);
             composer_response_destroy(&response);
@@ -589,7 +599,7 @@ static void test_variants_words(void) {
                  "\"distance\":\"%s\",\"count\":1,\"seed\":1}",
                  value_of(entry));
         ComposerResponse response;
-        ComposerStatus status = composer_api_variants(request, NULL, &response);
+        ComposerStatus status = composer_api_variants(test_context(), request, NULL, &response);
         assert(status != COMPOSER_ERR_REQUEST);
         composer_response_destroy(&response);
     }
@@ -600,7 +610,7 @@ static void test_variants_words(void) {
                  "\"functions\":[\"%s\"],\"count\":1,\"seed\":1}",
                  value_of(entry));
         ComposerResponse response;
-        ComposerStatus status = composer_api_variants(request, NULL, &response);
+        ComposerStatus status = composer_api_variants(test_context(), request, NULL, &response);
         assert(status != COMPOSER_ERR_REQUEST);
         composer_response_destroy(&response);
     }
@@ -626,7 +636,7 @@ static void test_tone_labels(void) {
                  "\"tones\":[\"2=%s\"]}",
                  value_of(entry));
         ComposerResponse response;
-        ComposerStatus status = composer_api_motive(request, NULL, &response);
+        ComposerStatus status = composer_api_motive(test_context(), request, NULL, &response);
         assert(status == COMPOSER_OK);
         composer_response_destroy(&response);
     }
@@ -692,7 +702,7 @@ static void test_defaults(void) {
     text = print(request);
     document = validated("random_motive", text, COMPOSER_OK, &response);
     const cJSON *filled = cJSON_GetObjectItemCaseSensitive(document, "request");
-    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(filled, "mode");
+    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(filled, "material");
     const cJSON *meter = cJSON_GetObjectItemCaseSensitive(filled, "meter");
     assert(cJSON_IsString(mode) && (strcmp(mode->valuestring, "major") == 0 || strcmp(mode->valuestring, "minor") == 0));
     assert(cJSON_IsString(meter) && strcmp(meter->valuestring, "random") != 0);
@@ -704,7 +714,7 @@ static void test_defaults(void) {
 
     /* The same seed draws what composer_api_random_motive reports as drawn. */
     ComposerResponse drawn;
-    assert(composer_api_random_motive("{\"mode\":\"random\",\"meter\":\"random\",\"seed\":3}", NULL, &drawn) == COMPOSER_OK);
+    assert(composer_api_random_motive(test_context(), "{\"mode\":\"random\",\"meter\":\"random\",\"seed\":3}", NULL, &drawn) == COMPOSER_OK);
     cJSON *made = cJSON_Parse(drawn.json);
     const cJSON *drawn_object = cJSON_GetObjectItemCaseSensitive(made, "drawn");
     assert(drawn_object);
@@ -773,12 +783,12 @@ static void test_refusals(void) {
     refused(NULL, "{}", "/kind");
 
     ComposerResponse response;
-    assert(composer_api_validate("motive", NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_validate(test_context(), "motive", NULL, &response) == COMPOSER_ERR_REQUEST);
     composer_response_destroy(&response);
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.25") == 0);
+    assert(strcmp(composer_api_version(), "2.0") == 0);
     test_lists();
     test_round_trip();
     test_slot_rules();

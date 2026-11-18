@@ -34,7 +34,7 @@
 #include "model/time/time_span.h"
 
 typedef struct {
-    const TimeSpan *span; /* borrowed */
+    TimeSpan span;
     long semitone;
 } StandardFormRepeatNote;
 
@@ -59,7 +59,7 @@ typedef struct {
 } StandardFormRepeatConfig;
 
 /* Finds the repeats and returns. `config` NULL for the default. NULL_ARGUMENT for a NULL notes with count > 0, a NULL map or a NULL
-   out; BAD_INPUT for a note without a span or a min_measures of 0; METER for a time the map cannot place. On OK, *out is owned by the
+   out; BAD_INPUT for a min_measures of 0; METER for a time the map cannot place. On OK, *out is owned by the
    caller (standard_form_repeats_destroy); otherwise untouched. No notes: no items. */
 StandardFormAnalysisStatus standard_form_find_repeats(const StandardFormRepeatNote *notes, size_t count, const MeterMap *map,
                                                       const StandardFormRepeatConfig *config, StandardFormRepeats *out);

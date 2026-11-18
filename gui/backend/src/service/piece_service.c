@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 700
 
 #include "piece_service.h"
+#include "knowledge_service.h"
 #include "util/fs_util.h"
 #include "util/json_util.h"
 
@@ -151,21 +152,27 @@ static bool structure_sized(const cJSON *structure) {
     return form && sections && strcmp(sections, "request") != 0;
 }
 
-/* What the request needs from the piece, checked before anything is made. A form with sizes asks only key, mode and
+/* The material of a structure as text: its id (or style), or the old mode word of a body not migrated; NULL when it has none. */
+static const char *structure_material(const cJSON *structure) {
+    const cJSON *material = cJSON_GetObjectItemCaseSensitive(structure, "material");
+    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(structure, "mode");
+    return cJSON_IsString(material) ? material->valuestring : cJSON_IsString(mode) ? mode->valuestring : NULL;
+}
+
+/* What the request needs from the piece, checked before anything is made. A form with sizes asks only key, material and
  * meter. */
 static bool composable(const cJSON *piece, bool has_brief, char *message, size_t message_size) {
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
     bool sized = cJSON_IsObject(structure) && structure_sized(structure);
     if (!cJSON_IsObject(structure) || (!sized && !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(structure, "sections"))) ||
         !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "key")) ||
-        !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "mode")) ||
-        !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "meter"))) {
-        ursatz_gui_copy_message(message, message_size, sized ? "the piece structure needs key, mode and meter"
-                                                             : "the piece structure needs key, mode, meter and sections");
+        !structure_material(structure) || !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(structure, "meter"))) {
+        ursatz_gui_copy_message(message, message_size, sized ? "the piece structure needs key, material and meter"
+                                                             : "the piece structure needs key, material, meter and sections");
         return false;
     }
-    if (strcmp(ursatz_gui_json_string(structure, "mode"), "style") == 0 && !has_brief) {
-        ursatz_gui_copy_message(message, message_size, "the mode style needs a brief");
+    if (strcmp(structure_material(structure), "style") == 0 && !has_brief) {
+        ursatz_gui_copy_message(message, message_size, "the material style needs a brief");
         return false;
     }
     const cJSON *section = NULL;
@@ -221,7 +228,8 @@ static UrsatzGuiThemeResult build_request(const cJSON *body, const char *dir, co
     bool ok = result == URSATZ_GUI_THEME_OK && cJSON_AddStringToObject(request, "schema", "ursatz-piece-request") &&
               cJSON_AddNumberToObject(request, "schema_version", 2) &&
               cJSON_AddStringToObject(request, "form", structure_form(structure)) && ursatz_gui_json_add_copy_if(request, structure, "key") &&
-              ursatz_gui_json_add_copy_if(request, structure, "mode") && ursatz_gui_json_add_copy_if(request, structure, "meter");
+              ursatz_gui_json_add_copy_if(request, structure, "material") && ursatz_gui_json_add_copy_if(request, structure, "mode") &&
+              ursatz_gui_json_add_copy_if(request, structure, "meter");
     const cJSON *motive_ref = cJSON_GetObjectItemCaseSensitive(piece, "motive");
     if (ok && cJSON_IsObject(motive_ref)) {
         cJSON *motive = motive_of(body, motive_ref, message, message_size, "the piece motive");
@@ -382,7 +390,7 @@ static UrsatzGuiThemeResult run_piece(const char *stage, const char *named, cons
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = composer_api_piece(text, job, &response);
+    ComposerStatus status = composer_api_piece(ursatz_gui_composer_context(), text, job, &response);
     free(text);
     cJSON *document = NULL;
     ComposerResponse extra;
@@ -586,7 +594,7 @@ UrsatzGuiThemeResult ursatz_gui_piece_validate(const cJSON *body, bool *complete
         return URSATZ_GUI_THEME_OK;
     }
     const cJSON *structure = cJSON_GetObjectItemCaseSensitive(piece, "structure");
-    if (has_brief && strcmp(ursatz_gui_json_string(structure, "mode"), "style") == 0) {
+    if (has_brief && strcmp(structure_material(structure), "style") == 0) {
         /* The style of the brief is built only when composing. */
         ursatz_gui_copy_message(message, message_size, "");
         return URSATZ_GUI_THEME_OK;
@@ -1078,7 +1086,7 @@ static UrsatzGuiThemeResult run_variations(const Source *source, const char *nam
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = composer_api_piece_variations(text, job, &response);
+    ComposerStatus status = composer_api_piece_variations(ursatz_gui_composer_context(), text, job, &response);
     free(text);
     cJSON *document = NULL;
     if (status != COMPOSER_OK) {

@@ -1,5 +1,5 @@
 {
-	"schema_version":	12,
+	"schema_version":	13,
 	"metadata":	{
 		"source_file":	"Field 5.mid",
 		"note_count":	1083,
@@ -104,7 +104,7 @@
 				"uncertainty":	0.70011489205125921,
 				"index":	0,
 				"tonic":	"Bb",
-				"mode":	"major",
+				"material":	"omt.material.major",
 				"measures":	{
 					"first":	1,
 					"last":	43
@@ -45213,7 +45213,7 @@
 						"duration":	"391/1024"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"9/8",
@@ -45517,7 +45517,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"1/8",
@@ -46008,7 +46008,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"1/8",
@@ -46312,7 +46312,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"3/8",
@@ -46616,7 +46616,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"3/4",
@@ -46920,7 +46920,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"9/8",
@@ -47224,7 +47224,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"0/1",
@@ -47528,7 +47528,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"3/8",
@@ -47832,7 +47832,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"3/4",
@@ -48030,7 +48030,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"9/8",
@@ -48228,7 +48228,7 @@
 						"duration":	"1/8"
 					}],
 				"tonic_pc":	10,
-				"minor":	false,
+				"material":	"omt.material.major",
 				"bar":	"3/2",
 				"beat":	"3/8",
 				"pickup":	"0/1",

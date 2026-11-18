@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include <cJSON.h>
+#include <theory/tonality/common_practice_materials.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_target.h>
@@ -19,6 +20,41 @@ ComposerStatus api_parse_request(const char *text, cJSON **out, ComposerError *e
 
 /* Sets error and returns status. path may be NULL or "". */
 ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char *path, const char *format, ...);
+
+/*
+ * For a key text the request parser refused: when it names a material the Composer does not compose in (request_key_refusal), sets
+ * error to that message at path and returns true; false when it does not, and the caller reports the key as unknown.
+ */
+bool api_fail_unsupported_key(ComposerError *error, const char *path, const KnowledgeSnapshot *knowledge, const char *key_text);
+
+/* What a request's "material" (or old "mode") member asked for. */
+typedef enum { API_MATERIAL_PICKED, API_MATERIAL_STYLE, API_MATERIAL_RANDOM } ApiMaterialKind;
+#define API_MATERIAL_ALLOW_STYLE 1u
+#define API_MATERIAL_ALLOW_RANDOM 2u
+
+/*
+ * Reads the "material" member of a request object, or the old "mode" member (the two together are refused). *text is the
+ * value, NULL when neither is present (an error when required), and *member names the member read ("material" or "mode").
+ * base NULL reads as api_member_string (paths "/<member>"); a base reads as api_request_string (paths "<base>/<member>").
+ */
+bool api_read_material(const cJSON *object, const char *base, bool required, const char **text, const char **member,
+                       ComposerError *error);
+
+/*
+ * Resolves the text api_read_material gave. "style" (allow API_MATERIAL_ALLOW_STYLE) and "random" (API_MATERIAL_ALLOW_RANDOM) set
+ * *kind and leave *material NULL. Under "material" the text is a K1 id, name, key word or alias of a material the Composer
+ * composes in; under the old "mode" only major and minor (any case), as before. path is the member's path, for the refusal.
+ */
+ComposerStatus api_resolve_material(const KnowledgeSnapshot *knowledge, const char *member, const char *path, const char *text,
+                                    unsigned allow, const PitchMaterial **material, ApiMaterialKind *kind, ComposerError *error);
+
+/*
+ * Checks the call context an entry takes first: COMPOSER_OK when context and its knowledge are present, else
+ * COMPOSER_ERR_REQUEST with error set to "a knowledge snapshot is required" (no path). The entry zeroes its response first.
+ * materials, when not NULL, gets the common-practice materials of the snapshot, resolved once for the call
+ * (common_practice_materials_resolve); a snapshot that lacks one is COMPOSER_ERR_REQUEST with the message that names it.
+ */
+ComposerStatus api_require_knowledge(const ComposerContext *context, CommonPracticeMaterials *materials, ComposerError *error);
 
 /* Sets error to "out of memory" (COMPOSER_ERR_ALLOC, no path) and returns the status. */
 ComposerStatus api_fail_alloc(ComposerError *error);
@@ -71,17 +107,18 @@ ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, 
 
 /*
  * Reads a motive from the request object (docs/api.md, "Motive requests"): "input" {"format", "form", "text"}, "meter",
- * "key", "pickup", and the extras of api_read_motive_extras. base is the JSON Pointer of the object in the request ("" for
+ * "key" (read through the knowledge snapshot), "pickup", and the extras of api_read_motive_extras. base is the JSON Pointer of the object in the request ("" for
  * the request itself), which the error paths start with. Returns COMPOSER_OK; COMPOSER_ERR_REQUEST for a member that is
  * not valid (error path set); COMPOSER_ERR_UNSATISFIABLE for text that is not a motive of the kind asked for. options
  * (may be NULL) gets the options the motive was read with.
  */
-ComposerStatus api_read_motive(const cJSON *request, const char *base, Motive *out, MotiveOptions *options,
-                               ComposerError *error);
+ComposerStatus api_read_motive(const cJSON *request, const char *base, const KnowledgeSnapshot *knowledge, Motive *out,
+                               MotiveOptions *options, ComposerError *error);
 
 /* As api_read_motive for a motive that arrives as the bytes of a Standard MIDI File: the request has no "input". */
-ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const unsigned char *bytes, size_t size,
-                                     Motive *out, MotiveOptions *options, ComposerError *error);
+ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const KnowledgeSnapshot *knowledge,
+                                     const unsigned char *bytes, size_t size, Motive *out, MotiveOptions *options,
+                                     ComposerError *error);
 
 /*
  * The motive's own harmony ("harmony"), labelled features ("features") and role ("role") of object, into options.
@@ -96,7 +133,7 @@ ComposerStatus api_read_motive_extras(const cJSON *object, const char *base, con
  * 'A'"), base is the JSON Pointer of the object. role forces the role when not NULL. Returns COMPOSER_OK, or
  * COMPOSER_ERR_REQUEST naming the member.
  */
-ComposerStatus api_read_degrees_motive(const char *what, const char *base, const cJSON *object, const char *role,
+ComposerStatus api_read_degrees_motive(const KnowledgeSnapshot *knowledge, const char *what, const char *base, const cJSON *object, const char *role,
                                        const PlanMeter *meter, const AnalysisKey *key, Motive *out, ComposerError *error);
 /* The GROW_FUNCTION_* bits a form's "functions" list names. */
 ComposerStatus api_read_functions(const char *what, const char *base, const cJSON *functions, unsigned *out,
@@ -139,8 +176,9 @@ ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *o
 /* --- reading a request without running it (composer_api_validate) --------------------------------------- */
 
 /* Reads the request as its entry does and stops before composing: COMPOSER_OK, or the status the entry would give. */
-ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error);
+ComposerStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *request,
+                                  ComposerError *error);
 /* As api_theme_validate for a random motive request; filled (a copy of request) gets the seed and the drawn mode and meter. */
-ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, ComposerError *error);
+ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, cJSON *filled, ComposerError *error);
 
 #endif

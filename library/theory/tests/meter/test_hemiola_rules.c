@@ -6,16 +6,15 @@
 
 static void window(unsigned beats, int exponent, bool expected, long pulse_n, unsigned long pulse_d, unsigned measures) {
     TimeSignature *signature = make_signature(beats, exponent);
-    Duration *pulse = NULL;
+    Duration pulse = {{7, 9}};
     unsigned got_measures = 99;
     bool ok = standard_meter_hemiola_window(signature, &pulse, &got_measures);
     assert(ok == expected);
     if (expected) {
-        assert_duration(pulse, pulse_n, pulse_d);
+        assert_duration(&pulse, pulse_n, pulse_d);
         assert(got_measures == measures);
-        duration_destroy(pulse);
     } else {
-        assert(pulse == NULL && got_measures == 99);
+        assert(got_measures == 99);
     }
     time_signature_destroy(signature);
 }
@@ -28,7 +27,7 @@ static void test_window(void) {
     window(12, 3, false, 0, 1, 0); /* 12/8 */
     window(9, 3, false, 0, 1, 0); /* 9/8 */
     window(2, 2, false, 0, 1, 0); /* 2/4 */
-    Duration *pulse = NULL;
+    Duration pulse;
     unsigned measures = 0;
     assert(!standard_meter_hemiola_window(NULL, &pulse, &measures));
 }

@@ -247,7 +247,7 @@ static void read_document_summary(const AnalysisDocument *document, PieceRecord 
 /* Imports, analyzes and writes one piece into record. A piece that cannot be analyzed is a failed record and still
    returns OK; only a failure to write an output file is a run error. */
 static CorpusRunResult analyze_piece(const char *output_dir, const char *relative, const char *input_path,
-                                     PieceRecord *record) {
+                                     const KnowledgeSnapshot *knowledge, PieceRecord *record) {
     record->status = CORPUS_PIECE_FAILED;
     record->error = NULL;
     record->document = NULL;
@@ -258,7 +258,7 @@ static CorpusRunResult analyze_piece(const char *output_dir, const char *relativ
     ImportedNotes notes;
     AnalyzerResult *result = NULL;
     InputPipelineResult imported = INPUT_PIPELINE_OK;
-    RunFileResult ran = analyzer_run_file(input_path, INPUT_FORMAT_AUTO, NULL, &notes, &result, &imported, NULL);
+    RunFileResult ran = analyzer_run_file(input_path, INPUT_FORMAT_AUTO, NULL, knowledge, &notes, &result, &imported, NULL);
     if (ran == RUN_FILE_ERR_IMPORT) {
         record->error = import_error_text(imported);
         return CORPUS_RUN_OK;
@@ -505,8 +505,8 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
     if (out) {
         *out = summary;
     }
-    if (!options || !options->input_dir || !options->input_dir[0]) {
-        fprintf(stderr, "Error: corpus run needs an input directory\n");
+    if (!options || !options->knowledge || !options->input_dir || !options->input_dir[0]) {
+        fprintf(stderr, "Error: corpus run needs an input directory and a knowledge snapshot\n");
         return CORPUS_RUN_ERR_ARGUMENT;
     }
 
@@ -566,7 +566,7 @@ CorpusRunResult corpus_run(const CorpusRunOptions *options, CorpusRunSummary *ou
         }
         PieceRecord *record = &records[done];
         if (!(previous && reuse_previous(previous, output_dir, relative, fnv1a_file(input_path), record))) {
-            result = analyze_piece(output_dir, relative, input_path, record);
+            result = analyze_piece(output_dir, relative, input_path, options->knowledge, record);
         }
         free(input_path);
         if (result != CORPUS_RUN_OK) {

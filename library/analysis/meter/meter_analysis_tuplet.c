@@ -233,6 +233,7 @@ static bool emit_run(StandardMeterTuplet **items, size_t *count, size_t *capacit
     item->attacks = run->attacks;
     item->meter = METER_TYPE_UNCLASSIFIED;
     item->beat = 1.0;
+    item->first = run->first;
     int measure = 0;
     double beat = 1.0;
     if (standard_meter_beat_of(notes->map, run->first, &measure, &beat)) {
@@ -240,16 +241,11 @@ static bool emit_run(StandardMeterTuplet **items, size_t *count, size_t *capacit
         item->beat = beat;
     }
     const MeterMapRegion *region = NULL;
-    Rational at_q = rational_ratio(0, 1);
-    Rational end_q = rational_ratio(0, 1);
     Tuplet *tuplet = NULL;
-    if (score_time_span(notes->notes[run->notes[0]].span, &at_q, &end_q)) {
-        MusicalTime *at = NULL;
-        if (at_q.num >= 0 && musical_time_create((long)at_q.num, (unsigned long)at_q.den, &at) == MUSICAL_TIME_OK) {
-            if (meter_map_region_at(notes->map, at, &region) != METER_MAP_OK) {
-                region = NULL;
-            }
-            musical_time_destroy(at);
+    {
+        MusicalTime at = notes->notes[run->notes[0]].span.start;
+        if (at.value.num >= 0 && meter_map_region_at(notes->map, &at, &region) != METER_MAP_OK) {
+            region = NULL;
         }
     }
     if (region != NULL && tuplet_create(actual, normal, &tuplet) == TUPLET_OK) {
@@ -259,16 +255,14 @@ static bool emit_run(StandardMeterTuplet **items, size_t *count, size_t *capacit
         item->borrowed = standard_meter_tuplet_borrowed(tuplet, type);
         Rational end = run->has_group_end ? run->group_end : run->end;
         Rational span;
-        Duration *duration = NULL;
         TupletLevel level;
-        if (rational_sub(end, run->first, &span) == RATIONAL_OK && span.num > 0 &&
-            duration_create((long)span.num, (unsigned long)span.den, &duration) == DURATION_OK) {
-            if (standard_meter_tuplet_level(signature, duration, &level)) {
+        if (rational_sub(end, run->first, &span) == RATIONAL_OK && span.num > 0) {
+            Duration duration = {span};
+            if (standard_meter_tuplet_level(signature, &duration, &level)) {
                 item->has_level = true;
                 item->level = level;
                 item->level_typical = standard_meter_tuplet_level_typical(tuplet, level);
             }
-            duration_destroy(duration);
         }
     }
     tuplet_destroy(tuplet);
@@ -331,7 +325,7 @@ static int compare_tuplets(const void *a, const void *b) {
     if (x->measure != y->measure) {
         return x->measure < y->measure ? -1 : 1;
     }
-    return x->beat < y->beat ? -1 : (x->beat > y->beat ? 1 : 0);
+    return rational_cmp(x->first, y->first);
 }
 
 static void free_items(StandardMeterTuplet *items, size_t count) {
@@ -361,9 +355,9 @@ StandardMeterAnalysisStatus standard_meter_find_tuplets(const AnalysisNoteSet *n
         if (in_line != NULL && !in_line[i]) {
             continue;
         }
-        Rational onset;
-        Rational release;
-        if (!score_time_span(notes->notes[i].span, &onset, &release) || !standard_meter_snap_time(&config, &onset, false, NULL)) {
+        Rational onset = notes->notes[i].span.start.value;
+        Rational release = notes->notes[i].span.end.value;
+        if (!standard_meter_snap_time(&config, &onset, false, NULL)) {
             continue;
         }
         TupletNote *note = &stream[stream_count];

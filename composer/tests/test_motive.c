@@ -11,6 +11,7 @@
 
 #include "util/request_parse.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Motive input and analysis. The same motive is loaded from MIDI, MusicXML, a note list and JSON and must come out
@@ -22,13 +23,15 @@
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter THREE_FOUR = {3, 4, 0};
-static const AnalysisKey D_MINOR = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
-static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
-static const AnalysisKey G_MAJOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR};
+/* The keys the tests read motives in: made in main, since a key carries the material of the knowledge snapshot. */
+static AnalysisKey D_MINOR;
+static AnalysisKey C_MAJOR;
+static AnalysisKey G_MAJOR;
 
 static MotiveOptions options_with(const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     if (meter) {
         options.has_meter = true;
         options.meter = *meter;
@@ -131,7 +134,7 @@ static void test_same_motive_from_each_format(void) {
     assert(time_is(midi.length, 1, 1));
     assert(motive_meter(&midi).beats_per_bar == 4 && motive_meter(&midi).beat_unit == 4);
     assert(midi.key_source == MOTIVE_SKETCH_KEY_GIVEN);
-    assert(midi.tonic_pc == 2 && midi.minor);
+    assert(midi.tonic_pc == 2 && motive_sketch_minor(&midi));
 
     assert(motive_equal(&midi, &musicxml));
     assert(motive_equal(&midi, &text));
@@ -168,7 +171,7 @@ static void test_options(void) {
     Motive motive;
     MotiveError error;
     assert(test_load_motive_file(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &bossa, &motive, &error) == MOTIVE_OK);
-    assert(motive.tonic_pc == 0 && !motive.minor);
+    assert(motive.tonic_pc == 0 && !motive_sketch_minor(&motive));
     assert(motive.key_source == MOTIVE_SKETCH_KEY_GIVEN);
 
     /* The same meter as the file's is fine; a different one changes the bars and is refused. */
@@ -187,14 +190,24 @@ static void test_options(void) {
     /* A note list has no meter of its own. */
     MotiveOptions none = options_with(NULL, NULL);
     assert(motive_from_notes_text("D4:q", &none, &motive, &error) == MOTIVE_ERR_METER);
-    assert(motive_from_notes_text("D4:q", NULL, &motive, &error) == MOTIVE_ERR_METER);
+    assert(motive_from_notes_text("D4:q", test_motive_options(), &motive, &error) == MOTIVE_ERR_METER);
     assert(strcmp(error.location, "meter") == 0);
 
     AnalysisKey key;
-    assert(request_parse_key("Bb minor", &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
-    assert(request_parse_key("F# major", &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
-    assert(!request_parse_key("H major", &key));
-    assert(!request_parse_key("D dorian", &key));
+    assert(request_parse_key("Bb minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 10 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    assert(request_parse_key("F# major", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 6 && harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
+    assert(!request_parse_key("H major", test_knowledge(), &key));
+    assert(!request_parse_key("D dorian", test_knowledge(), &key));
+    assert(!request_parse_key("C harmonic minor", test_knowledge(), &key) && !request_parse_key("D", test_knowledge(), &key));
+    assert(request_parse_key("c MINOR", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 0 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    assert(request_parse_key("G natural minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 7 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    char refusal[160];
+    assert(request_key_refusal("C dorian", test_knowledge(), refusal, sizeof refusal) &&
+           strcmp(refusal, "the Composer writes major and minor keys; 'dorian' is not one of them") == 0);
+    assert(request_key_refusal("C harmonic minor", test_knowledge(), refusal, sizeof refusal) &&
+           strcmp(refusal, "the Composer writes major and minor keys; 'harmonic minor' is not one of them") == 0);
+    assert(!request_key_refusal("C minor", test_knowledge(), refusal, sizeof refusal) && !request_key_refusal("H major", test_knowledge(), refusal, sizeof refusal) &&
+           !request_key_refusal("C nonsense", test_knowledge(), refusal, sizeof refusal));
     PlanMeter meter;
     assert(request_parse_meter("6/8", &meter) && meter.beats_per_bar == 6 && meter.beat_unit == 8);
     assert(!request_parse_meter("4/5", &meter));
@@ -386,17 +399,17 @@ static void test_analysis_without_a_key(void) {
 static void test_key_is_inferred_only_when_the_pitches_settle(void) {
     Motive scale = load_notes("D4:q E4:q F4:q G4:q A4:q Bb4:q C5:q D5:q", &FOUR_FOUR, NULL);
     assert(scale.key_source == MOTIVE_SKETCH_KEY_INFERRED);
-    assert(scale.tonic_pc == 2 && scale.minor);
+    assert(scale.tonic_pc == 2 && motive_sketch_minor(&scale));
     Motive major = load_notes("F4:q G4:q A4:q Bb4:q C5:q D5:q E5:q F5:q", &FOUR_FOUR, NULL);
     assert(major.key_source == MOTIVE_SKETCH_KEY_INFERRED);
-    assert(major.tonic_pc == 5 && !major.minor);
+    assert(major.tonic_pc == 5 && !motive_sketch_minor(&major));
     /* A given key is never replaced. */
     Motive given = load_notes("D4:q E4:q F4:q G4:q A4:q Bb4:q C5:q D5:q", &FOUR_FOUR, &C_MAJOR);
     assert(given.key_source == MOTIVE_SKETCH_KEY_GIVEN && given.tonic_pc == 0);
     /* Seven notes of a scale with no note to settle the relative keys stay open. */
     Motive open = load_notes("C4:q D4:q E4:q F4:q G4:q A4:q B4:q C5:q", &FOUR_FOUR, NULL);
     assert(open.key_source == MOTIVE_SKETCH_KEY_INFERRED && open.tonic_pc == 0 &&
-           !open.minor);
+           !motive_sketch_minor(&open));
     Motive undecided = load_notes("C4:q D4:q E4:q F4:q G4:q A4:q B4:q", &FOUR_FOUR, NULL);
     assert(undecided.key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED);
 }
@@ -439,7 +452,7 @@ static void test_json_round_trip(void) {
         assert(json);
         Motive back;
         MotiveError error;
-        assert(motive_from_json(json, NULL, &back, &error) == MOTIVE_OK);
+        assert(motive_from_json(json, test_motive_options(), &back, &error) == MOTIVE_OK);
         assert(motive_equal(&motives[i], &back));
         free(json);
     }
@@ -560,7 +573,7 @@ static void test_file_errors(void) {
     for (size_t i = 0; i < sizeof(GARBAGE) / sizeof(GARBAGE[0]); i++) {
         size_t size = i == 3 ? 26 : strlen(GARBAGE[i]);
         for (int format = MOTIVE_FORMAT_AUTO; format <= MOTIVE_FORMAT_JSON; format++) {
-            MotiveResult result = motive_load(GARBAGE[i], size, (MotiveFormat)format, NULL, &motive, &error);
+            MotiveResult result = motive_load(GARBAGE[i], size, (MotiveFormat)format, test_motive_options(), &motive, &error);
             assert(result != MOTIVE_OK);
             assert(error.message[0] != '\0');
         }
@@ -647,7 +660,7 @@ static void test_attach_as_given(void) {
     char *json = plan_to_json(plan, &json_error);
     assert(json);
     PiecePlan *copy = NULL;
-    assert(plan_from_json(json, &copy, &json_error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, &copy, &json_error) == PLAN_OK);
     assert(plan_node_kind(copy, node) == PLAN_NODE_MOTIVE && plan_node_state(copy, node) == PLAN_STATE_GIVEN);
     assert(plan_lane_span_state(copy, span) == PLAN_STATE_GIVEN && plan_lane_span_lane(copy, span) == PLAN_LANE_MELODY);
     const PlanLanePayload *read = plan_lane_span_payload(copy, span);
@@ -713,7 +726,7 @@ static void test_degrees_reading(void) {
     assert(note_is(&motive, 1, 64, 1, 4, 1, 8));
     assert(note_is(&motive, 2, 69, 3, 8, 1, 8));
     assert(note_is(&motive, 3, 74, 1, 2, 1, 2));
-    assert(motive.key_source == MOTIVE_SKETCH_KEY_GIVEN && motive.minor);
+    assert(motive.key_source == MOTIVE_SKETCH_KEY_GIVEN && motive_sketch_minor(&motive));
 
     /* Octave 0 puts the tonic in MIDI 60 to 71: G is 67. Marks are any number, up or down. */
     motive = load_with(motive_from_degrees_text, "1:q 1,:q 1':q 1'':q 1,,:q 1',:q", &FOUR_FOUR, &G_MAJOR);
@@ -957,7 +970,7 @@ static void test_pickup_and_form_in_json(void) {
     assert(!motive_equal(&plain, &shifted));
 
     const char *bad = "{\"meter\": {\"beats_per_bar\": 4, \"beat_unit\": 4}, \"form\": \"chord\", \"notes\": []}";
-    assert(motive_from_json(bad, NULL, &again, &error) == MOTIVE_ERR_VALUE);
+    assert(motive_from_json(bad, test_motive_options(), &again, &error) == MOTIVE_ERR_VALUE);
     assert(strcmp(error.location, "form") == 0);
     MotiveSketchForm form;
     assert(motive_form_parse("contour", &form) && form == MOTIVE_SKETCH_FORM_CONTOUR && !motive_form_parse("chord", &form));
@@ -1000,10 +1013,10 @@ static void test_analysis_by_form(void) {
 static void test_render_in_another_key(void) {
     /* D minor 1 b3 5 1' (D4 F4 A4 D5) in G minor: the same degrees, a fourth up. */
     Motive source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
-    static const AnalysisKey G_MINOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MINOR};
+    const AnalysisKey G_MINOR = test_key(7, "minor");
     Motive moved;
     assert(motive_in_key(&source, &G_MINOR, &moved));
-    assert(moved.key_source == MOTIVE_SKETCH_KEY_GIVEN && moved.tonic_pc == 7 && moved.minor);
+    assert(moved.key_source == MOTIVE_SKETCH_KEY_GIVEN && moved.tonic_pc == 7 && motive_sketch_minor(&moved));
     assert(moved.note_count == 4 && moved.notes[0].pitch == 67 && moved.notes[1].pitch == 70 &&
            moved.notes[2].pitch == 74 && moved.notes[3].pitch == 79);
     assert(moved.length.num == source.length.num && moved.length.den == source.length.den);
@@ -1146,7 +1159,7 @@ static const char *const EXTRAS_JSON =
 static void test_extras_in_json(void) {
     Motive motive;
     MotiveError error;
-    assert(motive_from_json(EXTRAS_JSON, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive_from_json(EXTRAS_JSON, test_motive_options(), &motive, &error) == MOTIVE_OK);
     assert(motive.chord_count == 3 && motive.feature_count == 2 && motive.accompaniment);
     assert(motive.chords[1].degree == 5 && motive.chords[1].inversion == 1 && time_is(motive.chords[1].onset, 1, 2));
     assert(strcmp(motive.features[1].label, "b") == 0 && motive.features[1].first == 2 && motive.features[1].last == 3);
@@ -1155,7 +1168,7 @@ static void test_extras_in_json(void) {
     char *written = test_motive_json(&motive);
     assert(written && strstr(written, "\"harmony\": \"I V6@2 I@3\"") && strstr(written, "\"role\": \"accompaniment\""));
     Motive again;
-    assert(motive_from_json(written, NULL, &again, &error) == MOTIVE_OK);
+    assert(motive_from_json(written, test_motive_options(), &again, &error) == MOTIVE_OK);
     assert(motive_equal(&motive, &again));
     free(written);
     Motive plain = load_notes("C4:q E4:q G4:q C5:q", &FOUR_FOUR, &C_MAJOR);
@@ -1235,10 +1248,10 @@ static void test_extras_errors(void) {
     assert(at);
     snprintf(text, strlen(EXTRAS_JSON) + 64, "%.*s%s%s", (int)(at - EXTRAS_JSON), EXTRAS_JSON, bad_harmony,
              at + strlen("\"harmony\": \"I V6@2 I@3\""));
-    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_ERR_SYNTAX);
+    assert(motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_ERR_SYNTAX);
     assert(strcmp(error.location, "harmony") == 0 && strstr(error.message, "token 2"));
     free(text);
-    assert(motive_from_json("{\"role\": \"bass\", \"notes\": []}", NULL, &motive, &error) == MOTIVE_ERR_VALUE);
+    assert(motive_from_json("{\"role\": \"bass\", \"notes\": []}", test_motive_options(), &motive, &error) == MOTIVE_ERR_VALUE);
     assert(strcmp(error.location, "role") == 0);
 }
 
@@ -1246,7 +1259,7 @@ static void test_equal_compares_extras(void) {
     Motive a;
     Motive b;
     MotiveError error;
-    assert(motive_from_json(EXTRAS_JSON, NULL, &a, &error) == MOTIVE_OK);
+    assert(motive_from_json(EXTRAS_JSON, test_motive_options(), &a, &error) == MOTIVE_OK);
     b = a;
     assert(motive_equal(&a, &b));
     b.chords[1].degree = 4;
@@ -1353,6 +1366,9 @@ static void test_features_follow_the_notes(void) {
 }
 
 int main(void) {
+    D_MINOR = test_key(2, "minor");
+    C_MAJOR = test_key(0, "major");
+    G_MAJOR = test_key(7, "major");
     test_same_motive_from_each_format();
     test_musicxml_keeps_spelling();
     test_options();

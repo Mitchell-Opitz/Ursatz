@@ -1,0 +1,147 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.material.major",
+      "kind": "material",
+      "subtype": "unordered",
+      "name": "major",
+      "aliases": [
+        "ionian"
+      ],
+      "content": {
+        "steps": [
+          0,
+          2,
+          4,
+          5,
+          7,
+          9,
+          11
+        ],
+        "family": "diatonic",
+        "brightness_rank": 6,
+        "key_word": "major"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "pitches": [
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "A",
+            "B"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.material.natural-minor",
+      "kind": "material",
+      "subtype": "unordered",
+      "name": "natural minor",
+      "aliases": [
+        "aeolian"
+      ],
+      "content": {
+        "steps": [
+          0,
+          2,
+          3,
+          5,
+          7,
+          8,
+          10
+        ],
+        "family": "diatonic",
+        "brightness_rank": 3,
+        "key_word": "minor"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "pitches": [
+            "C",
+            "D",
+            "Eb",
+            "F",
+            "G",
+            "Ab",
+            "Bb"
+          ]
+        }
+      ],
+      "version": 1
+    },
+    {
+      "id": "omt.material.mixolydian",
+      "kind": "material",
+      "subtype": "unordered",
+      "name": "mixolydian",
+      "content": {
+        "steps": [
+          0,
+          2,
+          4,
+          5,
+          7,
+          9,
+          10
+        ],
+        "family": "diatonic",
+        "brightness_rank": 5
+      },
+      "relations": [
+        {
+          "type": "rotation-of",
+          "target": "omt.material.major"
+        }
+      ],
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "examples": [
+        {
+          "center": "C",
+          "pitches": [
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "A",
+            "Bb"
+          ]
+        }
+      ],
+      "version": 1
+    }
+  ]
+}

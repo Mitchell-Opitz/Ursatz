@@ -37,8 +37,7 @@ KeyResult key_create(Interpretation *interpretation, const char *label, Key **ou
 
 KeyResult key_create_with_structure(Interpretation *interpretation, const char *label, const KeyStructure *structure,
                                      Key **out) {
-    if (structure == NULL || structure->tonic_pitch_class < 0 || structure->tonic_pitch_class > 11 ||
-        (structure->mode != KEY_STRUCTURE_MODE_MAJOR && structure->mode != KEY_STRUCTURE_MODE_MINOR)) {
+    if (structure == NULL || structure->tonic_pitch_class < 0 || structure->tonic_pitch_class > 11 || structure->material == NULL) {
         return KEY_ERR_BAD_STRUCTURE;
     }
     Key *key = NULL;

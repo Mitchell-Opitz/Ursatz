@@ -113,6 +113,7 @@ static void make_config(const PieceSpec *request, bool check, unsigned long seed
     config->pool = request->pool;
     config->pool_count = request->pool_count;
     config->job = request->job;
+    config->knowledge = request->knowledge;
 }
 
 static PieceResult compose_version(const PieceSpec *request, bool check, unsigned long seed, PieceVersion *version) {
@@ -292,7 +293,7 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
     *out = NULL;
     *targets = NULL;
     *count = 0;
-    if (plan_from_json(edit->text, &plan, &plan_error) != PLAN_OK) {
+    if (plan_from_json_resolved(request->knowledge, edit->text, &plan, &plan_error) != PLAN_OK) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the %s: %s", sized ? "plan" : "loop plan",
                         plan_error.message);
     }
@@ -403,7 +404,7 @@ ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEd
     if (!edit->section) {
         /* The plan is complete: nothing is composed, so the loop version has no outcome to report. */
         PlanJsonError plan_error;
-        if (plan_from_json(edit->text, &loop->plan, &plan_error) != PLAN_OK) {
+        if (plan_from_json_resolved(request->knowledge, edit->text, &loop->plan, &plan_error) != PLAN_OK) {
             *result = PIECE_ERR_BAD_REQUEST;
             return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the %s: %s",
                             request->form->request_sections ? "loop plan" : "plan", plan_error.message);
@@ -635,7 +636,7 @@ static void key_heard_at(const FormHeardKey *keys, size_t key_count, Rational st
     }
     out[0] = '\0';
     if (at) {
-        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.mode == KEY_STRUCTURE_MODE_MINOR, out, size);
+        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.material, out, size);
     }
 }
 
@@ -664,8 +665,8 @@ static void planned_key_at(const PiecePlan *plan, PlanSpan section, char *out, s
         }
     }
     if (at) {
-        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.mode == KEY_STRUCTURE_MODE_MINOR, out, size);
-        *flats = util_key_prefers_flats(analysis_key_tonic_pitch_class(&at->key), at->key.mode == KEY_STRUCTURE_MODE_MINOR);
+        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.material, out, size);
+        *flats = util_key_prefers_flats(analysis_key_tonic_pitch_class(&at->key), at->key.material);
     }
     free(ids);
 }
@@ -678,7 +679,8 @@ static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion
     size_t count = 0;
     FormHeardKey *keys = NULL;
     size_t key_count = 0;
-    if (version->plan && form_hear_keys(plan, plan_node_span(plan, plan_root(plan)), &keys, &key_count) != FORM_HEAR_OK) {
+    if (version->plan && form_hear_keys(plan, request->knowledge, plan_node_span(plan, plan_root(plan)), &keys,
+                                       &key_count) != FORM_HEAR_OK) {
         keys = NULL;
         key_count = 0;
     }
@@ -1039,12 +1041,13 @@ static cJSON *changes_json(const Row *row) {
     bool copied = form_return_copies(row->plan, row->node);
     cJSON *entry = cJSON_CreateObject();
     const char *setting = return_setting_name(row);
-    KeyStructureMode to_mode = KEY_STRUCTURE_MODE_MAJOR;
-    bool mapped = form_return_mode_change(row->plan, row->node, &to_mode);
-    const char *mode = mapped ? (to_mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major") : NULL;
+    const PitchMaterial *to_material = NULL;
+    bool mapped = form_return_mode_change(row->plan, row->node, &to_material);
+    const char *material_id = mapped && to_material ? to_material->id : NULL;
+    const char *mode = mapped ? (composer_material_is_minor(to_material) ? "minor" : "major") : NULL; /* the text keeps its word */
     bool ok = entry && cJSON_AddBoolToObject(entry, "copied", copied) &&
               cJSON_AddStringToObject(entry, "variation", plan_return_variation_name(spec->variation)) &&
-              api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "mode", string_or_null(mode));
+              api_add(entry, "setting", string_or_null(setting)) && api_add(entry, "material", string_or_null(material_id));
     char text[256] = "";
     size_t changed = 0;
     size_t chords = 0;
@@ -1278,7 +1281,7 @@ static GrowBrief make_brief(const PieceSpec *request) {
     memset(&brief, 0, sizeof(brief));
     brief.tempo = request->tempo;
     brief.tempo_from = request->tempo_from;
-    brief.minor = request->request.key.mode == KEY_STRUCTURE_MODE_MINOR;
+    brief.material = request->request.key.material;
     brief.mode_from = request->mode_from;
     brief.has_density = composer_style_density(request->style, &brief.density);
     brief.without = request->without;
@@ -1364,7 +1367,7 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
     char lanes[64];
     char meter[24];
     GrowBrief brief = make_brief(request);
-    util_key_name(analysis_key_tonic_pitch_class(&request->request.key), request->request.key.mode == KEY_STRUCTURE_MODE_MINOR,
+    util_key_name(analysis_key_tonic_pitch_class(&request->request.key), request->request.key.material,
                   key, sizeof key);
     snprintf(meter, sizeof meter, "%d/%d", request->request.meter.beats_per_bar, request->request.meter.beat_unit);
     cJSON *document = cJSON_CreateObject();
@@ -1616,8 +1619,14 @@ ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult resu
     return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", piece_result_name(result));
 }
 
-ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_piece(const ComposerContext *context, const char *request_json,
+                                  const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = NULL;
     PieceSpec *request = calloc(1, sizeof(*request));
     PieceMade piece;
@@ -1660,8 +1669,8 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
         status = read_edit(root, &plan_text, &edit, &section, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_piece_read_request(request, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request", style, plain_midi,
-                                        job, &out->error);
+        status = api_piece_read_request(request, context->knowledge, &materials, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request",
+                                        style, plain_midi, job, &out->error);
     }
     if (status == COMPOSER_OK && edit.text) {
         status = api_piece_refuse_performed(request, &out->error);

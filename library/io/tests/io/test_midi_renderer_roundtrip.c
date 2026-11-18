@@ -22,7 +22,7 @@ static void round_trip_reference_piece(const char *name) {
     NoteEvent **events = NULL;
     PitchNumericValue **pitches = NULL;
     size_t count = 0;
-    MidiMeterImport meter = {NULL, NULL, NULL, 0};
+    MidiMeterImport meter = {NULL, {{0, 1}}, NULL, 0};
     assert(test_midi_import_parts(data, size, &events, &pitches, &count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(count > 0);
 
@@ -118,10 +118,9 @@ static void test_meter_and_tempo_changes(void) {
     TempoMap *tempo_map = test_tempo_map(tempos, 3);
     MidiKeySignatureEvent keys[1];
     memset(keys, 0, sizeof(keys));
-    keys[0].position = test_time(0, 1);
+    keys[0].position = test_time_value(0, 1);
     keys[0].sharps_flats = 2;
     test_round_trip(notes.events, notes.pitches, notes.count, meter_map, tempo_map, keys, 1, 480);
-    musical_time_destroy(keys[0].position);
     meter_map_destroy(meter_map);
     tempo_map_destroy(tempo_map);
     test_notes_free(&notes);

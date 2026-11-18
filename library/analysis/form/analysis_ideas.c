@@ -71,7 +71,8 @@ static bool notes_in_measures(const StandardFormInput *input, int note_first, in
     for (int i = note_first; i < note_end; i++) {
         Rational start;
         int measure = 0;
-        if (!score_time_span(input->notes[i].span, &start, NULL) || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
+        start = input->notes[i].span.start.value;
+        if (meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
             return false;
         }
         if (measure >= first && measure <= last) {

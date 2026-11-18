@@ -6,6 +6,7 @@
 #include <model/pitch/pitch_arithmetic.h>
 
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 /*
  * The note-list text syntax (see motive.h): tokens of PITCH ":" DURATION ["~"], separated by white space, with "|"
@@ -308,7 +309,7 @@ MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDoc
 }
 
 MotiveResult motive_parse_degrees_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
-    AnalysisKey key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey key = plan_key_of_pitch_class(0, document->materials.major);
     if (document->has_key) {
         key = document->key;
     }
@@ -316,7 +317,7 @@ MotiveResult motive_parse_degrees_text(const char *text, Motive *motive, MotiveD
 }
 
 MotiveResult motive_parse_rhythm_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
-    AnalysisKey key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey key = plan_key_of_pitch_class(0, document->materials.major);
     if (document->has_key) {
         key = document->key;
     }
@@ -327,7 +328,7 @@ MotiveResult motive_parse_rhythm_text(const char *text, Motive *motive, MotiveDo
 
 /* A contour is ranks separated by white space, each a whole number; every note is a quarter, rank r on degree r + 1. */
 MotiveResult motive_parse_contour_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
-    AnalysisKey key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    AnalysisKey key = plan_key_of_pitch_class(0, document->materials.major);
     if (document->has_key) {
         key = document->key;
     }

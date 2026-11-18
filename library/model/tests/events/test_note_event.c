@@ -9,17 +9,15 @@ static EntityID *make_id(const char *value) {
     return id;
 }
 
-static TemporalAnchor *make_temporal_anchor(long numerator, unsigned long denominator) {
-    MusicalTime *position = NULL;
-    musical_time_create(numerator, denominator, &position);
-    TemporalAnchor *anchor = NULL;
-    temporal_anchor_create(position, &anchor);
-    return anchor;
+static MusicalTime make_onset(long long numerator, long long denominator) {
+    MusicalTime onset;
+    assert(musical_time_make(numerator, denominator, &onset) == MUSICAL_TIME_OK);
+    return onset;
 }
 
-static Duration *make_duration(long numerator, unsigned long denominator) {
-    Duration *duration = NULL;
-    duration_create(numerator, denominator, &duration);
+static Duration make_duration(long long numerator, long long denominator) {
+    Duration duration;
+    assert(duration_make(numerator, denominator, &duration) == DURATION_OK);
     return duration;
 }
 
@@ -37,84 +35,43 @@ static ProvenanceReference *make_absent_provenance(void) {
 
 static NoteEvent *make_minimal_note_event(const char *id_value) {
     NoteEvent *note_event = NULL;
-    note_event_create(make_id(id_value), make_temporal_anchor(1, 4), make_duration(1, 4), make_pitch("pitch-a"),
+    note_event_create(make_id(id_value), make_onset(1, 4), make_duration(1, 4), make_pitch("pitch-a"),
                        NULL, NULL, make_absent_provenance(), &note_event);
     return note_event;
 }
 
 /* Every failure path below returns before note_event_create takes
-   ownership of anything (src/events/note_event.c validates id,
-   temporal_anchor, duration, pitch, provenance in that order before any
-   assignment), so every argument that WAS successfully constructed for
-   a given call -- even ones that are not the null one under test -- is
-   still owned by the caller and must be destroyed here. */
+   ownership of anything (src/events/note_event.c validates id, pitch and
+   provenance before any assignment), so every pointer argument that WAS
+   successfully constructed for a given call -- even ones that are not the
+   null one under test -- is still owned by the caller and must be
+   destroyed here. The onset and the duration are values: nothing to free. */
 
 static void test_create_rejects_null_id(void) {
-    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
-    Duration *duration = make_duration(1, 4);
     PitchIdentity *pitch = make_pitch("pitch-a");
     ProvenanceReference *provenance = make_absent_provenance();
 
     NoteEvent *note_event = NULL;
     NoteEventResult r =
-        note_event_create(NULL, temporal_anchor, duration, pitch, NULL, NULL, provenance, &note_event);
+        note_event_create(NULL, make_onset(1, 4), make_duration(1, 4), pitch, NULL, NULL, provenance, &note_event);
     assert(r == NOTE_EVENT_ERR_NULL_ID);
     assert(note_event == NULL);
 
-    temporal_anchor_destroy(temporal_anchor);
-    duration_destroy(duration);
-    pitch_identity_destroy(pitch);
-    provenance_reference_destroy(provenance);
-}
-
-static void test_create_rejects_null_temporal_anchor(void) {
-    EntityID *id = make_id("note-1");
-    Duration *duration = make_duration(1, 4);
-    PitchIdentity *pitch = make_pitch("pitch-a");
-    ProvenanceReference *provenance = make_absent_provenance();
-
-    NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(id, NULL, duration, pitch, NULL, NULL, provenance, &note_event);
-    assert(r == NOTE_EVENT_ERR_NULL_TEMPORAL_ANCHOR);
-    assert(note_event == NULL);
-
-    entity_id_destroy(id);
-    duration_destroy(duration);
-    pitch_identity_destroy(pitch);
-    provenance_reference_destroy(provenance);
-}
-
-static void test_create_rejects_null_duration(void) {
-    EntityID *id = make_id("note-1");
-    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
-    PitchIdentity *pitch = make_pitch("pitch-a");
-    ProvenanceReference *provenance = make_absent_provenance();
-
-    NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(id, temporal_anchor, NULL, pitch, NULL, NULL, provenance, &note_event);
-    assert(r == NOTE_EVENT_ERR_NULL_DURATION);
-    assert(note_event == NULL);
-
-    entity_id_destroy(id);
-    temporal_anchor_destroy(temporal_anchor);
     pitch_identity_destroy(pitch);
     provenance_reference_destroy(provenance);
 }
 
 static void test_create_rejects_null_pitch(void) {
     EntityID *id = make_id("note-1");
-    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
-    Duration *duration = make_duration(1, 4);
     ProvenanceReference *provenance = make_absent_provenance();
 
     NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(id, temporal_anchor, duration, NULL, NULL, NULL, provenance, &note_event);
+    NoteEventResult r =
+        note_event_create(id, make_onset(1, 4), make_duration(1, 4), NULL, NULL, NULL, provenance, &note_event);
     assert(r == NOTE_EVENT_ERR_NULL_PITCH);
     assert(note_event == NULL);
 
     entity_id_destroy(id);
-    temporal_anchor_destroy(temporal_anchor);
-    duration_destroy(duration);
     provenance_reference_destroy(provenance);
 }
 
@@ -123,24 +80,24 @@ static void test_create_rejects_null_pitch(void) {
    provenance argument itself is never optional. */
 static void test_create_rejects_null_provenance(void) {
     EntityID *id = make_id("note-1");
-    TemporalAnchor *temporal_anchor = make_temporal_anchor(1, 4);
-    Duration *duration = make_duration(1, 4);
     PitchIdentity *pitch = make_pitch("pitch-a");
 
     NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(id, temporal_anchor, duration, pitch, NULL, NULL, NULL, &note_event);
+    NoteEventResult r =
+        note_event_create(id, make_onset(1, 4), make_duration(1, 4), pitch, NULL, NULL, NULL, &note_event);
     assert(r == NOTE_EVENT_ERR_NULL_PROVENANCE);
     assert(note_event == NULL);
 
     entity_id_destroy(id);
-    temporal_anchor_destroy(temporal_anchor);
-    duration_destroy(duration);
     pitch_identity_destroy(pitch);
 }
 
 static void test_create_accepts_minimal_valid(void) {
     NoteEvent *note_event = make_minimal_note_event("note-1");
     assert(note_event != NULL);
+    /* The event builds its own anchor at the onset and holds the duration as given. */
+    assert(musical_time_same(*temporal_anchor_position(note_event_temporal_anchor(note_event)), make_onset(1, 4)));
+    assert(duration_same(*note_event_duration(note_event), make_duration(1, 4)));
     assert(note_event_optional_pitch_spelling(note_event) == NULL);
     assert(note_event_optional_voice(note_event) == NULL);
     assert(provenance_reference_state(note_event_provenance(note_event)) == PROVENANCE_REFERENCE_ABSENT);
@@ -158,7 +115,7 @@ static void test_create_accepts_all_optional_fields_present(void) {
     provenance_reference_create_present(make_id("derivation-1"), &provenance);
 
     NoteEvent *note_event = NULL;
-    NoteEventResult r = note_event_create(make_id("note-1"), make_temporal_anchor(1, 4), make_duration(1, 4),
+    NoteEventResult r = note_event_create(make_id("note-1"), make_onset(1, 4), make_duration(1, 4),
                                            make_pitch("pitch-a"), spelling, voice, provenance, &note_event);
     assert(r == NOTE_EVENT_OK);
     assert(note_event_optional_pitch_spelling(note_event) != NULL);
@@ -169,14 +126,13 @@ static void test_create_accepts_all_optional_fields_present(void) {
 }
 
 /* duration >= 0 is Duration's own invariant (time/duration.h rejects a
-   negative numerator at duration_create); a caller cannot construct a
+   negative value at duration_make); a caller cannot construct a
    negative Duration to pass into note_event_create, so the invariant
    holds transitively without NoteEvent re-checking it. */
 static void test_duration_invariant_enforced_by_duration_type(void) {
-    Duration *negative = NULL;
-    DurationResult r = duration_create(-1, 4, &negative);
+    Duration negative;
+    DurationResult r = duration_make(-1, 4, &negative);
     assert(r == DURATION_ERR_NEGATIVE);
-    assert(negative == NULL);
 }
 
 /* optional_voice, when present, is typed as VoiceReference* -- the same
@@ -189,7 +145,7 @@ static void test_optional_voice_exposes_only_opaque_reference(void) {
     voice_reference_create(make_id("voice-1"), &voice);
 
     NoteEvent *note_event = NULL;
-    note_event_create(make_id("note-1"), make_temporal_anchor(1, 4), make_duration(1, 4), make_pitch("pitch-a"),
+    note_event_create(make_id("note-1"), make_onset(1, 4), make_duration(1, 4), make_pitch("pitch-a"),
                        NULL, voice, make_absent_provenance(), &note_event);
 
     const VoiceReference *stored_voice = note_event_optional_voice(note_event);
@@ -217,10 +173,32 @@ static void test_id_stable_under_round_trip(void) {
     note_event_destroy(note_event);
 }
 
+/* The notated tuplet is optional: none until set, any valid Tuplet ratio after, a refusal leaves the note as it was. */
+static void test_notated_tuplet(void) {
+    NoteEvent *note_event = make_minimal_note_event("note-tuplet");
+    unsigned actual = 99;
+    unsigned normal = 99;
+    assert(!note_event_tuplet(note_event, &actual, &normal));
+    assert(actual == 99 && normal == 99);
+
+    assert(note_event_set_tuplet(note_event, 5, 4) == NOTE_EVENT_OK);
+    assert(note_event_tuplet(note_event, &actual, &normal) && actual == 5 && normal == 4);
+    assert(note_event_tuplet(note_event, NULL, NULL));
+
+    assert(note_event_set_tuplet(note_event, 2, 3) == NOTE_EVENT_OK); /* a duplet */
+    assert(note_event_tuplet(note_event, &actual, &normal) && actual == 2 && normal == 3);
+
+    /* equal counts, a single note, and counts beyond the Tuplet bounds are not tuplets */
+    assert(note_event_set_tuplet(note_event, 3, 3) == NOTE_EVENT_ERR_BAD_TUPLET);
+    assert(note_event_set_tuplet(note_event, 1, 2) == NOTE_EVENT_ERR_BAD_TUPLET);
+    assert(note_event_set_tuplet(note_event, 3, 0) == NOTE_EVENT_ERR_BAD_TUPLET);
+    assert(note_event_set_tuplet(note_event, 65, 4) == NOTE_EVENT_ERR_BAD_TUPLET);
+    assert(note_event_tuplet(note_event, &actual, &normal) && actual == 2 && normal == 3);
+    note_event_destroy(note_event);
+}
+
 int main(void) {
     test_create_rejects_null_id();
-    test_create_rejects_null_temporal_anchor();
-    test_create_rejects_null_duration();
     test_create_rejects_null_pitch();
     test_create_rejects_null_provenance();
     test_create_accepts_minimal_valid();
@@ -228,5 +206,6 @@ int main(void) {
     test_duration_invariant_enforced_by_duration_type();
     test_optional_voice_exposes_only_opaque_reference();
     test_id_stable_under_round_trip();
+    test_notated_tuplet();
     return 0;
 }

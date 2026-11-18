@@ -6,7 +6,7 @@
     {
       "id": "omt.material.major", "kind": "material", "subtype": "unordered", "name": "major",
       "aliases": ["major scale", "ionian"],
-      "content": { "steps": [0, 2, 4, 5, 7, 9, 11], "family": "diatonic" },
+      "content": { "steps": [0, 2, 4, 5, 7, 9, 11], "family": "diatonic", "brightness_rank": 6, "key_word": "major" },
       "citations": [{ "source": "omt", "part": "I", "chapter": 12, "example": 1,
                       "note": "the major scale as the ascending succession whole, whole, half, whole, whole, whole, half" }],
       "status": "active",
@@ -17,7 +17,8 @@
     {
       "id": "omt.material.natural-minor", "kind": "material", "subtype": "unordered", "name": "natural minor",
       "aliases": ["natural minor scale", "aeolian", "minor"],
-      "content": { "steps": [0, 2, 3, 5, 7, 8, 10], "family": "diatonic" },
+      "content": { "steps": [0, 2, 3, 5, 7, 8, 10], "family": "diatonic", "brightness_rank": 3, "color_notes": ["b3", "b6", "b7"],
+                   "key_word": "minor" },
       "relations": [{ "type": "variant-of", "target": "omt.material.major" }],
       "citations": [{ "source": "omt", "part": "I", "chapter": 13, "example": 1,
                       "note": "the natural minor form: whole, half, whole, whole, half, whole, whole, the same both ways; minor keys and signatures are named from it" }],
@@ -46,6 +47,66 @@
       "status": "active",
       "examples": [{ "center": "G", "pitches": ["G", "A", "Bb", "C", "D", "E", "F#"],
                      "descending": ["G", "F", "Eb", "D", "C", "Bb", "A"] }],
+      "version": 1
+    },
+    {
+      "id": "omt.material.lydian", "kind": "material", "subtype": "unordered", "name": "lydian",
+      "content": { "steps": [0, 2, 4, 6, 7, 9, 11], "family": "diatonic", "brightness_rank": 7, "color_notes": ["#4"] },
+      "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
+      "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
+                      "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
+                    { "source": "omt", "part": "I", "chapter": 14, "example": 2,
+                      "note": "the lydian mode: the major scale with a raised fourth degree; the only mode with a brighter color than major" }],
+      "status": "active",
+      "examples": [{ "center": "C", "pitches": ["C", "D", "E", "F#", "G", "A", "B"] }],
+      "version": 1
+    },
+    {
+      "id": "omt.material.mixolydian", "kind": "material", "subtype": "unordered", "name": "mixolydian",
+      "content": { "steps": [0, 2, 4, 5, 7, 9, 10], "family": "diatonic", "brightness_rank": 5, "color_notes": ["b7"] },
+      "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
+      "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
+                      "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
+                    { "source": "omt", "part": "I", "chapter": 14, "example": 4,
+                      "note": "the mixolydian mode: the major scale with a lowered seventh degree" }],
+      "status": "active",
+      "examples": [{ "center": "C", "pitches": ["C", "D", "E", "F", "G", "A", "Bb"] }],
+      "version": 1
+    },
+    {
+      "id": "omt.material.dorian", "kind": "material", "subtype": "unordered", "name": "dorian",
+      "content": { "steps": [0, 2, 3, 5, 7, 9, 10], "family": "diatonic", "brightness_rank": 4, "color_notes": ["b3", "b7"] },
+      "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
+      "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
+                      "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
+                    { "source": "omt", "part": "I", "chapter": 14, "example": 5,
+                      "note": "the dorian mode: the major scale with lowered third and seventh degrees" }],
+      "status": "active",
+      "examples": [{ "center": "C", "pitches": ["C", "D", "Eb", "F", "G", "A", "Bb"] }],
+      "version": 1
+    },
+    {
+      "id": "omt.material.phrygian", "kind": "material", "subtype": "unordered", "name": "phrygian",
+      "content": { "steps": [0, 1, 3, 5, 7, 8, 10], "family": "diatonic", "brightness_rank": 2, "color_notes": ["b2", "b3", "b6", "b7"] },
+      "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
+      "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
+                      "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
+                    { "source": "omt", "part": "I", "chapter": 14, "example": 7,
+                      "note": "the phrygian mode: the major scale with lowered second, third, sixth and seventh degrees" }],
+      "status": "active",
+      "examples": [{ "center": "C", "pitches": ["C", "Db", "Eb", "F", "G", "Ab", "Bb"] }],
+      "version": 1
+    },
+    {
+      "id": "omt.material.locrian", "kind": "material", "subtype": "unordered", "name": "locrian",
+      "content": { "steps": [0, 1, 3, 5, 6, 8, 10], "family": "diatonic", "brightness_rank": 1, "color_notes": ["b2", "b3", "b5", "b6", "b7"] },
+      "relations": [{ "type": "rotation-of", "target": "omt.material.major" }],
+      "citations": [{ "source": "omt", "part": "I", "chapter": 14, "example": 1,
+                      "note": "the modes ranked from brightest to darkest, with each mode's altered degrees against the major scale" },
+                    { "source": "omt", "part": "I", "chapter": 14, "example": 8,
+                      "note": "the locrian mode: the major scale with every degree but the first, fourth and fifth lowered, the darkest of the seven" }],
+      "status": "active",
+      "examples": [{ "center": "C", "pitches": ["C", "Db", "Eb", "F", "Gb", "Ab", "Bb"] }],
       "version": 1
     }
   ]

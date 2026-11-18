@@ -29,6 +29,7 @@ add_library(ursatz_analysis
     harmony/analysis_six_four.c
     harmony/applied_chords.c
     harmony/chord_input.c
+    harmony/chord_reading.c
     harmony/harmonic_spans.c
     harmony/key_identification.c
     harmony/key_regions.c
@@ -134,6 +135,7 @@ ursatz_public_headers(ursatz_analysis
         analysis/harmony/progression_patterns.h
         analysis/harmony/roman_numeral_adapter.h
         analysis/harmony/weighted_chord_identification.h
+        analysis/harmony/chord_reading.h
         analysis/harmony/weighted_identification.h
         analysis/form/analysis_expansion.h
         analysis/form/analysis_ideas.h

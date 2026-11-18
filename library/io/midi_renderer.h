@@ -106,12 +106,12 @@ typedef struct {
 } MidiTrackName;
 
 /*
- * A marker meta-event (0xFF 0x06) in track 0 at position, text written as given. A NULL position or text is
+ * A marker meta-event (0xFF 0x06) in track 0 at position, text written as given. A NULL text is
  * MIDI_RENDER_ERR_NULL_ARG; a position that is negative or not a whole tick, or a text longer than 0x0FFFFFFF
  * bytes, is MIDI_RENDER_ERR_NOT_REPRESENTABLE.
  */
 typedef struct {
-    const MusicalTime *position;
+    MusicalTime position;
     const char *text;
 } MidiMarker;
 

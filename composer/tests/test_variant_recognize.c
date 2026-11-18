@@ -7,6 +7,7 @@
 #include <ursatz_composer/variant_registry.h>
 
 #include "util/request_parse.h"
+#include "support/test_knowledge.h"
 
 /*
  * The round trip of R-139: every variant the Composer makes is recovered. Four fixtures (a full motive in major, a full
@@ -61,6 +62,7 @@ static Motive load(const char *notes, const char *meter, const char *key, Motive
                    const MotiveOptions *extra) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     if (extra) {
         options = *extra;
     }
@@ -69,7 +71,7 @@ static Motive load(const char *notes, const char *meter, const char *key, Motive
         exit(2);
     }
     options.has_meter = true;
-    options.has_key = key && request_parse_key(key, &options.key);
+    options.has_key = key && request_parse_key(key, test_knowledge(), &options.key);
     Motive motive;
     MotiveError error;
     if (motive_load(notes, strlen(notes), format, &options, &motive, &error) != MOTIVE_OK) {
@@ -90,6 +92,7 @@ static void add_feature(MotiveOptions *options, const char *label, size_t first,
 static void make_fixtures(Fixture *fixtures) {
     MotiveOptions major;
     memset(&major, 0, sizeof(major));
+    major.knowledge = test_knowledge();
     add_feature(&major, "a", 0, 1);
     add_feature(&major, "b", 3, 4);
     fixtures[0].name = "full major";
@@ -97,6 +100,7 @@ static void make_fixtures(Fixture *fixtures) {
 
     MotiveOptions minor;
     memset(&minor, 0, sizeof(minor));
+    minor.knowledge = test_knowledge();
     minor.has_pickup = true;
     minor.pickup = (Rational){1, 4};
     add_feature(&minor, "a", 0, 1);

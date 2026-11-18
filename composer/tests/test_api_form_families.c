@@ -9,6 +9,7 @@
 #include "support/test_support.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 /*
  * The rows of the rondo and sonata forms in the piece document, one table and one test per family:
@@ -19,7 +20,8 @@
  * setting of its accompaniment, B1 is in the tonic major (C major in C major, A major in A minor) and R1 is home.
  *
  * sonata, the rows of a sonatina (P53 B3, R-525): B1 returns B at home, so in A minor its row names the copy across modes
- * (`changes.mode` "minor", the text `mode: mapped into minor`) and in C major it names none; E is in the elaboration key, F
+ * (`changes.material` "omt.material.natural-minor", the text `mode: mapped into minor`) and in C major it names none; E is in the
+ * elaboration key, F
  * major in both.
  */
 
@@ -104,9 +106,9 @@ static void check_sonata_rows(const cJSON *document, const ApiCase *row) {
     assert(strcmp(text(b1, "key"), row->b1_key) == 0);
     const cJSON *changes = member(b1, "changes");
     assert(cJSON_IsObject(changes) && strcmp(text(changes, "variation"), "reharmonize") == 0);
-    const cJSON *changed_mode = member(changes, "mode");
+    const cJSON *changed_mode = member(changes, "material");
     if (row->other) {
-        assert(cJSON_IsString(changed_mode) && strcmp(changed_mode->valuestring, row->other) == 0);
+        assert(cJSON_IsString(changed_mode) && strcmp(changed_mode->valuestring, "omt.material.natural-minor") == 0);
         if (!strstr(text(changes, "text"), "mode: mapped into minor")) {
             fprintf(stderr, "B1 text '%s'\n", text(changes, "text"));
         }
@@ -129,7 +131,7 @@ static void check(const ApiFamily *family, const ApiCase *row) {
              "\"key\": \"%s\", \"mode\": \"%s\", \"meter\": \"4/4\", \"bars\": %d, \"motive\": null}, \"seed\": 1}",
              family->form, row->key, row->mode, family->bars);
     ComposerResponse response;
-    ComposerStatus status = composer_api_piece(request, NULL, &response);
+    ComposerStatus status = composer_api_piece(test_context(), request, NULL, &response);
     if (status != COMPOSER_OK) {
         fprintf(stderr, "test_api_%s: %s: %s\n", family->name, test_status_name(status), response.error.message);
     }

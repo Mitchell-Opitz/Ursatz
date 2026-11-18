@@ -17,6 +17,7 @@
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -36,16 +37,16 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
 } Row;
 
-static const Row ROWS[] = {{"C major 3/4", 0, KEY_STRUCTURE_MODE_MAJOR, 3, 4},
-                           {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, 4},
-                           {"C major 2/4", 0, KEY_STRUCTURE_MODE_MAJOR, 2, 4},
-                           {"C major 6/8", 0, KEY_STRUCTURE_MODE_MAJOR, 6, 8},
-                           {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4}};
+static const Row ROWS[] = {{"C major 3/4", 0, HARMONY_MODE_MAJOR, 3, 4},
+                           {"A minor 3/4", 9, HARMONY_MODE_MINOR, 3, 4},
+                           {"C major 2/4", 0, HARMONY_MODE_MAJOR, 2, 4},
+                           {"C major 6/8", 0, HARMONY_MODE_MAJOR, 6, 8},
+                           {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4}};
 
 static FormSpec *load_form(void) {
     char path[1024];
@@ -67,7 +68,8 @@ static PiecePlan *compose(const FormSpec *form, const Row *row, unsigned long se
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(row->tonic, row->mode);
+    request.key = test_key_mode(row->tonic, row->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = (unsigned)row->beats;
     request.meter.beat_unit = (unsigned)row->unit;
     request.seed = seed;
@@ -79,6 +81,7 @@ static PiecePlan *compose(const FormSpec *form, const Row *row, unsigned long se
     }
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.form = form;
     *ran = compose_run(plan, &config, outcome);
@@ -289,7 +292,7 @@ static void test_round_trip(const FormSpec *form) {
     assert(text);
     assert(strstr(text, "\"liquidation\""));
     PiecePlan *parsed = NULL;
-    assert(plan_from_json(text, &parsed, &error) == PLAN_OK && parsed);
+    assert(plan_from_json(test_knowledge(), text, &parsed, &error) == PLAN_OK && parsed);
     char *again = plan_to_json(parsed, &error);
     assert(again && strcmp(text, again) == 0);
     free(text);
@@ -303,7 +306,8 @@ static PiecePlan *plan_of(const FormSpec *form, const Motive *motive, bool modul
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.seed = 1;
@@ -361,7 +365,7 @@ static void test_applies(const FormSpec *form) {
     snprintf(path, sizeof(path), "%s/rates/two-bar-3-4.json", COMPOSER_FIXTURE_DIR);
     char *motive_text = test_must_read_file(path, NULL);
     Motive motive;
-    assert(motive_text && motive_from_json(motive_text, NULL, &motive, NULL) == MOTIVE_OK);
+    assert(motive_text && motive_from_json(motive_text, test_motive_options(), &motive, NULL) == MOTIVE_OK);
     free(motive_text);
     plan = plan_of(form, &motive, false, &result);
     assert(result == PIECE_ERR_MOTIVE_TOO_LONG);

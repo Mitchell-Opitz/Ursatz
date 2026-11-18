@@ -88,8 +88,8 @@ static bool copy_markings(const MusicXmlImport *import, ImportedSource *source) 
         const TempoMarking *marking = import->tempo_markings[i];
         ImportedTempoMarking *copy = &source->tempo_markings[i];
         const MusicalTime *position = temporal_anchor_position(tempo_marking_temporal_anchor(marking));
-        copy->position_numerator = musical_time_numerator(position);
-        copy->position_denominator = musical_time_denominator(position);
+        copy->position_numerator = (long)position->value.num;
+        copy->position_denominator = (unsigned long)position->value.den;
         copy->part = import->tempo_marking_part[i];
         const MetronomeMarking *metronome = tempo_marking_metronome_marking(marking);
         if (metronome) {
@@ -118,10 +118,10 @@ static bool copy_markings(const MusicXmlImport *import, ImportedSource *source) 
         if (!span) {
             continue; /* the importer gives every dynamic a span; an entry without a marking is skipped later */
         }
-        copy->start_numerator = musical_time_numerator(time_span_start(span));
-        copy->start_denominator = musical_time_denominator(time_span_start(span));
-        copy->end_numerator = musical_time_numerator(time_span_end(span));
-        copy->end_denominator = musical_time_denominator(time_span_end(span));
+        copy->start_numerator = (long)span->start.value.num;
+        copy->start_denominator = (unsigned long)span->start.value.den;
+        copy->end_numerator = (long)span->end.value.num;
+        copy->end_denominator = (unsigned long)span->end.value.den;
         copy->part = import->dynamics_part[i];
         copy->staff = import->dynamics_staff[i];
         if (!(copy->marking = strdup(dynamics_marking(dynamics)))) {
@@ -201,12 +201,11 @@ MusicXmlPipelineResult musicxml_pipeline_import_file(const char *path, ImportedN
         }
     }
 
-    MusicalTime *end_time = notes_last_end((const NoteEvent *const *)import.events, import.count);
-    bool ok = end_time && take_key_signatures(&import, &notes.key_signature_events, &notes.key_signature) &&
+    MusicalTime end_time;
+    bool ok = notes_last_end((const NoteEvent *const *)import.events, import.count, &end_time) && take_key_signatures(&import, &notes.key_signature_events, &notes.key_signature) &&
               copy_parts(&import, &notes.source) &&
               copy_markings(&import, &notes.source);
     if (!ok) {
-        musical_time_destroy(end_time);
         midi_key_signature_events_destroy(&notes.key_signature_events);
         imported_notes_destroy(&notes);
         musicxml_import_destroy(&import);
@@ -219,7 +218,6 @@ MusicXmlPipelineResult musicxml_pipeline_import_file(const char *path, ImportedN
     notes.count = import.count;
     notes.streams = malloc((import.count > 0 ? import.count : 1) * sizeof *notes.streams);
     if (!notes.streams) {
-        musical_time_destroy(end_time);
         imported_notes_destroy(&notes);
         musicxml_import_destroy(&import);
         fprintf(stderr, "Error: out of memory importing '%s'\n", path);

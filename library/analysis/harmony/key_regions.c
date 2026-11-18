@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "model/pitch/pitch_arithmetic.h"
-#include "model/time/time_rational.h"
+#include "theory/tonality/common_practice_materials.h"
 
 CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void) {
     CommonPracticeKeyProfiles profiles = {
@@ -13,7 +13,7 @@ CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void) {
     return profiles;
 }
 
-CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) {
+CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(const CommonPracticeMaterials *materials) {
     CommonPracticeKeyRegionsConfig config;
     config.window_measures = 4;
     config.profiles = common_practice_krumhansl_kessler_profiles();
@@ -30,6 +30,7 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) 
     config.phrase_count = 0;
     config.repeats = NULL;
     config.repeat_count = 0;
+    config.materials = materials;
     return config;
 }
 
@@ -91,7 +92,6 @@ void common_practice_key_regions_destroy(CommonPracticeKeyRegions *regions) {
     }
     for (size_t i = 0; i < regions->region_count; i++) {
         key_destroy(regions->regions[i].key);
-        time_span_destroy(regions->regions[i].span);
     }
     free(regions->regions);
     free(regions->changes);
@@ -110,7 +110,10 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
     }
     CommonPracticeKeyRegionsConfig effective =
-        config != NULL ? *config : common_practice_key_regions_config_default();
+        config != NULL ? *config : common_practice_key_regions_config_default(NULL);
+    if (effective.materials == NULL) {
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG; /* the keys are made of the materials: a config carries them */
+    }
     CommonPracticeKeyRegionsStatus status = key_regions_validate_inputs(segments, segment_count, map, &effective);
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
         return status;
@@ -197,7 +200,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         for (size_t sp = 1; sp < plan.count; sp++) {
             fixed[plan.start[sp]] = true;
         }
-        key_regions_hold_home_keys(segments, segment_count, &measures, fixed, effective.hold_tolerance, measure_key);
+        key_regions_hold_home_keys(segments, segment_count, &measures, fixed, effective.hold_tolerance, measure_key, effective.materials);
     }
     if (status == COMMON_PRACTICE_KEY_REGIONS_OK && !phrase_mode && effective.phrase_boundary_count > 0) {
         size_t *slots = (size_t *)calloc(effective.phrase_boundary_count, sizeof(size_t));
@@ -291,9 +294,9 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
             }
             const CommonPracticeKeyRegion *into = &result.regions[change->to_region];
             status = key_regions_find_pivot(segments, segment_count, &measures, into->first_measure,
-                                time_span_start(into->span), result.regions[change->from_region].key_index,
+                                into->span.start, result.regions[change->from_region].key_index,
                                 into->key_index, effective.pivot_search_measures, phrase_mode, &change->has_pivot,
-                                &change->pivot_segment);
+                                &change->pivot_segment, effective.materials);
         }
     }
 
@@ -311,8 +314,9 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     return COMMON_PRACTICE_KEY_REGIONS_OK;
 }
 
-bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, AnalysisKey *out) {
-    if (region == NULL || out == NULL) {
+bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, const CommonPracticeMaterials *materials,
+                                             AnalysisKey *out) {
+    if (region == NULL || materials == NULL || out == NULL) {
         return false;
     }
     const char *name = common_practice_key_index_tonic_name(region->key_index);
@@ -326,18 +330,18 @@ bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *regi
     out->id = NULL;
     out->tonic_letter = letter;
     out->tonic_accidental = name[1] == '#' ? 1 : (name[1] == 'b' ? -1 : 0);
-    out->mode = common_practice_key_index_mode(region->key_index) == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR
-                                                                                              : KEY_STRUCTURE_MODE_MAJOR;
-    return true;
+    out->material = common_practice_material(materials, common_practice_key_index_mode(region->key_index));
+    return out->material != NULL;
 }
 
 bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *event, CommonPracticeKeySignatureEvent *out) {
-    if (event == NULL || out == NULL || event->time == NULL) {
+    if (event == NULL || out == NULL) {
         return false;
     }
     int fifths = pitch_spelling_fifths(event->key.tonic_letter, event->key.tonic_accidental);
-    if (event->key.mode == KEY_STRUCTURE_MODE_MINOR) {
-        fifths -= 3;
+    CommonPracticeKeyMode mode;
+    if (common_practice_key_mode_of(event->key.material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR) {
+        fifths -= 3; /* the minor tonic is three places down the line of fifths from its relative major */
     }
     if (fifths < -7 || fifths > 7) {
         return false;
@@ -348,14 +352,10 @@ bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *e
 }
 
 static bool region_duration(const CommonPracticeKeyRegion *region, Rational *out) {
-    Rational start;
-    Rational end;
-    if (region->span == NULL || region->key_index < 0 || region->key_index >= COMMON_PRACTICE_KEY_COUNT ||
-        rational_of_musical_time(time_span_start(region->span), &start) != RATIONAL_OK ||
-        rational_of_musical_time(time_span_end(region->span), &end) != RATIONAL_OK) {
+    if (region->key_index < 0 || region->key_index >= COMMON_PRACTICE_KEY_COUNT) {
         return false;
     }
-    return rational_sub(end, start, out) == RATIONAL_OK;
+    return rational_sub(region->span.end.value, region->span.start.value, out) == RATIONAL_OK;
 }
 
 bool common_practice_home_key_region(const CommonPracticeKeyRegion *regions, size_t count, size_t *home,

@@ -12,6 +12,7 @@
 #include "links/links_internal.h"
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Motive links over the four pieces of tests/fixtures/links: a (C major) and b (G major, a's motive transposed and augmented 2:1)
@@ -34,7 +35,7 @@ static bool analyze_fixtures(void) {
             fprintf(stderr, "cannot import %s\n", path);
             return false;
         }
-        if (!run_analysis_pipeline(&notes, &report)) {
+        if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
             fprintf(stderr, "cannot analyze %s\n", path);
             imported_notes_destroy(&notes);
             return false;
@@ -50,7 +51,7 @@ static bool analyze_fixtures(void) {
 }
 
 static MotiveLinkScope *scope_of(size_t count) {
-    MotiveLinkScope *scope = motive_link_scope_create();
+    MotiveLinkScope *scope = motive_link_scope_create(test_knowledge());
     for (size_t i = 0; scope && i < count; i++) {
         CHECK(motive_link_scope_add_document(scope, piece_ids[i], documents[i]) == MOTIVE_LINKS_OK);
     }
@@ -134,7 +135,7 @@ static void on_progress(size_t done, size_t total, void *context) {
 }
 
 static void check_scope_errors(void) {
-    MotiveLinkScope *scope = motive_link_scope_create();
+    MotiveLinkScope *scope = motive_link_scope_create(test_knowledge());
     CHECK(motive_link_scope_add_document(scope, "a.musicxml", documents[0]) == MOTIVE_LINKS_OK);
     CHECK(motive_link_scope_add_document(scope, "a.musicxml", documents[0]) == MOTIVE_LINKS_ERR_ARGUMENT);
     CHECK(motive_link_scope_add_document(scope, "x", "not json") == MOTIVE_LINKS_ERR_FORMAT);
@@ -157,7 +158,7 @@ static void check_scope_errors(void) {
     cJSON_free(stripped);
 
     /* a piece without motives is a piece without families */
-    CHECK(motive_link_scope_add_document(scope, "empty", "{\"schema_version\": 12, \"motives\": []}") ==
+    CHECK(motive_link_scope_add_document(scope, "empty", "{\"schema_version\": 13, \"motives\": []}") ==
           MOTIVE_LINKS_OK);
     CHECK(scope->piece_count == 3);
     CHECK(scope->family_count == 2);

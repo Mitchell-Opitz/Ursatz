@@ -14,6 +14,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/variations.h>
+#include "support/test_knowledge.h"
 
 /*
  * Variations and harmonizations (variations.h, R-088). Each mode is one ctest entry:
@@ -43,7 +44,8 @@ static PieceRequest request(const char * form) {
     memset(&request, 0, sizeof(request));
     request.form = form;
     request.bars = strcmp(form, "rounded-binary") == 0 ? 24 : 0;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     return request;
@@ -52,6 +54,7 @@ static PieceRequest request(const char * form) {
 static ComposeConfig config_of(unsigned long seed) {
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     return config;
 }
@@ -230,6 +233,7 @@ static PiecePlan *with_given_melody(unsigned long seed) {
     Motive melody;
     MotiveError error;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;

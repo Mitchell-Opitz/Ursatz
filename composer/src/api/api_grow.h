@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <cJSON.h>
+#include <theory/tonality/common_practice_materials.h>
 
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/composer_api.h>
@@ -33,7 +34,7 @@
 typedef struct {
     ComposerRatio tempo;      /* a denominator of 0 for none */
     const char *tempo_from;   /* "option", "style" or "none" */
-    bool minor;               /* the key's mode */
+    const PitchMaterial *material; /* the key's material */
     const char *mode_from;    /* "request" or "style" */
     bool has_density;         /* the style's density (attacks per beat) */
     ComposerRatio density;
@@ -67,7 +68,8 @@ typedef struct {
     const char *into;
     const char *hybrid;
     const char *key;
-    const char *mode;
+    const char *material;        /* a material word or "style"; NULL for none */
+    const char *material_member; /* "material" or the old "mode", for the path of a refusal */
     const char *meter;
     const char *bars;
     const char *cadence;
@@ -126,6 +128,8 @@ typedef struct {
     const GrowFidelityTable *fidelity;       /* NULL for the defaults; not owned */
     const MelodyFillParams *melody;          /* NULL for the defaults; not owned */
     const ComposerJob *job;
+    const KnowledgeSnapshot *knowledge;      /* the call context's; required, must outlive the run */
+    const CommonPracticeMaterials *materials; /* its materials, resolved once for the call; read by api_grow_read_brief */
 } GrowSetup;
 
 /* A theme made, with what the output of it needs. */
@@ -223,8 +227,9 @@ ComposerStatus api_style_without_add(const char **names, size_t *count, size_t c
 /* --- seeding from a corpus ---------------------------------------------------------------------------- */
 
 /* The motive of a corpus passage like the passage file like_path, in the meter and key. */
-ComposerStatus api_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
-                               unsigned long seed, CorpusSeed *out, ComposerError *error);
+ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const char *corpus_dir, const char *like_path,
+                               const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out,
+                               ComposerError *error);
 /* The seed as the plan records it. */
 ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error);
 /* "3 stale documents in '<dir>' (analyzed by another version; run the corpus again)", or "" when none is stale. */

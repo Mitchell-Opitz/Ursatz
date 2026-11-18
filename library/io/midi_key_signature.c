@@ -115,7 +115,6 @@ void midi_key_signature_events_destroy(MidiKeySignatureEvents *events) {
     }
     for (size_t i = 0; i < events->count; i++) {
         key_signature_destroy(events->events[i].key_signature);
-        musical_time_destroy(events->events[i].position);
     }
     free(events->events);
     events->events = NULL;
@@ -172,7 +171,7 @@ MidiKeySignatureScanAllResult midi_key_signature_collector_finish(MidiKeySignatu
                 failure = MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_ALLOC;
                 break;
             }
-            if (musical_time_create((long)event->tick, denominator, &entry->position) != MUSICAL_TIME_OK) {
+            if (musical_time_make((long)event->tick, (long long)denominator, &entry->position) != MUSICAL_TIME_OK) {
                 key_signature_destroy(entry->key_signature);
                 entry->key_signature = NULL;
                 failure = MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_ALLOC;

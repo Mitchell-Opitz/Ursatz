@@ -190,9 +190,14 @@ static size_t count_given(const PiecePlan *plan, size_t *nodes) {
     return spans;
 }
 
-ComposerStatus composer_api_lock(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_lock(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out) {
     (void)job;
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = NULL;
     char *text = NULL;
     PiecePlan *plan = NULL;
@@ -204,10 +209,10 @@ ComposerStatus composer_api_lock(const char *request_json, const ComposerJob *jo
         status = api_read_target(root, &target, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_read_plan_text(root, "plan", &text, &out->error);
+        status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_plan_from_text(text, "plan", &plan, &out->error);
+        status = api_plan_from_text(context->knowledge, text, "plan", &plan, &out->error);
     }
     if (status == COMPOSER_OK) {
         status = api_target_list(plan, &target, &targets, &target_count, &out->error);

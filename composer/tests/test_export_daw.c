@@ -15,6 +15,8 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/render.h>
+#include "support/test_knowledge.h"
+#include "model/pitch/pitch_material.h"
 
 /*
  * The DAW-friendly export (export.h, R-087): a filled rounded binary (24 bars, C major 4/4, seed 3) exported with
@@ -103,11 +105,13 @@ static PiecePlan *filled_rounded_binary(void) {
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
     request.bars = 24;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 3;
     PiecePlan *plan = NULL;
     ComposeOutcome outcome;
@@ -119,9 +123,9 @@ static PiecePlan *filled_rounded_binary(void) {
 
 static bool same_event(const NoteEvent *a, long pitch_a, const NoteEvent *b, long pitch_b) {
     return pitch_a == pitch_b &&
-           musical_time_equals(temporal_anchor_position(note_event_temporal_anchor(a)),
-                               temporal_anchor_position(note_event_temporal_anchor(b))) &&
-           duration_equals(note_event_duration(a), note_event_duration(b));
+           musical_time_same(*temporal_anchor_position(note_event_temporal_anchor(a)),
+                             *temporal_anchor_position(note_event_temporal_anchor(b))) &&
+           duration_same(*note_event_duration(a), *note_event_duration(b));
 }
 
 static bool has_name(const TrackMeta *track, const char *name) {
@@ -229,8 +233,8 @@ static void test_plain(const RenderedPlan *rendered) {
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].position = rendered->keys[i].position;
         keys[i].sharps_flats = (int8_t)rendered->keys[i].sharps_flats;
-        keys[i].mode_byte = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 0;
-        keys[i].mode_hint = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
+        keys[i].mode_byte = pitch_material_third(rendered->keys[i].material) == 3 ? 1 : 0;
+        keys[i].mode_hint = pitch_material_third(rendered->keys[i].material) == 3 ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     }
     unsigned char *old = NULL;
     size_t old_size = 0;

@@ -124,7 +124,7 @@ typedef struct {
 typedef struct {
     StandardFormPhraseClaim claim;
     double uncertainty;
-    TimeSpan *span;                 /* owned: the phrase's time span, the extension included */
+    TimeSpan span;                  /* the phrase's time span, the extension included */
     PhraseOccurrence *occurrence;   /* owned: the kernel's PhraseOccurrence */
     Interpretation *interpretation; /* owned; targets the occurrence's id */
 } StandardFormPhrase;

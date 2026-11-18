@@ -8,12 +8,14 @@
 #include <ursatz_composer/regenerate.h>
 
 #include "texture/texture_internal.h"
+#include "util/plan_util.h"
+#include "util/util.h"
 
 /* The fewest semitones a voice moves per chord change, on average, for the candidate to score for it. */
 #define SMOOTH_LIMIT 3
 
 AccompanimentParams accompaniment_params_default(void) {
-    AccompanimentParams params = {ACCOMPANIMENT_DEFAULT_CANDIDATES};
+    AccompanimentParams params = {ACCOMPANIMENT_DEFAULT_CANDIDATES, NULL};
     return params;
 }
 
@@ -58,15 +60,15 @@ bool accomp_chord_tones(const AnalysisKey *key, const PhraseChord *chord, int pc
         if (!harmony_applied_intervals(&chord->applied_chord, intervals, count)) {
             return false;
         }
-        root = harmony_applied_root_semitone(harmony_mode_of(key->mode), &chord->applied_chord);
+        root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
     } else {
-        if (!harmony_diatonic_intervals(key->mode, &chord->chord, intervals, count)) {
+        if (!harmony_diatonic_intervals(harmony_key_mode(key), &chord->chord, intervals, count)) {
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = key->mode == KEY_STRUCTURE_MODE_MINOR && chord->chord.leading_tone
+        root = composer_key_is_minor(key) && chord->chord.leading_tone
                    ? 11
-                   : harmony_applied_scale_semitone(harmony_mode_of(key->mode), chord->chord.degree);
+                   : harmony_applied_scale_semitone(harmony_key_mode(key), chord->chord.degree);
     }
     if (root < 0 || *count < 3) {
         return false;
@@ -214,13 +216,23 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
         constraint.params.accompaniment.high ? constraint.params.accompaniment.high : PLAN_ACCOMPANIMENT_DEFAULT_HIGH;
 
     /* The chords tile the target, all written. */
-    if (!harmony_read_lane(plan, out->span, out->key.mode, chords, &count, &metre) || count == 0 ||
+    if (!harmony_read_lane(plan, out->span, harmony_key_mode(&out->key), chords, &count, &metre) || count == 0 ||
         count > HARMONY_MAX_CHORDS ||
         plan_lane_find(plan, PLAN_LANE_HARMONY, 0, out->span, harmony, HARMONY_MAX_CHORDS) != count) {
         return false;
     }
     out->meter = metre.meter;
-    out->compound = out->meter.beat_unit == 8 && out->meter.beats_per_bar >= 6 && out->meter.beats_per_bar % 3 == 0;
+    TimeSignature *signature = NULL;
+    Duration beat_length;
+    if (!plan_meter_signature(out->meter, &signature)) {
+        return false;
+    }
+    out->compound = time_signature_is_compound(signature);
+    DurationResult beat_made = time_signature_beat_length(signature, &beat_length);
+    time_signature_destroy(signature);
+    if (beat_made != DURATION_OK) {
+        return false;
+    }
     size_t cells = 0;
     out->length = out->span.length;
     origin = out->span.start;
@@ -230,7 +242,7 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
         out->meter.beat_unit <= 0) {
         return false;
     }
-    out->beat = out->compound ? rational_ratio(3, 8) : rational_ratio(1, out->meter.beat_unit);
+    out->beat = beat_length.value;
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, out->span, meters, 2) != 1) {
         return false;
     }
@@ -274,7 +286,8 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
 
 /* ------------------------------------------------------------ judging */
 
-void accomp_judge(const AccompContext *context, const AccompCandidate *candidate, AccompVerdict *verdict) {
+void accomp_judge(const AccompContext *context, const KnowledgeSnapshot *knowledge, const AccompCandidate *candidate,
+                  AccompVerdict *verdict) {
     memset(verdict, 0, sizeof(*verdict));
     for (size_t voice = 0; voice < ACCOMP_VOICES && !verdict->hard; voice++) {
         for (size_t n = 0; n < candidate->note_count[voice] && !verdict->hard; n++) {
@@ -333,7 +346,7 @@ void accomp_judge(const AccompContext *context, const AccompCandidate *candidate
     if (context->texture >= 0) {
         bool heard = false;
         verdict->total++;
-        verdict->held += accomp_hear(context, candidate, &heard) && heard ? 1 : 0;
+        verdict->held += accomp_hear(context, knowledge, candidate, &heard) && heard ? 1 : 0;
     }
 }
 
@@ -415,7 +428,7 @@ static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng 
         if (!accomp_build(read, allowed[(first + attempt) % allowed_count], rng, scratch)) {
             continue;
         }
-        accomp_judge(read, scratch, &verdict);
+        accomp_judge(read, params ? params->knowledge : NULL, scratch, &verdict);
         if (verdict.hard) {
             continue;
         }
@@ -516,7 +529,8 @@ bool accompaniment_checker(const PiecePlan *plan, FillTarget target, const FillO
     memset(out, 0, sizeof(*out));
     out->score_denominator = 1;
     if (ok) {
-        accomp_judge(read, accompaniment, &verdict);
+        const AccompanimentParams *params = operator_->context;
+        accomp_judge(read, params ? params->knowledge : NULL, accompaniment, &verdict);
         out->hard_violation = verdict.hard != NULL;
         if (verdict.hard) {
             snprintf(out->reason, sizeof(out->reason), "%s", verdict.hard);

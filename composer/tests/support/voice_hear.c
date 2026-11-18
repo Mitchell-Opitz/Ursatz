@@ -86,8 +86,7 @@ static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
 static int scale_degree(const AnalysisKey *key, int pitch) {
     int degree = 1;
     int alteration;
-    util_scale_degree(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, pitch, &degree,
-                      &alteration);
+    util_scale_degree(analysis_key_tonic_pitch_class(key), key->material, pitch, &degree, &alteration);
     return degree;
 }
 
@@ -97,7 +96,7 @@ static PitchSpelling *spell_over(const AnalysisKey *key, const PhraseChord *chor
     size_t count;
     int root_degree;
     if (accomp_chord_tones(key, chord, pcs, &count)) {
-        root_degree = chord->applied ? harmony_applied_root_degree(harmony_mode_of(key->mode), &chord->applied_chord)
+        root_degree = chord->applied ? harmony_applied_root_degree(harmony_key_mode(key), &chord->applied_chord)
                                      : chord->chord.degree;
         for (size_t k = 0; root_degree >= 1 && root_degree <= 7 && k < count; k++) {
             if (pcs[k] == pitch % 12) {
@@ -184,7 +183,7 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
         return VOICE_HEAR_ERR_NOT_WRITTEN;
     }
     if (!harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, span, &key) ||
-        !harmony_read_lane(plan, span, key.mode, chords, &count, &metre) || count == 0 ||
+        !harmony_read_lane(plan, span, harmony_key_mode(&key), chords, &count, &metre) || count == 0 ||
         plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, harmony, HARMONY_MAX_CHORDS) != count) {
         return VOICE_HEAR_ERR_UNREADABLE;
     }
@@ -234,7 +233,7 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
     if (result == VOICE_HEAR_OK) {
         StandardCounterpointVoiceGrid counterpoint = {count, VOICES, grid->row_id_ptrs, grid->counterpoint_cells};
         HarmonyVoiceGrid harmony_grid = {count, VOICES, grid->segment_id_ptrs, grid->harmony_cells};
-        HeardPhrase phrase = {chords, count, key.mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, false, NULL,
+        HeardPhrase phrase = {chords, count, harmony_key_mode(&key), CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, false, NULL,
                               false,  false, NULL, NULL, false, &metre};
         result = count_violations(&counterpoint, &harmony_grid, &phrase, out);
         out->rows = count;

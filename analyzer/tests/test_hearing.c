@@ -16,6 +16,7 @@
 #include "pipeline/analysis_result_internal.h"
 #include "style/style_profile_internal.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The hearing entry and the style reference (composer_api.h) on the five reference pieces:
@@ -43,6 +44,12 @@ typedef struct {
    0, 8, 8, 8, 2 (were 2, 9, 7, 8, 3) and with spans 0, 16, 4, 9, 0 (were 0, 15, 4, 9, 1); the entries did not move. */
 static const Reading WITHOUT_SPANS[] = {{155, 0}, {606, 8}, {205, 8}, {268, 8}, {169, 2}};
 static const Reading WITH_SPANS[] = {{54, 0}, {210, 16}, {46, 4}, {107, 9}, {82, 0}};
+
+/* The material of a key the test hears: NULL without a key. */
+static const PitchMaterial *key_material_of(bool has_key, bool is_minor) {
+    return has_key ? knowledge_snapshot_material(test_knowledge(), is_minor ? "omt.material.natural-minor" : "omt.material.major")
+                   : NULL;
+}
 
 static int tonic_of(const ImportedNotes *notes) {
     int fifths = notes->key_signature.sharps_flats;
@@ -112,20 +119,21 @@ static void check_arguments(const AnalyzerHearing *hearing) {
     AnalyzerResult *result = (AnalyzerResult *)1;
     AnalyzerHearing no_midi = *hearing;
     no_midi.midi = NULL;
-    CHECKF(analyzer_hear(&no_midi, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no midi");
-    CHECKF(analyzer_hear(NULL, NULL, &result) == ANALYZER_ERR_ARGUMENT, "no hearing");
-    CHECKF(analyzer_hear(hearing, NULL, NULL) == ANALYZER_ERR_ARGUMENT, "no out");
+    CHECKF(analyzer_hear(&no_midi, test_hearing_defaults(), &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no midi");
+    CHECKF(analyzer_hear(NULL, test_hearing_defaults(), &result) == ANALYZER_ERR_ARGUMENT, "no hearing");
+    CHECKF(analyzer_hear(hearing, test_hearing_defaults(), NULL) == ANALYZER_ERR_ARGUMENT, "no out");
     int *bad = malloc(hearing->count * sizeof *bad);
     memcpy(bad, hearing->midi, hearing->count * sizeof *bad);
     bad[0] = 200;
     AnalyzerHearing out_of_range = *hearing;
     out_of_range.midi = bad;
-    CHECKF(analyzer_hear(&out_of_range, NULL, &result) == ANALYZER_ERR_ARGUMENT, "midi 200");
+    CHECKF(analyzer_hear(&out_of_range, test_hearing_defaults(), &result) == ANALYZER_ERR_ARGUMENT, "midi 200");
     free(bad);
     AnalyzerHearing bad_key = *hearing;
     bad_key.has_key = true;
+    bad_key.key_material = knowledge_snapshot_material(test_knowledge(), "omt.material.major");
     bad_key.key_tonic_pitch_class = 12;
-    CHECKF(analyzer_hear(&bad_key, NULL, &result) == ANALYZER_ERR_ARGUMENT, "tonic 12");
+    CHECKF(analyzer_hear(&bad_key, test_hearing_defaults(), &result) == ANALYZER_ERR_ARGUMENT, "tonic 12");
 }
 
 static bool same_violations(const AnalyzerViolation *a, const AnalyzerViolation *b, size_t count) {
@@ -182,19 +190,19 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
                                notes.meter.meter_map,
                                notes.key_signature.found,
                                tonic_of(&notes),
-                               notes.key_signature.is_minor,
+                               key_material_of(notes.key_signature.found, notes.key_signature.is_minor),
                                notes.streams};
 
     /* The events are the caller's. */
     AnalyzerResult *heard = NULL;
-    CHECKF(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "%s: hear", fixture);
+    CHECKF(analyzer_hear(&hearing, test_hearing_defaults(), &heard) == ANALYZER_OK && heard, "%s: hear", fixture);
     if (heard) {
         const AnalysisReport *report = analyzer_result_report(heard);
         CHECKF(report->entry_count == WITH_SPANS[piece].entries && report->cadence_count == WITH_SPANS[piece].cadences,
                "%s: default hearing %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
                report->cadence_count, WITH_SPANS[piece].entries, WITH_SPANS[piece].cadences);
     }
-    AnalyzerHearingOptions no_spans = analyzer_hearing_options_default();
+    AnalyzerHearingOptions no_spans = test_hearing_options();
     no_spans.analysis.harmonic_spans = false;
     AnalyzerResult *unspanned = NULL;
     CHECKF(analyzer_hear(&hearing, &no_spans, &unspanned) == ANALYZER_OK && unspanned, "%s: hear without spans", fixture);
@@ -206,7 +214,7 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     }
     analyzer_result_destroy(unspanned);
     AnalyzerResult *direct = NULL;
-    CHECKF(analyzer_analyze(&notes, NULL, &direct) == ANALYZER_OK && direct, "%s: analyze", fixture);
+    CHECKF(analyzer_analyze(&notes, test_analyzer_defaults(), &direct) == ANALYZER_OK && direct, "%s: analyze", fixture);
     if (!heard || !direct) {
         free(midi);
         imported_notes_destroy(&notes);
@@ -227,7 +235,7 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
 
     /* The document of a second hearing of the same events (the notes carry no file source). */
     AnalyzerResult *rendered = NULL;
-    CHECKF(analyzer_hear(&hearing, NULL, &rendered) == ANALYZER_OK && rendered, "%s: hear again", fixture);
+    CHECKF(analyzer_hear(&hearing, test_hearing_defaults(), &rendered) == ANALYZER_OK && rendered, "%s: hear again", fixture);
     char *json = rendered ? analysis_document_render_result("<fragment>", rendered) : NULL;
     /* The result's profile equals the profile of its document. */
     StyleProfile *from_result = style_profile_create();
@@ -281,7 +289,7 @@ int main(int argc, char **argv) {
     StyleModel *model = NULL;
     AnalyzerResult *result = NULL;
     if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK &&
-        analyzer_analyze(&notes, NULL, &result) == ANALYZER_OK) {
+        analyzer_analyze(&notes, test_analyzer_defaults(), &result) == ANALYZER_OK) {
         char *json = analysis_document_render_result("<fragment>", result);
         model = json ? model_of_document(json, file) : NULL;
         free(json);

@@ -3,9 +3,9 @@
 #include <math.h>
 
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/pitch/midi_pitch.h"
 #include "theory/tonality/tonal_key.h"
+#include "theory/tonality/common_practice_materials.h"
 
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     CommonPracticeWeightedConfig config;
@@ -24,6 +24,7 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.weigh_resolved_accents = false;
     config.classifier = NULL;
     config.classifier_context = NULL;
+    config.materials = NULL;
     return config;
 }
 
@@ -54,7 +55,7 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
     int bass_pitch = -1;
     bool have_bass = false;
     for (size_t i = 0; i < count; i++) {
-        if (!(members[i].duration > 0.0) || !isfinite(members[i].duration) ||
+        if (rational_cmp(members[i].duration, rational_ratio(0, 1)) <= 0 ||
             (!members[i].held && !beat_strength_valid(members[i].strength))) {
             return COMMON_PRACTICE_WEIGHTED_ERR_BAD_MEMBER;
         }
@@ -78,7 +79,7 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
             continue;
         }
         double factor = members[i].held ? config->held_factor : config->strength_factor[members[i].strength];
-        double weight = members[i].duration * factor;
+        double weight = rational_to_double(members[i].duration) * factor;
         if (pitch_class_of_midi(members[i].pitch) == pitch_class_of_midi(bass_pitch)) {
             weight *= config->bass_weight;
         }
@@ -266,18 +267,18 @@ static bool entry_holds(const VocabularyEntry *entry, int root, int pitch_class)
 
 /* The pitch classes above the tonic that belong to the key (applied chords need a tone outside them): the major scale;
    in minor the natural minor scale and its raised sixth and seventh. */
-static unsigned key_scale_mask(CommonPracticeKeyMode mode) {
+static unsigned key_scale_mask(const CommonPracticeMaterials *materials, CommonPracticeKeyMode mode) {
     if (mode == COMMON_PRACTICE_KEY_MAJOR) {
-        return standard_tonality_mode_pitch_classes(0, STANDARD_TONALITY_MODE_MAJOR);
+        return standard_tonality_material_pitch_classes(0, materials->major);
     }
-    return standard_tonality_mode_pitch_classes(0, STANDARD_TONALITY_MODE_NATURAL_MINOR) |
-           standard_tonality_mode_pitch_classes(0, STANDARD_TONALITY_MODE_MELODIC_MINOR);
+    return standard_tonality_material_pitch_classes(0, materials->natural_minor) |
+           standard_tonality_material_pitch_classes(0, materials->melodic_minor);
 }
 
 /* True when the entry, rooted at pitch class `root`, may be ranked on its own merits (the bass aside): its root sounds
    and, for an applied chord, a tone outside the key sounds too. */
 static bool entry_eligible(const VocabularyEntry *entry, int root, int tonic_pitch_class, CommonPracticeKeyMode mode,
-                           const CommonPracticeWeights *weights) {
+                           const CommonPracticeWeights *weights, const CommonPracticeMaterials *materials) {
     if (weights->pitch_class[root] <= 0.0) {
         return false; /* the root does not sound: not a reading the notes support */
     }
@@ -290,7 +291,7 @@ static bool entry_eligible(const VocabularyEntry *entry, int root, int tonic_pit
     chord.seventh = entry->seventh;
     int intervals[4];
     size_t count = common_practice_ranked_chord_intervals(&chord, intervals);
-    unsigned scale = key_scale_mask(mode);
+    unsigned scale = key_scale_mask(materials, mode);
     for (size_t i = 0; i < count; i++) {
         int pitch_class = (root + intervals[i]) % 12;
         if ((scale & (1u << ((pitch_class - tonic_pitch_class + 12) % 12))) == 0 && weights->pitch_class[pitch_class] > 0.0) {
@@ -311,6 +312,9 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     if (!config_valid(config)) {
         return COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG;
     }
+    if (config->applied_chords && config->materials == NULL) {
+        return COMMON_PRACTICE_WEIGHTED_ERR_BAD_CONFIG; /* the applied chords read the scale of the key's materials */
+    }
     if (mode != COMMON_PRACTICE_KEY_MAJOR && mode != COMMON_PRACTICE_KEY_MINOR) {
         return COMMON_PRACTICE_WEIGHTED_ERR_UNSUPPORTED_MODE;
     }
@@ -326,6 +330,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
                           : mode == COMMON_PRACTICE_KEY_MAJOR ? COMMON_PRACTICE_MAJOR_APPLIED_COUNT
                                                               : COMMON_PRACTICE_MINOR_APPLIED_COUNT;
     size_t entry_count = vocabulary_size + applied_size;
+    const CommonPracticeMaterials *materials = config->materials;
 
     /* Holding the bass is required only when some candidate the call ranks can: otherwise every candidate stays eligible. */
     bool bass_required = false;
@@ -333,7 +338,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
         for (size_t k = 0; k < entry_count && !bass_required; k++) {
             const VocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
             int root = (tonic_pitch_class + entry->offset) % 12;
-            bass_required = entry_eligible(entry, root, tonic_pitch_class, mode, weights) &&
+            bass_required = entry_eligible(entry, root, tonic_pitch_class, mode, weights, materials) &&
                             entry_holds(entry, root, weights->bass_pitch_class);
         }
     }
@@ -343,7 +348,7 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
     for (size_t k = 0; k < entry_count; k++) {
         const VocabularyEntry *entry = k < vocabulary_size ? &vocabulary[k] : &applied[k - vocabulary_size];
         int root = (tonic_pitch_class + entry->offset) % 12;
-        if (!entry_eligible(entry, root, tonic_pitch_class, mode, weights)) {
+        if (!entry_eligible(entry, root, tonic_pitch_class, mode, weights, materials)) {
             continue; /* the root does not sound (or no tone outside the key does, for an applied chord) */
         }
         if (bass_required && !entry_holds(entry, root, weights->bass_pitch_class)) {
@@ -417,22 +422,16 @@ unsigned common_practice_ranked_chord_mask(const CommonPracticeRankedChord *chor
     return mask;
 }
 
-bool common_practice_member_from_analysis_note(const AnalysisNote *note, const TimeSpan *segment, BeatStrength strength,
+bool common_practice_member_from_analysis_note(const AnalysisNote *note, TimeSpan segment, BeatStrength strength,
                                                CommonPracticeMember *out) {
-    if (note == NULL || segment == NULL || out == NULL || !analysis_note_valid(note) ||
+    if (note == NULL || out == NULL || !analysis_note_valid(note) ||
         note->midi == ANALYSIS_PITCH_UNKNOWN) {
         return false;
     }
-    Rational onset;
-    Rational release;
-    Rational from;
-    Rational to;
-    if (rational_of_musical_time(time_span_start(note->span), &onset) != RATIONAL_OK ||
-        rational_of_musical_time(time_span_end(note->span), &release) != RATIONAL_OK ||
-        rational_of_musical_time(time_span_start(segment), &from) != RATIONAL_OK ||
-        rational_of_musical_time(time_span_end(segment), &to) != RATIONAL_OK) {
-        return false;
-    }
+    Rational onset = note->span.start.value;
+    Rational release = note->span.end.value;
+    Rational from = segment.start.value;
+    Rational to = segment.end.value;
     Rational start = rational_cmp(onset, from) > 0 ? onset : from;
     Rational stop = rational_cmp(release, to) < 0 ? release : to;
     Rational overlap;
@@ -442,10 +441,10 @@ bool common_practice_member_from_analysis_note(const AnalysisNote *note, const T
     out->note_id = note->note_id;
     out->pitch = note->midi;
     out->held = rational_cmp(onset, from) < 0;
-    out->duration = rational_to_double(overlap);
+    out->duration = overlap;
     out->strength = strength;
     out->voice_id = note->voice_id;
-    out->onset = rational_to_double(onset);
+    out->onset = onset;
     out->resolves_in_segment = false;
     return true;
 }

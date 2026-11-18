@@ -11,6 +11,7 @@
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
+#include "test_knowledge.h"
 
 /*
  * Chord coverage: the fraction of the piece's sounding notes, by duration,
@@ -50,8 +51,8 @@ static double as_double(long numerator, unsigned long denominator) {
 static double sounding_inside(const NoteEvent *note, double start, double end) {
     const MusicalTime *onset_time = temporal_anchor_position(note_event_temporal_anchor(note));
     const Duration *length = note_event_duration(note);
-    double onset = as_double(musical_time_numerator(onset_time), musical_time_denominator(onset_time));
-    double release = onset + as_double((long)duration_numerator(length), duration_denominator(length));
+    double onset = as_double(onset_time->value.num, onset_time->value.den);
+    double release = onset + as_double((long)length->value.num, length->value.den);
     double from = onset > start ? onset : start;
     double to = release < end ? release : end;
     return to > from ? to - from : 0.0;
@@ -102,7 +103,7 @@ int main(int argc, char **argv) {
         ImportedNotes notes;
         assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
         AnalysisReport report;
-        assert(run_analysis_pipeline(&notes, &report));
+        assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
 
         size_t matched_chords = 0;
         double fraction = coverage(&notes, &report, &matched_chords);

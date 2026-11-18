@@ -1,6 +1,6 @@
 {
   "format": "ursatz-composer-plan",
-  "format_version": 2,
+  "format_version": 3,
   "metadata": {
     "composer_version": "",
     "ursatz_commit": ""
@@ -61,7 +61,7 @@
         "constraints": [],
         "payload": {
           "tonic": "D",
-          "mode": "minor"
+          "material": "omt.material.natural-minor"
         }
       }
     }],
@@ -666,7 +666,7 @@
             }, {
               "kind": "key",
               "tonic": "D",
-              "mode": "minor"
+              "material": "omt.material.natural-minor"
             }, {
               "kind": "section_letter",
               "letter": "I"
@@ -861,7 +861,7 @@
             }, {
               "kind": "key",
               "tonic": "D",
-              "mode": "minor"
+              "material": "omt.material.natural-minor"
             }, {
               "kind": "section_letter",
               "letter": "A"
@@ -956,7 +956,7 @@
             }, {
               "kind": "key",
               "tonic": "D",
-              "mode": "minor"
+              "material": "omt.material.natural-minor"
             }, {
               "kind": "section_letter",
               "letter": "B"
@@ -1051,7 +1051,7 @@
             }, {
               "kind": "key",
               "tonic": "D",
-              "mode": "minor"
+              "material": "omt.material.natural-minor"
             }, {
               "kind": "section_letter",
               "letter": "T"
@@ -1085,7 +1085,7 @@
             }, {
               "kind": "key",
               "tonic": "D",
-              "mode": "minor"
+              "material": "omt.material.natural-minor"
             }]
         }
       }, {

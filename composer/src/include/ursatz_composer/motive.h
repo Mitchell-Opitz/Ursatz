@@ -6,6 +6,7 @@
 
 #include <analysis/motive/motive_sketch.h>
 #include <analysis/motive/motive_tone_roles.h>
+#include <theory/knowledge/knowledge_snapshot.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
@@ -74,7 +75,7 @@ typedef enum {
  *                                                    MOTIVE_SKETCH_PITCH_UNKNOWN (see motive_pitch)
  *   length, pickup                                   where the last note ends; the part of a bar before the first barline
  *   bar, beat                                        the meter, read and set through motive_meter_of and motive_set_meter
- *   has_scale, tonic_pc, minor, key_source, tonic spelling   the key, read and set through motive_key_of and motive_set_key
+ *   has_scale, tonic_pc, material, key_source, tonic spelling   the key, read and set through motive_key_of and motive_set_key
  *   chords, chord_count                              its own harmony (MotiveSketchChord)
  *   features, feature_count                          labelled runs of notes (MotiveSketchFeature)
  *   accompaniment                                    the part it plays: false the tune, true what goes under it
@@ -88,7 +89,7 @@ typedef enum {
  */
 typedef MotiveSketch Motive;
 
-/* What the caller says about the motive. NULL options mean nothing. */
+/* What the caller says about the motive. The readers need `knowledge`: options with none (or NULL options) are refused (MOTIVE_ERR_NULL). */
 typedef struct {
     bool has_meter;
     PlanMeter meter;
@@ -110,6 +111,9 @@ typedef struct {
     size_t feature_count;
     bool has_role;
     bool accompaniment;
+    /* The knowledge snapshot whose common-practice materials the readers make their keys from (the C major a degree list is read in,
+       a key of a file or a JSON document, the key a motive's pitches settle on); required; borrowed, must outlive the motive. */
+    const KnowledgeSnapshot *knowledge;
 } MotiveOptions;
 
 /*

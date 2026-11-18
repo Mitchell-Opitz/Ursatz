@@ -4,6 +4,7 @@
 
 #include "analysis/motive/motive_relation.h"
 #include "theory/vocabulary/non_chord_tone.h"
+#include "test_knowledge.h"
 
 /*
  * Motive relation parameter metadata: every kind and index, names equal motive_relation_param_name, ranges and
@@ -26,6 +27,7 @@ static MotiveSketch rich(void) {
     }
     sketch.note_count = 8;
     sketch.has_scale = true;
+    sketch.material = test_materials()->major;
     sketch.bar = q(1, 1);
     sketch.beat = q(1, 4);
     sketch.pickup = q(0, 1);

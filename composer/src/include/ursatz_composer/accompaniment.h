@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <theory/knowledge/knowledge_snapshot.h>
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
@@ -37,6 +39,8 @@
 
 typedef struct {
     size_t candidates; /* the accompaniments proposed; 0 means ACCOMPANIMENT_DEFAULT_CANDIDATES */
+    /* The knowledge the Analyzer hears a candidate's texture with (the call context's snapshot); NULL: no candidate holds its texture. */
+    const KnowledgeSnapshot *knowledge;
 } AccompanimentParams;
 
 AccompanimentParams accompaniment_params_default(void);

@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive/motive_sketch.h"
+#include "test_knowledge.h"
 
 /*
  * Analysis-regression tests for MotiveSketch: validation (ordering, overlap, pickup, chords, features), equality,
@@ -26,6 +27,7 @@ static MotiveSketch four_quarters(void) {
     }
     sketch.note_count = 4;
     sketch.has_scale = true;
+    sketch.material = test_materials()->major;
     sketch.tonic_pc = 0;
     sketch.bar = q(1, 1);
     sketch.beat = q(1, 4);
@@ -176,7 +178,7 @@ static void test_every_pitch_class_is_spelled(void) {
 
     MotiveSketch minor = four_quarters();
     minor.tonic_pc = 9;
-    minor.minor = true;
+    minor.material = test_materials()->natural_minor;
     static const int MINOR_DEGREE[12] = {0, 0, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6};
     static const int MINOR_RAISED[12] = {0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1};
     for (int pc = 0; pc < 12; pc++) {
@@ -191,7 +193,7 @@ static void test_every_pitch_class_is_spelled(void) {
 static void test_steps_in_minor(void) {
     MotiveSketch sketch = four_quarters();
     sketch.tonic_pc = 9; /* A natural minor */
-    sketch.minor = true;
+    sketch.material = test_materials()->natural_minor;
     assert(motive_sketch_step(&sketch, 69, NULL) == 35);
     assert(motive_sketch_step(&sketch, 72, NULL) == 37); /* C is the third */
     assert(motive_sketch_step(&sketch, 77, NULL) == 40); /* F is the sixth */
@@ -228,9 +230,9 @@ static void test_contour_normalize(void) {
     /* In A minor ranks step through the scale from middle C. */
     MotiveSketch minor = four_quarters();
     minor.tonic_pc = 9;
-    minor.minor = true;
+    minor.material = test_materials()->natural_minor;
     assert(motive_sketch_contour_normalize(&minor, &out));
-    assert(out.notes[3].pitch == motive_sketch_pitch_at_step(&minor, 3, 0) + 60 && out.has_scale && out.minor);
+    assert(out.notes[3].pitch == motive_sketch_pitch_at_step(&minor, 3, 0) + 60 && out.has_scale && motive_sketch_minor(&out));
 
     /* No scale: C major. In place. Pickup, bar and beat are kept. */
     MotiveSketch bare = four_quarters();
@@ -249,6 +251,7 @@ static void test_contour_normalize(void) {
     MotiveSketch many;
     memset(&many, 0, sizeof(many));
     many.has_scale = true;
+    many.material = test_materials()->major;
     many.bar = q(1, 1);
     many.beat = q(1, 4);
     many.pickup = q(0, 1);
@@ -285,7 +288,7 @@ static void test_chord_tones(void) {
 
     /* In minor the dominant has a raised third. */
     sketch.tonic_pc = 9;
-    sketch.minor = true;
+    sketch.material = test_materials()->natural_minor;
     MotiveSketchChord minor_dominant = {q(0, 1), 5, 0, 0, false};
     assert(motive_sketch_chord_tones(&sketch, &minor_dominant, pcs) == 3);
     assert(pcs[0] == 4 && pcs[1] == 8 && pcs[2] == 11);

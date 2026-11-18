@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -62,7 +63,8 @@ bool request_parse_ratio(const char *text, ComposerRatio *out) {
     return true;
 }
 
-bool request_parse_key(const char *text, AnalysisKey *key) {
+/* The text of a key after its tonic: the tonic's pitch class in *pc, and the word that follows trimmed into word. False for no key. */
+static bool split_key(const char *text, int *pc, char *word, size_t size) {
     while (isspace((unsigned char)*text)) {
         text++;
     }
@@ -70,13 +72,13 @@ bool request_parse_key(const char *text, AnalysisKey *key) {
     if (!pitch_letter_from_char((char)toupper((unsigned char)*text), &tonic_letter)) {
         return false;
     }
-    int pc = pitch_letter_semitone(tonic_letter);
+    *pc = pitch_letter_semitone(tonic_letter);
     text++;
     if (*text == '#') {
-        pc++;
+        (*pc)++;
         text++;
     } else if (*text == 'b') {
-        pc--;
+        (*pc)--;
         text++;
     }
     if (!isspace((unsigned char)*text)) {
@@ -85,28 +87,47 @@ bool request_parse_key(const char *text, AnalysisKey *key) {
     while (isspace((unsigned char)*text)) {
         text++;
     }
-    char mode[8];
-    size_t length = 0;
-    while (text[length] && !isspace((unsigned char)text[length]) && length + 1 < sizeof(mode)) {
-        mode[length] = text[length];
-        length++;
+    size_t length = strlen(text);
+    while (length > 0 && isspace((unsigned char)text[length - 1])) {
+        length--;
     }
-    mode[length] = '\0';
-    const char *rest = text + length;
-    while (isspace((unsigned char)*rest)) {
-        rest++;
-    }
-    if (*rest != '\0') {
+    if (length == 0 || length >= size) {
         return false;
     }
-    if (request_equals_ignore_case(mode, "major")) {
-        key->mode = KEY_STRUCTURE_MODE_MAJOR;
-    } else if (request_equals_ignore_case(mode, "minor")) {
-        key->mode = KEY_STRUCTURE_MODE_MINOR;
-    } else {
+    memcpy(word, text, length);
+    word[length] = '\0';
+    return true;
+}
+
+bool request_parse_key(const char *text, const KnowledgeSnapshot *knowledge, AnalysisKey *key) {
+    int pc;
+    char word[REQUEST_KEY_WORD_MAX];
+    CommonPracticeMaterials materials;
+    if (!knowledge || !split_key(text, &pc, word, sizeof word) ||
+        !common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
         return false;
     }
-    *key = plan_key_of_pitch_class(util_pitch_class(pc), key->mode);
+    const PitchMaterial *material = knowledge_snapshot_material_named(knowledge, word);
+    if (!material || !composer_material_supported(&materials, material)) {
+        return false;
+    }
+    *key = plan_key_of_pitch_class(util_pitch_class(pc), material);
+    return true;
+}
+
+bool request_key_refusal(const char *text, const KnowledgeSnapshot *knowledge, char *message, size_t size) {
+    int pc;
+    char word[REQUEST_KEY_WORD_MAX];
+    CommonPracticeMaterials materials;
+    if (!knowledge || !message || size == 0 || !split_key(text, &pc, word, sizeof word) ||
+        !common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
+        return false;
+    }
+    const PitchMaterial *material = knowledge_snapshot_material_named(knowledge, word);
+    if (!material || composer_material_supported(&materials, material)) {
+        return false;
+    }
+    snprintf(message, size, "the Composer writes major and minor keys; '%s' is not one of them", word);
     return true;
 }
 

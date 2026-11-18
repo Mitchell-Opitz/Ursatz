@@ -17,10 +17,9 @@ bool harmony_key_change_classify(const HarmonyKeyChange *change, KeyChangeExtent
     return true;
 }
 
-bool harmony_key_change_confirm(KeyChangeExtent length_extent, double region_start, double region_end,
-                                const double *cadence_arrivals, size_t cadence_count, KeyChangeExtent *out) {
-    if (out == NULL || !key_change_extent_valid(length_extent) || !isfinite(region_start) || !isfinite(region_end) ||
-        region_end < region_start) {
+bool harmony_key_change_confirm(KeyChangeExtent length_extent, Rational region_start, Rational region_end,
+                                const Rational *cadence_arrivals, size_t cadence_count, KeyChangeExtent *out) {
+    if (out == NULL || !key_change_extent_valid(length_extent) || rational_cmp(region_end, region_start) < 0) {
         return false;
     }
     if (cadence_arrivals == NULL) {
@@ -29,7 +28,7 @@ bool harmony_key_change_confirm(KeyChangeExtent length_extent, double region_sta
     }
     bool confirmed = false;
     for (size_t i = 0; i < cadence_count && !confirmed; i++) {
-        confirmed = cadence_arrivals[i] >= region_start - 1e-9 && cadence_arrivals[i] < region_end - 1e-9;
+        confirmed = rational_cmp(cadence_arrivals[i], region_start) >= 0 && rational_cmp(cadence_arrivals[i], region_end) < 0;
     }
     if (confirmed) {
         *out = key_change_extent_is_modulation(length_extent) ? length_extent : KEY_CHANGE_EXTENT_WEAK_MODULATION;

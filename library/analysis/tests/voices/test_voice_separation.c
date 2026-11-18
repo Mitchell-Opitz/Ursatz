@@ -14,7 +14,6 @@
 #include "model/pitch/tuning_system.h"
 #include "model/time/duration.h"
 #include "model/core/rational.h"
-#include "model/time/time_rational.h"
 #include "model/time/meter_map.h"
 #include "model/time/note_value.h"
 #include "model/time/time_signature.h"
@@ -54,12 +53,10 @@ static void add_note(Notes *set, const TuningSystem *tuning, const char *id, lon
                                            PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_A, PITCH_LETTER_B};
     static const int ACCIDENTAL[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
 
-    MusicalTime *position = NULL;
-    assert(musical_time_create(on_n, on_d, &position) == MUSICAL_TIME_OK);
-    TemporalAnchor *anchor = NULL;
-    assert(temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK);
-    Duration *duration = NULL;
-    assert(duration_create(dur_n, dur_d, &duration) == DURATION_OK);
+    MusicalTime position;
+    assert(musical_time_make(on_n, (long long)on_d, &position) == MUSICAL_TIME_OK);
+    Duration duration;
+    assert(duration_make(dur_n, (long long)dur_d, &duration) == DURATION_OK);
     PitchIdentity *pitch = NULL;
     assert(pitch_identity_create("pitch", 6, &pitch) == PITCH_IDENTITY_OK);
     PitchSpelling *spelling = NULL;
@@ -67,7 +64,7 @@ static void add_note(Notes *set, const TuningSystem *tuning, const char *id, lon
            PITCH_SPELLING_OK);
     ProvenanceReference *provenance = NULL;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
-    assert(note_event_create(make_id(id), anchor, duration, pitch, spelling, NULL, provenance,
+    assert(note_event_create(make_id(id), position, duration, pitch, spelling, NULL, provenance,
                              &set->notes[set->count]) == NOTE_EVENT_OK);
     assert(pitch_numeric_value_create(tuning, midi, 1, &set->values[set->count]) == PITCH_NUMERIC_VALUE_OK);
     set->streams[set->count] = stream;
@@ -88,29 +85,27 @@ static MeterMap *four_four(void) {
     TimeSignature *signature = NULL;
     assert(time_signature_create(4, quarter, &signature) == TIME_SIGNATURE_OK);
     note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
     MeterMapChangePoint point = {signature, zero};
     MeterMap *map = NULL;
     assert(meter_map_create(make_id("map"), &point, 1, &map) == METER_MAP_OK);
     time_signature_destroy(signature);
-    musical_time_destroy(zero);
     return map;
 }
 
-static bool quarter_grid(const MeterMap *map, int measure, void *context, MusicalTime ***out_starts, size_t *out_count) {
+static bool quarter_grid(const MeterMap *map, int measure, void *context, MusicalTime **out_starts, size_t *out_count) {
     (void)context;
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    Rational at = test_rational_of_time(time_span_start(span));
-    Rational end = test_rational_of_time(time_span_end(span));
-    time_span_destroy(span);
-    MusicalTime **starts = (MusicalTime **)calloc(64, sizeof(MusicalTime *));
+    Rational at = span.start.value;
+    Rational end = span.end.value;
+    MusicalTime *starts = (MusicalTime *)calloc(64, sizeof(MusicalTime));
     size_t count = 0;
     while (rational_cmp(at, end) < 0 && count < 64) {
-        starts[count++] = musical_time_from_rational_or_null(at);
+        starts[count++] = musical_time_of(at);
         assert(rational_add(at, rational_ratio(1, 4), &at) == 0);
     }
     *out_starts = starts;
@@ -125,7 +120,7 @@ static bool quarter_beat_length(void *context, Rational at, Rational *out) {
     return true;
 }
 
-static bool empty_grid(const MeterMap *map, int measure, void *context, MusicalTime ***out_starts, size_t *out_count) {
+static bool empty_grid(const MeterMap *map, int measure, void *context, MusicalTime **out_starts, size_t *out_count) {
     (void)map;
     (void)measure;
     (void)context;

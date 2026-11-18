@@ -7,6 +7,7 @@
 #include <ursatz_composer/plan_state.h>
 #include "support/voice_hear.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Themes grown in four parts, seeds 1 to 10, in C major 4/4, G major 3/4 and D minor 4/4. With the argument "chorale"
@@ -28,16 +29,16 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
     const char *motive;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"G major 3/4", 7, KEY_STRUCTURE_MODE_MAJOR, 3, 4, "B4:q D5:e C5:e A4:q"},
-    {"D minor 4/4", 2, KEY_STRUCTURE_MODE_MINOR, 4, 4, "D4:q F4:e A4:e D5:h"},
+    {"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"G major 3/4", 7, HARMONY_MODE_MAJOR, 3, 4, "B4:q D5:e C5:e A4:q"},
+    {"D minor 4/4", 2, HARMONY_MODE_MINOR, 4, 4, "D4:q F4:e A4:e D5:h"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -45,6 +46,7 @@ static Motive make_motive(const Scenario *scenario) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
@@ -56,7 +58,7 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = 8;
@@ -88,6 +90,7 @@ int main(int argc, char **argv) {
             GrowConfig config;
             VoiceHeard heard;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             memset(&outcome, 0, sizeof(outcome));
             config.seed = seed;
             assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);

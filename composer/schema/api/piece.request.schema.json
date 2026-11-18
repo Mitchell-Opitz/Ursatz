@@ -91,7 +91,7 @@
           "type": "string"
         }
       },
-      "description": "A plan object (docs/plan-format.md, schema/plan.v2.schema.json)."
+      "description": "A plan object (docs/plan-format.md, schema/plan.v3.schema.json)."
     },
     "piece_request": {
       "type": "object",
@@ -99,7 +99,6 @@
         "schema",
         "schema_version",
         "key",
-        "mode",
         "meter"
       ],
       "properties": {
@@ -123,12 +122,17 @@
         "key": {
           "type": "string"
         },
+        "material": {
+          "type": "string",
+          "description": "A material: a K1 id, name, key word or alias (omt.material.major, \"major\", \"minor\"), or \"style\" for the style's. The Composer writes keys in major and natural minor. With a key that is a tonic alone it gives the mode of the key. The old member \"mode\" is read as before; give material or mode, not both."
+        },
         "mode": {
           "enum": [
             "major",
             "minor",
             "style"
-          ]
+          ],
+          "description": "The old name of material, read as before (major, minor or style). Give material or mode, not both."
         },
         "meter": {
           "type": "string"
@@ -337,7 +341,25 @@
             ]
           }
         }
-      ]
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "material"
+          ]
+        },
+        {
+          "required": [
+            "mode"
+          ]
+        }
+      ],
+      "not": {
+        "required": [
+          "material",
+          "mode"
+        ]
+      }
     }
   }
 }

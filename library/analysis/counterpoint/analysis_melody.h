@@ -77,7 +77,7 @@ typedef enum {
 typedef struct {
     bool present; /* false: a rest */
     const char *note_id;
-    const TimeSpan *span;
+    TimeSpan span;
     const MetricalPosition *position;
     bool has_strength;
     BeatStrength strength;

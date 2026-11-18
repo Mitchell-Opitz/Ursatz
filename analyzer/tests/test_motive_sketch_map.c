@@ -13,6 +13,7 @@
 #include "pipeline/motive_sketch_map.h"
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The one mapping from motive features to a MotiveSketch (motive_features_to_sketch). Every family of Mozart 545 is
@@ -42,7 +43,7 @@ static void check_equal(const MotiveSketch *a, const MotiveSketch *b) {
         CHECK(same_time(a->notes[i].onset, b->notes[i].onset));
         CHECK(same_time(a->notes[i].duration, b->notes[i].duration));
     }
-    CHECK(a->has_scale == b->has_scale && a->tonic_pc == b->tonic_pc && a->minor == b->minor);
+    CHECK(a->has_scale == b->has_scale && a->tonic_pc == b->tonic_pc && motive_sketch_minor(a) == motive_sketch_minor(b));
     CHECK(same_time(a->bar, b->bar) && same_time(a->beat, b->beat) && same_time(a->pickup, b->pickup));
     CHECK(same_time(a->length, b->length));
     CHECK(motive_sketch_fingerprint(a) == motive_sketch_fingerprint(b));
@@ -64,12 +65,12 @@ int main(void) {
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
     ImportedNotes notes;
     AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
+    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }
     char *json = test_render_document(path, &notes, &report);
-    MotiveLinkScope *scope = motive_link_scope_create();
+    MotiveLinkScope *scope = motive_link_scope_create(test_knowledge());
     CHECK(json != NULL && scope != NULL);
     CHECK(json && scope && motive_link_scope_add_document(scope, "mozart-545", json) == MOTIVE_LINKS_OK);
     CHECK(report.motive_count > 0);

@@ -565,7 +565,7 @@ static void test_compose(const Motifs *m) {
   check(strcmp(string_of(request, "schema"), "ursatz-theme-request") == 0 && number_of(request, "schema_version") == 2,
         "the request has the theme request schema");
   check(strcmp(string_of(request, "into"), "sentence") == 0 && strcmp(string_of(request, "key"), "C") == 0 &&
-            strcmp(string_of(request, "mode"), "minor") == 0 && number_of(request, "bars") == 8,
+            strcmp(string_of(request, "material"), "omt.material.natural-minor") == 0 && number_of(request, "bars") == 8,
         "the request has the form");
   const cJSON *slot_names = member(request, "slots");
   check(strcmp(string_of(slot_names, "basic"), "M1") == 0 && strcmp(string_of(slot_names, "cadential"), "M2") == 0 &&
@@ -1123,6 +1123,86 @@ static void test_real_composer(const Motifs *m) {
   free(second);
 }
 
+/* A theme form names its material (R-597): a theme saved with `material` composes the same MIDI and MusicXML as the one saved
+ * with the old mode word, its request carries the material, the new version keeps the member, and the material style needs a
+ * brief. */
+static void test_materials(const Motifs *m) {
+  int status = 0;
+  char slots[600];
+  char body[2400];
+  char path[400];
+  char dir[200];
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  theme_body(slots, "", body, sizeof(body));
+  char *old_theme = create_item("theme", "By mode", body, &status);
+  check(status == 200 && old_theme, "a theme with the form mode minor is saved");
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"material\":\"omt.material.natural-minor\","
+           "\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},\"slots\":%s}}",
+           slots);
+  char *new_theme = create_item("theme", "By material", body, &status);
+  check(status == 200 && new_theme, "a theme with the form material natural minor is saved");
+  if (!old_theme || !new_theme) {
+    free(old_theme);
+    free(new_theme);
+    return;
+  }
+  cJSON *answer = compose(old_theme, "{\"seed\":5}", &status);
+  check(status == 200 && ok_true(answer), "the theme with the mode composes");
+  cJSON_Delete(answer);
+  answer = compose(new_theme, "{\"seed\":5}", &status);
+  check(status == 200 && ok_true(answer), "the theme with the material composes");
+  cJSON_Delete(answer);
+  cJSON *request = last_request();
+  check(strcmp(string_of(request, "material"), "omt.material.natural-minor") == 0 && !member(request, "mode"),
+        "the request of the theme with a material carries it");
+  cJSON_Delete(request);
+
+  static const char *const files[] = {"theme.mid", "theme.musicxml"};
+  for (size_t i = 0; i < 2; i++) {
+    size_t old_size = 0;
+    size_t new_size = 0;
+    version_dir(old_theme, 2, dir, sizeof(dir));
+    snprintf(path, sizeof(path), "%s/%s", dir, files[i]);
+    char *old_bytes = test_read_file(path, &old_size);
+    version_dir(new_theme, 2, dir, sizeof(dir));
+    snprintf(path, sizeof(path), "%s/%s", dir, files[i]);
+    char *new_bytes = test_read_file(path, &new_size);
+    char what[120];
+    snprintf(what, sizeof(what), "the theme with a material composes the same %s as the one with a mode", files[i]);
+    check(old_bytes && new_bytes && old_size == new_size && old_size > 0 && memcmp(old_bytes, new_bytes, old_size) == 0, what);
+    free(old_bytes);
+    free(new_bytes);
+  }
+
+  /* The old theme's new version holds the material and no mode; version 1 is read the same. */
+  for (int version = 1; version <= 2; version++) {
+    snprintf(path, sizeof(path), "/api/materials/items/%s/versions/%d", old_theme, version);
+    answer = exchange("GET", path, NULL, &status);
+    const cJSON *form = member(theme_of(answer), "form");
+    check(status == 200 && strcmp(string_of(form, "material"), "omt.material.natural-minor") == 0 && !member(form, "mode"),
+          "a theme saved with a mode is read with the material and no mode");
+    cJSON_Delete(answer);
+  }
+
+  /* The material style needs a brief, as the mode style did. */
+  snprintf(body, sizeof(body),
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"material\":\"style\","
+           "\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},\"slots\":%s}}",
+           slots);
+  char *styled = create_item("theme", "Style", body, &status);
+  check(status == 200 && styled, "a theme with the material style is saved");
+  if (styled) {
+    answer = compose(styled, "{\"seed\":5}", &status);
+    check(status == 400 && strstr(string_of(answer, "error"), "the material style needs a brief") != NULL,
+          "the material style without a brief is 400");
+    cJSON_Delete(answer);
+  }
+  free(styled);
+  free(old_theme);
+  free(new_theme);
+}
+
 /* The development setting (Composer API 1.9): the request member reaches the Composer, a theme composed with it lists
  * each idea's development with its summary line, and a value the Composer does not know is refused at /development. */
 static void test_development(const Motifs *m) {
@@ -1311,6 +1391,7 @@ int main(int argc, char **argv) {
       test_concurrent(&motifs);
       test_jobs_route(&motifs);
       test_real_composer(&motifs);
+      test_materials(&motifs);
       test_development(&motifs);
       test_construction(&motifs);
       test_two_bar_theme();

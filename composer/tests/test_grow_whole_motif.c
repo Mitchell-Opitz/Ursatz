@@ -9,6 +9,7 @@
 
 #include "grow/grow_internal.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * A motif as long as the idea it fills is that idea (B1 of P33): grow_motive_fit for motives of 1, 1.5, 2 and 3 bars with
@@ -17,10 +18,11 @@
  * motive in the contrasting slot of a period.
  */
 
-static Motive make_motive(const char *text, int beats, int unit, bool minor, int tonic, Rational pickup) {
+static Motive make_motive(const char *text, int beats, int unit, bool is_minor, int tonic, Rational pickup) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = beats;
     options.meter.beat_unit = unit;
@@ -28,7 +30,7 @@ static Motive make_motive(const char *text, int beats, int unit, bool minor, int
         options.has_pickup = true;
         options.pickup = pickup;
     }
-    (void)minor;
+    (void)is_minor;
     (void)tonic;
     assert(motive_from_notes_text(text, &options, &motive, NULL) == MOTIVE_OK);
     return motive;
@@ -93,7 +95,7 @@ static void test_compose(void) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+    request.key = test_key(9, "minor");
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -107,6 +109,7 @@ static void test_compose(void) {
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
@@ -156,7 +159,7 @@ static void test_cadence_note(void) {
         memset(&request, 0, sizeof(request));
         request.motive = &basic;
         request.idea_motives[GROW_IDEA_CADENTIAL] = &cadential;
-        request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+        request.key = test_key(9, "minor");
         request.meter.beats_per_bar = 3;
         request.meter.beat_unit = 4;
         request.bars = 8;
@@ -167,6 +170,7 @@ static void test_cadence_note(void) {
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         GrowResult result = grow_run(plan, &config, &outcome);
@@ -199,12 +203,12 @@ static void test_variety(void) {
         int beats;
         int unit;
         int tonic;
-        KeyStructureMode mode;
+        HarmonyMode mode;
     } CASES[] = {
-        {"E4:q G4:e F4:e D4:q C4:q | G4:q E4:q D4:q C4:q", 4, 4, 0, KEY_STRUCTURE_MODE_MAJOR},
-        {"G4:q G4:q G4:q G4:q | G4:q G4:q G4:q C5:q", 4, 4, 0, KEY_STRUCTURE_MODE_MAJOR},
-        {"B4:q A4:e G4:e F#4:e D4:e | A4:q B4:e C5:e D5:q", 6, 8, 7, KEY_STRUCTURE_MODE_MAJOR},
-        {"C5:q B4:q A4:q | G4:q F4:q E4:q", 3, 4, 9, KEY_STRUCTURE_MODE_MINOR},
+        {"E4:q G4:e F4:e D4:q C4:q | G4:q E4:q D4:q C4:q", 4, 4, 0, HARMONY_MODE_MAJOR},
+        {"G4:q G4:q G4:q G4:q | G4:q G4:q G4:q C5:q", 4, 4, 0, HARMONY_MODE_MAJOR},
+        {"B4:q A4:e G4:e F#4:e D4:e | A4:q B4:e C5:e D5:q", 6, 8, 7, HARMONY_MODE_MAJOR},
+        {"C5:q B4:q A4:q | G4:q F4:q E4:q", 3, 4, 9, HARMONY_MODE_MINOR},
     };
     Rational none = {0, 1};
     for (size_t c = 0; c < sizeof(CASES) / sizeof(CASES[0]); c++) {
@@ -213,7 +217,7 @@ static void test_variety(void) {
             GrowRequest request;
             memset(&request, 0, sizeof(request));
             request.motive = &motive;
-            request.key = plan_key_of_pitch_class(CASES[c].tonic, CASES[c].mode);
+            request.key = test_key_mode(CASES[c].tonic, CASES[c].mode);
             request.meter.beats_per_bar = CASES[c].beats;
             request.meter.beat_unit = CASES[c].unit;
             request.bars = 8;
@@ -224,6 +228,7 @@ static void test_variety(void) {
             GrowOutcome outcome;
             GrowConfig config;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             config.seed = seed;
             assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
             GrowResult result = grow_run(plan, &config, &outcome);
@@ -243,7 +248,7 @@ static void test_four_bar_refused(void) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = &motive;
-    request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+    request.key = test_key(9, "minor");
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 4;
@@ -269,7 +274,7 @@ static void test_period_slot(void) {
     memset(&request, 0, sizeof(request));
     request.motive = &basic;
     request.slot_motives[GROW_SLOT_CONTRASTING] = &contrasting;
-    request.key = plan_key_of_pitch_class(9, KEY_STRUCTURE_MODE_MINOR);
+    request.key = test_key(9, "minor");
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -280,6 +285,7 @@ static void test_period_slot(void) {
     GrowOutcome outcome;
     GrowConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     GrowResult result = grow_run(plan, &config, &outcome);
@@ -324,7 +330,7 @@ static GrowRequest part_request(const Motive *motive, PlanThemeBeginning beginni
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;
@@ -351,6 +357,7 @@ static void test_part_length(void) {
                 GrowOutcome outcome;
                 GrowConfig config;
                 memset(&config, 0, sizeof(config));
+                config.knowledge = test_knowledge();
                 config.seed = seed;
                 assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
                 GrowResult result = grow_run(plan, &config, &outcome);

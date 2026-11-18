@@ -14,7 +14,7 @@ const { check, same, finish } = require("./support/check.js");
 
 function filled() {
   const state = T.emptyState("thm-1");
-  state.mode = "minor";
+  state.material = "omt.material.natural-minor";
   state.slots = [
     { slot: "cadential", item_id: "mot-2", version: 3 },
     { slot: "basic", item_id: "mot-1", version: 2 },
@@ -92,7 +92,7 @@ const unmeasured = fidelityOf({ fidelity: null, minimum: null, heard: null, hear
 check(unmeasured.heard === "" && unmeasured.fidelity === "" && unmeasured.minimum === "" && unmeasured.mismatch === false, "an idea that was not measured shows no score and no mismatch");
 check(unmeasured.text === "repetition: restates the basic idea", "an idea without a heard keeps its single line");
 check(oldView.developments[0].heard === "" && oldView.developments[0].mismatch === false, "a version composed before API 1.10 has no heard and no mismatch");
-check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-2").mode === "major", "a placeholder theme gives the defaults");
+check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-2").material === "omt.material.major", "a placeholder theme gives the defaults");
 check(T.bodyFromForm(T.emptyState("x")).theme.brief === null && T.bodyFromForm(T.emptyState("x")).theme.accompaniment === null, "the defaults have no brief and no accompaniment");
 
 /* problems */
@@ -121,7 +121,7 @@ check(T.formProblems(edge).length === 0 && T.bodyFromForm(edge).theme.tempo === 
 edge.tempo = "19";
 check(T.formProblems(edge).length === 0 && T.bodyFromForm(edge).theme.tempo === 19, "a tempo out of range is sent for the Composer to refuse");
 const noBrief = filled();
-noBrief.mode = "style";
+noBrief.material = "style";
 check(T.formProblems(noBrief).some((p) => /brief/.test(p)), "the mode from the brief needs a brief");
 noBrief.picks = [{ kind: "style", id: "sty-1" }];
 check(T.formProblems(noBrief).length === 0, "the mode from the brief works with a brief");
@@ -261,20 +261,20 @@ check(M.motifSaveDecision({ body: true }, "").kind === "blocked", "a changed the
 check(M.motifSaveDecision({ name: true }, "").kind === "save", "a rename alone saves without a note");
 check(M.motifSaveDecision({}, "x").message === "Nothing to save.", "no change says Nothing to save.");
 
-/* Mode default from the basic motif (R-205) */
-const minorBody = { motif: { key: "C minor" } };
-const majorBody = { motif: { key: "C major" } };
-check(T.motifMode(minorBody) === "minor" && T.motifMode(majorBody) === "major" && T.motifMode({}) === null, "a motif body gives its mode");
+/* Material default from the basic motif (R-205) */
+const minorBody = { motif: { material: "omt.material.natural-minor" } };
+const majorBody = { motif: { material: "omt.material.major" } };
+check(T.motifMaterial(minorBody) === "omt.material.natural-minor" && T.motifMaterial(majorBody) === "omt.material.major" && T.motifMaterial({}) === null && T.motifMaterial({ motif: { material: "omt.material.dorian" } }) === null, "a motif body gives its material");
 const fresh = T.emptyState("thm-2");
-check(T.applyBasicMode(fresh, false, minorBody) && fresh.mode === "minor", "the first basic motif sets the mode");
+check(T.applyBasicMaterial(fresh, false, minorBody) && fresh.material === "omt.material.natural-minor", "the first basic motif sets the material");
 const chosen = T.emptyState("thm-2");
-chosen.modeChosen = true;
-check(!T.applyBasicMode(chosen, false, minorBody) && chosen.mode === "major", "a mode set by hand is kept");
+chosen.materialChosen = true;
+check(!T.applyBasicMaterial(chosen, false, minorBody) && chosen.material === "omt.material.major", "a material set by hand is kept");
 const second = T.emptyState("thm-2");
-check(!T.applyBasicMode(second, true, minorBody) && second.mode === "major", "a second basic motif leaves the mode");
-check(!T.applyBasicMode(T.emptyState("x"), false, { motif: {} }), "a motif without a key leaves the mode");
-check(T.formFromBody(T.bodyFromForm(filled()), "thm-1").modeChosen === true, "a saved theme with a basic motif keeps its mode");
-check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-3").modeChosen === false, "a new theme has not chosen its mode");
+check(!T.applyBasicMaterial(second, true, minorBody) && second.material === "omt.material.major", "a second basic motif leaves the material");
+check(!T.applyBasicMaterial(T.emptyState("x"), false, { motif: {} }), "a motif without a material leaves the material");
+check(T.formFromBody(T.bodyFromForm(filled()), "thm-1").materialChosen === true, "a saved theme with a basic motif keeps its material");
+check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-3").materialChosen === false, "a new theme has not chosen its material");
 
 /* slots and ideas of each form */
 function formOf(into, hybrid) {

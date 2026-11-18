@@ -15,6 +15,8 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
+#include "support/test_knowledge.h"
+#include "model/pitch/pitch_material.h"
 
 /*
  * A hand-written 8-bar sentence in D minor, 4/4, with melody and bass. It is
@@ -68,7 +70,7 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
+    key.key = test_key(2, "minor");
     LaneSpanId key_span = PLAN_LANE_SPAN_NONE;
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &key_span) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, key_span, PLAN_STATE_GIVEN) == PLAN_OK);
@@ -136,20 +138,20 @@ static void test_render(void) {
     assert(rendered.meter_map != NULL);
     assert(rendered.key_count == 1);
     assert(rendered.keys[0].sharps_flats == -1);
-    assert(rendered.keys[0].mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(pitch_material_third(rendered.keys[0].material) == 3);
 
     /* In time order: the first two events sound together, melody before bass. */
     const MusicalTime *first = temporal_anchor_position(note_event_temporal_anchor(rendered.events[0]));
     const MusicalTime *second = temporal_anchor_position(note_event_temporal_anchor(rendered.events[1]));
-    assert(musical_time_numerator(first) == 0 && musical_time_numerator(second) == 0);
+    assert(first->value.num == 0 && second->value.num == 0);
     assert(rendered.part_index[0] == 0 && rendered.part_index[1] == 1);
     assert(pitch_numeric_value_position_numerator(rendered.pitch_values[0]) == 69);
     assert(pitch_numeric_value_position_numerator(rendered.pitch_values[1]) == 50);
     for (size_t i = 1; i < rendered.count; i++) {
         const MusicalTime *before = temporal_anchor_position(note_event_temporal_anchor(rendered.events[i - 1]));
         const MusicalTime *after = temporal_anchor_position(note_event_temporal_anchor(rendered.events[i]));
-        assert((long long)musical_time_numerator(before) * (long long)musical_time_denominator(after) <=
-               (long long)musical_time_numerator(after) * (long long)musical_time_denominator(before));
+        assert((long long)before->value.num * (long long)after->value.den <=
+               (long long)after->value.num * (long long)before->value.den);
     }
 
     /* B-flat 4 is spelled with a flat in D minor. */
@@ -205,9 +207,9 @@ static void test_render(void) {
 
 static bool same_event(const NoteEvent *a, long pitch_a, const NoteEvent *b, long pitch_b) {
     return pitch_a == pitch_b &&
-           musical_time_equals(temporal_anchor_position(note_event_temporal_anchor(a)),
-                               temporal_anchor_position(note_event_temporal_anchor(b))) &&
-           duration_equals(note_event_duration(a), note_event_duration(b));
+           musical_time_same(*temporal_anchor_position(note_event_temporal_anchor(a)),
+                             *temporal_anchor_position(note_event_temporal_anchor(b))) &&
+           duration_same(*note_event_duration(a), *note_event_duration(b));
 }
 
 /* Every rendered note has exactly one match among the imported ones. */
@@ -259,7 +261,7 @@ static void test_midi_round_trip(void) {
     assert(keys->count == 1);
     assert(keys->events[0].sharps_flats == -1);
     assert(keys->events[0].mode_hint == MIDI_MODE_HINT_MINOR);
-    assert(musical_time_numerator(keys->events[0].position) == 0);
+    assert(keys->events[0].position.value.num == 0);
 
     midi_import_destroy(&import);
     free(data);

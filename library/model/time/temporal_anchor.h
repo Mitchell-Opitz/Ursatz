@@ -19,12 +19,11 @@ typedef struct TemporalAnchor TemporalAnchor;
 
 typedef enum {
     TEMPORAL_ANCHOR_OK = 0,
-    TEMPORAL_ANCHOR_ERR_NULL_POSITION,
     TEMPORAL_ANCHOR_ERR_ALLOC
 } TemporalAnchorResult;
 
-/* Takes ownership of position on success (destroyed by temporal_anchor_destroy). */
-TemporalAnchorResult temporal_anchor_create(MusicalTime *position, TemporalAnchor **out);
+/* position is copied. */
+TemporalAnchorResult temporal_anchor_create(MusicalTime position, TemporalAnchor **out);
 void temporal_anchor_destroy(TemporalAnchor *anchor);
 
 const MusicalTime *temporal_anchor_position(const TemporalAnchor *anchor);

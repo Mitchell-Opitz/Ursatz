@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "model/core/rational.h"
 #include "theory/harmony/harmony_chord.h"
 #include "theory/harmony/harmony_pivot.h"
 #include "theory/harmony/harmony_related_key.h"
@@ -56,9 +57,9 @@ bool harmony_key_change_classify(const HarmonyKeyChange *change, KeyChangeExtent
  *
  * cadence_arrivals NULL means no cadences were given and length_extent is kept (the length rule as the fallback); an
  * empty list (non-NULL, count 0) means none were found. False (*out untouched) for an invalid length_extent, a NULL out,
- * a non-finite time, or a region that ends before it starts.
+ * or a region that ends before it starts.
  */
-bool harmony_key_change_confirm(KeyChangeExtent length_extent, double region_start, double region_end,
-                                const double *cadence_arrivals, size_t cadence_count, KeyChangeExtent *out);
+bool harmony_key_change_confirm(KeyChangeExtent length_extent, Rational region_start, Rational region_end,
+                                const Rational *cadence_arrivals, size_t cadence_count, KeyChangeExtent *out);
 
 #endif

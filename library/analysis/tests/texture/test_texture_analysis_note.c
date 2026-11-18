@@ -9,14 +9,12 @@
 #include "model/time/musical_time.h"
 #include "model/time/time_span.h"
 
-static TimeSpan *make_span(long start, long end) {
-    MusicalTime *from = NULL;
-    MusicalTime *to = NULL;
-    TimeSpan *span = NULL;
-    assert(musical_time_create(start, 4, &from) == MUSICAL_TIME_OK && musical_time_create(end, 4, &to) == MUSICAL_TIME_OK);
-    assert(time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK);
-    musical_time_destroy(from);
-    musical_time_destroy(to);
+static TimeSpan make_span(long start, long end) {
+    MusicalTime from;
+    MusicalTime to;
+    TimeSpan span;
+    assert(musical_time_make(start, 4, &from) == MUSICAL_TIME_OK && musical_time_make(end, 4, &to) == MUSICAL_TIME_OK);
+    assert(time_span_make(from, to, &span) == TIME_SPAN_OK);
     return span;
 }
 
@@ -25,7 +23,7 @@ int main(void) {
     EntityID *id = NULL;
     MeterMap *map = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK && meter_map_create_defaulted(id, &map) == METER_MAP_OK);
-    TimeSpan *span = make_span(1, 3);
+    TimeSpan span = make_span(1, 3);
 
     /* two voices of one track: a note's track and voice make its voice */
     AnalysisNote notes[2] = {{"n1", NULL, span, 67, NULL, NULL, 1, 3, 0.5}, {"n2", NULL, span, 60, NULL, NULL, 1, 4, 1.0}};
@@ -50,7 +48,6 @@ int main(void) {
     AnalysisNoteSet empty = {NULL, 0, map};
     assert(standard_texture_measure_windows(&empty, NULL, &windows) == STANDARD_TEXTURE_ANALYSIS_OK && windows.count == 0);
 
-    time_span_destroy(span);
     meter_map_destroy(map);
     printf("test_texture_analysis_note: ok\n");
     return 0;

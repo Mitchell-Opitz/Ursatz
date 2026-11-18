@@ -188,8 +188,9 @@ StandardMeterAnalysisStatus standard_meter_find_syncopations(const StandardMeter
         Rational start;
         Rational end;
         bool moved_start = false;
-        if (!score_time_span(input->notes[i].span, &start, &end) ||
-            !standard_meter_snap_time(config, &start, false, &moved_start) || !standard_meter_snap_time(config, &end, true, NULL)) {
+        start = input->notes[i].span.start.value;
+        end = input->notes[i].span.end.value;
+        if (!standard_meter_snap_time(config, &start, false, &moved_start) || !standard_meter_snap_time(config, &end, true, NULL)) {
             continue;
         }
         if (rational_cmp(end, start) <= 0) {

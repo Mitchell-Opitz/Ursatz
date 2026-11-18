@@ -16,6 +16,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/piece_plan_keys.h>
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 
 /*
  * Piece plans that change key follow standard-harmony's key-change rules (R-069). Every template, in C major and A
@@ -45,10 +46,10 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
 } Scenario;
 
-static const Scenario SCENARIOS[] = {{"C major", 0, KEY_STRUCTURE_MODE_MAJOR}, {"A minor", 9, KEY_STRUCTURE_MODE_MINOR}};
+static const Scenario SCENARIOS[] = {{"C major", 0, HARMONY_MODE_MAJOR}, {"A minor", 9, HARMONY_MODE_MINOR}};
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
 /* The beats of a bar the template's pieces are written in: 4/4, or the form's first meter when it lists meters (the
@@ -65,7 +66,8 @@ static PieceRequest request_of(const Scenario *scenario, const char *kind, unsig
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = kind;
-    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    request.key = test_key_mode(scenario->tonic, scenario->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = beats_of(kind);
     request.meter.beat_unit = 4;
     request.modulate = true;
@@ -73,18 +75,14 @@ static PieceRequest request_of(const Scenario *scenario, const char *kind, unsig
     return request;
 }
 
-static HarmonyMode harmony_mode(KeyStructureMode mode) {
-    return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
-}
-
 /* The closely related key of `home` that is `key`, from standard-harmony's own list. False when it is none. */
 static bool related(AnalysisKey home, AnalysisKey key, HarmonyRelatedKey *out) {
-    HarmonyMode home_mode = harmony_mode(home.mode);
+    HarmonyMode home_mode = harmony_key_mode(&home);
     int semitone = ((analysis_key_tonic_pitch_class(&key) - analysis_key_tonic_pitch_class(&home)) % 12 + 12) % 12;
     for (int i = 0; i < harmony_related_key_count(home_mode); i++) {
         HarmonyRelatedKey candidate;
         assert(harmony_related_key_at(home_mode, i, &candidate));
-        if (candidate.mode == harmony_mode(key.mode) && harmony_related_key_semitone(home_mode, &candidate) == semitone) {
+        if (candidate.mode == harmony_key_mode(&key) && harmony_related_key_semitone(home_mode, &candidate) == semitone) {
             *out = candidate;
             return harmony_key_is_closely_related(home_mode, &candidate);
         }
@@ -93,7 +91,7 @@ static bool related(AnalysisKey home, AnalysisKey key, HarmonyRelatedKey *out) {
 }
 
 static bool same_key(AnalysisKey a, AnalysisKey b) {
-    return analysis_key_tonic_pitch_class(&a) == analysis_key_tonic_pitch_class(&b) && a.mode == b.mode;
+    return analysis_key_tonic_pitch_class(&a) == analysis_key_tonic_pitch_class(&b) && harmony_key_mode(&a) == harmony_key_mode(&b);
 }
 
 /* The same tonic in the other mode: a change of mode on one tonic is not a modulation (R-499). */
@@ -182,7 +180,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
 static void check_plan(const PiecePlan *plan, const Scenario *scenario, const char *kind) {
     KeyLane lane = read_lane(plan);
     check_lane_tiles(plan, &lane);
-    AnalysisKey home = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    AnalysisKey home = test_key_mode(scenario->tonic, scenario->mode);
     assert(same_key(lane.key[0], home));
     for (size_t i = 0; i < lane.count; i++) {
         HarmonyRelatedKey unused;
@@ -304,14 +302,14 @@ static bool opens_with_pivot(const PiecePlan *plan, AnalysisKey from, AnalysisKe
     HarmonyChord parsed;
     if (plan_lane_find(plan, PLAN_LANE_HARMONY, 0, around, &chord, 1) != 1 ||
         rational_cmp(plan_lane_span_span(plan, chord).start, at) != 0 || !related(from, to, &key) ||
-        !harmony_roman_parse(to.mode, plan_lane_span_payload(plan, chord)->harmony.roman_numeral, &parsed) ||
+        !harmony_roman_parse(harmony_key_mode(&to), plan_lane_span_payload(plan, chord)->harmony.roman_numeral, &parsed) ||
         parsed.inversion != 0 || parsed.seventh) {
         return false;
     }
     HarmonyPivot pivots[HARMONY_PIVOT_MAX];
-    int found = harmony_pivot_find(harmony_mode(from.mode), &key, pivots);
+    int found = harmony_pivot_find(harmony_key_mode(&from), &key, pivots);
     for (int i = 0; i < found; i++) {
-        if (pivots[i].new_degree == parsed.degree && harmony_pivot_valid(harmony_mode(from.mode), &key, &pivots[i])) {
+        if (pivots[i].new_degree == parsed.degree && harmony_pivot_valid(harmony_key_mode(&from), &key, &pivots[i])) {
             return true;
         }
     }
@@ -458,6 +456,7 @@ static bool compose_one(const Scenario *scenario, const char *kind, unsigned lon
     ComposeConfig config;
     ComposeOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     PieceResult ran = compose_run(plan, &config, &outcome);
     tally->runs++;
@@ -524,6 +523,7 @@ static int test_smoke_always(void) {
         ComposeConfig config;
         ComposeOutcome outcome;
         memset(&config, 0, sizeof(config));
+        config.knowledge = test_knowledge();
         config.seed = seed;
         PieceResult ran = compose_run(plan, &config, &outcome);
         bool changes = false;
@@ -613,9 +613,9 @@ static int test_tonic_major(bool smoke) {
         return 2;
     }
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
-        const AnalysisKey home = plan_key_of_pitch_class(SCENARIOS[s].tonic, SCENARIOS[s].mode);
-        const bool minor = SCENARIOS[s].mode == KEY_STRUCTURE_MODE_MINOR;
-        const AnalysisKey major = plan_key_of_pitch_class(SCENARIOS[s].tonic, KEY_STRUCTURE_MODE_MAJOR);
+        const AnalysisKey home = test_key_mode(SCENARIOS[s].tonic, SCENARIOS[s].mode);
+        const bool is_minor = SCENARIOS[s].mode == HARMONY_MODE_MINOR;
+        const AnalysisKey major = test_key(SCENARIOS[s].tonic, "major");
         size_t composed = 0;
         for (unsigned long seed = 1; seed <= (smoke ? 1 : MAJOR_SEEDS); seed++) {
             PieceRequest request;
@@ -624,6 +624,7 @@ static int test_tonic_major(bool smoke) {
             memset(&request, 0, sizeof(request));
             request.form = form->name;
             request.key = home;
+            request.knowledge = test_knowledge();
             request.meter.beats_per_bar = 4;
             request.meter.beat_unit = 4;
             request.modulate = true;
@@ -635,13 +636,14 @@ static int test_tonic_major(bool smoke) {
             check_lane_tiles(plan, &lane);
             const AnalysisKey at_b = key_at(&lane, plan_node_span(plan, sections[2]).start);
             const AnalysisKey at_b1 = key_at(&lane, plan_node_span(plan, sections[6]).start);
-            assert(same_key(at_b1, minor ? major : home));
+            assert(same_key(at_b1, is_minor ? major : home));
             assert(same_key(key_at(&lane, plan_node_span(plan, sections[7]).start), home));
             assert(same_key(key_at(&lane, plan_node_span(plan, sections[4]).start), home));
             assert(!same_key(at_b, home));
             ComposeConfig config;
             ComposeOutcome outcome;
             memset(&config, 0, sizeof(config));
+            config.knowledge = test_knowledge();
             config.seed = seed;
             config.form = form;
             if (compose_run(plan, &config, &outcome) == PIECE_OK) {
@@ -664,7 +666,7 @@ static int test_tonic_major(bool smoke) {
             plan_destroy(plan);
         }
         printf("%s 4/4: %zu of %d seeds compose, B1 in %s\n", SCENARIOS[s].name, composed, smoke ? 1 : MAJOR_SEEDS,
-               minor ? "the tonic major" : "the home key");
+               is_minor ? "the tonic major" : "the home key");
         if (smoke) {
             /* Seed 1 alone has no rate to hold, but it must compose, so that the checks of a composed piece ran. */
             if (composed < 1) {

@@ -59,6 +59,10 @@
             "pattern": "^[#b]{0,2}(1[0-3]|[1-9])$"
           }
         },
+        "key_word": {
+          "type": "string",
+          "pattern": "^[a-z]+( [a-z]+)*$"
+        },
         "primary_chords": {
           "type": "array",
           "items": {

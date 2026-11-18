@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "member_test_util.h"
 #include "analysis/harmony/weighted_chord_identification.h"
 
 /*
@@ -21,10 +22,10 @@ static CommonPracticeMember note(const char *id, int pitch, bool held, double du
     m.note_id = id;
     m.pitch = pitch;
     m.held = held;
-    m.duration = duration;
+    m.duration = member_whole_notes(duration);
     m.strength = strength;
     m.voice_id = voice;
-    m.onset = onset;
+    m.onset = member_whole_notes(onset);
     return m;
 }
 

@@ -21,6 +21,7 @@
 #include "io/midi_importer.h"
 #include "chain/analysis_chain.h"
 #include "../key_index_test_util.h"
+#include "test_knowledge.h"
 
 /* --- the expected values --- */
 
@@ -306,7 +307,7 @@ typedef struct {
 } Chain;
 
 static double fv1_time_double(const MusicalTime *t) {
-    return (double)musical_time_numerator(t) / (double)musical_time_denominator(t);
+    return (double)t->value.num / (double)t->value.den;
 }
 
 static void fv1_chain_run(Chain *c, const FormPiece *fp) {
@@ -325,10 +326,11 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     for (size_t i = 0; i < c->key_event_count; i++) {
         const MidiKeySignatureEvent *event = &c->p.import.key_signatures.events[i];
         c->key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &c->key_events[i].key));
+        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &c->key_events[i].key));
     }
     AnalysisNoteSet set = {c->p.notes, c->p.note_count, c->map};
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     config.first_measure = x->keys_first;
     config.last_measure = x->keys_last;
@@ -368,19 +370,18 @@ static void fv1_chain_destroy(Chain *c) {
 static void fv1_where(const Chain *c, size_t segment, int *measure, double *beat) {
     const TimeSpan *window = sonority_time_window(analysis_chain_segments(c->chain)->sonorities.items[segment].sonority);
     MetricalPosition *position = NULL;
-    assert(metrical_position_from_time(c->map, time_span_start(window), &position) == METRICAL_POSITION_OK);
+    assert(metrical_position_from_time(c->map, &window->start, &position) == METRICAL_POSITION_OK);
     *measure = metrical_position_measure(position);
     const Duration *offset = metrical_position_offset(position);
-    *beat = 1.0 + ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / c->beat_length;
+    *beat = 1.0 + ((double)offset->value.num / (double)offset->value.den) / c->beat_length;
     metrical_position_destroy(position);
 }
 
 /* The time in whole notes of measure `m`, beat `b` of the piece. */
 static double fv1_time_of(const Chain *c, int measure, double beat) {
-    TimeSpan *span = NULL;
+    TimeSpan span;
     assert(meter_map_measure_span(c->map, measure, &span) == METER_MAP_OK);
-    double start = fv1_time_double(time_span_start(span));
-    time_span_destroy(span);
+    double start = fv1_time_double(&span.start);
     return start + (beat - 1.0) * c->beat_length;
 }
 

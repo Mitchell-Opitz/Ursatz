@@ -64,19 +64,17 @@ static Marks load_marks(const MeterMap *map) {
         char numeral[16] = "";
         assert(sscanf(line, "%d %d %15s", &measure, &beat, numeral) == 3);
 
-        TimeSpan *span = NULL;
+        TimeSpan span;
         assert(meter_map_measure_span(map, measure, &span) == METER_MAP_OK);
-        Rational at = test_rational_of_time(time_span_start(span));
+        Rational at = test_rational_of_time(&span.start);
         const TimeSignature *reading = NULL;
         assert(metrical_position_reading_signature(map, measure, &reading) == METRICAL_POSITION_OK);
-        Duration *beat_length = NULL;
+        Duration beat_length;
         unsigned beats = 0;
         assert(standard_meter_beat_grid(reading, &beat_length, &beats));
         for (int b = 1; b < beat; b++) {
-            assert(rational_add(at, test_rational_of_duration(beat_length), &at) == 0);
+            assert(rational_add(at, beat_length.value, &at) == 0);
         }
-        duration_destroy(beat_length);
-        time_span_destroy(span);
 
         assert(marks.count < 64);
         marks.marks[marks.count].start = at;
@@ -109,16 +107,14 @@ static Rational rational_of(double whole_notes) {
 }
 
 static void print_where(const MeterMap *map, Rational t) {
-    MusicalTime *time = musical_time_from_rational_or_null(t);
+    MusicalTime time = musical_time_of(t);
     int measure = 0;
-    assert(meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK);
-    TimeSpan *span = NULL;
+    assert(meter_map_measure_index_at(map, &time, &measure) == METER_MAP_OK);
+    TimeSpan span;
     assert(meter_map_measure_span(map, measure, &span) == METER_MAP_OK);
     Rational into = {0, 1};
-    assert(rational_sub(t, test_rational_of_time(time_span_start(span)), &into) == 0);
+    assert(rational_sub(t, test_rational_of_time(&span.start), &into) == 0);
     printf("measure %d, %.3f of a whole note in", measure, rational_to_double(into));
-    time_span_destroy(span);
-    musical_time_destroy(time);
 }
 
 static void test_field_1_follows_i_v_i_and_resolves_the_annotated_harmony(void) {
@@ -164,11 +160,10 @@ static void test_field_1_follows_i_v_i_and_resolves_the_annotated_harmony(void) 
     /* The opening I - V7 - I: the duration-weighted root of measures 2, 3 and 4. */
     int expected_roots[3] = {1, 5, 1};
     for (int m = 0; m < 3; m++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         assert(meter_map_measure_span(map, m + 2, &span) == METER_MAP_OK);
-        double from = rational_to_double(test_rational_of_time(time_span_start(span)));
-        double to = rational_to_double(test_rational_of_time(time_span_end(span)));
-        time_span_destroy(span);
+        double from = rational_to_double(test_rational_of_time(&span.start));
+        double to = rational_to_double(test_rational_of_time(&span.end));
         double by_degree[8] = {0};
         for (size_t s = 0; s < p.segment_count; s++) {
             if (p.starts[s] >= from - 1e-9 && p.starts[s] < to - 1e-9 && results.items[s].matched) {

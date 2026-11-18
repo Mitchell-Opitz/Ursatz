@@ -16,6 +16,8 @@ KINDS = {
     "pattern", "instrument", "rule", "preset", "term",
 }
 LETTER = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
+KEY_NAME = re.compile(r"^([A-G][#b]?) (.+)$")
 
 problems = []
 
@@ -65,6 +67,162 @@ def check_material_examples(path, entry):
                 problem(path, entry["id"], "example %d: descending does not match the descending steps" % number)
 
 
+def key_word(entry):
+    """The word after the tonic in a key name: the entry's key_word, else its name."""
+    return entry.get("content", {}).get("key_word", entry.get("name", "")).lower()
+
+
+def material_words(materials):
+    """Every lowercase word a key name may use for a material (key word, name, aliases) with the ids that use it."""
+    words = {}
+    for material_id, entry in materials.items():
+        for word in [key_word(entry), entry.get("name", "")] + list(entry.get("aliases", [])):
+            if isinstance(word, str):
+                words.setdefault(word.lower(), set()).add(material_id)
+    return words
+
+
+def parse_key(text, words):
+    """'C minor' -> (0, material id), or None when the tonic or the material word is unknown or ambiguous."""
+    match = KEY_NAME.match(text) if isinstance(text, str) else None
+    if match is None:
+        return None
+    ids = words.get(match.group(2).lower(), set())
+    if len(ids) != 1:
+        return None
+    return pitch_class(match.group(1)), next(iter(ids))
+
+
+def show_key(key, materials):
+    if key is None:
+        return "nothing"
+    return "%s %s" % (NAMES[key[0]], key_word(materials[key[1]]))
+
+
+def tonal_target(content, anchor, materials, words):
+    """The key a tonal relation gives from the anchor, or None when it is refused."""
+    center, kind = anchor
+    steps = materials[kind]["content"]["steps"]
+    if "degree" in content:
+        if content["degree"] > len(steps):
+            return None
+        center = (center + steps[content["degree"] - 1]) % 12
+    else:
+        center = (center + content["root_semitones"]) % 12
+    material = content["material"]
+    major = words.get("major", set())
+    minor = words.get("minor", set())
+    if material == "same":
+        return center, kind
+    if material == "parallel":
+        minor_forms = minor | {i for i, m in materials.items() if m.get("content", {}).get("family") == "minor"}
+        if kind in major and len(minor) == 1:
+            return center, next(iter(minor))
+        if kind in minor_forms and len(major) == 1:
+            return center, next(iter(major))
+        return None
+    if material == "diatonic":
+        degree = content["degree"] - 1
+        if degree >= len(steps) or len(major) != 1 or len(minor) != 1:
+            return None
+        count = len(steps)
+        root = steps[degree]
+        third = (steps[(degree + 2) % count] - root) % 12
+        fifth = (steps[(degree + 4) % count] - root) % 12
+        if (third, fifth) == (4, 7):
+            return center, next(iter(major))
+        if (third, fifth) == (3, 7):
+            return center, next(iter(minor))
+        return None
+    return (center, material) if material in materials else None
+
+
+def modal_target(content, anchor, materials):
+    center, kind = anchor
+    rank = materials[kind].get("content", {}).get("brightness_rank")
+    if rank is None:
+        return None
+    wanted = rank + content["brightness_steps"]
+    found = [i for i, m in materials.items() if m.get("content", {}).get("brightness_rank") == wanted]
+    if len(found) != 1:
+        return None
+    if content["center"] != "same":
+        center = (center + content["center"]) % 12
+    return center, found[0]
+
+
+def neo_riemannian_target(content, anchor, materials, words):
+    major, minor = words.get("major", set()), words.get("minor", set())
+    if len(major) != 1 or len(minor) != 1:
+        return None
+    major, minor = next(iter(major)), next(iter(minor))
+    center, kind = anchor
+    for move in content["moves"]:
+        if kind == major:
+            center, kind = {"P": (center, minor), "L": (center + 4, minor), "R": (center - 3, minor)}[move]
+        elif kind == minor:
+            center, kind = {"P": (center, major), "L": (center - 4, major), "R": (center + 3, major)}[move]
+        else:
+            return None
+        center %= 12
+    return center, kind
+
+
+def check_relation_examples(path, entry, materials, words):
+    content = entry.get("content")
+    subtype = entry.get("subtype")
+    if subtype not in ("tonal", "modal", "neo-riemannian") or not isinstance(content, dict):
+        return
+    for number, example in enumerate(entry.get("examples", []), 1):
+        if not isinstance(example, dict):
+            continue
+        anchor, target = parse_key(example.get("anchor"), words), parse_key(example.get("target"), words)
+        if anchor is None or target is None:
+            problem(path, entry["id"], "example %d: '%s' and '%s' are not both keys of a known material" % (
+                number, example.get("anchor"), example.get("target")))
+            continue
+        try:
+            if subtype == "tonal":
+                result = tonal_target(content, anchor, materials, words)
+            elif subtype == "modal":
+                result = modal_target(content, anchor, materials)
+            else:
+                result = neo_riemannian_target(content, anchor, materials, words)
+        except (KeyError, TypeError, IndexError):
+            continue
+        if result is None:
+            problem(path, entry["id"], "example %d: %s is refused by this relation" % (number, example["anchor"]))
+        elif result != target:
+            problem(path, entry["id"], "example %d: %s gives %s, not %s" % (
+                number, example["anchor"], show_key(result, materials), example["target"]))
+
+
+def check_materials(materials, locations):
+    """Key words and brightness ranks are one material's own; a rotation-of target is the same collection rotated."""
+    seen_words, seen_ranks = {}, {}
+    for material_id, entry in sorted(materials.items()):
+        path = locations[material_id]
+        word = key_word(entry)
+        if word in seen_words:
+            problem(path, material_id, "key word '%s' is also the key word of %s" % (word, seen_words[word]))
+        seen_words.setdefault(word, material_id)
+        rank = entry.get("content", {}).get("brightness_rank")
+        if rank is not None:
+            if rank in seen_ranks:
+                problem(path, material_id, "brightness rank %s is also the rank of %s" % (rank, seen_ranks[rank]))
+            seen_ranks.setdefault(rank, material_id)
+        steps = entry.get("content", {}).get("steps")
+        for relation in entry.get("relations", []) if isinstance(entry.get("relations"), list) else []:
+            if not isinstance(relation, dict) or relation.get("type") != "rotation-of" or relation.get("target") not in materials:
+                continue
+            other = materials[relation["target"]].get("content", {}).get("steps")
+            if not isinstance(steps, list) or not isinstance(other, list):
+                continue
+            rotations = [sorted((step - start) % 12 for step in other) for start in other]
+            if steps not in rotations:
+                problem(path, material_id, "is not a rotation of %s" % relation["target"])
+
+
 def main(argv):
     if len(argv) not in (2, 3):
         print("usage: check-knowledge.py <knowledge dir> [<schema dir>]")
@@ -93,6 +251,7 @@ def main(argv):
 
     ids = {}
     relations = []
+    materials, locations, relation_entries = {}, {}, []
     for folder in sorted(os.listdir(root)):
         folder_path = os.path.join(root, folder)
         if not os.path.isdir(folder_path) or folder == "schema":
@@ -162,9 +321,19 @@ def main(argv):
                         relations.append((rel, entry_id, relation.get("target")))
                 if kind == "material" and subtype == "unordered":
                     check_material_examples(rel, entry)
+                    steps = entry["content"].get("steps") if isinstance(entry.get("content"), dict) else None
+                    if isinstance(steps, list) and steps and all(isinstance(step, int) for step in steps):
+                        materials[entry_id] = entry
+                        locations[entry_id] = rel
+                if kind == "relation":
+                    relation_entries.append((rel, entry))
     for rel, entry_id, target in relations:
         if target not in ids:
             problem(rel, entry_id, "relation target '%s' is not an entry" % target)
+    check_materials(materials, locations)
+    words = material_words(materials)
+    for rel, entry in relation_entries:
+        check_relation_examples(rel, entry, materials, words)
     for line in problems:
         print(line)
     return 1 if problems else 0

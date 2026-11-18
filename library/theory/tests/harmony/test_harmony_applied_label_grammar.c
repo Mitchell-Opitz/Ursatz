@@ -4,6 +4,7 @@
 
 #include "theory/harmony/harmony_applied.h"
 #include "theory/tonality/roman_numeral_grammar.h"
+#include "test_knowledge.h"
 
 /*
  * harmony_applied_label keeps its own formatter (standard-harmony does not depend on standard-tonality). This
@@ -20,8 +21,7 @@ int main(void) {
     size_t checked = 0;
     for (int mode = 0; mode < 2; mode++) {
         HarmonyMode harmony_mode = mode == 0 ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR;
-        StandardTonalityMode tonal_mode = mode == 0 ? STANDARD_TONALITY_MODE_MAJOR
-                                                    : STANDARD_TONALITY_MODE_NATURAL_MINOR;
+        const PitchMaterial *tonal_material = mode == 0 ? test_materials()->major : test_materials()->natural_minor;
         for (int quality = 0; quality < HARMONY_APPLIED_QUALITY_COUNT; quality++) {
             for (int target = 1; target <= 7; target++) {
                 HarmonyAppliedChord chord;
@@ -45,7 +45,7 @@ int main(void) {
 
                 int semitones = -1;
                 int offset = chord.kind == APPLIED_CHORD_KIND_SECONDARY_DOMINANT ? 7 : 11;
-                assert(standard_tonality_numeral_root_semitone(&text, tonal_mode, &semitones));
+                assert(standard_tonality_numeral_root_semitone_of(&text, tonal_material, test_materials(), &semitones));
                 assert(semitones == (harmony_applied_scale_semitone(harmony_mode, target) + offset) % 12);
 
                 /* the canonical spelling of the same chord reads back to the same value */

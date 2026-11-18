@@ -42,7 +42,8 @@ int cli_fail_plan_api(ComposerStatus status, const ComposerError *error, const c
 /* --- calling --------------------------------------------------------------------------------------- */
 
 /* Calls the entry with the request (taken and deleted). */
-typedef ComposerStatus (*CliEntry)(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+typedef ComposerStatus (*CliEntry)(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                   ComposerResponse *out);
 ComposerStatus cli_call(CliEntry entry, cJSON *request, ComposerResponse *out);
 
 /* --- the node a command works on ------------------------------------------------------------------- */

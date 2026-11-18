@@ -65,7 +65,7 @@ typedef struct {
     int range_high;
     bool reharmonize;    /* FIGURATE: the figure sits over a reharmonized copy (the FIGURE constraint says so; always, with mode_change) */
     bool mode_change;    /* FIGURATE: the target is the source's tonic in the other mode (R-499): the copy is mapped degree by degree */
-    KeyStructureMode to_mode; /* the target's mode; read when mode_change */
+    const PitchMaterial *to_material; /* the target's material; read when mode_change */
     PlanAccompanimentPattern setting; /* SETTING: the pattern of the new accompaniment (R-518) */
     ReturnCopy source;   /* the returned section, as read */
     ReturnCopy result;   /* the target's, after the variation */
@@ -82,9 +82,9 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
  * voice pitch 4 or 9 semitones over the tonic is lowered a semitone; into major every pitch 3 or 8 over it is raised a
  * semitone and 10 is raised to 11 (the leading tone is kept). The KEY constraints of the nodes and spans take the mode.
  */
-bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, KeyStructureMode to);
+bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, const PitchMaterial *to);
 /* The pitch moved from the other mode of the tonic (a pitch class) into `to`, as return_copy_change_mode maps it. */
-int return_map_pitch(int tonic, KeyStructureMode to, int pitch);
+int return_map_pitch(int tonic, const PitchMaterial *to, int pitch);
 /* The pitch a source pitch (after the move) has in the result: mapped by the mode change of the payload, else as it is. */
 int return_mode_pitch(const ReturnPayload *payload, int pitch);
 /* Adds the copy to the plan under section: its nodes, then its lane spans. */
@@ -101,16 +101,16 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
 /*
  * Whether the key lanes of the two sections have the same shape, every target span is in the other mode from the
  * source's at the same place, all target spans are in one mode, and the tonic moves by one step throughout (R-524);
- * *shift is that step in semitones, from -5 to 6, and *to_mode the target's mode.
+ * *shift is that step in semitones, from -5 to 6, and *to_material the target's material.
  */
 bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
-                          int *shift, int *to_mode);
+                          int *shift, const PitchMaterial **to_material);
 /*
  * return_mode_shift_by with the shift required to be 0: every target span is on the same tonic as the source's at the
  * same place in the other mode (R-499). A copy across modes of a figurate return is moved by 0.
  */
 bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
-                       int *to_mode);
+                       const PitchMaterial **to_material);
 /* The RETURN of a section that form_return_copies holds (the returned section, the variation); false otherwise. */
 bool return_target(const PiecePlan *plan, NodeId section, PlanReturn *ret);
 /* The meter lane span that holds the span whole; false when none does. */

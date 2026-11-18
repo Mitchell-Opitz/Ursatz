@@ -12,26 +12,27 @@
 #include "model/core/value.h"
 #include "model/identity/entity_id.h"
 #include "model/pitch/pitch_spelling.h"
-#include "model/time/time_rational.h"
 #include "model/pitch/pitch_arithmetic.h"
 
 #define NONE ((size_t)-1)
 #define MAX_FRAMES 8
 
 GalantMatchConfig galant_match_config_default(void) {
-    GalantMatchConfig config = {2.0, 1};
+    GalantMatchConfig config = {rational_ratio(2, 1), 1};
     return config;
 }
 
 /* --- exact times --- */
 
-/* The time of a segment edge, read exactly. False when it does not fit a Rational. */
+/* The time of a segment edge, read exactly. */
 static bool seg_start(const GalantSegmentList *s, size_t i, Rational *out) {
-    return rational_of_musical_time(time_span_start(s->items[i].segment.span), out) == RATIONAL_OK;
+    *out = s->items[i].segment.span.start.value;
+    return true;
 }
 
 static bool seg_end(const GalantSegmentList *s, size_t i, Rational *out) {
-    return rational_of_musical_time(time_span_end(s->items[i].segment.span), out) == RATIONAL_OK;
+    *out = s->items[i].segment.span.end.value;
+    return true;
 }
 
 /* The start of segment `i` less `from`, as whole notes. False when a step does not fit a Rational. */
@@ -40,8 +41,13 @@ static bool gap_from(const GalantSegmentList *s, size_t i, Rational from, Ration
     return seg_start(s, i, &start) && rational_sub(start, from, gap) == RATIONAL_OK;
 }
 
-static double seg_beat(const GalantSegmentList *s, size_t i) {
-    return (double)s->items[i].beat_numerator / (double)s->items[i].beat_denominator;
+/* The segment's beat length in whole notes; 0 when its numerator and denominator are no Rational. */
+static Rational seg_beat(const GalantSegmentList *s, size_t i) {
+    Rational beat;
+    if (rational_make(s->items[i].beat_numerator, s->items[i].beat_denominator, &beat) != RATIONAL_OK) {
+        return rational_ratio(0, 1);
+    }
+    return beat;
 }
 
 /* --- a candidate match --- */
@@ -266,7 +272,7 @@ static void extend(Search *search, Candidate *c, size_t stage, size_t from, unsi
     }
     size_t previous_last = NONE;
     Rational previous_end = rational_ratio(0, 1);
-    double previous_beat = 1.0;
+    Rational previous_beat = rational_ratio(1, 1);
     if (stage > 0) {
         previous_last = c->seg2[stage - 1] != NONE ? c->seg2[stage - 1] : c->seg[stage - 1];
         if (!seg_end(s, previous_last, &previous_end)) {
@@ -283,7 +289,8 @@ static void extend(Search *search, Candidate *c, size_t stage, size_t from, unsi
             if (rational_is_negative(gap)) {
                 continue;
             }
-            if (rational_to_double(gap) / previous_beat > search->config.max_gap_beats + 1e-9) {
+            Rational reach;
+            if (rational_mul(search->config.max_gap_beats, previous_beat, &reach) != RATIONAL_OK || rational_cmp(gap, reach) > 0) {
                 break;
             }
         }
@@ -306,14 +313,17 @@ static size_t frames_for(const GalantSegmentList *s, size_t start, size_t stage_
                          GalantPitchDegree *frames) {
     size_t count = 0;
     frames[count++] = (GalantPitchDegree){1, 0};
-    double limit = (double)stage_count * (config->max_gap_beats + 4.0) * seg_beat(s, start);
+    Rational limit;
+    Rational beats;
     Rational begin;
-    if (!seg_start(s, start, &begin)) {
+    if (rational_add(config->max_gap_beats, rational_ratio(4, 1), &beats) != RATIONAL_OK ||
+        rational_mul_int(beats, (long long)stage_count, &beats) != RATIONAL_OK ||
+        rational_mul(beats, seg_beat(s, start), &limit) != RATIONAL_OK || !seg_start(s, start, &begin)) {
         return count;
     }
     for (size_t j = start; j < s->count && count < MAX_FRAMES; j++) {
         Rational reach;
-        if (!gap_from(s, j, begin, &reach) || rational_to_double(reach) > limit) {
+        if (!gap_from(s, j, begin, &reach) || rational_cmp(reach, limit) > 0) {
             break;
         }
         bool seen = false;
@@ -457,7 +467,7 @@ GalantAnalysisStatus galant_schema_match(const GalantSegmentList *segments, cons
     if (config == NULL) {
         config = &fallback;
     }
-    if (!(config->max_gap_beats >= 0.0)) {
+    if (config->max_gap_beats.den <= 0 || rational_is_negative(config->max_gap_beats)) {
         return GALANT_ANALYSIS_ERR_INVALID;
     }
     GalantSchemaMatches found = {NULL, 0};

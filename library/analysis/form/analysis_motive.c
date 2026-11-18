@@ -626,7 +626,7 @@ static bool make_kernel_window(const StandardFormMotiveLine *line, size_t first,
     memset(out, 0, sizeof(*out));
     PitchIdentity **pitches = (PitchIdentity **)calloc(n, sizeof(PitchIdentity *));
     ContourDirection *directions = (ContourDirection *)calloc(shape->intervals, sizeof(ContourDirection));
-    Duration **durations = (Duration **)calloc(shape->intervals, sizeof(Duration *));
+    Duration *durations = (Duration *)calloc(shape->intervals, sizeof(Duration));
     out->ids = (const EntityID **)calloc(n, sizeof(EntityID *));
     bool ok = pitches != NULL && directions != NULL && durations != NULL && out->ids != NULL;
     for (size_t k = 0; ok && k < n; k++) {
@@ -637,19 +637,16 @@ static bool make_kernel_window(const StandardFormMotiveLine *line, size_t first,
     for (size_t k = 0; ok && k < shape->intervals; k++) {
         directions[k] = shape->steps[k] > 0 ? CONTOUR_DIRECTION_UP
                                             : (shape->steps[k] < 0 ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);
-        ok = duration_create((long)shape->ioi[k].num, (unsigned long)shape->ioi[k].den, &durations[k]) == DURATION_OK;
+        ok = duration_of(shape->ioi[k], &durations[k]) == DURATION_OK;
     }
-    /* On success the contour and the pattern take the elements and copy the arrays; the arrays stay ours. */
+    /* On success the contour takes the elements and copies the arrays; the pattern copies the durations. */
     bool pitches_taken = false;
-    bool durations_taken = false;
     if (ok && contour_create(pitches, n, directions, shape->intervals, &out->contour) == CONTOUR_OK) {
         pitches_taken = true;
     } else {
         ok = false;
     }
-    if (ok && rhythmic_pattern_create(durations, shape->intervals, &out->rhythm) == RHYTHMIC_PATTERN_OK) {
-        durations_taken = true;
-    } else {
+    if (!ok || rhythmic_pattern_create(durations, shape->intervals, &out->rhythm) != RHYTHMIC_PATTERN_OK) {
         ok = false;
     }
     if (pitches != NULL && !pitches_taken) {
@@ -659,11 +656,6 @@ static bool make_kernel_window(const StandardFormMotiveLine *line, size_t first,
     }
     free(pitches);
     free(directions);
-    if (durations != NULL && !durations_taken) {
-        for (size_t k = 0; k < shape->intervals; k++) {
-            duration_destroy(durations[k]);
-        }
-    }
     free(durations);
     if (!ok) {
         contour_destroy(out->contour);

@@ -1,6 +1,6 @@
 {
   "format": "ursatz-composer-plan",
-  "format_version": 2,
+  "format_version": 3,
   "metadata": {
     "composer_version": "",
     "ursatz_commit": ""
@@ -61,7 +61,7 @@
         "constraints": [],
         "payload": {
           "tonic": "D",
-          "mode": "minor"
+          "material": "omt.material.natural-minor"
         }
       }
     }],
@@ -448,7 +448,7 @@
             }, {
               "kind": "key",
               "tonic": "D",
-              "mode": "minor"
+              "material": "omt.material.natural-minor"
             }]
         }
       }, {

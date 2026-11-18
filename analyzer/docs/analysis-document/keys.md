@@ -31,7 +31,7 @@ A key region is a claim, plus:
 | `uncertainty` | number | The library's uncertainty for the region, in [0, 1]. Higher is LESS certain: 0 when the chosen key beats every other by a full unit, 1 when another key fits as well or better. This is the opposite sense from a chord claim's `uncertainty`, which carries the library's confidence (see Chord claims). |
 | `index` | integer | The region's position in `regions`. |
 | `tonic` | string | The tonic's pitch class name, e.g. `"Eb"`. |
-| `mode` | `"major"` or `"minor"` | The mode. Minor is the profile's minor (raised sixth and seventh weigh in); chord identification treats it as natural minor. |
+| `material` | string | The id of the pitch material the key reads its scale from, in the knowledge snapshot of the analysis: `"omt.material.major"` or `"omt.material.natural-minor"` (the label says "major" or "minor" from the material's key word). Minor is the profile's minor (raised sixth and seventh weigh in); chord identification treats it as natural minor. Version 12 and older documents call it `mode` and give `"major"` or `"minor"`. |
 | `measures` | object | `{"first", "last"}`: the measure numbers the region covers, inclusive. |
 | `source` | `"profile"` or `"key_signature"` | `"key_signature"` when the region begins at a notated key signature and was restricted to its two keys; `"profile"` otherwise. |
 

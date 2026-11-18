@@ -7,6 +7,7 @@
 #include <cJSON.h>
 #include <analysis/motive/motive_relation.h>
 #include <analysis/motive/motive_sketch.h>
+#include <theory/tonality/common_practice_materials.h>
 #include <model/core/rational.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
@@ -33,6 +34,9 @@ typedef struct {
     size_t feature_count;
     bool has_role;
     bool accompaniment;
+    /* The options' snapshot's materials: the default C major of a degree list, the keys of a JSON document and of a file's signature. */
+    CommonPracticeMaterials materials;
+    const KnowledgeSnapshot *knowledge; /* the options' snapshot: a key's "material" is looked up in it */
 } MotiveDocument;
 
 /*
@@ -80,7 +84,7 @@ bool motive_implied_chord(const Motive *motive, MotiveSketchChord *out);
  * The motive a library sketch result makes: the template with the notes, meter, pickup, harmony, features and role of
  * the sketch, and its scale when it moved (marked given), the length where the last note ends. The template's form, key
  * source and tone labels stay. False, with *out untouched, for a sketch the Composer cannot hold: not valid, a meter it
- * does not have, a time past a billion, a pickup off the thirty-second grid, notes that fail motive_check_notes. out may
+ * does not have, a time past a billion, a pickup off the meter's grid, notes that fail motive_check_notes. out may
  * be the template.
  */
 bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template_motive, Motive *out);
@@ -90,7 +94,7 @@ bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template
  * pickup, harmony, features, role and (for the dominant form) key the relation gives, its length where the last note
  * ends. The motive's form, key source and tone labels stay. The library's refusals keep their meaning as MOTIVE_DEV_*:
  * OK, UNCHANGED, RANGE, NOT_EXPRESSIBLE; NO_SCALE is NO_KEY, INVALID is INVALID, any other is NOT_APPLICABLE. A result
- * the Composer cannot hold (a time past a billion, a pickup off the thirty-second grid, a meter it does not have) is
+ * the Composer cannot hold (a time past a billion, a pickup off the meter's grid, a meter it does not have) is
  * NOT_EXPRESSIBLE. A full motive with a key and no harmony of its own is given its best implied chord at 0 for the
  * relation; the result leaves that chord out when it is the best implied chord of the result's notes, unless keep_implied
  * (the harmony rows, whose chords are the variant's own). *out is written only on OK. applied, when not NULL,
@@ -131,8 +135,8 @@ cJSON *motive_json_object(const Motive *motive);
 /* Prints document as the project's JSON text and deletes it. NULL on failure; caller frees the text. */
 char *motive_json_text(cJSON *document);
 
-/* The key of a MIDI key signature count of sharps (negative for flats) and mode. */
-AnalysisKey motive_key_from_signature(int sharps_flats, KeyStructureMode mode);
+/* The key of a key signature count of sharps (negative for flats) and mode, in the materials' major or natural minor. */
+AnalysisKey motive_key_from_signature(const CommonPracticeMaterials *materials, int sharps_flats, CommonPracticeKeyMode mode);
 
 /*
  * The step of the key's scale a MIDI pitch is on (7 to an octave, 0 the tonic's pitch class), and whether it is a

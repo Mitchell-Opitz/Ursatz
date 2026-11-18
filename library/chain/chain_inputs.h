@@ -54,8 +54,8 @@ typedef enum {
 typedef struct {
     AdaptiveSonorities sonorities;       /* owned */
     char (*ids)[32];                     /* owned; count ids */
-    double *starts;                      /* owned; each segment's window in whole notes */
-    double *ends;
+    Rational *starts;                    /* owned; each segment's window in whole notes */
+    Rational *ends;
     size_t count;
     CommonPracticeMember *members;       /* owned; every segment's members, one after another; NULL before chain_build_members */
     CommonPracticeSegment *segments;     /* owned; count entries viewing members; NULL before chain_build_members */
@@ -135,7 +135,7 @@ ChainInputStatus chain_build_segment_lines(const ChainSegments *voice_segments, 
 typedef struct {
     HarmonySegmentInput *inputs;  /* owned; count entries */
     MetricalPosition **positions; /* owned */
-    Duration *beat_length;        /* owned */
+    Duration beat_length;
     size_t count;
 } ChainHarmonyInputs;
 
@@ -158,7 +158,7 @@ ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, siz
  * change out of an excursion takes the excursion's extent. `segment_starts` is each segment's start in whole notes
  * (ChainSegments.starts), indexed like the cadences' arrivals.
  */
-ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const double *segment_starts, const HarmonyCadences *cadences);
+ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const Rational *segment_starts, const HarmonyCadences *cadences);
 
 /*
  * The notes' events and sounding pitches as the kernel's analyses take them (outer_voice_extract, voice_separate): a NoteEvent array
@@ -176,17 +176,14 @@ ChainInputStatus chain_build_pitches(const AnalysisNoteSet *notes, ChainPitches 
 void chain_pitches_destroy(ChainPitches *pitches);
 
 /*
- * The input of standard-form's adapter (analysis_input.h) as the chain builds it: spans copied for the input to borrow, kept here.
+ * The input of standard-form's adapter (analysis_input.h) as the chain builds it: the soprano notes kept here for the input to borrow.
  */
 typedef struct {
     StandardFormInput input;
-    AnalysisNote *notes;  /* owned: the soprano notes the input borrows (copies; their spans are the note set's or in spans) */
+    AnalysisNote *notes;  /* owned: the soprano notes the input borrows (copies) */
     size_t note_count;
     size_t note_capacity;
     int *degrees;         /* owned: the scale degree of each note, for the motive input; NULL for the others */
-    TimeSpan **spans;     /* owned: every span the input borrows */
-    size_t span_count;
-    size_t span_capacity;
 } ChainFormInput;
 
 /*
@@ -204,12 +201,13 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
  * The form input for the motive analysis (analysis_motive.h): a NOTE-LEVEL soprano, which the outer-voice line (one note per segment)
  * cannot give. The soprano is the highest sounding note at each attack: at every onset, among the notes sounding then, the highest (the
  * later attack among equals); it is a soprano note when it is attacked then. Each note carries its scale degree in the key on
- * `tonic_pitch_class` (a chromatic note its altered degree). Only notes starting in the measures [first_measure, last_measure]. The
+ * `tonic_pitch_class` and `mode`, read in the scale of `materials` (a chromatic note its altered degree). Only notes starting in the measures [first_measure, last_measure]. The
  * cadences (NULL for none) are added over the windows of `segments`. Finished.
  */
 ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const ChainSegments *segments, int first_measure,
                                           int last_measure, int tonic_pitch_class, CommonPracticeKeyMode mode,
-                                          const HarmonyCadences *cadences, ChainFormInput *out);
+                                          const CommonPracticeMaterials *materials, const HarmonyCadences *cadences,
+                                          ChainFormInput *out);
 void chain_form_input_destroy(ChainFormInput *input);
 
 /*
@@ -233,12 +231,6 @@ typedef struct {
     StandardMeterInput input;
     AnalysisNote *notes;   /* owned: the scoped copies of the notes, each with its line (0, 1 or 2) as its voice; the input borrows them */
     size_t note_count;
-    TimeSpan **spans;      /* owned: every span the input borrows */
-    size_t span_count;
-    size_t span_capacity;
-    MusicalTime **times;   /* owned: every time the input borrows */
-    size_t time_count;
-    size_t time_capacity;
 } ChainMeterInput;
 
 /* The meter input over the measures [first_measure, last_measure]; `lines` are the voice lines (analysis_chain_outer_voices): the input reads only their note ids (which notes are the soprano and the bass), so every melody note counts, not only the one sounding at each chord segment's start. */
@@ -306,7 +298,8 @@ typedef struct {
 
 ChainInputStatus chain_build_melody_line(const ChainSegments *line_segments, size_t line_count, const OuterVoiceEntry *entries,
                                          const ChainSegments *segments, size_t count, const CommonPracticeWeightedResult *results,
-                                         int tonic_pitch_class, CommonPracticeKeyMode mode, ChainMelodyLine *out);
+                                         int tonic_pitch_class, CommonPracticeKeyMode mode, const CommonPracticeMaterials *materials,
+                                         ChainMelodyLine *out);
 void chain_melody_line_destroy(ChainMelodyLine *melody);
 
 /*
@@ -320,9 +313,6 @@ void chain_melody_line_destroy(ChainMelodyLine *melody);
  */
 typedef struct {
     GalantSegmentList list;  /* owned */
-    TimeSpan **spans;        /* owned: the spans of merged segments */
-    size_t span_count;
-    size_t span_capacity;
 } ChainGalantSegments;
 
 ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size_t count, const MeterMap *map,

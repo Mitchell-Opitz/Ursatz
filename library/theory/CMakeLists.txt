@@ -14,7 +14,6 @@ add_library(ursatz_theory
     rules/rule_pair.c
     rules/rule_table.c
     knowledge/knowledge_snapshot.c
-    knowledge/pitch_material.c
     vocabulary/applied_chord_kind.c
     vocabulary/beat_strength.c
     vocabulary/cadence_type.c
@@ -22,12 +21,15 @@ add_library(ursatz_theory
     vocabulary/motive_occurrence_kind.c
     vocabulary/non_chord_tone.c
     vocabulary/voice_part.c
+    tonality/brightness.c
     tonality/chord_vocabulary.c
     tonality/chord_vocabulary_seventh.c
     tonality/common_practice_framework.c
+    tonality/common_practice_materials.c
     tonality/framework.c
     tonality/interval.c
     tonality/key_vocabulary.c
+    tonality/region_relation.c
     tonality/roman_numeral_analysis_rules.c
     tonality/roman_numeral_grammar.c
     tonality/roman_numeral_rules.c
@@ -173,12 +175,16 @@ ursatz_public_headers(ursatz_theory
         theory/vocabulary/non_chord_tone.h
         theory/vocabulary/subphrase_role.h
         theory/vocabulary/voice_part.h
+        theory/knowledge/knowledge_snapshot.h
+        theory/knowledge/relation.h
         theory/tonality/chord_vocabulary.h
         theory/tonality/chord_vocabulary_seventh.h
         theory/tonality/common_practice_framework.h
+        theory/tonality/common_practice_materials.h
         theory/tonality/framework.h
         theory/tonality/interval.h
         theory/tonality/key_vocabulary.h
+        theory/tonality/region_relation.h
         theory/tonality/roman_numeral_analysis_rules.h
         theory/tonality/roman_numeral_grammar.h
         theory/tonality/roman_numeral_rules.h
@@ -296,8 +302,7 @@ ursatz_public_headers(ursatz_theory
 )
 target_link_libraries(ursatz_theory PUBLIC ursatz_model PRIVATE cjson)
 
-# The knowledge files are embedded in the library (target architecture 5): no binary reads knowledge/ at run time. The four tonality
-# modes' steps come out of their entries in the same step (StandardTonalityMode order).
+# The knowledge files are embedded in the library (target architecture 5): no binary reads knowledge/ at run time.
 # The paths come from this folder, not the top project: an application that adds the library as a subproject has its own root.
 if(NOT Python3_EXECUTABLE)
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -308,7 +313,6 @@ add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c
     COMMAND ${Python3_EXECUTABLE} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_knowledge.py ${URSATZ_REPOSITORY_ROOT}/knowledge
         ${CMAKE_CURRENT_BINARY_DIR}/knowledge_embedded.c
-        --modes omt.material.major,omt.material.natural-minor,omt.material.harmonic-minor,omt.material.melodic-minor
     DEPENDS ${URSATZ_KNOWLEDGE_FILES} ${URSATZ_REPOSITORY_ROOT}/cmake/embed_knowledge.py
     COMMENT "Embedding the knowledge files"
     VERBATIM)

@@ -13,6 +13,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Style labels and profiles over the corpora CMake builds in the build tree: "reference" (the five framework-v1
@@ -117,7 +118,7 @@ static StyleProfile *profile_of(const char *name, size_t expected_pieces) {
     char input[1024], output[1024];
     snprintf(input, sizeof(input), "%s/%s", URSATZ_CORPORA_DIR, name);
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
-    CorpusRunOptions options = {input, output, false, NULL, NULL};
+    CorpusRunOptions options = {input, output, false, NULL, NULL, test_knowledge()};
     CorpusRunSummary summary;
     CHECKF(corpus_run(&options, &summary) == CORPUS_RUN_OK, "%s run failed", name);
     CHECKF(summary.analyzed == expected_pieces && summary.failed == 0, "%s: %zu analyzed, %zu failed", name, summary.analyzed,
@@ -469,7 +470,7 @@ static size_t category_size(const StyleStatistic *list, size_t count, const char
    passing tone, note 7 an unclassified tone (no figure). */
 static void test_motive_categories(void) {
     const char *document =
-        "{\"schema_version\": 12,"
+        "{\"schema_version\": 13,"
         " \"non_chord_tones\": [{\"note_ids\": [3], \"type\": \"appoggiatura\"}, {\"note_ids\": [7], \"type\": null},"
         " {\"note_ids\": [9], \"type\": \"passing\"}],"
         " \"motives\": ["
@@ -508,7 +509,7 @@ static void test_motive_categories(void) {
 /* The figure of a tone at the ends of its occurrence has a dash for the missing neighbour. */
 static void test_motive_figure_ends(void) {
     const char *document =
-        "{\"schema_version\": 12,"
+        "{\"schema_version\": 13,"
         " \"non_chord_tones\": [{\"note_ids\": [1], \"type\": \"neighbor\"}, {\"note_ids\": [4], \"type\": \"escape-tone\"}],"
         " \"motives\": [{\"features\": {\"degrees\": [\"1\", \"2\", \"3\"], \"intervals\": [2, 2], \"rhythm\": [\"1/4\", \"1/4\", \"1/4\"]},"
         " \"occurrences\": [{\"note_ids\": [1, 2, 3, 4], \"degrees\": [\"6\", \"1\", \"2\", \"3\"]}]}]}";
@@ -583,7 +584,7 @@ static void test_refusals(void) {
     CHECKF(style_profile_add_document_json(profile, "{\"schema_version\": 8}") == STYLE_PROFILE_ERR_FORMAT, "version 8 is refused");
     CHECKF(style_profile_add_document_json(profile, "{}") == STYLE_PROFILE_ERR_FORMAT, "a document without a version is refused");
     CHECKF(style_profile_add_document_json(profile, "not json") == STYLE_PROFILE_ERR_FORMAT, "text is refused");
-    CHECKF(style_profile_add_document_json(profile, "{\"schema_version\": 12}") == STYLE_PROFILE_OK &&
+    CHECKF(style_profile_add_document_json(profile, "{\"schema_version\": 13}") == STYLE_PROFILE_OK &&
                style_profile_piece_count(profile) == 1,
            "an empty version 9 document counts as a piece with no labels");
     CHECKF(style_profile_add_corpus(profile, "/nonexistent-corpus") == STYLE_PROFILE_ERR_IO, "a missing corpus is an I/O error");

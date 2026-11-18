@@ -9,7 +9,6 @@
 #include "analysis/meter/meter_analysis_position.h"
 #include "model/time/meter_arithmetic.h"
 #include "model/time/score_time.h"
-#include "model/time/time_rational.h"
 
 typedef struct {
     Rational start;
@@ -147,7 +146,9 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
     for (size_t i = 0; i < input->note_count; i++) {
         Rational start;
         Rational end;
-        if (!score_time_span(input->notes[i].span, &start, &end) || !standard_meter_snap_time(config, &start, false, NULL) ||
+        start = input->notes[i].span.start.value;
+        end = input->notes[i].span.end.value;
+        if (!standard_meter_snap_time(config, &start, false, NULL) ||
             !standard_meter_snap_time(config, &end, true, NULL)) {
             continue;
         }
@@ -164,9 +165,8 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
     }
     size_t change_count = 0;
     for (size_t i = 0; i < input->chord_change_count; i++) {
-        Rational at;
-        if (rational_of_musical_time(input->chord_changes[i].time, &at) != RATIONAL_OK ||
-            !standard_meter_snap_time(config, &at, false, NULL)) {
+        Rational at = input->chord_changes[i].time.value;
+        if (!standard_meter_snap_time(config, &at, false, NULL)) {
             continue;
         }
         changes[change_count++] = at;
@@ -185,20 +185,13 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
         if (meter_map_region_of_measure(input->map, measure, &region) != METER_MAP_OK) {
             break;
         }
-        Duration *pulse_duration = NULL;
+        Duration pulse_duration;
         unsigned span = 0;
         if (!standard_meter_hemiola_window(meter_map_region_time_signature(region), &pulse_duration, &span)) {
             measure++;
             continue;
         }
-        Rational pulse;
-        bool pulse_ok = rational_make(duration_numerator(pulse_duration), (long long)duration_denominator(pulse_duration), &pulse) ==
-                        RATIONAL_OK;
-        duration_destroy(pulse_duration);
-        if (!pulse_ok) {
-            measure++;
-            continue;
-        }
+        Rational pulse = pulse_duration.value;
 
         Rational window_start = rational_ratio(0, 1);
         Rational window_end = rational_ratio(0, 1);

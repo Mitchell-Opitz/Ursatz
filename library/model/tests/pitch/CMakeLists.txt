@@ -5,4 +5,4 @@ ursatz_test(pitch_numeric_value LIBS ursatz_model)
 ursatz_test(key_signature LIBS ursatz_model)
 ursatz_test(pitch_arithmetic LIBS ursatz_model VALGRIND)
 ursatz_test(midi_pitch LIBS ursatz_model)
-
+ursatz_test(pitch_material LIBS ursatz_model)

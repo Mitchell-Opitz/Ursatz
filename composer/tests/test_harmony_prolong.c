@@ -10,6 +10,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "support/test_oracles.h"
+#include "support/test_knowledge.h"
 
 /*
  * The prolongation harmony operator, run through the fill loop with its checker. Every plan is one idea over a
@@ -21,7 +22,7 @@
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int bars;
     PlanHarmonyShape shape;
 } Scenario;
@@ -55,7 +56,7 @@ static Fixture build(const Scenario *scenario) {
     assert(plan_add_lane_span(fixture.plan, owner, PLAN_LANE_METER, 0, fixture.span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key = plan_key_of_pitch_class(0, scenario->mode);
+    payload.key = test_key_mode(0, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, owner, PLAN_LANE_KEY, 0, fixture.span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
@@ -186,7 +187,7 @@ static void test_every_meter_and_shape(void) {
                         memset(&scenario, 0, sizeof(scenario));
                         scenario.beats_per_bar = METERS[m][0];
                         scenario.beat_unit = METERS[m][1];
-                        scenario.mode = (KeyStructureMode)mode;
+                        scenario.mode = (HarmonyMode)mode;
                         scenario.bars = bars;
                         scenario.shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
                         scenario.shape.starts_on = ANCHORS[a][0];
@@ -272,7 +273,7 @@ static void test_dominant_pedal(void) {
                 memset(&scenario, 0, sizeof(scenario));
                 scenario.beats_per_bar = METERS[m][0];
                 scenario.beat_unit = METERS[m][1];
-                scenario.mode = (KeyStructureMode)mode;
+                scenario.mode = (HarmonyMode)mode;
                 scenario.bars = 2;
                 scenario.shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
                 scenario.shape.starts_on = PLAN_HARMONY_ANCHOR_DOMINANT;

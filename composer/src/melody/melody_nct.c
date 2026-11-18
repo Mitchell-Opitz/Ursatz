@@ -28,14 +28,13 @@ static bool leap_allowed(int move) {
 
 unsigned melody_scale_mask(const MelodyContext *context, size_t chord) {
     int tonic = analysis_key_tonic_pitch_class(&context->key);
-    if (context->key.mode != KEY_STRUCTURE_MODE_MINOR) {
-        return util_scale_mask(tonic, false);
+    if (!composer_key_is_minor(&context->key)) {
+        return util_scale_mask(tonic, context->key.material);
     }
     /* The harmonic minor where the chord has the raised seventh (the natural seventh beside it makes no melody), else the natural minor. */
     unsigned raised = 1u << ((tonic + 11) % 12);
-    return standard_tonality_mode_pitch_classes(tonic, (context->chord_mask[chord] & raised)
-                                                           ? STANDARD_TONALITY_MODE_HARMONIC_MINOR
-                                                           : STANDARD_TONALITY_MODE_NATURAL_MINOR);
+    return (context->chord_mask[chord] & raised) ? util_scale_mask_raised_seventh(tonic, context->key.material)
+                                                 : util_scale_mask(tonic, context->key.material);
 }
 
 bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *params, const MelodyNote *notes,

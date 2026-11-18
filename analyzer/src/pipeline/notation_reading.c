@@ -130,30 +130,24 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
     unsigned long start_den;
     long length_num;
     unsigned long length_den;
-    if (!scale_fraction(musical_time_numerator(start), musical_time_denominator(start), reading, &start_num,
-                        &start_den) ||
-        !scale_fraction(duration_numerator(duration), duration_denominator(duration), reading, &length_num,
+    if (!scale_fraction((long)start->value.num, (unsigned long)start->value.den, reading, &start_num, &start_den) ||
+        !scale_fraction((long)duration->value.num, (unsigned long)duration->value.den, reading, &length_num,
                         &length_den)) {
         *overflow = true;
         return NULL;
     }
 
     EntityID *id = entity_id_copy(note_event_id(note));
-    MusicalTime *time = NULL;
-    TemporalAnchor *anchor = NULL;
-    Duration *length = NULL;
+    MusicalTime time;
+    Duration length;
     PitchIdentity *pitch = NULL;
     PitchSpelling *spelling = NULL;
     VoiceReference *voice = NULL;
     ProvenanceReference *provenance = NULL;
     NoteEvent *event = NULL;
 
-    bool ok = id && musical_time_create(start_num, start_den, &time) == MUSICAL_TIME_OK &&
-              temporal_anchor_create(time, &anchor) == TEMPORAL_ANCHOR_OK;
-    if (ok) {
-        time = NULL; /* the anchor owns it */
-    }
-    ok = ok && duration_create(length_num, length_den, &length) == DURATION_OK;
+    bool ok = id && musical_time_make(start_num, (long long)start_den, &time) == MUSICAL_TIME_OK &&
+              duration_make(length_num, (long long)length_den, &length) == DURATION_OK;
 
     if (ok) {
         size_t token_size = 0;
@@ -184,13 +178,10 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
         ok = provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK;
     }
 
-    if (ok && note_event_create(id, anchor, length, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK) {
+    if (ok && note_event_create(id, time, length, pitch, spelling, voice, provenance, &event) == NOTE_EVENT_OK) {
         return event;
     }
     entity_id_destroy(id);
-    musical_time_destroy(time);
-    temporal_anchor_destroy(anchor);
-    duration_destroy(length);
     pitch_identity_destroy(pitch);
     pitch_spelling_destroy(spelling);
     voice_reference_destroy(voice);
@@ -198,15 +189,15 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
     return NULL;
 }
 
-static MusicalTime *scaled_time(const MusicalTime *time, const NotationReading *reading, bool *overflow) {
+/* time scaled by the reading, into *out; false (with *overflow set) when it does not fit. */
+static bool scaled_value(MusicalTime time, const NotationReading *reading, bool *overflow, MusicalTime *out) {
     long num;
     unsigned long den;
-    MusicalTime *out = NULL;
-    if (!scale_fraction(musical_time_numerator(time), musical_time_denominator(time), reading, &num, &den)) {
+    if (!scale_fraction((long)time.value.num, (unsigned long)time.value.den, reading, &num, &den)) {
         *overflow = true;
-        return NULL;
+        return false;
     }
-    return musical_time_create(num, den, &out) == MUSICAL_TIME_OK ? out : NULL;
+    return musical_time_make(num, (long long)den, out) == MUSICAL_TIME_OK;
 }
 
 static int exponent_of(int power_of_two) {
@@ -234,21 +225,19 @@ static TimeSignature *reading_signature(const NotationReading *reading) {
 
 /* A pickup shorter than one measure of signature. */
 static bool pickup_fits(const NotationReading *reading, const TimeSignature *signature) {
-    Duration *measure = NULL;
+    Duration measure;
     if (time_signature_measure_duration(signature, &measure) != DURATION_OK) {
         return false;
     }
     /* pickup < measure, as cross products */
-    bool fits = (unsigned long long)reading->pickup_numerator * duration_denominator(measure) <
-                (unsigned long long)duration_numerator(measure) * reading->pickup_denominator;
-    duration_destroy(measure);
-    return fits;
+    return (unsigned long long)reading->pickup_numerator * (unsigned long long)measure.value.den <
+           (unsigned long long)measure.value.num * reading->pickup_denominator;
 }
 
 typedef struct {
     NoteEvent **events;
-    MusicalTime **key_positions;
-    MusicalTime *end_time;
+    MusicalTime *key_positions;
+    MusicalTime end_time;
     MeterMap *meter_map;
     long *positions; /* tempo marking positions, then the dynamics' starts and ends: numerator, denominator pairs */
     unsigned long *denominators;
@@ -258,12 +247,8 @@ static void prepared_destroy(Prepared *prepared, const ImportedNotes *notes) {
     for (size_t i = 0; prepared->events && i < notes->count; i++) {
         note_event_destroy(prepared->events[i]);
     }
-    for (size_t i = 0; prepared->key_positions && i < notes->key_signature_events.count; i++) {
-        musical_time_destroy(prepared->key_positions[i]);
-    }
     free(prepared->events);
     free(prepared->key_positions);
-    musical_time_destroy(prepared->end_time);
     meter_map_destroy(prepared->meter_map);
     free(prepared->positions);
     free(prepared->denominators);
@@ -285,9 +270,9 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
     }
 
     MeterMap *map = NULL;
-    MusicalTime *times[3] = {NULL, NULL, NULL};
+    MusicalTime zero = musical_time_of(rational_ratio(0, 1));
+    MusicalTime pickup = zero;
     MeterMapChangePoint points[8];
-    MusicalTime **scaled = NULL;
     size_t count = 0;
     bool ok = true;
 
@@ -296,16 +281,15 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
             *invalid = true;
             ok = false;
         } else {
-            ok = musical_time_create(0, 1, &times[0]) == MUSICAL_TIME_OK &&
-                 musical_time_create(reading->pickup_numerator, reading->pickup_denominator, &times[1]) ==
-                     MUSICAL_TIME_OK;
-            points[0] = (MeterMapChangePoint){chosen, times[0]};
-            points[1] = (MeterMapChangePoint){chosen, times[1]};
+            ok = musical_time_make(reading->pickup_numerator, (long long)reading->pickup_denominator, &pickup) ==
+                 MUSICAL_TIME_OK;
+            points[0] = (MeterMapChangePoint){chosen, zero};
+            points[1] = (MeterMapChangePoint){chosen, pickup};
             count = 2;
         }
     } else if (reading->has_meter) {
-        ok = own && musical_time_create(0, 1, &times[0]) == MUSICAL_TIME_OK;
-        points[0] = (MeterMapChangePoint){chosen, times[0]};
+        ok = own != NULL;
+        points[0] = (MeterMapChangePoint){chosen, zero};
         count = 1;
     }
 
@@ -319,13 +303,13 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
             from = 1; /* a defaulted lead-in is restored by the map itself */
         }
         MeterMapChangePoint *list = malloc((region_count + 1) * sizeof *list);
-        scaled = calloc(region_count + 1, sizeof *scaled);
-        ok = list && scaled;
+        ok = list != NULL;
         for (size_t i = from; ok && i < region_count; i++) {
             const MeterMapRegion *region = meter_map_region(old, i);
-            scaled[count] = scaled_time(meter_map_region_start(region), reading, overflow);
-            ok = scaled[count] != NULL;
-            list[count] = (MeterMapChangePoint){meter_map_region_time_signature(region), scaled[count]};
+            MusicalTime region_start = meter_map_region_start(region);
+            MusicalTime start = zero;
+            ok = scaled_value(region_start, reading, overflow, &start);
+            list[count] = (MeterMapChangePoint){meter_map_region_time_signature(region), start};
             count++;
         }
         EntityID *id = ok ? entity_id_copy(meter_map_id(old)) : NULL;
@@ -337,12 +321,7 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
         if (!map) {
             entity_id_destroy(id);
         }
-        for (size_t i = 0; scaled && i < region_count + 1; i++) {
-            musical_time_destroy(scaled[i]);
-        }
-        free(scaled);
         free(list);
-        musical_time_destroy(times[0]);
         return ok ? map : NULL;
     }
 
@@ -352,9 +331,6 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
         if (!map) {
             entity_id_destroy(id);
         }
-    }
-    for (int i = 0; i < 3; i++) {
-        musical_time_destroy(times[i]);
     }
     time_signature_destroy(own);
     return ok ? map : NULL;
@@ -392,13 +368,12 @@ NotationReadingResult notation_reading_apply(ImportedNotes *notes, const Notatio
         ok = prepared.key_positions != NULL;
     }
     for (size_t i = 0; ok && i < key_count; i++) {
-        prepared.key_positions[i] = scaled_time(notes->key_signature_events.events[i].position, reading, &overflow);
-        ok = prepared.key_positions[i] != NULL;
+        ok = scaled_value(notes->key_signature_events.events[i].position, reading, &overflow,
+                          &prepared.key_positions[i]);
     }
 
     if (ok) {
-        prepared.end_time = scaled_time(notes->meter.end_time, reading, &overflow);
-        ok = prepared.end_time != NULL;
+        ok = scaled_value(notes->meter.end_time, reading, &overflow, &prepared.end_time);
     }
 
     size_t tempo_count = notes->source.tempo_marking_count;
@@ -442,11 +417,9 @@ NotationReadingResult notation_reading_apply(ImportedNotes *notes, const Notatio
     }
     free(prepared.events);
     for (size_t i = 0; i < key_count; i++) {
-        musical_time_destroy(notes->key_signature_events.events[i].position);
         notes->key_signature_events.events[i].position = prepared.key_positions[i];
     }
     free(prepared.key_positions);
-    musical_time_destroy(notes->meter.end_time);
     notes->meter.end_time = prepared.end_time;
     meter_map_destroy(notes->meter.meter_map);
     notes->meter.meter_map = prepared.meter_map;

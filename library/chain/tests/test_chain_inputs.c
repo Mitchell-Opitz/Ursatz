@@ -7,6 +7,14 @@
 #include "analysis/harmony/outer_scale_degrees.h"
 #include "theory/meter/segmentation_beat_grid.h"
 #include "chain/analysis_chain.h"
+#include "test_knowledge.h"
+
+/* The default config with the snapshot's materials: the key regions estimate has none of its own. */
+static const CommonPracticeKeyRegionsConfig *default_config(void) {
+    static CommonPracticeKeyRegionsConfig config;
+    config = common_practice_key_regions_config_default(test_materials());
+    return &config;
+}
 
 /*
  * The chain's input builders, each on a small constructed piece (chain_test_piece.h): the results, the error paths (a NULL argument, an
@@ -31,9 +39,9 @@ static const AnalysisVoiceCell *grid_cell(const AnalysisVoiceGrid *grid, size_t 
     return &grid->cells[segment * grid->voice_count + voice];
 }
 
-static MusicalTime *time_at(long numerator, unsigned long denominator) {
-    MusicalTime *time = NULL;
-    assert(musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK);
+static MusicalTime time_at(long numerator, unsigned long denominator) {
+    MusicalTime time;
+    assert(musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK);
     return time;
 }
 
@@ -56,7 +64,7 @@ static void test_segments_and_members(TestPiece *piece) {
     /* by default a melody over unchanged harmony merges into the segment before: one segment per chord */
     assert(chain_build_segments(&piece->set, NULL, &segments) == CHAIN_INPUT_OK);
     assert(segments.count == 4 && segments.members == NULL && segments.segments == NULL);
-    assert(strcmp(segments.ids[0], "seg-0") == 0 && segments.starts[0] == 0.0 && segments.ends[3] == 4.0);
+    assert(strcmp(segments.ids[0], "seg-0") == 0 && rational_equals(segments.starts[0], rational_ratio(0, 1)) && rational_equals(segments.ends[3], rational_ratio(4, 1)));
     assert(chain_build_members(&piece->set, &segments) == CHAIN_INPUT_OK);
     assert(segments.segments[0].member_count == 6 && segments.segments[1].member_count == 6);
     chain_segments_destroy(&segments);
@@ -68,10 +76,10 @@ static void test_segments_and_members(TestPiece *piece) {
     assert(segments.count == 14 && segments.members == NULL && segments.segments == NULL);
     assert(strcmp(segments.ids[13], "seg-13") == 0);
     for (size_t s = 0; s < segments.count; s++) {
-        assert(segments.ends[s] > segments.starts[s]);
-        assert(s == 0 || segments.starts[s] >= segments.ends[s - 1] - 1e-12);
+        assert(rational_cmp(segments.ends[s], segments.starts[s]) > 0);
+        assert(s == 0 || rational_cmp(segments.starts[s], segments.ends[s - 1]) >= 0);
     }
-    assert(segments.ends[13] == 4.0);
+    assert(rational_equals(segments.ends[13], rational_ratio(4, 1)));
 
     /* the members: a set missing a note a segment names fails and leaves the segments without members */
     assert(chain_build_members(&piece->set, NULL) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
@@ -84,8 +92,8 @@ static void test_segments_and_members(TestPiece *piece) {
     const CommonPracticeSegment *first = &segments.segments[0];
     assert(first->member_count == 3 && strcmp(first->id, "seg-0") == 0);
     for (size_t j = 0; j < first->member_count; j++) {
-        assert(!first->members[j].held && first->members[j].strength == BEAT_STRENGTH_STRONG && first->members[j].onset == 0.0);
-        assert(first->members[j].duration > 0.0 && first->members[j].note_id != NULL && first->members[j].voice_id != NULL);
+        assert(!first->members[j].held && first->members[j].strength == BEAT_STRENGTH_STRONG && rational_is_zero(first->members[j].onset));
+        assert(rational_cmp(first->members[j].duration, rational_ratio(0, 1)) > 0 && first->members[j].note_id != NULL && first->members[j].voice_id != NULL);
     }
     /* the second beat holds the alto and the bass, and attacks the soprano */
     const CommonPracticeSegment *second = &segments.segments[1];
@@ -93,7 +101,7 @@ static void test_segments_and_members(TestPiece *piece) {
     for (size_t j = 0; j < second->member_count; j++) {
         held += second->members[j].held ? 1 : 0;
         assert(!second->members[j].held || second->members[j].strength == BEAT_STRENGTH_STRONG);
-        assert(second->members[j].held || second->members[j].onset == 0.25);
+        assert(second->members[j].held || rational_equals(second->members[j].onset, rational_ratio(1, 4)));
     }
     assert(held == 2 && second->member_count == 3);
     /* the third beat's soprano is a medium attack */
@@ -108,19 +116,15 @@ static void test_segments_and_members(TestPiece *piece) {
 
 static void test_attack_strength(TestPiece *piece) {
     const MeterMap *map = piece->import.meter_map;
-    MusicalTime *beat_one = time_at(0, 1);
-    MusicalTime *beat_two = time_at(1, 4);
-    MusicalTime *beat_three = time_at(1, 2);
-    MusicalTime *offbeat = time_at(1, 8);
-    assert(chain_attack_strength(map, beat_one) == BEAT_STRENGTH_STRONG);
-    assert(chain_attack_strength(map, beat_two) == BEAT_STRENGTH_WEAK);
-    assert(chain_attack_strength(map, beat_three) == BEAT_STRENGTH_MEDIUM);
-    assert(chain_attack_strength(map, offbeat) == BEAT_STRENGTH_WEAK);
-    assert(chain_attack_strength(NULL, beat_one) == BEAT_STRENGTH_WEAK && chain_attack_strength(map, NULL) == BEAT_STRENGTH_WEAK);
-    musical_time_destroy(beat_one);
-    musical_time_destroy(beat_two);
-    musical_time_destroy(beat_three);
-    musical_time_destroy(offbeat);
+    MusicalTime beat_one = time_at(0, 1);
+    MusicalTime beat_two = time_at(1, 4);
+    MusicalTime beat_three = time_at(1, 2);
+    MusicalTime offbeat = time_at(1, 8);
+    assert(chain_attack_strength(map, &beat_one) == BEAT_STRENGTH_STRONG);
+    assert(chain_attack_strength(map, &beat_two) == BEAT_STRENGTH_WEAK);
+    assert(chain_attack_strength(map, &beat_three) == BEAT_STRENGTH_MEDIUM);
+    assert(chain_attack_strength(map, &offbeat) == BEAT_STRENGTH_WEAK);
+    assert(chain_attack_strength(NULL, &beat_one) == BEAT_STRENGTH_WEAK && chain_attack_strength(map, NULL) == BEAT_STRENGTH_WEAK);
 }
 
 static void test_keys(TestPiece *piece) {
@@ -142,26 +146,28 @@ static void test_keys(TestPiece *piece) {
     key_segments = NULL;
     assert(chain_build_key_segments(&segments, segments.count, NULL, &key_segments) == CHAIN_INPUT_OK);
     assert(key_segments[0].weights.total > 0.0 && key_segments[0].source == &segments.segments[0]);
-    assert(key_segments[0].start == time_span_start(sonority_time_window(segments.sonorities.items[0].sonority)));
+    assert(musical_time_same(key_segments[0].start, sonority_time_window(segments.sonorities.items[0].sonority)->start));
 
     CommonPracticeKeyRegions regions;
     memset(&regions, 0, sizeof(regions));
     const MeterMap *map = piece->import.meter_map;
-    assert(chain_estimate_key_regions(NULL, segments.count, map, NULL, 0, NULL, &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 1, NULL, &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    AnalysisKeyEvent no_time = {NULL, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}};
-    assert(chain_estimate_key_regions(key_segments, segments.count, map, &no_time, 1, NULL, &regions) == CHAIN_INPUT_ERR_KEYS);
+    assert(chain_estimate_key_regions(NULL, segments.count, map, NULL, 0, default_config(), &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 1, default_config(), &regions) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    MusicalTime before;
+    assert(musical_time_make(-1, 1, &before) == MUSICAL_TIME_OK);
+    AnalysisKeyEvent no_time = {before, {NULL, PITCH_LETTER_C, 0, test_materials()->major}}; /* before the piece starts */
+    assert(chain_estimate_key_regions(key_segments, segments.count, map, &no_time, 1, default_config(), &regions) == CHAIN_INPUT_ERR_KEYS);
     assert(regions.regions == NULL);
 
-    MusicalTime *zero = time_at(0, 1);
-    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}};
-    assert(chain_estimate_key_regions(key_segments, segments.count, map, &signature, 1, NULL, &regions) == CHAIN_INPUT_OK);
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
+    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, test_materials()->major}};
+    assert(chain_estimate_key_regions(key_segments, segments.count, map, &signature, 1, default_config(), &regions) == CHAIN_INPUT_OK);
     assert(regions.region_count >= 1 && regions.regions[0].key_index == 0); /* C major */
     common_practice_key_regions_destroy(&regions);
-    assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 0, NULL, &regions) == CHAIN_INPUT_OK);
+    assert(chain_estimate_key_regions(key_segments, segments.count, map, NULL, 0, default_config(), &regions) == CHAIN_INPUT_OK);
     assert(regions.region_count >= 1 && regions.regions[0].key_index == 0);
     common_practice_key_regions_destroy(&regions);
-    musical_time_destroy(zero);
     chain_key_segments_destroy(key_segments);
     chain_key_segments_destroy(NULL);
     chain_segments_destroy(&segments);
@@ -197,10 +203,12 @@ static void test_pitches(TestPiece *piece) {
 /* The stage inputs, from a chain run over the piece. */
 static void test_stage_inputs(TestPiece *piece) {
     AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
     config.stages = ANALYSIS_CHAIN_STAGE_CADENCES | ANALYSIS_CHAIN_STAGE_MELODY | ANALYSIS_CHAIN_STAGE_SCHEMAS;
     config.refine_keys = false;
-    MusicalTime *zero = time_at(0, 1);
-    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}};
+    MusicalTime zero;
+    assert(musical_time_make(0, 1, &zero) == MUSICAL_TIME_OK);
+    AnalysisKeyEvent signature = {zero, {NULL, PITCH_LETTER_C, 0, test_materials()->major}};
     AnalysisChain *chain = NULL;
     AnalysisChainStatus status = analysis_chain_run(&piece->set, &signature, 1, &config, &chain);
     assert(status == ANALYSIS_CHAIN_OK);
@@ -221,7 +229,7 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(segment_lines != NULL && segment_lines->count == count && lines->count == voice_segments->count && lines->count > count);
     for (size_t i = 0; i < count; i++) {
         size_t v = 0;
-        while (v + 1 < voice_segments->count && voice_segments->starts[v + 1] <= segments->starts[i] + 1e-12) {
+        while (v + 1 < voice_segments->count && rational_cmp(voice_segments->starts[v + 1], segments->starts[i]) <= 0) {
             v++;
         }
         assert(segment_lines->soprano[i].present == lines->soprano[v].present && segment_lines->bass[i].present == lines->bass[v].present);
@@ -238,11 +246,11 @@ static void test_stage_inputs(TestPiece *piece) {
     assert(chain_build_harmony_segments(segments, count + 1, map, chords, romans, lines, &harmony) == CHAIN_INPUT_ERR_BAD_NOTES);
     assert(harmony.inputs == NULL);
     assert(chain_build_harmony_segments(segments, count, map, chords, romans, lines, &harmony) == CHAIN_INPUT_OK);
-    assert(harmony.count == count && harmony.beat_length != NULL);
+    assert(harmony.count == count);
     for (size_t s = 0; s < count; s++) {
         const HarmonySegmentInput *input = &harmony.inputs[s];
         assert(strcmp(input->segment.id, segments->ids[s]) == 0 && input->segment.position == harmony.positions[s]);
-        assert(input->beat_length == harmony.beat_length && strcmp(input->key_ref, "key") == 0);
+        assert(input->has_beat_length && duration_same(input->beat_length, harmony.beat_length) && strcmp(input->key_ref, "key") == 0);
         if (romans[s].has_numeral) {
             assert(input->degree == romans[s].claim.degree && input->inversion == romans[s].claim.inversion);
             assert(input->interval_count == 3 || input->interval_count == 4);
@@ -294,7 +302,7 @@ static void test_stage_inputs(TestPiece *piece) {
     chain_segments_destroy(&aligned);
 
     /* the motive input: a note-level soprano with its degrees */
-    assert(chain_build_motive_input(&piece->set, segments, 1, 4, 0, COMMON_PRACTICE_KEY_MAJOR, &cadences, &form) == CHAIN_INPUT_OK);
+    assert(chain_build_motive_input(&piece->set, segments, 1, 4, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &cadences, &form) == CHAIN_INPUT_OK);
     assert(form.input.note_count == 16 && form.input.degrees[0] == 3 && form.input.degrees[1] == 2 &&
            form.input.degrees[2] == 1);
     chain_form_input_destroy(&form);
@@ -356,11 +364,11 @@ static void test_stage_inputs(TestPiece *piece) {
     /* the melody line: one note per soprano note, degrees in C major, a chord tone on the downbeat */
     ChainMelodyLine melody;
     memset(&melody, 0, sizeof(melody));
-    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, NULL) ==
+    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), NULL) ==
            CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    assert(chain_build_melody_line(segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) ==
+    assert(chain_build_melody_line(segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &melody) ==
            CHAIN_INPUT_ERR_BAD_NOTES);
-    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &melody) == CHAIN_INPUT_OK);
+    assert(chain_build_melody_line(segments, count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &melody) == CHAIN_INPUT_OK);
     assert(melody.line.count > 0 && melody.line.notes[0].present && melody.line.notes[0].degree == 3 &&
            melody.line.notes[0].alteration == 0 && melody.segment[0] == 0);
     assert(melody.line.notes[0].has_strength && melody.line.notes[0].strength == BEAT_STRENGTH_STRONG);
@@ -371,16 +379,16 @@ static void test_stage_inputs(TestPiece *piece) {
        each on the chord segment holding its onset; the chord results are read there */
     ChainMelodyLine voiced;
     memset(&voiced, 0, sizeof(voiced));
-    assert(chain_build_melody_line(NULL, lines->count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &voiced) ==
+    assert(chain_build_melody_line(NULL, lines->count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &voiced) ==
            CHAIN_INPUT_ERR_NULL_ARGUMENT);
-    assert(chain_build_melody_line(voice_segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, &voiced) ==
+    assert(chain_build_melody_line(voice_segments, 0, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR, test_materials(), &voiced) ==
            CHAIN_INPUT_ERR_BAD_NOTES);
     assert(chain_build_melody_line(voice_segments, lines->count + 1, lines->soprano, segments, count, results, 0,
-                                   COMMON_PRACTICE_KEY_MAJOR, &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
+                                   COMMON_PRACTICE_KEY_MAJOR, test_materials(), &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
     assert(chain_build_melody_line(voice_segments, lines->count, lines->soprano, segments, 0, results, 0, COMMON_PRACTICE_KEY_MAJOR,
-                                   &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
+                                   test_materials(), &voiced) == CHAIN_INPUT_ERR_BAD_NOTES);
     assert(chain_build_melody_line(voice_segments, lines->count, lines->soprano, segments, count, results, 0, COMMON_PRACTICE_KEY_MAJOR,
-                                   &voiced) == CHAIN_INPUT_OK);
+                                   test_materials(), &voiced) == CHAIN_INPUT_OK);
     size_t runs = 0;
     const char *previous = NULL;
     for (size_t v = 0; v < lines->count; v++) {
@@ -402,7 +410,7 @@ static void test_stage_inputs(TestPiece *piece) {
         const char *id = entry->present ? entity_id_value(entry->note_id) : NULL;
         if (id != NULL && (previous == NULL || strcmp(previous, id) != 0)) {
             size_t chord = 0;
-            while (chord + 1 < count && segments->starts[chord + 1] <= voice_segments->starts[v] + 1e-12) {
+            while (chord + 1 < count && rational_cmp(segments->starts[chord + 1], voice_segments->starts[v]) <= 0) {
                 chord++;
             }
             assert(voiced.line.notes[next_note].present && voiced.segment[next_note] == chord);
@@ -433,7 +441,6 @@ static void test_stage_inputs(TestPiece *piece) {
     chain_harmony_inputs_destroy(&harmony);
     chain_harmony_inputs_destroy(NULL);
     analysis_chain_destroy(chain);
-    musical_time_destroy(zero);
 }
 
 static void test_segment_lines(TestPiece *piece) {
@@ -467,7 +474,7 @@ static void test_segment_lines(TestPiece *piece) {
     assert(out.count == 4);
     for (size_t i = 0; i < 4; i++) {
         size_t v = 0;
-        while (v + 1 < voice_segments.count && voice_segments.starts[v + 1] <= chord_segments.starts[i] + 1e-12) {
+        while (v + 1 < voice_segments.count && rational_cmp(voice_segments.starts[v + 1], chord_segments.starts[i]) <= 0) {
             v++;
         }
         assert(out.soprano[i].segment_index == i && out.bass[i].segment_index == i);
@@ -482,11 +489,11 @@ static void test_segment_lines(TestPiece *piece) {
     outer_voice_lines_destroy(&out);
 
     /* chord segments that start inside a note: before the first voice segment the line is absent, and two segments over one held note share it */
-    double starts[4] = {-0.5, 0.1, 0.2, 1.0};
+    Rational starts[4] = {{-1, 2}, {1, 10}, {1, 5}, {1, 1}};
     ChainSegments shifted = chord_segments;
     shifted.starts = starts;
     assert(chain_build_segment_lines(&voice_segments, &lines, &shifted, 4, &out) == CHAIN_INPUT_OK);
-    assert(!out.soprano[0].present && !out.bass[0].present && out.soprano[0].note_id == NULL && out.soprano[0].span != NULL);
+    assert(!out.soprano[0].present && !out.bass[0].present && out.soprano[0].note_id == NULL);
     assert(out.soprano[1].present && out.soprano[2].present);
     assert(strcmp(entity_id_value(out.soprano[1].note_id), entity_id_value(out.soprano[2].note_id)) == 0);
     assert(strcmp(entity_id_value(out.soprano[1].note_id), entity_id_value(lines.soprano[0].note_id)) == 0);

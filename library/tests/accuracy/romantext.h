@@ -39,14 +39,14 @@
 #define ROMANTEXT_META_MAX 128
 
 typedef struct {
-    MusicalTime *time;      /* owned: where the key holds from */
+    MusicalTime time;       /* where the key holds from */
     int measure;
     int tonic_pitch_class;  /* 0..11 */
-    bool minor;
+    bool is_minor;
 } RomanTextKey;
 
 typedef struct {
-    MusicalTime *time;      /* owned: where the chord starts; it sounds until the next chord's start */
+    MusicalTime time;       /* where the chord starts; it sounds until the next chord's start */
     int measure;
     char text[ROMANTEXT_TEXT_MAX]; /* the token as written */
     bool supported;         /* false: the fields below are not meaningful */
@@ -61,7 +61,7 @@ typedef struct {
     int target_alteration;
     bool target_upper;      /* the target is written in capitals (a major key) */
     int tonic_pitch_class;  /* the key in force at the chord */
-    bool minor;
+    bool is_minor;
     size_t key_index;       /* an index into keys, or SIZE_MAX when no key was given before the chord */
 } RomanTextChord;
 
@@ -95,7 +95,7 @@ typedef enum {
  * (romantext_meter_map_grid) or the measure layout read from a score (score_layout.h), whose measures need not
  * be regular: a split measure, a pickup or a fermata break all sit where the score put them.
  */
-typedef bool (*RomanTextTimeAt)(const void *context, int measure, long beat_thousandths, MusicalTime **out_time);
+typedef bool (*RomanTextTimeAt)(const void *context, int measure, long beat_thousandths, MusicalTime *out_time);
 
 typedef struct {
     RomanTextTimeAt time_at;

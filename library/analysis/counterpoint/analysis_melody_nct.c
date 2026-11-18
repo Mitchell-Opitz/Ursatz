@@ -73,10 +73,6 @@ StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_labels(const S
     return STANDARD_COUNTERPOINT_MELODY_OK;
 }
 
-static Rational time_of(const MusicalTime *time) {
-    return rational_ratio(musical_time_numerator(time), (long long)musical_time_denominator(time));
-}
-
 /* The classifier's labels for notes[first, first + count) written into the copies in out. */
 static StandardCounterpointMelodyStatus relabel_run(StandardCounterpointMelodyNote *notes, size_t first, size_t count,
                                                     NonChordToneClassifier classifier, void *context) {
@@ -90,9 +86,9 @@ static StandardCounterpointMelodyStatus relabel_run(StandardCounterpointMelodyNo
     for (size_t k = 0; k < count; k++) {
         const StandardCounterpointMelodyNote *note = &notes[first + k];
         line[k].midi = (int)pitch_numeric_value_position_numerator(note->pitch);
-        if (note->span != NULL) {
-            line[k].onset = time_of(time_span_start(note->span));
-            if (rational_sub(time_of(time_span_end(note->span)), line[k].onset, &line[k].duration) != RATIONAL_OK) {
+        if (time_span_holds(note->span)) { /* a note with no span (all zero) is placed by its index */
+            line[k].onset = note->span.start.value;
+            if (rational_sub(note->span.end.value, line[k].onset, &line[k].duration) != RATIONAL_OK) {
                 line[k].duration = rational_ratio(1, 1);
             }
         } else {

@@ -44,8 +44,8 @@ typedef struct {
 /* The tick of a note's onset: the position in whole notes times four quarters times the file's division. */
 static long long onset_tick(const NoteEvent *event, unsigned division) {
     const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(event));
-    long long numerator = (long long)musical_time_numerator(onset) * 4 * (long long)division;
-    long long denominator = (long long)musical_time_denominator(onset);
+    long long numerator = onset->value.num * 4 * (long long)division;
+    long long denominator = onset->value.den;
     return denominator > 0 ? numerator / denominator : 0;
 }
 
@@ -252,7 +252,7 @@ static void read_opening_tempo(const TempoMap *tempo_map, ImportedSource *source
         const TempoMapRegion *region = tempo_map_region(tempo_map, 0);
         unsigned long microseconds = tempo_map_region_microseconds_per_quarter(region);
         if (microseconds > 0 && !tempo_map_region_is_defaulted(region) &&
-            musical_time_numerator(tempo_map_region_start(region)) == 0) {
+            tempo_map_region_start(region).value.num == 0) {
             source->tempo_declared = true;
             source->initial_quarters_per_minute = 60000000.0 / (double)microseconds;
         }
@@ -347,7 +347,7 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     import.events = NULL;
     import.pitch_values = NULL;
     import.count = 0;
-    import.meter = (MidiMeterImport){NULL, NULL, NULL, 0};
+    import.meter = (MidiMeterImport){NULL, {{0, 1}}, NULL, 0};
     import.key_signatures = (MidiKeySignatureEvents){NULL, 0};
     import.tempo.tempo_map = NULL;
     midi_import_destroy(&import);

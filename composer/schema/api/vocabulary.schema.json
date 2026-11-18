@@ -6,8 +6,8 @@
   "type": "object",
   "required": [
     "meters",
-    "modes",
-    "piece_modes",
+    "materials",
+    "piece_materials",
     "keys",
     "cadences",
     "theme_cadences",
@@ -48,14 +48,14 @@
         "$ref": "#/$defs/meter"
       }
     },
-    "modes": {
+    "materials": {
       "type": "array",
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/choice"
       }
     },
-    "piece_modes": {
+    "piece_materials": {
       "type": "array",
       "minItems": 1,
       "items": {
@@ -261,8 +261,7 @@
         "type": "object",
         "required": [
           "value",
-          "major",
-          "minor"
+          "names"
         ],
         "properties": {
           "value": {
@@ -270,11 +269,13 @@
             "minimum": 0,
             "maximum": 11
           },
-          "major": {
-            "type": "string"
-          },
-          "minor": {
-            "type": "string"
+          "names": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The tonic's spelling in a key of each material, by the material's id."
           }
         },
         "additionalProperties": false

@@ -79,7 +79,7 @@ static bool collect_tempo(const ImportedNotes *notes, const char *framework, Ana
     if (!report->tempo_markings) {
         return false;
     }
-    const MusicalTime *piece_end = notes->meter.end_time;
+    const MusicalTime piece_end = notes->meter.end_time;
     for (size_t i = 0; i < source->tempo_marking_count; i++) {
         const ImportedTempoMarking *in = &source->tempo_markings[i];
         AnalysisTempoMarking *out = &report->tempo_markings[i];
@@ -96,8 +96,8 @@ static bool collect_tempo(const ImportedNotes *notes, const char *framework, Ana
             out->end_numerator = source->tempo_markings[i + 1].position_numerator;
             out->end_denominator = source->tempo_markings[i + 1].position_denominator;
         } else {
-            out->end_numerator = piece_end ? musical_time_numerator(piece_end) : in->position_numerator;
-            out->end_denominator = piece_end ? musical_time_denominator(piece_end) : in->position_denominator;
+            out->end_numerator = (long)piece_end.value.num;
+            out->end_denominator = (unsigned long)piece_end.value.den;
         }
         out->part = in->part;
         out->group = NULL;

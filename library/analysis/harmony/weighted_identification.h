@@ -4,9 +4,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "model/core/rational.h"
 #include "theory/tonality/chord_vocabulary.h"
 #include "theory/tonality/chord_vocabulary_seventh.h"
 #include "theory/tonality/key_vocabulary.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "analysis/notes/analysis_note.h"
 #include "theory/vocabulary/beat_strength.h"
 #include "analysis/notes/tone_line.h"
@@ -42,10 +44,10 @@ typedef struct {
     const char *note_id;    /* the note's EntityID value; borrowed, may be NULL when labels are not used */
     int pitch;              /* semitone number, C4 = 60 */
     bool held;              /* sounding before the segment began (false: attacked in it) */
-    double duration;        /* whole notes sounding inside the segment; must be > 0 */
+    Rational duration;      /* whole notes sounding inside the segment; must be > 0 (the weight reads it as a double) */
     BeatStrength strength;  /* beat strength of the attack; not read when held */
     const char *voice_id;   /* the note's Voice EntityID value, or NULL when it has none */
-    double onset;           /* absolute onset in whole notes: orders the notes of one voice */
+    Rational onset;         /* absolute onset in whole notes: orders the notes of one voice */
     /* True marks an accented tone that resolves by step inside its segment over a held bass (an appoggiatura, a
        suspension, an accented passing tone, R-382; harmonic_span_mark_resolved_accents sets it): common_practice_weight_segment
        gives it no weight, nor to the total (unless config.weigh_resolved_accents). It stays a member, so a leftover tone is still labelled when it is not in the
@@ -56,10 +58,10 @@ typedef struct {
 /*
  * The member an AnalysisNote makes in a segment spanning `segment`, with the attack's beat strength the caller read. note_id, pitch
  * (midi) and voice_id carry over. held is true when the note starts before the segment; onset is the note's start and duration the
- * overlap of the note with the segment, both in whole notes as double (rational_to_double). False, *out untouched, for a NULL argument,
+ * overlap of the note with the segment, both in whole notes, exact. False, *out untouched, for a NULL note or out,
  * an invalid note, an unknown pitch or a note that does not overlap the segment.
  */
-bool common_practice_member_from_analysis_note(const AnalysisNote *note, const TimeSpan *segment, BeatStrength strength,
+bool common_practice_member_from_analysis_note(const AnalysisNote *note, TimeSpan segment, BeatStrength strength,
                                                CommonPracticeMember *out);
 
 typedef struct {
@@ -97,6 +99,9 @@ typedef struct {
        rounded to 1/960 of a whole note. */
     NonChordToneClassifier classifier;
     void *classifier_context;
+    /* The common-practice materials the applied-chord scale reads (borrowed). The chain sets its own; NULL (the default) is refused
+       by common_practice_rank_candidates when applied_chords is set (BAD_CONFIG). */
+    const CommonPracticeMaterials *materials;
 } CommonPracticeWeightedConfig;
 
 /* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.1, missing-third penalty

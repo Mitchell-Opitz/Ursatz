@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 700
 
 #include "compose_common.h"
+#include "knowledge_service.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -58,7 +59,7 @@ UrsatzGuiThemeResult ursatz_gui_compose_write_plan(const cJSON *plan, const char
     cJSON_Delete(request);
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = text ? composer_api_export(text, NULL, &response) : COMPOSER_ERR_ALLOC;
+    ComposerStatus status = text ? composer_api_export(ursatz_gui_composer_context(), text, NULL, &response) : COMPOSER_ERR_ALLOC;
     free(text);
     UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
     if (status != COMPOSER_OK || !response.plan_json) {
@@ -102,7 +103,7 @@ UrsatzGuiThemeResult ursatz_gui_compose_export(const cJSON *plan, double qpm, bo
         return URSATZ_GUI_THEME_ERR_ALLOC;
     }
     memset(response, 0, sizeof(*response));
-    ComposerStatus status = composer_api_export(printed, job, response);
+    ComposerStatus status = composer_api_export(ursatz_gui_composer_context(), printed, job, response);
     free(printed);
     if (status != COMPOSER_OK) {
         UrsatzGuiThemeResult result = ursatz_gui_compose_failure(status, response, message, message_size);

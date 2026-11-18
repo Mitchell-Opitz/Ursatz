@@ -13,6 +13,7 @@
 #include "grow/grow_internal.h"
 #include "support/test_support.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -46,7 +47,7 @@ static Motive load_motive(const char *path) {
     Motive motive;
     MotiveError error;
     memset(&error, 0, sizeof(error));
-    assert(motive_from_json(text, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive_from_json(text, test_motive_options(), &motive, &error) == MOTIVE_OK);
     free(text);
     return motive;
 }
@@ -102,7 +103,7 @@ static int step_of(int midi, const Motive *key) {
     int relative = midi - key->tonic_pc;
     int octave = relative >= 0 ? relative / 12 : -((11 - relative) / 12);
     int within = relative - octave * 12;
-    return octave * 7 + (key->minor ? MINOR : MAJOR)[within];
+    return octave * 7 + (motive_sketch_minor(key) ? MINOR : MAJOR)[within];
 }
 
 static bool same_rhythm(const PlanNote *a, const PlanNote *b, size_t count) {
@@ -253,6 +254,7 @@ int main(void) {
             text.cadence = "PAC";
             GrowSetup setup;
             memset(&setup, 0, sizeof(setup));
+            setup.knowledge = test_knowledge();
             setup.text = &text;
             setup.into = CASES[c].into;
             setup.pairing.beginning = CASES[c].beginning;

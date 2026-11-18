@@ -56,14 +56,12 @@ void key_regions_rotated_profile(const CommonPracticeKeyProfiles *profiles, int 
     }
 }
 
-bool key_regions_time_ok(const MusicalTime *time) {
-    return time != NULL && musical_time_numerator(time) >= 0;
+bool key_regions_time_ok(MusicalTime time) {
+    return time.value.num >= 0;
 }
 
-bool key_regions_before(const MusicalTime *a, const MusicalTime *b) {
-    /* a < b for non-negative times: a.n * b.d < b.n * a.d */
-    return (long double)musical_time_numerator(a) * (long double)musical_time_denominator(b) <
-           (long double)musical_time_numerator(b) * (long double)musical_time_denominator(a);
+bool key_regions_before(MusicalTime a, MusicalTime b) {
+    return musical_time_cmp(a, b) < 0;
 }
 
 #define DOMINANT_THIRD_BIT(root) (1u << (((root) + 4) % 12))
@@ -72,14 +70,14 @@ bool key_regions_before(const MusicalTime *a, const MusicalTime *b) {
    none) to chord `to`: see key_regions.h, FUNCTIONAL EVIDENCE. A tonic chord counts only when its third is the
    key's mode's third, so a dominant motion into a major tonic is evidence for the major key and not its parallel. */
 static double chord_evidence(const CommonPracticeKeyChord *from, const CommonPracticeKeyChord *to, int tonic,
-                             bool minor) {
+                             bool is_minor) {
     double evidence = 0.0;
     unsigned leading = PITCH_CLASS_BIT(tonic + 11);
     if (from == NULL) {
         return evidence;
     }
     bool tonic_chord = to->root_pitch_class == tonic &&
-                       (to->pitch_classes & PITCH_CLASS_BIT(tonic + (minor ? 3 : 4))) != 0;
+                       (to->pitch_classes & PITCH_CLASS_BIT(tonic + (is_minor ? 3 : 4))) != 0;
     if (tonic_chord) {
         if (from->root_pitch_class == (tonic + 7) % 12 &&
             (from->pitch_classes & DOMINANT_THIRD_BIT(from->root_pitch_class)) != 0) {
@@ -88,7 +86,7 @@ static double chord_evidence(const CommonPracticeKeyChord *from, const CommonPra
             evidence += 0.5;
         }
     }
-    if (minor && (to->pitch_classes & leading) != 0 && (to->pitch_classes & PITCH_CLASS_BIT(tonic + 10)) == 0 &&
+    if (is_minor && (to->pitch_classes & leading) != 0 && (to->pitch_classes & PITCH_CLASS_BIT(tonic + 10)) == 0 &&
         (from->pitch_classes & (PITCH_CLASS_BIT(tonic + 3) | PITCH_CLASS_BIT(tonic + 8))) != 0) {
         evidence += 0.5;
     }
@@ -117,7 +115,7 @@ CommonPracticeKeyRegionsStatus key_regions_gather_measures(const CommonPracticeK
             free(measure_of);
             return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT;
         }
-        if (meter_map_measure_index_at(map, segment->start, &measure_of[i]) != METER_MAP_OK) {
+        if (meter_map_measure_index_at(map, &segment->start, &measure_of[i]) != METER_MAP_OK) {
             free(measure_of);
             return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
         }
@@ -245,7 +243,7 @@ CommonPracticeKeyRegionsStatus key_window_scores(const CommonPracticeKeySegment 
         return COMMON_PRACTICE_KEY_REGIONS_ERR_NULL_ARGUMENT;
     }
     CommonPracticeKeyRegionsConfig effective =
-        config != NULL ? *config : common_practice_key_regions_config_default();
+        config != NULL ? *config : common_practice_key_regions_config_default(NULL); /* the window scores read no materials */
     CommonPracticeKeyRegionsStatus status = key_regions_validate_inputs(segments, segment_count, map, &effective);
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
         return status;

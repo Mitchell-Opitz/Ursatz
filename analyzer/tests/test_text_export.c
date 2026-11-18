@@ -10,6 +10,7 @@
 #include <ursatz_analyzer/version.h>
 
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The piece text export (text_export.h). Format rules are checked on three pieces:
@@ -33,7 +34,7 @@ static bool piece_load(Piece *piece, const char *path, const char *name) {
         return false;
     }
     AnalyzerResult *result = NULL;
-    if (analyzer_analyze(&piece->notes, NULL, &result) != ANALYZER_OK) {
+    if (analyzer_analyze(&piece->notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
         imported_notes_destroy(&piece->notes);
         return false;
     }
@@ -382,8 +383,8 @@ static void check_refusals(void) {
     char *older = malloc(strlen(piece.document) + 1);
     if (older) {
         strcpy(older, piece.document);
-        char *version = strstr(older, "\"schema_version\": 12");
-        CHECKF(version != NULL, "the document states schema_version 12");
+        char *version = strstr(older, "\"schema_version\": 13");
+        CHECKF(version != NULL, "the document states schema_version 13");
         if (version) {
             version[strlen("\"schema_version\": ")] = '8';
             CHECKF(analyzer_text_export_piece(&piece.notes, older, &options, &text) == ANALYZER_ERR_ARGUMENT && text == NULL,

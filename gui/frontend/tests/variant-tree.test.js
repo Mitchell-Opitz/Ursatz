@@ -106,8 +106,8 @@ check(V.treeRequest("v1").method === "GET" && V.treeRequest("v1").url === "/api/
 const cv = V.candidateView(candidate);
 check(cv.recognizability === "62% recognizable" && cv.kind.text === "Motive-form" && cv.chips.length === 2, "candidate view");
 check(V.candidateDegrees(candidate, "full") === "1:q 3:q" && V.candidateDegrees(candidate, "rhythm") === "x:q x:q" && V.candidateDegrees(candidate, "contour") === "0 1", "degrees by form");
-const body = V.candidateBody({ motif: { form: "rhythm", degrees: "x:h", key: "C major" } }, candidate);
-check(body.motif.degrees === "x:q x:q" && body.motif.key === "C major", "a candidate body keeps the source and swaps the degrees");
+const body = V.candidateBody({ motif: { form: "rhythm", degrees: "x:h", material: "omt.material.major" } }, candidate);
+check(body.motif.degrees === "x:q x:q" && body.motif.material === "omt.material.major", "a candidate body keeps the source and swaps the degrees");
 
 const rich = { ...candidate, functions: ["beginning", "bogus", "cadential"], remoteness: 0.3333, harmony: "I V@2", motive: { motive: { features: [{ label: "a", first: 0, last: 1 }] }, analysis: candidate.motive.analysis } };
 const rv = V.candidateView(rich);
@@ -171,17 +171,17 @@ const findingsMarks = {
   exact: { verdict: "works", comment: "same notes", seed: 1, notes_text: "C4:q", date: "2026-10-23" },
   transpose: { verdict: "wrong", comment: "", seed: 3, notes_text: "D4:q", date: "2026-10-23" },
 };
-const findings = V.findingsText("Opening", { notes: "C4:q E4:q", key: "C minor", meter: "4/4" }, findingsMarks, ["exact", "augment", "invert", "transpose"]);
+const findings = V.findingsText("Opening", { notes: "C4:q E4:q", material: "omt.material.natural-minor", meter: "4/4" }, findingsMarks, ["exact", "augment", "invert", "transpose"]);
 check(findings.split("\n").slice(0, 4).join("|") === "Opening|Notes: C4:q E4:q|Mode: minor|Meter: 4/4", "the findings start with the motif's name, notes, mode and meter");
 check(same(findings.split("\n").slice(5), ["invert: wrong - too low (result A3:q)", "transpose: wrong (result D4:q)", "exact: works - same notes (result C4:q)", "augment: works (result C4:h)"]),
   "one line per marked operation, wrong first, each in registry order");
-check(V.findingsText("Empty", { notes: "", key: "C major", meter: "3/4" }, {}).split("\n").length === 5, "no marks give only the header");
+check(V.findingsText("Empty", { notes: "", material: "omt.material.major", meter: "3/4" }, {}).split("\n").length === 5, "no marks give only the header");
 const filtered = JSON.parse(V.generateRequest("m1", { functions: ["cadential", "bogus", "beginning"] }).request.body);
 check(same(filtered.functions, ["beginning", "cadential"]) && JSON.parse(V.generateRequest("m1", {}).request.body).functions === undefined, "the function filter is sent in order and only when set");
 check(same(V.featureOptions([{ label: "a", first: 0, last: 2 }, { label: "turn", first: 3, last: 3 }]), [{ value: "", text: "drawn" }, { value: "0", text: "a (notes 1-3)" }, { value: "1", text: "turn (notes 4-4)" }]) && V.featureOptions(null).length === 1, "feature parameters offer the motif's labels");
 
 /* a variant's own pickup and meter */
-const pickupSource = { motif: { form: "full", pickup: "0", meter: "4/4", key: "C major" } };
+const pickupSource = { motif: { form: "full", pickup: "0", meter: "4/4", material: "omt.material.major" } };
 const pickupCandidate = (pickup, meter) => ({ motive: { motive: { meter }, analysis: { notes_text: "C4:q E4:q", pickup } }, harmony: null });
 const shifted = pickupCandidate("1", { beats_per_bar: 4, beat_unit: 4 });
 check(V.candidateBody(pickupSource, shifted).motif.pickup === "1", "a rhythm-shift or add-upbeat candidate keeps its pickup");
@@ -190,7 +190,7 @@ check(V.candidateBody(pickupSource, { motive: {} }).motif.pickup === "0" && V.ca
 check(V.resultNotes(shifted) === "C4:q E4:q pickup 1" && V.resultNotes(pickupCandidate("0", null)) === "C4:q E4:q", "the result text names a pickup that is not zero");
 const pickupMark = V.makeMark("works", "", shifted, "2026-10-28");
 check(pickupMark.notes_text === "C4:q E4:q pickup 1" && V.markView(pickupMark, shifted).changed === false && V.markView(pickupMark, pickupCandidate("0", null)).changed === true, "a mark records the pickup and changed since compares it");
-check(V.findingsText("Opening", { notes: "C4:q", key: "C major", meter: "4/4" }, { "rhythm-shift": pickupMark }, ["rhythm-shift"]).includes("(result C4:q E4:q pickup 1)"), "Copy findings shows the pickup");
+check(V.findingsText("Opening", { notes: "C4:q", material: "omt.material.major", meter: "4/4" }, { "rhythm-shift": pickupMark }, ["rhythm-shift"]).includes("(result C4:q E4:q pickup 1)"), "Copy findings shows the pickup");
 check(V.stepFromValues({ name: "repeat-feature", params: [{ name: "feature", kind: "int", min: 0, max: 7 }] }, { feature: "1" }).step.params.feature === 1, "a chosen feature becomes its index");
 
 const compareReq = V.compareRequest({ item: "m1", version: 2 }, { item: "m2", version: 3 });
@@ -375,7 +375,7 @@ check(harmonyRows[1].toneBody.motif.analysis.analysis.tones.length === 1 && harm
 const marks = { "harmony-append": { verdict: "works", comment: "ok", notes_text: "C5:q" }, transpose: { verdict: "wrong", comment: "", notes_text: "D5:q" } };
 const harmonies = V.resultHarmonies([{ ...withHarmony("I V@2"), chain: { steps: [{ op: "harmony-append" }] } }]);
 check(same(harmonies, { "harmony-append": "I V@2" }), "result harmonies are by operation");
-const text = V.findingsText("Opening", { key: "C major", notes: "C5:q", meter: "4/4" }, marks, ["harmony-append", "transpose"], harmonies);
+const text = V.findingsText("Opening", { material: "omt.material.major", notes: "C5:q", meter: "4/4" }, marks, ["harmony-append", "transpose"], harmonies);
 check(text.includes("harmony-append: works - ok (result C5:q harmony I V@2)") && text.includes("transpose: wrong (result D5:q)"), "findings add the harmony only when the variant has one");
 
 (async () => {

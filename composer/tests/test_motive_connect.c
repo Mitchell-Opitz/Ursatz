@@ -8,6 +8,7 @@
 #include <ursatz_composer/variant_registry.h>
 
 #include "util/request_parse.h"
+#include "support/test_knowledge.h"
 
 /*
  * The connection score (R-145): (2 x common + rhythm + harmony) / 4, halved when the candidate is remote (over 3/4 from
@@ -17,8 +18,9 @@
 static Motive load(const char *notes, const char *harmony) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = request_parse_meter("4/4", &options.meter);
-    options.has_key = request_parse_key("C major", &options.key);
+    options.has_key = request_parse_key("C major", test_knowledge(), &options.key);
     if (harmony) {
         /* One chord at the start: the degree is the numeral's. */
         options.has_harmony = true;
@@ -110,6 +112,7 @@ static void test_harmony_progression(void) {
 static void test_no_chord_no_harmony(void) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = request_parse_meter("4/4", &options.meter);
     Motive rhythm;
     assert(motive_from_rhythm_text("x:q x:q x:q x:q", &options, &rhythm, NULL) == MOTIVE_OK);

@@ -13,6 +13,7 @@
 #include "model/pitch/pitch_numeric_value.h"
 #include "model/pitch/pitch_spelling.h"
 #include "model/pitch/tuning_system.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/tonal_key.h"
 #include "theory/style/style_model_build.h"
 #include "model/time/duration.h"
@@ -57,10 +58,7 @@ static MeterMap *copy_meter_map(const MeterMap *map) {
     for (size_t i = 0; ok && i < count; i++) {
         const MeterMapRegion *region = meter_map_region(map, i);
         const TimeSignature *source = meter_map_region_time_signature(region);
-        NoteValue *unit = NULL;
-        ok = note_value_create(time_signature_bottom_unit_exponent(source), &unit) == NOTE_VALUE_OK;
-        ok = ok && time_signature_create(time_signature_top_number(source), unit, &signatures[i]) == TIME_SIGNATURE_OK;
-        note_value_destroy(unit);
+        ok = time_signature_copy(source, &signatures[i]) == TIME_SIGNATURE_OK;
         points[i].time_signature = signatures[i];
         points[i].start = meter_map_region_start(region);
     }
@@ -77,33 +75,35 @@ static MeterMap *copy_meter_map(const MeterMap *map) {
     return copy;
 }
 
-/* The key signature event at time 0 from a tonic and a mode, shaped as the MIDI scan gives them. */
-static bool add_key_signature(ImportedNotes *notes, int tonic, bool minor) {
+/* The key signature event at time 0 from a tonic and a material, shaped as the MIDI scan gives them (the mode byte follows the
+   material's third). */
+static bool add_key_signature(ImportedNotes *notes, int tonic, const PitchMaterial *material) {
     PitchLetter letter;
     int accidental;
     int fifths;
-    if (!standard_tonality_key_tonic_of_pitch_class(tonic, minor, &letter, &accidental) ||
-        !standard_tonality_key_fifths(letter, accidental, minor, &fifths)) {
+    if (!material || !standard_tonality_key_tonic_of_pitch_class_material(tonic, material, &letter, &accidental) ||
+        !standard_tonality_key_fifths_of(letter, accidental, material, &fifths)) {
         return false;
     }
+    CommonPracticeKeyMode mode;
+    bool is_minor = common_practice_key_mode_of(material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
     MidiKeySignatureEvent *event = calloc(1, sizeof *event);
     if (!event) {
         return false;
     }
-    if (midi_key_signature_build(fifths, &event->key_signature) != MIDI_KEY_SIGNATURE_BUILD_OK ||
-        musical_time_create(0, 1, &event->position) != MUSICAL_TIME_OK) {
-        key_signature_destroy(event->key_signature);
+    if (midi_key_signature_build(fifths, &event->key_signature) != MIDI_KEY_SIGNATURE_BUILD_OK) {
         free(event);
         return false;
     }
-    event->mode_hint = minor ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
+    event->position = musical_time_of(rational_ratio(0, 1));
+    event->mode_hint = is_minor ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     event->tick = 0;
     event->track_index = 0;
     event->sharps_flats = (int8_t)fifths;
-    event->mode_byte = minor ? 1 : 0;
+    event->mode_byte = is_minor ? 1 : 0;
     notes->key_signature_events.events = event;
     notes->key_signature_events.count = 1;
-    notes->key_signature = (MidiKeySignature){true, (int8_t)fifths, minor};
+    notes->key_signature = (MidiKeySignature){true, (int8_t)fifths, is_minor};
     return true;
 }
 
@@ -178,11 +178,10 @@ static HearingNotes *hearing_notes_build(const AnalyzerHearing *hearing) {
     if (ok) {
         built->owns_meter = !hearing->meter || meter_map_is_defaulted(hearing->meter);
         notes->meter.meter_map = built->owns_meter ? copy_meter_map(NULL) : (MeterMap *)hearing->meter;
-        notes->meter.end_time = notes_last_end(hearing->events, hearing->count);
-        ok = notes->meter.meter_map && notes->meter.end_time;
+        ok = notes_last_end(hearing->events, hearing->count, &notes->meter.end_time) && notes->meter.meter_map;
     }
     if (ok && hearing->has_key) {
-        ok = add_key_signature(notes, hearing->key_tonic_pitch_class, hearing->key_minor);
+        ok = add_key_signature(notes, hearing->key_tonic_pitch_class, hearing->key_material);
     }
     if (!ok) {
         hearing_notes_destroy(built);
@@ -233,25 +232,23 @@ void analyzer_violations_free(AnalyzerViolation *violations, size_t count) {
 static void place(const MeterMap *map, long numerator, unsigned long denominator, int *measure, double *beat) {
     *measure = 0;
     *beat = 0.0;
-    MusicalTime *time = NULL;
+    MusicalTime time;
     MetricalPosition *position = NULL;
     const TimeSignature *signature = NULL;
-    Duration *unit = NULL;
-    if (musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK) {
-        if (metrical_position_from_time(map, time, &position) == METRICAL_POSITION_OK) {
+    Duration unit;
+    if (musical_time_make(numerator, (long long)denominator, &time) == MUSICAL_TIME_OK) {
+        if (metrical_position_from_time(map, &time, &position) == METRICAL_POSITION_OK) {
             int m = metrical_position_measure(position);
             const Duration *offset = metrical_position_offset(position);
             if (metrical_position_reading_signature(map, m, &signature) == METRICAL_POSITION_OK &&
-                time_signature_unit_duration(signature, &unit) == DURATION_OK && duration_numerator(unit) > 0) {
+                time_signature_unit_duration(signature, &unit) == DURATION_OK && unit.value.num > 0) {
                 *measure = m;
-                *beat = 1.0 + ((double)duration_numerator(offset) / (double)duration_denominator(offset)) /
-                                  ((double)duration_numerator(unit) / (double)duration_denominator(unit));
+                *beat = 1.0 + ((double)offset->value.num / (double)offset->value.den) /
+                                  ((double)unit.value.num / (double)unit.value.den);
             }
         }
     }
-    duration_destroy(unit);
     metrical_position_destroy(position);
-    musical_time_destroy(time);
 }
 
 /* Appends one violation; the rule and the note ids are copied. false on allocation failure. */

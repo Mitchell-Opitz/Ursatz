@@ -16,6 +16,7 @@
 #include "theory/tonality/roman_numeral_grammar.h"
 #include "theory/tonality/seventh_rules.h"
 #include "theory/tonality/tonal_key.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "theory/framework/framework.h"
 #include "theory/tonality/triad_rules.h"
 #include "model/pitch/midi_pitch.h"
@@ -46,16 +47,16 @@ static const SeventhShape SEVENTHS[] = {{{0, 4, 7, 11}, STANDARD_TONALITY_SEVENT
 
 /* The degree 1..7 of the root `offset` semitones above the tonic, or 0; *raised set for minor's raised 7th,
    *raised_sixth for its raised 6th (melodic minor). */
-static int degree_of_offset(StandardTonalityRomanKeyMode mode, int offset, bool *raised, bool *raised_sixth) {
+static int degree_of_offset(const StandardTonalityChordInput *input, int offset, bool *raised, bool *raised_sixth) {
+    StandardTonalityRomanKeyMode mode = input->mode;
     *raised = false;
     *raised_sixth = false;
     int degree = 0;
     int alteration = 0;
-    if (!standard_tonality_degree_of_semitone(offset,
-                                              mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR
-                                                  ? STANDARD_TONALITY_MODE_MAJOR
-                                                  : STANDARD_TONALITY_MODE_NATURAL_MINOR,
-                                              &degree, &alteration)) {
+    const CommonPracticeMaterials *materials = input->materials;
+    if (materials == NULL || !standard_tonality_material_degree_of_semitone(
+            offset, mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? materials->major : materials->natural_minor, &degree,
+            &alteration)) {
         return 0;
     }
     if (alteration == 0) {
@@ -137,7 +138,7 @@ static bool read_diatonic(const StandardTonalityChordInput *input, StandardTonal
     int offset = pitch_class_of_midi(input->root_pitch_class - input->tonic_pitch_class);
     bool raised = false;
     bool raised_sixth = false;
-    int degree = degree_of_offset(input->mode, offset, &raised, &raised_sixth);
+    int degree = degree_of_offset(input, offset, &raised, &raised_sixth);
     if (degree == 0) {
         return false;
     }
@@ -145,23 +146,23 @@ static bool read_diatonic(const StandardTonalityChordInput *input, StandardTonal
     if (!numeral_from_intervals(input->intervals, input->interval_count, degree, &numeral)) {
         return false;
     }
-    bool minor = input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
+    bool is_minor = input->mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
     /* "IV7" is a major seventh in a major key; in minor no natural or harmonic IV is major, so IV7 is melodic
        minor's dominant seventh on the 4th, the one uppercase seventh off the dominant that is not ambiguous. */
-    bool melodic_dominant_seventh = minor && degree == 4 && numeral.seventh &&
+    bool melodic_dominant_seventh = is_minor && degree == 4 && numeral.seventh &&
                                     numeral.seventh_quality == STANDARD_TONALITY_SEVENTH_MAJOR_MINOR;
     if (!standard_tonality_roman_numeral_is_unambiguous(&numeral) && !melodic_dominant_seventh) {
         return false;
     }
     bool fits = !raised_sixth && standard_tonality_roman_numeral_fits_key(input->mode, degree, raised, &numeral);
-    if (!fits && !(minor && melodic_minor_fits(degree, raised, raised_sixth, &numeral))) {
+    if (!fits && !(is_minor && melodic_minor_fits(degree, raised, raised_sixth, &numeral))) {
         return false;
     }
     memset(out, 0, sizeof(*out));
     out->numeral = numeral;
     out->raised_leading_tone = raised;
     out->raised_sixth = raised_sixth;
-    out->romantext_spelling = minor;
+    out->romantext_spelling = is_minor;
     out->inversion = inversion_of(input);
     return true;
 }

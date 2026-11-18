@@ -8,6 +8,7 @@
 #include "model/interpretation/key.h"
 #include "theory/tonality/roman_numeral_analysis_rules.h"
 #include "model/time/musical_time.h"
+#include "theory/tonality/common_practice_materials.h"
 
 /*
  * The standard-tonality analysis adapter (L3): turns L2 facts into this framework's inputs. This file is
@@ -17,7 +18,7 @@
  *   - the segment's kernel Chord Interpretation (interpretation/chord.h) and its ChordStructure: the root
  *     pitch class, the quality as a root-relative interval set, and the bass pitch class;
  *   - the kernel Key Interpretation of each key region (interpretation/key.h) and its KeyStructure: the
- *     tonic pitch class and the mode;
+ *     tonic pitch class and the pitch material of the key;
  *   - the segment's 12 pitch-class weights, as a plain array (index 0 = C ... 11 = B).
  *
  * BASS. When the segment passes its sounding pitches, bass_pitch_class is the pitch class of the lowest
@@ -43,13 +44,13 @@
 
 typedef struct {
     const Key *key;            /* borrowed; the region's kernel Key */
-    const MusicalTime *start;  /* borrowed; the region starts here (inclusive) */
+    MusicalTime start;         /* the region starts here (inclusive) */
     double uncertainty;        /* [0, 1] */
 } StandardTonalityKeyRegionInput;
 
 typedef struct {
     const char *segment_id;    /* borrowed; the id of the segment's Sonority, the target of its Interpretations */
-    const MusicalTime *start;  /* borrowed */
+    MusicalTime start;
     const Chord *chord;        /* borrowed; NULL when no chord was identified */
     const double *weights;     /* borrowed; the 12 pitch-class weights, or NULL when not available */
     const int *pitches;        /* borrowed; the sounding pitches (semitone numbers, any order), or NULL */
@@ -66,7 +67,7 @@ typedef struct {
 
 typedef struct {
     const char *segment_id;
-    const MusicalTime *start;
+    MusicalTime start;
     bool has_numeral;          /* false: pass through as no-numeral; nothing below is meaningful */
     const Chord *chord;        /* borrowed */
     int root_pitch_class;      /* 0..11 */
@@ -82,6 +83,9 @@ typedef struct {
     double key_uncertainty;
     bool has_weights;
     double weights[12];
+    /* The common-practice materials the numeral reading takes the key's scale from (borrowed). The chain sets its own after building
+       the inputs; NULL (the built inputs' default) reads no scale, so no degree is found. */
+    const CommonPracticeMaterials *materials;
 } StandardTonalityChordInput;
 
 typedef enum {

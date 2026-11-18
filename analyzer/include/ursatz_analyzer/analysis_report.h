@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "model/pitch/pitch_material.h"
+
 /* A library Interpretation's scalar confidence (numerator/denominator in
    [0, 1]); present is false when the library supplies none. */
 typedef struct {
@@ -151,7 +153,7 @@ typedef enum {
 typedef struct {
     char *label;       /* owned; e.g. "Eb major", minimal-accidental spelling */
     int tonic_pitch_class; /* 0-11 */
-    bool is_major;
+    const PitchMaterial *material; /* borrowed from the knowledge snapshot of the analysis; outlives the report */
     bool prefer_flats; /* the key reads in flats, for naming pitch classes */
     long start_numerator; /* region start, whole notes */
     unsigned long start_denominator;
@@ -508,7 +510,7 @@ typedef struct {
     AnalysisMotiveNote *notes; /* owned; note_count entries */
     size_t note_count;
     int tonic_pc;              /* the key region the first note starts in */
-    bool minor;
+    const PitchMaterial *material; /* the material of that key region, borrowed from the analysis snapshot */
     unsigned long long bar_numerator; /* the meter at the first note, whole notes */
     unsigned long long bar_denominator;
     unsigned long long beat_numerator;

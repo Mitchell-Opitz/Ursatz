@@ -27,13 +27,11 @@ typedef struct {
 
 static MeterMap *build_map(const Change *changes, size_t count) {
     TimeSignature *signatures[4];
-    MusicalTime *starts[4];
     MeterMapChangePoint points[4];
     for (size_t i = 0; i < count; i++) {
         signatures[i] = make_signature(changes[i].top, changes[i].bottom_exponent);
-        assert(musical_time_create(changes[i].start_n, changes[i].start_d, &starts[i]) == MUSICAL_TIME_OK);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        assert(musical_time_make(changes[i].start_n, (long long)changes[i].start_d, &points[i].start) == MUSICAL_TIME_OK);
     }
     EntityID *id = NULL;
     assert(entity_id_create("map", &id) == ENTITY_ID_OK);
@@ -41,23 +39,20 @@ static MeterMap *build_map(const Change *changes, size_t count) {
     assert(meter_map_create(id, points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
 
 /* The beat starts of `measure` must be exactly the given fractions (num/den pairs), in order. */
 static void check_beats(const MeterMap *map, int measure, size_t expected_count, const long expected[][2]) {
-    MusicalTime **starts = NULL;
+    MusicalTime *starts = NULL;
     size_t count = 0;
     assert(standard_meter_segmentation_beat_grid(map, measure, NULL, &starts, &count));
     assert(count == expected_count);
     for (size_t i = 0; i < count; i++) {
-        MusicalTime *want = NULL;
-        assert(musical_time_create(expected[i][0], (unsigned long)expected[i][1], &want) == MUSICAL_TIME_OK);
-        assert(musical_time_equals(starts[i], want));
-        musical_time_destroy(want);
-        musical_time_destroy(starts[i]);
+        MusicalTime want;
+        assert(musical_time_make(expected[i][0], expected[i][1], &want) == MUSICAL_TIME_OK);
+        assert(musical_time_same(starts[i], want));
     }
     free(starts);
 }
@@ -163,7 +158,7 @@ static void test_a_pickup_measure(void) {
 static void test_declines_bad_input(void) {
     Change changes[] = {{4, 2, 0, 1}};
     MeterMap *map = build_map(changes, 1);
-    MusicalTime **starts = NULL;
+    MusicalTime *starts = NULL;
     size_t count = 7;
     assert(!standard_meter_segmentation_beat_grid(NULL, 1, NULL, &starts, &count));
     assert(!standard_meter_segmentation_beat_grid(map, 1, NULL, NULL, &count));
@@ -182,11 +177,10 @@ static EntityID *make_id(const char *value) {
 
 static NoteEvent *make_note(const char *id, long on_n, unsigned long on_d, long dur_n, unsigned long dur_d,
                             PitchLetter letter) {
-    MusicalTime *position = NULL;
-    assert(musical_time_create(on_n, on_d, &position) == MUSICAL_TIME_OK);
-    TemporalAnchor *anchor = NULL;
-    assert(temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK);
-    Duration *duration = make_duration(dur_n, dur_d);
+    MusicalTime position;
+    assert(musical_time_make(on_n, (long long)on_d, &position) == MUSICAL_TIME_OK);
+    Duration duration;
+    assert(duration_make(dur_n, (long long)dur_d, &duration) == DURATION_OK);
     PitchIdentity *pitch = NULL;
     assert(pitch_identity_create("pitch", 6, &pitch) == PITCH_IDENTITY_OK);
     PitchSpelling *spelling = NULL;
@@ -194,21 +188,19 @@ static NoteEvent *make_note(const char *id, long on_n, unsigned long on_d, long 
     ProvenanceReference *provenance = NULL;
     assert(provenance_reference_create_absent(&provenance) == PROVENANCE_REFERENCE_OK);
     NoteEvent *note = NULL;
-    assert(note_event_create(make_id(id), anchor, duration, pitch, spelling, NULL, provenance, &note) ==
+    assert(note_event_create(make_id(id), position, duration, pitch, spelling, NULL, provenance, &note) ==
            NOTE_EVENT_OK);
     return note;
 }
 
 static void assert_window(const AdaptiveSonority *s, long sn, unsigned long sd, long en, unsigned long ed) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    assert(musical_time_create(sn, sd, &start) == MUSICAL_TIME_OK);
-    assert(musical_time_create(en, ed, &end) == MUSICAL_TIME_OK);
+    MusicalTime start;
+    MusicalTime end;
+    assert(musical_time_make(sn, (long long)sd, &start) == MUSICAL_TIME_OK);
+    assert(musical_time_make(en, (long long)ed, &end) == MUSICAL_TIME_OK);
     const TimeSpan *window = sonority_time_window(s->sonority);
-    assert(musical_time_equals(time_span_start(window), start));
-    assert(musical_time_equals(time_span_end(window), end));
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+    assert(musical_time_same(window->start, start));
+    assert(musical_time_same(window->end, end));
 }
 
 static void test_the_builder_cuts_6_8_and_12_8_on_dotted_quarter_beats(void) {

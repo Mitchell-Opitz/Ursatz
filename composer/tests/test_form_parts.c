@@ -18,6 +18,7 @@
 #include "util/plan_util.h"
 #include "support/test_composer.h"
 #include "ursatz_test.h"
+#include "support/test_knowledge.h"
 
 #ifndef COMPOSER_FIXTURE_DIR
 #error "COMPOSER_FIXTURE_DIR is not defined"
@@ -60,15 +61,15 @@
 typedef struct {
     const char *name;
     int tonic;
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
 } Row;
 
-static const Row ROWS[] = {{"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4}, {"A minor 4/4", 9, KEY_STRUCTURE_MODE_MINOR, 4, 4},
-                           {"C major 3/4", 0, KEY_STRUCTURE_MODE_MAJOR, 3, 4}, {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, 4},
-                           {"G major 2/4", 7, KEY_STRUCTURE_MODE_MAJOR, 2, 4}, {"D minor 2/4", 2, KEY_STRUCTURE_MODE_MINOR, 2, 4},
-                           {"C major 6/8", 0, KEY_STRUCTURE_MODE_MAJOR, 6, 8}, {"D minor 6/8", 2, KEY_STRUCTURE_MODE_MINOR, 6, 8}};
+static const Row ROWS[] = {{"C major 4/4", 0, HARMONY_MODE_MAJOR, 4, 4}, {"A minor 4/4", 9, HARMONY_MODE_MINOR, 4, 4},
+                           {"C major 3/4", 0, HARMONY_MODE_MAJOR, 3, 4}, {"A minor 3/4", 9, HARMONY_MODE_MINOR, 3, 4},
+                           {"G major 2/4", 7, HARMONY_MODE_MAJOR, 2, 4}, {"D minor 2/4", 2, HARMONY_MODE_MINOR, 2, 4},
+                           {"C major 6/8", 0, HARMONY_MODE_MAJOR, 6, 8}, {"D minor 6/8", 2, HARMONY_MODE_MINOR, 6, 8}};
 #define ROW_COUNT (sizeof(ROWS) / sizeof(ROWS[0]))
 
 /* The 32-bar form; the transition's line is the member that differs between cases. */
@@ -141,7 +142,8 @@ static PiecePlan *compose(const FormSpec *form, const Row *row, unsigned long se
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(row->tonic, row->mode);
+    request.key = test_key_mode(row->tonic, row->mode);
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = (unsigned)row->beats;
     request.meter.beat_unit = (unsigned)row->unit;
     request.seed = seed;
@@ -154,6 +156,7 @@ static PiecePlan *compose(const FormSpec *form, const Row *row, unsigned long se
     }
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.form = form;
     *ran = compose_run(plan, &config, outcome);
@@ -201,7 +204,7 @@ static size_t idea_steps(const PiecePlan *plan, NodeId idea) {
 
 /* The tonic pitch class of the region the subordinate material is in: the fifth in major, the third (III) in minor. */
 static int region_tonic(const Row *row) {
-    return (row->tonic + (row->mode == KEY_STRUCTURE_MODE_MAJOR ? 7 : 3)) % 12;
+    return (row->tonic + (row->mode == HARMONY_MODE_MAJOR ? 7 : 3)) % 12;
 }
 
 /* One composed run of the transition case. */
@@ -295,7 +298,7 @@ static void check_round_trip(const PiecePlan *plan, const Row *row, unsigned lon
     char *text = plan_to_json(plan, &error);
     assert(text);
     PiecePlan *again = NULL;
-    assert(plan_from_json(text, &again, &error) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), text, &again, &error) == PLAN_OK);
     char *second = plan_to_json(again, &error);
     assert(second);
     if (strcmp(text, second) != 0) {
@@ -543,7 +546,8 @@ static PiecePlan *plan_only(const FormSpec *form, const Motive *motive, PieceRes
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
+    request.knowledge = test_knowledge();
     request.meter.beats_per_bar = motive ? 3 : 4;
     request.meter.beat_unit = 4;
     request.seed = 1;
@@ -643,7 +647,7 @@ static void test_applies(void) {
     snprintf(path, sizeof(path), "%s/rates/two-bar-3-4.json", COMPOSER_FIXTURE_DIR);
     char *motive_text = test_must_read_file(path, NULL);
     Motive motive;
-    assert(motive_text && motive_from_json(motive_text, NULL, &motive, NULL) == MOTIVE_OK);
+    assert(motive_text && motive_from_json(motive_text, test_motive_options(), &motive, NULL) == MOTIVE_OK);
     free(motive_text);
     FormSpec *plain = parse_form(THEME_AND_CODA);
     plan = plan_only(plain, NULL, &result);

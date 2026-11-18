@@ -19,7 +19,6 @@
 #define ELISION_COST 0.1
 #define MIN_RETURN_NOTES 6u
 #define RETURN_DISTANCE 5
-#define ONSET_TOLERANCE 1e-6
 #define STRICTLY_HIGHER 1e-9
 #define MAX_UNIT 16
 
@@ -30,11 +29,11 @@ typedef struct {
     size_t measures;
     size_t *note_first; /* per measure (+ 3 sentinels): the first note starting in it */
     size_t *note_count;
-    double *note_start; /* per note, in whole notes */
-    double *note_end;
-    double *measure_start; /* per measure */
-    double *measure_end;
-    double *beat;
+    Rational *note_start; /* per note, in whole notes */
+    Rational *note_end;
+    Rational *measure_start; /* per measure */
+    Rational *measure_end;
+    Rational *beat;
     double *cadence;       /* per measure */
     unsigned char *authentic;
     double *evidence;
@@ -99,16 +98,20 @@ static bool melody_returns(const Evidence *ev, int m) {
         return false;
     }
     size_t base = first_in(ev, m + 1);
-    double base_start = ev->measure_start[idx(ev, m + 1)];
+    Rational base_start = ev->measure_start[idx(ev, m + 1)];
     for (int b = ev->first; b <= m - RETURN_DISTANCE; b++) {
         if (count_in(ev, b) + count_in(ev, b + 1) != total) {
             continue;
         }
         size_t at = first_in(ev, b);
-        double at_start = ev->measure_start[idx(ev, b)];
+        Rational at_start = ev->measure_start[idx(ev, b)];
         bool same = true;
         for (size_t k = 0; same && k < total; k++) {
-            if (fabs((ev->note_start[at + k] - at_start) - (ev->note_start[base + k] - base_start)) > ONSET_TOLERANCE) {
+            Rational from_at;
+            Rational from_base;
+            if (rational_sub(ev->note_start[at + k], at_start, &from_at) != RATIONAL_OK ||
+                rational_sub(ev->note_start[base + k], base_start, &from_base) != RATIONAL_OK ||
+                !rational_equals(from_at, from_base)) {
                 same = false;
             }
             if (same && k > 0 &&
@@ -127,10 +130,14 @@ static bool melody_returns(const Evidence *ev, int m) {
 /* No melody note sounds in the last half beat of measure m. */
 static bool melody_rests(const Evidence *ev, int m) {
     size_t i = idx(ev, m);
-    double window = ev->measure_end[i] - ev->beat[i] / 2.0;
+    Rational half_beat;
+    Rational window;
+    if (rational_div_int(ev->beat[i], 2, &half_beat) != RATIONAL_OK || rational_sub(ev->measure_end[i], half_beat, &window) != RATIONAL_OK) {
+        return false;
+    }
     size_t after = ev->note_first[i] + ev->note_count[i]; /* notes [0, after) start in or before m */
     for (size_t k = after; k > 0; k--) {
-        if (ev->note_end[k - 1] > window + STRICTLY_HIGHER) {
+        if (rational_cmp(ev->note_end[k - 1], window) > 0) {
             return false;
         }
     }
@@ -143,16 +150,20 @@ static bool last_note_long(const Evidence *ev, int m) {
         return false;
     }
     size_t k = ev->note_first[i] + ev->note_count[i] - 1;
-    double length = ev->measure_end[i] - ev->measure_start[i];
-    return (ev->note_end[k] - ev->note_start[k]) * 2.0 >= length - STRICTLY_HIGHER;
+    Rational length;
+    Rational sounding;
+    Rational twice;
+    return rational_sub(ev->measure_end[i], ev->measure_start[i], &length) == RATIONAL_OK &&
+           rational_sub(ev->note_end[k], ev->note_start[k], &sounding) == RATIONAL_OK &&
+           rational_mul_int(sounding, 2, &twice) == RATIONAL_OK && rational_cmp(twice, length) >= 0;
 }
 
 static StandardFormAnalysisStatus evidence_build(const StandardFormInput *input, Evidence *ev) {
     memset(ev, 0, sizeof(*ev));
     ev->input = input;
     size_t count = input->note_count;
-    ev->note_start = (double *)calloc(count, sizeof(double));
-    ev->note_end = (double *)calloc(count, sizeof(double));
+    ev->note_start = (Rational *)calloc(count, sizeof(Rational));
+    ev->note_end = (Rational *)calloc(count, sizeof(Rational));
     int *note_measure = (int *)calloc(count, sizeof(int));
     if (ev->note_start == NULL || ev->note_end == NULL || note_measure == NULL) {
         free(note_measure);
@@ -162,14 +173,15 @@ static StandardFormAnalysisStatus evidence_build(const StandardFormInput *input,
     for (size_t i = 0; i < count; i++) {
         Rational start;
         Rational end;
-        if (!score_time_span(input->notes[i].span, &start, &end) ||
-            meter_map_measure_of(input->map, start, &note_measure[i]) != METER_MAP_OK) {
+        start = input->notes[i].span.start.value;
+        end = input->notes[i].span.end.value;
+        if (meter_map_measure_of(input->map, start, &note_measure[i]) != METER_MAP_OK) {
             free(note_measure);
             evidence_free(ev);
             return STANDARD_FORM_ANALYSIS_ERR_METER;
         }
-        ev->note_start[i] = rational_to_double(start);
-        ev->note_end[i] = rational_to_double(end);
+        ev->note_start[i] = start;
+        ev->note_end[i] = end;
         if (i == 0 || note_measure[i] < ev->first) {
             ev->first = note_measure[i];
         }
@@ -181,9 +193,9 @@ static StandardFormAnalysisStatus evidence_build(const StandardFormInput *input,
     size_t slots = ev->measures + 3;
     ev->note_first = (size_t *)calloc(slots, sizeof(size_t));
     ev->note_count = (size_t *)calloc(slots, sizeof(size_t));
-    ev->measure_start = (double *)calloc(slots, sizeof(double));
-    ev->measure_end = (double *)calloc(slots, sizeof(double));
-    ev->beat = (double *)calloc(slots, sizeof(double));
+    ev->measure_start = (Rational *)calloc(slots, sizeof(Rational));
+    ev->measure_end = (Rational *)calloc(slots, sizeof(Rational));
+    ev->beat = (Rational *)calloc(slots, sizeof(Rational));
     ev->cadence = (double *)calloc(slots, sizeof(double));
     ev->authentic = (unsigned char *)calloc(slots, sizeof(unsigned char));
     ev->evidence = (double *)calloc(slots, sizeof(double));
@@ -210,9 +222,9 @@ static StandardFormAnalysisStatus evidence_build(const StandardFormInput *input,
             evidence_free(ev);
             return STANDARD_FORM_ANALYSIS_ERR_METER;
         }
-        ev->measure_start[idx(ev, m)] = rational_to_double(start);
-        ev->measure_end[idx(ev, m)] = rational_to_double(end);
-        ev->beat[idx(ev, m)] = rational_to_double(beat);
+        ev->measure_start[idx(ev, m)] = start;
+        ev->measure_end[idx(ev, m)] = end;
+        ev->beat[idx(ev, m)] = beat;
     }
     for (size_t c = 0; c < input->cadence_count; c++) {
         const StandardFormCadence *cadence = &input->cadences[c];
@@ -225,7 +237,9 @@ static StandardFormAnalysisStatus evidence_build(const StandardFormInput *input,
         Rational end;
         int from = 0;
         int to = 0;
-        if (!score_time_span(cadence->arrival, &start, &end) || meter_map_measure_of(input->map, start, &from) != METER_MAP_OK ||
+        start = cadence->arrival.start.value;
+        end = cadence->arrival.end.value;
+        if (meter_map_measure_of(input->map, start, &from) != METER_MAP_OK ||
             meter_map_last_measure_touched(input->map, end, &to) != METER_MAP_OK) {
             evidence_free(ev);
             return STANDARD_FORM_ANALYSIS_ERR_METER;

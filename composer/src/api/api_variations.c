@@ -73,8 +73,13 @@ static ComposerStatus variations_document(const PlanVariations *variations, cons
     return COMPOSER_OK;
 }
 
-static ComposerStatus run_variations(const char *request_json, const ComposerJob *job, ComposerResponse *out, bool harmonize) {
+static ComposerStatus run_variations(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                     ComposerResponse *out, bool harmonize) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = NULL;
     char *text = NULL;
     PiecePlan *plan = NULL;
@@ -109,10 +114,10 @@ static ComposerStatus run_variations(const char *request_json, const ComposerJob
         seed = seeded ? seed : api_default_seed();
     }
     if (status == COMPOSER_OK) {
-        status = api_read_plan_text(root, "plan", &text, &out->error);
+        status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_plan_from_text(text, "plan", &plan, &out->error);
+        status = api_plan_from_text(context->knowledge, text, "plan", &plan, &out->error);
     }
     char what[96] = "";
     if (status == COMPOSER_OK) {
@@ -126,6 +131,7 @@ static ComposerStatus run_variations(const char *request_json, const ComposerJob
         memset(&config, 0, sizeof(config));
         config.seed = seed;
         config.job = job;
+        config.knowledge = context->knowledge;
         RegenerateResult ran;
         if (harmonize) {
             NodeId section;
@@ -179,10 +185,12 @@ static ComposerStatus run_variations(const char *request_json, const ComposerJob
     return status;
 }
 
-ComposerStatus composer_api_variations(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
-    return run_variations(request_json, job, out, false);
+ComposerStatus composer_api_variations(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                       ComposerResponse *out) {
+    return run_variations(context, request_json, job, out, false);
 }
 
-ComposerStatus composer_api_harmonize(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
-    return run_variations(request_json, job, out, true);
+ComposerStatus composer_api_harmonize(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+                                      ComposerResponse *out) {
+    return run_variations(context, request_json, job, out, true);
 }

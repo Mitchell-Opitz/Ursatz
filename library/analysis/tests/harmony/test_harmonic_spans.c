@@ -21,7 +21,10 @@ typedef struct {
     int end;
 } Note;
 
-#define SIXTEENTH 0.0625
+/* n sixteenths of a whole note, exact. */
+static Rational sixteenths(long long n) {
+    return rational_ratio(n, 16);
+}
 #define BAR 16
 #define MAX_CELLS 48
 #define MAX_MEMBERS 16
@@ -97,9 +100,9 @@ static void build_voiced(Piece *piece, const Note *notes, const char *const *voi
                 memset(member, 0, sizeof(*member));
                 member->pitch = notes[i].pitch;
                 member->held = notes[i].start < t0;
-                member->duration = (double)(t1 - t0) * SIXTEENTH;
+                member->duration = sixteenths(t1 - t0);
                 member->strength = strength_at(position_in_bar(notes[i].start));
-                member->onset = (double)notes[i].start * SIXTEENTH;
+                member->onset = sixteenths(notes[i].start);
                 member->voice_id = voices != NULL ? voices[i] : NULL;
             }
             if (m == 0) {
@@ -111,8 +114,8 @@ static void build_voiced(Piece *piece, const Note *notes, const char *const *voi
             segment->id = "cell";
             HarmonicSpanCell *cell = &piece->cells[piece->count];
             cell->segment = segment;
-            cell->start = (double)t0 * SIXTEENTH;
-            cell->end = (double)t1 * SIXTEENTH;
+            cell->start = sixteenths(t0);
+            cell->end = sixteenths(t1);
             cell->measure = bar + 1;
             cell->level = level_at(position_in_bar(t0));
             piece->count++;
@@ -134,7 +137,7 @@ static void group(const Piece *piece, HarmonicSpans *spans) {
 static void assert_span_starts(const Piece *piece, const HarmonicSpans *spans, const int *starts, size_t count) {
     assert(spans->count == count);
     for (size_t i = 0; i < count; i++) {
-        assert(piece->cells[spans->first[i]].start == (double)starts[i] * SIXTEENTH);
+        assert(rational_equals(piece->cells[spans->first[i]].start, sixteenths(starts[i])));
         if (i + 1 < count) {
             assert(spans->last[i] + 1 == spans->first[i + 1]);
         }
@@ -271,20 +274,20 @@ static void test_the_bass_rule(void) {
     Note one_note[] = {{G2, 0, 4}};
     build(&piece, one_note, COUNT(one_note), 1);
     CommonPracticeSegment empty = {NULL, 0, "empty", 0, false, 0};
-    HarmonicSpanCell cells[4] = {{&empty, 0.0, 0.0625, 1, HARMONIC_SPAN_LEVEL_BAR},
-                                 {&piece.segments[0], 0.0625, 0.125, 1, HARMONIC_SPAN_LEVEL_INNER},
-                                 {&empty, 0.125, 0.25, 1, HARMONIC_SPAN_LEVEL_INNER},
-                                 {&empty, 1.0, 1.25, 2, HARMONIC_SPAN_LEVEL_BAR}};
+    HarmonicSpanCell cells[4] = {{&empty, sixteenths(0), sixteenths(1), 1, HARMONIC_SPAN_LEVEL_BAR},
+                                 {&piece.segments[0], sixteenths(1), sixteenths(2), 1, HARMONIC_SPAN_LEVEL_INNER},
+                                 {&empty, sixteenths(2), sixteenths(4), 1, HARMONIC_SPAN_LEVEL_INNER},
+                                 {&empty, sixteenths(16), sixteenths(20), 2, HARMONIC_SPAN_LEVEL_BAR}};
     int bass[4];
     assert(harmonic_span_basses(cells, 4, bass));
     assert(bass[0] == -1 && bass[1] == G2 && bass[2] == G2 && bass[3] == G2);
 
     /* a note attacked after the cell start does not count */
-    CommonPracticeMember late = {NULL, G2, false, 0.0625, BEAT_STRENGTH_WEAK, NULL, 0.125};
-    CommonPracticeMember early = {NULL, E4, false, 0.25, BEAT_STRENGTH_STRONG, NULL, 0.0};
+    CommonPracticeMember late = {NULL, G2, false, sixteenths(1), BEAT_STRENGTH_WEAK, NULL, sixteenths(2)};
+    CommonPracticeMember early = {NULL, E4, false, sixteenths(4), BEAT_STRENGTH_STRONG, NULL, sixteenths(0)};
     CommonPracticeMember pair[2] = {late, early};
     CommonPracticeSegment mixed = {pair, 2, "mixed", 0, false, 0};
-    HarmonicSpanCell one = {&mixed, 0.0, 0.25, 1, HARMONIC_SPAN_LEVEL_BAR};
+    HarmonicSpanCell one = {&mixed, sixteenths(0), sixteenths(4), 1, HARMONIC_SPAN_LEVEL_BAR};
     assert(harmonic_span_basses(&one, 1, bass) && bass[0] == E4);
 }
 
@@ -573,10 +576,10 @@ static size_t window_members(const Note *notes, const char *const *voices, size_
         memset(&out[n], 0, sizeof(out[n]));
         out[n].pitch = notes[i].pitch;
         out[n].held = notes[i].start < from;
-        out[n].duration = (double)(stop - begin) * SIXTEENTH;
+        out[n].duration = sixteenths(stop - begin);
         out[n].strength = strength_at(((notes[i].start % BAR) + BAR) % BAR);
         out[n].voice_id = voices != NULL ? voices[i] : NULL;
-        out[n].onset = (double)notes[i].start * SIXTEENTH;
+        out[n].onset = sixteenths(notes[i].start);
         n++;
     }
     return n;
@@ -596,7 +599,7 @@ static size_t flagged_pitches(const Note *notes, const char *const *voices, size
     CommonPracticeMember members[MAX_MEMBERS];
     size_t n = window_members(notes, voices, note_count, from, to, members);
     CommonPracticeWeightedConfig config = span_config();
-    assert(harmonic_span_mark_resolved_accents(members, n, (double)from * SIXTEENTH, (double)to * SIXTEENTH, bass, &config) ==
+    assert(harmonic_span_mark_resolved_accents(members, n, sixteenths(from), sixteenths(to), bass, &config) ==
            HARMONIC_SPAN_OK);
     size_t count = 0;
     for (size_t i = 0; i < n; i++) {
@@ -689,17 +692,17 @@ static void test_marking_resolved_accents_refuses_bad_input_and_reads_nothing_wi
     size_t n = window_members(notes, voices, COUNT(notes), 0, 16, members);
     assert(n == 3);
 
-    assert(harmonic_span_mark_resolved_accents(NULL, n, 0.0, 1.0, G2, NULL) == HARMONIC_SPAN_ERR_NULL_ARGUMENT);
-    assert(harmonic_span_mark_resolved_accents(members, n, 1.0, 1.0, G2, NULL) == HARMONIC_SPAN_ERR_BAD_INPUT);
-    assert(harmonic_span_mark_resolved_accents(members, n, 1.0, 0.0, G2, NULL) == HARMONIC_SPAN_ERR_BAD_INPUT);
-    assert(harmonic_span_mark_resolved_accents(members, n, 0.0, 1.0, -2, NULL) == HARMONIC_SPAN_ERR_BAD_INPUT);
-    assert(harmonic_span_mark_resolved_accents(NULL, 0, 0.0, 1.0, G2, NULL) == HARMONIC_SPAN_OK);
+    assert(harmonic_span_mark_resolved_accents(NULL, n, sixteenths(0), sixteenths(16), G2, NULL) == HARMONIC_SPAN_ERR_NULL_ARGUMENT);
+    assert(harmonic_span_mark_resolved_accents(members, n, sixteenths(16), sixteenths(16), G2, NULL) == HARMONIC_SPAN_ERR_BAD_INPUT);
+    assert(harmonic_span_mark_resolved_accents(members, n, sixteenths(16), sixteenths(0), G2, NULL) == HARMONIC_SPAN_ERR_BAD_INPUT);
+    assert(harmonic_span_mark_resolved_accents(members, n, sixteenths(0), sixteenths(16), -2, NULL) == HARMONIC_SPAN_ERR_BAD_INPUT);
+    assert(harmonic_span_mark_resolved_accents(NULL, 0, sixteenths(0), sixteenths(16), G2, NULL) == HARMONIC_SPAN_OK);
 
     /* no bass: nothing is flagged, and a flag that was set is cleared */
     for (size_t i = 0; i < n; i++) {
         members[i].resolves_in_segment = true;
     }
-    assert(harmonic_span_mark_resolved_accents(members, n, 0.0, 1.0, -1, NULL) == HARMONIC_SPAN_OK);
+    assert(harmonic_span_mark_resolved_accents(members, n, sixteenths(0), sixteenths(16), -1, NULL) == HARMONIC_SPAN_OK);
     for (size_t i = 0; i < n; i++) {
         assert(!members[i].resolves_in_segment);
     }
@@ -709,7 +712,7 @@ static void test_marking_resolved_accents_refuses_bad_input_and_reads_nothing_wi
     for (size_t i = 0; i < n; i++) {
         members[i].resolves_in_segment = true;
     }
-    assert(harmonic_span_mark_resolved_accents(members, n, 0.0, 1.0, G2, NULL) == HARMONIC_SPAN_OK);
+    assert(harmonic_span_mark_resolved_accents(members, n, sixteenths(0), sixteenths(16), G2, NULL) == HARMONIC_SPAN_OK);
     for (size_t i = 0; i < n; i++) {
         assert(!members[i].resolves_in_segment);
     }
@@ -723,7 +726,7 @@ static void test_a_held_bass_note_is_not_cut(void) {
     build(&piece, notes, COUNT(notes), 1);
     bool beat_cell = false;
     for (size_t i = 1; i < piece.count; i++) {
-        if (piece.cells[i].start == 4.0 * SIXTEENTH) {
+        if (rational_equals(piece.cells[i].start, sixteenths(4))) {
             beat_cell = true;
             assert(piece.bass[i] == D3 && piece.bass[i - 1] == D3); /* the cell exists and the bass has not moved */
         }
@@ -732,7 +735,7 @@ static void test_a_held_bass_note_is_not_cut(void) {
     HarmonicSpans spans;
     group(&piece, &spans);
     for (size_t i = 0; i < spans.count; i++) {
-        assert(piece.cells[spans.first[i]].start != 4.0 * SIXTEENTH);
+        assert(!rational_equals(piece.cells[spans.first[i]].start, sixteenths(4)));
     }
     harmonic_spans_destroy(&spans);
 }
@@ -784,7 +787,7 @@ static void test_a_diminished_seventh_is_rooted_on_the_bass(void) {
 /* True when a span starts at the given sixteenth. */
 static bool span_starts_at(const Piece *piece, const HarmonicSpans *spans, int sixteenth) {
     for (size_t i = 0; i < spans->count; i++) {
-        if (piece->cells[spans->first[i]].start == (double)sixteenth * SIXTEENTH) {
+        if (rational_equals(piece->cells[spans->first[i]].start, sixteenths(sixteenth))) {
             return true;
         }
     }
@@ -804,7 +807,7 @@ static void test_a_chromatic_bass_against_its_chord_tone_is_not_cut(void) {
     build_voiced(&piece, notes, voices, COUNT(notes), 2);
     bool beat_cell = false;
     for (size_t i = 1; i < piece.count; i++) {
-        if (piece.cells[i].start == 12.0 * SIXTEENTH) {
+        if (rational_equals(piece.cells[i].start, sixteenths(12))) {
             beat_cell = true;
             assert(piece.bass[i] == Fs3 && piece.bass[i - 1] == A3); /* the cell exists and the bass moved to the F# */
         }

@@ -23,7 +23,6 @@ add_library(ursatz_model
     time/metrical_position.c
     time/tempo_map.c
     time/tuplet.c
-    time/time_rational.c
     time/meter_arithmetic.c
     time/score_time.c
     pitch/pitch_identity.c
@@ -33,6 +32,8 @@ add_library(ursatz_model
     pitch/pitch_numeric_value.c
     pitch/key_signature.c
     pitch/midi_pitch.c
+    pitch/pitch_material.c
+    pitch/region.c
     events/note_event.c
     events/dynamics.c
     events/tempo_marking.c
@@ -76,11 +77,14 @@ ursatz_public_headers(ursatz_model
         model/interpretation/key.h
         model/interpretation/texture.h
         model/interpretation/uncertainty.h
+        model/pitch/chord_type.h
         model/pitch/key_signature.h
         model/pitch/midi_pitch.h
         model/pitch/pitch_arithmetic.h
         model/pitch/pitch_identity.h
+        model/pitch/pitch_material.h
         model/pitch/pitch_numeric_value.h
+        model/pitch/region.h
         model/pitch/pitch_spelling.h
         model/pitch/tuning_system.h
         model/relationship/relationship.h
@@ -99,7 +103,6 @@ ursatz_public_headers(ursatz_model
         model/time/score_time.h
         model/time/tempo_map.h
         model/time/temporal_anchor.h
-        model/time/time_rational.h
         model/time/time_signature.h
         model/time/time_span.h
         model/time/tuplet.h

@@ -10,7 +10,6 @@
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_span.h"
 #include "model/pitch/pitch_arithmetic.h"
 
@@ -82,12 +81,12 @@ static ScoreClefResult read_time(const ScoreQuantized *notated, size_t i, NoteEv
     }
     const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(event));
     const Duration *duration = note_event_duration(event);
-    if (musical_time_numerator(position) < 0 || duration_numerator(duration) <= 0) {
+    if (position->value.num < 0 || duration->value.num <= 0) {
         return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
     }
-    Rational length;
-    if (rational_of_musical_time(position, start) != RATIONAL_OK || rational_of_duration(duration, &length) != RATIONAL_OK ||
-        rational_add(*start, length, end) != RATIONAL_OK) {
+    Rational length = duration->value;
+    *start = position->value;
+    if (rational_add(*start, length, end) != RATIONAL_OK) {
         return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
     }
     return SCORE_CLEFS_OK;
@@ -109,13 +108,9 @@ static void measures_free(Measures *measures) {
 
 /* The measures of meter that cover everything up to extent, at least one. */
 static ScoreClefResult measures_lay(const MeterMap *meter, Rational extent, Measures *measures) {
-    MusicalTime *extent_time = NULL;
-    if (musical_time_from_rational(extent, &extent_time) != TIME_RATIONAL_OK) {
-        return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
-    }
+    MusicalTime extent_time = musical_time_of(extent);
     size_t count = 0;
-    MeterMapResult status = meter_map_measure_count(meter, extent_time, &count);
-    musical_time_destroy(extent_time);
+    MeterMapResult status = meter_map_measure_count(meter, &extent_time, &count);
     if (status != METER_MAP_OK) {
         return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
     }
@@ -130,18 +125,13 @@ static ScoreClefResult measures_lay(const MeterMap *meter, Rational extent, Meas
     }
     int first = meter_map_first_measure_number(meter);
     for (size_t m = 0; m < count; m++) {
-        TimeSpan *span = NULL;
+        TimeSpan span;
         if (meter_map_measure_span(meter, first + (int)m, &span) != METER_MAP_OK) {
             measures_free(measures);
             return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
         }
-        bool converted = rational_of_musical_time(time_span_start(span), &measures->start[m]) == RATIONAL_OK &&
-                         rational_of_musical_time(time_span_end(span), &measures->end[m]) == RATIONAL_OK;
-        time_span_destroy(span);
-        if (!converted) {
-            measures_free(measures);
-            return SCORE_CLEFS_ERR_INCONSISTENT_INPUT;
-        }
+        measures->start[m] = span.start.value;
+        measures->end[m] = span.end.value;
     }
     measures->count = count;
     return SCORE_CLEFS_OK;

@@ -18,20 +18,18 @@
 
 static inline void import_analysis_notes_destroy(AnalysisNote *notes, size_t count);
 
-static inline bool import_notes_build_span(const NoteEvent *event, TimeSpan **out) {
-    const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(event));
-    MusicalTime *end = NULL;
-    if (musical_time_add(start, note_event_duration(event), &end) != MUSICAL_TIME_OK) {
+static inline bool import_notes_build_span(const NoteEvent *event, TimeSpan *out) {
+    MusicalTime start = *temporal_anchor_position(note_event_temporal_anchor(event));
+    MusicalTime end;
+    if (musical_time_plus(start, *note_event_duration(event), &end) != MUSICAL_TIME_OK) {
         return false;
     }
-    TimeSpanResult result = time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, out);
-    musical_time_destroy(end);
-    return result == TIME_SPAN_OK;
+    return time_span_make(start, end, out) == TIME_SPAN_OK;
 }
 
 static inline bool import_notes_fill_note(AnalysisNote *note, const NoteEvent *event, const PitchNumericValue *pitch,
                                           size_t track) {
-    TimeSpan *span = NULL;
+    TimeSpan span;
     if (event == NULL || pitch == NULL || !import_notes_build_span(event, &span)) {
         return false;
     }
@@ -45,11 +43,7 @@ static inline bool import_notes_fill_note(AnalysisNote *note, const NoteEvent *e
     note->track = track;
     note->voice = ANALYSIS_INDEX_NONE;
     note->voice_confidence = voice != NULL ? 1.0 : 0.0;
-    if (!analysis_note_valid(note)) {
-        time_span_destroy(span);
-        return false;
-    }
-    return true;
+    return analysis_note_valid(note);
 }
 
 static inline bool import_notes_build_notes(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
@@ -90,8 +84,7 @@ static inline bool import_notes_build_notes(NoteEvent *const *events, PitchNumer
  * PitchNumericValue array). track is the MIDI track chunk the note came from, or the MusicXML part index; voice is
  * ANALYSIS_INDEX_NONE (nothing here assigns voices); voice_confidence is 1 for a voice the source gave and 0 for none.
  *
- * *out is a newly allocated array and *count its length. Free it with import_analysis_notes_destroy, not free: each
- * note's span is allocated here. Fails (false, *out and *count untouched) on a NULL argument, an allocation failure,
+ * *out is a newly allocated array and *count its length. Free it with import_analysis_notes_destroy. Fails (false, *out and *count untouched) on a NULL argument, an allocation failure,
  * or an event that makes no valid AnalysisNote (a zero-length span or a pitch outside 0 to 127). An import with no
  * notes gives a NULL array and a count of 0.
  */
@@ -115,9 +108,7 @@ static inline void import_analysis_notes_destroy(AnalysisNote *notes, size_t cou
     if (notes == NULL) {
         return;
     }
-    for (size_t i = 0; i < count; i++) {
-        time_span_destroy((TimeSpan *)notes[i].span);
-    }
+    (void)count;
     free(notes);
 }
 

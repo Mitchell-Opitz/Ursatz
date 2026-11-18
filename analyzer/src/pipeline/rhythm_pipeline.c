@@ -28,7 +28,6 @@
 #include "model/time/musical_time.h"
 #include "model/time/score_time.h"
 #include "model/time/temporal_anchor.h"
-#include "model/time/time_rational.h"
 #include "model/time/time_signature.h"
 #include "model/time/time_span.h"
 #include "model/time/tuplet.h"
@@ -45,17 +44,11 @@ typedef struct {
     size_t note;
 } IdIndex;
 
-/* The library's input and what keeps it alive: the spans and times it borrows, and the index of each id. */
+/* The library's input and what keeps it alive: the notes it borrows, and the index of each id. */
 typedef struct {
     StandardMeterInput input;
     AnalysisNote *notes; /* the input's notes, in import order: the library's input borrows them */
     size_t note_count;
-    TimeSpan **spans;
-    size_t span_count;
-    size_t span_capacity;
-    MusicalTime **times;
-    size_t time_count;
-    size_t time_capacity;
     IdIndex *ids; /* sorted by id; one per input note */
     size_t id_count;
     int *lines;   /* per ImportedNotes index: its line, or -1 for a note left out of the input */
@@ -63,37 +56,10 @@ typedef struct {
 
 static void build_destroy(RhythmBuild *build) {
     standard_meter_input_destroy(&build->input);
-    for (size_t i = 0; i < build->span_count; i++) {
-        time_span_destroy(build->spans[i]);
-    }
-    for (size_t i = 0; i < build->time_count; i++) {
-        musical_time_destroy(build->times[i]);
-    }
     free(build->notes);
-    free(build->spans);
-    free(build->times);
     free(build->ids);
     free(build->lines);
     memset(build, 0, sizeof(*build));
-}
-
-/* A span [start, end) kept by the build, or NULL on failure. */
-static const TimeSpan *keep_span(RhythmBuild *build, const MusicalTime *start, const MusicalTime *end) {
-    if (build->span_count == build->span_capacity) {
-        size_t capacity = build->span_capacity == 0 ? 512 : build->span_capacity * 2;
-        TimeSpan **grown = realloc(build->spans, capacity * sizeof(TimeSpan *));
-        if (!grown) {
-            return NULL;
-        }
-        build->spans = grown;
-        build->span_capacity = capacity;
-    }
-    TimeSpan *span = NULL;
-    if (time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
-        return NULL;
-    }
-    build->spans[build->span_count++] = span;
-    return span;
 }
 
 static int compare_ids(const void *a, const void *b) {
@@ -138,22 +104,18 @@ static bool build_notes(RhythmBuild *build, const ImportedNotes *notes, const Ou
     for (size_t i = 0; ok && i < notes->count; i++) {
         build->lines[i] = -1;
         const NoteEvent *event = notes->events[i];
-        const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(event));
-        MusicalTime *release = NULL;
-        if (musical_time_add(onset, note_event_duration(event), &release) != MUSICAL_TIME_OK) {
-            ok = false;
-            break;
-        }
-        const TimeSpan *span = keep_span(build, onset, release);
-        musical_time_destroy(release);
-        if (!span) {
+        MusicalTime onset = *temporal_anchor_position(note_event_temporal_anchor(event));
+        MusicalTime release;
+        TimeSpan span;
+        if (musical_time_plus(onset, *note_event_duration(event), &release) != MUSICAL_TIME_OK ||
+            time_span_make(onset, release, &span) != TIME_SPAN_OK) {
             ok = false;
             break;
         }
         const char *id = entity_id_value(note_event_id(event));
         int line = in_ids(soprano, soprano_count, id) ? LINE_SOPRANO : (in_ids(bass, bass_count, id) ? LINE_BASS : LINE_OTHER);
         /* A note the library would refuse (an empty or too long id, a span that is not ahead) is left out. */
-        if (id[0] == '\0' || strlen(id) >= STANDARD_METER_ID_MAX || !time_span_is_valid(span)) {
+        if (id[0] == '\0' || strlen(id) >= STANDARD_METER_ID_MAX || !time_span_holds(span)) {
             continue;
         }
         long pitch = pitch_numeric_value_position_numerator(notes->pitch_values[i]);
@@ -195,25 +157,6 @@ static size_t note_of_id(const RhythmBuild *build, const char *id) {
     return found ? found->note : SIZE_MAX;
 }
 
-/* A copy of the time kept by the build, or NULL on failure. */
-static const MusicalTime *keep_time(RhythmBuild *build, long numerator, unsigned long denominator) {
-    if (build->time_count == build->time_capacity) {
-        size_t capacity = build->time_capacity == 0 ? 128 : build->time_capacity * 2;
-        MusicalTime **grown = realloc(build->times, capacity * sizeof(MusicalTime *));
-        if (!grown) {
-            return NULL;
-        }
-        build->times = grown;
-        build->time_capacity = capacity;
-    }
-    MusicalTime *time = NULL;
-    if (musical_time_create(numerator, denominator, &time) != MUSICAL_TIME_OK) {
-        return NULL;
-    }
-    build->times[build->time_count++] = time;
-    return time;
-}
-
 /* A chord change at the start of every chord segment whose harmony differs from the segment before it (the first
    segment is not one: nothing changes into it). */
 static bool build_chord_changes(RhythmBuild *build, const AnalysisReport *report) {
@@ -226,10 +169,11 @@ static bool build_chord_changes(RhythmBuild *build, const AnalysisReport *report
         if (!change[i]) {
             continue;
         }
-        const MusicalTime *time = keep_time(build, entry->time_numerator, entry->time_denominator);
+        MusicalTime time;
         char id[48];
         snprintf(id, sizeof(id), "chord-change-%zu", i);
-        if (!time || standard_meter_input_add_chord_change(&build->input, id, time) != STANDARD_METER_ANALYSIS_OK) {
+        if (musical_time_make(entry->time_numerator, (long long)entry->time_denominator, &time) != MUSICAL_TIME_OK ||
+            standard_meter_input_add_chord_change(&build->input, id, time) != STANDARD_METER_ANALYSIS_OK) {
             free(change);
             return false;
         }
@@ -244,15 +188,9 @@ static bool build_phrases(RhythmBuild *build, const FormStage *form) {
     const StandardFormPhrases *phrases = &form->phrases;
     for (size_t i = 0; i < phrases->count; i++) {
         const StandardFormPhrase *phrase = &phrases->items[i];
-        const TimeSpan *span = keep_span(build, time_span_start(phrase->span), time_span_end(phrase->span));
-        const TimeSpan *arrival = NULL;
-        if (phrase->claim.cadence_index >= 0) {
-            const TimeSpan *chord = form->built.input.cadences[phrase->claim.cadence_index].arrival;
-            arrival = keep_span(build, time_span_start(chord), time_span_end(chord));
-            if (!arrival) {
-                return false;
-            }
-        }
+        const TimeSpan *arrival = phrase->claim.cadence_index >= 0
+                                      ? &form->built.input.cadences[phrase->claim.cadence_index].arrival
+                                      : NULL;
         StandardMeterExpansionKind expansion = STANDARD_METER_EXPANSION_NONE;
         int measures = 0;
         for (size_t e = 0; e < form->expansions.count; e++) {
@@ -276,8 +214,8 @@ static bool build_phrases(RhythmBuild *build, const FormStage *form) {
         }
         char id[48];
         snprintf(id, sizeof(id), "phrase-%zu", i);
-        if (!span || standard_meter_input_add_phrase(&build->input, id, span, arrival, expansion, measures, false) !=
-                         STANDARD_METER_ANALYSIS_OK) {
+        if (standard_meter_input_add_phrase(&build->input, id, phrase->span, arrival, expansion, measures, false) !=
+            STANDARD_METER_ANALYSIS_OK) {
             return false;
         }
     }
@@ -290,11 +228,11 @@ static bool build_phrases(RhythmBuild *build, const FormStage *form) {
    is in the phrase's span. */
 static size_t *phrase_notes(const RhythmBuild *build, const ImportedNotes *notes, size_t phrase, int line, size_t *count) {
     StandardMeterConfig config = standard_meter_config_default();
-    Rational start;
-    Rational end;
+    Rational start = build->input.phrases[phrase].span.start.value;
+    Rational end = build->input.phrases[phrase].span.end.value;
     *count = 0;
     size_t *ids = malloc((build->input.note_count + 1) * sizeof(size_t));
-    if (!ids || !score_time_span(build->input.phrases[phrase].span, &start, &end)) {
+    if (!ids) {
         free(ids);
         return NULL;
     }
@@ -303,9 +241,8 @@ static size_t *phrase_notes(const RhythmBuild *build, const ImportedNotes *notes
             continue;
         }
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
-        Rational at;
-        if (rational_of_musical_time(onset, &at) != RATIONAL_OK ||
-            !score_time_snap(at, config.onset_grid_denominator, config.onset_tolerance_denominator, &at, NULL)) {
+        Rational at = onset->value;
+        if (!score_time_snap(at, config.onset_grid_denominator, config.onset_tolerance_denominator, &at, NULL)) {
             free(ids);
             *count = 0;
             return NULL;

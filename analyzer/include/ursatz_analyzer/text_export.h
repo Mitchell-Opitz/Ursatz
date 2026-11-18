@@ -5,6 +5,7 @@
 
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/imported_notes.h>
+#include <theory/knowledge/knowledge_snapshot.h>
 
 /*
  * The text export (docs/text-export.md): what the Score and Analysis tabs show, as plain text a person can paste into a
@@ -79,6 +80,8 @@ typedef struct {
     size_t fact_count;
     const AnalyzerTextExportSection *sections;
     size_t section_count;
+    /* The knowledge snapshot the sections are analyzed with (borrowed; ANALYZER_ERR_ARGUMENT without it). */
+    const KnowledgeSnapshot *knowledge;
 } AnalyzerTextExportMaterial;
 
 /*
@@ -87,7 +90,7 @@ typedef struct {
  * the Analyzer reads no store or Composer format.
  *
  * On ANALYZER_OK *text is the export, which the caller frees with free(); otherwise *text is NULL.
- * ANALYZER_ERR_ARGUMENT for a NULL material, kind or text, a NULL label, or a segment outside its section's notes;
+ * ANALYZER_ERR_ARGUMENT for a NULL material, kind, knowledge or text, a NULL label, or a segment outside its section's notes;
  * ANALYZER_ERR_LIBRARY when a section's bytes cannot be imported or its score cannot be written or read back;
  * ANALYZER_ERR_ALLOC.
  */

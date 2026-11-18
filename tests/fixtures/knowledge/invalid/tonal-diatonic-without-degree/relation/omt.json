@@ -1,0 +1,32 @@
+{
+  "schema": "ursatz-knowledge",
+  "schema_version": 1,
+  "source": "omt",
+  "entries": [
+    {
+      "id": "omt.relation.no-degree",
+      "kind": "relation",
+      "subtype": "tonal",
+      "name": "no degree",
+      "content": {
+        "root_semitones": 7,
+        "material": "diatonic"
+      },
+      "citations": [
+        {
+          "source": "omt",
+          "chapter": 1,
+          "note": "what the fixture entry takes from the source"
+        }
+      ],
+      "status": "active",
+      "version": 1,
+      "examples": [
+        {
+          "anchor": "C major",
+          "target": "G major"
+        }
+      ]
+    }
+  ]
+}

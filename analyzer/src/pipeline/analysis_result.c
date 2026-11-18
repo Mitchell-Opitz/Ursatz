@@ -19,7 +19,7 @@ _Static_assert(ANALYZER_STAGE_ALL == (ANALYSIS_CHAIN_STAGE_ALL | ((1u << 18) - (
                "ANALYZER_STAGE_ALL covers the chain stages and the Analyzer bits");
 
 AnalyzerOptions analyzer_options_default(void) {
-    AnalyzerOptions options = {ANALYZER_STAGE_ALL, true};
+    AnalyzerOptions options = {ANALYZER_STAGE_ALL, true, NULL};
     return options;
 }
 
@@ -40,7 +40,7 @@ AnalyzerStatus analyzer_analyze(const ImportedNotes *notes, const AnalyzerOption
     }
     *out = NULL;
     AnalyzerOptions used = options ? *options : analyzer_options_default();
-    if (!notes || (used.stages & ANALYSIS_CHAIN_STAGE_ALL) == 0) {
+    if (!notes || !used.knowledge || (used.stages & ANALYSIS_CHAIN_STAGE_ALL) == 0) {
         return ANALYZER_ERR_ARGUMENT;
     }
     AnalyzerResult *result = calloc(1, sizeof(*result));
@@ -66,6 +66,10 @@ const AnalysisReport *analyzer_result_report(const AnalyzerResult *result) {
 
 const ImportedNotes *analyzer_result_notes(const AnalyzerResult *result) {
     return result ? result->pass.notes : NULL;
+}
+
+const KnowledgeSnapshot *analyzer_result_knowledge(const AnalyzerResult *result) {
+    return result ? result->pass.options.knowledge : NULL;
 }
 
 bool analyzer_result_report_complete(const AnalyzerResult *result) {

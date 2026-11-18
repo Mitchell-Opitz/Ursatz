@@ -12,6 +12,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * The form plan: sections, thematic returns and the form tree, for the five reference pieces and the three constructed
@@ -353,7 +354,7 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
     AnalysisReport report;
     bool imported = piece->midi ? midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK
                                 : musicxml_pipeline_import_file(path, &notes) == MUSICXML_PIPELINE_OK;
-    if (!imported || !run_analysis_pipeline(&notes, &report)) {
+    if (!imported || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return;

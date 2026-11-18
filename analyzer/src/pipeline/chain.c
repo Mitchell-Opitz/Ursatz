@@ -5,6 +5,7 @@
 
 #include "analysis/harmony/key_regions.h"
 #include "model/time/time_span.h"
+#include "theory/tonality/common_practice_materials.h"
 #include "pipeline/form_plan_pipeline.h"
 #include "pipeline/harmonic_rhythm_pipeline.h"
 #include "pipeline/key_region_pipeline.h"
@@ -43,10 +44,10 @@ static bool segmentation_view(const AnalyzerPass *pass, const ChainSegments *sou
         const AdaptiveSonority *item = &source->sonorities.items[s];
         const TimeSpan *window = sonority_time_window(item->sonority);
         Segment *segment = &out->segments[s];
-        segment->start_numerator = musical_time_numerator(time_span_start(window));
-        segment->start_denominator = musical_time_denominator(time_span_start(window));
-        segment->end_numerator = musical_time_numerator(time_span_end(window));
-        segment->end_denominator = musical_time_denominator(time_span_end(window));
+        segment->start_numerator = (long)window->start.value.num;
+        segment->start_denominator = (unsigned long)window->start.value.den;
+        segment->end_numerator = (long)window->end.value.num;
+        segment->end_denominator = (unsigned long)window->end.value.den;
         size_t count = sonority_event_id_count(item->sonority);
         segment->member_count = count;
         segment->note_indices = malloc(sizeof(size_t) * (count > 0 ? count : 1));
@@ -219,7 +220,7 @@ static bool collect_pass(AnalyzerPass *pass) {
     if (!build_entries(pass) || !read_roman_numerals(pass->library, &pass->romans) ||
         !assign_roman_numerals(&pass->romans, pass->chords, report->entries) ||
         !collect_outer_voices(notes, &pass->voice_segmentation, segmentation, pass->chords, report->key_regions,
-                              lines, report) ||
+                              lines, &pass->materials, report) ||
         !collect_non_chord_tones(pass)) {
         return false;
     }
@@ -273,13 +274,16 @@ bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes, const Ana
     if (notes->count == 0) {
         return true;
     }
-    if (!chain_input_build(notes, &pass->input)) {
+    char message[160];
+    if (!common_practice_materials_resolve(pass->options.knowledge, &pass->materials, message, sizeof(message)) ||
+        !chain_input_build(notes, &pass->materials, &pass->input)) {
         return false;
     }
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = pass->options.stages & ANALYSIS_CHAIN_STAGE_ALL;
     config.harmonic_spans = pass->options.harmonic_spans;
     config.refine_keys = true;
+    config.knowledge = pass->options.knowledge;
     if (analysis_chain_run(&pass->input.set, pass->input.key_events, pass->input.key_event_count, &config,
                            &pass->library) != ANALYSIS_CHAIN_OK) {
         return false;

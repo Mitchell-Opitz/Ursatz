@@ -83,8 +83,20 @@ const cJSON *ursatz_gui_composer_vocabulary_list(const char *name);
  * theme needs); -1 when there is none. */
 int ursatz_gui_composer_vocabulary_required_index(const char *list);
 
-/* The spelling of the tonic of pitch_class (0 to 11) in mode ("major" or "minor") in the vocabulary's pitch_class_names;
- * false when it has none. */
-bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size);
+/* The spelling of the tonic of pitch_class (0 to 11) in a key of the material (its id, "omt.material.major") in the vocabulary's
+ * pitch_class_names; false when it has none. */
+bool ursatz_gui_composer_tonic_name(int pitch_class, const char *material, char *out, size_t out_size);
+
+/* The key word of the material (its id) in the vocabulary's materials ("minor" for "omt.material.natural-minor"); false when
+ * it names none. */
+bool ursatz_gui_composer_key_word(const char *material, char *out, size_t out_size);
+
+/* The word a stored mode member used for a material: its key word ("minor" for "omt.material.natural-minor"), or "style" for
+ * "style" (a brief's own); false for anything else. */
+bool ursatz_gui_composer_material_word(const char *material, char *out, size_t out_size);
+
+/* The material of an old mode word: the id of the materials entry whose key word it is ("minor" gives
+ * "omt.material.natural-minor"), "style" for "style"; false for any other word. */
+bool ursatz_gui_composer_material_of_word(const char *word, char *out, size_t out_size);
 
 #endif /* URSATZ_GUI_COMPOSER_CLIENT_H */

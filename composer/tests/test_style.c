@@ -26,6 +26,7 @@
 #include "util/request_parse.h"
 #include "support/test_support.h"
 #include "support/test_composer.h"
+#include "support/test_knowledge.h"
 #include "ursatz_test.h"
 
 /*
@@ -117,7 +118,7 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    key.key = test_key(0, "major");
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 }
@@ -195,9 +196,11 @@ static void analyze(const PiecePlan *plan, Heard *heard) {
     hearing.meter = heard->rendered.meter_map;
     hearing.has_key = true;
     hearing.key_tonic_pitch_class = 0;
-    hearing.key_minor = false;
+    hearing.key_material = knowledge_snapshot_material(test_knowledge(), "omt.material.major");
     hearing.streams = heard->rendered.part_index;
-    assert(analyzer_hear(&hearing, NULL, &heard->result) == ANALYZER_OK);
+    AnalyzerHearingOptions options = analyzer_hearing_options_default();
+    options.analysis.knowledge = test_knowledge();
+    assert(analyzer_hear(&hearing, &options, &heard->result) == ANALYZER_OK);
 }
 
 /* The profile of a heard analysis: the Analyzer's document of the result, counted. */
@@ -529,6 +532,7 @@ static unsigned long long fnv(const char *text) {
 static PiecePlan *sentence_plan(Motive *motive) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -536,7 +540,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    request.key = test_key(0, "major");
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
@@ -561,6 +565,7 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
     PiecePlan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.style = style;
     config.style_weight = weight;
@@ -605,8 +610,9 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  * five changed. Before: P35 B1 (realized motive notes, R-338).
  */
 /* Re-recorded at P36 B3 (liquidated residues, R-345) and at P37 B2 (ideas ranked by fidelity, R-355: seeds 1, 3 and 5). */
-static const unsigned long long MAIN_HASH[5] = {0x0a947488498a3fe5ULL, 0xd7d125680cfed013ULL, 0x09f6d8f3606878fbULL,
-                                                0xd8917a74dfdac22dULL, 0x1739b7abbedb6cf7ULL};
+/* Re-recorded at P58 B14 (plan format 3: keys name their material, a key from a form region names its relation); the notes are the same. */
+static const unsigned long long MAIN_HASH[5] = {0xcc6b2002ceda07f5ULL, 0x44ef43437f101ec7ULL, 0x2cf20d8dda38cec7ULL,
+                                                0x17efe6174bea5901ULL, 0x3d91958ff2c04907ULL};
 
 static int test_same(void) {
     /* CHORALES_MOTIVES, not CHORALES: since P41 B7 the chorales model holds tempo and note-density, which a style applies at weight 0 too. */
@@ -700,6 +706,7 @@ static int test_motive_labels(void) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = true;
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
@@ -745,6 +752,7 @@ static void repetition_degrees(unsigned long seed, const ComposerStyle *style, c
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = seed;
     config.style = style;
     assert(grow_run(plan, &config, &outcome) == GROW_OK);
@@ -829,7 +837,7 @@ static int test_plan_without(void) {
     char *json = plan_json_with(2);
     assert(strstr(json, "\"without\": [") && strstr(json, "motive-rhythm"));
     PiecePlan *again = NULL;
-    assert(plan_from_json(json, &again, NULL) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
     const PlanStyle *read = style_of(again);
     assert(read && read->without_count == 2 && strcmp(read->without[0], "motive-degrees") == 0 &&
            strcmp(read->without[1], "motive-rhythm") == 0);
@@ -838,7 +846,7 @@ static int test_plan_without(void) {
     /* a style constraint with no list: no member is written and it reads back with none */
     json = plan_json_with(0);
     assert(!strstr(json, "without"));
-    assert(plan_from_json(json, &again, NULL) == PLAN_OK);
+    assert(plan_from_json(test_knowledge(), json, &again, NULL) == PLAN_OK);
     read = style_of(again);
     assert(read && read->without_count == 0);
     plan_destroy(again);
@@ -857,6 +865,7 @@ static int test_measure_without_motives(void) {
     PiecePlan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
+    config.knowledge = test_knowledge();
     config.seed = 1;
     ComposeOutcome outcome;
     assert(compose_run(plan, &config, &outcome) == PIECE_OK);
@@ -1120,24 +1129,25 @@ static int test_brief(void) {
     ComposerStyle *style = NULL;
     assert(composer_style_load_without(FAST_MINOR, NULL, 0, &style) == COMPOSER_STYLE_OK);
     ComposerRatio tempo = {0, 0};
-    bool minor = false;
+    const PitchMaterial *mode = NULL;
     ComposerRatio density = {0, 0};
     assert(composer_style_tempo(style, &tempo) && tempo.numerator == 170 && tempo.denominator == 1);
-    assert(composer_style_mode(style, &minor) && minor);
+    assert(composer_style_mode(style, test_materials(), &mode) && mode == test_materials()->natural_minor);
     assert(composer_style_density(style, &density) && density.numerator == 4 && density.denominator == 2);
     composer_style_destroy(style);
     /* A style without the categories gives none of them (the fixture is chorales plus the motive categories, with no tempo or density: the
        chorales model re-recorded at P41 B7 holds both, which a style applies as the brief even at weight 0). */
     assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &style) == COMPOSER_STYLE_OK);
     assert(!composer_style_tempo(style, &tempo) && !composer_style_density(style, &density));
-    assert(composer_style_mode(style, &minor));
+    assert(composer_style_mode(style, test_materials(), &mode));
     composer_style_destroy(style);
 
     /* The limit halves a connection that is remote, between 1/2 and 3/4, only at 1/2. */
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
+    options.knowledge = test_knowledge();
     options.has_meter = request_parse_meter("4/4", &options.meter);
-    options.has_key = request_parse_key("C major", &options.key);
+    options.has_key = request_parse_key("C major", test_knowledge(), &options.key);
     Motive basic;
     assert(motive_from_notes_text("E4:q G4:e F4:e D4:q C4:q", &options, &basic, NULL) == MOTIVE_OK);
     MotiveScore remote = {5, 8};

@@ -52,10 +52,10 @@
  * order. The first is the start of the measure (as meter_map_measure_span gives it) and each beat
  * lasts until the next start; the last lasts until the end of the measure. The provider must handle
  * short measures (a meter change mid-measure) and a pickup measure (whose first beat may start
- * partway through a beat). On success *out_beat_starts is a newly allocated array of *out_count new
- * MusicalTimes, which the builder destroys. Returns false on failure.
+ * partway through a beat). On success *out_beat_starts is a malloc'd array of *out_count
+ * MusicalTime values, which the builder frees. Returns false on failure.
  */
-typedef bool (*BeatGridProvider)(const MeterMap *map, int measure, void *context, MusicalTime ***out_beat_starts,
+typedef bool (*BeatGridProvider)(const MeterMap *map, int measure, void *context, MusicalTime **out_beat_starts,
                                   size_t *out_count);
 
 /*

@@ -5,8 +5,8 @@
 #include <stddef.h>
 
 #include "model/core/rational.h"
+#include "model/pitch/pitch_material.h"
 #include "theory/vocabulary/non_chord_tone.h"
-#include "model/time/time_rational.h"
 
 /*
  * MotiveSketch (L8 analysis value): a motive as plain data, the input of the motive relations
@@ -83,7 +83,7 @@ typedef struct {
     size_t note_count;
     bool has_scale;
     int tonic_pc; /* 0 to 11 */
-    bool minor;   /* natural minor steps */
+    const PitchMaterial *material; /* the scale: its steps; read only when has_scale, then not NULL; borrowed from the snapshot */
     Rational bar;
     Rational beat;
     Rational pickup;
@@ -207,6 +207,9 @@ unsigned long long motive_sketch_fingerprint(const MotiveSketch *sketch);
  * a scale; tone overrides on existing notes with a role and type that exist.
  */
 bool motive_sketch_validate(const MotiveSketch *sketch);
+
+/* True when the sketch's scale has a minor third (the old `minor` flag); false without a scale or material. */
+bool motive_sketch_minor(const MotiveSketch *sketch);
 
 /*
  * The sketch as its contour: the pitches are replaced by dense ranks over the distinct pitches (0 the

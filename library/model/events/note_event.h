@@ -36,9 +36,11 @@
  * (tests/events/test_architecture_events.c) independently confirms no
  * containers/ include exists anywhere under src/events/.
  *
- * There is no mutator. A revision is a new NoteEvent with a new id
- * and/or provenance -- constructing that from an old one is out of scope
- * for this layer (no Activity/Transformation exists yet to drive it).
+ * There is no mutator for the identity fields. A revision is a new
+ * NoteEvent with a new id and/or provenance -- constructing that from an
+ * old one is out of scope for this layer (no Activity/Transformation
+ * exists yet to drive it). The one optional member, the notated tuplet,
+ * is set once after creation (note_event_set_tuplet).
  *
  * Serialization (left to callers, no serializer exists yet in this
  * codebase): id MUST serialize as an EntityID, never a positional index.
@@ -54,25 +56,24 @@ typedef struct NoteEvent NoteEvent;
 typedef enum {
     NOTE_EVENT_OK = 0,
     NOTE_EVENT_ERR_NULL_ID,
-    NOTE_EVENT_ERR_NULL_TEMPORAL_ANCHOR,
-    NOTE_EVENT_ERR_NULL_DURATION,
     NOTE_EVENT_ERR_NULL_PITCH,
     NOTE_EVENT_ERR_NULL_PROVENANCE,
+    NOTE_EVENT_ERR_BAD_TUPLET,
     NOTE_EVENT_ERR_ALLOC
 } NoteEventResult;
 
 /*
- * Takes ownership of id, temporal_anchor, duration, pitch, provenance,
- * and (when non-NULL) optional_pitch_spelling and optional_voice, on
- * success (destroyed by note_event_destroy). optional_pitch_spelling and
- * optional_voice may be NULL; every other parameter is required.
+ * Takes ownership of id, pitch, provenance, and (when non-NULL)
+ * optional_pitch_spelling and optional_voice, on success (destroyed by
+ * note_event_destroy). onset and duration are values and are copied: the
+ * event builds its own TemporalAnchor at onset. optional_pitch_spelling
+ * and optional_voice may be NULL; every other pointer is required.
  *
  * duration's own invariant (>= 0) is enforced by Duration itself
- * (time/duration.h rejects a negative numerator at duration_create) --
- * a caller cannot construct a negative Duration to pass here, so this
- * constructor does not re-check it.
+ * (time/duration.h makes no negative Duration) -- so this constructor
+ * does not re-check it.
  */
-NoteEventResult note_event_create(EntityID *id, TemporalAnchor *temporal_anchor, Duration *duration,
+NoteEventResult note_event_create(EntityID *id, MusicalTime onset, Duration duration,
                                    PitchIdentity *pitch, PitchSpelling *optional_pitch_spelling,
                                    VoiceReference *optional_voice, ProvenanceReference *provenance,
                                    NoteEvent **out);
@@ -87,5 +88,20 @@ const PitchSpelling *note_event_optional_pitch_spelling(const NoteEvent *note_ev
 /* NULL if not present. */
 const VoiceReference *note_event_optional_voice(const NoteEvent *note_event);
 const ProvenanceReference *note_event_provenance(const NoteEvent *note_event);
+
+/*
+ * The notated tuplet of the note, when the notation states one (MusicXML <time-modification>): `actual` notes in the
+ * time of `normal` of the same written value (3:2 a triplet, 5:4 a quintuplet). It is a hint about how the duration
+ * is written; the duration itself is exact either way. Returns false (outputs untouched) when the note has none.
+ * Either output may be NULL.
+ */
+bool note_event_tuplet(const NoteEvent *note_event, unsigned *actual, unsigned *normal);
+
+/*
+ * Sets the notated tuplet. The ratio must be a valid Tuplet (model/time/tuplet.h: 2 to 64 actual, 1 to 64 normal,
+ * the two different), else NOTE_EVENT_ERR_BAD_TUPLET and the note is unchanged. A note has no tuplet until this is
+ * called.
+ */
+NoteEventResult note_event_set_tuplet(NoteEvent *note_event, unsigned actual, unsigned normal);
 
 #endif

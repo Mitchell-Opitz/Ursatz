@@ -8,14 +8,24 @@
 
 
 #define BASS_PERSIST_SEMITONES 12
-#define TIME_TOLERANCE 1e-9
+#define SCORE_TOLERANCE 1e-9 /* two scores within it are tied; times are never compared with a tolerance (they are exact) */
+
+/* The length from `from` to `to` in whole notes as a double weight; false when the difference does not fit a Rational. */
+static bool length_weight(Rational from, Rational to, double *out) {
+    Rational length;
+    if (rational_sub(to, from, &length) != RATIONAL_OK) {
+        return false;
+    }
+    *out = rational_to_double(length);
+    return true;
+}
 
 /* The lowest pitch sounding at the cell's start, or -1 when nothing does. */
 static int lowest_at_start(const HarmonicSpanCell *cell) {
     int lowest = -1;
     for (size_t i = 0; i < cell->segment->member_count; i++) {
         const CommonPracticeMember *member = &cell->segment->members[i];
-        if (!member->held && member->onset > cell->start + TIME_TOLERANCE) {
+        if (!member->held && rational_cmp(member->onset, cell->start) > 0) {
             continue; /* attacked after the start */
         }
         if (lowest < 0 || member->pitch < lowest) {
@@ -132,10 +142,10 @@ static HarmonicSpanStatus best_chord_over_keys(const CommonPracticeWeights *weig
                 if (!allowed_in_grouping(&ranked[i])) {
                     continue;
                 }
-                bool tie_on_bass = *found && fabs(ranked[i].score - best->score) <= TIME_TOLERANCE &&
+                bool tie_on_bass = *found && fabs(ranked[i].score - best->score) <= SCORE_TOLERANCE &&
                                    weights->bass_pitch_class >= 0 && ranked[i].root_pitch_class == weights->bass_pitch_class &&
                                    best->root_pitch_class != weights->bass_pitch_class;
-                if (!*found || ranked[i].score > best->score + TIME_TOLERANCE || tie_on_bass) {
+                if (!*found || ranked[i].score > best->score + SCORE_TOLERANCE || tie_on_bass) {
                     *best = ranked[i];
                     *best_tonic = tonic;
                     *found = true;
@@ -155,21 +165,21 @@ static bool same_text(const char *a, const char *b) {
 }
 
 static bool same_note(const CommonPracticeMember *a, const CommonPracticeMember *b) {
-    return a->pitch == b->pitch && fabs(a->onset - b->onset) <= TIME_TOLERANCE && same_text(a->voice_id, b->voice_id) &&
+    return a->pitch == b->pitch && rational_equals(a->onset, b->onset) && same_text(a->voice_id, b->voice_id) &&
            same_text(a->note_id, b->note_id);
 }
 
 /* --- resolved accents (R-382) --- */
 
-static bool sounds_at_start(const CommonPracticeMember *member, double start) {
-    return member->held || fabs(member->onset - start) <= TIME_TOLERANCE;
+static bool sounds_at_start(const CommonPracticeMember *member, Rational start) {
+    return member->held || rational_equals(member->onset, start);
 }
 
-/* The member that resolves member `m`: the first of m's voice attacked after m (by more than TIME_TOLERANCE), when it is attacked
+/* The member that resolves member `m`: the first of m's voice attacked after m, when it is attacked
    inside the window, one or two semitones from m, and a member on the bass pitch sounds at `start` and still sounds after it is
-   attacked (its end later than that onset by more than TIME_TOLERANCE): a bass that ends as the step lands holds nothing. SIZE_MAX
+   attacked (its end later than that onset): a bass that ends as the step lands holds nothing. SIZE_MAX
    when m has no such resolution. */
-static size_t accent_resolution(const CommonPracticeMember *members, size_t count, size_t m, double start, double end,
+static size_t accent_resolution(const CommonPracticeMember *members, size_t count, size_t m, Rational start, Rational end,
                                 int bass_pitch) {
     const CommonPracticeMember *accent = &members[m];
     if (accent->voice_id == NULL || !sounds_at_start(accent, start) || accent->pitch <= bass_pitch) {
@@ -177,14 +187,14 @@ static size_t accent_resolution(const CommonPracticeMember *members, size_t coun
     }
     size_t r = SIZE_MAX;
     for (size_t j = 0; j < count; j++) {
-        if (j == m || !same_text(members[j].voice_id, accent->voice_id) || !(members[j].onset > accent->onset + TIME_TOLERANCE)) {
+        if (j == m || !same_text(members[j].voice_id, accent->voice_id) || rational_cmp(members[j].onset, accent->onset) <= 0) {
             continue;
         }
-        if (r == SIZE_MAX || members[j].onset < members[r].onset - TIME_TOLERANCE) {
+        if (r == SIZE_MAX || rational_cmp(members[j].onset, members[r].onset) < 0) {
             r = j;
         }
     }
-    if (r == SIZE_MAX || members[r].held || !(members[r].onset < end - TIME_TOLERANCE)) {
+    if (r == SIZE_MAX || members[r].held || rational_cmp(members[r].onset, end) >= 0) {
         return SIZE_MAX;
     }
     int step = members[r].pitch - accent->pitch;
@@ -198,20 +208,21 @@ static size_t accent_resolution(const CommonPracticeMember *members, size_t coun
         if (b == m || members[b].pitch != bass_pitch || !sounds_at_start(&members[b], start)) {
             continue;
         }
-        double release = (members[b].held ? start : members[b].onset) + members[b].duration;
-        if (release > members[r].onset + TIME_TOLERANCE) {
+        Rational release;
+        if (rational_add(members[b].held ? start : members[b].onset, members[b].duration, &release) == RATIONAL_OK &&
+            rational_cmp(release, members[r].onset) > 0) {
             return r;
         }
     }
     return SIZE_MAX;
 }
 
-HarmonicSpanStatus harmonic_span_mark_resolved_accents(CommonPracticeMember *members, size_t count, double start, double end,
+HarmonicSpanStatus harmonic_span_mark_resolved_accents(CommonPracticeMember *members, size_t count, Rational start, Rational end,
                                                        int bass_pitch, const CommonPracticeWeightedConfig *config) {
     if (count > 0 && members == NULL) {
         return HARMONIC_SPAN_ERR_NULL_ARGUMENT;
     }
-    if (!isfinite(start) || !isfinite(end) || !(end > start) || bass_pitch < -1) {
+    if (rational_cmp(end, start) <= 0 || bass_pitch < -1) {
         return HARMONIC_SPAN_ERR_BAD_INPUT;
     }
     for (size_t i = 0; i < count; i++) {
@@ -268,7 +279,7 @@ HarmonicSpanStatus harmonic_span_mark_resolved_accents(CommonPracticeMember *mem
 
 /* The union of the members of cells a..b in g->scratch: a note sounding in several cells is one member whose duration
    adds up; a note first sounding after the part's first cell was attacked in the part. Returns the member count. */
-static size_t merge_members(const Grouper *g, size_t a, size_t b) {
+static HarmonicSpanStatus merge_members(const Grouper *g, size_t a, size_t b, size_t *out_count) {
     size_t n = 0;
     for (size_t c = a; c <= b; c++) {
         const CommonPracticeSegment *segment = g->cells[c].segment;
@@ -279,7 +290,9 @@ static size_t merge_members(const Grouper *g, size_t a, size_t b) {
                 j++;
             }
             if (j < n) {
-                g->scratch[j].duration += member->duration;
+                if (rational_add(g->scratch[j].duration, member->duration, &g->scratch[j].duration) != RATIONAL_OK) {
+                    return HARMONIC_SPAN_ERR_BAD_INPUT;
+                }
                 continue;
             }
             g->scratch[n] = *member;
@@ -290,7 +303,8 @@ static size_t merge_members(const Grouper *g, size_t a, size_t b) {
             n++;
         }
     }
-    return n;
+    *out_count = n;
+    return HARMONIC_SPAN_OK;
 }
 
 /* The shorter way round between two pitch classes, 0 to 6. */
@@ -340,7 +354,7 @@ static bool is_new_bass(const Grouper *g, size_t c) {
     bool above = false;
     for (size_t i = 0; i < segment->member_count; i++) {
         const CommonPracticeMember *member = &segment->members[i];
-        if (member->pitch == g->bass[c] && !member->held && member->onset <= g->cells[c].start + TIME_TOLERANCE) {
+        if (member->pitch == g->bass[c] && !member->held && rational_cmp(member->onset, g->cells[c].start) <= 0) {
             attacked = true;
         }
         if (member->pitch > g->bass[c] && sounds_at_start(member, g->cells[c].start)) {
@@ -374,10 +388,14 @@ static bool bass_explained_by(const Grouper *g, size_t a, size_t b, unsigned mas
 /* Reads cells a..b as one segment over the given bass (-1: the lowest sounding pitch), in no key: the best chord over
    all 24 keys. */
 static HarmonicSpanStatus read_over(const Grouper *g, size_t a, size_t b, int bass_pitch, Reading *out) {
-    size_t n = merge_members(g, a, b);
+    size_t n = 0;
+    HarmonicSpanStatus status = merge_members(g, a, b, &n);
+    if (status != HARMONIC_SPAN_OK) {
+        return status;
+    }
     const int *bass_override = bass_pitch >= 0 ? &bass_pitch : NULL;
 
-    HarmonicSpanStatus status =
+    status =
         harmonic_span_mark_resolved_accents(g->scratch, n, g->cells[a].start, g->cells[b].end, bass_pitch, &g->config);
     if (status != HARMONIC_SPAN_OK) {
         return status;
@@ -490,9 +508,11 @@ static HarmonicSpanStatus emit_span(Grouper *g, size_t a, size_t b, const Readin
         for (size_t c = a + 1; c <= b && inside_beat; c++) {
             inside_beat = g->cells[c].level == HARMONIC_SPAN_LEVEL_INNER;
         }
-        double middle = 0.5 * (g->cells[a].start + g->cells[b].end);
+        Rational middle;
+        inside_beat = inside_beat && rational_add(g->cells[a].start, g->cells[b].end, &middle) == RATIONAL_OK &&
+                      rational_div_int(middle, 2, &middle) == RATIONAL_OK;
         for (size_t c = a + 1; c <= b && inside_beat && half == 0; c++) {
-            if (fabs(g->cells[c].start - middle) <= TIME_TOLERANCE) {
+            if (rational_equals(g->cells[c].start, middle)) {
                 half = c;
             }
         }
@@ -509,11 +529,13 @@ static HarmonicSpanStatus emit_span(Grouper *g, size_t a, size_t b, const Readin
             return status;
         }
         if (left.valid && right.valid && left.root_pitch_class != right.root_pitch_class) {
-            double dur_left = g->cells[half - 1].end - g->cells[a].start;
-            double dur_right = g->cells[b].end - g->cells[half].start;
-            double dur_span = g->cells[b].end - g->cells[a].start;
-            double weighted = (left.score * dur_left + right.score * dur_right) / dur_span;
-            if (weighted >= reading->score + HARMONIC_SPAN_SPLIT_MARGIN) {
+            double dur_left;
+            double dur_right;
+            double dur_span;
+            if (length_weight(g->cells[a].start, g->cells[half - 1].end, &dur_left) &&
+                length_weight(g->cells[half].start, g->cells[b].end, &dur_right) &&
+                length_weight(g->cells[a].start, g->cells[b].end, &dur_span) &&
+                (left.score * dur_left + right.score * dur_right) / dur_span >= reading->score + HARMONIC_SPAN_SPLIT_MARGIN) {
                 add_span(g, a, half - 1, left.bass);
                 return add_span(g, half, b, right.bass);
             }
@@ -556,7 +578,10 @@ typedef struct {
 } Partition;
 
 static HarmonicSpanStatus score_partition(const Grouper *g, Measure *m, unsigned mask, Partition *out) {
-    double measure_duration = g->cells[m->points[m->n + 1] - 1].end - g->cells[m->points[0]].start;
+    double measure_duration;
+    if (!length_weight(g->cells[m->points[0]].start, g->cells[m->points[m->n + 1] - 1].end, &measure_duration)) {
+        return HARMONIC_SPAN_ERR_BAD_INPUT;
+    }
     Partition result = {true, 0, 0.0, 0.0};
     size_t start = 0;
     int previous_root = -1;
@@ -574,7 +599,10 @@ static HarmonicSpanStatus score_partition(const Grouper *g, Measure *m, unsigned
             *out = result;
             return HARMONIC_SPAN_OK;
         }
-        double duration = g->cells[m->points[j] - 1].end - g->cells[m->points[start]].start;
+        double duration;
+        if (!length_weight(g->cells[m->points[start]].start, g->cells[m->points[j] - 1].end, &duration)) {
+            return HARMONIC_SPAN_ERR_BAD_INPUT;
+        }
         result.value += reading->score * duration / measure_duration;
         result.parts++;
         previous_root = reading->root_pitch_class;
@@ -585,13 +613,13 @@ static HarmonicSpanStatus score_partition(const Grouper *g, Measure *m, unsigned
     return HARMONIC_SPAN_OK;
 }
 
-/* True when partition (a_mask, a) beats the current best (b_mask, b): higher penalized value, within TIME_TOLERANCE
+/* True when partition (a_mask, a) beats the current best (b_mask, b): higher penalized value, within SCORE_TOLERANCE
    the fewer parts, then the one whose first differing boundary is earlier (the lowest differing bit set). */
 static bool partition_better(const Partition *a, unsigned a_mask, const Partition *b, unsigned b_mask) {
-    if (a->penalized > b->penalized + TIME_TOLERANCE) {
+    if (a->penalized > b->penalized + SCORE_TOLERANCE) {
         return true;
     }
-    if (a->penalized < b->penalized - TIME_TOLERANCE) {
+    if (a->penalized < b->penalized - SCORE_TOLERANCE) {
         return false;
     }
     if (a->parts != b->parts) {
@@ -683,7 +711,7 @@ static HarmonicSpanStatus validate(const HarmonicSpanCell *cells, size_t count, 
     for (size_t i = 0; i < count; i++) {
         const HarmonicSpanCell *cell = &cells[i];
         if (cell->segment == NULL || (cell->segment->members == NULL && cell->segment->member_count > 0) ||
-            !isfinite(cell->start) || !isfinite(cell->end) || !(cell->end > cell->start) ||
+            rational_cmp(cell->end, cell->start) <= 0 ||
             (unsigned)cell->level > (unsigned)HARMONIC_SPAN_LEVEL_INNER || bass[i] < -1) {
             return HARMONIC_SPAN_ERR_BAD_INPUT;
         }

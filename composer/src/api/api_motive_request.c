@@ -182,10 +182,12 @@ static ComposerStatus load_failure(ComposerError *error, const char *base, bool 
                    detail->location[0] ? " at " : "", detail->location, detail->message);
 }
 
-static ComposerStatus read_motive(const cJSON *request, const char *base, const unsigned char *bytes, size_t size,
-                                  Motive *out, MotiveOptions *options_out, ComposerError *error) {
+static ComposerStatus read_motive(const cJSON *request, const char *base, const KnowledgeSnapshot *knowledge,
+                                  const unsigned char *bytes, size_t size, Motive *out, MotiveOptions *options_out,
+                                  ComposerError *error) {
     MotiveOptions options;
     memset(&options, 0, sizeof options);
+    options.knowledge = knowledge;
     const char *meter_text = NULL;
     const char *key_text = NULL;
     bool present = false;
@@ -205,7 +207,11 @@ static ComposerStatus read_motive(const cJSON *request, const char *base, const 
         return status;
     }
     if (present) {
-        if (!request_parse_key(key_text, &options.key)) {
+        if (!request_parse_key(key_text, knowledge, &options.key)) {
+            char refusal[REQUEST_KEY_WORD_MAX + 96];
+            if (request_key_refusal(key_text, knowledge, refusal, sizeof refusal)) {
+                return fail_at(error, COMPOSER_ERR_REQUEST, base, "/key", "%s", refusal);
+            }
             return fail_at(error, COMPOSER_ERR_REQUEST, base, "/key",
                            "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                            "for example \"D minor\"",
@@ -273,14 +279,15 @@ static ComposerStatus read_motive(const cJSON *request, const char *base, const 
     return COMPOSER_OK;
 }
 
-ComposerStatus api_read_motive(const cJSON *request, const char *base, Motive *out, MotiveOptions *options,
-                               ComposerError *error) {
-    return read_motive(request, base ? base : "", NULL, 0, out, options, error);
+ComposerStatus api_read_motive(const cJSON *request, const char *base, const KnowledgeSnapshot *knowledge, Motive *out,
+                               MotiveOptions *options, ComposerError *error) {
+    return read_motive(request, base ? base : "", knowledge, NULL, 0, out, options, error);
 }
 
-ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const unsigned char *bytes, size_t size,
-                                     Motive *out, MotiveOptions *options, ComposerError *error) {
-    return read_motive(request, base ? base : "", bytes, size, out, options, error);
+ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const KnowledgeSnapshot *knowledge,
+                                     const unsigned char *bytes, size_t size, Motive *out, MotiveOptions *options,
+                                     ComposerError *error) {
+    return read_motive(request, base ? base : "", knowledge, bytes, size, out, options, error);
 }
 
 /* --- the motives of a theme or piece request ------------------------------------------------------------ */
@@ -383,7 +390,7 @@ static ComposerStatus read_tone_overrides(const char *what, const char *base, co
     return COMPOSER_OK;
 }
 
-ComposerStatus api_read_degrees_motive(const char *what, const char *base, const cJSON *object, const char *role,
+ComposerStatus api_read_degrees_motive(const KnowledgeSnapshot *knowledge, const char *what, const char *base, const cJSON *object, const char *role,
                                        const PlanMeter *meter, const AnalysisKey *key, Motive *out, ComposerError *error) {
     const char *degrees;
     const char *harmony;
@@ -407,6 +414,7 @@ ComposerStatus api_read_degrees_motive(const char *what, const char *base, const
     options.meter = *meter;
     options.has_key = true;
     options.key = *key;
+    options.knowledge = knowledge;
     if (pickup) {
         if (!request_parse_pickup(pickup, meter->beat_unit, &options.pickup)) {
             return fail_at(error, COMPOSER_ERR_REQUEST, base, "/pickup", "%s: pickup '%s' is not a number of beats; write 0, 1 or 1/2",

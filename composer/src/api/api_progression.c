@@ -68,7 +68,8 @@ static bool present(const cJSON *request, const char *name) {
     return item && !cJSON_IsNull(item);
 }
 
-static ComposerStatus read_request(const cJSON *request, Options *options, ApiOutputs *outputs, ComposerError *error) {
+static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot *knowledge, Options *options,
+                                   ApiOutputs *outputs, ComposerError *error) {
     const char *cadence_text = NULL;
     const char *embellish_text = NULL;
     bool found;
@@ -87,7 +88,10 @@ static ComposerStatus read_request(const cJSON *request, Options *options, ApiOu
         !api_member_bool(request, "plans", &options->plans, &found, error)) {
         return COMPOSER_ERR_REQUEST;
     }
-    if (!request_parse_key(options->key_text, &options->key)) {
+    if (!request_parse_key(options->key_text, knowledge, &options->key)) {
+        if (api_fail_unsupported_key(error, "/key", knowledge, options->key_text)) {
+            return COMPOSER_ERR_REQUEST;
+        }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                         "for example \"D minor\"",
@@ -133,9 +137,9 @@ static ComposerStatus read_request(const cJSON *request, Options *options, ApiOu
                             options->schema_text);
         }
         options->has_schema = true;
-        if (!harmony_schema_available(options->schema, options->key.mode)) {
+        if (!harmony_schema_available(options->schema, options->key.material)) {
             return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/schema", "the schema '%s' cannot be written in a %s key",
-                            options->schema_text, options->key.mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major");
+                            options->schema_text, composer_key_is_minor(&options->key) ? "minor" : "major");
         }
     }
     if (options->sequence_text) {
@@ -221,7 +225,7 @@ static bool build_plan(const Options *options, Built *built) {
 
     /* The part of the phrase the operators fill: all of it, or what follows a tonic first bar. */
     PlanSpan region = built->span;
-    const char *tonic = options->key.mode == KEY_STRUCTURE_MODE_MINOR ? "i" : "I";
+    const char *tonic = composer_key_is_minor(&options->key) ? "i" : "I";
     if (needs_lead(options)) {
         PlanSpan lead = {built->span.start, built->bar_length};
         region.start = built->bar_length;
@@ -569,7 +573,7 @@ static size_t collect_rows(const Options *options, const Built *built, Row *rows
 static const char *heard_name(const Options *options, const Built *built) {
     CadenceType heard;
     bool at_end;
-    if (harmony_hear_cadence(built->plan, built->span, options->key.mode, options->cadence, &heard, &at_end) && at_end) {
+    if (harmony_hear_cadence(built->plan, built->span, harmony_key_mode(&options->key), options->cadence, &heard, &at_end) && at_end) {
         return cadence_type_name(heard);
     }
     return "none";
@@ -630,7 +634,7 @@ static ComposerStatus build_document(const Options *options, const Built *built,
     char key[24];
     char meter[16];
     cJSON *document = cJSON_CreateObject();
-    util_key_name(analysis_key_tonic_pitch_class(&options->key), options->key.mode == KEY_STRUCTURE_MODE_MINOR, key, sizeof(key));
+    util_key_name(analysis_key_tonic_pitch_class(&options->key), options->key.material, key, sizeof(key));
     snprintf(meter, sizeof(meter), "%d/%d", options->meter.beats_per_bar, options->meter.beat_unit);
     bool ok = document && cJSON_AddStringToObject(document, "key", key) && cJSON_AddStringToObject(document, "meter", meter) &&
               cJSON_AddNumberToObject(document, "bars", (double)options->bars) &&
@@ -672,27 +676,28 @@ static ComposerStatus build_document(const Options *options, const Built *built,
 
 /* --- the lists of names --------------------------------------------------------------------------------- */
 
-/* `list_schemas`: {"schemas": [{"name", "function", "modes"}], "sequences": [name]}. */
-static ComposerStatus list_names(ComposerResponse *out) {
+/* `list_schemas`: {"schemas": [{"name", "function", "materials"}], "sequences": [name]}. */
+static ComposerStatus list_names(const CommonPracticeMaterials *materials, ComposerResponse *out) {
     cJSON *document = cJSON_CreateObject();
     cJSON *schemas = document ? cJSON_AddArrayToObject(document, "schemas") : NULL;
     cJSON *sequences = schemas ? cJSON_AddArrayToObject(document, "sequences") : NULL;
     bool ok = sequences != NULL;
     for (int id = 0; ok && id < GALANT_SCHEMA_COUNT; id++) {
-        bool major = harmony_schema_available((GalantSchemaId)id, KEY_STRUCTURE_MODE_MAJOR);
-        bool minor = harmony_schema_available((GalantSchemaId)id, KEY_STRUCTURE_MODE_MINOR);
-        if (!major && !minor) {
+        bool major = harmony_schema_available((GalantSchemaId)id, materials->major);
+        bool is_minor = harmony_schema_available((GalantSchemaId)id, materials->natural_minor);
+        if (!major && !is_minor) {
             continue;
         }
         cJSON *entry = cJSON_CreateObject();
-        cJSON *modes = entry ? cJSON_CreateArray() : NULL;
-        ok = entry && modes && cJSON_AddStringToObject(entry, "name", galant_schema_name((GalantSchemaId)id)) &&
+        cJSON *materials_array = entry ? cJSON_CreateArray() : NULL;
+        ok = entry && materials_array && cJSON_AddStringToObject(entry, "name", galant_schema_name((GalantSchemaId)id)) &&
              cJSON_AddStringToObject(entry, "function", schema_function_name(galant_prototype((GalantSchemaId)id)->function)) &&
-             (!major || cJSON_AddItemToArray(modes, cJSON_CreateString("major"))) &&
-             (!minor || cJSON_AddItemToArray(modes, cJSON_CreateString("minor"))) && cJSON_AddItemToObject(entry, "modes", modes) &&
+             (!major || cJSON_AddItemToArray(materials_array, cJSON_CreateString(materials->major->id))) &&
+             (!is_minor || cJSON_AddItemToArray(materials_array, cJSON_CreateString(materials->natural_minor->id))) &&
+             cJSON_AddItemToObject(entry, "materials", materials_array) &&
              cJSON_AddItemToArray(schemas, entry);
         if (!ok) {
-            cJSON_Delete(modes);
+            cJSON_Delete(materials_array);
             cJSON_Delete(entry);
         }
     }
@@ -708,8 +713,14 @@ static ComposerStatus list_names(ComposerResponse *out) {
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
 
-ComposerStatus composer_api_progression(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_progression(const ComposerContext *context, const char *request_json,
+                                        const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    CommonPracticeMaterials materials;
+    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *request = NULL;
     Options options;
     ApiOutputs outputs;
@@ -728,7 +739,7 @@ ComposerStatus composer_api_progression(const char *request_json, const Composer
         if (!api_member_bool(request, "list_schemas", &list, &found, &out->error)) {
             status = COMPOSER_ERR_REQUEST;
         } else if (list) {
-            status = list_names(out);
+            status = list_names(&materials, out);
             cJSON_Delete(request);
             if (status != COMPOSER_OK) {
                 ComposerError error = out->error;
@@ -739,7 +750,7 @@ ComposerStatus composer_api_progression(const char *request_json, const Composer
         }
     }
     if (status == COMPOSER_OK) {
-        status = read_request(request, &options, &outputs, &out->error);
+        status = read_request(request, context->knowledge, &options, &outputs, &out->error);
         if (status == COMPOSER_OK) {
             options.job = job;
             seed = options.seed;

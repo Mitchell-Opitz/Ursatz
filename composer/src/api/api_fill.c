@@ -155,8 +155,13 @@ static cJSON *candidates_json(const ComposeCandidates *candidates, unsigned long
     return list;
 }
 
-ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+ComposerStatus composer_api_fill(const ComposerContext *context, const char *request_json,
+                                 const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
+    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
+    if (context_status != COMPOSER_OK) {
+        return context_status;
+    }
     cJSON *root = NULL;
     char *text = NULL;
     ApiOutputs outputs;
@@ -182,7 +187,7 @@ ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *jo
         status = read_style_members(root, &style_options, &out->error);
     }
     if (status == COMPOSER_OK) {
-        status = api_read_plan_text(root, "plan", &text, &out->error);
+        status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
 
     /* The seeds are tried one after another, each from a new copy of the plan; only a stuck run can be mended by the next. */
@@ -203,7 +208,7 @@ ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *jo
             break;
         }
         PiecePlan *fresh = NULL;
-        status = api_plan_from_text(text, "plan", &fresh, &out->error);
+        status = api_plan_from_text(context->knowledge, text, "plan", &fresh, &out->error);
         if (status != COMPOSER_OK) {
             break;
         }
@@ -223,6 +228,7 @@ ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *jo
         config.style = style;
         config.style_weight = style_weight;
         config.job = job;
+        config.knowledge = context->knowledge;
         if (candidates_wanted > 0) {
             /* The candidates run from the seed and the next ones; the best is written. */
             PieceResult ran = compose_candidates(fresh, &config, candidates_wanted, &candidates);

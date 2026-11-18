@@ -13,6 +13,7 @@
 
 #include "test_support.h"
 #include "ursatz_test.h"
+#include "test_knowledge.h"
 
 /*
  * Roman numerals, applied chords and the chord vocabulary.
@@ -134,7 +135,7 @@ typedef struct {
 
 static void analyze(const char *path, Analyzed *out) {
     if (midi_pipeline_import_file(path, &out->notes) != MIDI_PIPELINE_OK ||
-        !run_analysis_pipeline(&out->notes, &out->report)) {
+        !run_analysis_pipeline(&out->notes, test_knowledge(), &out->report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         exit(1);
     }

@@ -19,9 +19,9 @@ static TimeSignature *sig(unsigned top, int bottom_exponent) {
     return ts;
 }
 
-static MusicalTime *at(long n, unsigned long d) {
-    MusicalTime *t = NULL;
-    assert(musical_time_create(n, d, &t) == MUSICAL_TIME_OK);
+static MusicalTime at(long n, unsigned long d) {
+    MusicalTime t;
+    assert(musical_time_make(n, (long long)d, &t) == MUSICAL_TIME_OK);
     return t;
 }
 
@@ -40,19 +40,16 @@ typedef struct {
 
 static MeterMap *build(const Change *changes, size_t count) {
     TimeSignature *signatures[8];
-    MusicalTime *starts[8];
     MeterMapChangePoint points[8];
     for (size_t i = 0; i < count; i++) {
         signatures[i] = sig(changes[i].top, changes[i].bottom_exponent);
-        starts[i] = at(changes[i].start_n, changes[i].start_d);
         points[i].time_signature = signatures[i];
-        points[i].start = starts[i];
+        points[i].start = at(changes[i].start_n, changes[i].start_d);
     }
     MeterMap *map = NULL;
     assert(meter_map_create(id("map"), points, count, &map) == METER_MAP_OK);
     for (size_t i = 0; i < count; i++) {
         time_signature_destroy(signatures[i]);
-        musical_time_destroy(starts[i]);
     }
     return map;
 }
@@ -82,11 +79,9 @@ static void expect_bounds(const MeterMap *map, int measure, Rational start, Rati
 }
 
 static void expect_beat(const MeterMap *map, Rational time, int measure, int beat, Rational offset) {
-    int m = -99;
-    int b = -99;
-    Rational o;
-    assert(meter_map_beat_of(map, time, &m, &b, &o) == METER_MAP_OK);
-    assert(m == measure && b == beat && rational_equals(o, offset));
+    NotatedPosition p;
+    assert(meter_map_position_of(map, musical_time_of(time), &p) == METER_MAP_OK);
+    assert(p.measure == measure && p.beat == beat && rational_equals(p.offset, offset));
 }
 
 static void expect_snap(const MeterMap *map, int measure, Rational time, Rational expected) {
@@ -148,10 +143,34 @@ static void test_compound_meters(void) {
     expect_beat(twelve, q(7, 16), 1, 3, q(1, 16));
     meter_map_destroy(twelve);
 
-    /* A top number of 6 over a quarter is simple: the beat is the unit. */
-    MeterMap *simple_six = single(6, 2);
-    expect_length(simple_six, 1, q(1, 4));
-    meter_map_destroy(simple_six);
+    /* 6/4 is compound too (OMT I ch. 10: two groups of three): the beat is a dotted half. */
+    MeterMap *six_four = single(6, 2);
+    expect_length(six_four, 1, q(3, 4));
+    meter_map_destroy(six_four);
+
+    /* 15/8 is five dotted quarters, 18/8 six; 9/4, 12/4 and 6/2 are compound over their own unit (OMT I ch. 10) */
+    MeterMap *fifteen = single(15, 3);
+    expect_bounds(fifteen, 1, q(0, 1), q(15, 8));
+    expect_length(fifteen, 1, q(3, 8));
+    expect_beat(fifteen, q(3, 2), 1, 5, q(0, 1));
+    expect_beat(fifteen, q(13, 8), 1, 5, q(1, 8));
+    assert(meter_map_on_beat(fifteen, q(9, 8)) && !meter_map_on_beat(fifteen, q(1, 2)));
+    meter_map_destroy(fifteen);
+
+    MeterMap *nine_four = single(9, 2);
+    expect_length(nine_four, 1, q(3, 4));
+    expect_beat(nine_four, q(3, 2), 1, 3, q(0, 1));
+    meter_map_destroy(nine_four);
+
+    MeterMap *twelve_four = single(12, 2);
+    expect_length(twelve_four, 1, q(3, 4));
+    expect_beat(twelve_four, q(9, 4), 1, 4, q(0, 1));
+    meter_map_destroy(twelve_four);
+
+    MeterMap *six_two = single(6, 1);
+    expect_length(six_two, 1, q(3, 2));
+    expect_beat(six_two, q(3, 2), 1, 2, q(0, 1));
+    meter_map_destroy(six_two);
 }
 
 static void test_changing_meters(void) {
@@ -245,12 +264,11 @@ static void test_errors_and_overflow(void) {
     assert(meter_map_first_counted_measure(NULL) == 1);
 
     /* A time whose measure number does not fit an int or whose beat count overflows is an error, not a wrap. */
-    int beat = 7;
-    Rational offset = q(5, 7);
-    MeterMapResult result = meter_map_beat_of(map, huge, &measure, &beat, &offset);
+    NotatedPosition position = {7, 7, q(5, 7)};
+    MeterMapResult result = meter_map_position_of(map, musical_time_of(huge), &position);
     assert(result == METER_MAP_OK || result == METER_MAP_ERR_OVERFLOW || result == METER_MAP_ERR_INDEX_OUT_OF_RANGE);
     if (result != METER_MAP_OK) {
-        assert(beat == 7 && rational_equals(offset, q(5, 7)));
+        assert(position.measure == 7 && position.beat == 7 && rational_equals(position.offset, q(5, 7)));
     }
     meter_map_destroy(map);
 }

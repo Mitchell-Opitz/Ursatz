@@ -8,6 +8,7 @@
 
 #include "model/core/value.h"
 #include "model/time/musical_time.h"
+#include "model/time/note_value.h"
 #include "model/time/time_signature.h"
 
 /* ---- Exact time (whole notes) ---- */
@@ -61,36 +62,49 @@ typedef struct {
     bool four_beats;     /* a candidate's meter has four beats: its third beat is a secondary downbeat */
 } Grid;
 
-static bool signature_is_compound(unsigned top, unsigned bottom) {
-    return bottom == 8 && (top == 6 || top == 9 || top == 12);
-}
-
 /* Whether a signature has four beats, so that its third beat is the secondary accent. */
-static bool four_beats(unsigned top, unsigned bottom) {
-    return (top == 4 && bottom == 4) || (top == 12 && bottom == 8);
+static bool four_beats(const TimeSignature *signature) {
+    return time_signature_group_count(signature) == 4;
 }
 
-/* The beat of a signature in whole notes: the denominator's note, a dotted one in the compound meters. */
-static Rational beat_length(Calc *calc, unsigned top, unsigned bottom) {
-    return calc_make(calc, signature_is_compound(top, bottom) ? 3 : 1, (long long)bottom);
-}
-
-static Rational time_rat(Calc *calc, const MusicalTime *time) {
-    unsigned long den = musical_time_denominator(time);
-    if (den > (unsigned long)LLONG_MAX) {
+/* The beat of a signature in whole notes: the signature's own, the one owner of the beat (a dotted unit in the compound
+   meters). */
+static Rational beat_length(Calc *calc, const TimeSignature *signature) {
+    Duration beat;
+    if (time_signature_beat_length(signature, &beat) != DURATION_OK) {
         calc->overflow = true;
-        return rational_ratio(0, 1);
+        return rational_ratio(1, 1);
     }
-    return calc_make(calc, (long long)musical_time_numerator(time), (long long)den);
+    return beat.value;
 }
 
-/* The MusicalTime of x, or NULL when x is negative or does not fit. */
-static MusicalTime *time_of(Rational x) {
-    MusicalTime *time = NULL;
-    if (x.num < 0 || x.num > LONG_MAX || musical_time_create((long)x.num, (unsigned long)x.den, &time) != MUSICAL_TIME_OK) {
-        return NULL;
+/* The signature of a candidate meter shape; false (and an overflow) when it cannot be made. The caller destroys it. */
+static bool shape_signature(Calc *calc, unsigned top, unsigned bottom, TimeSignature **out) {
+    NoteValue *unit = NULL;
+    int exponent = 0;
+    for (unsigned b = bottom; b > 1; b >>= 1) {
+        exponent++;
     }
-    return time;
+    bool ok = note_value_create(exponent, &unit) == NOTE_VALUE_OK;
+    ok = ok && time_signature_create(top, unit, out) == TIME_SIGNATURE_OK;
+    note_value_destroy(unit);
+    if (!ok) {
+        calc->overflow = true;
+    }
+    return ok;
+}
+
+static Rational time_rat(MusicalTime time) {
+    return time.value;
+}
+
+/* The MusicalTime of x; false when x is negative. */
+static bool time_of(Rational x, MusicalTime *out) {
+    if (x.num < 0) {
+        return false;
+    }
+    *out = musical_time_of(x);
+    return true;
 }
 
 /* Whether the grid has a barline (a downbeat) at x, and whether it has a beat. */
@@ -107,13 +121,12 @@ static void grid_place(Calc *calc, const Grid *grid, Rational x, bool *downbeat,
         *secondary = grid->four_beats && is_integer(calc_sub(calc, measures, half));
         return;
     }
-    MusicalTime *time = time_of(x);
-    if (!time) {
+    MusicalTime time;
+    if (!time_of(x, &time)) {
         return;
     }
     const MeterMapRegion *region = NULL;
-    MeterMapResult found = meter_map_region_at(grid->map, time, &region);
-    musical_time_destroy(time);
+    MeterMapResult found = meter_map_region_at(grid->map, &time, &region);
     if (found != METER_MAP_OK) {
         return;
     }
@@ -121,15 +134,16 @@ static void grid_place(Calc *calc, const Grid *grid, Rational x, bool *downbeat,
     unsigned top = time_signature_top_number(signature);
     unsigned bottom = time_signature_bottom_number(signature);
     /* a pickup region's grid is laid back from its end, the first barline */
-    const MusicalTime *anchor_time =
-        meter_map_region_is_pickup(region) && meter_map_region_end(region) ? meter_map_region_end(region)
-                                                                           : meter_map_region_start(region);
-    Rational from = calc_sub(calc, x, time_rat(calc, anchor_time));
+    MusicalTime anchor_time = meter_map_region_start(region);
+    if (meter_map_region_is_pickup(region)) {
+        meter_map_region_end(region, &anchor_time);
+    }
+    Rational from = calc_sub(calc, x, time_rat(anchor_time));
     Rational measure = calc_make(calc, (long long)top, (long long)bottom);
     Rational measures = calc_div(calc, from, measure);
     *downbeat = is_integer(measures);
-    *beat = is_integer(calc_div(calc, from, beat_length(calc, top, bottom)));
-    *secondary = four_beats(top, bottom) && is_integer(calc_sub(calc, measures, half));
+    *beat = is_integer(calc_div(calc, from, beat_length(calc, signature)));
+    *secondary = four_beats(signature) && is_integer(calc_sub(calc, measures, half));
 }
 
 /* How many downbeats the grid has from time from to time to, both inclusive; at least 1. */
@@ -150,14 +164,12 @@ static long long downbeats_between(Calc *calc, const Grid *grid, Rational from, 
     } else {
         int measure_from = 0;
         int measure_to = 0;
-        MusicalTime *a = time_of(from);
-        MusicalTime *b = time_of(to);
-        if (a && b && meter_map_measure_index_at(grid->map, a, &measure_from) == METER_MAP_OK &&
-            meter_map_measure_index_at(grid->map, b, &measure_to) == METER_MAP_OK) {
+        MusicalTime a;
+        MusicalTime b;
+        if (time_of(from, &a) && time_of(to, &b) && meter_map_measure_index_at(grid->map, &a, &measure_from) == METER_MAP_OK &&
+            meter_map_measure_index_at(grid->map, &b, &measure_to) == METER_MAP_OK) {
             count = (long long)measure_to - (long long)measure_from + 1;
         }
-        musical_time_destroy(a);
-        musical_time_destroy(b);
     }
     return count < 1 ? 1 : count;
 }
@@ -312,9 +324,9 @@ static bool effective_candidate(Calc *calc, const MeterMap *map, Candidate *effe
     unsigned bottom = time_signature_bottom_number(signature);
     Rational pickup = {0, 1};
     if (index == 1) {
-        const MusicalTime *end = meter_map_region_end(meter_map_region(map, 0));
-        if (end) {
-            pickup = time_rat(calc, end);
+        MusicalTime end;
+        if (meter_map_region_end(meter_map_region(map, 0), &end)) {
+            pickup = time_rat(end);
         }
     }
     memset(effective, 0, sizeof(*effective));
@@ -326,9 +338,9 @@ static bool effective_candidate(Calc *calc, const MeterMap *map, Candidate *effe
     /* the first full measure's grid, for telling equal candidates apart */
     barlines->map = NULL;
     barlines->measure = calc_make(calc, (long long)top, (long long)bottom);
-    barlines->beat = beat_length(calc, top, bottom);
+    barlines->beat = beat_length(calc, signature);
     barlines->offset = pickup;
-    effective->grid.four_beats = four_beats(top, bottom);
+    effective->grid.four_beats = four_beats(signature);
     return true;
 }
 
@@ -367,8 +379,14 @@ StandardMeterAnalysisStatus standard_meter_check_meter(const MeterMap *map, cons
     for (size_t m = 0; m < METER_COUNT && !calc.overflow; m++) {
         unsigned top = METERS[m].top;
         unsigned bottom = METERS[m].bottom;
-        Rational beat = beat_length(&calc, top, bottom);
-        size_t beats = signature_is_compound(top, bottom) ? top / 3 : top;
+        TimeSignature *shape = NULL;
+        if (!shape_signature(&calc, top, bottom, &shape)) {
+            break;
+        }
+        Rational beat = beat_length(&calc, shape);
+        size_t beats = time_signature_group_count(shape);
+        bool shape_four_beats = four_beats(shape);
+        time_signature_destroy(shape);
         for (size_t s = 0; s < sizeof(SCALES) / sizeof(SCALES[0]); s++) {
             Rational scale = SCALES[s];
             for (size_t k = 0; k < beats; k++) {
@@ -381,7 +399,7 @@ StandardMeterAnalysisStatus standard_meter_check_meter(const MeterMap *map, cons
                 candidate.grid.measure = calc_div(&calc, calc_make(&calc, (long long)top, (long long)bottom), scale);
                 candidate.grid.beat = calc_div(&calc, beat, scale);
                 candidate.grid.offset = calc_div(&calc, candidate.pickup, scale);
-                candidate.grid.four_beats = four_beats(top, bottom);
+                candidate.grid.four_beats = shape_four_beats;
                 if (rational_cmp(candidate.grid.measure, effective_barlines.beat) <= 0) {
                     continue; /* a bar no longer than the beat already counted only adds barlines */
                 }

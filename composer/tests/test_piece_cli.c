@@ -162,7 +162,7 @@ static size_t notes_before(const PiecePlan *plan, double limit, Note *out, size_
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     for (size_t i = 0; i < rendered.count; i++) {
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(rendered.events[i]));
-        double onset = (double)musical_time_numerator(position) / (double)musical_time_denominator(position);
+        double onset = (double)position->value.num / (double)position->value.den;
         if (onset < limit) {
             assert(count < capacity);
             out[count].onset = onset;
@@ -293,7 +293,7 @@ static void test_done_when(void) {
     assert(marker_tick("ending.mid", "loopStart") < 0 && marker_tick("ending.mid", "loopEnd") < 0);
     /* The ending is the version after the body: the default ending of 2 bars, closing in a PAC. */
     assert(strstr(shown, "\"part\":\"ending\",\"function\":null,\"letter\":\"E\",\"start\":\"14/1\",\"beats\":8,\"cadence\":\"PAC\""));
-    assert(strstr(shown, "\"mode\":{\"mode\":\"minor\",\"from\":\"style\"}"));
+    assert(strstr(shown, "\"material\":{\"material\":\"omt.material.natural-minor\",\"from\":\"style\"}"));
 
     /* The Analyzer check passes on both: five items each (a cadence for each of the four sections, the key). */
     assert(count_of(shown, "\"contradicts\":false") == 2 && count_of(shown, "\"analyzer_check\":null") == 0);

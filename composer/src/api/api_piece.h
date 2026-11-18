@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <cJSON.h>
+#include <theory/tonality/common_practice_materials.h>
 
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/compose.h>
@@ -63,7 +64,8 @@ typedef struct {
     const cJSON *piece_motive_json;
     Motive *piece_motive; /* owned */
     const char *key_text;
-    const char *mode_text;
+    const char *material_text;   /* "material" or the old "mode": a material word, or "style" */
+    const char *material_member; /* which of the two the request wrote */
     const char *meter_text;
     const char *style_path;
     ComposerRatio weight;
@@ -79,6 +81,8 @@ typedef struct {
     const Motive *basic;  /* the motive the motives stage compares with, NULL when it is invented */
     PlanExportOptions export_options;
     const ComposerJob *job;
+    const KnowledgeSnapshot *knowledge; /* the call context's; set by api_piece_read_request, must outlive the request */
+    const CommonPracticeMaterials *materials; /* its common-practice materials, resolved once for the call; as long-lived */
 } PieceSpec;
 
 /*
@@ -86,8 +90,9 @@ typedef struct {
  * paths start with. style_path, when not NULL, replaces the request's "style". The caller destroys the request, also on
  * failure. COMPOSER_ERR_REQUEST names a member; COMPOSER_ERR_UNSATISFIABLE is a style that cannot be read.
  */
-ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, const char *base, const char *style_path,
-                                      bool plain_midi, const ComposerJob *job, ComposerError *error);
+ComposerStatus api_piece_read_request(PieceSpec *request, const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials,
+                                      const cJSON *root, const char *base, const char *style_path, bool plain_midi,
+                                      const ComposerJob *job, ComposerError *error);
 void api_piece_request_destroy(PieceSpec *request);
 
 /* The name of the first version of the request's form: "loop" for the game loop, "piece" for a form with sizes. */
@@ -98,7 +103,8 @@ const char *api_piece_first_version_name(const PieceSpec *request);
  * section that has none (piece_default_cadences) and the default ending section when there is none
  * (piece_default_ending).
  */
-ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerError *error);
+ComposerStatus api_piece_validate(const KnowledgeSnapshot *knowledge, const CommonPracticeMaterials *materials, const cJSON *root,
+                                  cJSON *filled, ComposerError *error);
 
 /* A version of the piece: its plan and what composing it reported. */
 typedef struct {

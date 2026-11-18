@@ -3,86 +3,49 @@
 #include <assert.h>
 #include <stddef.h>
 
-static void test_create_rejects_null(void) {
-    MusicalTime *start = NULL;
-    musical_time_create(0, 1, &start);
-
-    TimeSpan *span = NULL;
-    TimeSpanResult r = time_span_create(NULL, start, TIME_SPAN_BOUNDARY_CLOSED, &span);
-    assert(r == TIME_SPAN_ERR_NULL);
-    assert(span == NULL);
-
-    musical_time_destroy(start);
+static MusicalTime mt(long long n, long long d) {
+    MusicalTime t;
+    assert(musical_time_make(n, d, &t) == MUSICAL_TIME_OK);
+    return t;
 }
 
-static void test_create_rejects_end_before_start(void) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    musical_time_create(1, 1, &start);
-    musical_time_create(1, 2, &end);
-
-    TimeSpan *span = NULL;
-    TimeSpanResult r = time_span_create(start, end, TIME_SPAN_BOUNDARY_CLOSED, &span);
+static void test_make_rejects_end_before_start(void) {
+    TimeSpan keep;
+    assert(time_span_make(mt(0, 1), mt(1, 1), &keep) == TIME_SPAN_OK);
+    TimeSpan span = keep;
+    TimeSpanResult r = time_span_make(mt(1, 1), mt(1, 2), &span);
     assert(r == TIME_SPAN_ERR_END_BEFORE_START);
-    assert(span == NULL);
-
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+    assert(musical_time_same(span.start, keep.start));
+    assert(musical_time_same(span.end, keep.end));
 }
 
-static void test_create_accepts_equal_start_end(void) {
-    MusicalTime *point = NULL;
-    musical_time_create(1, 2, &point);
-
-    TimeSpan *span = NULL;
-    TimeSpanResult r = time_span_create(point, point, TIME_SPAN_BOUNDARY_CLOSED, &span);
+static void test_make_accepts_equal_start_end(void) {
+    TimeSpan span;
+    TimeSpanResult r = time_span_make(mt(1, 2), mt(1, 2), &span);
     assert(r == TIME_SPAN_OK);
-    assert(span != NULL);
-
-    time_span_destroy(span);
-    musical_time_destroy(point);
+    assert(!time_span_holds(span));
 }
 
-/* boundary has no implicit default: an out-of-range value must not be
-   silently coerced to CLOSED (or any other member). */
-static void test_create_rejects_invalid_boundary(void) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    musical_time_create(0, 1, &start);
-    musical_time_create(1, 1, &end);
-
-    TimeSpan *span = NULL;
-    TimeSpanResult r = time_span_create(start, end, (TimeSpanBoundary)99, &span);
-    assert(r == TIME_SPAN_ERR_INVALID_BOUNDARY);
-    assert(span == NULL);
-
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+/* A span is always half-open [start, end): there is no boundary member to supply or to get wrong. */
+static void test_a_span_is_two_times(void) {
+    TimeSpan span;
+    assert(time_span_make(mt(0, 1), mt(1, 1), &span) == TIME_SPAN_OK);
+    assert(sizeof span == 2 * sizeof(MusicalTime));
+    assert(time_span_holds(span));
 }
 
-static void test_accessors(void) {
-    MusicalTime *start = NULL;
-    MusicalTime *end = NULL;
-    musical_time_create(1, 4, &start);
-    musical_time_create(3, 4, &end);
+static void test_fields(void) {
+    TimeSpan span;
+    assert(time_span_make(mt(1, 4), mt(3, 4), &span) == TIME_SPAN_OK);
 
-    TimeSpan *span = NULL;
-    time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span);
-
-    assert(musical_time_equals(time_span_start(span), start));
-    assert(musical_time_equals(time_span_end(span), end));
-    assert(time_span_boundary(span) == TIME_SPAN_BOUNDARY_LEFT_CLOSED);
-
-    time_span_destroy(span);
-    musical_time_destroy(start);
-    musical_time_destroy(end);
+    assert(musical_time_same(span.start, mt(1, 4)));
+    assert(musical_time_same(span.end, mt(3, 4)));
 }
 
 int main(void) {
-    test_create_rejects_null();
-    test_create_rejects_end_before_start();
-    test_create_accepts_equal_start_end();
-    test_create_rejects_invalid_boundary();
-    test_accessors();
+    test_make_rejects_end_before_start();
+    test_make_accepts_equal_start_end();
+    test_a_span_is_two_times();
+    test_fields();
     return 0;
 }

@@ -22,14 +22,21 @@
 #include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"
 #include "util/plan_util.h"
+#include "util/util.h"
 
 #define COMPOSER_FRAMEWORK "ursatz-composer"
 #define PLAN_FORMAT_NAME "ursatz-composer-plan"
 #define COMPOSER_KEY_METHOD "composer_plan"
+/* The materials a file of format 1 or 2 means by "major" and "minor". */
+#define MATERIAL_ID_MAJOR "omt.material.major"
+#define MATERIAL_ID_MINOR "omt.material.natural-minor"
 
 static const char *const NODE_KINDS[] = {"form", "section", "phrase", "subphrase", "idea", "motive"};
 static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
+/* The "mode" of a key in plan formats 1 and 2, which are only read. */
 static const char *const MODE_NAMES[] = {"major", "minor"};
+/* A key span's anchor, in PlanKeyAnchor order. */
+static const char *const KEY_ANCHOR_NAMES[] = {"home", "previous"};
 /* A version 1 file wrote a chord with no function as "unknown". */
 #define LEGACY_FUNCTION_NONE "unknown"
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
@@ -100,12 +107,23 @@ static cJSON *span_json(PlanSpan span) {
 /* A motive ref's relation step as its text (motive_relation_step_text); a ref with no step has no member. */
 #define STEP_TEXT_MAX 160
 
-/* A key's "tonic", spelled as the library spells it (F#, Bb), and its "mode". */
+/* A key's "tonic", spelled as the library spells it (F#, Bb), and its "material", the id of the key's pitch material. */
 static bool key_members_json(cJSON *object, const AnalysisKey *key) {
     char tonic[8];
     return pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic)) &&
            plan_json_add(object, "tonic", cJSON_CreateString(tonic)) &&
-           plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[key->mode]));
+           plan_json_add(object, "material", cJSON_CreateString(composer_key_material_id(key)));
+}
+
+/* A key span's payload: the key, with the relation it is named by beside it (R-597); a span not yet resolved is only the relation. */
+static bool key_payload_json(cJSON *object, const AnalysisKey *key, const PlanKeyRelation *relation) {
+    if (relation && !relation->resolved) {
+        return plan_json_add(object, "relation", cJSON_CreateString(relation->relation)) &&
+               plan_json_add(object, "anchor", cJSON_CreateString(KEY_ANCHOR_NAMES[relation->anchor]));
+    }
+    return key_members_json(object, key) &&
+           (!relation || (plan_json_add(object, "relation", cJSON_CreateString(relation->relation)) &&
+                          plan_json_add(object, "anchor", cJSON_CreateString(KEY_ANCHOR_NAMES[relation->anchor]))));
 }
 
 static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *constraint) {
@@ -423,7 +441,7 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
 static void plan_key_label(const AnalysisKey *key, char *out, size_t size) {
     char tonic[8] = "?";
     pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic));
-    snprintf(out, size, "%s %s", tonic, MODE_NAMES[key->mode]);
+    snprintf(out, size, "%s %s", tonic, composer_key_word(key));
 }
 
 static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *out, size_t size) {
@@ -467,7 +485,7 @@ static cJSON *notes_json(const PlanNotes *notes) {
     return array;
 }
 
-static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
+static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload, const PlanKeyRelation *relation) {
     cJSON *object = cJSON_CreateObject();
     if (!object) {
         return NULL;
@@ -480,7 +498,7 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
              plan_json_add(object, "bars_per_hyperbar", json_number(payload->meter.bars_per_hyperbar));
         break;
     case PLAN_LANE_KEY:
-        ok = key_members_json(object, &payload->key);
+        ok = key_payload_json(object, &payload->key, relation);
         break;
     case PLAN_LANE_HARMONY:
         ok = plan_json_add(object, "roman_numeral", cJSON_CreateString(payload->harmony.roman_numeral));
@@ -502,11 +520,21 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
     return object;
 }
 
+/* The label of a key span: the key's, or for a span not yet resolved the relation and its anchor. */
+static void key_span_label(const PiecePlan *plan, LaneSpanId id, char *out, size_t size) {
+    const PlanKeyRelation *relation = plan_lane_span_key_relation(plan, id);
+    if (relation && !relation->resolved) {
+        snprintf(out, size, "%s from %s", relation->relation, KEY_ANCHOR_NAMES[relation->anchor]);
+    } else {
+        plan_key_label(&plan_lane_span_payload(plan, id)->key, out, size);
+    }
+}
+
 /* The label of the key span that covers the start of span, or "no match". */
 static void enclosing_plan_key_label(const PiecePlan *plan, PlanSpan span, char *out, size_t size) {
     LaneSpanId found = PLAN_LANE_SPAN_NONE;
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &found, 1) > 0) {
-        plan_key_label(&plan_lane_span_payload(plan, found)->key, out, size);
+        key_span_label(plan, found, out, size);
     } else {
         snprintf(out, size, "no match");
     }
@@ -519,6 +547,9 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
     char label[64];
     char context_key[64];
     lane_label(payload, lane, label, sizeof(label));
+    if (lane == PLAN_LANE_KEY) {
+        key_span_label(plan, id, label, sizeof(label));
+    }
 
     cJSON *object = cJSON_CreateObject();
     cJSON *composer = cJSON_CreateObject();
@@ -529,7 +560,7 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
          plan_json_add(composer, "voice", json_number(plan_lane_span_voice(plan, id))) &&
          plan_json_add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_lane_span_state(plan, id)])) &&
          plan_json_add(composer, "constraints", span_constraints_json(plan, id)) &&
-         plan_json_add(composer, "payload", payload_json(lane, payload));
+         plan_json_add(composer, "payload", payload_json(lane, payload, plan_lane_span_key_relation(plan, id)));
     ok = ok && plan_json_add(object, "framework", cJSON_CreateString(COMPOSER_FRAMEWORK)) &&
          plan_json_add(object, "span", span_json(span)) && plan_json_add(object, "note_ids", cJSON_CreateArray()) &&
          plan_json_add(object, "label", cJSON_CreateString(label)) && plan_json_add(object, "uncertainty", cJSON_CreateNull());
@@ -1261,52 +1292,170 @@ static bool read_motive_tones(JsonReader *reader, const cJSON *item, const char 
 }
 
 /*
- * Version 1 files (R-260): a key is "tonic_pitch_class" and "mode", with no spelling. The tonic is spelled as the library
- * spells the key on that pitch class (standard_tonality_key_tonic_of_pitch_class: the fewest accidentals in its
- * signature, sharps on a tie), which is how every plan of version 1 was written.
+ * Plan formats 1 and 2 name a key's mode, "major" or "minor", where format 3 names a material (R-597). The migration reads them as
+ * the materials the snapshot holds for those words: the major as omt.material.major, the minor as omt.material.natural-minor. A
+ * file of format 1 or 2 has no relation beside a key either: a key span reads back with none.
  */
-static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, KeyStructureMode mode,
-                        AnalysisKey *out) {
-    long pitch_class;
-    PitchLetter letter;
-    int accidental;
-    if (!json_read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &pitch_class)) {
-        return false;
-    }
-    if (!standard_tonality_key_tonic_of_pitch_class((int)pitch_class, mode == KEY_STRUCTURE_MODE_MINOR, &letter,
-                                                    &accidental)) {
-        char at[PLAN_JSON_PATH_MAX];
-        json_child_path(at, path, "tonic_pitch_class");
-        return json_bad_format(reader, at, "no key on this pitch class");
-    }
-    AnalysisKey key = {NULL, letter, accidental, mode};
-    *out = key;
-    return true;
-}
-
-/* A key's members: "tonic" (a spelled name) in version 2; see read_key_v1 for version 1. */
-static bool read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+static bool read_legacy_material(JsonReader *reader, const cJSON *object, const char *path, const PitchMaterial **out) {
     int mode;
     if (!read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &mode)) {
         return false;
     }
-    if (reader->version == 1) {
-        return read_key_v1(reader, object, path, (KeyStructureMode)mode, out);
+    *out = knowledge_snapshot_material(reader->knowledge, mode == 1 ? MATERIAL_ID_MINOR : MATERIAL_ID_MAJOR);
+    if (!*out) {
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "mode");
+        return json_bad_format(reader, at, "the knowledge snapshot has no material for this mode");
     }
+    return true;
+}
+
+/*
+ * Version 1 files (R-260): a key is "tonic_pitch_class" and "mode", with no spelling. The tonic is spelled as the library
+ * spells the key on that pitch class (standard_tonality_key_tonic_of_pitch_class_material: the fewest accidentals in its
+ * signature, sharps on a tie), which is how every plan of version 1 was written.
+ */
+static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+    const PitchMaterial *material;
+    long pitch_class;
+    PitchLetter letter;
+    int accidental;
+    if (!read_legacy_material(reader, object, path, &material) ||
+        !json_read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &pitch_class)) {
+        return false;
+    }
+    if (!standard_tonality_key_tonic_of_pitch_class_material((int)pitch_class, material, &letter, &accidental)) {
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "tonic_pitch_class");
+        return json_bad_format(reader, at, "no key on this pitch class");
+    }
+    AnalysisKey key = {NULL, letter, accidental, material};
+    *out = key;
+    return true;
+}
+
+/* A tonic member: a spelled name ("C", "F#", "Bb"). */
+static bool read_tonic_member(JsonReader *reader, const cJSON *object, const char *path, PitchLetter *letter, int *accidental) {
     const cJSON *tonic = plan_json_member(reader, object, path, "tonic", true);
     if (!tonic) {
         return false;
     }
     char at[PLAN_JSON_PATH_MAX];
     json_child_path(at, path, "tonic");
-    PitchLetter letter;
-    int accidental;
-    if (!cJSON_IsString(tonic) || !pitch_spelling_parse_name(tonic->valuestring, &letter, &accidental, NULL)) {
+    if (!cJSON_IsString(tonic) || !pitch_spelling_parse_name(tonic->valuestring, letter, accidental, NULL)) {
         return json_bad_format(reader, at, "expected a tonic like \"C\", \"F#\" or \"Bb\"");
     }
-    AnalysisKey key = {NULL, letter, accidental, (KeyStructureMode)mode};
+    return true;
+}
+
+/* A version 3 key: "tonic" and "material", the id of a material the Composer composes in. */
+static bool read_key_v3(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+    const cJSON *id = plan_json_member(reader, object, path, "material", true);
+    if (!id) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, "material");
+    if (!cJSON_IsString(id)) {
+        return json_bad_format(reader, at, "expected a material id like \"omt.material.major\"");
+    }
+    const PitchMaterial *material = knowledge_snapshot_material(reader->knowledge, id->valuestring);
+    if (!material) {
+        return json_bad_format(reader, at, "no material has this id");
+    }
+    if (!composer_material_supported(reader->materials, material)) {
+        return json_bad_format(reader, at, "the Composer composes in major and natural minor keys only");
+    }
+    PitchLetter letter;
+    int accidental;
+    if (!read_tonic_member(reader, object, path, &letter, &accidental)) {
+        return false;
+    }
+    AnalysisKey key = {NULL, letter, accidental, material};
     *out = key;
     return true;
+}
+
+/* A version 2 key: "tonic" and "mode". */
+static bool read_key_v2(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+    const PitchMaterial *material;
+    PitchLetter letter;
+    int accidental;
+    if (!read_legacy_material(reader, object, path, &material) || !read_tonic_member(reader, object, path, &letter, &accidental)) {
+        return false;
+    }
+    AnalysisKey key = {NULL, letter, accidental, material};
+    *out = key;
+    return true;
+}
+
+/* A key's members, by the version of the file: see read_key_v1, read_key_v2 and read_key_v3. */
+static bool read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+    switch (reader->version) {
+    case 1:
+        return read_key_v1(reader, object, path, out);
+    case 2:
+        return read_key_v2(reader, object, path, out);
+    default:
+        return read_key_v3(reader, object, path, out);
+    }
+}
+
+/* A key span's optional "relation" and "anchor" beside its key (version 3): both or neither. *relation is left empty for neither. */
+static bool read_key_relation(JsonReader *reader, const cJSON *object, const char *path, PlanKeyRelation *relation) {
+    memset(relation, 0, sizeof(*relation));
+    const cJSON *id = cJSON_GetObjectItemCaseSensitive(object, "relation");
+    const cJSON *anchor = cJSON_GetObjectItemCaseSensitive(object, "anchor");
+    if (!id && !anchor) {
+        return true;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    if (!id || !anchor) {
+        json_child_path(at, path, id ? "anchor" : "relation");
+        return json_bad_format(reader, at, "a key names its relation and its anchor together");
+    }
+    json_child_path(at, path, "relation");
+    if (!cJSON_IsString(id) || id->valuestring[0] == '\0' || strlen(id->valuestring) >= PLAN_KEY_RELATION_MAX) {
+        return json_bad_format(reader, at, "expected a relation id like \"omt.relation.dominant\"");
+    }
+    json_child_path(at, path, "anchor");
+    if (!cJSON_IsString(anchor)) {
+        return json_bad_format(reader, at, "expected \"home\" or \"previous\"");
+    }
+    int found = -1;
+    for (int i = 0; i < (int)COUNT_OF(KEY_ANCHOR_NAMES); i++) {
+        if (strcmp(anchor->valuestring, KEY_ANCHOR_NAMES[i]) == 0) {
+            found = i;
+        }
+    }
+    if (found < 0) {
+        return json_bad_format(reader, at, "expected \"home\" or \"previous\"");
+    }
+    snprintf(relation->relation, PLAN_KEY_RELATION_MAX, "%s", id->valuestring);
+    relation->anchor = (PlanKeyAnchor)found;
+    relation->resolved = true;
+    return true;
+}
+
+/*
+ * The payload of a key span: its key and, in version 3, the relation it is named by. A version 3 span with a "relation" and an
+ * "anchor" and neither a "tonic" nor a "material" is named only by them: its key is the zero key until plan_resolve_key_spans.
+ */
+static bool read_key_span(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *key, PlanKeyRelation *relation) {
+    memset(relation, 0, sizeof(*relation));
+    if (reader->version >= 3 && cJSON_GetObjectItemCaseSensitive(object, "relation") &&
+        !cJSON_GetObjectItemCaseSensitive(object, "tonic") && !cJSON_GetObjectItemCaseSensitive(object, "material")) {
+        AnalysisKey zero;
+        memset(&zero, 0, sizeof(zero));
+        *key = zero;
+        if (!read_key_relation(reader, object, path, relation)) {
+            return false;
+        }
+        relation->resolved = false;
+        return true;
+    }
+    return read_key_members(reader, object, path, key) &&
+           (reader->version < 3 || read_key_relation(reader, object, path, relation));
 }
 
 /* A chord's "function": a harmonic_function_name, absent for none. Version 1 always wrote it, "unknown" for none. */
@@ -2053,7 +2202,7 @@ static bool collect_section(JsonReader *reader, const cJSON *document, const cha
 }
 
 static bool read_payload(JsonReader *reader, const cJSON *composer, const char *composer_path, PlanLaneKind lane,
-                         PlanLanePayload *payload, PlanNote **notes_storage) {
+                         PlanLanePayload *payload, PlanKeyRelation *relation, PlanNote **notes_storage) {
     const cJSON *object = plan_json_member(reader, composer, composer_path, "payload", true);
     if (!object) {
         return false;
@@ -2079,7 +2228,7 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
         payload->meter.bars_per_hyperbar = (int)third;
         return true;
     case PLAN_LANE_KEY:
-        return read_key_members(reader, object, path, &payload->key);
+        return read_key_span(reader, object, path, &payload->key, relation);
     case PLAN_LANE_HARMONY: {
         const cJSON *numeral = plan_json_member(reader, object, path, "roman_numeral", true);
         if (!numeral) {
@@ -2175,8 +2324,10 @@ static bool build_lane_span(JsonReader *reader, PiecePlan *plan, const ParsedLan
     }
 
     PlanLanePayload payload;
+    PlanKeyRelation relation;
     PlanNote *notes_storage = NULL;
-    bool ok = read_payload(reader, composer, composer_path, (PlanLaneKind)lane, &payload, &notes_storage);
+    memset(&relation, 0, sizeof(relation));
+    bool ok = read_payload(reader, composer, composer_path, (PlanLaneKind)lane, &payload, &relation, &notes_storage);
     if (ok) {
         LaneSpanId id;
         PlanResult result =
@@ -2187,6 +2338,9 @@ static bool build_lane_span(JsonReader *reader, PiecePlan *plan, const ParsedLan
             ok = json_fail(reader, PLAN_ERR_FORMAT, parsed->path, "lane span %s", result_name(result));
         } else if (id != expected_id) {
             ok = json_bad_format(reader, parsed->path, "lane span ids must run from 1 without gaps");
+        } else if (relation.relation[0] != '\0' &&
+                   plan_lane_span_set_key_relation(plan, id, relation.relation, relation.anchor, relation.resolved) != PLAN_OK) {
+            ok = json_bad_format(reader, parsed->path, "a key span names its relation badly");
         }
     }
     free(notes_storage);
@@ -2313,8 +2467,9 @@ static bool read_metadata(JsonReader *reader, const cJSON *document, PiecePlan *
     return true;
 }
 
-static PlanResult read_document(const cJSON *document, PiecePlan *plan, PlanJsonError *error) {
-    JsonReader reader = {error, PLAN_OK, 0};
+static PlanResult read_document(const cJSON *document, PiecePlan *plan, const CommonPracticeMaterials *materials,
+                                const KnowledgeSnapshot *knowledge, PlanJsonError *error) {
+    JsonReader reader = {error, PLAN_OK, 0, materials, knowledge};
     if (!cJSON_IsObject(document)) {
         json_bad_format(&reader, "", "expected a JSON object");
         return reader.result;
@@ -2353,12 +2508,30 @@ static PlanResult read_document(const cJSON *document, PiecePlan *plan, PlanJson
     return PLAN_OK;
 }
 
-PlanResult plan_from_json(const char *text, PiecePlan **out, PlanJsonError *error) {
+PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error) {
+    PlanResult result = plan_from_json(knowledge, text, out, error);
+    if (result != PLAN_OK) {
+        return result;
+    }
+    result = plan_resolve_key_spans(*out, knowledge, error);
+    if (result != PLAN_OK) {
+        plan_destroy(*out);
+        *out = NULL;
+    }
+    return result;
+}
+
+PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, PiecePlan **out, PlanJsonError *error) {
     if (!text || !out) {
         json_set_error(error, -1, "", "text or out is NULL");
         return PLAN_ERR_NULL;
     }
     *out = NULL;
+    CommonPracticeMaterials materials;
+    if (!common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
+        json_set_error(error, -1, "", "a knowledge snapshot is required");
+        return PLAN_ERR_NULL;
+    }
     const char *end = NULL;
     cJSON *document = cJSON_ParseWithLengthOpts(text, strlen(text) + 1, &end, true);
     if (!document) {
@@ -2371,7 +2544,7 @@ PlanResult plan_from_json(const char *text, PiecePlan **out, PlanJsonError *erro
         json_set_error(error, -1, "", "out of memory");
         return PLAN_ERR_ALLOC;
     }
-    PlanResult result = read_document(document, plan, error);
+    PlanResult result = read_document(document, plan, &materials, knowledge, error);
     cJSON_Delete(document);
     if (result != PLAN_OK) {
         plan_destroy(plan);

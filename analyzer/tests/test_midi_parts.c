@@ -108,7 +108,7 @@ static long note_pitch(const ImportedNotes *notes, size_t i) {
 /* The measure of a note in a piece in 4/4 that starts on a barline: the whole notes before it, plus one. */
 static long note_measure(const ImportedNotes *notes, size_t i) {
     const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
-    return (long)(musical_time_numerator(onset) / musical_time_denominator(onset)) + 1;
+    return (long)(onset->value.num / onset->value.den) + 1;
 }
 
 /* The stream that holds the lower notes: the one with the lower mean pitch. */
@@ -212,8 +212,8 @@ static void check_reference_pieces(void) {
             continue;
         }
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes.events[i]));
-        long num = (long)musical_time_numerator(onset);
-        long den = (long)musical_time_denominator(onset);
+        long num = (long)onset->value.num;
+        long den = (long)onset->value.den;
         assert(previous_onset_num < 0 || num * previous_onset_den >= previous_onset_num * den);
         previous_onset_num = num;
         previous_onset_den = den;

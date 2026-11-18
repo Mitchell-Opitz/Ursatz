@@ -7,6 +7,7 @@
 #include <ursatz_composer/motive_random.h>
 
 #include "motive/motive_internal.h"
+#include "support/test_knowledge.h"
 
 /*
  * Segment-based random motives: 200 seeds over 2/4, 3/4, 4/4 and 6/8 in major and minor give motives with no melodic fault,
@@ -18,15 +19,15 @@
 #define SEEDS 200
 
 typedef struct {
-    KeyStructureMode mode;
+    HarmonyMode mode;
     int beats;
     int unit;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {KEY_STRUCTURE_MODE_MAJOR, 2, 4}, {KEY_STRUCTURE_MODE_MINOR, 2, 4}, {KEY_STRUCTURE_MODE_MAJOR, 3, 4},
-    {KEY_STRUCTURE_MODE_MINOR, 3, 4}, {KEY_STRUCTURE_MODE_MAJOR, 4, 4}, {KEY_STRUCTURE_MODE_MINOR, 4, 4},
-    {KEY_STRUCTURE_MODE_MAJOR, 6, 8}, {KEY_STRUCTURE_MODE_MINOR, 6, 8},
+    {HARMONY_MODE_MAJOR, 2, 4}, {HARMONY_MODE_MINOR, 2, 4}, {HARMONY_MODE_MAJOR, 3, 4},
+    {HARMONY_MODE_MINOR, 3, 4}, {HARMONY_MODE_MAJOR, 4, 4}, {HARMONY_MODE_MINOR, 4, 4},
+    {HARMONY_MODE_MAJOR, 6, 8}, {HARMONY_MODE_MINOR, 6, 8},
 };
 
 /* The harmony plans the strategy draws from, one degree per segment. */
@@ -35,7 +36,8 @@ static const int PLANS[][3] = {{1, 5, 0}, {1, 4, 0}, {1, 1, 0}, {1, 5, 1}, {1, 4
 static MotiveRandomOptions options_of(const Scenario *scenario, unsigned long seed) {
     MotiveRandomOptions options;
     memset(&options, 0, sizeof(options));
-    options.mode = scenario->mode;
+    options.material = test_material_mode(scenario->mode);
+    options.knowledge = test_knowledge();
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
     options.form = MOTIVE_SKETCH_FORM_FULL;

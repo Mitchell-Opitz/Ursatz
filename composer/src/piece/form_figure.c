@@ -8,6 +8,7 @@
 #include "melody/melody_internal.h"
 #include "piece/form_figure_internal.h"
 #include "piece/form_return_internal.h"
+#include "util/plan_util.h"
 #include "util/util.h"
 
 #include <theory/tonality/tonal_key.h>
@@ -23,7 +24,7 @@ static int compare_notes(const void *a, const void *b) {
 
 /* The melody of the section the target returns, read as FigureSourceNote, in order of onset. NULL when it holds no note. */
 FigureSourceNote *form_figure_read_melody(const PiecePlan *plan, NodeId source, int shift, bool mode_change, int tonic,
-                                          KeyStructureMode to_mode, size_t *count) {
+                                          const PitchMaterial *to_material, size_t *count) {
     PlanSpan span = plan_node_span(plan, source);
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
     LaneSpanId *ids = spans ? calloc(spans, sizeof(LaneSpanId)) : NULL;
@@ -50,7 +51,7 @@ FigureSourceNote *form_figure_read_melody(const PiecePlan *plan, NodeId source, 
                  rational_sub(at, span.start, &onset) == RATIONAL_OK &&
                  rational_add(onset, held->notes[n].duration, &notes[used].end) == RATIONAL_OK;
             notes[used].onset = onset;
-            notes[used].pitch = mode_change ? return_map_pitch(tonic, to_mode, held->notes[n].midi + shift)
+            notes[used].pitch = mode_change ? return_map_pitch(tonic, to_material, held->notes[n].midi + shift)
                                             : held->notes[n].midi + shift;
             used++;
         }
@@ -97,15 +98,22 @@ static bool nearest_chord_tone(unsigned mask, int pitch, int *out) {
  * the figure.
  */
 static bool figure_cell_length(const PlanMeter *meter, Rational *cell, size_t *per_bar) {
-    if (meter->beat_unit == 8 && meter->beats_per_bar == 6) {
-        *per_bar = 2;
-        return rational_make(3, 8, cell) == RATIONAL_OK;
+    TimeSignature *signature = NULL;
+    Duration beat;
+    if (!plan_meter_signature(*meter, &signature)) {
+        return false;
     }
-    if (meter->beat_unit == 4 && meter->beats_per_bar >= 2 && meter->beats_per_bar <= 4) {
-        *per_bar = (size_t)meter->beats_per_bar;
-        return rational_make(1, 4, cell) == RATIONAL_OK;
+    size_t beats = time_signature_group_count(signature);
+    DurationResult beat_made = time_signature_beat_length(signature, &beat);
+    time_signature_destroy(signature);
+    /* two to four beats of a quarter or a dotted quarter: the figures are written in those cells */
+    if (beat_made != DURATION_OK || beats < 2 || beats > 4 ||
+        (rational_cmp(beat.value, (Rational){1, 4}) != 0 && rational_cmp(beat.value, (Rational){3, 8}) != 0)) {
+        return false;
     }
-    return false;
+    *per_bar = beats;
+    *cell = beat.value;
+    return true;
 }
 
 void form_figure_reading_free(FigureReading *reading) {
@@ -133,7 +141,7 @@ FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
     PhraseMetre *metre = &reading->metre;
     if (!section_key(plan, span, &reading->key) ||
-        !harmony_read_lane(plan, span, reading->key.mode, reading->chords, &reading->chord_count, metre) ||
+        !harmony_read_lane(plan, span, harmony_key_mode(&reading->key), reading->chords, &reading->chord_count, metre) ||
         !rational_is_zero(metre->lead) || !rational_is_zero(metre->tail) || !rational_is_zero(metre->offset) ||
         metre->cells == 0 || metre->cells_per_bar == 0 || !figure_cell_length(&metre->meter, &reading->cell_length, &reading->cells_per_bar) ||
         metre->bars * reading->cells_per_bar > FORM_SKELETON_MAX) {
@@ -142,16 +150,16 @@ FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section) {
     }
     /* A copy across modes (R-499) is moved by 0 and mapped degree by degree, as form-return maps it. */
     bool mode_change = !return_key_shift(plan, plan_node_span(plan, ret.section), plan, span, &shift);
-    int to_mode = 0;
+    const PitchMaterial *to_material = NULL;
     if (mode_change) {
         shift = 0;
-        if (!return_mode_shift(plan, plan_node_span(plan, ret.section), plan, span, &to_mode)) {
+        if (!return_mode_shift(plan, plan_node_span(plan, ret.section), plan, span, &to_material)) {
             form_figure_reading_free(reading);
             return NULL;
         }
     }
     reading->notes = form_figure_read_melody(plan, ret.section, shift, mode_change, analysis_key_tonic_pitch_class(&reading->key),
-                                        (KeyStructureMode)to_mode, &reading->note_count);
+                                        to_material, &reading->note_count);
     if (!reading->notes) {
         form_figure_reading_free(reading);
         return NULL;
@@ -292,12 +300,11 @@ bool form_figure_kept_notes(const FigureReading *reading, size_t cell, int octav
 /* The scale a cell is figured in: the key's, with the raised seventh in minor over a chord that holds the leading tone. */
 static unsigned scale_pitch_classes(const AnalysisKey *key, unsigned chord_mask) {
     int tonic = analysis_key_tonic_pitch_class(key);
-    if (key->mode != KEY_STRUCTURE_MODE_MINOR) {
-        return standard_tonality_mode_pitch_classes(tonic, STANDARD_TONALITY_MODE_MAJOR);
+    if (!composer_key_is_minor(key)) {
+        return util_scale_mask(tonic, key->material);
     }
     bool raised = (chord_mask >> ((tonic + 11) % 12)) & 1u;
-    return standard_tonality_mode_pitch_classes(tonic, raised ? STANDARD_TONALITY_MODE_HARMONIC_MINOR
-                                                              : STANDARD_TONALITY_MODE_NATURAL_MINOR);
+    return raised ? util_scale_mask_raised_seventh(tonic, key->material) : util_scale_mask(tonic, key->material);
 }
 
 /* The tone of a pitch-class mask next to a pitch, above (direction 1) or below (-1). */

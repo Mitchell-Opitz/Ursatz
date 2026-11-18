@@ -29,6 +29,9 @@ bool cli_equals_ignore_case(const char *a, const char *b);
 /* A size the API limits requests to (composer_api_vocabulary "limits": motive_notes, motive_chords, motive_features, variant_chain, variant_functions, random_motive_count); 0 when unknown. */
 long cli_limit(const char *name);
 
+/* The key word of a material the reply named by id ("minor" for "omt.material.natural-minor"), from the vocabulary, written into out; the id itself when the vocabulary names none. */
+const char *cli_material_word(const char *id, char *out, size_t size);
+
 /* Room for the repeatable options that the limits cap (--tone, --feature, --function): the API refuses more than its limit. */
 #define CLI_LIST_CAPACITY 64
 

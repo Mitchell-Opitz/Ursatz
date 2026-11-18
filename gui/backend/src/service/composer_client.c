@@ -1,4 +1,5 @@
 #include "composer_client.h"
+#include "knowledge_service.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -48,7 +49,7 @@ static cJSON *g_vocabulary_tree = NULL;
 static void vocabulary_build(void) {
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_vocabulary(&response);
+  ComposerStatus status = composer_api_vocabulary(ursatz_gui_composer_context(), &response);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(status, &response, &reply);
   if (reply.status == COMPOSER_OK && reply.json) {
@@ -193,16 +194,60 @@ int ursatz_gui_composer_vocabulary_required_index(const char *list) {
   return -1;
 }
 
-bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size) {
-  if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !mode) {
+bool ursatz_gui_composer_tonic_name(int pitch_class, const char *material, char *out, size_t out_size) {
+  if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !material) {
     return false;
   }
   const cJSON *entry = NULL;
   cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "pitch_class_names")) {
     const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
-    const cJSON *name = cJSON_GetObjectItemCaseSensitive(entry, mode);
+    const cJSON *name = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(entry, "names"), material);
     if (cJSON_IsNumber(value) && value->valueint == pitch_class && cJSON_IsString(name)) {
       snprintf(out, out_size, "%s", name->valuestring);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ursatz_gui_composer_key_word(const char *material, char *out, size_t out_size) {
+  if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !material) {
+    return false;
+  }
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "materials")) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(entry, "label");
+    if (cJSON_IsString(value) && cJSON_IsString(label) && strcmp(value->valuestring, material) == 0) {
+      snprintf(out, out_size, "%s", label->valuestring);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ursatz_gui_composer_material_word(const char *material, char *out, size_t out_size) {
+  if (material && strcmp(material, "style") == 0) {
+    snprintf(out, out_size, "style");
+    return true;
+  }
+  return ursatz_gui_composer_key_word(material, out, out_size);
+}
+
+bool ursatz_gui_composer_material_of_word(const char *word, char *out, size_t out_size) {
+  if (!word || !ursatz_gui_composer_vocabulary() || !g_vocabulary_tree) {
+    return false;
+  }
+  if (strcmp(word, "style") == 0) {
+    snprintf(out, out_size, "style");
+    return true;
+  }
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "materials")) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
+    const cJSON *label = cJSON_GetObjectItemCaseSensitive(entry, "label");
+    if (cJSON_IsString(value) && cJSON_IsString(label) && strcmp(label->valuestring, word) == 0) {
+      snprintf(out, out_size, "%s", value->valuestring);
       return true;
     }
   }

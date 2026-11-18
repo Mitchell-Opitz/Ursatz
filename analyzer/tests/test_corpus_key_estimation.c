@@ -5,6 +5,7 @@
 
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/midi_pipeline.h>
+#include "test_knowledge.h"
 
 /*
  * The home key of the six reference pieces: the key with the most total time over the key regions Ursatz's key-region detection finds.
@@ -36,7 +37,7 @@ int main(void) {
         assert(import_result == MIDI_PIPELINE_OK);
 
         AnalysisReport report;
-        assert(run_analysis_pipeline(&notes, &report));
+        assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
         assert(report.key_region_count > 0);
         assert(report.entry_count > 0);
 
