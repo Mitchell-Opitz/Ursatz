@@ -196,7 +196,8 @@ composable piece. A structure alone is valid: every fill may be left out.
   (a boolean) only where the form's settings allow it.
 - `fill`: null or `{kind: "empty"}`; `{kind: "motif", item_id, version, into?, hybrid?}`, a melodic motif of form
   `full`; `{kind: "theme", item_id, version}`, a theme version that was composed (it has a `result` and a `plan.json`);
-  `{kind: "progression", numerals, cells?}`, the numerals as text (the Composer reads them) and 1 to 8 cells for each chord.
+  `region` and `harmony` are the section's own members, not fills; a stored `progression` fill is read as harmony
+  (views/piece-sections.md).
 - `motive`: null or `{item_id, version}`, a melodic motif of form `full`: the piece's basic motive. `pool`,
   `accompaniment` (null or `{pattern}`; the pattern `motive` is not available), `brief`, `style_weight`, `without`,
   `tempo`, `check`, `seed` and `result` are the theme's.
