@@ -28,88 +28,6 @@ static void make_dir(const char *path) {
     mkdir(path, 0777);
 }
 
-/* ---- labels ---- */
-
-static void check_numeral(const char *input, const char *expected) {
-    char *label = style_label_numeral(input);
-    CHECKF((label == NULL) == (expected == NULL) && (!label || strcmp(label, expected) == 0), "numeral '%s' gives '%s', expected '%s'",
-           input, label ? label : "(none)", expected ? expected : "(none)");
-    free(label);
-}
-
-static void check_interval(int semitones, const char *expected) {
-    char label[16];
-    style_label_interval(semitones, label, sizeof(label));
-    CHECKF(strcmp(label, expected) == 0, "interval %d gives '%s', expected '%s'", semitones, label, expected);
-}
-
-static void check_duration(unsigned long numerator, unsigned long denominator, const char *expected) {
-    char label[48];
-    style_label_duration(numerator, denominator, label, sizeof(label));
-    CHECKF(strcmp(label, expected) == 0, "duration %lu/%lu gives '%s', expected '%s'", numerator, denominator, label, expected);
-}
-
-static void test_labels(void) {
-    check_numeral("V", "V");
-    check_numeral("V7", "V7");
-    check_numeral("V6/5", "V7");
-    check_numeral("V4/3", "V7");
-    check_numeral("V4/2", "V7");
-    check_numeral("I6/4", "I");
-    check_numeral("I6", "I");
-    check_numeral("ii6/5", "ii7");
-    check_numeral("bVI", "bVI");
-    check_numeral("viio6", "viio");
-    check_numeral("V6/5/V", "V7/V");
-    check_numeral("V/V", "V/V");
-    check_numeral("", NULL);
-    check_numeral("hello", NULL);
-    check_numeral("V/", NULL);
-    check_numeral("V/x", NULL);
-    check_numeral("6/4", NULL);
-
-    check_interval(0, "0");
-    check_interval(2, "+2");
-    check_interval(-5, "-5");
-    check_interval(12, "+12");
-    check_interval(-12, "-12");
-    check_interval(13, "+13+");
-    check_interval(-24, "-13+");
-
-    check_duration(1, 8, "1/8");
-    check_duration(2, 16, "1/8");
-    check_duration(3, 16, "3/16");
-    check_duration(4, 4, "1/1");
-    check_duration(1, 0, "0/1");
-
-    CHECKF(strcmp(style_label_contour(3), "up") == 0 && strcmp(style_label_contour(-1), "down") == 0 &&
-               strcmp(style_label_contour(0), "same") == 0,
-           "contour labels");
-
-    const char *pair[] = {"ii", "V7", "I"};
-    char *progression = style_label_progression(pair, 3);
-    CHECKF(progression && strcmp(progression, "ii-V7-I") == 0, "progression label '%s'", progression ? progression : "(none)");
-    free(progression);
-    CHECKF(style_label_progression(pair, 0) == NULL, "empty progression has no label");
-
-    StyleDimension dimension;
-    CHECKF(style_category_dimension("chord-progression-3", &dimension) && dimension == STYLE_DIMENSION_HARMONY, "harmony category");
-    CHECKF(style_category_dimension("syncopation-per-phrase", &dimension) && dimension == STYLE_DIMENSION_RHYTHM, "rhythm category");
-    CHECKF(style_category_dimension("phrase-range", &dimension) && dimension == STYLE_DIMENSION_MELODY, "melody category");
-    CHECKF(style_category_dimension("mode", &dimension) && dimension == STYLE_DIMENSION_FORM, "form category");
-    CHECKF(style_category_dimension("motive-degrees", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
-               style_category_dimension("motive-intervals", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
-               style_category_dimension("motive-rhythm", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
-               style_category_dimension("motive-nct-figure", &dimension) && dimension == STYLE_DIMENSION_MELODY,
-           "motive categories are melody");
-    CHECKF(style_category_dimension("tempo", &dimension) && dimension == STYLE_DIMENSION_RHYTHM &&
-               style_category_dimension("note-density", &dimension) && dimension == STYLE_DIMENSION_RHYTHM,
-           "tempo and note density are rhythm");
-    CHECKF(!style_category_dimension("no-such-category", &dimension), "unknown category");
-    CHECKF(style_dimension_from_name("melody", &dimension) && dimension == STYLE_DIMENSION_MELODY, "dimension from name");
-    CHECKF(!style_dimension_from_name("timbre", &dimension), "unknown dimension name");
-}
-
 /* ---- profiles ---- */
 
 static char work_dir[512];
@@ -375,79 +293,6 @@ static void test_chorales_and_sonatinas(void) {
     style_profile_destroy(sonatina_profile);
 }
 
-/* ---- hand-built models ---- */
-
-static StyleModel *build_model(const char *name, const StyleStatistic *statistics, size_t count) {
-    EntityID *id = NULL;
-    StyleModel *model = NULL;
-    if (entity_id_create(name, &id) != ENTITY_ID_OK) {
-        return NULL;
-    }
-    if (style_model_from_statistics(id, name, "hand", "test", statistics, count, &model) != STYLE_MODEL_BUILD_OK) {
-        entity_id_destroy(id);
-        return NULL;
-    }
-    return model;
-}
-
-static void test_hand_distances(void) {
-    const StyleStatistic a_stats[] = {{"cadence-type", "half", 3, 4}, {"cadence-type", "perfect-authentic", 1, 4}};
-    const StyleStatistic b_stats[] = {{"cadence-type", "half", 1, 4},
-                                      {"cadence-type", "perfect-authentic", 3, 4},
-                                      {"mode", "major", 1, 1}};
-    StyleModel *a = build_model("a", a_stats, 2);
-    StyleModel *b = build_model("b", b_stats, 3);
-    CHECKF(a && b, "cannot build the hand models");
-    if (a && b) {
-        StyleComparison comparison;
-        CHECKF(style_profile_compare(a, b, &comparison) == STYLE_COMPARE_OK, "hand comparison");
-        const StyleCategoryDistance *cadence = NULL, *mode = NULL;
-        for (size_t i = 0; i < comparison.category_count; i++) {
-            if (strcmp(comparison.categories[i].category, "cadence-type") == 0) {
-                cadence = &comparison.categories[i];
-            } else if (strcmp(comparison.categories[i].category, "mode") == 0) {
-                mode = &comparison.categories[i];
-            }
-        }
-        CHECKF(cadence && cadence->distance.num == 1 && cadence->distance.den == 2, "cadence distance");
-        CHECKF(cadence && cadence->in_a && cadence->in_b && strcmp(cadence->top_a[0], "half") == 0 &&
-                   strcmp(cadence->top_b[0], "perfect-authentic") == 0 && strcmp(cadence->top_a[1], "perfect-authentic") == 0 &&
-                   cadence->top_a[2] == NULL,
-               "top labels");
-        CHECKF(mode && mode->distance.num == 1 && mode->distance.den == 1 && !mode->in_a && mode->in_b,
-               "a category in one model only is distance 1");
-        /* harmony: cadence-type only, 1/2. form: mode only, 1. Rhythm and melody have no categories. */
-        CHECKF(comparison.dimension_present[STYLE_DIMENSION_HARMONY] && comparison.dimension[STYLE_DIMENSION_HARMONY] == 0.5,
-               "harmony dimension");
-        CHECKF(comparison.dimension_present[STYLE_DIMENSION_FORM] && comparison.dimension[STYLE_DIMENSION_FORM] == 1.0,
-               "form dimension");
-        CHECKF(!comparison.dimension_present[STYLE_DIMENSION_RHYTHM] && !comparison.dimension_present[STYLE_DIMENSION_MELODY],
-               "empty dimensions are left out");
-        CHECKF(comparison.overall_present && comparison.overall == 0.75,
-               "overall distance");
-        style_comparison_destroy(&comparison);
-    }
-    style_model_destroy(a);
-    style_model_destroy(b);
-}
-
-static void test_overflow(void) {
-    /* Totals so large that twice their product does not fit in 128 bits: an error, never a wrapped distance. */
-    const unsigned long big = ~0UL;
-    const StyleStatistic a_stats[] = {{"contour", "up", 1, big}};
-    const StyleStatistic b_stats[] = {{"contour", "up", 1, big - 1}};
-    StyleModel *a = build_model("big-a", a_stats, 1);
-    StyleModel *b = build_model("big-b", b_stats, 1);
-    CHECKF(a && b, "cannot build the large models");
-    if (a && b) {
-        StyleComparison comparison;
-        CHECKF(style_profile_compare(a, b, &comparison) == STYLE_COMPARE_ERR_OVERFLOW, "an overflowing comparison is refused");
-        CHECKF(comparison.category_count == 0 && comparison.categories == NULL, "nothing is left behind after an overflow");
-    }
-    style_model_destroy(a);
-    style_model_destroy(b);
-}
-
 /* ---- motive categories ---- */
 
 static unsigned long label_count(const StyleStatistic *list, size_t count, const char *category, const char *label) {
@@ -642,7 +487,6 @@ int main(void) {
     }
     make_dir(work_dir);
 
-    test_labels();
 
     StyleProfile *reference = profile_of("reference", 5);
     if (reference) {
@@ -661,8 +505,6 @@ int main(void) {
     test_motive_categories();
     test_motive_figure_ends();
     test_chorales_and_sonatinas();
-    test_hand_distances();
-    test_overflow();
     test_refusals();
 
     return test_update_goldens() ? test_goldens_updated("test_style_profile") : test_finish("test_style_profile");

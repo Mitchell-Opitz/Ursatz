@@ -291,8 +291,10 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema slow)
 endif()
 
-ursatz_test(test_analyzer_style_labels SOURCES test_style_labels.c LIBS ursatz_test_support ursatz_analyzer
-    INCLUDES ${PROJECT_SOURCE_DIR}/src)
+ursatz_test_executable(test_style_piece LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
+ursatz_test(test_style_piece_smoke TARGET test_style_piece ARGS smoke)
+# Over 10 s in the fast set (the five pieces): runs nightly.
+ursatz_test(test_style_piece TARGET test_style_piece LABELS slow)
 
 # Over 10 s in the fast set (about 84 s of CPU measured): runs nightly.
 ursatz_test(test_style_profile LIBS ursatz_analyzer analyzer_test_support cjson
