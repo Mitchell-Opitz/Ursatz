@@ -261,6 +261,7 @@ like tests-chain chain
 uses tests-chain test-helpers
 
 uses tests-export io tests-io core -- export tests round-trip through the importers
+uses tests-io tests-export -- the note id test writes a score with the export helpers and reads it back
 uses tests-chain io tests-io tests-integration -- chain tests import the corpus
 
 module analyzer-tests     analyzer/tests            root analyzer/tests analyzer/tests/support analyzer/src analyzer/include
