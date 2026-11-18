@@ -685,7 +685,9 @@ static ComposerStatus read_overlays(PieceSpec *request, const cJSON *root, const
     if (!list || cJSON_IsNull(list)) {
         return COMPOSER_OK;
     }
-    snprintf(path, sizeof path, "%s/sections", base);
+    char sections_path[400];
+    snprintf(sections_path, sizeof sections_path, "%.380s/sections", base);
+    snprintf(path, sizeof path, "%s", sections_path);
     if (!cJSON_IsArray(list) || (size_t)cJSON_GetArraySize(list) > size->section_count) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "sections lists the sections of %s to give something of their own, at most %zu",
                         form->label, size->section_count);
@@ -694,7 +696,7 @@ static ComposerStatus read_overlays(PieceSpec *request, const cJSON *root, const
     const cJSON *item;
     cJSON_ArrayForEach(item, list) {
         char at[1060];
-        snprintf(at, sizeof at, "%.300s/%zu", path, index);
+        snprintf(at, sizeof at, "%s/%zu", sections_path, index);
         if (!cJSON_IsObject(item)) {
             return api_fail(error, COMPOSER_ERR_REQUEST, at, "every section of the request must be an object");
         }
