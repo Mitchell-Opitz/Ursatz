@@ -3,52 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "model/core/voice_reference.h"
-#include "model/identity/entity_id.h"
-#include "model/pitch/pitch_numeric_value.h"
-#include "model/time/duration.h"
-#include "model/time/musical_time.h"
-#include "model/time/temporal_anchor.h"
-#include "model/time/time_span.h"
+#include "analysis/notes/analysis_note_build.h"
 #include <theory/tonality/common_practice_materials.h>
-
-static bool build_span(const NoteEvent *event, TimeSpan *out) {
-    MusicalTime start = *temporal_anchor_position(note_event_temporal_anchor(event));
-    MusicalTime end;
-    if (musical_time_plus(start, *note_event_duration(event), &end) != MUSICAL_TIME_OK) {
-        return false;
-    }
-    return time_span_make(start, end, out) == TIME_SPAN_OK;
-}
-
-static bool fill_note(AnalysisNote *note, const ImportedNotes *notes, size_t i) {
-    const NoteEvent *event = notes->events[i];
-    TimeSpan span;
-    if (!build_span(event, &span)) {
-        return false;
-    }
-    const VoiceReference *voice = note_event_optional_voice(event);
-    note->note_id = entity_id_value(note_event_id(event));
-    note->event = event;
-    note->span = span;
-    note->midi = (int)pitch_numeric_value_position_numerator(notes->pitch_values[i]);
-    note->spelling = notes->source.spelling_notated ? note_event_optional_pitch_spelling(event) : NULL;
-    note->voice_id = voice ? entity_id_value(voice_reference_target_id(voice)) : NULL;
-    note->track = notes->streams ? notes->streams[i] : ANALYSIS_INDEX_NONE;
-    note->voice = ANALYSIS_INDEX_NONE;
-    note->voice_confidence = voice ? 1.0 : 0.0;
-    return analysis_note_valid(note);
-}
-
-/* An AnalysisNote with its ImportedNotes index; the note comes first so analysis_note_compare reads it directly. */
-typedef struct {
-    AnalysisNote note;
-    size_t index;
-} IndexedNote;
-
-static int compare_indexed(const void *a, const void *b) {
-    return analysis_note_compare(a, b);
-}
 
 static int compare_slots(const void *a, const void *b) {
     return strcmp(((const ChainInputSlot *)a)->id, ((const ChainInputSlot *)b)->id);
@@ -79,35 +35,28 @@ static bool build_key_events(const ImportedNotes *notes, const CommonPracticeMat
 
 bool chain_input_build(const ImportedNotes *notes, const CommonPracticeMaterials *materials, ChainInput *out) {
     memset(out, 0, sizeof(*out));
-    out->set.map = notes->meter.meter_map;
+    AnalysisNoteSource source = {
+        .events = (const NoteEvent *const *)notes->events,
+        .pitch_values = notes->pitch_values,
+        .tracks = notes->streams,
+        .count = notes->count,
+        .use_spelling = notes->source.spelling_notated,
+        .map = notes->meter.meter_map,
+    };
+    if (!analysis_note_set_build(&source, &out->set, &out->order)) {
+        memset(out, 0, sizeof(*out));
+        return false;
+    }
+    out->count = notes->count;
     if (notes->count > 0) {
-        IndexedNote *indexed = calloc(notes->count, sizeof(IndexedNote));
-        out->notes = calloc(notes->count, sizeof(AnalysisNote));
-        out->order = malloc(sizeof(size_t) * notes->count);
         out->by_id = malloc(sizeof(ChainInputSlot) * notes->count);
-        if (!indexed || !out->notes || !out->order || !out->by_id) {
-            free(indexed);
+        if (!out->by_id) {
             chain_input_destroy(out);
             return false;
         }
-        for (size_t i = 0; i < notes->count; i++) {
-            indexed[i].index = i;
-            if (!fill_note(&indexed[i].note, notes, i)) {
-                free(indexed);
-                chain_input_destroy(out);
-                return false;
-            }
-        }
-        qsort(indexed, notes->count, sizeof(IndexedNote), compare_indexed);
-        out->count = notes->count;
-        out->set.notes = out->notes;
-        out->set.count = notes->count;
         for (size_t p = 0; p < notes->count; p++) {
-            out->notes[p] = indexed[p].note;
-            out->order[p] = indexed[p].index;
-            out->by_id[p] = (ChainInputSlot){out->notes[p].note_id, indexed[p].index};
+            out->by_id[p] = (ChainInputSlot){out->set.notes[p].note_id, out->order[p]};
         }
-        free(indexed);
         qsort(out->by_id, notes->count, sizeof(ChainInputSlot), compare_slots);
     }
     if (!build_key_events(notes, materials, out)) {
@@ -118,8 +67,7 @@ bool chain_input_build(const ImportedNotes *notes, const CommonPracticeMaterials
 }
 
 void chain_input_destroy(ChainInput *input) {
-    free(input->notes);
-    free(input->order);
+    analysis_note_set_built_destroy(&input->set, input->order);
     free(input->by_id);
     free(input->key_events);
     memset(input, 0, sizeof(*input));

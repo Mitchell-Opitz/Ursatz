@@ -11,66 +11,32 @@
 #include "io/musicxml_importer.h"
 #include "model/pitch/pitch_numeric_value.h"
 #include "analysis/notes/analysis_note.h"
+#include "analysis/notes/analysis_note_build.h"
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 #include "model/time/time_span.h"
 
-static inline void import_analysis_notes_destroy(AnalysisNote *notes, size_t count);
-
-static inline bool import_notes_build_span(const NoteEvent *event, TimeSpan *out) {
-    MusicalTime start = *temporal_anchor_position(note_event_temporal_anchor(event));
-    MusicalTime end;
-    if (musical_time_plus(start, *note_event_duration(event), &end) != MUSICAL_TIME_OK) {
-        return false;
-    }
-    return time_span_make(start, end, out) == TIME_SPAN_OK;
-}
-
-static inline bool import_notes_fill_note(AnalysisNote *note, const NoteEvent *event, const PitchNumericValue *pitch,
-                                          size_t track) {
-    TimeSpan span;
-    if (event == NULL || pitch == NULL || !import_notes_build_span(event, &span)) {
-        return false;
-    }
-    const VoiceReference *voice = note_event_optional_voice(event);
-    note->note_id = entity_id_value(note_event_id(event));
-    note->event = event;
-    note->span = span;
-    note->midi = (int)pitch_numeric_value_position_numerator(pitch);
-    note->spelling = note_event_optional_pitch_spelling(event);
-    note->voice_id = voice != NULL ? entity_id_value(voice_reference_target_id(voice)) : NULL;
-    note->track = track;
-    note->voice = ANALYSIS_INDEX_NONE;
-    note->voice_confidence = voice != NULL ? 1.0 : 0.0;
-    return analysis_note_valid(note);
-}
-
 static inline bool import_notes_build_notes(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
                                             const size_t *tracks, size_t event_count, AnalysisNote **out,
                                             size_t *count) {
-    if (out == NULL || count == NULL || (event_count > 0 && (events == NULL || pitch_values == NULL))) {
+    if (out == NULL || count == NULL) {
         return false;
     }
-    if (event_count == 0) {
-        *out = NULL;
-        *count = 0;
-        return true;
-    }
-    AnalysisNote *notes = calloc(event_count, sizeof(AnalysisNote));
-    if (notes == NULL) {
+    AnalysisNoteSource source = {
+        .events = (const NoteEvent *const *)events,
+        .pitch_values = pitch_values,
+        .tracks = tracks,
+        .count = event_count,
+        .use_spelling = true,
+        .map = NULL,
+    };
+    AnalysisNoteSet set;
+    if (!analysis_note_set_build(&source, &set, NULL)) {
         return false;
     }
-    for (size_t i = 0; i < event_count; i++) {
-        size_t track = tracks != NULL ? tracks[i] : ANALYSIS_INDEX_NONE;
-        if (!import_notes_fill_note(&notes[i], events[i], pitch_values[i], track)) {
-            import_analysis_notes_destroy(notes, i);
-            return false;
-        }
-    }
-    qsort(notes, event_count, sizeof(AnalysisNote), analysis_note_compare);
-    *out = notes;
-    *count = event_count;
+    *out = (AnalysisNote *)set.notes;
+    *count = set.count;
     return true;
 }
 
