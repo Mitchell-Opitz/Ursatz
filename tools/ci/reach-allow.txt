@@ -54,7 +54,5 @@ library/theory/knowledge/instrument.c instrument_in_range  # no app calls it unt
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type  # no app looks up a chord type by id (chord readings find it by members, P62 may name one); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_of  # only chord_reading_of_sonority reads a chord type, and no app reads a chord reading until P62's reading layer; its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_at  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
-library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry_count  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
