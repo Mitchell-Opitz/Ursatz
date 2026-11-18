@@ -56,3 +56,5 @@ ursatz_test(standard_tonality_chord_input SOURCES test_chord_input.c LIBS ursatz
 ursatz_test(standard_tonality_roman_numeral_adapter SOURCES test_roman_numeral_adapter.c LIBS ursatz_analysis)
 
 ursatz_test(standard_tonality_applied_chords SOURCES test_applied_chords.c LIBS ursatz_analysis)
+
+ursatz_test(chord_reading SOURCES test_chord_reading.c LIBS ursatz_analysis VALGRIND)

@@ -586,7 +586,23 @@ static void check_subsets(const char *context, ChainInput *input, const Referenc
     assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &keys) == ANALYSIS_CHAIN_OK);
     if (!CHECK(analysis_chain_key_regions(keys) != NULL && analysis_chain_chords(keys) == NULL && analysis_chain_cadences(keys) == NULL)) abort();
     if (!CHECK(analysis_chain_key_regions(keys)->region_count >= 1)) abort();
+    /* no chords stage: no reading */
+    ChordReading none;
+    memset(&none, 0x33, sizeof(none));
+    ChordReading kept = none;
+    if (!CHECK(analysis_chain_chord_reading(keys, 0, &none) == ANALYSIS_CHAIN_ERR_CHORDS && memcmp(&none, &kept, sizeof(none)) == 0)) abort();
     analysis_chain_destroy(keys);
+
+    /* the chords without the cadences: every chord reads as functional, as no cadential six-four is known */
+    config.stages = ANALYSIS_CHAIN_STAGE_CHORDS;
+    AnalysisChain *chords = NULL;
+    assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &chords) == ANALYSIS_CHAIN_OK);
+    if (!CHECK(analysis_chain_segment_count(chords) > 0)) abort();
+    for (size_t i = 0; i < analysis_chain_segment_count(chords); i++) {
+        ChordReading reading;
+        if (!CHECK(analysis_chain_chord_reading(chords, i, &reading) == ANALYSIS_CHAIN_OK && reading.role == CHORD_ROLE_FUNCTIONAL)) abort();
+    }
+    analysis_chain_destroy(chords);
 }
 
 /* The outer lines on the chord segments: an entry per chord segment, the voice segment sounding at its start. */
@@ -615,6 +631,110 @@ static void check_segment_lines(const char *context, const AnalysisChain *c) {
         }
     }
     outer_voice_lines_destroy(&built);
+}
+
+/* --- chord readings (R-592) --- */
+
+typedef struct {
+    int count;
+    int above[3]; /* the semitones above the root of the members after the root */
+    const char *id;
+} ReadingType;
+
+static const ReadingType READING_TYPES[9] = {
+    {2, {4, 7, 0}, "omt.chord-type.major-triad"},
+    {2, {3, 7, 0}, "omt.chord-type.minor-triad"},
+    {2, {3, 6, 0}, "omt.chord-type.diminished-triad"},
+    {2, {4, 8, 0}, "omt.chord-type.augmented-triad"},
+    {3, {4, 7, 10}, "omt.chord-type.dominant-seventh"},
+    {3, {4, 7, 11}, "omt.chord-type.major-seventh"},
+    {3, {3, 7, 10}, "omt.chord-type.minor-seventh"},
+    {3, {3, 6, 10}, "omt.chord-type.half-diminished-seventh"},
+    {3, {3, 6, 9}, "omt.chord-type.diminished-seventh"},
+};
+
+/* The chord type id of a chain chord, by the intervals of its quality, or NULL for a quality outside the nine. */
+static const char *reading_type_id(const CommonPracticeRankedChord *chord) {
+    int intervals[4];
+    size_t n = common_practice_ranked_chord_intervals(chord, intervals);
+    for (size_t t = 0; t < 9; t++) {
+        if ((size_t)READING_TYPES[t].count + 1 != n) {
+            continue;
+        }
+        bool same = true;
+        for (int i = 0; i < READING_TYPES[t].count; i++) {
+            same = same && intervals[i + 1] == READING_TYPES[t].above[i];
+        }
+        if (same) {
+            return READING_TYPES[t].id;
+        }
+    }
+    return NULL;
+}
+
+/* Bach 114's first eight chords (the chain's chord segments 0 to 7): root pitch class and the chord type id, or -1 and NULL for a
+   segment with no chord. Captured from the chain beside the check that every reading equals the chain's own chord result. */
+static const struct {
+    int root;
+    const char *type;
+} BACH114_FIRST_EIGHT[8] = {
+    {7, "omt.chord-type.major-triad"},  {0, "omt.chord-type.major-triad"}, {4, "omt.chord-type.minor-triad"},
+    {9, "omt.chord-type.minor-triad"},  {7, "omt.chord-type.major-triad"}, {11, "omt.chord-type.minor-triad"},
+    {7, "omt.chord-type.major-triad"},  {7, "omt.chord-type.major-triad"},
+};
+
+/* Every segment's reading equals the chain's chord result: root, type, bass, role and the fields no reading fills yet. */
+static void check_chord_readings(const char *context, const AnalysisChain *c, bool bach114) {
+    ChordReading r;
+    size_t count = analysis_chain_segment_count(c);
+    const CommonPracticeWeightedResult *chords = analysis_chain_chords(c);
+    const StandardTonalityChordInput *inputs = analysis_chain_chord_inputs(c);
+    const HarmonySegment *prepared = analysis_chain_prepared_harmony(c);
+    const KnowledgeSnapshot *snapshot = test_knowledge();
+    size_t matched = 0;
+    size_t embellishing = 0;
+    for (size_t i = 0; i < count; i++) {
+        memset(&r, 0x5a, sizeof(r));
+        if (!CHECK(analysis_chain_chord_reading(c, i, &r) == ANALYSIS_CHAIN_OK)) abort();
+        const ChainSegments *segs = analysis_chain_segments(c);
+        if (!CHECK(rational_equals(r.sonority.span.start.value, segs->starts[i]) && rational_equals(r.sonority.span.end.value, segs->ends[i]))) abort();
+        if (!CHECK(r.borrowed_from == NULL && !r.has_expected && r.expected_type == NULL && r.expected_root_pitch_class == 0)) abort();
+        if (!CHECK(r.bass_pitch_class == r.sonority.bass_pitch_class)) abort();
+        bool cadential = prepared != NULL && harmony_cadence_is_cadential_six_four(&prepared[i]);
+        if (chords[i].matched && chords[i].best_chord != NULL) {
+            matched++;
+            if (!CHECK(r.has_root && r.root_pitch_class == chords[i].best.root_pitch_class)) abort();
+            const char *id = reading_type_id(&chords[i].best);
+            if (!CHECK(id != NULL && r.type != NULL && strcmp(r.type->id, id) == 0)) abort();
+            if (!CHECK(r.type == knowledge_snapshot_chord_type(snapshot, id))) abort();
+            unsigned members = 0;
+            for (int role = 0; role < CHORD_READING_ROLE_COUNT; role++) {
+                members |= r.members_by_role[role];
+            }
+            if (!CHECK(members == r.sonority.pitch_classes && r.members_by_role[CHORD_MEMBER_ROOT] == (1u << r.root_pitch_class))) abort();
+            if (!CHECK(r.bass_pitch_class == inputs[i].bass_pitch_class || inputs[i].bass_pitch_class < 0)) abort();
+        } else {
+            if (!CHECK(!r.has_root && r.type == NULL && r.members_by_role[CHORD_MEMBER_ROOT] == 0)) abort();
+            if (!CHECK(r.bass_pitch_class == (inputs[i].has_numeral ? inputs[i].bass_pitch_class : -1))) abort();
+        }
+        if (!CHECK(r.role == (cadential && r.has_root ? CHORD_ROLE_EMBELLISHING : CHORD_ROLE_FUNCTIONAL))) abort();
+        embellishing += r.role == CHORD_ROLE_EMBELLISHING;
+        if (bach114 && i < 8) {
+            if (!CHECK((BACH114_FIRST_EIGHT[i].type == NULL) == (r.type == NULL))) abort();
+            if (!CHECK(BACH114_FIRST_EIGHT[i].root == (r.has_root ? r.root_pitch_class : -1))) abort();
+            if (r.type != NULL && !CHECK(strcmp(r.type->id, BACH114_FIRST_EIGHT[i].type) == 0)) abort();
+        }
+    }
+    if (!CHECK(matched > 0)) abort();
+    /* the refusals: a NULL chain or out, an index past the segments */
+    ChordReading untouched;
+    memset(&untouched, 0x33, sizeof(untouched));
+    r = untouched;
+    if (!CHECK(analysis_chain_chord_reading(NULL, 0, &r) == ANALYSIS_CHAIN_ERR_NULL_ARGUMENT)) abort();
+    if (!CHECK(analysis_chain_chord_reading(c, 0, NULL) == ANALYSIS_CHAIN_ERR_NULL_ARGUMENT)) abort();
+    if (!CHECK(analysis_chain_chord_reading(c, count, &r) == ANALYSIS_CHAIN_ERR_CHORDS)) abort();
+    if (!CHECK(memcmp(&r, &untouched, sizeof(r)) == 0)) abort();
+    printf("  %s: %zu chord readings (%zu with a chord, %zu embellishing)\n", context, count, matched, embellishing);
 }
 
 /* The stage inputs the chain keeps: all there after a full run, none on a NULL chain, and the ones the stages read are the ones they built. */
@@ -715,6 +835,7 @@ static void check_piece(const Reference *ref, bool dump) {
         check_stage_inputs(context, chain);
         check_voice_line_inputs(context, &input, ref, chain);
         check_voice_leading(context, chain);
+        check_chord_readings(context, chain, strcmp(ref->name, "Bach 114") == 0);
         check_subsets(context, &input, ref, chain);
         printf("  %s: %zu segments, %zu key regions, %zu cadences, %zu phrases; %d stages as expected\n", context, segments, key_regions,
                cadences, phrases, STAGE_COUNT);
