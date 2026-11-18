@@ -7,6 +7,9 @@ ursatz_test(chain_stage_table SOURCES test_stage_table.c LIBS ursatz_chain ursat
 
 ursatz_test(chain_inputs LIBS ursatz_chain ursatz_io VALGRIND)
 
+ursatz_test(chain_score LIBS ursatz_chain ursatz_io ursatz_test_support
+    DEFINITIONS URSATZ_CORPUS_DIR="${URSATZ_FIXTURES_DIR}/framework-v1-corpus" VALGRIND)
+
 # The chain on four reference pieces against fixed expected results (captured while it was proven equal to the test glue it replaced).
 # 13 s measured (serial, 10 s rule); runs in the nightly.
 ursatz_test(analysis_chain LIBS ursatz_chain ursatz_io ursatz_test_support

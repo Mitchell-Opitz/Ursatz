@@ -194,6 +194,8 @@ void chain_result_destroy(ChainResult *report) {
     free(report->tuplets);
     report->entries = NULL;
     report->entry_count = 0;
+    report->outer_lines = NULL;
+    report->outer_line_count = 0;
     report->non_chord_tones = NULL;
     report->non_chord_tone_count = 0;
     report->key_regions = NULL;
