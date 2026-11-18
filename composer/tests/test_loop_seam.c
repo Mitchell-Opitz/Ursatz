@@ -229,11 +229,11 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
                                  PieceFillKind fill) {
     PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
-    snprintf(section->id, sizeof(section->id), "%s", id);
-    snprintf(section->letter, sizeof(section->letter), "%s", letter);
-    section->part = part;
-    section->beats = beats;
-    section->pickup = (Rational){0, 1};
+    snprintf(section->description.id, sizeof(section->description.id), "%s", id);
+    snprintf(section->description.letter, sizeof(section->description.letter), "%s", letter);
+    piece_section_set_part(section, part);
+    section->description.beats = beats;
+    section->description.pickup = (Rational){0, 1};
     section->fill = fill;
     return section;
 }

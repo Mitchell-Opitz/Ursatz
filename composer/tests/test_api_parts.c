@@ -185,7 +185,7 @@ static void test_refusals(void) {
         ComposerResponse response;
         ComposerStatus status = composer_api_piece(test_context(), printed, NULL, &response);
         char expected[96];
-        snprintf(expected, sizeof expected, "the function must be transition or coda, not '%s'", VALUES[v]);
+        snprintf(expected, sizeof expected, "%s", v < 2 ? "unknown function" : "a request takes transition or coda");
         assert(status == COMPOSER_ERR_REQUEST);
         if (strcmp(response.error.path, "/request/sections/2/function") != 0 || !strstr(response.error.message, expected)) {
             fprintf(stderr, "'%s' at '%s'\n", response.error.message, response.error.path);

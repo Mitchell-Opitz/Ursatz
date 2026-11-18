@@ -1061,12 +1061,12 @@ static void test_default_cadences(void) {
         request.sections = sections;
         request.section_count = row->count;
         for (size_t i = 0; i < row->count; i++) {
-            sections[i].part = row->parts[i];
+            piece_section_set_part(&sections[i], row->parts[i]);
         }
         piece_default_cadences(form, &request);
         for (size_t i = 0; i < row->count; i++) {
-            if (!sections[i].has_cadence || sections[i].cadence != row->cadences[i]) {
-                fprintf(stderr, "layout %s: section %zu has cadence %d, expected %d\n", row->layout, i, (int)sections[i].cadence,
+            if (!sections[i].description.has_cadence || sections[i].description.cadence != row->cadences[i]) {
+                fprintf(stderr, "layout %s: section %zu has cadence %d, expected %d\n", row->layout, i, (int)sections[i].description.cadence,
                         (int)row->cadences[i]);
                 exit(1);
             }
@@ -1079,13 +1079,13 @@ static void test_default_cadences(void) {
     memset(&request, 0, sizeof(request));
     request.sections = sections;
     request.section_count = 3;
-    sections[0].part = PIECE_PART_BODY;
-    sections[1].part = PIECE_PART_BODY;
-    sections[1].has_cadence = true;
-    sections[1].cadence = CADENCE_TYPE_PLAGAL;
-    sections[2].part = PIECE_PART_ENDING;
+    piece_section_set_part(&sections[0], PIECE_PART_BODY);
+    piece_section_set_part(&sections[1], PIECE_PART_BODY);
+    sections[1].description.has_cadence = true;
+    sections[1].description.cadence = CADENCE_TYPE_PLAGAL;
+    piece_section_set_part(&sections[2], PIECE_PART_ENDING);
     piece_default_cadences(form, &request);
-    assert(sections[0].cadence == IAC && sections[1].cadence == CADENCE_TYPE_PLAGAL && sections[2].cadence == PAC);
+    assert(sections[0].description.cadence == IAC && sections[1].description.cadence == CADENCE_TYPE_PLAGAL && sections[2].description.cadence == PAC);
     form_spec_destroy(form);
 }
 

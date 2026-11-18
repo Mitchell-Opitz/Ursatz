@@ -5,6 +5,7 @@
 
 #include <cJSON.h>
 
+#include <plan/section_json.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_json.h>
 
@@ -89,7 +90,7 @@ static ComposerStatus read_numerals(PieceSpec *request, size_t index, const char
 
 static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *fill, const char *base, ComposerError *error) {
     PieceSection *section = &request->sections[index];
-    const char *id = section->id;
+    const char *id = section->description.id;
     const char *kind = "empty";
     char path[128];
     if (fill && !cJSON_IsNull(fill)) {
@@ -239,73 +240,75 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
 static ComposerStatus read_section(PieceSpec *request, size_t index, const cJSON *item, const char *base,
                                    const PlanMeter *meter, ComposerError *error) {
     PieceSection *section = &request->sections[index];
-    const char *id = NULL;
-    const char *part = NULL;
-    const char *letter = NULL;
-    const char *cadence = NULL;
-    const char *pickup = NULL;
-    const char *function = NULL;
-    char pickup_text[32];
     char path[128];
     if (!cJSON_IsObject(item)) {
         return api_fail(error, COMPOSER_ERR_REQUEST, base, "every section of the request must be an object");
     }
-    if (!api_request_string(item, base, "id", true, &id, error) || !api_request_string(item, base, "part", true, &part, error) ||
-        !api_request_string(item, base, "letter", false, &letter, error) ||
-        !api_request_string(item, base, "cadence", false, &cadence, error) ||
-        !api_request_string(item, base, "function", false, &function, error) ||
-        !api_request_pickup(item, base, pickup_text, sizeof(pickup_text), &pickup, error)) {
-        return COMPOSER_ERR_REQUEST;
+    /* The section is the library's description for a request (R-605); `part` is the old name of `role`, and `fill` is read below. */
+    const cJSON *part = cJSON_GetObjectItemCaseSensitive(item, "part");
+    if (part && !cJSON_IsNull(part) && cJSON_GetObjectItemCaseSensitive(item, "role")) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, base, "give role or part, not both");
     }
-    if (strlen(id) == 0 || strlen(id) >= PIECE_SECTION_ID_MAX) {
-        snprintf(path, sizeof path, "%s/id", base);
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "a section id is 1 to %d characters, not '%s'", PIECE_SECTION_ID_MAX - 1,
-                        id);
+    cJSON *named = cJSON_Duplicate(item, true);
+    if (!named) {
+        return api_fail(error, COMPOSER_ERR_ALLOC, base, "out of memory");
     }
-    snprintf(section->id, sizeof(section->id), "%s", id);
-    if (!piece_part_from_name(part, &section->part)) {
-        snprintf(path, sizeof path, "%s/part", base);
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': the part must be intro, body, turnaround or ending, not '%s'",
-                        id, part);
+    /* A member given as null is a member not given, as it always was in this request. */
+    for (cJSON *member = named->child; member;) {
+        cJSON *next = member->next;
+        if (cJSON_IsNull(member)) {
+            cJSON_Delete(cJSON_DetachItemViaPointer(named, member));
+        }
+        member = next;
     }
-    section->function = PIECE_FUNCTION_NONE;
-    if (function && !piece_function_from_name(function, &section->function)) {
-        snprintf(path, sizeof path, "%s/function", base);
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': the function must be transition or coda, not '%s'", id,
-                        function);
+    if (part && !cJSON_IsNull(part)) {
+        cJSON *moved = cJSON_DetachItemFromObjectCaseSensitive(named, "part");
+        if (!cJSON_AddItemToObject(named, "role", moved)) {
+            cJSON_Delete(moved);
+            cJSON_Delete(named);
+            return api_fail(error, COMPOSER_ERR_ALLOC, base, "out of memory");
+        }
     }
-    if (letter) {
-        snprintf(section->letter, sizeof(section->letter), "%s", letter);
-    } else {
-        snprintf(section->letter, sizeof(section->letter), "%c", toupper((unsigned char)id[0]));
+    static const char *const SKIPPED[] = {"fill"};
+    SectionDescription description;
+    SectionError refused;
+    bool read = section_from_json(named, SECTION_USE_REQUEST, SKIPPED, 1, &description, &refused);
+    cJSON_Delete(named);
+    if (!read) {
+        const char *member = part && strcmp(refused.path, "/role") == 0 ? "/part" : refused.path;
+        snprintf(path, sizeof path, "%s%s", base, member);
+        const cJSON *given_id = cJSON_GetObjectItemCaseSensitive(item, "id");
+        if (cJSON_IsString(given_id) && given_id->valuestring[0] != '\0') {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%.15s': %s", given_id->valuestring, refused.message);
+        }
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", refused.message);
     }
-    const cJSON *beats = cJSON_GetObjectItemCaseSensitive(item, "beats");
-    if (!cJSON_IsNumber(beats) || beats->valuedouble < 1 || beats->valuedouble > API_PIECE_BEATS_MAX ||
-        beats->valuedouble != (double)(size_t)beats->valuedouble) {
+    const char *id = description.id;
+    piece_section_init(section);
+    section->description = description;
+    if (description.letter[0] == '\0') {
+        snprintf(section->description.letter, sizeof(section->description.letter), "%c", toupper((unsigned char)id[0]));
+    }
+    if (description.bars != 0) {
+        section->description.beats = description.bars * (size_t)meter->beats_per_bar;
+    }
+    if (section->description.beats < 1 || section->description.beats > API_PIECE_BEATS_MAX) {
         snprintf(path, sizeof path, "%s/beats", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': \"beats\" must be a whole number of beats, 1 or more", id);
     }
-    section->beats = (size_t)beats->valuedouble;
-    section->pickup = (Rational){0, 1};
-    if (pickup && !request_parse_pickup(pickup, meter->beat_unit, &section->pickup)) {
+    /* The codec holds a pickup in beats; the request holds it in whole notes. */
+    section->description.pickup = (Rational){0, 1};
+    if (description.has_pickup &&
+        (meter->beat_unit <= 0 || rational_mul(description.pickup, (Rational){1, meter->beat_unit}, &section->description.pickup) != RATIONAL_OK)) {
         snprintf(path, sizeof path, "%s/pickup", base);
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': pickup '%s' is not a number of beats; write 0, 1 or 1/2", id,
-                        pickup);
-    }
-    if (cadence) {
-        if (!request_parse_cadence(cadence, &section->cadence)) {
-            snprintf(path, sizeof path, "%s/cadence", base);
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': the cadence must be PAC, IAC, HC, DC or PC, not '%s'",
-                            id, cadence);
-        }
-        section->has_cadence = true;
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': the pickup is not a number of beats; write 0, 1 or 1/2", id);
     }
     snprintf(path, sizeof path, "%s/fill", base);
     ComposerStatus filled = read_fill(request, index, cJSON_GetObjectItemCaseSensitive(item, "fill"), path, error);
     if (filled == COMPOSER_OK && section->has_construction) {
         size_t per_bar = (size_t)meter->beats_per_bar;
-        if (section->pickup.num != 0 || per_bar == 0 || section->beats % per_bar != 0 || section->beats / per_bar < 3 ||
-            section->beats / per_bar > 16) {
+        if (section->description.pickup.num != 0 || per_bar == 0 || section->description.beats % per_bar != 0 || section->description.beats / per_bar < 3 ||
+            section->description.beats / per_bar > 16) {
             snprintf(path, sizeof path, "%s/fill/construction", base);
             return api_fail(error, COMPOSER_ERR_REQUEST, path,
                             "section '%s': a construction needs a theme of 3 to 16 whole bars and no pickup", id);
@@ -535,7 +538,7 @@ static ComposerStatus load_motives(PieceSpec *request, const char *base, Compose
     size_t forms = 0;
     for (size_t i = 0; status == COMPOSER_OK && i < piece->section_count; i++) {
         if (request->motive_json[i]) {
-            snprintf(what, sizeof(what), "the motive of section '%s'", request->sections[i].id);
+            snprintf(what, sizeof(what), "the motive of section '%s'", request->sections[i].description.id);
             snprintf(path, sizeof path, "%s/sections/%zu/fill/motive", base, i);
             status = read_melodic(request->knowledge, what, path, request->motive_json[i], &piece->meter, &piece->key,
                                   &request->section_motive[i], error);
@@ -850,10 +853,10 @@ ComposerStatus api_piece_validate(const KnowledgeSnapshot *knowledge, const Comm
         cJSON *item = i < given ? cJSON_GetArrayItem(sections, (int)i) : NULL;
         if (!item) {
             item = cJSON_CreateObject();
-            if (!item || !cJSON_AddStringToObject(item, "id", section->id) ||
-                !cJSON_AddStringToObject(item, "part", piece_part_name(section->part)) ||
-                !cJSON_AddStringToObject(item, "letter", section->letter) ||
-                !cJSON_AddNumberToObject(item, "beats", (double)section->beats) || !cJSON_AddItemToArray(sections, item)) {
+            if (!item || !cJSON_AddStringToObject(item, "id", section->description.id) ||
+                !cJSON_AddStringToObject(item, "part", piece_part_name(piece_section_part(section))) ||
+                !cJSON_AddStringToObject(item, "letter", section->description.letter) ||
+                !cJSON_AddNumberToObject(item, "beats", (double)section->description.beats) || !cJSON_AddItemToArray(sections, item)) {
                 cJSON_Delete(item);
                 status = api_fail_alloc(error);
                 break;
@@ -867,7 +870,7 @@ ComposerStatus api_piece_validate(const KnowledgeSnapshot *knowledge, const Comm
         const cJSON *cadence = cJSON_GetObjectItemCaseSensitive(item, "cadence");
         if (!cadence || cJSON_IsNull(cadence)) {
             cJSON_DeleteItemFromObjectCaseSensitive(item, "cadence");
-            if (!cJSON_AddStringToObject(item, "cadence", plan_cadence_name(section->cadence))) {
+            if (!cJSON_AddStringToObject(item, "cadence", plan_cadence_name(section->description.cadence))) {
                 status = api_fail_alloc(error);
             }
         }

@@ -333,11 +333,11 @@ typedef struct {
 static void piece_section(PieceFixture *fixture, const char *id, PiecePart part, size_t beats, PieceFillKind fill) {
     PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
-    snprintf(section->id, sizeof(section->id), "%s", id);
-    snprintf(section->letter, sizeof(section->letter), "%c", id[0] - 32);
-    section->part = part;
-    section->beats = beats;
-    section->pickup = (Rational){0, 1};
+    snprintf(section->description.id, sizeof(section->description.id), "%s", id);
+    snprintf(section->description.letter, sizeof(section->description.letter), "%c", id[0] - 32);
+    piece_section_set_part(section, part);
+    section->description.beats = beats;
+    section->description.pickup = (Rational){0, 1};
     section->fill = fill;
 }
 

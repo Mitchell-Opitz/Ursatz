@@ -576,16 +576,16 @@ static void test_refused(char *plan) {
     free(text);
 
     text = with_section_member(plan, 0, "beats", "\"8\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/beats", "whole number of beats");
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/beats", "must be a whole number");
     free(text);
     text = with_section_member(plan, 0, "cadence", "\"XX\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/cadence", "the cadence must be");
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/cadence", "unknown cadence");
     free(text);
     text = with_section_member(plan, 2, "part", "\"coda\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/2/part", "the part must be");
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/2/part", "a request names intro, body, turnaround or ending");
     free(text);
     text = with_section_member(plan, 0, "pickup", "\"half\"");
-    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/pickup", "not a number of beats");
+    expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/sections/0/pickup", "must be a whole number or a fraction");
     free(text);
     text = with_piece_member(plan, "meter", "\"5/4\"");
     expect_refusal(text, false, COMPOSER_ERR_REQUEST, "/request/meter", "is not supported");

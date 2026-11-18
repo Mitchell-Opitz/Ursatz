@@ -32,18 +32,6 @@ const char *piece_part_name(PiecePart part) {
     return part >= 0 && part < PIECE_PART_COUNT ? PART_NAMES[part] : "unknown";
 }
 
-bool piece_part_from_name(const char *name, PiecePart *out) {
-    for (int part = 0; name && part < PIECE_PART_COUNT; part++) {
-        if (strcmp(name, PART_NAMES[part]) == 0) {
-            if (out) {
-                *out = (PiecePart)part;
-            }
-            return true;
-        }
-    }
-    return false;
-}
-
 const char *piece_function_name(PieceFunction function) {
     switch (function) {
     case PIECE_FUNCTION_NONE:
@@ -54,21 +42,6 @@ const char *piece_function_name(PieceFunction function) {
         return "coda";
     }
     return "unknown";
-}
-
-bool piece_function_from_name(const char *name, PieceFunction *out) {
-    PieceFunction function;
-    if (name && strcmp(name, "transition") == 0) {
-        function = PIECE_FUNCTION_TRANSITION;
-    } else if (name && strcmp(name, "coda") == 0) {
-        function = PIECE_FUNCTION_CODA;
-    } else {
-        return false;
-    }
-    if (out) {
-        *out = function;
-    }
-    return true;
 }
 
 const char *piece_fill_name(PieceFillKind fill) {
@@ -151,25 +124,25 @@ static PieceResult check(const FormSpec *form, const PieceRequest *request) {
     int last_part = PIECE_PART_INTRO;
     for (size_t i = 0; i < request->section_count; i++) {
         const PieceSection *section = &request->sections[i];
-        if (section->id[0] == '\0' || strnlen(section->id, PIECE_SECTION_ID_MAX) == PIECE_SECTION_ID_MAX ||
-            section->part < PIECE_PART_INTRO || section->part > PIECE_PART_ENDING || (int)section->part < last_part ||
-            !form_spec_has_role(form, role_of(section->part)) || section->beats < 1 || !pickup_valid(request->meter, section->pickup, bar) ||
+        if (section->description.id[0] == '\0' || strnlen(section->description.id, PIECE_SECTION_ID_MAX) == PIECE_SECTION_ID_MAX ||
+            piece_section_part(section) < PIECE_PART_INTRO || piece_section_part(section) > PIECE_PART_ENDING || (int)piece_section_part(section) < last_part ||
+            !form_spec_has_role(form, role_of(piece_section_part(section))) || section->description.beats < 1 || !pickup_valid(request->meter, section->description.pickup, bar) ||
             section->fill < PIECE_FILL_EMPTY || section->fill > PIECE_FILL_PROGRESSION ||
-            section->function < PIECE_FUNCTION_NONE || section->function > PIECE_FUNCTION_CODA ||
+            piece_section_function(section) < PIECE_FUNCTION_NONE || piece_section_function(section) > PIECE_FUNCTION_CODA ||
             /* A transition leads on to the next section: not the turnaround (it leads back) or the ending. A coda closes. */
-            (section->function == PIECE_FUNCTION_TRANSITION &&
-             (section->part == PIECE_PART_TURNAROUND || section->part == PIECE_PART_ENDING)) ||
-            (section->function == PIECE_FUNCTION_CODA && section->part != PIECE_PART_ENDING)) {
+            (piece_section_function(section) == PIECE_FUNCTION_TRANSITION &&
+             (piece_section_part(section) == PIECE_PART_TURNAROUND || piece_section_part(section) == PIECE_PART_ENDING)) ||
+            (piece_section_function(section) == PIECE_FUNCTION_CODA && piece_section_part(section) != PIECE_PART_ENDING)) {
             return PIECE_ERR_BAD_REQUEST;
         }
         for (size_t other = 0; other < i; other++) {
-            if (strcmp(request->sections[other].id, section->id) == 0) {
+            if (strcmp(request->sections[other].description.id, section->description.id) == 0) {
                 return PIECE_ERR_BAD_REQUEST;
             }
         }
-        last_part = (int)section->part;
-        body = body || section->part == PIECE_PART_BODY;
-        beats += section->beats;
+        last_part = (int)piece_section_part(section);
+        body = body || piece_section_part(section) == PIECE_PART_BODY;
+        beats += section->description.beats;
     }
     size_t per_bar = (size_t)request->meter.beats_per_bar;
     if (!body || (beats + per_bar - 1) / per_bar > PIECE_STRUCTURE_MAX_BARS) {
@@ -199,13 +172,13 @@ void piece_default_cadences(const FormSpec *form, PieceRequest *request) {
     size_t count = request->section_count;
     for (size_t i = 0; i < count; i++) {
         PieceSection *section = &request->sections[i];
-        if (section->has_cadence) {
+        if (section->description.has_cadence) {
             continue;
         }
-        section->has_cadence = true;
-        section->cadence = form->default_cadence;
-        if (section->function == PIECE_FUNCTION_TRANSITION) {
-            section->cadence = CADENCE_TYPE_HALF;
+        section->description.has_cadence = true;
+        section->description.cadence = form->default_cadence;
+        if (piece_section_function(section) == PIECE_FUNCTION_TRANSITION) {
+            section->description.cadence = CADENCE_TYPE_HALF;
             continue;
         }
         /* The first rule whose roles hold the last section of one of them. */
@@ -214,13 +187,13 @@ void piece_default_cadences(const FormSpec *form, PieceRequest *request) {
             size_t last = count;
             for (size_t k = 0; k < count; k++) {
                 for (size_t role = 0; role < rule->role_count; role++) {
-                    if (role_of(request->sections[k].part) == rule->roles[role]) {
+                    if (role_of(piece_section_part(&request->sections[k])) == rule->roles[role]) {
                         last = k;
                     }
                 }
             }
             if (last == i) {
-                section->cadence = rule->cadence;
+                section->description.cadence = rule->cadence;
                 break;
             }
         }
@@ -232,7 +205,7 @@ bool piece_default_ending(const FormSpec *form, PieceRequest *request, size_t ca
         return false;
     }
     for (size_t i = 0; i < request->section_count; i++) {
-        if (request->sections[i].part == PIECE_PART_ENDING) {
+        if (piece_section_part(&request->sections[i]) == PIECE_PART_ENDING) {
             return true;
         }
     }
@@ -241,14 +214,14 @@ bool piece_default_ending(const FormSpec *form, PieceRequest *request, size_t ca
     }
     const FormDefaultEnding *ending = &form->default_ending;
     PieceSection *section = &request->sections[request->section_count++];
-    memset(section, 0, sizeof(*section));
-    snprintf(section->id, sizeof(section->id), "%s", ending->id);
-    snprintf(section->letter, sizeof(section->letter), "%s", ending->letter);
-    section->part = (PiecePart)(ending->role - SECTION_ROLE_INTRO);
-    section->beats = ending->bars * (size_t)request->meter.beats_per_bar;
-    section->pickup = (Rational){0, 1};
-    section->has_cadence = true;
-    section->cadence = ending->cadence;
+    piece_section_init(section);
+    snprintf(section->description.id, sizeof(section->description.id), "%s", ending->id);
+    snprintf(section->description.letter, sizeof(section->description.letter), "%s", ending->letter);
+    piece_section_set_part(section, (PiecePart)(ending->role - SECTION_ROLE_INTRO));
+    section->description.beats = ending->bars * (size_t)request->meter.beats_per_bar;
+    section->description.pickup = (Rational){0, 1};
+    section->description.has_cadence = true;
+    section->description.cadence = ending->cadence;
     section->fill = PIECE_FILL_EMPTY;
     return true;
 }
@@ -291,12 +264,12 @@ static bool theme_pairing(const PieceSection *section, SectionPairing *out) {
 static bool is_theme_section(const PieceRequest *request, const PieceSection *section, size_t start_beats,
                              SectionPairing *pairing) {
     size_t per_bar = (size_t)request->meter.beats_per_bar;
-    if (section->pickup.num != 0 || start_beats % per_bar != 0 || section->beats % per_bar != 0) {
+    if (section->description.pickup.num != 0 || start_beats % per_bar != 0 || section->description.beats % per_bar != 0) {
         return false;
     }
-    size_t bars = section->beats / per_bar;
+    size_t bars = section->description.beats / per_bar;
     return (bars == 4 || bars == 8) && theme_pairing(section, pairing) &&
-           grow_theme_buildable(&request->meter, bars, pairing, section->cadence, ANTECEDENT_CADENCE);
+           grow_theme_buildable(&request->meter, bars, pairing, section->description.cadence, ANTECEDENT_CADENCE);
 }
 
 /*
@@ -307,16 +280,16 @@ static bool is_theme_section(const PieceRequest *request, const PieceSection *se
 static bool section_construction(const PieceRequest *request, const PieceSection *section, size_t start_beats,
                                  const Motive *motive, SectionPairing *pairing, SectionConstruction *out) {
     size_t per_bar = (size_t)request->meter.beats_per_bar;
-    if (!section->has_construction || section->fill != PIECE_FILL_MOTIF || section->pickup.num != 0 ||
-        start_beats % per_bar != 0 || section->beats % per_bar != 0 || !theme_pairing(section, pairing)) {
+    if (!section->has_construction || section->fill != PIECE_FILL_MOTIF || section->description.pickup.num != 0 ||
+        start_beats % per_bar != 0 || section->description.beats % per_bar != 0 || !theme_pairing(section, pairing)) {
         return false;
     }
-    size_t bars = section->beats / per_bar;
+    size_t bars = section->description.beats / per_bar;
     if (section->construction_auto) {
-        return grow_construction_choose(motive, &request->meter, bars, pairing, section->cadence, out);
+        return grow_construction_choose(motive, &request->meter, bars, pairing, section->description.cadence, out);
     }
     *out = section->construction;
-    return grow_construction_buildable(&request->meter, bars, pairing, section->cadence, ANTECEDENT_CADENCE, out);
+    return grow_construction_buildable(&request->meter, bars, pairing, section->description.cadence, ANTECEDENT_CADENCE, out);
 }
 
 /* The key over the start of a span, when one key span holds it. */
@@ -389,7 +362,7 @@ static NodeId find_part_section(const PiecePlan *plan, const PieceSection *secti
         }
         const SectionDescription *described = plan_node_section(plan, id);
         if (described->has_role && described->role >= SECTION_ROLE_INTRO && described->role <= SECTION_ROLE_ENDING &&
-            (int)(described->role - SECTION_ROLE_INTRO) == (int)section->part && strcmp(described->id, section->id) == 0) {
+            (int)(described->role - SECTION_ROLE_INTRO) == (int)piece_section_part(section) && strcmp(described->id, section->description.id) == 0) {
             return id;
         }
     }
@@ -419,10 +392,10 @@ static bool is_held(const FormSpec *form, const PieceRequest *request, size_t in
     size_t loop_end = request->section_count;
     size_t first_body = request->section_count;
     for (size_t i = 0; i < request->section_count; i++) {
-        if (request->sections[i].part == first_loop_part(form) && first_body == request->section_count) {
+        if (piece_section_part(&request->sections[i]) == first_loop_part(form) && first_body == request->section_count) {
             first_body = i;
         }
-        if (in_loop(form, request->sections[i].part)) {
+        if (in_loop(form, piece_section_part(&request->sections[i]))) {
             loop_end = i;
         }
     }
@@ -431,7 +404,7 @@ static bool is_held(const FormSpec *form, const PieceRequest *request, size_t in
     }
     if (section->fill == PIECE_FILL_PROGRESSION) {
         size_t per_chord = section->cells_per_chord ? section->cells_per_chord : cells;
-        return section->numeral_count * per_chord * (size_t)request->meter.beats_per_bar < section->beats * cells;
+        return section->numeral_count * per_chord * (size_t)request->meter.beats_per_bar < section->description.beats * cells;
     }
     return true;
 }
@@ -452,8 +425,8 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
         return PIECE_ERR_BAD_REQUEST;
     }
     bool theme = constructed || (given == PLAN_NODE_NONE && is_theme_section(request, section, start_beats, &pairing));
-    const bool transition = section->function == PIECE_FUNCTION_TRANSITION;
-    const bool coda = section->function == PIECE_FUNCTION_CODA;
+    const bool transition = piece_section_function(section) == PIECE_FUNCTION_TRANSITION;
+    const bool coda = piece_section_function(section) == PIECE_FUNCTION_CODA;
     if (transition || coda) {
         /* A function is the section's own growing (R-508): empty or motif fill, and no given theme. */
         if (given != PLAN_NODE_NONE || (section->fill != PIECE_FILL_EMPTY && section->fill != PIECE_FILL_MOTIF) ||
@@ -462,14 +435,14 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
         }
     }
     if (transition && (!theme || (section->has_into && section->into != PLAN_ARCHETYPE_SENTENCE) ||
-                       section->cadence != CADENCE_TYPE_HALF)) {
+                       section->description.cadence != CADENCE_TYPE_HALF)) {
         return PIECE_ERR_BAD_REQUEST;
     }
     if (coda) {
         /* A coda is 8 whole bars from a barline, no pickup, closing on a perfect authentic cadence. */
         size_t per_bar = (size_t)request->meter.beats_per_bar;
-        if (section->pickup.num != 0 || start_beats % per_bar != 0 || section->beats != 8 * per_bar ||
-            section->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC) {
+        if (section->description.pickup.num != 0 || start_beats % per_bar != 0 || section->description.beats != 8 * per_bar ||
+            section->description.cadence != CADENCE_TYPE_PERFECT_AUTHENTIC) {
             return PIECE_ERR_BAD_REQUEST;
         }
     }
@@ -499,7 +472,7 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
     }
     if (given == PLAN_NODE_NONE) {
         description.has_cadence = true;
-        description.cadence = section->cadence;
+        description.cadence = section->description.cadence;
     }
     if (theme && pairing.beginning == SECTION_BEGINNING_ANTECEDENT) {
         description.has_first_cadence = true;
@@ -509,11 +482,11 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
         description.has_function = true;
         description.function.function = transition ? SECTION_FUNCTION_TRANSITION : SECTION_FUNCTION_CODA;
     }
-    snprintf(description.letter, sizeof(description.letter), "%s", section->letter);
+    snprintf(description.letter, sizeof(description.letter), "%s", section->description.letter);
     description.has_role = true;
-    description.role = (SectionRole)(SECTION_ROLE_INTRO + (int)section->part);
-    snprintf(description.id, sizeof(description.id), "%s", section->id);
-    PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
+    description.role = (SectionRole)(SECTION_ROLE_INTRO + (int)piece_section_part(section));
+    snprintf(description.id, sizeof(description.id), "%s", section->description.id);
+    PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->description.id, out));
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_node_set_section(plan, *out, &description));
     }
@@ -535,10 +508,10 @@ static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *requ
         constraint.params.voicing = request->voicing;
         result = piece_add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK && section->pickup.num != 0) {
+    if (result == PIECE_OK && section->description.pickup.num != 0) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_PICKUP;
-        constraint.params.pickup = section->pickup;
+        constraint.params.pickup = section->description.pickup;
         result = piece_add_constraint(plan, *out, &constraint);
     }
     return result;
@@ -588,9 +561,9 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     /* The motive fills the basic idea of every section laid out: its construction's, else 2 bars of an 8-bar theme, 1 of a 4-bar one or a free phrase. */
     size_t basic_bars = 2;
     for (size_t i = 0; i < copy.section_count; i++) {
-        has_ending = has_ending || copy.sections[i].part == PIECE_PART_ENDING;
-        if (loop_plan ? !is_dropped(form, copy.sections[i].part) : copy.sections[i].part != PIECE_PART_ENDING) {
-            size_t section_basic = copy.sections[i].beats == 8 * per_bar ? 2 : 1;
+        has_ending = has_ending || piece_section_part(&copy.sections[i]) == PIECE_PART_ENDING;
+        if (loop_plan ? !is_dropped(form, piece_section_part(&copy.sections[i])) : piece_section_part(&copy.sections[i]) != PIECE_PART_ENDING) {
+            size_t section_basic = copy.sections[i].description.beats == 8 * per_bar ? 2 : 1;
             if (copy.sections[i].has_construction) {
                 SectionPairing pairing;
                 SectionConstruction construction;
@@ -603,8 +576,8 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
             }
             basic_bars = section_basic < basic_bars ? section_basic : basic_bars;
             laid = i + 1;
-            beats += copy.sections[i].beats;
-            material_bars += MATERIAL_BARS_PER_SECTION * motive_bars + (copy.sections[i].beats + per_bar - 1) / per_bar;
+            beats += copy.sections[i].description.beats;
+            material_bars += MATERIAL_BARS_PER_SECTION * motive_bars + (copy.sections[i].description.beats + per_bar - 1) / per_bar;
         }
     }
     if (loop_plan && !has_ending) {
@@ -657,14 +630,14 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     Rational start = {0, 1};
     size_t start_beats = 0;
     for (size_t i = 0; result == PIECE_OK && i < laid; i++) {
-        if (loop_plan && is_dropped(form, copy.sections[i].part)) {
+        if (loop_plan && is_dropped(form, piece_section_part(&copy.sections[i]))) {
             continue;
         }
         NodeId id;
         /* The ending version takes the intro and the body as the loop realized them. */
-        bool from_loop = loop_plan && copy.sections[i].part != PIECE_PART_ENDING;
+        bool from_loop = loop_plan && piece_section_part(&copy.sections[i]) != PIECE_PART_ENDING;
         NodeId loop_section = from_loop ? find_part_section(loop_plan, &copy.sections[i]) : PLAN_NODE_NONE;
-        PlanSpan span = {start, beats_of(&request->meter, copy.sections[i].beats)};
+        PlanSpan span = {start, beats_of(&request->meter, copy.sections[i].description.beats)};
         result = add_request_section(plan, &copy, &copy.sections[i], start_beats, motive, form_id, span, &id);
         if (result == PIECE_OK && from_loop) {
             if (loop_section == PLAN_NODE_NONE || plan_give_section(plan, id, loop_plan, loop_section) != GIVEN_OK) {
@@ -692,7 +665,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
         if (result == PIECE_OK) {
             result = piece_result_of_plan(plan_result_of_rational(rational_add(start, span.length, &start)));
         }
-        start_beats += copy.sections[i].beats;
+        start_beats += copy.sections[i].description.beats;
     }
     /* The seam: the bar the loop leads into, open and empty until the seam stage copies the body's first bar into it. */
     if (result == PIECE_OK && !loop_plan) {

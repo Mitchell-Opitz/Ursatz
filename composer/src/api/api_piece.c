@@ -251,7 +251,7 @@ void api_piece_lanes_name(const PieceEdit *edit, char *out, size_t size) {
 /* A section's fill in the request, or PIECE_FILL_EMPTY for an id the request does not have. */
 static PieceFillKind request_fill(const PieceSpec *request, const char *id) {
     for (size_t s = 0; s < request->request.section_count; s++) {
-        if (strcmp(request->sections[s].id, id) == 0) {
+        if (strcmp(request->sections[s].description.id, id) == 0) {
             return request->sections[s].fill;
         }
     }
@@ -807,7 +807,7 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
         Row *row = &rows[count];
         memset(row, 0, sizeof(*row));
         for (size_t s = 0; s < request->request.section_count; s++) {
-            if (strcmp(request->sections[s].id, described->id) == 0) {
+            if (strcmp(request->sections[s].description.id, described->id) == 0) {
                 row->section = &request->sections[s];
                 row->source = request->source[s];
             }
@@ -963,11 +963,11 @@ static cJSON *function_json(const Row *row) {
 /* A row of a form whose sections the request gives: {id, part, function, letter, start, beats, cadence, heard, [in_scope], fill, source, [construction_text]}. */
 static cJSON *loop_row_json(const Row *row) {
     cJSON *entry = cJSON_CreateObject();
-    bool ok = entry && cJSON_AddStringToObject(entry, "id", row->section->id) &&
-              cJSON_AddStringToObject(entry, "part", piece_part_name(row->section->part)) &&
+    bool ok = entry && cJSON_AddStringToObject(entry, "id", row->section->description.id) &&
+              cJSON_AddStringToObject(entry, "part", piece_part_name(piece_section_part(row->section))) &&
               api_add(entry, "function", function_json(row)) &&
-              cJSON_AddStringToObject(entry, "letter", row->section->letter) && api_add(entry, "start", time_json(row->start)) &&
-              cJSON_AddNumberToObject(entry, "beats", (double)row->section->beats) &&
+              cJSON_AddStringToObject(entry, "letter", row->section->description.letter) && api_add(entry, "start", time_json(row->start)) &&
+              cJSON_AddNumberToObject(entry, "beats", (double)row->section->description.beats) &&
               api_add(entry, "cadence", string_or_null(row->has_cadence ? plan_cadence_name(row->cadence) : NULL)) &&
               api_add(entry, "heard", string_or_null(row->heard)) && (!row->kept || cJSON_AddBoolToObject(entry, "in_scope", false)) &&
               cJSON_AddStringToObject(entry, "fill", piece_fill_name(row->section->fill)) &&

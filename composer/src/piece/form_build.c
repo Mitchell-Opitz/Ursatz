@@ -412,8 +412,8 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
         basic = 2;
         for (size_t i = 0; i < request->section_count; i++) {
             const PieceSection *section = &request->sections[i];
-            size_t bars = section->has_construction ? section->beats / per_bar : (section->beats == 8 * per_bar ? 8 : 4);
-            size_t idea = !section->has_construction ? (section->beats == 8 * per_bar ? 2 : 1)
+            size_t bars = section->has_construction ? section->description.beats / per_bar : (section->description.beats == 8 * per_bar ? 8 : 4);
+            size_t idea = !section->has_construction ? (section->description.beats == 8 * per_bar ? 2 : 1)
                           : section->construction_auto ? (bars >= 6 ? 2 : 1)
                                                        : section->construction.idea_bars[GROW_IDEA_BASIC];
             shortest = bars < shortest ? bars : shortest;

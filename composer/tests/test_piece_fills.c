@@ -92,11 +92,11 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
                                  PieceFillKind fill) {
     PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
-    snprintf(section->id, sizeof(section->id), "%s", id);
-    snprintf(section->letter, sizeof(section->letter), "%s", letter);
-    section->part = part;
-    section->beats = beats;
-    section->pickup = (Rational){0, 1};
+    snprintf(section->description.id, sizeof(section->description.id), "%s", id);
+    snprintf(section->description.letter, sizeof(section->description.letter), "%s", letter);
+    piece_section_set_part(section, part);
+    section->description.beats = beats;
+    section->description.pickup = (Rational){0, 1};
     section->fill = fill;
     return section;
 }
@@ -287,7 +287,7 @@ static void test_refused(void) {
     assert(plan_node_lane_spans(plan, sections[0], NULL, 0) == 0);
     plan_destroy(plan);
     theme_structure(&fixture, theme);
-    fixture.sections[0].beats = 16;
+    fixture.sections[0].description.beats = 16;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST);
 
     /* A plan whose section is not realized yet. */
@@ -345,8 +345,8 @@ static void test_progression(void) {
         body->cells_per_chord = 2;
         /* The progression ends on V, so the section ends in a half cadence: the default for a section that is not the
            loop's last would be an imperfect authentic cadence, which no melody can make over a final V. */
-        body->has_cadence = true;
-        body->cadence = CADENCE_TYPE_HALF;
+        body->description.has_cadence = true;
+        body->description.cadence = CADENCE_TYPE_HALF;
         add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 16, PIECE_FILL_EMPTY);
         assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
         NodeId sections[4];

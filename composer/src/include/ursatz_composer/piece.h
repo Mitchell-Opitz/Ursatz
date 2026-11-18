@@ -3,7 +3,9 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
+#include <plan/section.h>
 #include <theory/knowledge/knowledge_snapshot.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_spec.h>
@@ -45,16 +47,12 @@ typedef enum { PIECE_PART_INTRO, PIECE_PART_BODY, PIECE_PART_TURNAROUND, PIECE_P
 
 /* "intro", "body", "turnaround", "ending"; "unknown" for a value that is none of them. */
 const char *piece_part_name(PiecePart part);
-/* False for a name that is none of these. */
-bool piece_part_from_name(const char *name, PiecePart *out);
 
 /* The part of a larger form a section is, when it is one (R-508): a transition (any body section but the ending) or a coda (the ending's). */
 typedef enum { PIECE_FUNCTION_NONE, PIECE_FUNCTION_TRANSITION, PIECE_FUNCTION_CODA } PieceFunction;
 
 /* "none", "transition", "coda"; "unknown" for a value that is none of them. */
 const char *piece_function_name(PieceFunction function);
-/* False for a name that is none of "transition" and "coda"; "none" is not a name a request gives. */
-bool piece_function_from_name(const char *name, PieceFunction *out);
 
 /*
  * What fills a section (R-170): nothing of its own (empty, made from the piece's basic motive), a motive (a theme
@@ -71,15 +69,14 @@ bool piece_fill_from_name(const char *name, PieceFillKind *out);
 #define PIECE_STRUCTURE_MAX_SECTIONS 32
 #define PIECE_STRUCTURE_MAX_BARS 512
 
+/*
+ * A game loop section as the request gives it: its description (the section description of library/plan, R-605: `id`, `letter`, a
+ * `role` that is a part (intro, body, turnaround or ending), a `function` of a transition or a coda (R-508), `beats` (at least 1), the
+ * `pickup` before it (0 for none) and its `cadence`, which `has_cadence` false leaves to piece_default_cadences), then what fills it.
+ * piece_section_init zeroes it; the accessors read and set the part and the function in the description's terms.
+ */
 typedef struct {
-    char id[PIECE_SECTION_ID_MAX];
-    char letter[PLAN_SECTION_LETTER_MAX];
-    PiecePart part;
-    PieceFunction function;      /* none by default; a transition or a coda (R-508) */
-    size_t beats;                /* the length, in beats of the meter; at least 1 */
-    Rational pickup;             /* the anacrusis before the section; 0 for none */
-    bool has_cadence;            /* false: piece_default_cadences decides */
-    CadenceType cadence;
+    SectionDescription description;
     PieceFillKind fill;
     const Motive *motive;        /* motif: the section's own motive, else the piece's basic motive */
     bool has_into;               /* motif: a theme section's archetype */
@@ -95,6 +92,38 @@ typedef struct {
     size_t numeral_count;
     size_t cells_per_chord;      /* progression: harmony cells each chord lasts; 0 for a bar */
 } PieceSection;
+
+/* A section with nothing set: an empty fill, no pickup. */
+static inline void piece_section_init(PieceSection *section) {
+    memset(section, 0, sizeof(*section));
+    section_description_init(&section->description);
+    section->description.pickup = (Rational){0, 1};
+}
+
+/* The part of a section: the description's role, which is one of intro, body, turnaround and ending. */
+static inline PiecePart piece_section_part(const PieceSection *section) {
+    return (PiecePart)(section->description.role - SECTION_ROLE_INTRO);
+}
+
+static inline void piece_section_set_part(PieceSection *section, PiecePart part) {
+    section->description.has_role = true;
+    section->description.role = (SectionRole)(SECTION_ROLE_INTRO + (int)part);
+}
+
+/* The function of a section: a transition or a coda, else none. */
+static inline PieceFunction piece_section_function(const PieceSection *section) {
+    if (!section->description.has_function) {
+        return PIECE_FUNCTION_NONE;
+    }
+    return section->description.function.function == SECTION_FUNCTION_TRANSITION ? PIECE_FUNCTION_TRANSITION
+           : section->description.function.function == SECTION_FUNCTION_CODA     ? PIECE_FUNCTION_CODA
+                                                                                  : PIECE_FUNCTION_NONE;
+}
+
+static inline void piece_section_set_function(PieceSection *section, PieceFunction function) {
+    section->description.has_function = function != PIECE_FUNCTION_NONE;
+    section->description.function.function = function == PIECE_FUNCTION_CODA ? SECTION_FUNCTION_CODA : SECTION_FUNCTION_TRANSITION;
+}
 
 typedef struct {
     const char *form;      /* the name of a built-in form: "binary", "rounded-binary", ... (form_spec.h) */

@@ -53,11 +53,11 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
                                  PieceFillKind fill) {
     PieceSection *section = &fixture->sections[fixture->request.section_count++];
     memset(section, 0, sizeof(*section));
-    snprintf(section->id, sizeof(section->id), "%s", id);
-    snprintf(section->letter, sizeof(section->letter), "%s", letter);
-    section->part = part;
-    section->beats = beats;
-    section->pickup = (Rational){0, 1};
+    snprintf(section->description.id, sizeof(section->description.id), "%s", id);
+    snprintf(section->description.letter, sizeof(section->description.letter), "%s", letter);
+    piece_section_set_part(section, part);
+    section->description.beats = beats;
+    section->description.pickup = (Rational){0, 1};
     section->fill = fill;
     return section;
 }
@@ -142,22 +142,22 @@ static void test_checks(void) {
     /* Pickups: a quarter is fine, a bar is not, a triplet eighth (1/12) is on the 4/4 grid, 1/64 is not. */
     fixture_init(&fixture);
     PieceSection *section = add_section(&fixture, "a", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
-    assert(rational_make(1, 4, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 4, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_OK);
-    assert(rational_make(1, 1, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 1, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
-    assert(rational_make(1, 12, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 12, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_OK);
-    assert(rational_make(1, 64, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 64, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
     /* every multiple of 1/32 is still on the grid; a triplet of the beat is too; 1/24 and 1/48 are on no level */
-    assert(rational_make(3, 32, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(3, 32, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_OK);
-    assert(rational_make(1, 6, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 6, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_OK);
-    assert(rational_make(1, 24, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 24, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
-    assert(rational_make(1, 48, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 48, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
     /* in 6/8 the division is an eighth: a dotted eighth is on the grid, a triplet eighth (1/12) is not */
@@ -165,11 +165,11 @@ static void test_checks(void) {
     fixture.request.meter.beats_per_bar = 6;
     fixture.request.meter.beat_unit = 8;
     section = add_section(&fixture, "a", "A", PIECE_PART_BODY, 12, PIECE_FILL_EMPTY);
-    assert(rational_make(3, 16, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(3, 16, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_OK);
-    assert(rational_make(1, 32, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 32, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_OK);
-    assert(rational_make(1, 12, &section->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 12, &section->description.pickup) == RATIONAL_OK);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
 
     /* Too many sections, and too many bars. */
@@ -189,22 +189,22 @@ static void test_default_cadences(void) {
     Fixture fixture;
     standard_structure(&fixture);
     PieceSection *explicit_cadence = &fixture.sections[2];
-    explicit_cadence->has_cadence = true;
-    explicit_cadence->cadence = CADENCE_TYPE_DECEPTIVE;
+    explicit_cadence->description.has_cadence = true;
+    explicit_cadence->description.cadence = CADENCE_TYPE_DECEPTIVE;
     assert(default_ending(&fixture.request, PIECE_STRUCTURE_MAX_SECTIONS + 2));
     assert(fixture.request.section_count == 5);
     default_cadences(&fixture.request);
     /* The intro leads into the body (HC), the middle of the body is open (IAC), the loop leads back (HC). */
-    assert(fixture.sections[0].cadence == CADENCE_TYPE_HALF);
-    assert(fixture.sections[1].cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
-    assert(fixture.sections[2].cadence == CADENCE_TYPE_DECEPTIVE); /* a cadence asked for is kept */
-    assert(fixture.sections[3].cadence == CADENCE_TYPE_HALF);
+    assert(fixture.sections[0].description.cadence == CADENCE_TYPE_HALF);
+    assert(fixture.sections[1].description.cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
+    assert(fixture.sections[2].description.cadence == CADENCE_TYPE_DECEPTIVE); /* a cadence asked for is kept */
+    assert(fixture.sections[3].description.cadence == CADENCE_TYPE_HALF);
     /* The ending closes. */
-    assert(fixture.sections[4].part == PIECE_PART_ENDING);
-    assert(fixture.sections[4].cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
-    assert(fixture.sections[4].beats == 8);
-    assert(strcmp(fixture.sections[4].id, "end") == 0);
-    assert(strcmp(fixture.sections[4].letter, "E") == 0);
+    assert(piece_section_part(&fixture.sections[4]) == PIECE_PART_ENDING);
+    assert(fixture.sections[4].description.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    assert(fixture.sections[4].description.beats == 8);
+    assert(strcmp(fixture.sections[4].description.id, "end") == 0);
+    assert(strcmp(fixture.sections[4].description.letter, "E") == 0);
     /* A structure with an ending is left alone. */
     assert(default_ending(&fixture.request, PIECE_STRUCTURE_MAX_SECTIONS + 2));
     assert(fixture.request.section_count == 5);
@@ -214,7 +214,7 @@ static void test_plan(void) {
     Fixture fixture;
     standard_structure(&fixture);
     PieceSection *pickup = &fixture.sections[2];
-    assert(rational_make(1, 4, &pickup->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 4, &pickup->description.pickup) == RATIONAL_OK);
     PiecePlan *plan;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
     NodeId sections[8];
@@ -367,7 +367,7 @@ static void test_pickup(void) {
     fixture_init(&fixture);
     add_section(&fixture, "a", "A", PIECE_PART_BODY, 8, PIECE_FILL_MOTIF);
     PieceSection *pickup = add_section(&fixture, "b", "B", PIECE_PART_BODY, 12, PIECE_FILL_EMPTY);
-    assert(rational_make(1, 4, &pickup->pickup) == RATIONAL_OK);
+    assert(rational_make(1, 4, &pickup->description.pickup) == RATIONAL_OK);
     add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 6, PIECE_FILL_EMPTY);
     PiecePlan *plan;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_OK);
@@ -524,12 +524,12 @@ static void function_structure(Fixture *fixture, FunctionRow *row) {
     add_section(fixture, "intro", "I", PIECE_PART_INTRO, 4 * bar, PIECE_FILL_EMPTY);
     add_section(fixture, "a", "A", PIECE_PART_BODY, 8 * bar, PIECE_FILL_MOTIF);
     PieceSection *t = add_section(fixture, "t", "T", PIECE_PART_BODY, 8 * bar, PIECE_FILL_MOTIF);
-    t->function = PIECE_FUNCTION_TRANSITION;
+    piece_section_set_function(t, PIECE_FUNCTION_TRANSITION);
     PieceSection *b = add_section(fixture, "b", "B", PIECE_PART_BODY, 8 * bar, PIECE_FILL_MOTIF);
     b->motive = &row->motive;
     add_section(fixture, "turn", "R", PIECE_PART_TURNAROUND, 4 * bar, PIECE_FILL_EMPTY);
     PieceSection *k = add_section(fixture, "k", "K", PIECE_PART_ENDING, 8 * bar, PIECE_FILL_MOTIF);
-    k->function = PIECE_FUNCTION_CODA;
+    piece_section_set_function(k, PIECE_FUNCTION_CODA);
 }
 
 /* The motive reference of the motive node an idea's melody span names, or NULL (R-512: the plan, not the notes). */
@@ -605,30 +605,27 @@ static void function_refusals(const FunctionRow *row, const PiecePlan *loop_plan
 
     /* A transition on the turnaround or the ending, a coda on any part but the ending. */
     function_structure(&fixture, &copy);
-    fixture.sections[TURN].function = PIECE_FUNCTION_TRANSITION;
+    piece_section_set_function(&fixture.sections[TURN], PIECE_FUNCTION_TRANSITION);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
     function_structure(&fixture, &copy);
-    fixture.sections[K].function = PIECE_FUNCTION_TRANSITION;
+    piece_section_set_function(&fixture.sections[K], PIECE_FUNCTION_TRANSITION);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
     function_structure(&fixture, &copy);
-    fixture.sections[B].function = PIECE_FUNCTION_CODA;
+    piece_section_set_function(&fixture.sections[B], PIECE_FUNCTION_CODA);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
     function_structure(&fixture, &copy);
-    fixture.sections[TURN].function = PIECE_FUNCTION_CODA;
+    piece_section_set_function(&fixture.sections[TURN], PIECE_FUNCTION_CODA);
     assert(piece_request_check(&fixture.request) == PIECE_ERR_BAD_REQUEST);
     function_structure(&fixture, &copy);
     assert(piece_request_check(&fixture.request) == PIECE_OK);
     assert(strcmp(piece_function_name(PIECE_FUNCTION_TRANSITION), "transition") == 0 &&
            strcmp(piece_function_name(PIECE_FUNCTION_CODA), "coda") == 0);
-    PieceFunction named;
-    assert(piece_function_from_name("coda", &named) && named == PIECE_FUNCTION_CODA);
-    assert(!piece_function_from_name("none", &named) && !piece_function_from_name("retransition", &named));
 
     /* A transition that is no sentence-or-motif theme section with a half cadence: a perfect cadence, a period, a theme fill, a
        construction, a length that is no theme's. */
     function_structure(&fixture, &copy);
-    fixture.sections[T].has_cadence = true;
-    fixture.sections[T].cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    fixture.sections[T].description.has_cadence = true;
+    fixture.sections[T].description.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
     function_structure(&fixture, &copy);
     fixture.sections[T].has_into = true;
@@ -642,20 +639,20 @@ static void function_refusals(const FunctionRow *row, const PiecePlan *loop_plan
     fixture.sections[T].construction_auto = true;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
     function_structure(&fixture, &copy);
-    fixture.sections[T].beats = 6 * bar + 1;
+    fixture.sections[T].description.beats = 6 * bar + 1;
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST && !plan);
 
     /* A coda that is not 8 whole bars with no pickup, a perfect authentic cadence and an empty or motif fill. */
     PiecePlan *ending = NULL;
     function_structure(&fixture, &copy);
-    fixture.sections[K].beats = 4 * bar;
+    fixture.sections[K].description.beats = 4 * bar;
     assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_ERR_BAD_REQUEST && !ending);
     function_structure(&fixture, &copy);
-    assert(rational_make(1, 4, &fixture.sections[K].pickup) == RATIONAL_OK);
+    assert(rational_make(1, 4, &fixture.sections[K].description.pickup) == RATIONAL_OK);
     assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_ERR_BAD_REQUEST && !ending);
     function_structure(&fixture, &copy);
-    fixture.sections[K].has_cadence = true;
-    fixture.sections[K].cadence = CADENCE_TYPE_HALF;
+    fixture.sections[K].description.has_cadence = true;
+    fixture.sections[K].description.cadence = CADENCE_TYPE_HALF;
     assert(piece_build_ending(loop_plan, &fixture.request, &ending) == PIECE_ERR_BAD_REQUEST && !ending);
     function_structure(&fixture, &copy);
     fixture.sections[K].fill = PIECE_FILL_PROGRESSION;
