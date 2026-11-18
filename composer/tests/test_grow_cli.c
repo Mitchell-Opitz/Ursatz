@@ -357,7 +357,7 @@ static size_t occurrences(const char *path, const char *needle) {
     return found;
 }
 
-/* An accompaniment is written in the files as a part of its own: a MIDI track and a MusicXML part more. */
+/* An accompaniment is a line of the piano part (API 2.1, R-599): the files keep one MIDI part track and one MusicXML part. */
 static void test_accompaniment(void) {
     remove("grow_cli_plain.mid");
     remove("grow_cli_plain.xml");
@@ -370,9 +370,9 @@ static void test_accompaniment(void) {
     assert(strstr(out, "accompaniment alberti") != NULL);
     free(out);
 
-    /* The melody and the bass, and now voice 1: three parts, after the track of the tempo and the meter. */
-    assert(occurrences("grow_cli_plain.mid", "MTrk") == 3 && occurrences("grow_cli_alberti.mid", "MTrk") == 4);
-    assert(occurrences("grow_cli_plain.xml", "<part id=") == 2 && occurrences("grow_cli_alberti.xml", "<part id=") == 3);
+    /* The melody, the bass and, with the accompaniment, voice 1 are lines of one piano part: the conductor's track and the piano's. */
+    assert(occurrences("grow_cli_plain.mid", "MTrk") == 2 && occurrences("grow_cli_alberti.mid", "MTrk") == 2);
+    assert(occurrences("grow_cli_plain.xml", "<part id=") == 1 && occurrences("grow_cli_alberti.xml", "<part id=") == 1);
 
     PiecePlan *plan = NULL;
     PlanJsonError error;
