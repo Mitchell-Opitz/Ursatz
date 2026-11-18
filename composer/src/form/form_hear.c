@@ -7,7 +7,7 @@
 #include <theory/form/phrase_level_form.h>
 #include <theory/tonality/common_practice_materials.h>
 #include <model/time/time_span.h>
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <ursatz_analyzer/result_chain.h>
 #include <chain/analysis_chain.h>
 
@@ -87,7 +87,7 @@ static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan range) 
 /* The cadences the Analyzer heard over the span, with where each arrives (the start of the chord it arrives on). */
 static FormHearResult copy_cadences(const AnalyzerResult *result, FormHeard *out) {
     const HarmonyCadences *cadences = analysis_chain_cadences(analyzer_result_chain(result));
-    const AnalysisReport *report = analyzer_result_report(result);
+    const ChainResult *report = analyzer_result_report(result);
     if (!cadences || cadences->count == 0) {
         return FORM_HEAR_OK;
     }

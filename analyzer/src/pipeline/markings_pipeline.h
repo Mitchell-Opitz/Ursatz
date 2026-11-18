@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 /*
@@ -17,6 +17,6 @@
  */
 
 /* Fills the report's tempo markings and dynamics. Returns false only on allocation failure. */
-bool markings_stage_collect(const ImportedScore *notes, AnalysisReport *report);
+bool markings_stage_collect(const ImportedScore *notes, ChainResult *report);
 
 #endif

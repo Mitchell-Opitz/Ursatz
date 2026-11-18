@@ -12,7 +12,7 @@
  * Labels are owned strings, not fixed 32-byte buffers: a report whose
  * first entry carries labels longer than 31 characters (swapped in
  * through the report API) keeps them intact through the analysis
- * document, and analysis_report_destroy frees them.
+ * document, and chain_result_destroy frees them.
  */
 
 static char *copy_string(const char *s) {
@@ -32,7 +32,7 @@ int main(void) {
     ImportedScore notes;
     assert(imported_score_import_file(URSATZ_FIXTURES_DIR "/framework-v1-corpus/Mozart 545.mid", IMPORTED_FORMAT_MIDI, &notes, NULL) ==
            IMPORTED_SCORE_OK);
-    AnalysisReport report;
+    ChainResult report;
     assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     assert(report.key_region_count > 0);
     assert(report.entry_count > 0);
@@ -52,7 +52,7 @@ int main(void) {
     assert(strstr(json, chord_label));
     free(json);
     analysis_document_destroy(document);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     assert(report.entries == NULL);
     assert(report.entry_count == 0);
     imported_score_destroy(&notes);

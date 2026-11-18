@@ -46,7 +46,7 @@ static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
 }
 
 /* The chord entries each merged segment covers: those starting inside its span. entries are in time order. */
-static bool entry_ranges(const AnalysisReport *report, SchemaBuild *build) {
+static bool entry_ranges(const ChainResult *report, SchemaBuild *build) {
     const GalantSegmentList *list = &build->galant.list;
     build->first_entry = calloc(list->count > 0 ? list->count : 1, sizeof(size_t));
     build->last_entry = calloc(list->count > 0 ? list->count : 1, sizeof(size_t));
@@ -197,7 +197,7 @@ static bool copy_sequence(const SchemaBuild *build, const ScaleSequenceMatch *ma
     return true;
 }
 
-bool schema_stage_collect(const ImportedScore *notes, const AnalysisChain *library, AnalysisReport *report) {
+bool schema_stage_collect(const ImportedScore *notes, const AnalysisChain *library, ChainResult *report) {
     size_t count = analysis_chain_segment_count(library);
     const GalantSchemaMatches *schemas = analysis_chain_schemas(library);
     const ScaleSequenceMatches *sequences = analysis_chain_sequences(library);

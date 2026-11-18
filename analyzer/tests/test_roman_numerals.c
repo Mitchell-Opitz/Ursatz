@@ -129,7 +129,7 @@ static void write_piece(const char *path, const Measure *measures, size_t measur
 
 typedef struct {
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     cJSON *document;
 } Analyzed;
 
@@ -150,7 +150,7 @@ static void analyze(const char *path, Analyzed *out) {
 
 static void release(Analyzed *analyzed) {
     cJSON_Delete(analyzed->document);
-    analysis_report_destroy(&analyzed->report);
+    chain_result_destroy(&analyzed->report);
     imported_score_destroy(&analyzed->notes);
 }
 

@@ -70,7 +70,7 @@ static bool text_group(const char *text, TempoGroup *group) {
     return true;
 }
 
-static bool collect_tempo(const ImportedScore *notes, const char *framework, AnalysisReport *report) {
+static bool collect_tempo(const ImportedScore *notes, const char *framework, ChainResult *report) {
     const ImportedSource *source = &notes->source;
     if (source->tempo_marking_count == 0) {
         return true;
@@ -119,7 +119,7 @@ static bool collect_tempo(const ImportedScore *notes, const char *framework, Ana
     return true;
 }
 
-static bool collect_dynamics(const ImportedSource *source, const char *framework, AnalysisReport *report) {
+static bool collect_dynamics(const ImportedSource *source, const char *framework, ChainResult *report) {
     if (source->dynamics_count == 0) {
         return true;
     }
@@ -162,7 +162,7 @@ static bool collect_dynamics(const ImportedSource *source, const char *framework
     return true;
 }
 
-bool markings_stage_collect(const ImportedScore *notes, AnalysisReport *report) {
+bool markings_stage_collect(const ImportedScore *notes, ChainResult *report) {
     if (notes->source.format != IMPORTED_FORMAT_MUSICXML) {
         return true;
     }

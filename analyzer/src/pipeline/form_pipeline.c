@@ -131,7 +131,7 @@ static size_t *note_ids_of(const FormStage *stage, int first, int end, size_t *c
     return ids;
 }
 
-static bool collect_ideas(const FormStage *stage, AnalysisReport *report) {
+static bool collect_ideas(const FormStage *stage, ChainResult *report) {
     size_t count = stage->segmentation.idea_count;
     if (count == 0) {
         return true;
@@ -177,7 +177,7 @@ static bool collect_ideas(const FormStage *stage, AnalysisReport *report) {
     return true;
 }
 
-static bool collect_subphrases(const FormStage *stage, AnalysisReport *report) {
+static bool collect_subphrases(const FormStage *stage, ChainResult *report) {
     size_t count = stage->segmentation.subphrase_count;
     if (count == 0) {
         return true;
@@ -254,7 +254,7 @@ static void fill_part(AnalysisThemePart *part, const char *name, int first, int 
 }
 
 /* A compound period's halves are the two sentences the library marks part_of_compound over its two phrases. */
-static void find_compound_halves(const FormStage *stage, AnalysisReport *report, size_t compound) {
+static void find_compound_halves(const FormStage *stage, ChainResult *report, size_t compound) {
     AnalysisTheme *theme = &report->themes[compound];
     size_t found = 0;
     for (size_t j = 0; j < report->theme_count && found < 2; j++) {
@@ -268,7 +268,7 @@ static void find_compound_halves(const FormStage *stage, AnalysisReport *report,
     theme->has_halves = found == 2;
 }
 
-static bool collect_themes(const FormStage *stage, AnalysisReport *report) {
+static bool collect_themes(const FormStage *stage, ChainResult *report) {
     size_t count = stage->themes.count;
     if (count == 0) {
         return true;
@@ -353,7 +353,7 @@ static void fill_techniques(AnalysisExpansion *expansion, int mask) {
     }
 }
 
-static bool collect_expansions(const FormStage *stage, AnalysisReport *report) {
+static bool collect_expansions(const FormStage *stage, ChainResult *report) {
     size_t count = stage->expansions.count;
     if (count == 0) {
         return true;
@@ -407,7 +407,7 @@ static bool collect_expansions(const FormStage *stage, AnalysisReport *report) {
     return true;
 }
 
-bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
+bool form_stage_collect(const FormStage *stage, ChainResult *report) {
     size_t count = stage->phrases.count;
     if (count == 0) {
         return true;
@@ -455,7 +455,7 @@ bool form_stage_collect(const FormStage *stage, AnalysisReport *report) {
            collect_expansions(stage, report);
 }
 
-bool form_stage_collect_repeats(const FormStage *stage, AnalysisReport *report) {
+bool form_stage_collect_repeats(const FormStage *stage, ChainResult *report) {
     if (!stage->have_input || !stage->repeats || stage->repeats->count == 0) {
         return true;
     }

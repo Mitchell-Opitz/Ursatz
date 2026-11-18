@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 
 /* The shortest and longest progression the analyzer looks for, in chords. */
 #define PROGRESSION_MIN_LENGTH 2
@@ -20,7 +20,7 @@
  * Fills report->progressions from report->entries, replacing nothing (the report must have none yet). Returns false
  * only on allocation failure.
  */
-bool progression_stage_collect(AnalysisReport *report);
+bool progression_stage_collect(ChainResult *report);
 
 /* The label of a pattern as Ursatz's corpus statistics print one: "I > IV > V > I". Owned; NULL on allocation failure. */
 char *progression_label(const AnalysisProgression *progression);

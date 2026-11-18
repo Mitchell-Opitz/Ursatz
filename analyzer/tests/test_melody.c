@@ -68,7 +68,7 @@ static bool known_status(const char *status) {
 
 /* --- the structure of the report and the document --- */
 
-static void check_melody(const ImportedScore *notes, const AnalysisReport *report, const cJSON *document) {
+static void check_melody(const ImportedScore *notes, const ChainResult *report, const cJSON *document) {
     const cJSON *melody = test_json_member(document, "melody");
     const cJSON *phrases = test_json_member(document, "phrases");
     CHECK(report->melody_count > 0);
@@ -278,7 +278,7 @@ static double tick_time(int measure, long offset) {
 
 /* The climaxes and ranges: among the soprano notes of the report that start in the annotated span, the highest pitch, the
    first note at it, how many are at it, and the lowest. Counts the climaxes right and the ranges right. */
-static void check_spans(const ImportedScore *notes, const AnalysisReport *report, const Annotation *annotation,
+static void check_spans(const ImportedScore *notes, const ChainResult *report, const Annotation *annotation,
                         size_t *climaxes_right, size_t *ranges_right) {
     *climaxes_right = 0;
     *ranges_right = 0;
@@ -321,7 +321,7 @@ static void check_spans(const ImportedScore *notes, const AnalysisReport *report
 
 /* The leaps: the report has a leap arriving on the annotated note, between the annotated pitches, with the annotated
    status. Returns how many are right. */
-static size_t check_leaps(const ImportedScore *notes, const AnalysisReport *report, const Annotation *annotation) {
+static size_t check_leaps(const ImportedScore *notes, const ChainResult *report, const Annotation *annotation) {
     size_t right = 0;
     for (size_t i = 0; i < annotation->leap_count; i++) {
         const AnnotatedLeap *want = &annotation->leaps[i];
@@ -347,7 +347,7 @@ static size_t check_leaps(const ImportedScore *notes, const AnalysisReport *repo
 }
 
 /* The annotation against the report: the floors in the default run, the target when target is set. */
-static void check_annotation(const ImportedScore *notes, const AnalysisReport *report, const char *annotation_path,
+static void check_annotation(const ImportedScore *notes, const ChainResult *report, const char *annotation_path,
                              bool target) {
     Annotation annotation;
     CHECK(load_annotation(annotation_path, &annotation));
@@ -375,7 +375,7 @@ int main(int argc, char **argv) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURES_DIR);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
@@ -393,7 +393,7 @@ int main(int argc, char **argv) {
         check_annotation(&notes, &report, path, target);
     }
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
     return test_finish("test_melody");
 }

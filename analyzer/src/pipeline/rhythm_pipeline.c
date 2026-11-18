@@ -159,13 +159,13 @@ static size_t note_of_id(const RhythmBuild *build, const char *id) {
 
 /* A chord change at the start of every chord segment whose harmony differs from the segment before it (the first
    segment is not one: nothing changes into it). */
-static bool build_chord_changes(RhythmBuild *build, const AnalysisReport *report) {
+static bool build_chord_changes(RhythmBuild *build, const ChainResult *report) {
     bool *change = NULL;
     if (!harmonic_rhythm_change_flags(report->entries, report->entry_count, &change)) {
         return false;
     }
     for (size_t i = 1; i < report->entry_count; i++) {
-        const AnalysisReportEntry *entry = &report->entries[i];
+        const ChainEntry *entry = &report->entries[i];
         if (!change[i]) {
             continue;
         }
@@ -254,7 +254,7 @@ static size_t *phrase_notes(const RhythmBuild *build, const ImportedScore *notes
     return ids;
 }
 
-static bool collect_densities(const RhythmBuild *build, const ImportedScore *notes, AnalysisReport *report) {
+static bool collect_densities(const RhythmBuild *build, const ImportedScore *notes, ChainResult *report) {
     StandardMeterDensities densities = {NULL, 0};
     if (standard_meter_find_densities(&build->input, NULL, &densities) != STANDARD_METER_ANALYSIS_OK) {
         return false;
@@ -308,7 +308,7 @@ static const char *level_name(int level) {
     return level >= 0 && level < 5 ? NAMES[level] : "finer";
 }
 
-static bool collect_syncopations(const RhythmBuild *build, AnalysisReport *report) {
+static bool collect_syncopations(const RhythmBuild *build, ChainResult *report) {
     StandardMeterSyncopations found = {NULL, 0};
     if (standard_meter_find_syncopations(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
         return false;
@@ -352,7 +352,7 @@ static void free_hemiolas(AnalysisHemiola *items, size_t count) {
     free(items);
 }
 
-static bool collect_hemiolas(const RhythmBuild *build, AnalysisReport *report) {
+static bool collect_hemiolas(const RhythmBuild *build, ChainResult *report) {
     StandardMeterHemiolas found = {NULL, 0};
     if (standard_meter_find_hemiolas(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
         return false;
@@ -421,7 +421,7 @@ static void free_hypermeters(AnalysisHypermeter *items, size_t count) {
     free(items);
 }
 
-static bool collect_hypermeter(const RhythmBuild *build, const ImportedScore *notes, AnalysisReport *report) {
+static bool collect_hypermeter(const RhythmBuild *build, const ImportedScore *notes, ChainResult *report) {
     StandardMeterHypermeter found;
     memset(&found, 0, sizeof(found));
     if (standard_meter_find_hypermeter(&build->input, NULL, &found) != STANDARD_METER_ANALYSIS_OK) {
@@ -488,7 +488,7 @@ static const char *tuplet_level_name(TupletLevel level) {
    library orders the notes of equal onset itself and does not need the set sorted; import order keeps the order of
    the notes of a tuplet that the report has always had. It reads all notes as one stream: a tuplet is a figure of the
    music, not of a line. */
-static bool collect_tuplets(const RhythmBuild *build, const ImportedScore *notes, AnalysisReport *report) {
+static bool collect_tuplets(const RhythmBuild *build, const ImportedScore *notes, ChainResult *report) {
     (void)notes;
     size_t count = build->input.note_count;
     const AnalysisNote *set_notes = build->input.notes;
@@ -542,7 +542,7 @@ static bool collect_tuplets(const RhythmBuild *build, const ImportedScore *notes
 }
 
 bool rhythm_stage_collect(const ImportedScore *notes, const OuterVoiceLines *lines, const FormStage *form,
-                          AnalysisReport *report) {
+                          ChainResult *report) {
     const MeterMap *map = notes->meter.meter_map;
     if (!map || notes->count == 0 || !form->have_input || form->phrases.count == 0 ||
         form->phrases.count != report->phrase_count || lines->count == 0) {

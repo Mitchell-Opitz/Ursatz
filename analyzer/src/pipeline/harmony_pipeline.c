@@ -35,7 +35,7 @@ bool harmony_stage_prepare(const AnalysisChain *library, HarmonyStage *out) {
     return true;
 }
 
-bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *report) {
+bool harmony_stage_collect_cadences(const HarmonyStage *stage, ChainResult *report) {
     size_t count = stage->cadences.count;
     if (count == 0) {
         return true;
@@ -47,7 +47,7 @@ bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *r
     report->cadence_count = count;
     for (size_t i = 0; i < count; i++) {
         const HarmonyCadenceResult *found = &stage->cadences.items[i];
-        const AnalysisReportEntry *arrival = &report->entries[found->arrival_first];
+        const ChainEntry *arrival = &report->entries[found->arrival_first];
         AnalysisCadence *cadence = &report->cadences[i];
         const char *type = cadence_type_name(found->type);
         cadence->type = strdup(type ? type : "unknown");
@@ -83,7 +83,7 @@ bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *r
     return true;
 }
 
-bool harmony_stage_collect_functions(const HarmonyStage *stage, AnalysisReport *report) {
+bool harmony_stage_collect_functions(const HarmonyStage *stage, ChainResult *report) {
     if (!stage->segments || stage->count == 0) {
         return true;
     }
@@ -92,7 +92,7 @@ bool harmony_stage_collect_functions(const HarmonyStage *stage, AnalysisReport *
         return false;
     }
     for (size_t i = 0; i < stage->count && i < report->entry_count; i++) {
-        AnalysisReportEntry *entry = &report->entries[i];
+        ChainEntry *entry = &report->entries[i];
         if (!results[i].has_function) {
             continue;
         }
@@ -111,7 +111,7 @@ bool harmony_stage_collect_functions(const HarmonyStage *stage, AnalysisReport *
     return true;
 }
 
-bool harmony_stage_collect_six_fours_and_prolongations(const HarmonyStage *stage, AnalysisReport *report) {
+bool harmony_stage_collect_six_fours_and_prolongations(const HarmonyStage *stage, ChainResult *report) {
     if (!stage->segments || stage->count == 0) {
         return true;
     }
@@ -148,7 +148,7 @@ bool harmony_stage_collect_six_fours_and_prolongations(const HarmonyStage *stage
         for (size_t r = 0; ok && r < span->interior_count; r++) {
             prolongation->reasons[r] = harmony_prolongation_reason_name(span->reasons[r]);
         }
-        const AnalysisReportEntry *first = &report->entries[span->first_segment];
+        const ChainEntry *first = &report->entries[span->first_segment];
         prolongation->in_region = first->in_region;
         prolongation->region = first->region;
         for (size_t e = span->first_segment; e <= span->closing_segment && e < report->entry_count; e++) {
@@ -161,7 +161,7 @@ bool harmony_stage_collect_six_fours_and_prolongations(const HarmonyStage *stage
     return ok;
 }
 
-bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, AnalysisReport *report) {
+bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, ChainResult *report) {
     if (!stage->segments || stage->count == 0 || report->phrase_count == 0) {
         return true;
     }

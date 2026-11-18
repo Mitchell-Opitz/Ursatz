@@ -44,7 +44,7 @@
 
 typedef struct {
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     cJSON *document;
 } Analysis;
 
@@ -65,7 +65,7 @@ static bool analyze(const char *path, Analysis *analysis) {
 
 static void analysis_destroy(Analysis *analysis) {
     cJSON_Delete(analysis->document);
-    analysis_report_destroy(&analysis->report);
+    chain_result_destroy(&analysis->report);
     imported_score_destroy(&analysis->notes);
 }
 
@@ -84,7 +84,7 @@ static size_t claims_of(const cJSON *document, const char *label, const cJSON **
 /* --- the structure of the claims --- */
 
 static void check_structure(const Analysis *analysis) {
-    const AnalysisReport *report = &analysis->report;
+    const ChainResult *report = &analysis->report;
     const cJSON *rhythm = test_json_member(analysis->document, "rhythm");
     size_t expected = report->density_count + report->syncopation_count + report->hemiola_count +
                       report->hypermeter_count + report->tuplet_count + (report->meter_check.present ? 1 : 0);
@@ -183,7 +183,7 @@ static double rate(size_t hits, size_t total) {
 }
 
 static void check_field5(const Analysis *analysis, const Annotation *annotation, bool target) {
-    const AnalysisReport *report = &analysis->report;
+    const ChainResult *report = &analysis->report;
     size_t sync_hits = 0;
     for (size_t i = 0; i < annotation->syncopation_count; i++) {
         bool found = false;

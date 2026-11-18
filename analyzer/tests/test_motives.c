@@ -268,7 +268,7 @@ static char *joined(const cJSON *array, bool numbers) {
 
 /* The first family of Mozart 545 is the opening figure C5 E5 G5 B4 C5 D5 C5 A5, hand-read; some family in the minor
    reads b6; a non-chord tone on a motive note is typed; the fingerprints do not change between two runs. */
-static void check_mozart_features(const cJSON *motives, const AnalysisReport *report, const AnalysisReport *again) {
+static void check_mozart_features(const cJSON *motives, const ChainResult *report, const ChainResult *again) {
     const cJSON *first = test_json_member(cJSON_GetArrayItem(motives, 0), "features");
     CHECK(strcmp(joined(test_json_member(first, "degrees"), false), "1 3 5 7 1 2 1 6") == 0);
     CHECK(strcmp(joined(test_json_member(first, "intervals"), true), "4 3 -8 1 2 -2 9") == 0);
@@ -305,13 +305,13 @@ int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }
     ImportedScore notes_again;
-    AnalysisReport report_again;
+    ChainResult report_again;
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes_again, NULL) != IMPORTED_SCORE_OK ||
         !run_analysis_pipeline(&notes_again, test_knowledge(), &report_again)) {
         fprintf(stderr, "cannot analyze %s again\n", path);
@@ -339,8 +339,8 @@ int main(void) {
         check_annotation(motives, families, family_count);
         cJSON_Delete(document);
     }
-    analysis_report_destroy(&report);
-    analysis_report_destroy(&report_again);
+    chain_result_destroy(&report);
+    chain_result_destroy(&report_again);
     imported_score_destroy(&notes);
     imported_score_destroy(&notes_again);
     return test_finish("test_motives");

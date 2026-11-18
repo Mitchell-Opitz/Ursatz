@@ -7,7 +7,7 @@
 #include "model/events/note_event.h"
 #include "model/time/meter_map.h"
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <ursatz_analyzer/analysis_result.h>
 #include <io/imported_score.h>
 #include <ursatz_analyzer/style_profile.h>

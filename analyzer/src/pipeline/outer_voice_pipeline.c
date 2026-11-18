@@ -109,7 +109,7 @@ static size_t chord_at(const Segmentation *segmentation, const Segment *voice, s
 static bool collect_outer_lines(const ImportedScore *notes, const Segmentation *voices, const Segmentation *segmentation,
                                 const ChordEstimate *chords, const AnalysisKeyRegion *regions,
                                 const OuterVoiceLines *lines, const CommonPracticeMaterials *materials,
-                                AnalysisReport *report) {
+                                ChainResult *report) {
     report->outer_lines = calloc(voices->segment_count, sizeof(*report->outer_lines));
     if (!report->outer_lines) {
         return false;
@@ -138,8 +138,8 @@ static bool collect_outer_lines(const ImportedScore *notes, const Segmentation *
 
 bool collect_outer_voices(const ImportedScore *notes, const Segmentation *voices, const Segmentation *segmentation,
                           const ChordEstimate *chords, const AnalysisKeyRegion *regions, const OuterVoiceLines *lines,
-                          const CommonPracticeMaterials *materials, AnalysisReport *report) {
-    AnalysisReportEntry *entries = report->entries;
+                          const CommonPracticeMaterials *materials, ChainResult *report) {
+    ChainEntry *entries = report->entries;
     size_t count = segmentation->segment_count;
     for (size_t i = 0; i < count; i++) {
         entries[i].in_region = chords[i].in_region;

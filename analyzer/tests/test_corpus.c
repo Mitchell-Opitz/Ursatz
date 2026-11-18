@@ -132,13 +132,13 @@ static char *render_single(const char *path) {
     if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         return NULL;
     }
-    AnalysisReport report;
+    ChainResult report;
     if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         imported_score_destroy(&notes);
         return NULL;
     }
     char *json = test_render_document(path, &notes, &report);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
     return json;
 }

@@ -1,5 +1,5 @@
-#ifndef URSATZ_ANALYZER_ANALYSIS_REPORT_H
-#define URSATZ_ANALYZER_ANALYSIS_REPORT_H
+#ifndef URSATZ_CHAIN_CHAIN_RESULT_H
+#define URSATZ_CHAIN_CHAIN_RESULT_H
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -111,7 +111,7 @@ typedef struct {
     const char *phrase_model;       /* the library's phrase model label of the chord, as it abbreviates it: "Tb", "PD", "D"
                                        or "Te"; NULL for a chord with none (outside a labelled phrase, or not a chord
                                        of the model) */
-} AnalysisReportEntry;
+} ChainEntry;
 
 /* One voice segment of the melody and bass lines (the library chain's voice segments: one per melody note, not
    merged over unchanged harmony). The window is the voice segment's; chord_index is the chord whose segment holds
@@ -1105,7 +1105,7 @@ typedef struct {
 } AnalysisTuplet;
 
 typedef struct {
-    AnalysisReportEntry *entries;
+    ChainEntry *entries;
     size_t entry_count;
     AnalysisOuterLineEntry *outer_lines; /* owned; one per voice segment, in time order; empty when the library gave no lines
                                             for this piece */
@@ -1178,12 +1178,15 @@ typedef struct {
     size_t home_region; /* first region in the home key; valid only when key_region_count > 0 */
     long home_duration_numerator; /* total time in the home key across its regions, whole notes */
     unsigned long home_duration_denominator;
-} AnalysisReport;
+} ChainResult;
 
 /* Frees every entry's labels and note ids, the entries array, the key regions and changes, the cadences, the
    prolongations, the progressions, the harmonic rhythm, the phrases, ideas, subphrases, themes, expansions, sections,
    thematic returns, motives, melodies, densities, syncopations, hemiolas, hypermeters, tuplets, texture passages and changes
    the voice leading, the schemas, the sequences, and the tempo and dynamics markings. */
-void analysis_report_destroy(AnalysisReport *report);
+void chain_result_destroy(ChainResult *report);
+
+/* Frees a motive's features (their arrays) and clears them. NULL is a no-op. */
+void chain_motive_features_destroy(AnalysisMotiveFeatures *features);
 
 #endif

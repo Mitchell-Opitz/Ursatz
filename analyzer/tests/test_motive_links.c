@@ -30,7 +30,7 @@ static bool analyze_fixtures(void) {
         char path[512];
         snprintf(path, sizeof path, "%s/%s", URSATZ_LINKS_DIR, piece_ids[i]);
         ImportedScore notes;
-        AnalysisReport report;
+        ChainResult report;
         if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) != IMPORTED_SCORE_OK) {
             fprintf(stderr, "cannot import %s\n", path);
             return false;
@@ -41,7 +41,7 @@ static bool analyze_fixtures(void) {
             return false;
         }
         documents[i] = test_render_document(path, &notes, &report);
-        analysis_report_destroy(&report);
+        chain_result_destroy(&report);
         imported_score_destroy(&notes);
         if (!documents[i]) {
             return false;

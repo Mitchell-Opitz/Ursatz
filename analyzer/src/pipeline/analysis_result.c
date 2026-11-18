@@ -60,7 +60,7 @@ const AnalysisChain *analyzer_result_chain(const AnalyzerResult *result) {
     return result ? result->pass.library : NULL;
 }
 
-const AnalysisReport *analyzer_result_report(const AnalyzerResult *result) {
+const ChainResult *analyzer_result_report(const AnalyzerResult *result) {
     return result ? &result->pass.report : NULL;
 }
 
@@ -76,7 +76,7 @@ bool analyzer_result_report_complete(const AnalyzerResult *result) {
     return result && (result->pass.options.stages & ANALYSIS_CHAIN_STAGE_ALL) == ANALYSIS_CHAIN_STAGE_ALL;
 }
 
-bool analyzer_result_take_report(AnalyzerResult *result, AnalysisReport *report) {
+bool analyzer_result_take_report(AnalyzerResult *result, ChainResult *report) {
     if (!result) {
         return false;
     }

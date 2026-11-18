@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include "ursatz_test.h"
@@ -81,7 +81,7 @@ static const char *annotated_category(const Annotation *a, int measure) {
     return NULL;
 }
 
-static const char *found_category(const AnalysisReport *report, int measure) {
+static const char *found_category(const ChainResult *report, int measure) {
     for (size_t i = 0; i < report->texture_passage_count; i++) {
         const AnalysisTexturePassage *passage = &report->texture_passages[i];
         if (measure >= passage->first_measure && measure <= passage->last_measure) {
@@ -91,7 +91,7 @@ static const char *found_category(const AnalysisReport *report, int measure) {
     return NULL;
 }
 
-static void check_structure(const ImportedScore *notes, const AnalysisReport *report) {
+static void check_structure(const ImportedScore *notes, const ChainResult *report) {
     size_t highest = 0;
     for (size_t i = 0; i < notes->count; i++) {
         highest = notes->streams[i] > highest ? notes->streams[i] : highest;
@@ -130,7 +130,7 @@ int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Field 1.mid", URSATZ_FIXTURES_DIR);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK) {
         fprintf(stderr, "cannot import %s\n", path);
         return 1;
@@ -144,7 +144,7 @@ int main(void) {
     snprintf(path, sizeof(path), "%s/annotations/field1_texture.txt", URSATZ_FIXTURES_DIR);
     if (!load_annotation(path, &annotation)) {
         fprintf(stderr, "cannot read %s\n", path);
-        analysis_report_destroy(&report);
+        chain_result_destroy(&report);
         imported_score_destroy(&notes);
         return 1;
     }
@@ -185,7 +185,7 @@ int main(void) {
     printf("Field 1: change points found: %zu of %zu\n", found_changes, annotation.change_count);
     CHECK(found_changes == annotation.change_count);
 
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
     return test_finish("test_texture");
 }

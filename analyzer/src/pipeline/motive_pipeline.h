@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include <chain/analysis_chain.h>
@@ -46,7 +46,7 @@ bool motive_stage_read(MotiveStage *stage, const ChainInput *input, const Analys
 /* Copies the stage's families and occurrences into the report, each family with its features (motive_features.h) read
    from its prototype, and each occurrence with its degrees. Needs the report's entries, non-chord tones and key
    regions. Returns false only on allocation failure. */
-bool motive_stage_collect(const MotiveStage *stage, const ImportedScore *notes, AnalysisReport *report);
+bool motive_stage_collect(const MotiveStage *stage, const ImportedScore *notes, ChainResult *report);
 
 void motive_stage_destroy(MotiveStage *stage);
 

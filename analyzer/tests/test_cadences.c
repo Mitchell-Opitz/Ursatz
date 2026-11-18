@@ -80,7 +80,7 @@ static size_t count_type(const cJSON *cadences, const char *type) {
     return count;
 }
 
-static void check_claims(const Piece *piece, const ImportedScore *notes, const AnalysisReport *report,
+static void check_claims(const Piece *piece, const ImportedScore *notes, const ChainResult *report,
                          const cJSON *document) {
     const cJSON *cadences = test_json_member(document, "cadences");
     const cJSON *regions = test_json_member(test_json_member(document, "keys"), "regions");
@@ -135,7 +135,7 @@ static void check_claims(const Piece *piece, const ImportedScore *notes, const A
 
 /* A change into a new key is a modulation exactly when a cadence arrives in the new region (R-044); a return takes
    the extent of the excursion before it. */
-static void check_key_changes(const cJSON *document, const AnalysisReport *report) {
+static void check_key_changes(const cJSON *document, const ChainResult *report) {
     const cJSON *cadences = test_json_member(document, "cadences");
     const cJSON *regions = test_json_member(test_json_member(document, "keys"), "regions");
     for (size_t i = 0; i < report->key_change_count; i++) {
@@ -247,7 +247,7 @@ static void run_piece(const Piece *piece) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
@@ -274,7 +274,7 @@ static void run_piece(const Piece *piece) {
         printf("%s: %zu cadences\n", piece->name, report.cadence_count);
         cJSON_Delete(document);
     }
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
 }
 

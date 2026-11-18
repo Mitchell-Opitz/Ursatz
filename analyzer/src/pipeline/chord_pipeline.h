@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 
 #include "pipeline/segmentation.h"
 

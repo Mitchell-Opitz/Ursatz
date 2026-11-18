@@ -1,7 +1,7 @@
 #ifndef URSATZ_ANALYZER_INTERPRETATION_UTIL_H
 #define URSATZ_ANALYZER_INTERPRETATION_UTIL_H
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 
 #include "model/interpretation/interpretation.h"
 #include "model/interpretation/uncertainty.h"

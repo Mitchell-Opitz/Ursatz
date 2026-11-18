@@ -16,8 +16,8 @@ const KnowledgeSnapshot *analyzer_result_knowledge(const AnalyzerResult *result)
 /* True when every chain stage ran, so the report view is complete and can be exported. */
 bool analyzer_result_report_complete(const AnalyzerResult *result);
 
-/* Moves the report out into *report (the caller releases it with analysis_report_destroy); the result keeps an empty one. */
-bool analyzer_result_take_report(AnalyzerResult *result, AnalysisReport *report);
+/* Moves the report out into *report (the caller releases it with chain_result_destroy); the result keeps an empty one. */
+bool analyzer_result_take_report(AnalyzerResult *result, ChainResult *report);
 
 /* Gives the result something to release after the pass (the notes a hearing built). The result frees it on destroy;
    the owner's destroy runs after the pass is released. */

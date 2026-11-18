@@ -23,7 +23,7 @@
 
 /* ---- Sections ---- */
 
-static void fill_section(AnalysisSection *section, const AnalysisReport *report, size_t first_phrase,
+static void fill_section(AnalysisSection *section, const ChainResult *report, size_t first_phrase,
                          size_t phrase_count, bool closed) {
     const AnalysisPhrase *first = &report->phrases[first_phrase];
     const AnalysisPhrase *last = &report->phrases[first_phrase + phrase_count - 1];
@@ -71,7 +71,7 @@ static bool relationships_agree(const FormStructureDetectionEntry *entries, size
     return agree;
 }
 
-static bool build_sections(const FormStage *stage, AnalysisReport *report) {
+static bool build_sections(const FormStage *stage, ChainResult *report) {
     size_t phrase_count = report->phrase_count;
     FormStructureDetectionEntry *entries = calloc(phrase_count, sizeof(*entries));
     if (!entries) {
@@ -251,7 +251,7 @@ static bool make_theme_window(const FormStage *stage, size_t t, ThemeWindow *win
     return ok;
 }
 
-static size_t section_of_phrase(const AnalysisReport *report, size_t phrase) {
+static size_t section_of_phrase(const ChainResult *report, size_t phrase) {
     for (size_t s = 0; s < report->section_count; s++) {
         if (phrase >= report->sections[s].first_phrase &&
             phrase < report->sections[s].first_phrase + report->sections[s].phrase_count) {
@@ -284,7 +284,7 @@ static int compare_returns(const void *a, const void *b) {
 
 /* Reads the returns of the kernel's relationships into the report, dropping those between themes that share a
    phrase. */
-static bool collect_returns(Relationship **relationships, size_t relationship_count, AnalysisReport *report) {
+static bool collect_returns(Relationship **relationships, size_t relationship_count, ChainResult *report) {
     AnalysisThematicReturn *returns = calloc(relationship_count > 0 ? relationship_count : 1, sizeof(*returns));
     if (!returns) {
         return false;
@@ -333,7 +333,7 @@ static bool collect_returns(Relationship **relationships, size_t relationship_co
     return true;
 }
 
-static bool find_returns(const FormStage *stage, AnalysisReport *report) {
+static bool find_returns(const FormStage *stage, ChainResult *report) {
     size_t theme_count = report->theme_count;
     if (theme_count < 2 || stage->themes.count != theme_count) {
         return true;
@@ -401,7 +401,7 @@ static void set_label(AnalysisSection *section, size_t family, size_t primes) {
 
 /* The return that sets section s's letter: among the returns of a theme that opens the section (the first phrase of
    the section) from an earlier section, the most similar, then the earliest section, then the first. */
-static bool best_return(const AnalysisReport *report, size_t s, size_t *best) {
+static bool best_return(const ChainResult *report, size_t s, size_t *best) {
     bool found = false;
     for (size_t r = 0; r < report->thematic_return_count; r++) {
         const AnalysisThematicReturn *item = &report->thematic_returns[r];
@@ -419,7 +419,7 @@ static bool best_return(const AnalysisReport *report, size_t s, size_t *best) {
     return found;
 }
 
-static bool assign_letters(AnalysisReport *report) {
+static bool assign_letters(ChainResult *report) {
     size_t count = report->section_count;
     size_t *family_of = calloc(count, sizeof(size_t));
     size_t *members = calloc(count, sizeof(size_t));
@@ -447,7 +447,7 @@ static bool assign_letters(AnalysisReport *report) {
     return true;
 }
 
-bool form_plan_stage_collect(const FormStage *stage, AnalysisReport *report) {
+bool form_plan_stage_collect(const FormStage *stage, ChainResult *report) {
     if (report->phrase_count == 0 || stage->phrases.count != report->phrase_count) {
         return true;
     }

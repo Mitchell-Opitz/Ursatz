@@ -10,7 +10,7 @@
 
 /* The report's chords as the kernel's entries: the base numeral of a labelled chord in a key region, the key region as
    the group. An unlabelled chord, or one outside every region, ends the block before it. */
-static ProgressionEntry entry_of(const AnalysisReportEntry *entry) {
+static ProgressionEntry entry_of(const ChainEntry *entry) {
     bool labelled = entry->in_region && entry->roman.labelled && entry->roman.base_numeral != NULL;
     return (ProgressionEntry){labelled ? entry->roman.base_numeral : NULL, labelled ? (long)entry->region : -1};
 }
@@ -45,7 +45,7 @@ static bool progression_make(const ProgressionPattern *pattern, AnalysisProgress
     return true;
 }
 
-bool progression_stage_collect(AnalysisReport *report) {
+bool progression_stage_collect(ChainResult *report) {
     ProgressionEntry *entries = calloc(report->entry_count > 0 ? report->entry_count : 1, sizeof(ProgressionEntry));
     ProgressionPatterns found = {0};
     if (!entries) {

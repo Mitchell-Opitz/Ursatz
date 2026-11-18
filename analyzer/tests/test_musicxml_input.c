@@ -43,11 +43,11 @@ static long number(const cJSON *object, const char *key) {
 static cJSON *analyze(const char *path, ImportedScore *notes_out) {
     ImportedScore notes;
     assert(imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) == IMPORTED_SCORE_OK);
-    AnalysisReport report;
+    ChainResult report;
     assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     if (notes_out) {
         *notes_out = notes;
     } else {

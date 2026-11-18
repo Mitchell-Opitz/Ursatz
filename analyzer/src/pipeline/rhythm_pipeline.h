@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include "analysis/voices/outer_voice.h"
@@ -27,6 +27,6 @@
 
 /* Returns false only on allocation or library failure. lines is the chain's outer voice lines. */
 bool rhythm_stage_collect(const ImportedScore *notes, const OuterVoiceLines *lines, const FormStage *form,
-                          AnalysisReport *report);
+                          ChainResult *report);
 
 #endif

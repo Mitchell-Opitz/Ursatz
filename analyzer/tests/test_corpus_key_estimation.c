@@ -36,7 +36,7 @@ int main(void) {
         ImportedScoreResult import_result = imported_score_import_file(CASES[i].path, IMPORTED_FORMAT_MIDI, &notes, NULL);
         assert(import_result == IMPORTED_SCORE_OK);
 
-        AnalysisReport report;
+        ChainResult report;
         assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
         assert(report.key_region_count > 0);
         assert(report.entry_count > 0);
@@ -48,7 +48,7 @@ int main(void) {
             assert(0);
         }
 
-        analysis_report_destroy(&report);
+        chain_result_destroy(&report);
         imported_score_destroy(&notes);
     }
 

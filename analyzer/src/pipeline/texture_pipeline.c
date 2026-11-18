@@ -69,7 +69,7 @@ static bool copy_passage(const ImportedScore *notes, const StandardTexturePassag
     return true;
 }
 
-bool texture_stage_collect(const ImportedScore *notes, const AnalysisChain *library, AnalysisReport *report) {
+bool texture_stage_collect(const ImportedScore *notes, const AnalysisChain *library, ChainResult *report) {
     const StandardTextureAnalysis *analysis = analysis_chain_texture(library);
     if (notes->count == 0 || !analysis) {
         return true;

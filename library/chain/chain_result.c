@@ -1,9 +1,24 @@
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "pipeline/motive_features.h"
+void chain_motive_features_destroy(AnalysisMotiveFeatures *features) {
+    if (!features) {
+        return;
+    }
+    if (features->ncts) {
+        for (size_t i = 0; i < features->note_count; i++) {
+            free(features->ncts[i]);
+        }
+    }
+    free(features->ncts);
+    free(features->notes);
+    free(features->degrees);
+    free(features->intervals);
+    free(features->steps);
+    memset(features, 0, sizeof(*features));
+}
 
 /* Frees an outer note's strings and clears it. */
 static void analysis_outer_note_destroy(AnalysisOuterNote *note) {
@@ -39,7 +54,7 @@ void analysis_chord_reading_destroy(AnalysisChordReading *reading) {
     *reading = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
 }
 
-void analysis_report_destroy(AnalysisReport *report) {
+void chain_result_destroy(ChainResult *report) {
     if (!report) {
         return;
     }
@@ -121,7 +136,7 @@ void analysis_report_destroy(AnalysisReport *report) {
         }
         free(report->motives[i].occurrences);
         free(report->motives[i].development);
-        motive_features_destroy(&report->motives[i].features);
+        chain_motive_features_destroy(&report->motives[i].features);
     }
     free(report->motives);
     for (size_t i = 0; i < report->melody_count; i++) {

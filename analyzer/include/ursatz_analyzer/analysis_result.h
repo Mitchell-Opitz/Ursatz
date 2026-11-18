@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include <theory/knowledge/knowledge_snapshot.h>
@@ -68,6 +68,6 @@ void analyzer_result_destroy(AnalyzerResult *result);
 /* The library chain is read through result_chain.h (analyzer_result_chain), served by the ursatz_analyzer::chain target. */
 
 /* The report view the document is exported from (R-252). Never NULL for a result. */
-const AnalysisReport *analyzer_result_report(const AnalyzerResult *result);
+const ChainResult *analyzer_result_report(const AnalyzerResult *result);
 
 #endif

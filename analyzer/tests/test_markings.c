@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include "ursatz_test.h"
@@ -23,7 +23,7 @@ static bool starts_measure(long numerator, unsigned long denominator, int measur
     return numerator == (long)(measure - 1) * (long)denominator;
 }
 
-static bool analyze(const char *dir, const char *name, ImportedScore *notes, AnalysisReport *report) {
+static bool analyze(const char *dir, const char *name, ImportedScore *notes, ChainResult *report) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", dir, name);
     if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(notes, test_knowledge(), report)) {
@@ -36,7 +36,7 @@ static bool analyze(const char *dir, const char *name, ImportedScore *notes, Ana
 
 static void check_markings(const char *dir) {
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     if (!analyze(dir, "markings.musicxml", &notes, &report)) {
         return;
     }
@@ -74,19 +74,19 @@ static void check_markings(const char *dir) {
         CHECK(mp->relation && strcmp(mp->relation, "quieter") == 0);
     }
 
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
 }
 
 static void check_no_markings(const char *dir) {
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     if (!analyze(dir, "two-parts.musicxml", &notes, &report)) {
         return;
     }
     CHECK(report.tempo_marking_count == 0);
     CHECK(report.dynamic_count == 0);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
 }
 

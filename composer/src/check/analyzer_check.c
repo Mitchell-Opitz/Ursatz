@@ -149,7 +149,7 @@ static size_t bar_of(Rational at, const PlanMeter *meter) {
 }
 
 /* The bar (0-based from the section's start) the chord of a report entry starts in; SIZE_MAX before the section. */
-static size_t entry_bar(const AnalysisReportEntry *entry, Rational origin, const PlanMeter *meter) {
+static size_t entry_bar(const ChainEntry *entry, Rational origin, const PlanMeter *meter) {
     Rational at;
     Rational from_origin;
     if (rational_make(entry->time_numerator, entry->time_denominator, &at) != RATIONAL_OK ||
@@ -160,7 +160,7 @@ static size_t entry_bar(const AnalysisReportEntry *entry, Rational origin, const
 }
 
 static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars, Rational origin, const PlanMeter *meter,
-                             const AnalysisReport *report, Items *items) {
+                             const ChainResult *report, Items *items) {
     CadenceType planned[MAX_CADENCES];
     size_t count = 0;
     const SectionDescription *described = plan_section_or_empty(plan, section);
@@ -180,7 +180,7 @@ static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars,
             if (cadence->arrival_first >= report->entry_count) {
                 continue;
             }
-            const AnalysisReportEntry *entry = &report->entries[cadence->arrival_first];
+            const ChainEntry *entry = &report->entries[cadence->arrival_first];
             if (entry_bar(entry, origin, meter) != bar) {
                 continue;
             }
@@ -195,7 +195,7 @@ static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars,
     }
 }
 
-static void compare_key(const AnalysisReport *report, AnalysisKey key, Items *items) {
+static void compare_key(const ChainResult *report, AnalysisKey key, Items *items) {
     char planned[32];
     char heard[32] = "none";
     bool agreed = false;
@@ -308,7 +308,7 @@ AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId s
     if (hear_status != ANALYZER_CHECK_OK) {
         return hear_status;
     }
-    const AnalysisReport *report = analyzer_result_report(heard);
+    const ChainResult *report = analyzer_result_report(heard);
     Items items;
     memset(&items, 0, sizeof(items));
     compare_cadences(plan, section, bars, span.start, &meter, report, &items);
@@ -355,10 +355,10 @@ static bool is_part_section(const PiecePlan *plan, NodeId id) {
 }
 
 /* Where the Analyzer heard a cadence end: the start of the chord after its arrival, else the end of the fragment. */
-static Rational cadence_end(const AnalysisReport *report, const AnalysisCadence *cadence, Rational fragment_end) {
+static Rational cadence_end(const ChainResult *report, const AnalysisCadence *cadence, Rational fragment_end) {
     Rational out = fragment_end;
     if (cadence->arrival_last + 1 < report->entry_count) {
-        const AnalysisReportEntry *next = &report->entries[cadence->arrival_last + 1];
+        const ChainEntry *next = &report->entries[cadence->arrival_last + 1];
         if (rational_make(next->time_numerator, next->time_denominator, &out) != RATIONAL_OK) {
             out = fragment_end;
         }
@@ -371,7 +371,7 @@ static Rational cadence_end(const AnalysisReport *report, const AnalysisCadence 
  * arrival gives way to the next), or its arrival begins in the section's last bar. A tonic that arrives in the last bar
  * and carries on into the next section ends a bar or more after it, and is the section's cadence all the same.
  */
-static bool cadence_at(const AnalysisReport *report, const AnalysisCadence *cadence, Rational section_end, Rational fragment_end,
+static bool cadence_at(const ChainResult *report, const AnalysisCadence *cadence, Rational section_end, Rational fragment_end,
                        const PlanMeter *meter) {
     if (within_a_beat(cadence_end(report, cadence, fragment_end), section_end, meter)) {
         return true;
@@ -379,7 +379,7 @@ static bool cadence_at(const AnalysisReport *report, const AnalysisCadence *cade
     if (cadence->arrival_first >= report->entry_count) {
         return false;
     }
-    const AnalysisReportEntry *arrival = &report->entries[cadence->arrival_first];
+    const ChainEntry *arrival = &report->entries[cadence->arrival_first];
     Rational start;
     Rational last_bar;
     Rational bar = {meter->beats_per_bar, (unsigned long)meter->beat_unit};
@@ -390,7 +390,7 @@ static bool cadence_at(const AnalysisReport *report, const AnalysisCadence *cade
     return rational_cmp(start, last_bar) >= 0 && rational_cmp(start, section_end) <= 0;
 }
 
-static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter, const AnalysisReport *report,
+static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter, const ChainResult *report,
                                    Rational fragment_end, Items *items) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!is_part_section(plan, id)) {
@@ -480,7 +480,7 @@ AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCh
     if (hear_status != ANALYZER_CHECK_OK) {
         return hear_status;
     }
-    const AnalysisReport *report = analyzer_result_report(heard);
+    const ChainResult *report = analyzer_result_report(heard);
     Items items;
     memset(&items, 0, sizeof(items));
     compare_piece_cadences(plan, &meter, report, rendered->piece_end, &items);

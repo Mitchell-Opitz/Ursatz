@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include "analysis/harmony/analysis_cadence.h"
@@ -45,25 +45,25 @@ bool harmony_stage_prepare(const AnalysisChain *library, HarmonyStage *out);
 /* Copies the stage's cadences into report->cadences, each with its entry ranges, type, soprano degree (the entry's
    label), beat strength, key region and uncertainty. entries must be the ones the stage was prepared from. Returns
    false only on allocation failure. */
-bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *report);
+bool harmony_stage_collect_cadences(const HarmonyStage *stage, ChainResult *report);
 
 /* Reads the library's harmonic function of every prepared segment into report->entries (function,
    function_applied, function_applied_to, function_uncertainty). The prepared segments already carry the cadential six-fours
    (the chain's harmony_analysis_prepare marks them). entries must be the
    ones the stage was prepared from. A stage the library declined leaves the entries without a function. Returns
    false only on allocation failure. */
-bool harmony_stage_collect_functions(const HarmonyStage *stage, AnalysisReport *report);
+bool harmony_stage_collect_functions(const HarmonyStage *stage, ChainResult *report);
 
 /* Reads the library's six-four types into report->entries (six_four) and its prolongations into
    report->prolongations. Run after harmony_stage_collect_functions. entries must be the ones the stage was prepared
    from. A stage the library declined leaves both empty. Returns false only on allocation failure. */
-bool harmony_stage_collect_six_fours_and_prolongations(const HarmonyStage *stage, AnalysisReport *report);
+bool harmony_stage_collect_six_fours_and_prolongations(const HarmonyStage *stage, ChainResult *report);
 
 /* Labels the chords of every phrase of report->phrases for the phrase model (harmony_analysis_phrase_model_label):
    Tb, PD, D and Te as the library names them, into report->entries (phrase_model). A phrase spans the chords that start in it up to its cadence's arrival (an extension after
    the cadence takes no label); a phrase with no cadence gets none. Run after the phrases are in the report. A stage
    the library declined, or no phrases, leaves the report without labels. Returns false only on allocation failure. */
-bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, AnalysisReport *report);
+bool harmony_stage_collect_phrase_model(const HarmonyStage *stage, ChainResult *report);
 
 void harmony_stage_destroy(HarmonyStage *stage);
 

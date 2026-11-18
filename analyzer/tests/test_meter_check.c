@@ -35,7 +35,7 @@ static const char *musicxml(const char *name) {
 
 typedef struct {
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     cJSON *document;
 } Analysis;
 
@@ -55,7 +55,7 @@ static void analyze(const char *name, const ImportedReading *reading, Analysis *
 
 static void analysis_destroy(Analysis *analysis) {
     cJSON_Delete(analysis->document);
-    analysis_report_destroy(&analysis->report);
+    chain_result_destroy(&analysis->report);
     imported_score_destroy(&analysis->notes);
 }
 
@@ -178,10 +178,10 @@ static void test_empty_score(void) {
         IMPORTED_SCORE_OK) {
         return; /* the importer refuses an empty score: nothing to check */
     }
-    AnalysisReport report;
+    ChainResult report;
     assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     assert(!report.meter_check.present);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
 }
 

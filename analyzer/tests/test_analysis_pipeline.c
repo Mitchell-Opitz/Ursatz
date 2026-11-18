@@ -73,7 +73,7 @@ int main(void) {
     assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     assert(notes.count == 11);
 
-    AnalysisReport report;
+    ChainResult report;
     assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     assert(report.key_region_count > 0);
     /* Harmonic spans: D F A read as one ii, and the B with the closing C E G D as one iii; three chords where the
@@ -94,7 +94,7 @@ int main(void) {
     assert(strcmp(report.entries[2].chord_label, "iii") == 0);
     assert(strcmp(report.entries[2].key_label, "C major") == 0);
 
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
     remove(path);
     free(path);

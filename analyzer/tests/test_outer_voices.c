@@ -137,7 +137,7 @@ static void write_piece(const char *path, const PieceNote *notes, size_t count) 
 
 typedef struct {
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     cJSON *document;
 } Analyzed;
 
@@ -158,7 +158,7 @@ static void analyze(const char *path, Analyzed *out) {
 
 static void release(Analyzed *analyzed) {
     cJSON_Delete(analyzed->document);
-    analysis_report_destroy(&analyzed->report);
+    chain_result_destroy(&analyzed->report);
     imported_score_destroy(&analyzed->notes);
 }
 
@@ -177,7 +177,7 @@ static void report_outer(const char *what, size_t index, const AnalysisOuterNote
    agrees with the report's outer line and names the chord holding its start; each chord's own "outer" summary
    agrees with the report entry. */
 static void check_document_lines(const Analyzed *analyzed) {
-    const AnalysisReport *report = &analyzed->report;
+    const ChainResult *report = &analyzed->report;
     const cJSON *outer = cJSON_GetObjectItemCaseSensitive(analyzed->document, "outer_voices");
     const cJSON *chords = cJSON_GetObjectItemCaseSensitive(analyzed->document, "chords");
     CHECK(cJSON_IsObject(outer));
@@ -261,7 +261,7 @@ static void test_progression(const char *path) {
     write_piece(path, notes, count);
     Analyzed analyzed;
     analyze(path, &analyzed);
-    const AnalysisReport *report = &analyzed.report;
+    const ChainResult *report = &analyzed.report;
 
     CHECK(report->entry_count == 32);
     CHECK(report->key_region_count == 1);
@@ -273,7 +273,7 @@ static void test_progression(const char *path) {
     static const char *const BASS_PITCH[4] = {"C4", "F4", "G4", "C4"};
     static const char *const BASS_DEGREE[4] = {"1", "4", "5", "1"};
     for (size_t i = 0; i < report->entry_count && i < 32; i++) {
-        const AnalysisReportEntry *entry = &report->entries[i];
+        const ChainEntry *entry = &report->entries[i];
         bool soprano_ok = outer_is(&entry->soprano, SOPRANO_PITCH[i % 4], SOPRANO_DEGREE[i % 4]);
         bool bass_ok = outer_is(&entry->bass, BASS_PITCH[i % 4], BASS_DEGREE[i % 4]);
         CHECK(soprano_ok);
@@ -301,11 +301,11 @@ static void test_tonicization(const char *path) {
     write_piece(path, notes, count);
     Analyzed analyzed;
     analyze(path, &analyzed);
-    const AnalysisReport *report = &analyzed.report;
+    const ChainResult *report = &analyzed.report;
 
     bool found_local_region = false;
     for (size_t i = 0; i < report->entry_count; i++) {
-        const AnalysisReportEntry *entry = &report->entries[i];
+        const ChainEntry *entry = &report->entries[i];
         if (!entry->in_region || strcmp(report->key_regions[entry->region].label, "G major") != 0) {
             continue;
         }
@@ -325,7 +325,7 @@ static void test_tonicization(const char *path) {
        early, so the chord is found by time, and it still lies in the G major region. */
     size_t first_in_g = report->entry_count;
     for (size_t i = 0; i < report->entry_count; i++) {
-        const AnalysisReportEntry *entry = &report->entries[i];
+        const ChainEntry *entry = &report->entries[i];
         if (entry->time_numerator == 8 && entry->time_denominator == 1) {
             first_in_g = i;
             break;
@@ -371,7 +371,7 @@ static void test_texture(const char *path) {
     write_piece(path, notes, count);
     Analyzed analyzed;
     analyze(path, &analyzed);
-    const AnalysisReport *report = &analyzed.report;
+    const ChainResult *report = &analyzed.report;
 
     /* A half bar a voice segment, a whole bar a chord: two lines to each chord. */
     CHECK(report->entry_count >= 2);
@@ -416,7 +416,7 @@ static void test_monophonic(const char *path) {
     write_piece(path, notes, count);
     Analyzed analyzed;
     analyze(path, &analyzed);
-    const AnalysisReport *report = &analyzed.report;
+    const ChainResult *report = &analyzed.report;
 
     CHECK(report->entry_count > 0);
     for (size_t i = 0; i < report->entry_count; i++) {
@@ -451,7 +451,7 @@ static void test_held_chord(const char *path) {
     write_piece(path, notes, count);
     Analyzed analyzed;
     analyze(path, &analyzed);
-    const AnalysisReport *report = &analyzed.report;
+    const ChainResult *report = &analyzed.report;
 
     CHECK(report->entry_count == 1);
     CHECK(report->outer_line_count == 4);

@@ -56,7 +56,7 @@ bool test_within(const cJSON *inner, const cJSON *outer) {
                test_rational_of(test_json_require(outer, "end")) + 1e-12;
 }
 
-char *test_render_document(const char *input_path, const ImportedScore *notes, const AnalysisReport *report) {
+char *test_render_document(const char *input_path, const ImportedScore *notes, const ChainResult *report) {
     AnalysisDocument *document = analysis_document_build(input_path, notes, report, test_knowledge());
     if (!document) {
         return NULL;
@@ -69,11 +69,11 @@ char *test_render_document(const char *input_path, const ImportedScore *notes, c
 cJSON *test_analyze_midi(const char *path) {
     ImportedScore notes;
     assert(imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) == IMPORTED_SCORE_OK);
-    AnalysisReport report;
+    ChainResult report;
     assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);

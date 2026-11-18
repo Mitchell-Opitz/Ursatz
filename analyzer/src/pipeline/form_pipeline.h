@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include "analysis/voices/outer_voice.h"
@@ -53,11 +53,11 @@ long form_stage_phrase_cadence(const FormStage *stage, size_t phrase);
 /* Copies the stage's phrases, ideas, subphrases, themes and expansions into the report, each phrase with its span, the chord entries inside it (entries must be the
    ones the stage was built from), measures, cadence and signal, and its ideas and subphrases. A stage without phrases leaves the report without.
    Returns false only on allocation failure. */
-bool form_stage_collect(const FormStage *stage, AnalysisReport *report);
+bool form_stage_collect(const FormStage *stage, ChainResult *report);
 /* Copies the stage's repeats and returns into the report, each with its measures, transposition and the soprano notes
    that start in the later span. A stage without its form input leaves the report without. Call after
    form_stage_collect. Returns false only on allocation failure. */
-bool form_stage_collect_repeats(const FormStage *stage, AnalysisReport *report);
+bool form_stage_collect_repeats(const FormStage *stage, ChainResult *report);
 void form_stage_destroy(FormStage *stage);
 
 #endif

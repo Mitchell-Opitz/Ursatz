@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include "pipeline/chord_pipeline.h"
@@ -34,6 +34,6 @@
  */
 bool collect_outer_voices(const ImportedScore *notes, const Segmentation *voices, const Segmentation *segmentation,
                           const ChordEstimate *chords, const AnalysisKeyRegion *regions, const OuterVoiceLines *lines,
-                          const CommonPracticeMaterials *materials, AnalysisReport *report);
+                          const CommonPracticeMaterials *materials, ChainResult *report);
 
 #endif

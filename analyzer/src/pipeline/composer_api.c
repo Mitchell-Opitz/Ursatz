@@ -196,7 +196,7 @@ AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, Analyzer
     }
     *out = NULL;
     *count = 0;
-    const AnalysisReport *report = analyzer_result_report(result);
+    const ChainResult *report = analyzer_result_report(result);
     const ImportedScore *notes = analyzer_result_notes(result);
     if (!report || !notes) {
         return ANALYZER_ERR_ARGUMENT;
@@ -208,7 +208,7 @@ AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, Analyzer
     bool ok = true;
     for (size_t i = 0; ok && leading->present && i < leading->violation_count; i++) {
         const AnalysisVoiceViolation *fault = &leading->violations[i];
-        const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
+        const ChainEntry *arrival = &report->entries[fault->entry_to];
         bool parallel = fault->rule[0] == 'p';
         ok = add_violation(map, &list, &used, &capacity, voice_rule_id(fault), parallel, arrival->time_numerator,
                            arrival->time_denominator, fault->note_ids, 4);
@@ -220,7 +220,7 @@ AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, Analyzer
             if (strcmp(fault->rule, wanted) != 0) {
                 continue;
             }
-            const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
+            const ChainEntry *arrival = &report->entries[fault->entry_to];
             ok = add_violation(map, &list, &used, &capacity,
                                pass == 0 ? "unresolved-seventh" : "unresolved-leading-tone", false,
                                arrival->time_numerator, arrival->time_denominator, fault->note_ids, 2);

@@ -24,7 +24,7 @@
 #include "util/misc_util.h"
 
 /* The key region the time lies in, or the last one for a time past the end. Regions are ordered and gap-free. */
-static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long long n, long long d) {
+static const AnalysisKeyRegion *region_at(const ChainResult *report, long long n, long long d) {
     for (size_t r = 0; r < report->key_region_count; r++) {
         const AnalysisKeyRegion *region = &report->key_regions[r];
         if (rational_cmp(rational_ratio(n, d),
@@ -65,7 +65,7 @@ bool motive_stage_read(MotiveStage *stage, const ChainInput *input, const Analys
    and of its last note, and the idea of that phrase which does. The motive stage reads its own phrases and ideas, from
    the same cadences, so the occurrence is placed against the report's by time. Both stay unset for an occurrence
    that crosses a boundary. */
-static void link_occurrence(const AnalysisReport *report, MusicalTime first_start, MusicalTime last_start,
+static void link_occurrence(const ChainResult *report, MusicalTime first_start, MusicalTime last_start,
                             AnalysisMotiveOccurrence *occurrence) {
     long long first_n = first_start.value.num;
     long long first_d = first_start.value.den;
@@ -96,7 +96,7 @@ static void link_occurrence(const AnalysisReport *report, MusicalTime first_star
     }
 }
 
-static bool collect_occurrence(const MotiveStage *stage, const AnalysisReport *report,
+static bool collect_occurrence(const MotiveStage *stage, const ChainResult *report,
                                const StandardFormMotiveOccurrence *found, size_t index,
                                AnalysisMotiveOccurrence *occurrence) {
     const MotiveStage *form = stage;
@@ -184,7 +184,7 @@ static bool note_timing(const ImportedScore *notes, size_t index, Rational *star
 }
 
 /* Each note of an occurrence as a degree of the tonic of the key region it starts in. */
-static bool collect_occurrence_degrees(const ImportedScore *notes, const AnalysisReport *report,
+static bool collect_occurrence_degrees(const ImportedScore *notes, const ChainResult *report,
                                        AnalysisMotiveOccurrence *occurrence) {
     occurrence->degrees = calloc(occurrence->note_id_count > 0 ? occurrence->note_id_count : 1, sizeof(char *));
     if (!occurrence->degrees) {
@@ -246,9 +246,9 @@ static bool meter_at(const MeterMap *map, Rational start, Rational *bar, Rationa
 /* The non-chord-tone type of the segment the note starts in: the library's type, "chord-tone" when the note is one of
    the chord there, NULL when the segment has no chord or the library left the tone unclassified. *failed is set on
    allocation failure. */
-static char *note_nct(const AnalysisReport *report, size_t note_id, Rational start, bool *failed) {
+static char *note_nct(const ChainResult *report, size_t note_id, Rational start, bool *failed) {
     for (size_t e = 0; e < report->entry_count; e++) {
-        const AnalysisReportEntry *entry = &report->entries[e];
+        const ChainEntry *entry = &report->entries[e];
         Rational from = msk_make((unsigned long long)entry->time_numerator, entry->time_denominator);
         Rational to = msk_make((unsigned long long)entry->end_numerator, entry->end_denominator);
         if (msk_cmp(start, from) < 0 || msk_cmp(start, to) >= 0) {
@@ -277,7 +277,7 @@ static char *note_nct(const AnalysisReport *report, size_t note_id, Rational sta
 
 /* Describes the family by its prototype. Leaves has_features false for a family whose first note has no key region
    or meter, or whose sketch the library would refuse. false only on allocation failure. */
-static bool collect_features(const MotiveStage *stage, const ImportedScore *notes, const AnalysisReport *report,
+static bool collect_features(const MotiveStage *stage, const ImportedScore *notes, const ChainResult *report,
                              AnalysisMotive *motive) {
     const AnalysisMotiveOccurrence *prototype = &motive->occurrences[0];
     size_t count = prototype->note_id_count;
@@ -353,11 +353,11 @@ static bool collect_features(const MotiveStage *stage, const ImportedScore *note
     motive->has_features = true;
     return true;
 skip:
-    motive_features_destroy(features);
+    chain_motive_features_destroy(features);
     return true;
 }
 
-bool motive_stage_collect(const MotiveStage *stage, const ImportedScore *notes, AnalysisReport *report) {
+bool motive_stage_collect(const MotiveStage *stage, const ImportedScore *notes, ChainResult *report) {
     size_t count = stage->motives.family_count;
     if (count == 0) {
         return true;

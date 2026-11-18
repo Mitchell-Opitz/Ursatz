@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include "ursatz_test.h"
@@ -229,7 +229,7 @@ static bool load_planted(const char *path, PlantedList *list) {
 
 typedef struct {
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
 } Analysis;
 
 static bool analyze(const char *path, Analysis *analysis) {
@@ -244,18 +244,18 @@ static bool analyze(const char *path, Analysis *analysis) {
 }
 
 static void analysis_destroy(Analysis *analysis) {
-    analysis_report_destroy(&analysis->report);
+    chain_result_destroy(&analysis->report);
     imported_score_destroy(&analysis->notes);
 }
 
 /* The start of an entry's chord and the end of another's, in beats (quarter notes) from the start of the piece. */
-static double beats_start(const AnalysisReport *report, size_t entry) {
-    const AnalysisReportEntry *e = &report->entries[entry];
+static double beats_start(const ChainResult *report, size_t entry) {
+    const ChainEntry *e = &report->entries[entry];
     return 4.0 * (double)e->time_numerator / (double)e->time_denominator;
 }
 
-static double beats_end(const AnalysisReport *report, size_t entry) {
-    const AnalysisReportEntry *e = &report->entries[entry];
+static double beats_end(const ChainResult *report, size_t entry) {
+    const ChainEntry *e = &report->entries[entry];
     return 4.0 * (double)e->end_numerator / (double)e->end_denominator;
 }
 
@@ -263,7 +263,7 @@ static bool near_planted(const Planted *p, double start, double end) {
     return fabs(start - p->start) <= 1.0 + 1e-9 && fabs(end - p->end) <= 1.0 + 1e-9;
 }
 
-static bool planted_found(const AnalysisReport *report, const Planted *p) {
+static bool planted_found(const ChainResult *report, const Planted *p) {
     if (p->schema) {
         for (size_t k = 0; k < report->schema_count; k++) {
             const AnalysisSchema *s = &report->schemas[k];
@@ -293,7 +293,7 @@ static bool unit_ok(double x) {
     return x >= 0.0 && x <= 1.0;
 }
 
-static void check_structure(const AnalysisReport *report) {
+static void check_structure(const ChainResult *report) {
     size_t previous_first = 0;
     for (size_t i = 0; i < report->schema_count; i++) {
         const AnalysisSchema *s = &report->schemas[i];
@@ -368,7 +368,7 @@ static void check_fixture(const char *dir) {
     if (!analyze(midi_path, &analysis)) {
         return;
     }
-    const AnalysisReport *report = &analysis.report;
+    const ChainResult *report = &analysis.report;
     size_t found = 0;
     for (size_t i = 0; i < planted.count; i++) {
         bool hit = planted_found(report, &planted.items[i]);
@@ -394,7 +394,7 @@ typedef struct {
     size_t parallel_chords;
 } Pinned;
 
-static size_t count_kind(const AnalysisReport *report, const char *kind) {
+static size_t count_kind(const ChainResult *report, const char *kind) {
     size_t n = 0;
     for (size_t i = 0; i < report->sequence_count; i++) {
         n += strcmp(report->sequences[i].kind, kind) == 0 ? 1 : 0;
@@ -409,7 +409,7 @@ static void check_piece(const char *dir, const Pinned *pinned) {
     if (!analyze(path, &analysis)) {
         return;
     }
-    const AnalysisReport *report = &analysis.report;
+    const ChainResult *report = &analysis.report;
     printf("%s: %zu schema(s), %zu sequence(s)\n", pinned->file, report->schema_count, report->sequence_count);
     CHECK(report->schema_count == pinned->schemas);
     CHECK(report->sequence_count == pinned->sequences);

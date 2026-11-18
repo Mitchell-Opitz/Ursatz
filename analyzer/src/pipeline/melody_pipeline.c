@@ -43,7 +43,7 @@ static void phrase_line_destroy(PhraseLine *built) {
 }
 
 /* The key region the time lies in, or the last one for a time past the end; NULL with none. */
-static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long long n, long long d) {
+static const AnalysisKeyRegion *region_at(const ChainResult *report, long long n, long long d) {
     for (size_t r = 0; r < report->key_region_count; r++) {
         const AnalysisKeyRegion *region = &report->key_regions[r];
         if (rational_cmp(rational_ratio(n, d),
@@ -70,7 +70,7 @@ static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
 }
 
 /* The key region of the chain's home key: the first region in that key, or none. */
-static const AnalysisKeyRegion *home_region_of(const AnalysisReport *report, int home) {
+static const AnalysisKeyRegion *home_region_of(const ChainResult *report, int home) {
     if (home < 0) {
         return NULL;
     }
@@ -92,7 +92,7 @@ static const AnalysisKeyRegion *home_region_of(const AnalysisReport *report, int
    takes its part of it. Leading and trailing rests are not part of a phrase's line. False on allocation failure or a
    note the input does not know. */
 static bool build_phrase_line(const ImportedScore *notes, const ChainInput *input, const AnalysisChainMelody *melody,
-                              const Segmentation *segmentation, const AnalysisReport *report,
+                              const Segmentation *segmentation, const ChainResult *report,
                               const AnalysisKeyRegion *home, const AnalysisPhrase *phrase, PhraseLine *built) {
     memset(built, 0, sizeof(*built));
     const StandardCounterpointMelodyLine *line = &melody->line.line;
@@ -397,7 +397,7 @@ done:
 }
 
 bool melody_stage_collect(const ImportedScore *notes, const ChainInput *input, const AnalysisChain *library,
-                          const Segmentation *segmentation, AnalysisReport *report) {
+                          const Segmentation *segmentation, ChainResult *report) {
     const AnalysisChainMelody *melody = analysis_chain_melody(library);
     if (report->phrase_count == 0 || !melody || melody->line.line.count == 0 ||
         segmentation->segment_count == 0) {

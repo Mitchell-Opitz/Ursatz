@@ -49,7 +49,7 @@ static void strip_run_metadata(cJSON *root) {
 }
 
 static void check_chain_against_document(const char *slug, const AnalyzerResult *result, const cJSON *document) {
-    const AnalysisReport *report = analyzer_result_report(result);
+    const ChainResult *report = analyzer_result_report(result);
     const AnalysisChain *chain = analyzer_result_chain(result);
 
     /* The voice-leading and melody results are the chain's own; the document aggregates them. */
@@ -102,7 +102,7 @@ static void check_piece(const char *fixture, const char *slug) {
     AnalyzerStatus status = analyzer_analyze(&notes, &options, &result);
     CHECKF(status == ANALYZER_OK && result != NULL, "%s: analyze returned %d", slug, (int)status);
     if (result) {
-        const AnalysisReport *report = analyzer_result_report(result);
+        const ChainResult *report = analyzer_result_report(result);
         CHECKF(report && report->entry_count > 0, "%s: empty report view", slug);
 
         char *json = analysis_document_render_result(fixture, result);

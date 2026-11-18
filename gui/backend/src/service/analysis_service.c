@@ -28,7 +28,6 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/playback.h>
 #include <ursatz_analyzer/score_export.h>
@@ -304,14 +303,14 @@ static UrsatzGuiAnalysisResult analyze_source_file(const char *dir_path, Importe
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
-    AnalysisReport report;
+    ChainResult report;
     if (!run_analysis_pipeline(&notes, ursatz_gui_knowledge(), &report)) {
         imported_score_destroy(&notes);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
     AnalysisDocument *document = analysis_document_build(source_path, &notes, &report, ursatz_gui_knowledge());
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
     if (!document) {
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;

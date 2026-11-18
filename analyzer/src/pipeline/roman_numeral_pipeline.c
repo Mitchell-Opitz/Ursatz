@@ -68,7 +68,7 @@ bool read_roman_numerals(const AnalysisChain *library, RomanNumerals *out) {
     return true;
 }
 
-bool assign_roman_numerals(const RomanNumerals *romans, const ChordEstimate *chords, AnalysisReportEntry *entries) {
+bool assign_roman_numerals(const RomanNumerals *romans, const ChordEstimate *chords, ChainEntry *entries) {
     for (size_t i = 0; i < romans->count; i++) {
         const StandardTonalityRomanResult *result = &romans->results[i];
         AnalysisRomanNumeral *roman = &entries[i].roman;

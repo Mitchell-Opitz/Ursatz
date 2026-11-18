@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include <chain/analysis_chain.h>
@@ -26,5 +26,5 @@
  */
 /* Returns false only on allocation failure. segmentation is the chain's chord segments. */
 bool melody_stage_collect(const ImportedScore *notes, const ChainInput *input, const AnalysisChain *library,
-                          const Segmentation *segmentation, AnalysisReport *report);
+                          const Segmentation *segmentation, ChainResult *report);
 #endif

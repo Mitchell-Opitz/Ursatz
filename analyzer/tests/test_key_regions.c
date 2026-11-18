@@ -79,7 +79,7 @@ static const ReferencePiece PIECES[] = {
      sizeof(MOZART_MODULATIONS) / sizeof(MOZART_MODULATIONS[0])},
 };
 
-static const AnalysisKeyRegion *region_of_measure(const AnalysisReport *report, int measure, size_t *index) {
+static const AnalysisKeyRegion *region_of_measure(const ChainResult *report, int measure, size_t *index) {
     for (size_t i = 0; i < report->key_region_count; i++) {
         if (report->key_regions[i].first_measure <= measure && measure <= report->key_regions[i].last_measure) {
             *index = i;
@@ -93,7 +93,7 @@ static bool is_modulation_extent(AnalysisKeyChangeExtent extent) {
     return extent == ANALYSIS_KEY_CHANGE_WEAK_MODULATION || extent == ANALYSIS_KEY_CHANGE_MODULATION;
 }
 
-static void check_regions_are_gap_free(const AnalysisReport *report) {
+static void check_regions_are_gap_free(const ChainResult *report) {
     CHECK(report->key_region_count >= 1);
     CHECK(report->key_change_count + 1 == report->key_region_count);
     for (size_t i = 1; i < report->key_region_count; i++) {
@@ -112,7 +112,7 @@ static int run_reference_piece(const ReferencePiece *piece) {
         fprintf(stderr, "%s: cannot import\n", piece->path);
         return 1;
     }
-    AnalysisReport report;
+    ChainResult report;
     if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "%s: pipeline failed\n", piece->path);
         imported_score_destroy(&notes);
@@ -198,7 +198,7 @@ static int run_reference_piece(const ReferencePiece *piece) {
         free(json);
     }
 
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
     return test_failure_count == 0 ? 0 : 1;
 }
@@ -294,7 +294,7 @@ static void write_piece(const char *path, const Stretch *stretches, size_t stret
 
 typedef struct {
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     cJSON *document;
 } Analyzed;
 
@@ -315,7 +315,7 @@ static void analyze(const char *path, Analyzed *out) {
 
 static void release(Analyzed *analyzed) {
     cJSON_Delete(analyzed->document);
-    analysis_report_destroy(&analyzed->report);
+    chain_result_destroy(&analyzed->report);
     imported_score_destroy(&analyzed->notes);
 }
 
@@ -329,7 +329,7 @@ static void test_no_modulation(const char *path) {
     write_piece(path, stretches, 1, false, 0);
     Analyzed analyzed;
     analyze(path, &analyzed);
-    const AnalysisReport *report = &analyzed.report;
+    const ChainResult *report = &analyzed.report;
 
     CHECK(report->key_region_count == 1);
     CHECK(report->key_change_count == 0);
@@ -355,7 +355,7 @@ static void test_excursion_with_cadence(const char *path) {
     write_piece(path, stretches, 3, false, 0);
     Analyzed analyzed;
     analyze(path, &analyzed);
-    const AnalysisReport *report = &analyzed.report;
+    const ChainResult *report = &analyzed.report;
 
     CHECK(report->key_region_count == 3);
     if (report->key_region_count == 3) {
@@ -379,7 +379,7 @@ static void test_modulation(const char *path) {
     write_piece(path, stretches, 2, false, 0);
     Analyzed analyzed;
     analyze(path, &analyzed);
-    const AnalysisReport *report = &analyzed.report;
+    const ChainResult *report = &analyzed.report;
 
     CHECK(report->key_region_count == 2);
     if (report->key_region_count == 2) {
@@ -421,7 +421,7 @@ static void test_key_signature_disagreement(const char *path) {
     write_piece(path, stretches, 1, true, -1);
     Analyzed analyzed;
     analyze(path, &analyzed);
-    const AnalysisReport *report = &analyzed.report;
+    const ChainResult *report = &analyzed.report;
 
     const cJSON *signatures = cJSON_GetObjectItemCaseSensitive(
         cJSON_GetObjectItemCaseSensitive(analyzed.document, "metadata"), "key_signatures");

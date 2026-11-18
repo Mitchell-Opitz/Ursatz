@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include "ursatz_test.h"
@@ -19,8 +19,8 @@
  */
 
 /* The entry starts at the beginning of the given measure of the 4/4 piece (measure 1 is time 0). */
-static bool starts_measure(const AnalysisReport *report, size_t entry, int measure) {
-    const AnalysisReportEntry *e = &report->entries[entry];
+static bool starts_measure(const ChainResult *report, size_t entry, int measure) {
+    const ChainEntry *e = &report->entries[entry];
     return e->time_numerator == (long)(measure - 1) * (long)e->time_denominator;
 }
 
@@ -28,7 +28,7 @@ static void check_chorale(const char *dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/chorale-voice-leading.musicxml", dir);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
@@ -73,7 +73,7 @@ static void check_chorale(const char *dir) {
         }
     }
 
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
 }
 

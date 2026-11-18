@@ -6,7 +6,7 @@
 
 #include "pipeline/analysis_result_internal.h"
 
-bool run_analysis_pipeline(const ImportedScore *notes, const KnowledgeSnapshot *knowledge, AnalysisReport *report) {
+bool run_analysis_pipeline(const ImportedScore *notes, const KnowledgeSnapshot *knowledge, ChainResult *report) {
     memset(report, 0, sizeof(*report));
     report->home_duration_denominator = 1;
 

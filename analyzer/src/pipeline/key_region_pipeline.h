@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 #include "analysis/harmony/key_regions.h"
@@ -23,11 +23,11 @@
  * does not compare it with the signature (the analysis document does, and surfaces a disagreement).
  *
  * Fills report's key regions, key changes and home region. The regions' labels and the arrays are owned by the report
- * (analysis_report_destroy). A piece with no regions (found NULL or empty) is left as a piece with no key. Returns
+ * (chain_result_destroy). A piece with no regions (found NULL or empty) is left as a piece with no key. Returns
  * false only on allocation failure.
  *
  * The pivot reading of each change is left empty; identify_pivot_chords (chord_pipeline.h) fills it.
  */
-bool key_regions_collect(const CommonPracticeKeyRegions *found, AnalysisReport *report);
+bool key_regions_collect(const CommonPracticeKeyRegions *found, ChainResult *report);
 
 #endif

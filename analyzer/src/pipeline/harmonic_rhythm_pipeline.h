@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 /*
@@ -19,12 +19,12 @@
  * measures before the arrival's measure against those in the two measures before them. Returns false only on
  * allocation failure.
  */
-bool harmonic_rhythm_stage_collect(const ImportedScore *notes, AnalysisReport *report);
+bool harmonic_rhythm_stage_collect(const ImportedScore *notes, ChainResult *report);
 
 /* Marks in *flags (one per entry, owned by the caller, free) the entries that start different harmony from the entry
    before: another base numeral or key region (a segment with no numeral differs from one that has one), and the first
    entry. The rule is the library's standard_meter_check_changes. The rhythm stage and the meter check use the same
    changes. False, *flags NULL, when a time does not fit or on allocation failure. */
-bool harmonic_rhythm_change_flags(const AnalysisReportEntry *entries, size_t count, bool **flags);
+bool harmonic_rhythm_change_flags(const ChainEntry *entries, size_t count, bool **flags);
 
 #endif

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <chain/analysis_chain.h>
 
 #include "pipeline/chord_pipeline.h"
@@ -33,7 +33,7 @@ bool read_roman_numerals(const AnalysisChain *library, RomanNumerals *out);
  * key region, the library identified no chord, or the adapter returns no numeral for the chord in that key.
  * Returns false only on allocation failure.
  */
-bool assign_roman_numerals(const RomanNumerals *romans, const ChordEstimate *chords, AnalysisReportEntry *entries);
+bool assign_roman_numerals(const RomanNumerals *romans, const ChordEstimate *chords, ChainEntry *entries);
 void roman_numerals_destroy(RomanNumerals *romans);
 
 #endif

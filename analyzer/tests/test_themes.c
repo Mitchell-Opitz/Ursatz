@@ -40,7 +40,7 @@ static void check_claim(const cJSON *claim, size_t note_count) {
     }
 }
 
-static bool analyze(const char *path, bool midi, ImportedScore *notes, AnalysisReport *report, cJSON **document) {
+static bool analyze(const char *path, bool midi, ImportedScore *notes, ChainResult *report, cJSON **document) {
     bool imported = midi ? imported_score_import_file(path, IMPORTED_FORMAT_MIDI, notes, NULL) == IMPORTED_SCORE_OK
                          : imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, notes, NULL) == IMPORTED_SCORE_OK;
     if (!imported || !run_analysis_pipeline(notes, test_knowledge(), report)) {
@@ -77,7 +77,7 @@ static void check_sentence(const char *dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/sentence.musicxml", dir);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     cJSON *document = NULL;
     if (!analyze(path, false, &notes, &report, &document)) {
         return;
@@ -114,7 +114,7 @@ static void check_sentence(const char *dir) {
     /* a balanced sentence is neither expanded nor contracted */
     CHECK(test_json_member(cJSON_GetArrayItem(test_json_member(document, "phrases"), 0), "expansions") == NULL);
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
 }
 
@@ -122,7 +122,7 @@ static void check_period(const char *dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/period.musicxml", dir);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     cJSON *document = NULL;
     if (!analyze(path, false, &notes, &report, &document)) {
         return;
@@ -158,7 +158,7 @@ static void check_period(const char *dir) {
         CHECK(cJSON_IsFalse(test_json_member(theme, "cadences_usual")));
     }
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
 }
 
@@ -166,7 +166,7 @@ static void check_compound_period(const char *dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/compound-period.musicxml", dir);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     cJSON *document = NULL;
     if (!analyze(path, false, &notes, &report, &document)) {
         return;
@@ -193,7 +193,7 @@ static void check_compound_period(const char *dir) {
         CHECK(strcmp(part_cadence(document, cJSON_GetArrayItem(parts, 1)), "perfect-authentic") == 0);
     }
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
 }
 
@@ -328,7 +328,7 @@ static void check_piece(const Piece *piece) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     cJSON *document = NULL;
     if (!analyze(path, true, &notes, &report, &document)) {
         return;
@@ -344,7 +344,7 @@ static void check_piece(const Piece *piece) {
     check_themes(document, notes.count);
     check_expansions(document);
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
 }
 

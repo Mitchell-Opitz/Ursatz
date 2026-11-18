@@ -15,6 +15,7 @@ add_library(ursatz_chain
     chain_inputs_schemas.c
     form_bridge.c
     kernel_owners.c
+    chain_result.c
 )
 # Public headers (R-223), staged under chain/ in the build tree; the chain directory is private.
 ursatz_public_headers(ursatz_chain
@@ -23,6 +24,7 @@ ursatz_public_headers(ursatz_chain
     HEADERS
         chain/analysis_chain.h
         chain/chain_inputs.h
+        chain/chain_result.h
 )
 target_link_libraries(ursatz_chain PUBLIC ursatz_analysis)
 

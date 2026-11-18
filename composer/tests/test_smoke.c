@@ -12,7 +12,7 @@
 int main(void) {
     assert(strlen(composer_version()) > 0);
 
-    AnalysisReport report = {0};
-    analysis_report_destroy(&report);
+    ChainResult report = {0};
+    chain_result_destroy(&report);
     return 0;
 }

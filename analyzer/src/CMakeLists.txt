@@ -24,7 +24,6 @@ add_library(ursatz_analyzer STATIC
     pipeline/voice_leading_pipeline.c
     pipeline/voicing_check.c
     pipeline/schema_pipeline.c
-    pipeline/analysis_report.c
     pipeline/chain.c
     pipeline/analysis_result.c
     pipeline/analysis_pipeline.c
@@ -86,8 +85,8 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz_io ursatz_analysis
-    PRIVATE ursatz_chain cjson
+    PUBLIC ursatz_io ursatz_analysis ursatz_chain
+    PRIVATE cjson
 )
 
 # Reading the chain's claims (analyzer_result_chain): the chain headers reach only a consumer that links this target.

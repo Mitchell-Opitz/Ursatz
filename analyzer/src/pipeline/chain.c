@@ -134,8 +134,8 @@ static AnalysisChordContext chord_context(const ChordEstimate *chord) {
 static bool build_entries(AnalyzerPass *chain) {
     const Segmentation *segmentation = &chain->segmentation;
     size_t count = segmentation->segment_count;
-    AnalysisReport *report = &chain->report;
-    report->entries = calloc(count, sizeof(AnalysisReportEntry));
+    ChainResult *report = &chain->report;
+    report->entries = calloc(count, sizeof(ChainEntry));
     if (!report->entries) {
         return false;
     }
@@ -143,7 +143,7 @@ static bool build_entries(AnalyzerPass *chain) {
     for (size_t i = 0; i < count; i++) {
         const Segment *segment = &segmentation->segments[i];
         ChordEstimate *chord = &chain->chords[i];
-        AnalysisReportEntry *entry = &report->entries[i];
+        ChainEntry *entry = &report->entries[i];
         entry->time_numerator = segment->start_numerator;
         entry->time_denominator = segment->start_denominator;
         entry->end_numerator = segment->end_numerator;
@@ -198,7 +198,7 @@ static bool collect_non_chord_tones(AnalyzerPass *chain) {
 /* The home key: the library's key with the longest total duration over its regions. */
 static bool collect_pass(AnalyzerPass *pass) {
     const Segmentation *segmentation = &pass->segmentation;
-    AnalysisReport *report = &pass->report;
+    ChainResult *report = &pass->report;
     const ImportedScore *notes = pass->notes;
     if (segmentation->segment_count == 0) {
         return true;
@@ -302,7 +302,7 @@ void analyzer_pass_destroy(AnalyzerPass *pass) {
     form_stage_destroy(&pass->form);
     motive_stage_destroy(&pass->motives);
     harmony_stage_destroy(&pass->harmony);
-    analysis_report_destroy(&pass->report);
+    chain_result_destroy(&pass->report);
     segmentation_view_destroy(&pass->segmentation, false);
     segmentation_view_destroy(&pass->voice_segmentation, true);
     analysis_chain_destroy(pass->library);

@@ -144,7 +144,7 @@ Every key region and every entry in `chords` and `non_chord_tones` is a claim. A
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `framework` | string | Id of the source that made the claim, e.g. `"common-practice-minimal-v1"`. |
-| `span` | object | `{"start": {"num", "den"}, "end": {"num", "den"}}`: rational times in whole notes from the start of the piece, in lowest terms, matching `time_numerator`/`time_denominator` in `AnalysisReport`. |
+| `span` | object | `{"start": {"num", "den"}, "end": {"num", "den"}}`: rational times in whole notes from the start of the piece, in lowest terms, matching `time_numerator`/`time_denominator` in `ChainResult`. |
 | `location` | object | `{"start", "end"}`: where the span starts and ends on the measure grid, as positions (see below). |
 | `note_ids` | array of integers | The notes the claim covers, as indices into the imported notes. Index `N` is the note Ursatz names `midi-note-N`. |
 | `label` | string | The claim's label. |

@@ -11,7 +11,7 @@ result, not its source.
 AnalyzerResult *result = NULL;
 AnalyzerOptions options = analyzer_options_default();
 if (analyzer_analyze(&notes, &options, &result) == ANALYZER_OK) {
-    const AnalysisReport *report = analyzer_result_report(result);
+    const ChainResult *report = analyzer_result_report(result);
     char *json = analysis_document_render_result("piece.mid", result);
     ...
     analyzer_result_destroy(result);
@@ -65,5 +65,5 @@ result: the same bytes as `analysis_document_build` over the same notes and repo
 snapshot the report was made with (the labels of a notated key signature are spelled with its major and natural minor materials).
 
 `run_analysis_pipeline` is a wrapper over `analyzer_analyze`: it moves the result's report out into the caller's
-`AnalysisReport`, with the same ownership as before. `AnalysisReport` and the fragment API stay until the Composer and
+`ChainResult`, with the same ownership as before. `ChainResult` and the fragment API stay until the Composer and
 the GUI have switched to the result.

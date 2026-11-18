@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 
 #include "pipeline/form_pipeline.h"
 
@@ -21,6 +21,6 @@
  * Needs the report's phrases, themes, cadences and entries, as form_stage_collect leaves them. A report without
  * phrases is left without sections. Returns false only on allocation or library failure.
  */
-bool form_plan_stage_collect(const FormStage *stage, AnalysisReport *report);
+bool form_plan_stage_collect(const FormStage *stage, ChainResult *report);
 
 #endif

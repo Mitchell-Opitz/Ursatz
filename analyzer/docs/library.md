@@ -13,9 +13,9 @@ Its public include directory is `include/`, and consumers include headers as
 | `input_pipeline.h` | The thin import entries for the GUI: `analyzer_import_file` and `analyzer_import_buffer` read a MIDI or MusicXML document into an `ImportedScore`. The imported score, `ImportedFormat` and the readings are the library's (`io/imported_score.h`, which this header includes). |
 | `analysis_result.h` | `analyzer_analyze` turns an `ImportedScore` into an `AnalyzerResult`: the library chain's results and the report view the document is exported from (no claim layer, R-530). See [analysis-result.md](analysis-result.md). |
 | `result_chain.h` | `analyzer_result_chain`, the `AnalysisChain` behind an `AnalyzerResult`. The one public header that includes a chain header; needs the `ursatz_analyzer::chain` target. |
-| `analysis_pipeline.h` | `run_analysis_pipeline`, a wrapper over `analyzer_analyze` that moves the report out as an `AnalysisReport`. |
-| `analysis_report.h` | `AnalysisReport` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
-| `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalyzerResult` (or an `AnalysisReport`), serializes it as JSON, and derives `<stem>.analysis.json`. |
+| `analysis_pipeline.h` | `run_analysis_pipeline`, a wrapper over `analyzer_analyze` that moves the report out as an `ChainResult`. |
+| `chain/chain_result.h` (the library chain's) | `ChainResult` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
+| `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalyzerResult` (or an `ChainResult`), serializes it as JSON, and derives `<stem>.analysis.json`. |
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
 | `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
 | `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
@@ -30,7 +30,7 @@ Its public include directory is `include/`, and consumers include headers as
 
 The Composer calls `composer_api.h` to analyze a fragment it generated, with no file: see [composer-api.md](composer-api.md).
 
-Ownership: the caller owns the `AnalysisReport` and frees it with `analysis_report_destroy`,
+Ownership: the caller owns the `ChainResult` and frees it with `chain_result_destroy`,
 which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
 marks a group or key that was not identified. It also frees each entry's `note_ids`. The caller
 frees an `AnalysisDocument` with `analysis_document_destroy`; it keeps no reference to the notes
@@ -73,7 +73,7 @@ which runs the analysis as one `AnalyzerPass` (`chain.h`) inside `analyzer_analy
 2. `analysis_chain_run` runs once, over every stage: segments, key regions (a second pass on the chords and phrase ends of
    the first, so the Analyzer runs no pass of its own), chords, Roman numerals, outer voices, cadences, form, motives,
    meter, texture, voice leading, melody, schemas and sequences.
-3. The stage files read the chain's accessors into the `AnalysisReport` and nothing more: `key_region_pipeline`,
+3. The stage files read the chain's accessors into the `ChainResult` and nothing more: `key_region_pipeline`,
    `chord_pipeline` (with the respelling of a notated score), `roman_numeral_pipeline`, `outer_voice_pipeline`,
    `harmony_pipeline` (cadences; the functions, six-fours, prolongations and phrase model, which the chain does not
    run, are library calls over the chain's prepared harmony segments), `form_pipeline`, `motive_pipeline`, `melody_pipeline` (each

@@ -256,7 +256,7 @@ static bool collect_chords(const VoiceGrid *build, const HarmonyStage *harmony, 
 }
 
 bool voice_leading_stage_collect(const ImportedScore *notes, const ChainInput *input, const AnalysisChain *library,
-                                 const HarmonyStage *harmony, AnalysisReport *report) {
+                                 const HarmonyStage *harmony, ChainResult *report) {
     const AnalysisChainVoiceLeading *found = analysis_chain_voice_leading(library);
     if (notes->count == 0 || report->entry_count == 0 || !notes->meter.meter_map || !found ||
         found->voice_count == 0 || analysis_chain_segment_count(library) != report->entry_count) {

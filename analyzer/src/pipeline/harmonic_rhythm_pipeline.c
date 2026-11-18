@@ -26,12 +26,12 @@ static bool measure_at(const MeterMap *map, long numerator, unsigned long denomi
     return true;
 }
 
-static bool entry_time(const AnalysisReportEntry *entry, Rational *time) {
+static bool entry_time(const ChainEntry *entry, Rational *time) {
     return entry->time_denominator <= (unsigned long)LLONG_MAX &&
            rational_make((long long)entry->time_numerator, (long long)entry->time_denominator, time) == RATIONAL_OK;
 }
 
-bool harmonic_rhythm_change_flags(const AnalysisReportEntry *entries, size_t count, bool **flags) {
+bool harmonic_rhythm_change_flags(const ChainEntry *entries, size_t count, bool **flags) {
     *flags = calloc(count > 0 ? count : 1, sizeof(bool));
     const char **labels = calloc(count > 0 ? count : 1, sizeof(const char *));
     long *regions = calloc(count > 0 ? count : 1, sizeof(long));
@@ -82,7 +82,7 @@ static void window_changes(const AnalysisMeasureChanges *rhythm, size_t count, i
 }
 
 /* One approach per cadence, from the arrival's measure (measures[i] is the measure of entry i). */
-static bool collect_approaches(const int *measures, AnalysisReport *report) {
+static bool collect_approaches(const int *measures, ChainResult *report) {
     if (report->cadence_count == 0) {
         return true;
     }
@@ -104,7 +104,7 @@ static bool collect_approaches(const int *measures, AnalysisReport *report) {
     return true;
 }
 
-bool harmonic_rhythm_stage_collect(const ImportedScore *notes, AnalysisReport *report) {
+bool harmonic_rhythm_stage_collect(const ImportedScore *notes, ChainResult *report) {
     size_t count = report->entry_count;
     if (count == 0) {
         return true;
@@ -117,7 +117,7 @@ bool harmonic_rhythm_stage_collect(const ImportedScore *notes, AnalysisReport *r
     int first = 0;
     int last = 0;
     for (size_t i = 0; i < count; i++) {
-        const AnalysisReportEntry *entry = &report->entries[i];
+        const ChainEntry *entry = &report->entries[i];
         if (!measure_at(map, entry->time_numerator, entry->time_denominator, &measures[i])) {
             free(measures);
             return true; /* a segment off the meter: no harmonic rhythm, as with the cadences */

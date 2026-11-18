@@ -105,7 +105,7 @@ int main(void) {
 
     ImportedScore notes;
     assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
-    AnalysisReport report;
+    ChainResult report;
     assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
 
     char *json = test_render_document(path, &notes, &report);
@@ -378,7 +378,7 @@ int main(void) {
 
     cJSON_Delete(document);
     free(json);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
     remove(path);
     free(path);

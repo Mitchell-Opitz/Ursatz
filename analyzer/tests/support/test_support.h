@@ -7,7 +7,7 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <io/imported_score.h>
 
 /* A format 0 MIDI file with one track into buf; returns its size. */
@@ -24,7 +24,7 @@ bool test_within(const cJSON *inner, const cJSON *outer);
 
 /* analysis_document_build, then analysis_document_to_json, for an input path, its notes and report. Returns a heap
    string the caller frees, or NULL on allocation failure. */
-char *test_render_document(const char *input_path, const ImportedScore *notes, const AnalysisReport *report);
+char *test_render_document(const char *input_path, const ImportedScore *notes, const ChainResult *report);
 
 /* Imports a file (the format is detected), runs the pipeline and returns the parsed analysis document the
    caller deletes. Asserts on any failure. */

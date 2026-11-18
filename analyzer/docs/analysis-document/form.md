@@ -150,7 +150,7 @@ Each entry is a claim over the later run, in the library's order (`framework` `"
 | `earlier`, `later` | object | `{"first", "last"}`: the library's measure numbers of the two runs; the earlier run ends before the later begins. |
 | `transposition` | integer | Semitones, later minus earlier; `0` for a repeat. A return can also read `0` when only the soprano matches. |
 
-The report holds the same list as `AnalysisReport.repeats` (`AnalysisRepeat`). Measured on the reference pieces:
+The report holds the same list as `ChainResult.repeats` (`AnalysisRepeat`). Measured on the reference pieces:
 Mozart 545 has the repeats m1-m28 to m29-m56 and m57-m101 to m102-m146 and the return of m1-m8 at m70-m77 (+5); Clementi
 36 has the returns of m1-m4 at m24-m27 (-12) and m8-m12 at m31-m35 (-7). The text export shows each at the later run's
 first measure ([text-export.md](../text-export.md)).

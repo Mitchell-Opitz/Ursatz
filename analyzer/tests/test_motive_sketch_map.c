@@ -64,7 +64,7 @@ int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
     ImportedScore notes;
-    AnalysisReport report;
+    ChainResult report;
     if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
@@ -95,7 +95,7 @@ int main(void) {
     printf("Mozart 545: %zu motive families mapped both ways\n", mapped);
     motive_link_scope_destroy(scope);
     free(json);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     imported_score_destroy(&notes);
     return test_finish("test_motive_sketch_map");
 }

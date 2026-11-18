@@ -61,7 +61,7 @@ static void copy_change(const CommonPracticeKeyChange *source, AnalysisKeyChange
     out->pivot = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
 }
 
-bool key_regions_collect(const CommonPracticeKeyRegions *found, AnalysisReport *report) {
+bool key_regions_collect(const CommonPracticeKeyRegions *found, ChainResult *report) {
     if (!found || found->region_count == 0) {
         return true;
     }

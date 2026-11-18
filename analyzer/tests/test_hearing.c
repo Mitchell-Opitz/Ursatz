@@ -197,7 +197,7 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     AnalyzerResult *heard = NULL;
     CHECKF(analyzer_hear(&hearing, test_hearing_defaults(), &heard) == ANALYZER_OK && heard, "%s: hear", fixture);
     if (heard) {
-        const AnalysisReport *report = analyzer_result_report(heard);
+        const ChainResult *report = analyzer_result_report(heard);
         CHECKF(report->entry_count == WITH_SPANS[piece].entries && report->cadence_count == WITH_SPANS[piece].cadences,
                "%s: default hearing %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
                report->cadence_count, WITH_SPANS[piece].entries, WITH_SPANS[piece].cadences);
@@ -207,7 +207,7 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
     AnalyzerResult *unspanned = NULL;
     CHECKF(analyzer_hear(&hearing, &no_spans, &unspanned) == ANALYZER_OK && unspanned, "%s: hear without spans", fixture);
     if (unspanned) {
-        const AnalysisReport *report = analyzer_result_report(unspanned);
+        const ChainResult *report = analyzer_result_report(unspanned);
         CHECKF(report->entry_count == WITHOUT_SPANS[piece].entries && report->cadence_count == WITHOUT_SPANS[piece].cadences,
                "%s: hearing without spans %zu entries and %zu cadences, expected %zu and %zu", fixture, report->entry_count,
                report->cadence_count, WITHOUT_SPANS[piece].entries, WITHOUT_SPANS[piece].cadences);
@@ -226,8 +226,8 @@ static void check_piece(size_t piece, const StyleModel *reference_model) {
         same_events = borrowed->events[i] == notes.events[i];
     }
     CHECKF(same_events, "%s: the result's notes do not point at the caller's events", fixture);
-    const AnalysisReport *heard_report = analyzer_result_report(heard);
-    const AnalysisReport *direct_report = analyzer_result_report(direct);
+    const ChainResult *heard_report = analyzer_result_report(heard);
+    const ChainResult *direct_report = analyzer_result_report(direct);
     CHECKF(heard_report->entry_count == direct_report->entry_count &&
                heard_report->key_region_count == direct_report->key_region_count &&
                heard_report->progression_count == direct_report->progression_count,

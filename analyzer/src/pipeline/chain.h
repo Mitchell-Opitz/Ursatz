@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <ursatz_analyzer/analysis_result.h>
 #include <io/imported_score.h>
 
@@ -37,7 +37,7 @@ typedef struct AnalyzerPass {
     CommonPracticeMaterials materials; /* the four common-practice materials of options.knowledge, resolved once per pass */
     ChainInput input;                /* the library chain's neutral notes and key events */
     AnalysisChain *library;          /* owned; NULL for a piece with no notes */
-    AnalysisReport report;           /* the pass's results: entries, non-chord tones, key regions and changes */
+    ChainResult report;           /* the pass's results: entries, non-chord tones, key regions and changes */
 
     /* Views of the chain's results that the stage files and the Analyzer-only stages read. */
     Segmentation segmentation;       /* the chord segments (analysis_chain_segments), merged over unchanged harmony */
