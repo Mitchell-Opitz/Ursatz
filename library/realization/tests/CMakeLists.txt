@@ -1,1 +1,4 @@
 ursatz_test_includes()
+
+ursatz_test(realization_lines SOURCES test_realization_lines.c LIBS ursatz_realization VALGRIND)
+ursatz_test(realization_scoring SOURCES test_realization_scoring.c LIBS ursatz_realization VALGRIND)
