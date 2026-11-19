@@ -71,26 +71,11 @@ static int handle_start_run(struct mg_connection *conn) {
 }
 
 static int handle_list_runs(struct mg_connection *conn) {
-  cJSON *runs = NULL;
-  UrsatzStatus result = workshop_link_run_list(&runs);
-  if (result != URSATZ_OK) {
-    return send_link_failure(conn, result);
-  }
-  return send_ok_with(conn, 200, "runs", runs);
+  return ursatz_gui_answer_query(conn, "links.list", ursatz_gui_request_params(conn, NULL), NULL, ursatz_gui_failed_message, false);
 }
 
 static int handle_get_run(struct mg_connection *conn, const char *id) {
-  cJSON *run = NULL;
-  UrsatzStatus result = workshop_link_run_get(id, &run);
-  if (result != URSATZ_OK) {
-    return result == URSATZ_ERR_NOT_FOUND ? ursatz_gui_send_failure(conn, 404, "run not found")
-                                                    : send_link_failure(conn, result);
-  }
-  if (!workshop_link_titles_for_run(run)) {
-    cJSON_Delete(run);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return send_ok_with(conn, 200, "run", run);
+  return ursatz_gui_answer_query(conn, "links.get", ursatz_gui_request_params(conn, "id", id, NULL), NULL, ursatz_gui_failed_message, false);
 }
 
 static int handle_delete_run(struct mg_connection *conn, const char *id) {
@@ -106,16 +91,8 @@ static int handle_delete_run(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_piece_links(struct mg_connection *conn, const char *piece_id) {
-  cJSON *links = NULL;
-  UrsatzStatus result = workshop_link_piece_links(piece_id, &links);
-  if (result != URSATZ_OK) {
-    return send_link_failure(conn, result);
-  }
-  if (!workshop_link_titles_for_piece_links(links)) {
-    cJSON_Delete(links);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return send_ok_with(conn, 200, "links", links);
+  return ursatz_gui_answer_query(conn, "links.piece", ursatz_gui_request_params(conn, "id", piece_id, NULL), NULL, ursatz_gui_failed_message,
+                                 false);
 }
 
 /* The id after "<prefix>/", or false when it is empty, too long, or has a slash in it. */

@@ -16,21 +16,11 @@ static int send_subject_failure(struct mg_connection *conn, UrsatzStatus result)
 
 
 static int handle_list_subjects(struct mg_connection *conn) {
-  cJSON *subjects = NULL;
-  UrsatzStatus result = workshop_subject_list(&subjects);
-  if (result != URSATZ_OK) {
-    return send_subject_failure(conn, result);
-  }
-  return send_ok_with(conn, "subjects", subjects);
+  return QUERY(conn, "subject.list", failed_material, false, NULL);
 }
 
 static int handle_subject_groups(struct mg_connection *conn) {
-  cJSON *groups = NULL;
-  UrsatzStatus result = workshop_subject_groups(&groups);
-  if (result != URSATZ_OK) {
-    return send_subject_failure(conn, result);
-  }
-  return send_ok_with(conn, "groups", groups);
+  return QUERY(conn, "subject.groups", failed_material, false, NULL);
 }
 
 static int handle_create_subject(struct mg_connection *conn) {
@@ -57,12 +47,7 @@ static int handle_create_subject(struct mg_connection *conn) {
 }
 
 static int handle_get_subject(struct mg_connection *conn, const char *id) {
-  cJSON *subject = NULL;
-  UrsatzStatus result = workshop_subject_get(id, &subject);
-  if (result != URSATZ_OK) {
-    return send_subject_failure(conn, result);
-  }
-  return send_ok_with(conn, "subject", subject);
+  return QUERY(conn, "subject.get", failed_material, false, "id", id);
 }
 
 static int handle_patch_subject(struct mg_connection *conn, const char *id) {

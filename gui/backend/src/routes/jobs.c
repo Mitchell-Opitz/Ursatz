@@ -37,31 +37,14 @@ int ursatz_gui_jobs_send_accepted(struct mg_connection *conn, const char *kind, 
   return ursatz_gui_send_object(conn, 202, object);
 }
 
+/* The failure of a job query: {"ok": false, "error"} with the status of the table. */
+static int failed_job(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  return send_error(conn, workshop_http_status(status, NULL), error->message);
+}
+
 /* GET /api/jobs/<id>: {"ok": true, "job": {id, kind, state, stage, done, total, http_status?, result?}}. */
 static int handle_get(struct mg_connection *conn, const char *id) {
-  WorkshopJobInfo info;
-  if (!workshop_job_get(id, &info)) {
-    return send_error(conn, 404, "job not found");
-  }
-  cJSON *object = cJSON_CreateObject();
-  cJSON *job = object ? cJSON_AddObjectToObject(object, "job") : NULL;
-  bool ok = job && cJSON_AddBoolToObject(object, "ok", 1) && cJSON_AddStringToObject(job, "id", info.id) &&
-            cJSON_AddStringToObject(job, "kind", info.kind) &&
-            cJSON_AddStringToObject(job, "state", workshop_job_state_name(info.state)) &&
-            cJSON_AddStringToObject(job, "stage", info.stage) && cJSON_AddNumberToObject(job, "done", info.done) &&
-            cJSON_AddNumberToObject(job, "total", info.total);
-  if (ok && info.result) {
-    ok = cJSON_AddNumberToObject(job, "http_status", info.http_status) && cJSON_AddItemToObject(job, "result", info.result);
-    if (ok) {
-      info.result = NULL; /* the answer owns the tree now */
-    }
-  }
-  workshop_job_info_destroy(&info);
-  if (!ok) {
-    cJSON_Delete(object);
-    return send_error(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, 200, object);
+  return ursatz_gui_answer_query(conn, "job.get", ursatz_gui_request_params(conn, "id", id, NULL), NULL, failed_job, false);
 }
 
 /* DELETE /api/jobs/<id>: asks the job to stop (204). */

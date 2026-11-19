@@ -23,60 +23,25 @@ static int send_error(struct mg_connection *conn, int status, const char *error)
   return ursatz_gui_send_object(conn, status, object);
 }
 
-/* GET /api/composer/status: the versions this build holds, from the workshop (workshop_status). "version" keeps the text the command
- * printed; api_version, analyzer_version (the Analyzer's, the workshop holds both apps) and producer_key are additive. */
+/* The failure of a Composer query: {"error"} with the status of the table. */
+static int failed_composer(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  return send_error(conn, workshop_http_status(status, NULL), error->message);
+}
+
+/* GET /api/composer/status: the versions this build holds, from the workshop. "version" keeps the text the command printed; api_version,
+ * analyzer_version (the Analyzer's, the workshop holds both apps) and producer_key are additive. */
 static int handle_status(struct mg_connection *conn) {
-  cJSON *versions = NULL;
-  UrsatzError failure = {{0}};
-  Workshop *workshop = ursatz_gui_workshop();
-  if (!workshop || workshop_status(workshop, &versions, &failure) != URSATZ_OK) {
-    cJSON *object = cJSON_CreateObject();
-    if (object) {
-      cJSON_AddStringToObject(object, "error", "composer failed");
-      cJSON_AddStringToObject(object, "stderr", failure.message);
-    }
-    return ursatz_gui_send_object(conn, 500, object);
-  }
-  const cJSON *composer_version = cJSON_GetObjectItemCaseSensitive(versions, "composer_version");
-  const cJSON *api_version = cJSON_GetObjectItemCaseSensitive(versions, "api_version");
-  const cJSON *producer_key = cJSON_GetObjectItemCaseSensitive(versions, "producer_key");
-  const cJSON *analyzer = cJSON_GetObjectItemCaseSensitive(versions, "analyzer_version");
-  char version[128];
-  snprintf(version, sizeof(version), "ursatz-composer %s", cJSON_IsString(composer_version) ? composer_version->valuestring : "");
-  cJSON *object = cJSON_CreateObject();
-  bool built = object && cJSON_IsString(composer_version) && cJSON_IsString(api_version) &&
-               cJSON_IsString(producer_key) && cJSON_IsString(analyzer) &&
-               cJSON_AddTrueToObject(object, "ok") && cJSON_AddTrueToObject(object, "available") &&
-               cJSON_AddStringToObject(object, "version", version) &&
-               cJSON_AddStringToObject(object, "api_version", api_version->valuestring) &&
-               cJSON_AddStringToObject(object, "analyzer_version", analyzer->valuestring) &&
-               cJSON_AddStringToObject(object, "producer_key", producer_key->valuestring);
-  cJSON_Delete(versions);
-  if (!built) {
-    cJSON_Delete(object);
-    return send_error(conn, 500, "composer failed");
-  }
-  return ursatz_gui_send_object(conn, 200, object);
+  return ursatz_gui_answer_query(conn, "composer.status", NULL, NULL, failed_composer, false);
 }
 
-/* GET /api/composer/vocabulary: the words the Composer reads, as composer_api_vocabulary gives them (built once and
- * kept, R-270). */
+/* GET /api/composer/vocabulary: the words the Composer reads (built once and kept, R-270). */
 static int handle_vocabulary(struct mg_connection *conn) {
-  const char *vocabulary = workshop_composer_vocabulary();
-  if (!vocabulary) {
-    return send_error(conn, 500, "composer failed");
-  }
-  return ursatz_gui_send_json_status(conn, 200, "OK", vocabulary);
+  return ursatz_gui_answer_query(conn, "composer.vocabulary", NULL, NULL, failed_composer, true);
 }
 
-/* GET /api/composer/forms: the forms the Composer builds and their sections, sizes and slots, as composer_api_forms
- * gives them (built once and kept). */
+/* GET /api/composer/forms: the forms the Composer builds and their sections, sizes and slots (built once and kept). */
 static int handle_forms(struct mg_connection *conn) {
-  const char *forms = workshop_composer_forms();
-  if (!forms) {
-    return send_error(conn, 500, "composer failed");
-  }
-  return ursatz_gui_send_json_status(conn, 200, "OK", forms);
+  return ursatz_gui_answer_query(conn, "composer.forms", NULL, NULL, failed_composer, true);
 }
 
 static size_t split_path(char *rest, char *segments[MAX_SEGMENTS]) {

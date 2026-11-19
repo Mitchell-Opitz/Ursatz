@@ -41,7 +41,14 @@ add_library(ursatz_workshop STATIC
     src/rendering/playback.c
     src/rendering/render_cache.c
     src/jobs/job_queue.c
+    src/coordinator/api_analysis.c
+    src/coordinator/api_collections.c
+    src/coordinator/api_composer.c
+    src/coordinator/api_items.c
+    src/coordinator/api_jobs.c
+    src/coordinator/api_library.c
     src/coordinator/data_lock.c
+    src/coordinator/dispatch.c
     src/coordinator/settings.c
     src/coordinator/workshop.c
 )

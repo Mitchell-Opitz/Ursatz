@@ -23,15 +23,13 @@
 
 static const char *kMaterialsPrefix = "/api/materials";
 
+static int failed_version(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error);
+static int failed_export(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error);
+
 /* --- projects ------------------------------------------------------------ */
 
 static int handle_list_projects(struct mg_connection *conn) {
-  cJSON *projects = NULL;
-  UrsatzStatus result = workshop_material_project_list(&projects);
-  if (result != URSATZ_OK) {
-    return send_material_failure(conn, result);
-  }
-  return send_ok_with(conn, "projects", projects);
+  return QUERY(conn, "project.list", failed_material, false, NULL);
 }
 
 static int handle_create_project(struct mg_connection *conn) {
@@ -57,12 +55,7 @@ static int handle_create_project(struct mg_connection *conn) {
 }
 
 static int handle_get_project(struct mg_connection *conn, const char *id) {
-  cJSON *project = NULL;
-  UrsatzStatus result = workshop_material_project_get(id, &project);
-  if (result != URSATZ_OK) {
-    return send_material_failure(conn, result);
-  }
-  return send_ok_with(conn, "project", project);
+  return QUERY(conn, "project.get", failed_material, false, "id", id);
 }
 
 static int handle_patch_project(struct mg_connection *conn, const char *id) {
@@ -98,16 +91,7 @@ static int handle_delete_project(struct mg_connection *conn, const char *id) {
 /* --- items and versions -------------------------------------------------- */
 
 static int handle_list_items(struct mg_connection *conn) {
-  char project[256];
-  char type[32];
-  cJSON *items = NULL;
-  UrsatzStatus result = workshop_material_item_list(
-      query_value(conn, "project", project, sizeof(project)) ? project : NULL,
-      query_value(conn, "type", type, sizeof(type)) ? type : NULL, &items);
-  if (result != URSATZ_OK) {
-    return send_material_failure(conn, result);
-  }
-  return send_ok_with(conn, "items", items);
+  return QUERY(conn, "item.list", failed_material, false, NULL);
 }
 
 /* Adds "analysis_error" to the item answer when the Composer was unavailable. */
@@ -181,46 +165,9 @@ static int handle_create_item(struct mg_connection *conn) {
   return send_item_answer(conn, item, analysis_error);
 }
 
-/* The item answer: {"ok":true,"item":meta,"body":current,"uses_status":[...],"used_by":[...],"subjects":[...]}. */
+/* The item answer: {"ok":true,"item":meta,"body":current,"layers":...,"uses_status":[...],"used_by":[...],"subjects":[...]}. */
 static int handle_get_item(struct mg_connection *conn, const char *id) {
-  cJSON *meta = NULL;
-  cJSON *body = NULL;
-  cJSON *uses_status = NULL;
-  cJSON *used_by = NULL;
-  cJSON *subjects = NULL;
-  UrsatzStatus result = workshop_material_item_get(id, &meta, &body);
-  if (result == URSATZ_OK) {
-    result = workshop_material_uses_status(id, &uses_status);
-  }
-  if (result == URSATZ_OK) {
-    result = workshop_material_used_by(id, &used_by);
-  }
-  if (result == URSATZ_OK) {
-    subjects = workshop_subjects_for_item(id);
-  }
-  cJSON *object = result == URSATZ_OK && subjects ? cJSON_CreateObject() : NULL;
-  if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "item", meta)) {
-    cJSON_Delete(object);
-    cJSON_Delete(meta);
-    cJSON_Delete(body);
-    cJSON_Delete(uses_status);
-    cJSON_Delete(used_by);
-    cJSON_Delete(subjects);
-    return result == URSATZ_OK ? send_failure(conn, 500, "out of memory")
-                                            : send_material_failure(conn, result);
-  }
-  cJSON_AddItemToObject(object, "body", body);
-  {
-    cJSON *layers = NULL;
-    int current = (int)(cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(meta, "current_version")) ? cJSON_GetObjectItemCaseSensitive(meta, "current_version")->valuedouble : 0);
-    if (workshop_material_version_layers(id, current, &layers) == URSATZ_OK) {
-      cJSON_AddItemToObject(object, "layers", layers);
-    }
-  }
-  cJSON_AddItemToObject(object, "uses_status", uses_status);
-  cJSON_AddItemToObject(object, "used_by", used_by);
-  cJSON_AddItemToObject(object, "subjects", subjects);
-  return ursatz_gui_send_object(conn, 200, object);
+  return QUERY(conn, "item.get", failed_material, false, "id", id);
 }
 
 static int handle_patch_item(struct mg_connection *conn, const char *id) {
@@ -374,28 +321,12 @@ static int handle_reanalyze(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_get_version(struct mg_connection *conn, const char *id, const char *number_text) {
-  char *end = NULL;
-  long number = strtol(number_text, &end, 10);
-  if (end == number_text || *end != '\0' || number < 1 || number > 1000000) {
-    return send_failure(conn, 404, "version not found");
-  }
-  cJSON *version_body = NULL;
-  UrsatzStatus result = workshop_material_item_get_version(id, (int)number, &version_body);
-  if (result != URSATZ_OK) {
-    return send_material_failure(conn, result);
-  }
-  cJSON *object = cJSON_CreateObject();
-  if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddNumberToObject(object, "number", (double)number)) {
-    cJSON_Delete(object);
-    cJSON_Delete(version_body);
-    return send_failure(conn, 500, "out of memory");
-  }
-  cJSON_AddItemToObject(object, "body", version_body);
-  cJSON *layers = NULL;
-  if (workshop_material_version_layers(id, (int)number, &layers) == URSATZ_OK) {
-    cJSON_AddItemToObject(object, "layers", layers);
-  }
-  return ursatz_gui_send_object(conn, 200, object);
+  return QUERY(conn, "item.version", failed_version, false, "id", id, "version", number_text);
+}
+
+/* The failures of a read of a version or one of its files: a missing version or file is the error shape, the rest the store's message. */
+static int failed_version(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  return status == URSATZ_ERR_NOT_FOUND ? send_failure(conn, 404, error->message) : failed_material(conn, status, error);
 }
 
 /* A version number from a path segment, 1 to 1000000. */
@@ -551,19 +482,7 @@ static int handle_piece_variations(struct mg_connection *conn, const char *id, c
 /* GET /api/materials/items/<pce-id>/versions/<n>/variations/<set>/<file>: a file of a variations set. */
 static int handle_piece_variation_file(struct mg_connection *conn, const char *id, const char *number_text, const char *set_text,
                                        const char *name) {
-  int version = 0;
-  int set = 0;
-  unsigned char *data = NULL;
-  size_t size = 0;
-  const char *type = NULL;
-  if (!parse_version_number(number_text, &version) || !parse_version_number(set_text, &set) ||
-      workshop_piece_variation_file(id, version, set, name, &data, &size, &type) != URSATZ_OK) {
-    return send_failure(conn, 404, "file not found");
-  }
-  mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n", type, size);
-  mg_write(conn, data, size);
-  free(data);
-  return 200;
+  return QUERY(conn, "item.variation-file", failed_material_error, false, "id", id, "version", number_text, "set", set_text, "name", name);
 }
 
 /* POST /api/materials/items/<pce-id>/versions/<n>/variations/<set>/choose {index}: makes a variation the next version. */
@@ -599,24 +518,7 @@ static int handle_piece_choose(struct mg_connection *conn, const char *id, const
 
 /* GET /api/materials/items/<id>/versions/<n>/files/<name>: one of a theme or piece version's files. */
 static int handle_version_file(struct mg_connection *conn, const char *id, const char *number_text, const char *name) {
-  char *end = NULL;
-  long number = strtol(number_text, &end, 10);
-  const char *content_type = workshop_material_version_file_type(name);
-  if (end == number_text || *end != '\0' || number < 1 || number > 1000000 || !content_type) {
-    return send_failure(conn, 404, "file not found");
-  }
-  unsigned char *data = NULL;
-  size_t size = 0;
-  UrsatzStatus result = workshop_material_version_file(id, (int)number, name, &data, &size);
-  if (result != URSATZ_OK) {
-    return result == URSATZ_ERR_NOT_FOUND ? send_failure(conn, 404, "file not found")
-                                                        : send_material_failure(conn, result);
-  }
-  mg_printf(conn, "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
-            content_type, size);
-  mg_write(conn, data, size);
-  free(data);
-  return 200;
+  return QUERY(conn, "item.file", failed_version, false, "id", id, "version", number_text, "name", name);
 }
 
 /* Sends a file's bytes with a content type. */
@@ -630,46 +532,13 @@ static int send_bytes(struct mg_connection *conn, const char *type, const void *
    file (variation-<i>.mid). */
 static int handle_piece_variation_playback(struct mg_connection *conn, const char *id, const char *number_text,
                                            const char *set_text, const char *name) {
-  int version = 0;
-  int set = 0;
-  char path[640];
-  if (!parse_version_number(number_text, &version) || !parse_version_number(set_text, &set) ||
-      workshop_piece_variation_midi_path(id, version, set, name, path, sizeof(path)) != URSATZ_OK) {
-    return send_failure(conn, 404, "file not found");
-  }
-  char *json = NULL;
-  UrsatzStatus built = workshop_playback_of_midi(path, &json);
-  return built == URSATZ_OK ? send_playback_text(conn, json)
-                                         : send_failure(conn, 500, playback_failure_text(built));
+  return QUERY(conn, "item.variation-playback", failed_material_error, true, "id", id, "version", number_text, "set", set_text, "name", name);
 }
 
 /* GET /api/materials/items/<id>/versions/<n>/score and .../playback, with ?key= for the key to sound it in (default: the motif's own
    key). With ?file= the playback route answers for a theme or piece version's own MIDI file instead. */
 static int handle_version_render(struct mg_connection *conn, const char *id, const char *number_text, bool playback_only) {
-  char *end = NULL;
-  long number = strtol(number_text, &end, 10);
-  if (end == number_text || *end != '\0' || number < 1 || number > 1000000) {
-    return send_failure(conn, 404, "version not found");
-  }
-  char file[16];
-  char render_key[32];
-  bool has_file = playback_only && query_value(conn, "file", file, sizeof(file));
-  bool has_render_key = query_value(conn, "key", render_key, sizeof(render_key));
-  char *musicxml = NULL;
-  cJSON *playback = NULL;
-  int status = 0;
-  UrsatzError error = {{0}};
-  UrsatzStatus result = workshop_motif_version_render(id, (int)number, has_render_key ? render_key : NULL, playback_only,
-                                                      has_file ? file : NULL, &musicxml, &playback, &status, &error);
-  if (result != URSATZ_OK) {
-    return send_failure_at(conn, status, error.message, error.path);
-  }
-  if (playback) {
-    return ursatz_gui_send_object(conn, 200, playback);
-  }
-  int answered = send_bytes(conn, "application/xml", musicxml, strlen(musicxml));
-  free(musicxml);
-  return answered;
+  return QUERY(conn, playback_only ? "item.playback" : "item.score", failed_material_error, true, "id", id, "version", number_text);
 }
 
 /* ---- variants ---------------------------------------------------------- */
@@ -702,36 +571,18 @@ static int handle_update_use(struct mg_connection *conn, const char *id, const c
 
 
 
+/* The failures of an item export: a motif the Composer cannot render is a 422, a version that is no number a 400. */
+static int failed_export(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  if (status == URSATZ_ERR_REQUEST) {
+    return send_failure(conn, strncmp(error->path, "/params/", 8) == 0 ? 400 : 422, error->message);
+  }
+  return failed_version(conn, status, error);
+}
+
 /* GET /api/materials/items/<id>/export[?version=<n>]: the Analyzer's text export of a motif, theme or piece (text/plain).
    The current version unless version is given. */
 static int handle_get_item_export(struct mg_connection *conn, const char *id) {
-  char version_text[16];
-  int version = 0;
-  if (query_value(conn, "version", version_text, sizeof(version_text))) {
-    char *end = NULL;
-    long parsed = strtol(version_text, &end, 10);
-    if (end == version_text || *end != '\0' || parsed < 1 || parsed > 999999) {
-      return send_failure(conn, 400, "version must be a whole number from 1");
-    }
-    version = (int)parsed;
-  }
-  char *text = NULL;
-  UrsatzError failure = {{0}};
-  UrsatzStatus result = workshop_material_export(id, version, &text, &failure);
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    return send_failure(conn, 404, "item or version not found");
-  }
-  if (result == URSATZ_ERR_REQUEST) {
-    return send_failure(conn, 422, failure.message[0] ? failure.message : "composer could not render the motif");
-  }
-  if (result != URSATZ_OK) {
-    return send_failure(conn, 500, result == URSATZ_ERR_ALLOC ? "out of memory" : "failed to export the item");
-  }
-  size_t length = strlen(text);
-  mg_send_http_ok(conn, "text/plain; charset=utf-8", (long)length);
-  mg_write(conn, text, length);
-  free(text);
-  return 200;
+  return QUERY(conn, "item.export", failed_export, false, "id", id);
 }
 
 static int route_items(struct mg_connection *conn, const char *method, char segments[][256], int count) {

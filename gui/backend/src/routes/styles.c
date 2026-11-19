@@ -43,33 +43,11 @@ static int handle_build_style(struct mg_connection *conn) {
 }
 
 static int handle_list_styles(struct mg_connection *conn) {
-  cJSON *list = NULL;
-  UrsatzStatus result = workshop_style_list(&list);
-  if (result != URSATZ_OK) {
-    return send_style_failure(conn, result);
-  }
-  cJSON *object = cJSON_CreateObject();
-  if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "styles", list)) {
-    cJSON_Delete(list);
-    cJSON_Delete(object);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, 200, object);
+  return ursatz_gui_answer_query(conn, "style.list", ursatz_gui_request_params(conn, NULL), NULL, ursatz_gui_failed_message, false);
 }
 
 static int handle_get_style(struct mg_connection *conn, const char *id) {
-  cJSON *style = NULL;
-  UrsatzStatus result = workshop_style_get(id, &style);
-  if (result != URSATZ_OK) {
-    return send_style_failure(conn, result);
-  }
-  cJSON *object = cJSON_CreateObject();
-  if (!object || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "style", style)) {
-    cJSON_Delete(style);
-    cJSON_Delete(object);
-    return ursatz_gui_send_failure(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, 200, object);
+  return ursatz_gui_answer_query(conn, "style.get", ursatz_gui_request_params(conn, "id", id, NULL), NULL, ursatz_gui_failed_message, false);
 }
 
 static int handle_rebuild_style(struct mg_connection *conn, const char *id) {

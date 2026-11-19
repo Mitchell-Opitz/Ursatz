@@ -138,6 +138,36 @@ static inline int split_path(const char *rest, char segments[][256]) {
   return count;
 }
 
+/* Runs the query name for the route (its query variables and the path parameters given as name/value pairs, NULL ending them) and answers
+ * it: bytes as a file, JSON as {"ok": true, ...members} (bare: as it is), a failure through failed. */
+#define QUERY(conn, name, failed, bare, ...) \
+  ursatz_gui_answer_query((conn), (name), ursatz_gui_request_params((conn), __VA_ARGS__, NULL), NULL, (failed), (bare))
+
+/* Runs the query name with the request's JSON body as params (and the id of the path as "id" when given). The body's failures are
+ * answered here (400, or 413 past kMaxRequestBodySize). */
+static inline int query_with_body(struct mg_connection *conn, const char *name, UrsatzGuiFailureFn failed, bool bare, const char *id) {
+  int status = 0;
+  cJSON *body = ursatz_gui_read_json_body_max(conn, kMaxRequestBodySize, &status);
+  if (!body) {
+    return status;
+  }
+  if (id) {
+    cJSON_DeleteItemFromObjectCaseSensitive(body, "id");
+    cJSON_AddStringToObject(body, "id", id);
+  }
+  return ursatz_gui_answer_query(conn, name, body, NULL, failed, bare);
+}
+
+/* The failures the material routes answer: the message shape for the store's own failures, the error shape (with the request path at
+ * fault) for what is wrong with the request. */
+static inline int failed_material(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  return ursatz_gui_failed_message(conn, status, error);
+}
+
+static inline int failed_material_error(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  return ursatz_gui_failed_error(conn, status, error);
+}
+
 /* The failure answer of a workshop call: the status its error says (the Composer's refusal path travels as "path"). */
 static inline int send_service_error(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
   return send_failure_at(conn, workshop_http_status(status, NULL), error->message, error->path);

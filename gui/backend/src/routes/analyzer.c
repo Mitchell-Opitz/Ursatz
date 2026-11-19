@@ -61,13 +61,6 @@ static unsigned char *read_request_body(struct mg_connection *conn, size_t *out_
   return buffer;
 }
 
-static void send_musicxml_export_error(struct mg_connection *conn, UrsatzStatus status) {
-  char body[192];
-  snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}",
-           ursatz_status_name(status));
-  ursatz_gui_send_json_status(conn, 500, "Internal Server Error", body);
-}
-
 /* Answers {"ok": true, <name>: value}; value (or the members of object, when name is NULL) is moved into the answer. */
 static int send_ok_with(struct mg_connection *conn, const char *name, cJSON *value) {
   cJSON *answer = name ? cJSON_CreateObject() : value;
@@ -146,69 +139,53 @@ static int handle_post(struct mg_connection *conn) {
                                        workshop_analysis_job_free);
 }
 
-/* Reads one query parameter (URL-decoded) into out; false when absent or empty. */
-static bool query_value(const struct mg_request_info *info, const char *name, int occurrence, char *out,
-                        size_t out_size) {
-  if (!info->query_string) {
-    return false;
-  }
-  int length = mg_get_var2(info->query_string, strlen(info->query_string), name, out, out_size, (size_t)occurrence);
-  return length > 0;
+/* Library failures: every one answers 200 with {"ok": false, "message"} (the old answers, until B12). */
+static int send_library_failure(struct mg_connection *conn, const UrsatzError *error) {
+  return ursatz_gui_send_failure(conn, 200, error->message);
 }
 
-/* Builds the metadata filter from composer, source, tag, unassigned (composer
- * or source, may repeat) and untagged=1. The strings live in the buffers. */
-static void read_filter(const struct mg_request_info *info, WorkshopPieceFilter *filter, char *composer,
-                        char *source, char *tag, size_t size) {
-  memset(filter, 0, sizeof(*filter));
-  filter->composer = query_value(info, "composer", 0, composer, size) ? composer : NULL;
-  filter->source = query_value(info, "source", 0, source, size) ? source : NULL;
-  filter->tag = query_value(info, "tag", 0, tag, size) ? tag : NULL;
-  for (int occurrence = 0; occurrence < 2; occurrence++) {
-    char which[16];
-    if (!query_value(info, "unassigned", occurrence, which, sizeof(which))) {
-      continue;
-    }
-    if (strcmp(which, "composer") == 0) {
-      filter->composer_unassigned = true;
-    } else if (strcmp(which, "source") == 0) {
-      filter->source_unassigned = true;
+/* Runs a Library query for the route's id and query variables and answers {"ok": true, ...} or the failure through failed. */
+static int run_library_query(struct mg_connection *conn, const char *name, const char *id, UrsatzGuiFailureFn failed) {
+  return ursatz_gui_answer_query(conn, name, ursatz_gui_request_params(conn, id ? "id" : NULL, id, NULL), NULL, failed, false);
+}
+
+static int failed_200(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  (void)status;
+  return send_library_failure(conn, error);
+}
+
+/* The failures of a read of one piece's document, export, score or playback: 404 for a missing piece, 422 for a source that no longer
+ * imports, 400 for a refused request, 500 for the rest. */
+static int failed_piece_read(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
+  switch (status) {
+    case URSATZ_ERR_NOT_FOUND:
+      mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+      return 404;
+    case URSATZ_ERR_FORMAT:
+      return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity", "{\"ok\":false,\"message\":\"could not import the stored source\"}");
+    case URSATZ_ERR_REQUEST:
+      if (strcmp(error->message, "failed to export piece") != 0) {
+        return ursatz_gui_send_failure(conn, 400, error->message);
+      }
+      /* fall through: the score export of a source the Analyzer refuses is a 500 naming the code */
+    default: {
+      char body[192];
+      if (strcmp(error->message, "failed to export piece") == 0 && (status == URSATZ_ERR_REQUEST || status == URSATZ_ERR_INTERNAL)) {
+        snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}", ursatz_status_name(status));
+        return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", body);
+      }
+      return ursatz_gui_send_failure(conn, 500, error->message);
     }
   }
-  char untagged[8];
-  filter->untagged = query_value(info, "untagged", 0, untagged, sizeof(untagged)) && strcmp(untagged, "1") == 0;
 }
 
 static int handle_get(struct mg_connection *conn) {
-  char composer[256], source[256], tag[256];
-  WorkshopPieceFilter filter;
-  read_filter(mg_get_request_info(conn), &filter, composer, source, tag, sizeof(composer));
-  cJSON *pieces = NULL;
-  UrsatzStatus result = workshop_library_list_json(kPiecesDir, &filter, &pieces);
-  if (result == URSATZ_ERR_ALLOC) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
-    return 200;
-  }
-  if (result != URSATZ_OK) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
-    return 200;
-  }
-  return send_ok_with(conn, "pieces", pieces);
+  return run_library_query(conn, "library.list", NULL, failed_200);
 }
 
 /* GET /api/analyzer/groups: the distinct composers, sources and tags with piece counts. */
 static int handle_get_groups(struct mg_connection *conn) {
-  cJSON *groups = NULL;
-  UrsatzStatus result = workshop_library_groups_json(kPiecesDir, &groups);
-  if (result == URSATZ_ERR_ALLOC) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"out of memory\"}");
-    return 200;
-  }
-  if (result != URSATZ_OK) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to list pieces\"}");
-    return 200;
-  }
-  return send_ok_with(conn, NULL, groups);
+  return run_library_query(conn, "library.groups", NULL, failed_200);
 }
 
 static int groups_handler(struct mg_connection *conn, void *cbdata) {
@@ -224,21 +201,7 @@ static int groups_handler(struct mg_connection *conn, void *cbdata) {
 static const char *kPieceDetailPrefix = "/api/analyzer/pieces/";
 
 static int handle_get_piece(struct mg_connection *conn, const char *id) {
-  char document_mode[16];
-  bool summary = query_value(mg_get_request_info(conn), "document", 0, document_mode, sizeof(document_mode)) &&
-                 strcmp(document_mode, "summary") == 0;
-  cJSON *piece = NULL;
-  UrsatzStatus result = workshop_library_piece_json(kPiecesDir, id, summary, &piece);
-
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 200;
-  }
-  if (result != URSATZ_OK) {
-    ursatz_gui_send_json(conn, "{\"ok\":false,\"message\":\"failed to load piece\"}");
-    return 200;
-  }
-  return send_ok_with(conn, NULL, piece);
+  return run_library_query(conn, "library.piece", id, failed_200);
 }
 
 static char *read_patch_body(struct mg_connection *conn) {
@@ -354,199 +317,28 @@ static const char *kPlaybackSuffix = "/playback";
 static const char *kDocumentSuffix = "/document";
 static const char *kExportSuffix = "/export";
 
-#define DOCUMENT_SECTIONS_MAX 64
-#define DOCUMENT_SECTION_NAME_MAX 64
-
-/* GET /api/analyzer/pieces/<id>/document?sections=a,b: only those sections of the stored analysis document, read
-   without importing the source. */
+/* GET /api/analyzer/pieces/<id>/document?sections=a,b: only those sections of the stored analysis document, read without importing the
+   source. */
 static int handle_get_piece_document(struct mg_connection *conn, const char *id) {
-  char list[DOCUMENT_SECTIONS_MAX * (DOCUMENT_SECTION_NAME_MAX + 1) + 1];
-  const char *bad_request = "{\"ok\":false,\"message\":\"sections must name one or more document sections\"}";
-  if (!query_value(mg_get_request_info(conn), "sections", 0, list, sizeof(list))) {
-    return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_request);
-  }
-  char names_text[DOCUMENT_SECTIONS_MAX][DOCUMENT_SECTION_NAME_MAX + 1];
-  const char *names[DOCUMENT_SECTIONS_MAX];
-  size_t count = 0;
-  const char *cursor = list;
-  while (*cursor) {
-    size_t length = 0;
-    while (cursor[length] && cursor[length] != ',') {
-      char c = cursor[length];
-      if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_')) {
-        return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_request);
-      }
-      length++;
-    }
-    if (length == 0 || length > DOCUMENT_SECTION_NAME_MAX || count == DOCUMENT_SECTIONS_MAX) {
-      return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_request);
-    }
-    memcpy(names_text[count], cursor, length);
-    names_text[count][length] = '\0';
-    names[count] = names_text[count];
-    count++;
-    cursor += length;
-    if (*cursor == ',') {
-      cursor++;
-      if (!*cursor) {
-        return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_request);
-      }
-    }
-  }
-
-  char *sections = NULL;
-  UrsatzStatus result = workshop_analysis_get_document(kPiecesDir, id, names, count, &sections);
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 404;
-  }
-  if (result != URSATZ_OK) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error",
-                                       "{\"ok\":false,\"message\":\"failed to load the document\"}");
-  }
-  cJSON *tree = cJSON_Parse(sections);
-  free(sections);
-  if (!tree) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
-  }
-  return send_ok_with(conn, "sections", tree);
-}
-
-/* Reads a measure number of the export range: digits only, at most 6. False when it is not one. */
-static bool parse_export_measure(const char *text, int *out) {
-  size_t length = strlen(text);
-  if (length == 0 || length > 6) {
-    return false;
-  }
-  int value = 0;
-  for (size_t i = 0; i < length; i++) {
-    if (text[i] < '0' || text[i] > '9') {
-      return false;
-    }
-    value = value * 10 + (text[i] - '0');
-  }
-  *out = value;
-  return true;
+  return run_library_query(conn, "library.document", id, failed_piece_read);
 }
 
 /* GET /api/analyzer/pieces/<id>/export[?from=<m>&to=<m>]: the Analyzer's text export of the piece (text/plain). */
 static int handle_get_piece_export(struct mg_connection *conn, const char *id) {
-  const struct mg_request_info *info = mg_get_request_info(conn);
-  const char *bad_range = "{\"ok\":false,\"message\":\"from and to must be measure numbers, from not after to\"}";
-  char from_text[16];
-  char to_text[16];
-  bool has_from = query_value(info, "from", 0, from_text, sizeof(from_text));
-  bool has_to = query_value(info, "to", 0, to_text, sizeof(to_text));
-  int first = 0;
-  int last = 0;
-  if ((has_from && !parse_export_measure(from_text, &first)) || (has_to && !parse_export_measure(to_text, &last))) {
-    return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_range);
-  }
-  if (has_from || has_to) {
-    if (!has_from) {
-      first = 1;
-    }
-    if (!has_to) {
-      last = 999999;
-    }
-    if (first > last) {
-      return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_range);
-    }
-  }
-
-  char *text = NULL;
-  UrsatzStatus result = workshop_analysis_get_piece_export(kPiecesDir, id, first, last, &text);
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 404;
-  }
-  if (result == URSATZ_ERR_FORMAT) {
-    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
-                            "{\"ok\":false,\"message\":\"could not import the stored source\"}");
-  }
-  if (result == URSATZ_ERR_REQUEST) {
-    return ursatz_gui_send_json_status(conn, 400, "Bad Request",
-                            "{\"ok\":false,\"message\":\"no measure in that range\"}");
-  }
-  if (result != URSATZ_OK) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error",
-                            "{\"ok\":false,\"message\":\"failed to export the analysis\"}");
-  }
-
-  size_t len = strlen(text);
-  mg_send_http_ok(conn, "text/plain; charset=utf-8", (long)len);
-  mg_write(conn, text, len);
-  free(text);
-  return 200;
+  return run_library_query(conn, "library.export", id, failed_piece_read);
 }
 
 static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
-  char *xml = NULL;
-  bool meter_defaulted = false;
-  UrsatzStatus result = workshop_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted);
-
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 404;
-  }
-  if (result == URSATZ_ERR_FORMAT) {
-    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
-                            "{\"ok\":false,\"message\":\"could not import the stored source\"}");
-  }
-  if (result == URSATZ_ERR_REQUEST || result == URSATZ_ERR_INTERNAL) {
-    send_musicxml_export_error(conn, result);
-    return 500;
-  }
-  if (result != URSATZ_OK) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
-  }
-
-  size_t len = strlen(xml);
-  mg_send_http_ok(conn, "application/xml", (long)len);
-  mg_write(conn, xml, len);
-  free(xml);
-  return 200;
+  return run_library_query(conn, "library.musicxml", id, failed_piece_read);
 }
 
 static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
-  bool meter_defaulted = false;
-  UrsatzStatus result = workshop_analysis_get_piece_meter_defaulted(kPiecesDir, id, &meter_defaulted);
-
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 404;
-  }
-  if (result == URSATZ_ERR_FORMAT) {
-    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
-                            "{\"ok\":false,\"message\":\"could not import the stored source\"}");
-  }
-  if (result != URSATZ_OK) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
-  }
-
-  ursatz_gui_send_json(conn, meter_defaulted ? "{\"ok\":true,\"meter_defaulted\":true}" : "{\"ok\":true,\"meter_defaulted\":false}");
-  return 200;
+  return run_library_query(conn, "library.meter-defaulted", id, failed_piece_read);
 }
 
+/* The playback document is the answer as the Analyzer made it (it holds its own "ok"). */
 static int handle_get_piece_playback(struct mg_connection *conn, const char *id) {
-  char *json = NULL;
-  UrsatzStatus result = workshop_analysis_get_piece_playback(kPiecesDir, id, &json);
-
-  if (result == URSATZ_ERR_NOT_FOUND) {
-    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
-    return 404;
-  }
-  if (result == URSATZ_ERR_FORMAT) {
-    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
-                            "{\"ok\":false,\"message\":\"could not import the stored source\"}");
-  }
-  if (result != URSATZ_OK) {
-    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to build playback\"}");
-  }
-
-  ursatz_gui_send_json(conn, json);
-  free(json);
-  return 200;
+  return run_library_query(conn, "library.playback", id, failed_piece_read);
 }
 
 /*

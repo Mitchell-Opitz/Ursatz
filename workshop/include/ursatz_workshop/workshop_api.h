@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <cJSON.h>
 
@@ -93,6 +94,42 @@ typedef struct {
 } WorkshopMigrateOptions;
 
 UrsatzStatus workshop_migrate(const char *data_dir, const WorkshopMigrateOptions *options, cJSON **report, UrsatzError *error);
+
+/*
+ * Queries and commands (R-646). Every read of the GUI is a query and every change a command; the GUI and, later, the command line give
+ * a name and a JSON object and get a reply. A query changes no file outside cache/. A command (workshop_command) is
+ *   {"command": <name>, "actor": <text>, "target": <id or null>, "base_version": <n, absent for none>, "params": {...}}
+ * and is journaled under its name with its actor; the commands of an item that has versions need base_version (the version the caller
+ * read) and are refused with URSATZ_ERR_CONFLICT, "changed since you read it", when it is not the item's current one. An unknown name,
+ * a missing actor or a params member of the wrong type is URSATZ_ERR_REQUEST naming its path. The names are in
+ * workshop/src/coordinator/dispatch.c.
+ *
+ * The reply is what the caller asked for: json (a tree the caller owns, the members of the answer) or bytes (a file, with its
+ * content_type and, for a download, filename). A command's reply holds journal_seq (the record it wrote; 0 for a command that
+ * writes none or whose job writes it later). The reply is also filled when the status is not URSATZ_OK and the answer has members
+ * (a refused delete lists what uses the item; a stale base version gives current_version).
+ */
+typedef struct {
+    const uint8_t *data;
+    size_t size;
+    const char *name;
+} WorkshopBytes;
+
+typedef struct {
+    cJSON *json;
+    uint8_t *bytes;
+    size_t size;
+    char content_type[64];
+    char filename[128];
+} WorkshopReply;
+
+void workshop_reply_destroy(WorkshopReply *reply);
+
+/*
+ * bytes is the file a few queries read (composer.import-motif: a MIDI file); NULL for the others.
+ */
+UrsatzStatus workshop_query(Workshop *workshop, const char *name, const cJSON *params, const WorkshopBytes *bytes, WorkshopReply *reply,
+                            UrsatzError *error);
 
 /* Stops what the workshop holds, releases the data folder and frees the workshop. NULL is a no-op. */
 void workshop_close(Workshop *workshop);
