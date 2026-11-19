@@ -575,4 +575,28 @@ bool grow_fidelity_checker(const Plan *plan, FillTarget target, const FillOperat
 /* The first section that asks for an archetype and a theme pairing; with open_only, a Constrained one. */
 NodeId grow_find_theme(const Plan *plan, bool open_only);
 
+/* --- shared by the files that grow a theme (grow_theme.c reads, grow_idea.c, grow_contrast.c and grow_draw.c draw, grow_apply.c applies) --- */
+
+/* How many candidates are drawn for each one asked for before the search is given up. */
+#define DRAWS_PER_CANDIDATE 6
+/* The most gaps Given material leaves in one idea or one subphrase for one lane. */
+#define GROW_MAX_GAPS 16
+
+/* Reads the request of a target; false when the target is not one grow-theme grows. */
+bool grow_read_request(const Plan *plan, FillTarget target, GrowThemeRequest *out);
+/* Whether two developments are the same kind of change by the same amount. */
+bool grow_same_kind(const MotiveRelationStep *a, const MotiveRelationStep *b);
+/* The bars of the material section the spec's motives take. */
+size_t grow_derived_bars(const GrowThemeSpec *spec, Rational bar);
+/* The bars of the material section's span, a bar each. */
+size_t grow_count_bars(PlanSpan material_span, Rational bar);
+/* Draws a spec (the candidates of one seed); false when it does not come out. */
+bool grow_draw_spec(const Plan *plan, const GrowThemeRequest *request, const GrowContext *shared, FillRng *rng, GrowThemeSpec *spec);
+/* Whether two specs are the same theme. */
+bool grow_same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b);
+/* The label of a spec, as the candidate list shows it. */
+void grow_spec_label(const GrowThemeSpec *spec, char *label, size_t size);
+/* Applies a candidate to the plan: the nodes, the targets and the motives of the theme. */
+PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context);
+
 #endif
