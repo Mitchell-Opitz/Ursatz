@@ -76,7 +76,7 @@ static bool motif_is_off_c(const char *items_dir, const char *name, const cJSON 
     return off;
 }
 
-static bool data_check_run(const char *data_dir, char *message, size_t size, bool write_marker) {
+bool workshop_data_check(const char *data_dir, char *message, size_t size) {
     if (message && size > 0) {
         message[0] = '\0';
     }
@@ -166,22 +166,5 @@ static bool data_check_run(const char *data_dir, char *message, size_t size, boo
         return false;
     }
 
-    if (!write_marker) {
-        return true;
-    }
-    static const char kMarkerText[] = "checked before the overhaul\n";
-    if (!(common_file_write_atomic(path, kMarkerText, sizeof(kMarkerText) - 1, NULL) == URSATZ_OK)) {
-        snprintf(message, size, "the data folder (%s) could not get its marker file %s",
-                 strcmp(data_dir, ".") == 0 ? "the working directory" : data_dir, kChecked);
-        return false;
-    }
     return true;
-}
-
-bool workshop_data_check(const char *data_dir, char *message, size_t size) {
-    return data_check_run(data_dir, message, size, true);
-}
-
-bool workshop_data_check_only(const char *data_dir, char *message, size_t size) {
-    return data_check_run(data_dir, message, size, false);
 }

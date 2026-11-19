@@ -119,4 +119,3 @@ workshop/src/items/formats.c ends_with_segment  # until P63 B8 (the transaction'
 workshop/src/items/formats.c starts_with  # until P63 B8 (the transaction's validation names the format of a staged file from its path)
 workshop/src/items/formats.c workshop_format_known  # until P63 B8 (the transaction's validation names the format of a staged file from its path)
 workshop/src/items/formats.c workshop_format_of_path  # until P63 B8 (the transaction's validation names the format of a staged file from its path)
-workshop/src/items/data_check.c workshop_data_check  # until P63 B7 test commit (the migration asks the read-only check; the data_check test still calls this one)

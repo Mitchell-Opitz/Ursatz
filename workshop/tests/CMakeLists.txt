@@ -10,9 +10,12 @@ ursatz_test(piece_metadata LIBS ursatz_workshop ursatz_test_support WORKING_DIRE
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/id_service)
 ursatz_test(id_service LIBS ursatz_workshop ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/id_service)
 
-# The test makes one data folder per case in its own working directory and removes it.
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data_check)
-ursatz_test(data_check LIBS ursatz_workshop ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data_check)
+# The migration of the GUI's data folder to layout 1, its refusals and the data check's cases (P63 B7). The test copies the version 0
+# fixture into folders of its own working directory.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_migrate)
+ursatz_test(workshop_migrate SOURCES test_migrate.c LIBS ursatz_workshop ursatz_test_support
+    DEFINITIONS URSATZ_WORKSHOP_DATA_V0="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/data-v0"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_migrate)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/job_queue)
 ursatz_test(job_queue LIBS ursatz_workshop ursatz_test_http
@@ -57,3 +60,13 @@ ursatz_test(workshop_variants SOURCES test_variants.c LIBS ursatz_workshop ursat
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/workshop_variants)
 # The test creates its own materials_<pid>/ store in the build tree (URSATZ_GUI_TEST_STORE_DIR), saves a motif and three generations of
 # variants through the workshop functions, and removes it.
+
+# Every file the layout names, in the folder the migrated_routes test migrates and then writes into (the routes make a project, an item,
+# a version, a mark and a subject, and compose the theme again), against its schema in workshop/schema. Needs python3 with jsonschema
+# (cmake/UrsatzTools.cmake); it runs after migrated_routes.
+if(URSATZ_JSONSCHEMA_PYTHON)
+    ursatz_test(workshop_formats COMMAND ${URSATZ_JSONSCHEMA_PYTHON} ${CMAKE_CURRENT_SOURCE_DIR}/validate_formats.py
+                     ${PROJECT_SOURCE_DIR}/workshop/schema ${CMAKE_BINARY_DIR}/gui/backend/tests/migrated_routes
+        LABELS schema
+        PROPERTIES FIXTURES_REQUIRED migrated_routes_files)
+endif()

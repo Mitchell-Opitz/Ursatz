@@ -114,3 +114,11 @@ ursatz_test(piece_snapshot LIBS ursatz_gui_core ursatz_test_http gui_server_supp
 # The test compares the detail note ids, score and playback replies of three pieces with fixtures/pieces (the Bach 114
 # playback with the Analyzer's own snapshot); it creates pieces/ in its own working directory.
 # URSATZ_UPDATE_GOLDENS=1 rewrites the snapshot in fixtures/pieces, never the Analyzer's.
+
+# The routes on the migrated version 0 fixture (P63 B7): the test copies workshop/tests/fixtures/data-v0 into its working directory, migrates it
+# and serves it. The folder it leaves is validated by workshop_formats.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/migrated_routes)
+ursatz_test(migrated_routes SOURCES test_migrated_routes.c LIBS ursatz_gui_core ursatz_test_http gui_server_support
+    DEFINITIONS URSATZ_WORKSHOP_DATA_V0="${CMAKE_SOURCE_DIR}/workshop/tests/fixtures/data-v0"
+    PROPERTIES FIXTURES_SETUP migrated_routes_files RESOURCE_LOCK migrated_routes_files
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/migrated_routes)

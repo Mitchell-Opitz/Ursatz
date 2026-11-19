@@ -878,7 +878,7 @@ static UrsatzStatus migrate_run(const char *data_dir, const WorkshopMigrateOptio
     char backup[PATH_BYTES] = "";
     if (!finishing) {
         char message[2048];
-        if (!workshop_data_check_only(root, message, sizeof(message))) {
+        if (!workshop_data_check(root, message, sizeof(message))) {
             return ursatz_error_set(error, URSATZ_ERR_FORMAT, root, "%s", message);
         }
         if (!run.dry) {
