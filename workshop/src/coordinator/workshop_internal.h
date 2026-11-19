@@ -12,6 +12,15 @@ struct Workshop {
     int port;
     int http_threads;
     int job_workers;
+    int lock_descriptor; /* the data folder's lock, held until close */
 };
+
+/*
+ * Locks the data folder (data_lock.c): flock(LOCK_EX | LOCK_NB) on "<data>/.ursatz.lock", which then holds this process's pid. A folder
+ * another workshop holds, in this or another process, is URSATZ_ERR_CONFLICT naming the pid. *descriptor is the lock to give
+ * back to workshop_data_lock_release, -1 on failure.
+ */
+UrsatzStatus workshop_data_lock_acquire(const char *data_dir, int *descriptor, UrsatzError *error);
+void workshop_data_lock_release(int descriptor);
 
 #endif

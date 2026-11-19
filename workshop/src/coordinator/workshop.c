@@ -24,10 +24,17 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
     if (made != URSATZ_OK) {
         return made;
     }
+    int lock = -1;
+    UrsatzStatus locked = workshop_data_lock_acquire(resolved->data_dir, &lock, error);
+    if (locked != URSATZ_OK) {
+        return locked;
+    }
     Workshop *workshop = calloc(1, sizeof(*workshop));
     if (!workshop) {
+        workshop_data_lock_release(lock);
         return ursatz_error_set(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
+    workshop->lock_descriptor = lock;
     snprintf(workshop->data_dir, sizeof(workshop->data_dir), "%s", resolved->data_dir);
     workshop->port = resolved->port;
     workshop->http_threads = resolved->http_threads;
@@ -37,6 +44,9 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
 }
 
 void workshop_close(Workshop *workshop) {
+    if (workshop) {
+        workshop_data_lock_release(workshop->lock_descriptor);
+    }
     free(workshop);
 }
 
