@@ -19,11 +19,17 @@ How `ursatz-analyzer` is put together: what it is for, what it calls, what it of
 | Directory | What it holds | Doc |
 | --- | --- | --- |
 | `include/ursatz_analyzer/` | The public headers, included as `<ursatz_analyzer/xxx.h>` | [library.md](library.md) |
-| `src/pipeline/` | Import, the chain wrapper, one file per analysis area, the document and report exporters, corpus, playback, score export | [library.md](library.md#pipeline) |
+| `src/util/` | Private JSON, file and misc helpers; the bottom of the stack | [library.md](library.md) |
+| `src/store/` | The corpus walk, paths and the stale check (`corpus_walk`, `path_util`, `staleness`) | [corpus.md](corpus.md) |
+| `src/result/` | The analysis result (`analyzer_analyze`), the file entry (`run_file`) and the thin import entries | [analysis-result.md](analysis-result.md) |
+| `src/export/` | The analysis document and its text, material, score and playback exports | [analysis-document.md](analysis-document.md), [text-export.md](text-export.md) |
+| `src/style/` | Style profiles read from documents and the corpus | [style-profile.md](style-profile.md) |
+| `src/corpus/` | The corpus run, similar material, the chord sequence and the corpus passages | [corpus.md](corpus.md), [similar-material.md](similar-material.md), [corpus-passages.md](corpus-passages.md) |
 | `src/links/` | Motive links, their cache and their JSON | [motive-links.md](motive-links.md) |
-| `src/style/` | Style labels, profiles, the model file, similar material | [style-profile.md](style-profile.md) |
-| `src/util/` | Private JSON, file and misc helpers | [library.md](library.md) |
-| `src/main.c` | The CLI | [README](../README.md#usage) |
+| `src/cli/` | The `ursatz-analyzer` command (`main.c`) | [README](../README.md#usage) |
+
+The folders are modules of `cmake/layer-table.txt` (test `layer_table`): `util` includes nothing of the Analyzer, `store` only `util`, `result` `util` and `store`, `export`, `style`, `corpus` and `links` those three, and `cli` all of them. The one edge into another folder's `*_internal.h` is `corpus.c` reading the document builder's entry, named in the table.
+
 | `schema/` | JSON Schemas of the document and the other JSON files | [analysis-document.md](analysis-document.md) |
 | `../tools/ci/` (repository root) | Include, chain build, file scope and docs checks, shared by every part | [building.md](building.md) |
 | `tests/` | Unit, snapshot and CLI tests | [building.md](building.md#tests) |

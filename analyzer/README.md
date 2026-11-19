@@ -102,7 +102,7 @@ All docs are indexed in [docs/README.md](docs/README.md). How the Analyzer is bu
 
 - Build and test: [docs/building.md](docs/building.md)
 - Input formats and notation readings: [docs/input.md](docs/input.md)
-- Library headers and pipeline: [docs/library.md](docs/library.md)
+- Library headers and the source layout (`src/util`, `store`, `result`, `export`, `style`, `corpus`, `links`, `cli`): [docs/library.md](docs/library.md), [docs/architecture.md](docs/architecture.md)
 - What each analysis reads: [harmony](docs/analyses/harmony.md), [form and motive](docs/analyses/form-and-motive.md), [rhythm, texture and voice leading](docs/analyses/rhythm-texture-voice-leading.md)
 - The analysis document: [docs/analysis-document.md](docs/analysis-document.md)
 - Known limits: [docs/known-limits.md](docs/known-limits.md)
