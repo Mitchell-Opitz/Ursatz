@@ -89,7 +89,7 @@ typedef struct {
     unsigned long magic;
     size_t bars;
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     CadenceType cadence;
     SectionPairing pairing;
     GrowLayout layout;                 /* where each idea lies (grow_layout_of) */
@@ -188,14 +188,14 @@ typedef struct {
     NodeId section;
     PlanSpan span;
     PlanMeter meter;
-    AnalysisKey key;                   /* the key the section starts in */
+    SpelledKey key;                   /* the key the section starts in */
     bool has_start_change;         /* the key before the section is another, which the section opens */
     bool pedal;                    /* the presentation is written over a dominant pedal (R-446); kept only in the home key */
     bool transition;               /* the section is a transition (R-504): its continuation liquidates to the upbeat chord */
     bool independent;              /* its motive is a motive of its own in the material (R-504): not m0, not made from it */
-    AnalysisKey from_key;              /* that key; read only with has_start_change */
+    SpelledKey from_key;              /* that key; read only with has_start_change */
     bool has_end_change;           /* the second half of the section is in another key, which it opens */
-    AnalysisKey end_key;               /* that key; read only with has_end_change */
+    SpelledKey end_key;               /* that key; read only with has_end_change */
     CadenceType cadence;
     CadenceType first_cadence; /* meaningful when has_first */
     bool has_first;
@@ -524,7 +524,7 @@ size_t grow_motive_layout_bars(const Motive *motive, Rational bar);
 /* The node named "m0" of the plan (its Given source motive), else PLAN_NODE_NONE. */
 NodeId grow_find_source(const PiecePlan *plan);
 /* Reads the motive on a motive node's Given or Realized melody lane span, with the meter and key given. */
-bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const AnalysisKey *key, Motive *out);
+bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const SpelledKey *key, Motive *out);
 
 /*
  * One segment of a motive as a motive of its own: its notes from time 0 (no pickup), with the source's meter and key, the

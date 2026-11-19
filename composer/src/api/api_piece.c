@@ -638,7 +638,7 @@ static void key_heard_at(const FormHeardKey *keys, size_t key_count, Rational st
     }
     out[0] = '\0';
     if (at) {
-        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.material, out, size);
+        util_key_name(spelled_key_tonic_pitch_class(&at->key), at->key.material, out, size);
     }
 }
 
@@ -667,8 +667,8 @@ static void planned_key_at(const PiecePlan *plan, PlanSpan section, char *out, s
         }
     }
     if (at) {
-        util_key_name(analysis_key_tonic_pitch_class(&at->key), at->key.material, out, size);
-        *flats = util_key_prefers_flats(analysis_key_tonic_pitch_class(&at->key), at->key.material);
+        util_key_name(spelled_key_tonic_pitch_class(&at->key), at->key.material, out, size);
+        *flats = util_key_prefers_flats(spelled_key_tonic_pitch_class(&at->key), at->key.material);
     }
     free(ids);
 }
@@ -1407,7 +1407,7 @@ static cJSON *piece_document(const PieceSpec *request, const PieceMade *piece, c
     char lanes[64];
     char meter[24];
     GrowBrief brief = make_brief(request);
-    util_key_name(analysis_key_tonic_pitch_class(&request->request.key), request->request.key.material,
+    util_key_name(spelled_key_tonic_pitch_class(&request->request.key), request->request.key.material,
                   key, sizeof key);
     snprintf(meter, sizeof meter, "%d/%d", request->request.meter.beats_per_bar, request->request.meter.beat_unit);
     cJSON *document = cJSON_CreateObject();

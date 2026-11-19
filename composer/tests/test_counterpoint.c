@@ -172,7 +172,7 @@ static void check_result(const Piece *piece, const Cantus *cantus, int species, 
     PitchSpelling *cantus_spelled[MAX_BARS];
     PitchSpelling *owned[MAX_BARS * 4] = {NULL};
     StandardCounterpointSlot slots[MAX_BARS * 4];
-    PitchSpelling *tonic = spell(analysis_key_tonic_pitch_class(&(AnalysisKey){NULL, cantus->key.tonic_letter, cantus->key.tonic_accidental, NULL}) + 60);
+    PitchSpelling *tonic = spell(spelled_key_tonic_pitch_class(&(SpelledKey){NULL, cantus->key.tonic_letter, cantus->key.tonic_accidental, NULL}) + 60);
     StandardCounterpointLine line = {(const PitchSpelling *const *)cantus_spelled, cantus->bars};
     StandardCounterpointCantusPart part = above ? STANDARD_COUNTERPOINT_CANTUS_IN_LOWER : STANDARD_COUNTERPOINT_CANTUS_IN_UPPER;
     StandardCounterpointResult result;

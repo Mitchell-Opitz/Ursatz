@@ -47,8 +47,8 @@ static PlanResult refuse(PlanJsonError *error, const PiecePlan *plan, LaneSpanId
 }
 
 /* The region of a key: its tonic's pitch class and its material (the major, for a key with none). */
-static Region key_region(const AnalysisKey *key, const CommonPracticeMaterials *materials) {
-    return region_tonal(analysis_key_tonic_pitch_class(key), key->material ? key->material : materials->major);
+static Region key_region(const SpelledKey *key, const CommonPracticeMaterials *materials) {
+    return region_tonal(spelled_key_tonic_pitch_class(key), key->material ? key->material : materials->major);
 }
 
 PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *knowledge, PlanJsonError *error) {
@@ -68,7 +68,7 @@ PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *know
         return PLAN_OK;
     }
     LaneSpanId *ids = calloc(count, sizeof(LaneSpanId));
-    AnalysisKey *keys = calloc(count, sizeof(AnalysisKey));
+    SpelledKey *keys = calloc(count, sizeof(SpelledKey));
     if (!ids || !keys) {
         free(ids);
         free(keys);
@@ -110,7 +110,7 @@ PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *know
             }
             anchor_at = found;
         }
-        const AnalysisKey *anchor_key = &keys[anchor_at];
+        const SpelledKey *anchor_key = &keys[anchor_at];
         const Relation *relation = knowledge_snapshot_relation(knowledge, named->relation);
         if (!relation) {
             result = refuse(error, plan, ids[i], "relation", "no relation has the id '%s'", named->relation);

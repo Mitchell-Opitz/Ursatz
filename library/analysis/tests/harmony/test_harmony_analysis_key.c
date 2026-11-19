@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/harmony/analysis_input.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "analysis/notes/analysis_segment.h"
 #include "model/identity/entity_id.h"
 #include "model/time/meter_map.h"

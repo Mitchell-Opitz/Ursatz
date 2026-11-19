@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include "chain/tests/weighted_pipeline.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "chain/analysis_chain.h"
 #include "tests/key_index_test_util.h"
 #include "test_knowledge.h"
@@ -299,12 +299,12 @@ static int report_piece(const Piece *piece) {
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, piece->midi, NULL);
 
     size_t key_event_count = p.import.key_signatures.count;
-    AnalysisKeyEvent *key_events = (AnalysisKeyEvent *)calloc(key_event_count + 1, sizeof(AnalysisKeyEvent));
+    SpelledKeyEvent *key_events = (SpelledKeyEvent *)calloc(key_event_count + 1, sizeof(SpelledKeyEvent));
     assert(key_events != NULL);
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p.import.key_signatures.events[i];
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
+        assert(spelled_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
     }
     AnalysisChainConfig config = analysis_chain_config_default();
     config.knowledge = test_knowledge();

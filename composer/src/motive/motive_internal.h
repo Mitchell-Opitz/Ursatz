@@ -21,7 +21,7 @@ typedef struct {
     /* The input declares the meter (a file's time signature, a JSON "meter"), as opposed to Ursatz's 4/4 default. */
     bool meter_declared;
     bool has_key;
-    AnalysisKey key;
+    SpelledKey key;
     /* A JSON "form" and "pickup"; the other inputs have neither, and the caller's options can set the pickup. */
     MotiveSketchForm form;
     bool has_pickup;
@@ -136,15 +136,15 @@ cJSON *motive_json_object(const Motive *motive);
 char *motive_json_text(cJSON *document);
 
 /* The key of a key signature count of sharps (negative for flats) and mode, in the materials' major or natural minor. */
-AnalysisKey motive_key_from_signature(const CommonPracticeMaterials *materials, int sharps_flats, CommonPracticeKeyMode mode);
+SpelledKey motive_key_from_signature(const CommonPracticeMaterials *materials, int sharps_flats, CommonPracticeKeyMode mode);
 
 /*
  * The step of the key's scale a MIDI pitch is on (7 to an octave, 0 the tonic's pitch class), and whether it is a
  * raised degree (1) or on the degree (0); and the pitch at a step. A pitch outside the scale is on the degree below
  * it, raised. The pitch is not range-checked.
  */
-void motive_scale_position(const AnalysisKey *key, int pitch, long *position, int *alteration);
-int motive_position_pitch(const AnalysisKey *key, long position, int alteration);
+void motive_scale_position(const SpelledKey *key, int pitch, long *position, int *alteration);
+int motive_position_pitch(const SpelledKey *key, long position, int alteration);
 
 /*
  * Checks the motive's own harmony and features: chords ascending inside the length, degree 1 to 7, alteration -1 to 1,

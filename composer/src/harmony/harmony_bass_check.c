@@ -26,7 +26,7 @@ int harmony_member_degree(HarmonyMode mode, const PhraseChord *chord) {
 }
 
 /* Spells a MIDI pitch as the given scale degree of the key; NULL when it cannot be spelled. */
-PitchSpelling *harmony_spell_pitch(const AnalysisKey *key, int degree, int pitch) {
+PitchSpelling *harmony_spell_pitch(const SpelledKey *key, int degree, int pitch) {
     if (degree < 1 || degree > 7) {
         return NULL;
     }
@@ -41,7 +41,7 @@ PitchSpelling *harmony_spell_pitch(const AnalysisKey *key, int degree, int pitch
     return spelling;
 }
 
-PitchSpelling *harmony_spell_tonic(const AnalysisKey *key, int octave) {
+PitchSpelling *harmony_spell_tonic(const SpelledKey *key, int octave) {
     PitchSpelling *spelling = NULL;
     if (pitch_spelling_create(key->tonic_letter, key->tonic_accidental, octave, &spelling) != PITCH_SPELLING_OK) {
         return NULL;
@@ -127,7 +127,7 @@ bool harmony_bass_check(const void *payload, FillCheck *out) {
     return true;
 }
 
-bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, AnalysisKey key, const HarmonyBassParams *params,
+bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, SpelledKey key, const HarmonyBassParams *params,
                         const char **violation) {
     BassCandidate *line = calloc(1, sizeof(*line));
     if (!line || !violation) {

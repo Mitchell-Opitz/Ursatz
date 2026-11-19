@@ -86,7 +86,7 @@ typedef struct {
     bool form_defaulted;
     size_t given_melodies;
     FormSpec *form; /* the built-in form named, owned */
-    AnalysisKey key;
+    SpelledKey key;
     char key_name[24];
     char key_request[64];
     PlanMeter meter;

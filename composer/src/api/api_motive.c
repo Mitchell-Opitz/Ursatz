@@ -86,7 +86,7 @@ static ComposerStatus render_motive(const cJSON *request, const KnowledgeSnapsho
         return COMPOSER_ERR_REQUEST;
     }
     if (has_key) {
-        AnalysisKey key;
+        SpelledKey key;
         if (!request_parse_key(key_text, knowledge, &key)) {
             if (api_fail_unsupported_key(error, "/render_key", knowledge, key_text)) {
                 return COMPOSER_ERR_REQUEST;

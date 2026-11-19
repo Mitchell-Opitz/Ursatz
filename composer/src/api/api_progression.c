@@ -36,7 +36,7 @@ typedef struct {
     const char *meter_text;
     const char *schema_text;
     const char *sequence_text;
-    AnalysisKey key;
+    SpelledKey key;
     PlanMeter meter;
     long bars;
     CadenceType cadence;
@@ -243,8 +243,8 @@ static bool build_plan(const Options *options, Built *built) {
         for (int pitch = 40; pitch <= 60; pitch++) {
             int distance = pitch > 50 ? pitch - 50 : 50 - pitch;
             int best = tonic_note.midi > 50 ? tonic_note.midi - 50 : 50 - tonic_note.midi;
-            if (pitch % 12 == analysis_key_tonic_pitch_class(&options->key) &&
-                (tonic_note.midi % 12 != analysis_key_tonic_pitch_class(&options->key) || distance < best)) {
+            if (pitch % 12 == spelled_key_tonic_pitch_class(&options->key) &&
+                (tonic_note.midi % 12 != spelled_key_tonic_pitch_class(&options->key) || distance < best)) {
                 tonic_note.midi = pitch;
                 tonic_note.spelled = false;
             }
@@ -634,7 +634,7 @@ static ComposerStatus build_document(const KnowledgeSnapshot *knowledge, const O
     char key[24];
     char meter[16];
     cJSON *document = cJSON_CreateObject();
-    util_key_name(analysis_key_tonic_pitch_class(&options->key), options->key.material, key, sizeof(key));
+    util_key_name(spelled_key_tonic_pitch_class(&options->key), options->key.material, key, sizeof(key));
     snprintf(meter, sizeof(meter), "%d/%d", options->meter.beats_per_bar, options->meter.beat_unit);
     bool ok = document && cJSON_AddStringToObject(document, "key", key) && cJSON_AddStringToObject(document, "meter", meter) &&
               cJSON_AddNumberToObject(document, "bars", (double)options->bars) &&

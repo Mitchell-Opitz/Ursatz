@@ -6,7 +6,7 @@
 
 #include "theory/harmony/harmony_applied.h"
 #include "theory/harmony/harmony_chord.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "analysis/notes/analysis_segment.h"
 #include "theory/vocabulary/applied_chord_kind.h"
 #include "theory/vocabulary/beat_strength.h"

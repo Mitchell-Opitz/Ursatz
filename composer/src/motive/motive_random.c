@@ -103,7 +103,7 @@ static bool draw_rhythm(const PlanMeter *meter, FillRng *rng, Rhythm *out) {
 }
 
 /* The frame, the notes between, and a range of no more than a twelfth. */
-static bool draw_melody(const AnalysisKey *key, const Rhythm *rhythm, FillRng *rng, Melody *melody) {
+static bool draw_melody(const SpelledKey *key, const Rhythm *rhythm, FillRng *rng, Melody *melody) {
     long positions[MAX_NOTES];
     memset(melody, 0, sizeof(*melody));
     if (!motive_random_draw_frame(key, rhythm, rng, positions, melody) || !motive_random_draw_between(key, rhythm, rng, positions, melody)) {
@@ -143,7 +143,7 @@ static bool tones_as_drawn(const Motive *motive, const Melody *melody) {
  * One full motive that passes the melodic rules. *found is false when the draw did not (try again); the result is false
  * only when the check itself could not run.
  */
-static bool draw_drawn_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
+static bool draw_drawn_candidate(const MotiveRandomOptions *options, const SpelledKey *key, FillRng *rng, Motive *out,
                            bool *found) {
     Rhythm rhythm;
     Melody melody;
@@ -160,7 +160,7 @@ static bool draw_drawn_candidate(const MotiveRandomOptions *options, const Analy
     return true;
 }
 /* One candidate by the strategy asked for. */
-static bool draw_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
+static bool draw_candidate(const MotiveRandomOptions *options, const SpelledKey *key, FillRng *rng, Motive *out,
                            bool *found) {
     return options->strategy == MOTIVE_RANDOM_STRATEGY_DRAWN ? draw_drawn_candidate(options, key, rng, out, found)
                                                               : motive_random_segments_candidate(options, key, rng, out, found);
@@ -188,10 +188,10 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
         !valid_beat_unit(options->meter.beat_unit)) {
         return MOTIVE_RANDOM_ERR_METER;
     }
-    AnalysisKey key;
+    SpelledKey key;
     if (options->has_key) {
         key = options->key;
-        if (composer_key_is_minor(&key) != composer_material_is_minor(options->material) || analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
+        if (composer_key_is_minor(&key) != composer_material_is_minor(options->material) || spelled_key_tonic_pitch_class(&key) < 0 || spelled_key_tonic_pitch_class(&key) > 11) {
             return MOTIVE_RANDOM_ERR_KEY;
         }
     } else {

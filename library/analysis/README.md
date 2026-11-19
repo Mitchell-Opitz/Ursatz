@@ -11,7 +11,7 @@ each framework folder, with common-practice-minimal's perception and all of stan
 
 | Area | Holds | Former framework adapters |
 |---|---|---|
-| `notes/` | `AnalysisNote`, `AnalysisSegment`, `AnalysisKey`, `AnalysisVoiceGrid`, sonority segmentation, contour and rhythm patterns | kernel `semantics` |
+| `notes/` | `AnalysisNote`, `AnalysisSegment`, `SpelledKey`, `AnalysisVoiceGrid`, sonority segmentation, contour and rhythm patterns | kernel `semantics` |
 | `motive/` | Motive sketches, relations, links, tone roles, variant recognition, window matching | kernel `analysis` |
 | `voices/` | Outer voices, voice separation | kernel `analysis` |
 | `harmony/` | Chord segments to functions, cadences, six-fours, prolongation; weighted chord identification, key regions, non-chord tones, harmonic spans, Roman numeral and applied-chord adapters; progression patterns; chord readings of sonorities | standard-harmony, standard-tonality, common-practice-minimal |

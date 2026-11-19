@@ -273,7 +273,7 @@ bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at
 }
 
 /* The key of the key lane over a chord, when one span holds it. */
-static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id, AnalysisKey *key) {
+static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id, SpelledKey *key) {
     LaneSpanId keys[2];
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, chord_span, keys, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, keys[0]), chord_span)) {
@@ -300,7 +300,7 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, HarmonyMode mo
         Rational end;
         HarmonyMode chord_mode = mode;
         LaneSpanId key_id = PLAN_LANE_SPAN_NONE;
-        AnalysisKey key;
+        SpelledKey key;
         if (modes && key_under(plan, chord_span, &key_id, &key)) {
             chord_mode = harmony_key_mode(&key);
         }

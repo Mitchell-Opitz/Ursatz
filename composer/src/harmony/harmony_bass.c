@@ -37,7 +37,7 @@ static unsigned chance_of(unsigned value) {
     return value > CHANCE_SCALE ? CHANCE_SCALE : value;
 }
 
-bool harmony_chord_bass_pc(const AnalysisKey *key, const PhraseChord *chord, int *pc) {
+bool harmony_chord_bass_pc(const SpelledKey *key, const PhraseChord *chord, int *pc) {
     int intervals[4];
     size_t count;
     int root;
@@ -61,7 +61,7 @@ bool harmony_chord_bass_pc(const AnalysisKey *key, const PhraseChord *chord, int
     if (root < 0 || member < 0 || (size_t)member >= count) {
         return false;
     }
-    *pc = (analysis_key_tonic_pitch_class(key) + root + intervals[member]) % 12;
+    *pc = (spelled_key_tonic_pitch_class(key) + root + intervals[member]) % 12;
     return true;
 }
 

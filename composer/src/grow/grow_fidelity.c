@@ -58,7 +58,7 @@ GrowIdeaRole grow_idea_role(const char *idea_name) {
 }
 
 /* The meter and key of the lanes over the span. */
-static bool read_meter_key(const PiecePlan *plan, PlanSpan span, PlanMeter *meter, AnalysisKey *key) {
+static bool read_meter_key(const PiecePlan *plan, PlanSpan span, PlanMeter *meter, SpelledKey *key) {
     LaneSpanId id;
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &id, 1) < 1) {
         return false;
@@ -80,7 +80,7 @@ static bool notes_end(const PlanNotes *notes, size_t count, Rational *out) {
  * The theme's motive m0 as the plan holds it, with the compose run's basic motive's features and pickup when m0 is its
  * first notes (grow_theme.c's draw_segments does the same), so its segments are the run's.
  */
-static bool read_m0(const PiecePlan *plan, const Motive *basic, const PlanMeter *meter, const AnalysisKey *key, Motive *m0) {
+static bool read_m0(const PiecePlan *plan, const Motive *basic, const PlanMeter *meter, const SpelledKey *key, Motive *m0) {
     NodeId node = grow_find_source(plan);
     if (node == PLAN_NODE_NONE || !grow_read_motive(plan, node, meter, key, m0)) {
         return false;
@@ -123,7 +123,7 @@ bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const M
     }
     const PlanConstraint *asked = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     if (!asked || !plan_has_node(plan, asked->params.motive.motive) ||
         !read_meter_key(plan, plan_lane_span_span(plan, melody), &meter, &key)) {
         return false;
@@ -153,7 +153,7 @@ bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const M
 /* The notes as a motive in the meter and key of the lanes over the span; its length is the end of its last note. */
 static bool realized_motive(const PiecePlan *plan, LaneSpanId melody, const PlanNote *notes, size_t count, Motive *out) {
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     Rational length;
     if (count == 0 || count > MOTIVE_MAX_NOTES || !read_meter_key(plan, plan_lane_span_span(plan, melody), &meter, &key)) {
         return false;

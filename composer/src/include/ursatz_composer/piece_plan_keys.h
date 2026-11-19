@@ -36,8 +36,8 @@
  * (R-597: `omt.relation.dominant`; a static string), NULL for home. The key lane writes it beside the key.
  */
 typedef struct {
-    AnalysisKey start;
-    AnalysisKey end;
+    SpelledKey start;
+    SpelledKey end;
     const char *start_relation;
     const char *end_relation;
     PlanKeyAnchor anchor;      /* what the relations are taken from: home for a drawn region, else a request's region (R-610) */
@@ -58,7 +58,7 @@ typedef struct {
  * degrees a form lists is the closely related key of standard-harmony on it (harmony_related_key_of). False when the relation
  * refuses the degree (a diminished triad names no key) or the snapshot lacks the entry; one draw of rng is made in any case.
  */
-bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out);
+bool piece_region_key(const KnowledgeSnapshot *knowledge, SpelledKey home, const FormRegion *region, FillRng *rng, SpelledKey *out);
 
 /*
  * Plans the keys of the plan made by form_build_plan from the form's size before its form is Given: adds the Given key lane spans to the

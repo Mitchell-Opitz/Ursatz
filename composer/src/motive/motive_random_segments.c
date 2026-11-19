@@ -173,7 +173,7 @@ static long step_of(long position) {
 }
 
 /* The alteration of a position on the chord of a degree: in minor, the third of V is raised. */
-static int chord_alteration(const AnalysisKey *key, int degree, long position) {
+static int chord_alteration(const SpelledKey *key, int degree, long position) {
     return composer_key_is_minor(key) && degree == 5 && step_of(position - chord_shift(degree)) == 2 ? 1 : 0;
 }
 
@@ -944,12 +944,12 @@ typedef struct {
     bool repeat_pair[MAX_NOTES]; /* the second note of the repeat feature's pair, and the matching note of a repeat of segment a */
 } Place;
 
-static int pitch_of(const AnalysisKey *key, const Place *place, size_t i) {
+static int pitch_of(const SpelledKey *key, const Place *place, size_t i) {
     return motive_position_pitch(key, place->position[i], place->alteration[i]);
 }
 
 /* A frame note on the ladder of I, moved to the tones of the chord at its onset. In minor, the third of V is raised. */
-static bool set_frame(const AnalysisKey *key, const Layout *layout, Place *place, Melody *melody, size_t i, long rung) {
+static bool set_frame(const SpelledKey *key, const Layout *layout, Place *place, Melody *melody, size_t i, long rung) {
     int degree = layout->degree[i];
     long shift = chord_shift(degree);
     if (rung < 0) {
@@ -979,7 +979,7 @@ static long next_rung(const MotiveRandomPreferences *preferences, FillRng *rng, 
 }
 
 /* Segment a's frame: a walk, with the feature (a leap or a repeated note) between two frame notes. */
-static bool draw_frame_a(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Feature feature, Place *place,
+static bool draw_frame_a(const MotiveRandomPreferences *preferences, const SpelledKey *key, const Layout *layout, FillRng *rng, Feature feature, Place *place,
                          Melody *melody) {
     size_t frames[MAX_NOTES];
     size_t frame_count = 0;
@@ -1032,7 +1032,7 @@ static bool draw_frame_a(const MotiveRandomPreferences *preferences, const Analy
  * by a number of rungs (an octave is three) so that it starts near the note before it; on the same chord it is moved at
  * least one rung, so it is not a copy.
  */
-static bool draw_frame_repeat(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t segment,
+static bool draw_frame_repeat(const MotiveRandomPreferences *preferences, const SpelledKey *key, const Layout *layout, FillRng *rng, size_t segment,
                               Place *place, Melody *melody) {
     size_t first = layout->first[segment];
     size_t previous = first - 1;
@@ -1067,7 +1067,7 @@ static bool draw_frame_repeat(const MotiveRandomPreferences *preferences, const 
 }
 
 /* The frame of a new segment: it starts on a chord tone near the last frame note before it, then walks. */
-static bool draw_frame_new(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t segment, Place *place,
+static bool draw_frame_new(const MotiveRandomPreferences *preferences, const SpelledKey *key, const Layout *layout, FillRng *rng, size_t segment, Place *place,
                            Melody *melody) {
     size_t first = layout->first[segment];
     size_t previous = first - 1;
@@ -1116,7 +1116,7 @@ static bool draw_frame_new(const MotiveRandomPreferences *preferences, const Ana
 }
 
 /* The positions near the note before where a non-chord tone of a kind (1 to 4 of the decorations list) makes its figure. */
-static size_t find_figures(const AnalysisKey *key, const Melody *melody, size_t i, long before, long shift, size_t kind, long *options) {
+static size_t find_figures(const SpelledKey *key, const Melody *melody, size_t i, long before, long shift, size_t kind, long *options) {
     size_t option_count = 0;
     for (long p = before - OFF_FRAME_REACH; p <= before + OFF_FRAME_REACH; p++) {
         int pitch = motive_position_pitch(key, p, 0);
@@ -1130,7 +1130,7 @@ static size_t find_figures(const AnalysisKey *key, const Melody *melody, size_t 
 
 /* A run of notes between two frame notes, walked by step (draw_run). */
 typedef struct {
-    const AnalysisKey *key;
+    const SpelledKey *key;
     int degree;
     long shift;
     size_t length;       /* the notes of the run */
@@ -1184,7 +1184,7 @@ static void walk_run(RunWalk *walk, size_t d, long from, int from_pitch) {
  * segment's chord, and the last note is a step from the frame note after. One path is drawn by `fill_rng_below`; none fails
  * the draw.
  */
-static bool draw_run(const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place, Melody *melody, size_t first, size_t last) {
+static bool draw_run(const SpelledKey *key, const Layout *layout, FillRng *rng, Place *place, Melody *melody, size_t first, size_t last) {
     RunWalk walk;
     memset(&walk, 0, sizeof(walk));
     walk.key = key;
@@ -1216,7 +1216,7 @@ static bool draw_run(const AnalysisKey *key, const Layout *layout, FillRng *rng,
  * before it that makes the figure with the notes either side, else a chord tone of its segment's chord near it. Two or more
  * such notes in a row are a run (draw_run), walked by step.
  */
-static bool draw_decorations(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place, Melody *melody) {
+static bool draw_decorations(const MotiveRandomPreferences *preferences, const SpelledKey *key, const Layout *layout, FillRng *rng, Place *place, Melody *melody) {
     for (size_t i = 0; i < layout->rhythm.count; i++) {
         if (place->frame[i]) {
             continue;
@@ -1279,7 +1279,7 @@ static bool draw_decorations(const MotiveRandomPreferences *preferences, const A
 }
 
 /* Note i keeps a non-chord tone `type` at position p, and the note after it takes the chord tone (a position and alteration). */
-static void put_accent(const AnalysisKey *key, Place *place, Melody *melody, size_t i, long position, int alteration, NonChordTone type,
+static void put_accent(const SpelledKey *key, Place *place, Melody *melody, size_t i, long position, int alteration, NonChordTone type,
                        long target_position, int target_alteration) {
     place->position[i] = position;
     place->alteration[i] = alteration;
@@ -1294,7 +1294,7 @@ static void put_accent(const AnalysisKey *key, Place *place, Melody *melody, siz
 }
 
 /* An appoggiatura or passing tone on the beat: the chord tone moves one note later, and a step beside it comes first. */
-static bool place_step_accent(const AnalysisKey *key, const Layout *layout, FillRng *rng, size_t i, NonChordTone type, Place *place, Melody *melody) {
+static bool place_step_accent(const SpelledKey *key, const Layout *layout, FillRng *rng, size_t i, NonChordTone type, Place *place, Melody *melody) {
     int degree = layout->degree[i];
     long shift = chord_shift(degree);
     long target = place->position[i];
@@ -1317,7 +1317,7 @@ static bool place_step_accent(const AnalysisKey *key, const Layout *layout, Fill
 }
 
 /* A suspension where the chord changes: the note before is held over as a non-chord tone and falls to a chord tone. */
-static bool place_suspension(const AnalysisKey *key, const Layout *layout, size_t i, Place *place, Melody *melody) {
+static bool place_suspension(const SpelledKey *key, const Layout *layout, size_t i, Place *place, Melody *melody) {
     if (i == 0 || layout->degree[i] == layout->degree[i - 1]) {
         return false;
     }
@@ -1341,7 +1341,7 @@ static bool place_suspension(const AnalysisKey *key, const Layout *layout, size_
  * pickup, the first note, or the last note of a segment. Each eligible note is chosen in one of `accented_one_in`. A
  * segment that already holds a long non-chord tone (`accented`, place_long_accents) is skipped.
  */
-static bool place_accents(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place,
+static bool place_accents(const MotiveRandomPreferences *preferences, const SpelledKey *key, const Layout *layout, FillRng *rng, Place *place,
                           Melody *melody, bool accented[SEGMENT_MAX]) {
     for (size_t i = 1; i + 1 < layout->rhythm.count; i++) {
         size_t s = (size_t)place->segment[i];
@@ -1378,7 +1378,7 @@ typedef struct {
 } LongNct;
 
 /* Adds the figure `type` at position n resolving to r at note i when the rules allow it, weighted by its type and interval. */
-static void add_long_nct(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, const Melody *melody,
+static void add_long_nct(const MotiveRandomPreferences *preferences, const SpelledKey *key, const Layout *layout, const Melody *melody,
                          size_t i, size_t type, long n, int n_alteration, long r, LongNct *out, size_t *count) {
     int degree = layout->degree[i];
     long shift = chord_shift(degree);
@@ -1410,7 +1410,7 @@ static void add_long_nct(const MotiveRandomPreferences *preferences, const Analy
  * interval above the chord root (long_nct_types, long_nct_intervals). A suspension or retardation holds the note before over
  * where the chord changes. A segment with none eligible, or whose weights are all 0, draws nothing.
  */
-static bool place_long_accents(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Place *place,
+static bool place_long_accents(const MotiveRandomPreferences *preferences, const SpelledKey *key, const Layout *layout, FillRng *rng, Place *place,
                                Melody *melody, bool accented[SEGMENT_MAX]) {
     long bar = layout->grid.beats * layout->grid.beat;
     long onset[MAX_NOTES];
@@ -1507,7 +1507,7 @@ static bool crosses_beat(const Layout *layout, const long *onset, size_t i) {
 }
 
 /* The frames of every segment, the notes between, and a range of no more than a twelfth. */
-static bool draw_melody(const MotiveRandomPreferences *preferences, const AnalysisKey *key, const Layout *layout, FillRng *rng, Feature feature, Melody *melody) {
+static bool draw_melody(const MotiveRandomPreferences *preferences, const SpelledKey *key, const Layout *layout, FillRng *rng, Feature feature, Melody *melody) {
     Place place;
     memset(&place, 0, sizeof(place));
     memset(melody, 0, sizeof(*melody));
@@ -1686,7 +1686,7 @@ static bool tones_as_drawn(const Motive *motive, const Layout *layout, const Mel
 }
 
 /* A motive of the notes first to last of a layout (no pickup), to be scored against another. */
-static bool segment_motive(const MotiveRandomOptions *options, const AnalysisKey *key, const Layout *layout, const Melody *melody, size_t first,
+static bool segment_motive(const MotiveRandomOptions *options, const SpelledKey *key, const Layout *layout, const Melody *melody, size_t first,
                            size_t last, Motive *out) {
     Rhythm rhythm;
     Melody notes;
@@ -1711,7 +1711,7 @@ static bool segment_motive(const MotiveRandomOptions *options, const AnalysisKey
  * is at least the minimum. A layout with no such segment passes. Both motives are made and scored here; false when
  * the score is below the minimum or cannot be made.
  */
-static bool contrast_is_close(const MotiveRandomOptions *options, const AnalysisKey *key, const MotiveRandomPreferences *preferences, const Layout *layout,
+static bool contrast_is_close(const MotiveRandomOptions *options, const SpelledKey *key, const MotiveRandomPreferences *preferences, const Layout *layout,
                               const Melody *melody) {
     for (size_t s = 1; s < layout->segment_count; s++) {
         if (layout->repeats[s]) {
@@ -1780,7 +1780,7 @@ bool motive_random_segments_plan_fits(const MotiveRandomPreferences *preferences
     return !(only_open && (last == 4 || last == 6));
 }
 
-bool motive_random_segments_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
+bool motive_random_segments_candidate(const MotiveRandomOptions *options, const SpelledKey *key, FillRng *rng, Motive *out,
                                       bool *found) {
     Setup setup;
     MotiveRandomPreferences defaults;

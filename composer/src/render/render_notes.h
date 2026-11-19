@@ -18,6 +18,6 @@ typedef struct {
 } RenderNote;
 
 /* Renders count notes into *out, which the caller destroys with rendered_plan_destroy. No meter, key or section. */
-PlanRenderResult render_notes(const RenderNote *notes, size_t count, const AnalysisKey *key, RenderedPlan *out);
+PlanRenderResult render_notes(const RenderNote *notes, size_t count, const SpelledKey *key, RenderedPlan *out);
 
 #endif

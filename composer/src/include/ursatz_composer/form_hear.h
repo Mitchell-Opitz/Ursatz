@@ -64,7 +64,7 @@ const char *form_hear_result_name(FormHearResult result);
 /* A key the Analyzer heard from start on, until the next region's start (or the end of the span). */
 typedef struct {
     Rational start; /* in whole notes from the start of the plan */
-    AnalysisKey key;
+    SpelledKey key;
 } FormHeardKey;
 
 /*

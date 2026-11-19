@@ -39,16 +39,16 @@ static const char MELODY_VOICE[] = "melody";
 static const char BASS_VOICE[] = "bass";
 
 /* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
-static int pitch_degree(const AnalysisKey *key, int pitch) {
+static int pitch_degree(const SpelledKey *key, int pitch) {
     int degree = 1;
     int alteration;
-    util_scale_degree(analysis_key_tonic_pitch_class(key), key->material, pitch, &degree, &alteration);
+    util_scale_degree(spelled_key_tonic_pitch_class(key), key->material, pitch, &degree, &alteration);
     return degree;
 }
 
 /* The diatonic step of a pitch from the tonic: 0 is do, 7 the octave above. */
-static int pitch_step(const AnalysisKey *key, int pitch) {
-    int relative = pitch - analysis_key_tonic_pitch_class(key);
+static int pitch_step(const SpelledKey *key, int pitch) {
+    int relative = pitch - spelled_key_tonic_pitch_class(key);
     int octave = relative >= 0 ? relative / 12 : -((-relative + 11) / 12);
     return octave * 7 + pitch_degree(key, pitch) - 1;
 }
@@ -57,8 +57,8 @@ unsigned melody_cadence_mask(const MelodyContext *context) {
     if (!context->has_cadence) {
         return 0xFFFu;
     }
-    unsigned tonic = 1u << analysis_key_tonic_pitch_class(&context->key);
-    unsigned third = 1u << ((analysis_key_tonic_pitch_class(&context->key) + composer_material_third(context->key.material)) % 12);
+    unsigned tonic = 1u << spelled_key_tonic_pitch_class(&context->key);
+    unsigned third = 1u << ((spelled_key_tonic_pitch_class(&context->key) + composer_material_third(context->key.material)) % 12);
     switch (context->cadence) {
     case CADENCE_TYPE_PERFECT_AUTHENTIC:
     case CADENCE_TYPE_PLAGAL:
@@ -236,7 +236,7 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, u
 }
 
 /* The pitch spelled as a degree of the key; the caller destroys it. */
-static PitchSpelling *spell_melody(const AnalysisKey *key, int pitch) {
+static PitchSpelling *spell_melody(const SpelledKey *key, int pitch) {
     return harmony_spell_pitch(key, pitch_degree(key, pitch), pitch);
 }
 

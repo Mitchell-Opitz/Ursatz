@@ -41,7 +41,7 @@ static void refuse(char *message, size_t size, const char *format, ...) {
 }
 
 PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
-                               const AnalysisKey *key, char *message, size_t message_size) {
+                               const SpelledKey *key, char *message, size_t message_size) {
     if (!plan || !harmony || !meter || !key) {
         return PIECE_ERR_NULL;
     }
@@ -120,7 +120,7 @@ PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHar
     return PIECE_OK;
 }
 
-bool piece_check_harmony(const PlanMeter *meter, const AnalysisKey *key, Rational length, const SectionHarmony *harmony, char *message,
+bool piece_check_harmony(const PlanMeter *meter, const SpelledKey *key, Rational length, const SectionHarmony *harmony, char *message,
                          size_t message_size) {
     if (harmony->kind == SECTION_HARMONY_NONE) {
         return true;

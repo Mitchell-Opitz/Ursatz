@@ -75,8 +75,8 @@ bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request) {
     request->key = plan_lane_span_payload(plan, spans[at])->key;
     /* A change of mode on one tonic is not a modulation: no pivot (R-499). */
     if (at > 0 && rational_cmp(first.start, request->span.start) == 0 &&
-        analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, spans[at - 1])->key) !=
-            analysis_key_tonic_pitch_class(&request->key)) {
+        spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, spans[at - 1])->key) !=
+            spelled_key_tonic_pitch_class(&request->key)) {
         request->has_start_change = true;
         request->from_key = plan_lane_span_payload(plan, spans[at - 1])->key;
     }
@@ -107,8 +107,8 @@ static bool starts_in_home_key(const PiecePlan *plan, const GrowThemeRequest *re
         plan_lane_find(plan, PLAN_LANE_KEY, 0, whole, spans, MAX_KEY_SPANS) == 0) {
         return false;
     }
-    const AnalysisKey *home = &plan_lane_span_payload(plan, spans[0])->key;
-    return analysis_key_tonic_pitch_class(home) == analysis_key_tonic_pitch_class(&request->key) &&
+    const SpelledKey *home = &plan_lane_span_payload(plan, spans[0])->key;
+    return spelled_key_tonic_pitch_class(home) == spelled_key_tonic_pitch_class(&request->key) &&
            composer_key_is_minor(home) == composer_key_is_minor(&request->key);
 }
 

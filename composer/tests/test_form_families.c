@@ -195,7 +195,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
 /* The key lane. */
 typedef struct {
     PlanSpan span[32];
-    AnalysisKey key[32];
+    SpelledKey key[32];
     size_t count;
 } KeyLane;
 
@@ -212,7 +212,7 @@ static KeyLane read_lane(const PiecePlan *plan) {
     return lane;
 }
 
-static AnalysisKey key_at(const KeyLane *lane, Rational time) {
+static SpelledKey key_at(const KeyLane *lane, Rational time) {
     for (size_t i = 0; i < lane->count; i++) {
         Rational end;
         assert(plan_span_end(lane->span[i], &end) == PLAN_OK);
@@ -224,13 +224,13 @@ static AnalysisKey key_at(const KeyLane *lane, Rational time) {
     return lane->key[0];
 }
 
-static bool is_key(AnalysisKey key, int tonic, HarmonyMode mode) {
-    return analysis_key_tonic_pitch_class(&key) == ((tonic % 12) + 12) % 12 && harmony_key_mode(&key) == mode;
+static bool is_key(SpelledKey key, int tonic, HarmonyMode mode) {
+    return spelled_key_tonic_pitch_class(&key) == ((tonic % 12) + 12) % 12 && harmony_key_mode(&key) == mode;
 }
 
 /* The key difference in semitones from -5 to 6 a section returned in another key is moved by. */
-static int shift_between(AnalysisKey from, AnalysisKey to) {
-    int step = ((analysis_key_tonic_pitch_class(&to) - analysis_key_tonic_pitch_class(&from)) % 12 + 12) % 12;
+static int shift_between(SpelledKey from, SpelledKey to) {
+    int step = ((spelled_key_tonic_pitch_class(&to) - spelled_key_tonic_pitch_class(&from)) % 12 + 12) % 12;
     return step > 6 ? step - 12 : step;
 }
 
@@ -303,14 +303,14 @@ static void check_second(const PiecePlan *plan, const KeyLane *lane, NodeId sect
     Rational end;
     assert(plan_span_end(span, &end) == PLAN_OK);
     const bool major = row->mode == HARMONY_MODE_MAJOR;
-    const AnalysisKey first = key_at(lane, span.start);
+    const SpelledKey first = key_at(lane, span.start);
     assert(is_key(first, row->tonic + (major ? 9 : 8), major ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR) ||
            is_key(first, row->tonic + 5, row->mode));
     for (size_t i = 0; i < lane->count; i++) {
         Rational lane_end;
         assert(plan_span_end(lane->span[i], &lane_end) == PLAN_OK);
         if (rational_cmp(lane->span[i].start, end) < 0 && rational_cmp(lane_end, span.start) > 0) {
-            assert(is_key(lane->key[i], analysis_key_tonic_pitch_class(&first), harmony_key_mode(&first)));
+            assert(is_key(lane->key[i], spelled_key_tonic_pitch_class(&first), harmony_key_mode(&first)));
         }
     }
 }
@@ -369,7 +369,7 @@ static void check_rondo(const PiecePlan *plan, const FormFamily *family, const R
     const bool is_minor = row->mode == HARMONY_MODE_MINOR;
     const int region = is_minor ? row->tonic + 3 : row->tonic + 7;
     /* B is in the region from its first bar, V major or III. */
-    const AnalysisKey at_b = key_at(&lane, plan_node_span(plan, sections[family->b]).start);
+    const SpelledKey at_b = key_at(&lane, plan_node_span(plan, sections[family->b]).start);
     assert(is_key(at_b, region, HARMONY_MODE_MAJOR));
     /* R and R1 start in the home key. */
     assert(is_key(key_at(&lane, plan_node_span(plan, sections[family->r]).start), row->tonic, row->mode));
@@ -386,7 +386,7 @@ static void check_rondo(const PiecePlan *plan, const FormFamily *family, const R
     check_embellished(plan, sections[family->a], sections[family->a1], 0);
     /* B1 is in the tonic major, its melody is B's moved by the key difference, and the section after it is home. */
     if (family->b1 != NONE) {
-        const AnalysisKey at_b1 = key_at(&lane, plan_node_span(plan, sections[family->b1]).start);
+        const SpelledKey at_b1 = key_at(&lane, plan_node_span(plan, sections[family->b1]).start);
         assert(is_key(at_b1, row->tonic, HARMONY_MODE_MAJOR));
         check_moved(plan, sections[family->b], sections[family->b1], shift_between(at_b, at_b1));
         assert(is_key(key_at(&lane, plan_node_span(plan, sections[family->b1 + 1]).start), row->tonic, row->mode));
@@ -437,7 +437,7 @@ static void check_sonatina(const PiecePlan *plan, const FormFamily *family, cons
     check_one_key(plan, &lane, s[B], region, HARMONY_MODE_MAJOR);
     check_one_key(plan, &lane, s[C1], region, HARMONY_MODE_MAJOR);
     check_one_key(plan, &lane, s[C2], region, HARMONY_MODE_MAJOR);
-    const AnalysisKey at_b = key_at(&lane, plan_node_span(plan, s[B]).start);
+    const SpelledKey at_b = key_at(&lane, plan_node_span(plan, s[B]).start);
     /* E: the elaboration key, B embellished and moved. */
     check_one_key(plan, &lane, s[E], elaboration, HARMONY_MODE_MAJOR);
     const ReturnRef *back = return_of(plan, s[E]);

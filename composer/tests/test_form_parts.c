@@ -233,7 +233,7 @@ static void check_transition(const PiecePlan *plan, const Row *row, unsigned lon
         PlanSpan k = plan_lane_span_span(plan, keys[i]);
         if (rational_cmp(k.start, middle) == 0) {
             starts_at_half = true;
-            if (analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, keys[i])->key) != region_tonic(row)) {
+            if (spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, keys[i])->key) != region_tonic(row)) {
                 fprintf(stderr, "%s seed %lu: T's second half is not in the region\n", row->name, seed);
                 assert(false);
             }
@@ -384,7 +384,7 @@ static void check_retransition(const PiecePlan *plan, const Row *row, unsigned l
     size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 32);
     assert(found > 0 && found <= 32);
     for (size_t i = 0; i < found; i++) {
-        if (analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, ids[i])->key) != row->tonic) {
+        if (spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, ids[i])->key) != row->tonic) {
             fprintf(stderr, "%s seed %lu: R is not in the home key\n", row->name, seed);
             assert(false);
         }

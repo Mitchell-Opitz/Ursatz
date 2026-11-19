@@ -366,7 +366,7 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
 
     /* The melody passes the frameworks' rules: standard-counterpoint (melodic, and harmonic against the bass),
        the NonChordTone labeler and standard-harmony's resolution, read from the plan. */
-    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(melody_check_lane(fixture->plan, fixture->span, key, params, &violation));
     assert(violation == NULL);

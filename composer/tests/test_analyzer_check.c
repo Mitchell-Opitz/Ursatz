@@ -65,7 +65,7 @@ static const size_t BASELINE[3][SCENARIO_COUNT] = {{9, 7}, {10, 0}, {9, 0}};
 static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_out) {
     PiecePlan *plan = NULL;
     PlanMeter meter = {scenario->beats, 4, 0};
-    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
     if (shape == ROUNDED_BINARY) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));

@@ -91,7 +91,7 @@ typedef struct {
     const GrowBriefText *text; /* kept for the messages; must outlive the run */
     GrowInto into;
     SectionPairing pairing;
-    AnalysisKey key;
+    SpelledKey key;
     PlanMeter meter;
     size_t bars;
     bool has_construction;                   /* a construction was given (api_grow_read_construction), reason GIVEN */
@@ -228,7 +228,7 @@ ComposerStatus api_style_without_add(const char **names, size_t *count, size_t c
 
 /* The motive of one of the passages the request gives, in the meter and key. */
 ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
-                               const AnalysisKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error);
+                               const SpelledKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error);
 /* The seed as the plan records it. */
 ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error);
 /* "3 stale documents (analyzed by another version; run the corpus again)", or "" when none is stale. */

@@ -440,7 +440,7 @@ static const char *motive_reason(const GrowRequest *request, const Motive *motiv
         return "is not in the theme's meter";
     }
     if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
-        (motive->tonic_pc != analysis_key_tonic_pitch_class(&request->key) ||
+        (motive->tonic_pc != spelled_key_tonic_pitch_class(&request->key) ||
          motive_sketch_minor(motive) != (composer_key_is_minor(&request->key)))) {
         return "is not in the theme's key";
     }
@@ -665,7 +665,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     if (request->motive->note_count < 2) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/slots/basic", "the basic motif needs at least two notes");
     }
-    if (analysis_key_tonic_pitch_class(&request->key) < 0 || analysis_key_tonic_pitch_class(&request->key) > 11) {
+    if (spelled_key_tonic_pitch_class(&request->key) < 0 || spelled_key_tonic_pitch_class(&request->key) > 11) {
         return refuse(refusal, GROW_ERR_BAD_REQUEST, "/key", "the key has no tonic");
     }
     Rational bar = grow_bar_length(&request->meter);
@@ -950,7 +950,7 @@ NodeId grow_find_source(const PiecePlan *plan) {
     return PLAN_NODE_NONE;
 }
 
-bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const AnalysisKey *key, Motive *out) {
+bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const SpelledKey *key, Motive *out) {
     LaneSpanId ids[16];
     size_t found = plan_node_lane_spans(plan, node, ids, 16);
     for (size_t i = 0; i < found && i < 16; i++) {

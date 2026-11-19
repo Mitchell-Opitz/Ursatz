@@ -120,7 +120,7 @@ struct GrowPoolForm;
 typedef struct {
     PlanMeter meter;
     bool has_key;
-    AnalysisKey key;
+    SpelledKey key;
     /* The snapshot's common-practice materials: motive-invent reads its C major from them when neither the plan nor the context has a
        key. NULL for none (the key is then the zero key). Must outlive the registry. */
     const CommonPracticeMaterials *materials;

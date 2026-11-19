@@ -117,7 +117,7 @@ bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, siz
     return true;
 }
 
-bool melody_check_lane(const PiecePlan *plan, PlanSpan span, AnalysisKey key, const MelodyFillParams *params,
+bool melody_check_lane(const PiecePlan *plan, PlanSpan span, SpelledKey key, const MelodyFillParams *params,
                        const char **violation) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     MelodyCandidate *melody = calloc(1, sizeof(*melody));
@@ -224,7 +224,7 @@ static bool fault(char *reason, size_t size, size_t cell, const char *what) {
 }
 
 /* Whether a step from one pitch to the next is a step of the figure: 1 or 2 semitones, 3 in minor (the augmented second). */
-static bool is_scale_step(const AnalysisKey *key, int from, int to) {
+static bool is_scale_step(const SpelledKey *key, int from, int to) {
     int move = util_absolute(to - from);
     return (move >= 1 && move <= 2) || (move == 3 && composer_key_is_minor(key));
 }

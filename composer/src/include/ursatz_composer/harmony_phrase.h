@@ -114,7 +114,7 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode
  * and natural minor keys, and the tables written for those two stay as they are.
  */
 HarmonyMode harmony_mode_of_material(const PitchMaterial *material);
-static inline HarmonyMode harmony_key_mode(const AnalysisKey *key) {
+static inline HarmonyMode harmony_key_mode(const SpelledKey *key) {
     return harmony_mode_of_material(key != NULL ? key->material : NULL);
 }
 

@@ -124,7 +124,7 @@ static inline void piece_section_set_function(PieceSection *section, PieceFuncti
 
 typedef struct {
     const char *form;      /* the name of a built-in form: "binary", "rounded-binary", ... (form_spec.h) */
-    AnalysisKey key;
+    SpelledKey key;
     PlanMeter meter;
     size_t bars;           /* the form's size; 0 for the size count gives, or the default */
     size_t count;          /* variations or layers; 0 for the size bars gives, or the default */
@@ -258,7 +258,7 @@ PieceResult piece_request_check(const PieceRequest *request);
 typedef struct {
     bool has_region;
     bool changes_key; /* the key differs from the section before's (home for the first): the plan has a key change here */
-    AnalysisKey key;
+    SpelledKey key;
     char relation[PLAN_KEY_RELATION_MAX];
     PlanKeyAnchor anchor;
     char anchor_section[PLAN_KEY_ANCHOR_SECTION_MAX];
@@ -285,10 +285,10 @@ PieceResult piece_resolve_overlay_regions(const PieceRequest *request, const For
  * is in; a section that modulates takes no schema.
  */
 PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
-                               const AnalysisKey *key, char *message, size_t message_size);
+                               const SpelledKey *key, char *message, size_t message_size);
 
 /* Whether the harmony can be given to a section of this length in this key and meter, tried on a scratch plan; message says why not. */
-bool piece_check_harmony(const PlanMeter *meter, const AnalysisKey *key, Rational length, const SectionHarmony *harmony, char *message,
+bool piece_check_harmony(const PlanMeter *meter, const SpelledKey *key, Rational length, const SectionHarmony *harmony, char *message,
                          size_t message_size);
 
 /*

@@ -25,7 +25,7 @@
 /* A key lane span before it is added: its key, the relation that reached it from home (NULL for home) and where it lies. */
 typedef struct {
     PlanSpan span;
-    AnalysisKey key;
+    SpelledKey key;
     const char *relation;
     PlanKeyAnchor anchor;
     const char *anchor_section;
@@ -37,13 +37,13 @@ typedef struct {
 #define PARALLEL_RELATION "omt.relation.parallel"
 
 /* The key a relation of the snapshot reaches from the home key, resolved against the home key's region. */
-static bool resolve_relation(const KnowledgeSnapshot *knowledge, AnalysisKey home, const char *relation_id, AnalysisKey *out,
+static bool resolve_relation(const KnowledgeSnapshot *knowledge, SpelledKey home, const char *relation_id, SpelledKey *out,
                              const char **resolved_id) {
     if (!knowledge || !relation_id || home.material == NULL) {
         return false;
     }
     const Relation *relation = knowledge_snapshot_relation(knowledge, relation_id);
-    Region anchor = region_tonal(analysis_key_tonic_pitch_class(&home), home.material);
+    Region anchor = region_tonal(spelled_key_tonic_pitch_class(&home), home.material);
     Region found;
     if (!relation || region_resolve(knowledge, relation, &anchor, &found, NULL, 0) != REGION_RELATION_OK ||
         found.kind != REGION_TONAL_MODAL) {
@@ -60,7 +60,7 @@ static bool resolve_relation(const KnowledgeSnapshot *knowledge, AnalysisKey hom
  * the home key's parallel key, the other mode on the same tonic; any other is the key the relation reaches, closely related
  * for the relations the forms list. False when the relation refuses.
  */
-static bool region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out,
+static bool region_key(const KnowledgeSnapshot *knowledge, SpelledKey home, const FormRegion *region, FillRng *rng, SpelledKey *out,
                        const char **relation_id) {
     bool is_minor = composer_key_is_minor(&home);
     const char(*relations)[SECTION_WORD_MAX] = is_minor ? region->minor : region->major;
@@ -68,7 +68,7 @@ static bool region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, con
     return resolve_relation(knowledge, home, relations[fill_rng_below(rng, count)], out, relation_id);
 }
 
-bool piece_region_key(const KnowledgeSnapshot *knowledge, AnalysisKey home, const FormRegion *region, FillRng *rng, AnalysisKey *out) {
+bool piece_region_key(const KnowledgeSnapshot *knowledge, SpelledKey home, const FormRegion *region, FillRng *rng, SpelledKey *out) {
     const char *relation_id;
     return region_key(knowledge, home, region, rng, out, &relation_id);
 }
@@ -91,10 +91,10 @@ static bool region_has_parallel(const FormRegion *region, bool is_minor) {
  * the draw is fill_rng_below(rng, 3), 0 staying home unless the form always modulates (R-493), then one pick per
  * region in the order the form lists them.
  */
-static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size, AnalysisKey home, FillRng *rng,
+static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size, SpelledKey home, FillRng *rng,
                       PieceSectionKeys *keys,
                       bool *modulates) {
-    AnalysisKey away[FORM_SPEC_MAX_REGIONS];
+    SpelledKey away[FORM_SPEC_MAX_REGIONS];
     const char *away_relation[FORM_SPEC_MAX_REGIONS];
     bool can = false;
     *modulates = false;
@@ -154,9 +154,9 @@ static bool draw_keys(const KnowledgeSnapshot *knowledge, const FormSpec *form, 
 }
 
 /* Adds a segment, joined to the one before it when that is in the same key and ends where this one starts. */
-static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, AnalysisKey key, const char *relation,
+static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, SpelledKey key, const char *relation,
                                 PlanKeyAnchor anchor, const char *anchor_section) {
-    if (*count > 0 && analysis_key_equals(&segments[*count - 1].key, &key)) {
+    if (*count > 0 && spelled_key_equals(&segments[*count - 1].key, &key)) {
         Rational end;
         PieceResult result = piece_result_of_plan(plan_span_end(segments[*count - 1].span, &end));
         if (result == PIECE_OK && rational_cmp(end, span.start) == 0) {
@@ -179,7 +179,7 @@ static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan sp
 
 /* A section whose key changes halfway has its first half in the key it starts in and its second in the key it ends in. */
 static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpan span, const PieceSectionKeys *keys) {
-    if (analysis_key_equals(&keys->start, &keys->end)) {
+    if (spelled_key_equals(&keys->start, &keys->end)) {
         return push_segment(segments, count, span, keys->start, keys->start_relation, keys->anchor, keys->anchor_section);
     }
     PlanSpan first;
@@ -198,7 +198,7 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
 }
 
 /* The KEY constraint of the section, replaced by the key it ends in. */
-static PieceResult set_section_key(PiecePlan *plan, NodeId section, AnalysisKey key) {
+static PieceResult set_section_key(PiecePlan *plan, NodeId section, SpelledKey key) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_KEY) {
             PlanConstraint constraint;
@@ -241,7 +241,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
     if (!home_key || material == PLAN_NODE_NONE || count != size->section_count) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    AnalysisKey home = home_key->params.key;
+    SpelledKey home = home_key->params.key;
     out->count = count;
     if (!draw_keys(knowledge, spec, size, home, rng, out->sections, &out->modulates)) {
         return PIECE_ERR_BAD_REQUEST;
@@ -257,7 +257,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
         keys->end_relation = keys->start_relation;
         keys->anchor = regions[i].anchor;
         keys->anchor_section = regions[i].anchor == PLAN_KEY_ANCHOR_SECTION ? regions[i].anchor_section : NULL;
-        out->modulates = out->modulates || !analysis_key_equals(&regions[i].key, &home);
+        out->modulates = out->modulates || !spelled_key_equals(&regions[i].key, &home);
     }
 
     KeySegment segments[MAX_SEGMENTS];
@@ -283,7 +283,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge,
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
     }
     for (size_t i = 0; result == PIECE_OK && i < count; i++) {
-        if (!analysis_key_equals(&out->sections[i].end, &home)) {
+        if (!spelled_key_equals(&out->sections[i].end, &home)) {
             result = set_section_key(plan, sections[i], out->sections[i].end);
         }
     }
@@ -321,7 +321,7 @@ PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSn
     if (!request || !out || !knowledge || !common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
         return PIECE_ERR_NULL;
     }
-    AnalysisKey keys[PIECE_STRUCTURE_MAX_SECTIONS];
+    SpelledKey keys[PIECE_STRUCTURE_MAX_SECTIONS];
     size_t count = request->section_count < PIECE_STRUCTURE_MAX_SECTIONS ? request->section_count : PIECE_STRUCTURE_MAX_SECTIONS;
     for (size_t i = 0; i < count; i++) {
         const SectionDescription *section = &request->sections[i].description;
@@ -336,22 +336,22 @@ PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSn
         }
         entry->has_region = true;
         if (region->kind == SECTION_REGION_HOME) {
-            entry->changes_key = i > 0 && !analysis_key_equals(&keys[i - 1], &request->key);
+            entry->changes_key = i > 0 && !spelled_key_equals(&keys[i - 1], &request->key);
             continue;
         }
         if (region->kind == SECTION_REGION_KEY) {
             char text[SECTION_TONIC_MAX + SECTION_WORD_MAX + 2];
             snprintf(text, sizeof(text), "%s %s", region->tonic, region->material);
             const PitchMaterial *material = knowledge_snapshot_material_named(knowledge, region->material);
-            AnalysisKey key;
+            SpelledKey key;
             if (!material) {
                 return refuse_region(i, refused, message, message_size, "section '%s': no material is named '%s'", section->id, region->material);
             }
             if (!composer_material_supported(&materials, material)) {
                 char tonic[SECTION_TONIC_MAX + 8];
                 snprintf(tonic, sizeof(tonic), "%s major", region->tonic);
-                AnalysisKey center;
-                int pc = request_parse_key(tonic, knowledge, &center) ? analysis_key_tonic_pitch_class(&center) : -1;
+                SpelledKey center;
+                int pc = request_parse_key(tonic, knowledge, &center) ? spelled_key_tonic_pitch_class(&center) : -1;
                 return refuse_material(i, section->id, pc, material, refused, message, message_size);
             }
             if (!request_parse_key(text, knowledge, &key)) {
@@ -359,12 +359,12 @@ PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSn
             }
             entry->key = key;
             keys[i] = key;
-            entry->changes_key = !analysis_key_equals(i > 0 ? &keys[i - 1] : &request->key, &key);
+            entry->changes_key = !spelled_key_equals(i > 0 ? &keys[i - 1] : &request->key, &key);
             snprintf(entry->text, sizeof(entry->text), "%s", text);
             continue;
         }
         /* a relation from an anchor: home, the section before, or an earlier section */
-        const AnalysisKey *anchor_key = &request->key;
+        const SpelledKey *anchor_key = &request->key;
         const char *anchor_name = "home";
         if (region->anchor == SECTION_ANCHOR_PREVIOUS) {
             if (i == 0) {
@@ -386,7 +386,7 @@ PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSn
             anchor_name = region->anchor_section;
         }
         const Relation *relation = knowledge_snapshot_relation_named(knowledge, region->relation);
-        Region from = region_tonal(analysis_key_tonic_pitch_class(anchor_key), anchor_key->material);
+        Region from = region_tonal(spelled_key_tonic_pitch_class(anchor_key), anchor_key->material);
         Region reached;
         char why[256];
         if (!relation) {
@@ -401,8 +401,8 @@ PieceResult piece_resolve_regions(const PieceRequest *request, const KnowledgeSn
         entry->key = plan_key_of_pitch_class(reached.center, reached.material);
         keys[i] = entry->key;
         /* A region equal to the section before's (home for the first) asks for no key change. */
-        const AnalysisKey *before = i > 0 ? &keys[i - 1] : &request->key;
-        Region before_region = region_tonal(analysis_key_tonic_pitch_class(before), before->material);
+        const SpelledKey *before = i > 0 ? &keys[i - 1] : &request->key;
+        Region before_region = region_tonal(spelled_key_tonic_pitch_class(before), before->material);
         entry->changes_key = !region_equals(&reached, &before_region);
         snprintf(entry->relation, sizeof(entry->relation), "%s", relation->id);
         entry->anchor = region->anchor == SECTION_ANCHOR_PREVIOUS  ? PLAN_KEY_ANCHOR_PREVIOUS
@@ -452,7 +452,7 @@ PieceResult piece_resolve_overlay_regions(const PieceRequest *request, const For
 /* The key lane over the whole plan, in order. */
 typedef struct {
     PlanSpan span[MAX_SEGMENTS];
-    AnalysisKey key[MAX_SEGMENTS];
+    SpelledKey key[MAX_SEGMENTS];
     size_t count;
 } KeyLane;
 
@@ -471,17 +471,17 @@ static bool read_key_lane(const PiecePlan *plan, KeyLane *lane) {
 }
 
 /* Whether the key is the home key's or one of its closely related keys. */
-static bool related_to_home(AnalysisKey home, AnalysisKey key) {
+static bool related_to_home(SpelledKey home, SpelledKey key) {
     HarmonyMode home_mode = harmony_key_mode(&home);
     HarmonyMode mode = harmony_key_mode(&key);
-    if (analysis_key_equals(&home, &key)) {
+    if (spelled_key_equals(&home, &key)) {
         return true;
     }
     /* The home key's parallel key, on the same tonic (R-499). */
-    if (analysis_key_tonic_pitch_class(&home) == analysis_key_tonic_pitch_class(&key)) {
+    if (spelled_key_tonic_pitch_class(&home) == spelled_key_tonic_pitch_class(&key)) {
         return true;
     }
-    int semitone = util_pitch_class(analysis_key_tonic_pitch_class(&key) - analysis_key_tonic_pitch_class(&home));
+    int semitone = util_pitch_class(spelled_key_tonic_pitch_class(&key) - spelled_key_tonic_pitch_class(&home));
     for (int i = 0; i < harmony_related_key_count(home_mode); i++) {
         HarmonyRelatedKey related;
         if (harmony_related_key_at(home_mode, i, &related) && related.mode == mode &&
@@ -538,7 +538,7 @@ static bool authentic_arrivals(ComposerHearing *hearing, const PiecePlan *plan, 
     return true;
 }
 
-static bool constraint_key(const PiecePlan *plan, NodeId section, AnalysisKey *out) {
+static bool constraint_key(const PiecePlan *plan, NodeId section, SpelledKey *out) {
     const PlanConstraint *constraint = plan_node_find_constraint(plan, section, PLAN_CONSTRAINT_KEY);
     if (constraint) {
         *out = constraint->params.key;
@@ -582,7 +582,7 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
         !authentic_arrivals(hearing, plan, &lane, sections, section_count, arrivals, &arrival_count)) {
         return false;
     }
-    AnalysisKey home = lane.key[0];
+    SpelledKey home = lane.key[0];
     for (size_t k = 0; k < lane.count; k++) {
         if (!related_to_home(home, lane.key[k]) && out->ok) {
             out->ok = false;
@@ -591,8 +591,8 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
     }
     for (size_t k = 1; k < lane.count; k++) {
         /* A change of mode on one tonic is neither counted nor classified (R-499). */
-        if (analysis_key_equals(&lane.key[k], &lane.key[k - 1]) ||
-            analysis_key_tonic_pitch_class(&lane.key[k]) == analysis_key_tonic_pitch_class(&lane.key[k - 1])) {
+        if (spelled_key_equals(&lane.key[k], &lane.key[k - 1]) ||
+            spelled_key_tonic_pitch_class(&lane.key[k]) == spelled_key_tonic_pitch_class(&lane.key[k - 1])) {
             continue;
         }
         out->changes++;
@@ -606,13 +606,13 @@ bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceK
         region_end = rational_cmp(span_end, piece_end) < 0 ? span_end : piece_end;
         /* A section planned to end in the new key, inside the span: the last of them is where the cadence is. */
         for (size_t s = 0; s < section_count; s++) {
-            AnalysisKey ends_in;
+            SpelledKey ends_in;
             Rational end;
             if (!constraint_key(plan, sections[s], &ends_in) ||
                 plan_span_end(plan_node_span(plan, sections[s]), &end) != PLAN_OK) {
                 return false;
             }
-            if (analysis_key_equals(&ends_in, &lane.key[k]) && rational_cmp(end, lane.span[k].start) > 0 &&
+            if (spelled_key_equals(&ends_in, &lane.key[k]) && rational_cmp(end, lane.span[k].start) > 0 &&
                 rational_cmp(end, region_end) <= 0 && rational_cmp(end, cadence_end) > 0) {
                 cadence_end = end;
                 planned = true;

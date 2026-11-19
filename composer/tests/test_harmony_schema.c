@@ -385,7 +385,7 @@ static int check_schemas(const Fixture *fixture, const Scenario *scenario, const
         Rational end = time_plus(last.start, last.length);
         assert(offset_in_bar(fixture, end).num == 0);
         PlanSpan whole = {first.start, time_sub(end, first.start)};
-        AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+        SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
         const char *violation = "unread";
         assert(harmony_check_bass(fixture->plan, whole, key, bass, &violation));
         assert(violation == NULL);
@@ -647,7 +647,7 @@ static void check_sequence(const Fixture *fixture, const Scenario *scenario, con
     PlanSpan first = plan_lane_span_span(fixture->plan, ids[0]);
     PlanSpan last = plan_lane_span_span(fixture->plan, ids[count - 1]);
     PlanSpan whole = {first.start, time_sub(time_plus(last.start, last.length), first.start)};
-    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(harmony_check_bass(fixture->plan, whole, key, &params->bass, &violation));
     assert(violation == NULL);

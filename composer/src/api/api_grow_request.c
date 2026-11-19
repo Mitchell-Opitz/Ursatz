@@ -82,7 +82,7 @@ ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, Composer
 }
 
 ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
-                               const AnalysisKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error) {
+                               const SpelledKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error) {
     CorpusSeedResult result = corpus_seed_motive(knowledge, passages->items, passages->count, meter, key, seed, out);
     return result == CORPUS_SEED_OK ? COMPOSER_OK : seed_failure(result, error);
 }
@@ -193,7 +193,7 @@ static ComposerStatus read_brief(const cJSON *request, GrowRequestText *brief, C
 /* The motive request with the key the brief settled on, and the meter and the role of an accompaniment motive. */
 static ComposerStatus make_lines(State *state, ComposerError *error) {
     char key[24];
-    util_key_name(analysis_key_tonic_pitch_class(&state->setup.key), state->setup.key.material, key,
+    util_key_name(spelled_key_tonic_pitch_class(&state->setup.key), state->setup.key.material, key,
                   sizeof key);
     state->line = cJSON_Duplicate(state->request, true);
     if (!state->line) {

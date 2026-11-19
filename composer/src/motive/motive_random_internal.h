@@ -72,14 +72,14 @@ bool motive_random_forms(NonChordTone type, int before, int pitch, int after);
  * The frame: a walk on the chord tones of I from degree 1, 3 or 5, for the first and last note and every note that starts
  * on a beat. The draw fails when a note leaves PITCH_LOW to PITCH_HIGH.
  */
-bool motive_random_draw_frame(const AnalysisKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody);
+bool motive_random_draw_frame(const SpelledKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody);
 
 /* Fills the notes between two frame notes with a chord tone or a non-chord tone that makes its figure. */
-bool motive_random_draw_between(const AnalysisKey *key, const Rhythm *rhythm, FillRng *rng, long *positions,
+bool motive_random_draw_between(const SpelledKey *key, const Rhythm *rhythm, FillRng *rng, long *positions,
                                 Melody *melody);
 
 /* The notes, pickup and length of a candidate, in the key. False when a time does not fit a Rational. */
-bool motive_random_build(const MotiveRandomOptions *options, const AnalysisKey *key, const Rhythm *rhythm,
+bool motive_random_build(const MotiveRandomOptions *options, const SpelledKey *key, const Rhythm *rhythm,
                          const Melody *melody, Motive *out);
 
 /* The form of a full motive, read back by the reader of that form. */
@@ -95,7 +95,7 @@ int motive_random_ratio_compare(const ComposerRatio *a, const ComposerRatio *b);
 
 /* One candidate of the SEGMENTS strategy (motive_random_segments.c), as the DRAWN one: *found is false when the draw did
    not pass (try again); the result is false only when the check itself could not run. */
-bool motive_random_segments_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
+bool motive_random_segments_candidate(const MotiveRandomOptions *options, const SpelledKey *key, FillRng *rng, Motive *out,
                                       bool *found);
 
 /* True when a given chord plan (preferences->plan_count > 0) can be drawn in the meter (motive_random_segments.c); false means

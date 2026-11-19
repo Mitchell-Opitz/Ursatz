@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "analysis/galant/galant_analysis_input.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "analysis/notes/analysis_segment.h"
 #include "model/time/musical_time.h"
 #include "model/time/time_span.h"

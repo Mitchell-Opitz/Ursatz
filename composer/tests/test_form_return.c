@@ -916,7 +916,7 @@ typedef struct {
 } HomeRow;
 
 /* The keys of the key lane under a section; every one must be the home key. */
-static size_t keys_under(const PiecePlan *plan, NodeId section, AnalysisKey *out, size_t capacity) {
+static size_t keys_under(const PiecePlan *plan, NodeId section, SpelledKey *out, size_t capacity) {
     LaneSpanId ids[32];
     size_t count = plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, section), ids, 32);
     assert(count >= 1 && count <= capacity);
@@ -930,8 +930,8 @@ static size_t keys_under(const PiecePlan *plan, NodeId section, AnalysisKey *out
 static void check_home(const PiecePlan *plan, NodeId source, NodeId section, const HomeRow *row) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
-    AnalysisKey source_key;
-    AnalysisKey keys[32];
+    SpelledKey source_key;
+    SpelledKey keys[32];
     const ReturnRef *back = return_of(plan, section);
     assert(back && back->section == source &&
            back->variation == SECTION_RETURN_REHARMONIZE && back->across_modes);
@@ -939,9 +939,9 @@ static void check_home(const PiecePlan *plan, NodeId source, NodeId section, con
     assert(keys_under(plan, source, &source_key, 1) == 1);
     size_t key_count = keys_under(plan, section, keys, 32);
     for (size_t i = 0; i < key_count; i++) {
-        assert(analysis_key_tonic_pitch_class(&keys[i]) == row->pitch_class && harmony_key_mode(&keys[i]) == row->mode);
+        assert(spelled_key_tonic_pitch_class(&keys[i]) == row->pitch_class && harmony_key_mode(&keys[i]) == row->mode);
     }
-    int step = ((row->pitch_class - analysis_key_tonic_pitch_class(&source_key)) % 12 + 12) % 12;
+    int step = ((row->pitch_class - spelled_key_tonic_pitch_class(&source_key)) % 12 + 12) % 12;
     int shift = step > 6 ? step - 12 : step;
     size_t an = events(plan, source, PLAN_LANE_MELODY, 0, a);
     size_t bn = events(plan, section, PLAN_LANE_MELODY, 0, b);

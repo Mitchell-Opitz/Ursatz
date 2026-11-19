@@ -205,7 +205,7 @@ static bool same_place(int measure_a, double beat_a, int measure_b, double beat_
 
 /* The key of the last chord that starts at or before the passage, else of the first chord; false when no chord names one. */
 static bool source_key(const KnowledgeSnapshot *knowledge, const CorpusPassageChord *chords, size_t count, int measure,
-                       double beat, AnalysisKey *out) {
+                       double beat, SpelledKey *out) {
     const CorpusPassageChord *found = NULL;
     for (size_t i = 0; i < count; i++) {
         bool before = chords[i].measure < measure || same_place(chords[i].measure, chords[i].beat, measure, beat) ||
@@ -227,12 +227,12 @@ static bool source_key(const KnowledgeSnapshot *knowledge, const CorpusPassageCh
  * source key (a note off the scale keeps its distance above the degree below it), placed in the target key, with the
  * move from the pitch within a tritone either way so the melody stays where it was heard.
  */
-static int transposition(int pitch, const AnalysisKey *source, const AnalysisKey *target) {
-    int above = util_pitch_class(pitch - analysis_key_tonic_pitch_class(source));
+static int transposition(int pitch, const SpelledKey *source, const SpelledKey *target) {
+    int above = util_pitch_class(pitch - spelled_key_tonic_pitch_class(source));
     int degree = 1;
     int beyond = 0;
     standard_tonality_material_degree_at_or_below_semitone(above, source->material, &degree, &beyond);
-    int landed = (analysis_key_tonic_pitch_class(target) + util_scale_semitone(target->material, degree) + beyond) % 12;
+    int landed = (spelled_key_tonic_pitch_class(target) + util_scale_semitone(target->material, degree) + beyond) % 12;
     int shift = util_pitch_class(landed - (pitch % 12));
     return shift > 6 ? shift - 12 : shift;
 }
@@ -246,7 +246,7 @@ static bool plan_time_fits(Rational time) {
  * One bar of a passage's melody as a motive: the notes that start in the first bar, the last shortened to the barline,
  * moved by shift semitones. false when fewer than two notes are left or one does not fit a plan time.
  */
-static bool motive_from_passage(const CorpusPassage *passage, const PlanMeter *meter, const AnalysisKey *key, int shift,
+static bool motive_from_passage(const CorpusPassage *passage, const PlanMeter *meter, const SpelledKey *key, int shift,
                                 Motive *out) {
     Rational bar;
     if (rational_make((long long)meter->beats_per_bar, (long long)meter->beat_unit, &bar) != RATIONAL_OK) {
@@ -305,7 +305,7 @@ static void fill_match(const CorpusPassage *passage, CorpusSeed *out) {
 }
 
 CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassage *passages, size_t count,
-                                    const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out) {
+                                    const PlanMeter *meter, const SpelledKey *key, unsigned long seed, CorpusSeed *out) {
     if (!knowledge || (count > 0 && !passages) || !meter || !key || !out || meter->beats_per_bar < 1 || meter->beat_unit < 1) {
         return CORPUS_SEED_ERR_ARGUMENT;
     }
@@ -334,7 +334,7 @@ CorpusSeedResult corpus_seed_motive(const KnowledgeSnapshot *knowledge, const Co
             continue;
         }
         int shift = 0;
-        AnalysisKey from;
+        SpelledKey from;
         stale += passage->stale ? 1 : 0;
         if (source_key(knowledge, passage->chords, passage->chord_count, passage->start_measure, passage->start_beat, &from)) {
             shift = transposition(passage->notes[0].pitch, &from, key);

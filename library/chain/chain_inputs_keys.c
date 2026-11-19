@@ -40,7 +40,7 @@ void chain_key_segments_destroy(CommonPracticeKeySegment *key_segments) {
 }
 
 ChainInputStatus chain_estimate_key_regions(const CommonPracticeKeySegment *key_segments, size_t count, const MeterMap *map,
-                                            const AnalysisKeyEvent *events, size_t event_count,
+                                            const SpelledKeyEvent *events, size_t event_count,
                                             const CommonPracticeKeyRegionsConfig *config, CommonPracticeKeyRegions *out) {
     if (key_segments == NULL || map == NULL || out == NULL || (event_count > 0 && events == NULL)) {
         return CHAIN_INPUT_ERR_NULL_ARGUMENT;

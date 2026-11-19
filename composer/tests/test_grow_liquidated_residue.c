@@ -146,7 +146,7 @@ static void check_idea(const PiecePlan *plan, const Motive *motive, const Motive
 static void compose(const Case *test, unsigned long seed, GrowRun *run, Motive *motive) {
     static GrowBriefText text;
     *motive = load_motive(test->file);
-    AnalysisKey key = motive_key(motive);
+    SpelledKey key = motive_key(motive);
     memset(&text, 0, sizeof(text));
     text.cadence = "PAC";
     GrowSetup setup;
@@ -188,8 +188,8 @@ static void test_cadential_ideas(void) {
             for (size_t i = 1; i < motive.note_count; i++) {
                 shortest = rational_cmp(motive.notes[i].duration, shortest) < 0 ? motive.notes[i].duration : shortest;
             }
-            AnalysisKey key = motive_key(&motive);
-            int tonic = analysis_key_tonic_pitch_class(&key);
+            SpelledKey key = motive_key(&motive);
+            int tonic = spelled_key_tonic_pitch_class(&key);
             bool is_minor = harmony_key_mode(&key) == HARMONY_MODE_MINOR;
             const PiecePlan *plan = run.themes[0].plan;
             if (test->ending == SECTION_ENDING_CONTINUATION) {
@@ -244,7 +244,7 @@ static void test_no_residue(void) {
     options.features[1].first = 1;
     options.features[1].last = 1;
     assert(motive_from_notes_text("C5:h G4:h", &options, &motive, NULL) == MOTIVE_OK);
-    AnalysisKey key = test_key(0, "major");
+    SpelledKey key = test_key(0, "major");
     motive_set_key(&motive, &key, MOTIVE_SKETCH_KEY_GIVEN);
     memset(&text, 0, sizeof(text));
     text.cadence = "PAC";

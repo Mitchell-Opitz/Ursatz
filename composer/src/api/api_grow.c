@@ -1664,7 +1664,7 @@ static cJSON *given_construction_json(const SectionConstruction *construction) {
 cJSON *api_grow_result_json(const GrowSetup *setup, const GrowRun *run, const GrowThemeInfo *info) {
     const GrowBriefText *text = setup->text;
     char key[24];
-    util_key_name(analysis_key_tonic_pitch_class(&setup->key), setup->key.material, key, sizeof key);
+    util_key_name(spelled_key_tonic_pitch_class(&setup->key), setup->key.material, key, sizeof key);
     char pairing[64];
     snprintf(pairing, sizeof(pairing), "%s + %s", BEGINNING_NAMES[setup->pairing.beginning],
              ENDING_NAMES[setup->pairing.ending]);

@@ -17,7 +17,7 @@
 #include "analysis/meter/meter_analysis_input.h"
 #include "analysis/texture/texture_analysis_input.h"
 #include "analysis/harmony/roman_numeral_adapter.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "analysis/notes/analysis_note.h"
 #include "theory/vocabulary/beat_strength.h"
 #include "analysis/notes/voice_grid.h"
@@ -108,7 +108,7 @@ void chain_key_segments_destroy(CommonPracticeKeySegment *key_segments);
  * event_count 0. config may be NULL for the defaults. Destroy with common_practice_key_regions_destroy.
  */
 ChainInputStatus chain_estimate_key_regions(const CommonPracticeKeySegment *key_segments, size_t count, const MeterMap *map,
-                                            const AnalysisKeyEvent *events, size_t event_count,
+                                            const SpelledKeyEvent *events, size_t event_count,
                                             const CommonPracticeKeyRegionsConfig *config, CommonPracticeKeyRegions *out);
 
 /*

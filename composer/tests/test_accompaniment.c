@@ -43,8 +43,8 @@ static Rational fraction(long num, unsigned long den) {
     return time;
 }
 
-static AnalysisKey c_major(void) {
-    AnalysisKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
+static SpelledKey c_major(void) {
+    SpelledKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     return key;
 }
 
@@ -83,7 +83,7 @@ static void add_motive_node(PiecePlan *plan, NodeId form) {
     NodeId idea;
     PlanSpan material = {fraction(8, 1), fraction(1, 1)};
     motive_init(&motive, (PlanMeter){4, 4, 0});
-    AnalysisKey motive_key_value = c_major();
+    SpelledKey motive_key_value = c_major();
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     motive.accompaniment = true;
     static const int PITCHES[4] = {60, 67, 64, 67};
@@ -299,7 +299,7 @@ static void check_shape(const Piece *piece, PlanAccompanimentPattern pattern, bo
     }
 }
 
-static void run_pattern(const char *name, Piece (*make)(void), AnalysisKey key, PlanAccompanimentPattern pattern,
+static void run_pattern(const char *name, Piece (*make)(void), SpelledKey key, PlanAccompanimentPattern pattern,
                         bool steady) {
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         Piece piece = make();

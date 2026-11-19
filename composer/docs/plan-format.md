@@ -30,7 +30,7 @@ These are the library's.
 The file does not change with the types behind it. In memory a time is a library `Rational` (`<core/rational.h>`) in
 whole notes, a span a `Rational` start and length, a cadence a `CadenceType` (the file names PAC, IAC, HC, DC and PC as
 `pac`, `iac`, `hc`, `dc`, `pc`), a harmonic function a `HarmonicFunction` with a `has_function` flag (the file leaves
-`function` out when it is false), a key an `AnalysisKey` (the file writes `tonic`, spelled, and `material`, the id of a K1 material), and a note a MIDI
+`function` out when it is false), a key an `SpelledKey` (the file writes `tonic`, spelled, and `material`, the id of a K1 material), and a note a MIDI
 number with an optional spelling (the file writes `spelling` for a spelled note and nothing for an unspelled one), an id, and an optional source and operation (`PlanNote.id`, `.source`, `.operation`: see [Note ids](#note-ids)).
 
 ## Top level

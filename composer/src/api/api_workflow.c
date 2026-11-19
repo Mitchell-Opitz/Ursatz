@@ -22,8 +22,8 @@
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 
-const char *api_key_name(const AnalysisKey *key, char *out, size_t size) {
-    util_key_name(analysis_key_tonic_pitch_class(key), key->material, out, size);
+const char *api_key_name(const SpelledKey *key, char *out, size_t size) {
+    util_key_name(spelled_key_tonic_pitch_class(key), key->material, out, size);
     return out;
 }
 

@@ -57,8 +57,8 @@ static Rational beats(long count) {
     return fraction(count, 4);
 }
 
-static AnalysisKey c_major(void) {
-    AnalysisKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
+static SpelledKey c_major(void) {
+    SpelledKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     return key;
 }
 
@@ -153,7 +153,7 @@ static void add_accompaniment_motive(Piece *piece) {
     PlanSpan material = {beats(40), beats(4)};
     static const int PITCHES[4] = {60, 67, 64, 67};
     motive_init(&motive, (PlanMeter){4, 4, 0});
-    AnalysisKey motive_key_value = c_major();
+    SpelledKey motive_key_value = c_major();
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     motive.accompaniment = true;
     for (size_t n = 0; n < 4; n++) {

@@ -52,19 +52,19 @@ static MotiveDegree degree_of(const PitchMaterial *material, int relative) {
 }
 
 /* The step of the key's scale a pitch is on: octaves of 7 from the tonic's pitch class, and the degree in the octave. */
-void motive_scale_position(const AnalysisKey *key, int pitch, long *position, int *alteration) {
-    int relative = pitch - analysis_key_tonic_pitch_class(key);
+void motive_scale_position(const SpelledKey *key, int pitch, long *position, int *alteration) {
+    int relative = pitch - spelled_key_tonic_pitch_class(key);
     long octave = floor_div(relative, 12);
     MotiveDegree degree = degree_of(key->material, (int)(relative - octave * 12));
     *position = octave * 7 + (degree.degree - 1);
     *alteration = degree.alteration;
 }
 
-int motive_position_pitch(const AnalysisKey *key, long position, int alteration) {
+int motive_position_pitch(const SpelledKey *key, long position, int alteration) {
     Scale scale = scale_of(key->material);
     long octave = floor_div(position, 7);
     int degree = (int)(position - octave * 7) + 1;
-    return (int)(analysis_key_tonic_pitch_class(key) + octave * 12 + scale.semitones[degree] + alteration);
+    return (int)(spelled_key_tonic_pitch_class(key) + octave * 12 + scale.semitones[degree] + alteration);
 }
 
 /* ---------------------------------------------------------------- contour */
@@ -315,9 +315,9 @@ static const char *direction_name(ContourDirection direction) {
     return direction == CONTOUR_DIRECTION_UP ? "up" : direction == CONTOUR_DIRECTION_DOWN ? "down" : "same";
 }
 
-static void key_text(const AnalysisKey *key, char *out, size_t size) {
+static void key_text(const SpelledKey *key, char *out, size_t size) {
     /* The minor key's tonic is named as a minor key is written (key_tonic_name_minor, R-582: Eb minor, not D# minor). */
-    int tonic = analysis_key_tonic_pitch_class(key);
+    int tonic = spelled_key_tonic_pitch_class(key);
     snprintf(out, size, "%s %s",
              composer_key_is_minor(key) ? key_tonic_name_minor(tonic) : key_tonic_name(tonic),
              composer_key_is_minor(key) ? "minor" : "major");
@@ -523,7 +523,7 @@ static cJSON *key_json(const MotiveAnalysis *analysis) {
         return cJSON_CreateNull();
     }
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&analysis->key))) &&
+    bool ok = object && plan_json_add(object, "tonic_pitch_class", json_number(spelled_key_tonic_pitch_class(&analysis->key))) &&
               add_string(object, "material", composer_key_material_id(&analysis->key)) &&
               add_string(object, "source", key_source_name(analysis->key_source));
     if (!ok) {
@@ -540,7 +540,7 @@ static cJSON *rendered_json(const Motive *rendered) {
     bool ok = object && notes;
     if (ok && rendered->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         char text[32];
-        AnalysisKey rendered_key = motive_key(rendered);
+        SpelledKey rendered_key = motive_key(rendered);
         key_text(&rendered_key, text, sizeof(text));
         ok = add_string(object, "key", text);
     } else if (ok) {

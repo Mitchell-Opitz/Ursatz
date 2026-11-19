@@ -56,7 +56,7 @@ typedef struct {
     unsigned long magic;
     SectionReturnVariation variation;
     PlanSpan span;       /* the target section's span */
-    AnalysisKey key;         /* the key at its start */
+    SpelledKey key;         /* the key at its start */
     PlanMeter meter;
     Rational from_start; /* where the returned section starts */
     int transpose;       /* the key difference, in semitones, the copy is moved by */
@@ -82,7 +82,7 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
  * voice pitch 4 or 9 semitones over the tonic is lowered a semitone; into major every pitch 3 or 8 over it is raised a
  * semitone and 10 is raised to 11 (the leading tone is kept). The KEY constraints of the nodes and spans take the mode.
  */
-bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, const PitchMaterial *to);
+bool return_copy_change_mode(ReturnCopy *copy, SpelledKey home, const PitchMaterial *to);
 /* The pitch moved from the other mode of the tonic (a pitch class) into `to`, as return_copy_change_mode maps it. */
 int return_map_pitch(int tonic, const PitchMaterial *to, int pitch);
 /* The pitch a source pitch (after the move) has in the result: mapped by the mode change of the payload, else as it is. */

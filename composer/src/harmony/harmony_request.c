@@ -38,7 +38,7 @@ bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner,
     return found != NULL;
 }
 
-bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, AnalysisKey *out) {
+bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, SpelledKey *out) {
     LaneSpanId keys[2];
     size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, keys, 2);
     if (found == 1) {
@@ -59,7 +59,7 @@ bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSp
 /* The most key spans looked through before a point of the piece. */
 #define MAX_KEY_SPANS 32
 
-bool harmony_key_before(const PiecePlan *plan, Rational start, AnalysisKey *out) {
+bool harmony_key_before(const PiecePlan *plan, Rational start, SpelledKey *out) {
     LaneSpanId spans[MAX_KEY_SPANS];
     PlanSpan before = {{0, 1}, {0, 1}};
     if (start.num <= 0 || rational_make(start.num, start.den, &before.length) != RATIONAL_OK) {
@@ -79,9 +79,9 @@ bool harmony_key_before(const PiecePlan *plan, Rational start, AnalysisKey *out)
 }
 
 /* The closely related key of `from` that is the key `to`. */
-static bool related_key_of(AnalysisKey from, AnalysisKey to, HarmonyMode *home, HarmonyRelatedKey *out) {
+static bool related_key_of(SpelledKey from, SpelledKey to, HarmonyMode *home, HarmonyRelatedKey *out) {
     *home = composer_key_is_minor(&from) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
-    int semitone = util_pitch_class(analysis_key_tonic_pitch_class(&to) - analysis_key_tonic_pitch_class(&from));
+    int semitone = util_pitch_class(spelled_key_tonic_pitch_class(&to) - spelled_key_tonic_pitch_class(&from));
     HarmonyMode mode = composer_key_is_minor(&to) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
     for (int i = 0; i < harmony_related_key_count(*home); i++) {
         HarmonyRelatedKey key;
@@ -102,7 +102,7 @@ static HarmonyChord triad_on(int degree) {
     return chord;
 }
 
-size_t harmony_pivot_degrees(AnalysisKey from, AnalysisKey to, int degrees[HARMONY_PIVOT_MAX]) {
+size_t harmony_pivot_degrees(SpelledKey from, SpelledKey to, int degrees[HARMONY_PIVOT_MAX]) {
     HarmonyMode home;
     HarmonyRelatedKey related;
     HarmonyPivot pivots[HARMONY_PIVOT_MAX];
@@ -138,7 +138,7 @@ size_t harmony_pivot_degrees(AnalysisKey from, AnalysisKey to, int degrees[HARMO
     return count;
 }
 
-bool harmony_pivot_chord_valid(AnalysisKey from, AnalysisKey to, const HarmonyChord *chord) {
+bool harmony_pivot_chord_valid(SpelledKey from, SpelledKey to, const HarmonyChord *chord) {
     HarmonyMode home;
     HarmonyRelatedKey related;
     HarmonyPivot pivots[HARMONY_PIVOT_MAX];
@@ -155,7 +155,7 @@ bool harmony_pivot_chord_valid(AnalysisKey from, AnalysisKey to, const HarmonyCh
 }
 
 bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, HarmonyMode *out) {
-    AnalysisKey key;
+    SpelledKey key;
     if (!harmony_find_key(plan, id, owner, span, &key)) {
         return false;
     }

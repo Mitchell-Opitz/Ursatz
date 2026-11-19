@@ -58,7 +58,7 @@ bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, siz
  * written, and tile the span), in key, with params (NULL for the defaults). The same rules the checker applies. True when
  * the lane could be read, with *violation NULL if nothing is broken and otherwise the rule that is.
  */
-bool melody_check_lane(const PiecePlan *plan, PlanSpan span, AnalysisKey key, const MelodyFillParams *params,
+bool melody_check_lane(const PiecePlan *plan, PlanSpan span, SpelledKey key, const MelodyFillParams *params,
                        const char **violation);
 
 /*

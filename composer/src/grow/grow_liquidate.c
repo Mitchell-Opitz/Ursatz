@@ -168,18 +168,18 @@ bool grow_liquidate_applies(const PiecePlan *plan, FillTarget target) {
 
 /* ------------------------------------------------------------- the made motives */
 
-static bool minor_key(const AnalysisKey *key) {
+static bool minor_key(const SpelledKey *key) {
     return composer_key_is_minor(key);
 }
 
 /* The pitch of the step `position` of the key's scale (7 to an octave), the seventh raised in minor (the harmonic minor). */
-static int step_pitch(const AnalysisKey *key, long position) {
+static int step_pitch(const SpelledKey *key, long position) {
     long degree = ((position % 7) + 7) % 7;
     return motive_position_pitch(key, position, minor_key(key) && degree == 6 ? 1 : 0);
 }
 
 /* The step of degree (1 to 7) in the octave that puts its pitch nearest `pitch`; the nearer below on a tie. */
-static long nearest_step(const AnalysisKey *key, int degree, int pitch) {
+static long nearest_step(const SpelledKey *key, int degree, int pitch) {
     long position;
     int alteration;
     motive_scale_position(key, pitch, &position, &alteration);
@@ -212,7 +212,7 @@ static void own_harmony_v(Motive *made) {
  * tone labels and V for its own harmony, the pitches the steps of the key's scale `from`, `from + gap`, ... A run outside MIDI FORM_LOW to
  * FORM_HIGH is shifted an octave; false when it cannot be placed.
  */
-static bool make_line(const Motive *base, const AnalysisKey *key, size_t count, long from, const long *offsets, Motive *out) {
+static bool make_line(const Motive *base, const SpelledKey *key, size_t count, long from, const long *offsets, Motive *out) {
     for (int shift = 0; shift < 3; shift++) {
         long octave = shift == 0 ? 0 : (shift == 1 ? -7 : 7);
         Motive made = *base;
@@ -236,7 +236,7 @@ static bool make_line(const Motive *base, const AnalysisKey *key, size_t count, 
     return false;
 }
 
-static bool make_run(const Motive *base, const AnalysisKey *key, size_t count, long from, long gap, Motive *out) {
+static bool make_run(const Motive *base, const SpelledKey *key, size_t count, long from, long gap, Motive *out) {
     long offsets[MOTIVE_MAX_NOTES];
     for (size_t i = 0; i < count && i < MOTIVE_MAX_NOTES; i++) {
         offsets[i] = gap * (long)i;
@@ -248,7 +248,7 @@ static bool make_run(const Motive *base, const AnalysisKey *key, size_t count, l
  * The broken chord of V: every other step up from the degree 5 (5, 7, 2), and in a run of four eighths (4/4) the root again an
  * octave up (5, 7, 2, 5), so the last note is always a tone of V (the seventh, 4, would end on a dissonance).
  */
-static bool make_broken(const Motive *base, const AnalysisKey *key, size_t count, long from, Motive *out) {
+static bool make_broken(const Motive *base, const SpelledKey *key, size_t count, long from, Motive *out) {
     long offsets[MOTIVE_MAX_NOTES];
     for (size_t i = 0; i < count && i < MOTIVE_MAX_NOTES; i++) {
         offsets[i] = i < 3 ? 2 * (long)i : 7;
@@ -257,7 +257,7 @@ static bool make_broken(const Motive *base, const AnalysisKey *key, size_t count
 }
 
 /* The scale line (`scale_run` eighths), then the broken chord of V (`run` eighths) from the degree 5 nearest the line's last note. */
-static bool make_runs(GrowLiquidateSpec *spec, const AnalysisKey *key, size_t run, size_t scale_run) {
+static bool make_runs(GrowLiquidateSpec *spec, const SpelledKey *key, size_t run, size_t scale_run) {
     /* The line goes on from the idea before it: the liquidated idea, or the retransition's second residue. */
     const Motive *before = spec->retransition ? &spec->repeated : &spec->liquidated;
     int last_pitch = motive_pitch(before, before->note_count - 1);

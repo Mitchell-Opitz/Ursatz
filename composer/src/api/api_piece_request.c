@@ -501,7 +501,7 @@ static ComposerStatus load_style(PieceSpec *request, const cJSON *root, const ch
 
 /* A melodic motive of the request. */
 static ComposerStatus read_melodic(const KnowledgeSnapshot *knowledge, const char *what, const char *path, const cJSON *json, const PlanMeter *meter,
-                                   const AnalysisKey *key, Motive **out, ComposerError *error) {
+                                   const SpelledKey *key, Motive **out, ComposerError *error) {
     *out = calloc(1, sizeof(Motive));
     if (!*out) {
         return api_fail_alloc(error);
@@ -812,7 +812,7 @@ static ComposerStatus check_harmony(PieceSpec *request, const char *base, Compos
             continue;
         }
         Rational length = {0, 1};
-        AnalysisKey key = piece->key;
+        SpelledKey key = piece->key;
         char path[200];
         if (request->form->request_sections) {
             if (rational_make((long long)items[i].description.beats, piece->meter.beat_unit, &length) != RATIONAL_OK) {

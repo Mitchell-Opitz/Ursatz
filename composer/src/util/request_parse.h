@@ -30,7 +30,7 @@ bool request_parse_ratio(const char *text, ComposerRatio *out);
  * word that names no material or a material the Composer does not compose in (composer_material_supported: anything but the major
  * and the natural minor) is refused. False for a NULL snapshot.
  */
-bool request_parse_key(const char *text, const KnowledgeSnapshot *knowledge, AnalysisKey *key);
+bool request_parse_key(const char *text, const KnowledgeSnapshot *knowledge, SpelledKey *key);
 
 /*
  * Whether the key text is a tonic and the word of a material the snapshot knows but the Composer does not compose in ("C dorian",

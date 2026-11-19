@@ -113,7 +113,7 @@ const RenderedPlan *hearing_rendered(const ComposerHearing *hearing) {
 }
 
 /* The key lane's key under the span's start. */
-static bool key_under(const PiecePlan *plan, PlanSpan span, AnalysisKey *out) {
+static bool key_under(const PiecePlan *plan, PlanSpan span, SpelledKey *out) {
     LaneSpanId first;
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &first, 1) == 0 ||
         rational_cmp(plan_lane_span_span(plan, first).start, span.start) > 0) {
@@ -183,7 +183,7 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
         return HEARING_OK;
     }
     Rational end;
-    AnalysisKey key;
+    SpelledKey key;
     if (plan_span_end(span, &end) != PLAN_OK || !hearing->rendered.meter_map ||
         !key_under(hearing->plan, span, &key)) {
         return HEARING_ERR_PLAN;
@@ -229,7 +229,7 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
                               .meter = rendered->meter_map,
                               .streams = heard.streams,
                               .has_key = true};
-    if (!key_signature_of(analysis_key_tonic_pitch_class(&key),
+    if (!key_signature_of(spelled_key_tonic_pitch_class(&key),
                           common_practice_material(&materials, composer_key_is_minor(&key) ? COMMON_PRACTICE_KEY_MINOR
                                                                                            : COMMON_PRACTICE_KEY_MAJOR),
                           &view.key_fifths, &view.key_minor)) {

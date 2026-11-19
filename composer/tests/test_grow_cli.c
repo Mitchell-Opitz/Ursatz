@@ -600,7 +600,7 @@ static void test_library_bad_slots(void) {
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);
     other = fits;
-    AnalysisKey other_key = test_key_mode(7, motive_sketch_minor(&other) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR);
+    SpelledKey other_key = test_key_mode(7, motive_sketch_minor(&other) ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR);
     motive_set_key(&other, &other_key, other.key_source);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_ERR_BAD_REQUEST);

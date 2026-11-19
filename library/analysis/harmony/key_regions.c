@@ -315,7 +315,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
 }
 
 bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, const CommonPracticeMaterials *materials,
-                                             AnalysisKey *out) {
+                                             SpelledKey *out) {
     if (region == NULL || materials == NULL || out == NULL) {
         return false;
     }
@@ -334,7 +334,7 @@ bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *regi
     return out->material != NULL;
 }
 
-bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *event, CommonPracticeKeySignatureEvent *out) {
+bool common_practice_key_signature_event_from_analysis(const SpelledKeyEvent *event, CommonPracticeKeySignatureEvent *out) {
     if (event == NULL || out == NULL) {
         return false;
     }

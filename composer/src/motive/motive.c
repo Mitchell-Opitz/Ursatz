@@ -128,10 +128,10 @@ static bool meter_valid(const PlanMeter *meter) {
            (unit == 1 || unit == 2 || unit == 4 || unit == 8 || unit == 16);
 }
 
-AnalysisKey motive_key_from_signature(const CommonPracticeMaterials *materials, int sharps_flats, CommonPracticeKeyMode mode) {
+SpelledKey motive_key_from_signature(const CommonPracticeMaterials *materials, int sharps_flats, CommonPracticeKeyMode mode) {
     const PitchMaterial *material = common_practice_material(materials, mode);
-    AnalysisKey key;
-    if (analysis_key_from_fifths(sharps_flats, material, &key)) {
+    SpelledKey key;
+    if (spelled_key_from_fifths(sharps_flats, material, &key)) {
         return key;
     }
     int major_tonic = util_pitch_class(sharps_flats * 7);
@@ -183,7 +183,7 @@ bool motive_set_meter(MotiveSketch *sketch, PlanMeter meter) {
     return true;
 }
 
-bool motive_key_of(const MotiveSketch *sketch, AnalysisKey *key) {
+bool motive_key_of(const MotiveSketch *sketch, SpelledKey *key) {
     if (!sketch || !key || !sketch->has_scale || sketch->tonic_pc < 0 || sketch->tonic_pc > 11) {
         return false;
     }
@@ -195,7 +195,7 @@ bool motive_key_of(const MotiveSketch *sketch, AnalysisKey *key) {
     return true;
 }
 
-void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKeySource source) {
+void motive_set_key(MotiveSketch *sketch, const SpelledKey *key, MotiveSketchKeySource source) {
     if (!sketch || !key) {
         return;
     }
@@ -211,7 +211,7 @@ void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKe
         return;
     }
     sketch->has_scale = true;
-    sketch->tonic_pc = analysis_key_tonic_pitch_class(key);
+    sketch->tonic_pc = spelled_key_tonic_pitch_class(key);
     sketch->material = key->material;
     sketch->key_source = source;
     sketch->has_tonic_spelling = true;
@@ -256,8 +256,8 @@ int motive_pitch(const Motive *motive, size_t index) {
     return 60 + (motive->has_scale ? motive->tonic_pc : 0);
 }
 
-AnalysisKey motive_key(const Motive *motive) {
-    AnalysisKey key;
+SpelledKey motive_key(const Motive *motive) {
+    SpelledKey key;
     if (!motive_key_of(motive, &key)) {
         key = plan_key_of_pitch_class(0, NULL); /* the zero key: C, no material (it reads as C major) */
     }
@@ -331,14 +331,14 @@ MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveEr
  * unspecified; no key is guessed from fewer pitches. A scale and its relative share their seven pitch classes, so
  * two answers are settled by the last note and, failing that, left open.
  */
-static bool infer_key(const Motive *motive, const CommonPracticeMaterials *materials, AnalysisKey *out) {
+static bool infer_key(const Motive *motive, const CommonPracticeMaterials *materials, SpelledKey *out) {
     bool present[12] = {false};
     for (size_t i = 0; i < motive->note_count; i++) {
         if (motive->notes[i].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN) {
             present[motive->notes[i].pitch % 12] = true;
         }
     }
-    AnalysisKey found[24];
+    SpelledKey found[24];
     size_t found_count = 0;
     for (int tonic = 0; tonic < 12; tonic++) {
         int relative[12];
@@ -361,7 +361,7 @@ static bool infer_key(const Motive *motive, const CommonPracticeMaterials *mater
     int last = motive->notes[motive->note_count - 1].pitch % 12;
     size_t match = found_count;
     for (size_t i = 0; i < found_count; i++) {
-        if (analysis_key_tonic_pitch_class(&found[i]) == last) {
+        if (spelled_key_tonic_pitch_class(&found[i]) == last) {
             if (match != found_count) {
                 return false;
             }
@@ -439,7 +439,7 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     motive->pickup = pickup;
     motive->form = document->form;
 
-    AnalysisKey key;
+    SpelledKey key;
     MotiveSketchKeySource source;
     if (options && options->has_key) {
         key = options->key;
@@ -453,8 +453,8 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
         key = plan_key_of_pitch_class(0, document->materials.major);
         source = MOTIVE_SKETCH_KEY_UNSPECIFIED;
     }
-    if (analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
-        motive_set_error(error, "key", "the tonic pitch class %d is not from 0 to 11", analysis_key_tonic_pitch_class(&key));
+    if (spelled_key_tonic_pitch_class(&key) < 0 || spelled_key_tonic_pitch_class(&key) > 11) {
+        motive_set_error(error, "key", "the tonic pitch class %d is not from 0 to 11", spelled_key_tonic_pitch_class(&key));
         return MOTIVE_ERR_VALUE;
     }
     /* A motive with no key has no scale: its key reads as C major (motive_key). */
@@ -767,9 +767,9 @@ static cJSON *meter_json(const PlanMeter *meter) {
     return object;
 }
 
-static cJSON *key_json(const AnalysisKey *key) {
+static cJSON *key_json(const SpelledKey *key) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(key))) &&
+    if (object && !(plan_json_add(object, "tonic_pitch_class", json_number(spelled_key_tonic_pitch_class(key))) &&
                     plan_json_add(object, "material", cJSON_CreateString(composer_key_material_id(key))))) {
         cJSON_Delete(object);
         return NULL;
@@ -826,7 +826,7 @@ cJSON *motive_json_object(const Motive *motive) {
     bool ok = document && plan_json_add(document, "meter", meter_json(&meter));
     /* An inferred key is worked out again on reading, so only a stated one is written. */
     if (ok && motive->key_source == MOTIVE_SKETCH_KEY_GIVEN) {
-        AnalysisKey key = motive_key(motive);
+        SpelledKey key = motive_key(motive);
         ok = plan_json_add(document, "key", key_json(&key));
     }
     ok = ok && plan_json_add(document, "notes", notes_json(motive));
@@ -1176,12 +1176,12 @@ PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, Rational start,
     return attach(plan, parent, start, motive, name, source, PLAN_STATE_GIVEN, out_node, out_span);
 }
 
-bool motive_in_key(const Motive *source, const AnalysisKey *key, Motive *out) {
+bool motive_in_key(const Motive *source, const SpelledKey *key, Motive *out) {
     if (!source || !key || !out || source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         return false;
     }
     Motive moved = *source;
-    AnalysisKey source_key = motive_key(source);
+    SpelledKey source_key = motive_key(source);
     for (size_t i = 0; i < source->note_count; i++) {
         if (source->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN) {
             continue;

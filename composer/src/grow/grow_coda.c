@@ -169,7 +169,7 @@ bool grow_coda_applies(const PiecePlan *plan, FillTarget target) {
 /* ------------------------------------------------------------- the made motives */
 
 /* The tonic of the key in the octave that puts it nearest `pitch` (the lower on a tie), within MIDI FORM_LOW to FORM_HIGH. */
-static bool nearest_tonic(const AnalysisKey *key, int pitch, int *out) {
+static bool nearest_tonic(const SpelledKey *key, int pitch, int *out) {
     long position;
     int alteration;
     motive_scale_position(key, pitch, &position, &alteration);
@@ -191,7 +191,7 @@ static bool nearest_tonic(const AnalysisKey *key, int pitch, int *out) {
 }
 
 /* The held tonic: one note, a bar long, a copy of m0 with its own harmony I. */
-static bool make_tone(const Motive *base, const AnalysisKey *key, Rational bar, int near, Motive *out) {
+static bool make_tone(const Motive *base, const SpelledKey *key, Rational bar, int near, Motive *out) {
     int pitch;
     if (!nearest_tonic(key, near, &pitch)) {
         return false;

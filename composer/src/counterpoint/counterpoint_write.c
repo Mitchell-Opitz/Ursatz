@@ -32,8 +32,8 @@ void counterpoint_context_free(CounterpointContext *context) {
 }
 
 /* The scale degree of a pitch class above the tonic, 1 to 7, or 0 when the key's scale has no such note. */
-static int scale_degree(const AnalysisKey *key, int pitch) {
-    int tonic = analysis_key_tonic_pitch_class(key);
+static int scale_degree(const SpelledKey *key, int pitch) {
+    int tonic = spelled_key_tonic_pitch_class(key);
     int degree;
     int alteration;
     /* The minor scale as it is written in counterpoint: the natural minor, with the raised sixth and seventh. */
@@ -44,7 +44,7 @@ static int scale_degree(const AnalysisKey *key, int pitch) {
     return degree;
 }
 
-static bool read_spellings(const AnalysisKey *key, CounterpointContext *out) {
+static bool read_spellings(const SpelledKey *key, CounterpointContext *out) {
     for (int pitch = 0; pitch < 128; pitch++) {
         int degree = scale_degree(key, pitch);
         if (degree > 0) {

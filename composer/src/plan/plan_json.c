@@ -105,7 +105,7 @@ static cJSON *span_json(PlanSpan span) {
 #define STEP_TEXT_MAX 160
 
 /* A key's "tonic", spelled as the library spells it (F#, Bb), and its "material", the id of the key's pitch material. */
-bool json_key_members(cJSON *object, const AnalysisKey *key) {
+bool json_key_members(cJSON *object, const SpelledKey *key) {
     char tonic[8];
     return pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic)) &&
            plan_json_add(object, "tonic", cJSON_CreateString(tonic)) &&
@@ -117,7 +117,7 @@ static const char *key_anchor_text(const PlanKeyRelation *relation) {
     return relation->anchor == PLAN_KEY_ANCHOR_SECTION ? relation->anchor_section : KEY_ANCHOR_NAMES[relation->anchor];
 }
 
-static bool key_payload_json(cJSON *object, const AnalysisKey *key, const PlanKeyRelation *relation) {
+static bool key_payload_json(cJSON *object, const SpelledKey *key, const PlanKeyRelation *relation) {
     if (relation && !relation->resolved) {
         return plan_json_add(object, "relation", cJSON_CreateString(relation->relation)) &&
                plan_json_add(object, "anchor", cJSON_CreateString(key_anchor_text(relation)));
@@ -223,7 +223,7 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
     return object;
 }
 
-static void plan_key_label(const AnalysisKey *key, char *out, size_t size) {
+static void plan_key_label(const SpelledKey *key, char *out, size_t size) {
     char tonic[8] = "?";
     pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic));
     snprintf(out, size, "%s %s", tonic, composer_key_word(key));
@@ -865,7 +865,7 @@ static bool read_legacy_material(JsonReader *reader, const cJSON *object, const 
  * spells the key on that pitch class (standard_tonality_key_tonic_of_pitch_class_material: the fewest accidentals in its
  * signature, sharps on a tie), which is how every plan of version 1 was written.
  */
-static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, SpelledKey *out) {
     const PitchMaterial *material;
     long pitch_class;
     PitchLetter letter;
@@ -879,7 +879,7 @@ static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *pat
         json_child_path(at, path, "tonic_pitch_class");
         return json_bad_format(reader, at, "no key on this pitch class");
     }
-    AnalysisKey key = {NULL, letter, accidental, material};
+    SpelledKey key = {NULL, letter, accidental, material};
     *out = key;
     return true;
 }
@@ -899,7 +899,7 @@ static bool read_tonic_member(JsonReader *reader, const cJSON *object, const cha
 }
 
 /* A version 3 key: "tonic" and "material", the id of a material the Composer composes in. */
-static bool read_key_v3(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+static bool read_key_v3(JsonReader *reader, const cJSON *object, const char *path, SpelledKey *out) {
     const cJSON *id = plan_json_member(reader, object, path, "material", true);
     if (!id) {
         return false;
@@ -921,26 +921,26 @@ static bool read_key_v3(JsonReader *reader, const cJSON *object, const char *pat
     if (!read_tonic_member(reader, object, path, &letter, &accidental)) {
         return false;
     }
-    AnalysisKey key = {NULL, letter, accidental, material};
+    SpelledKey key = {NULL, letter, accidental, material};
     *out = key;
     return true;
 }
 
 /* A version 2 key: "tonic" and "mode". */
-static bool read_key_v2(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+static bool read_key_v2(JsonReader *reader, const cJSON *object, const char *path, SpelledKey *out) {
     const PitchMaterial *material;
     PitchLetter letter;
     int accidental;
     if (!read_legacy_material(reader, object, path, &material) || !read_tonic_member(reader, object, path, &letter, &accidental)) {
         return false;
     }
-    AnalysisKey key = {NULL, letter, accidental, material};
+    SpelledKey key = {NULL, letter, accidental, material};
     *out = key;
     return true;
 }
 
 /* A key's members, by the version of the file: see read_key_v1, read_key_v2 and read_key_v3. */
-bool json_read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+bool json_read_key_members(JsonReader *reader, const cJSON *object, const char *path, SpelledKey *out) {
     switch (reader->version) {
     case 1:
         return read_key_v1(reader, object, path, out);
@@ -995,11 +995,11 @@ static bool read_key_relation(JsonReader *reader, const cJSON *object, const cha
  * The payload of a key span: its key and, in version 3, the relation it is named by. A version 3 span with a "relation" and an
  * "anchor" and neither a "tonic" nor a "material" is named only by them: its key is the zero key until plan_resolve_key_spans.
  */
-static bool read_key_span(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *key, PlanKeyRelation *relation) {
+static bool read_key_span(JsonReader *reader, const cJSON *object, const char *path, SpelledKey *key, PlanKeyRelation *relation) {
     memset(relation, 0, sizeof(*relation));
     if (reader->version >= 3 && cJSON_GetObjectItemCaseSensitive(object, "relation") &&
         !cJSON_GetObjectItemCaseSensitive(object, "tonic") && !cJSON_GetObjectItemCaseSensitive(object, "material")) {
-        AnalysisKey zero;
+        SpelledKey zero;
         memset(&zero, 0, sizeof(zero));
         *key = zero;
         if (!read_key_relation(reader, object, path, relation)) {

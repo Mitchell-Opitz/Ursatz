@@ -1,4 +1,4 @@
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -6,14 +6,14 @@
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/tonality/tonal_key.h"
 
-int analysis_key_tonic_pitch_class(const AnalysisKey *key) {
+int spelled_key_tonic_pitch_class(const SpelledKey *key) {
     if (key == NULL) {
         return -1;
     }
     return pitch_class_of_letter(key->tonic_letter, key->tonic_accidental);
 }
 
-bool analysis_key_equals(const AnalysisKey *a, const AnalysisKey *b) {
+bool spelled_key_equals(const SpelledKey *a, const SpelledKey *b) {
     if (a == NULL || b == NULL) {
         return false;
     }
@@ -22,7 +22,7 @@ bool analysis_key_equals(const AnalysisKey *a, const AnalysisKey *b) {
     return a->tonic_letter == b->tonic_letter && a->tonic_accidental == b->tonic_accidental && same_material;
 }
 
-bool analysis_key_from_fifths(int fifths, const PitchMaterial *material, AnalysisKey *out) {
+bool spelled_key_from_fifths(int fifths, const PitchMaterial *material, SpelledKey *out) {
     if (out == NULL || fifths < -7 || fifths > 7) {
         return false;
     }

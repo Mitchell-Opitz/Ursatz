@@ -150,7 +150,7 @@ static void expect_key(const FormHeardKey *key, long numerator, long denominator
     Rational start;
     assert(rational_make(numerator, denominator, &start) == RATIONAL_OK);
     assert(rational_cmp(key->start, start) == 0);
-    assert(analysis_key_tonic_pitch_class(&key->key) == tonic && harmony_key_mode(&key->key) == mode);
+    assert(spelled_key_tonic_pitch_class(&key->key) == tonic && harmony_key_mode(&key->key) == mode);
 }
 
 /* The key regions heard: the C major sentence is one region from 0, the one that modulates ends in a G major region. */

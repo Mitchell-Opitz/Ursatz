@@ -81,7 +81,7 @@ bool harmony_schema_available(GalantSchemaId id, const PitchMaterial *material);
  * The numerals of the schema's stages in a key, one for each stage (R-610): false for a schema that modulates, has no stages or whose
  * stage makes no chord in the key. At most GALANT_MAX_STAGES numerals, *count of them.
  */
-bool harmony_schema_chords(const AnalysisKey *key, GalantSchemaId id, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t *count);
+bool harmony_schema_chords(const SpelledKey *key, GalantSchemaId id, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t *count);
 
 /* The defaults: every schema, every role, preference 250, and the bass operator's defaults. */
 HarmonySchemaParams harmony_schema_params_default(void);

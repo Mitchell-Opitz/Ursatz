@@ -775,8 +775,8 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
 static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     const MotiveRelationStep *avoid = spec->pairing.beginning == SECTION_BEGINNING_ANTECEDENT ? &spec->contrast : NULL;
     /* It ends in the cadence's tone: the tonic for a perfect authentic cadence, the third for an imperfect one. */
-    AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
-    int tonic = analysis_key_tonic_pitch_class(&ends_in);
+    SpelledKey ends_in = request->has_end_change ? request->end_key : request->key;
+    int tonic = spelled_key_tonic_pitch_class(&ends_in);
     int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
                : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + composer_material_third(ends_in.material)) % 12
                                                       : -1;

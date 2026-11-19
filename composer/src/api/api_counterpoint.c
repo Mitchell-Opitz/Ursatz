@@ -26,7 +26,7 @@ typedef struct {
     const char *meter_text;
     int species;
     bool above;
-    AnalysisKey key;
+    SpelledKey key;
     PlanMeter meter;
     unsigned long seed;
     unsigned long suggest;
@@ -431,7 +431,7 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
         char key[24];
         char meter[16];
         PlanSpan span = {fraction(0, 1), motive.length};
-        util_key_name(analysis_key_tonic_pitch_class(&options.key), options.key.material, key, sizeof(key));
+        util_key_name(spelled_key_tonic_pitch_class(&options.key), options.key.material, key, sizeof(key));
         snprintf(meter, sizeof(meter), "%d/%d", options.meter.beats_per_bar, options.meter.beat_unit);
         document = cJSON_CreateObject();
         cJSON *list = document ? cJSON_CreateArray() : NULL;

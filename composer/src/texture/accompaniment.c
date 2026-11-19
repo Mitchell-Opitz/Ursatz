@@ -53,7 +53,7 @@ size_t accomp_chord_at(const AccompContext *context, Rational position) {
 }
 
 /* The pitch classes of a chord in the key, root first. */
-bool accomp_chord_tones(const AnalysisKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
+bool accomp_chord_tones(const SpelledKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
     int intervals[4];
     int root;
     if (chord->applied) {
@@ -74,7 +74,7 @@ bool accomp_chord_tones(const AnalysisKey *key, const PhraseChord *chord, int pc
         return false;
     }
     for (size_t k = 0; k < *count; k++) {
-        pcs[k] = (analysis_key_tonic_pitch_class(key) + root + intervals[k]) % 12;
+        pcs[k] = (spelled_key_tonic_pitch_class(key) + root + intervals[k]) % 12;
     }
     return true;
 }

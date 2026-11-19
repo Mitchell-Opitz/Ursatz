@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <analysis/notes/analysis_key.h>
+#include <theory/tonality/spelled_key.h>
 #include <ursatz_composer/composer_api.h>
 #include <theory/harmony/harmony_chord.h>
 #include <ursatz_composer/harmony_phrase.h>
@@ -80,12 +80,12 @@ static inline const PitchMaterial *test_material_mode(HarmonyMode mode) {
  * The key on a pitch class (0 to 11) in the material the word names ("major", "minor", ...), spelled as plan_key_of_pitch_class
  * spells it: a test builds its keys from materials as a request does, by the word.
  */
-static inline AnalysisKey test_key(int pitch_class, const char *word) {
+static inline SpelledKey test_key(int pitch_class, const char *word) {
     return plan_key_of_pitch_class(pitch_class, test_material(word));
 }
 
 /* test_key for a mode held in a variable. */
-static inline AnalysisKey test_key_mode(int pitch_class, HarmonyMode mode) {
+static inline SpelledKey test_key_mode(int pitch_class, HarmonyMode mode) {
     return test_key(pitch_class, test_mode_word(mode));
 }
 
@@ -96,15 +96,15 @@ static inline const MotiveOptions *test_motive_options(void) {
     return &options;
 }
 
-/* A key as a table row writes it: a spelled tonic and a mode; test_key_of makes the AnalysisKey of the mode's material. */
+/* A key as a table row writes it: a spelled tonic and a mode; test_key_of makes the SpelledKey of the mode's material. */
 typedef struct {
     PitchLetter tonic_letter;
     int tonic_accidental;
     HarmonyMode mode;
 } TestKeySpec;
 
-static inline AnalysisKey test_key_of(TestKeySpec spec) {
-    AnalysisKey key = {NULL, spec.tonic_letter, spec.tonic_accidental, test_material_mode(spec.mode)};
+static inline SpelledKey test_key_of(TestKeySpec spec) {
+    SpelledKey key = {NULL, spec.tonic_letter, spec.tonic_accidental, test_material_mode(spec.mode)};
     return key;
 }
 

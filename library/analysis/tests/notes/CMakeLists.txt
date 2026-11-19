@@ -11,6 +11,5 @@ ursatz_test(tone_line LIBS ursatz_analysis VALGRIND)
 
 ursatz_test(analysis_note LIBS ursatz_analysis VALGRIND)
 
-ursatz_test(analysis_key LIBS ursatz_analysis VALGRIND)
 
 ursatz_test(analysis_note_build LIBS ursatz_analysis VALGRIND)

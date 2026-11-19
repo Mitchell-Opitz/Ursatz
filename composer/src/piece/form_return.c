@@ -230,8 +230,8 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
         }
         for (size_t c = 0; c < node->constraint_count; c++) {
             if (node->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
-                AnalysisKey *key = &node->constraints[c].params.key;
-                *key = plan_key_of_pitch_class(util_pitch_class(analysis_key_tonic_pitch_class(key) + transpose), key->material);
+                SpelledKey *key = &node->constraints[c].params.key;
+                *key = plan_key_of_pitch_class(util_pitch_class(spelled_key_tonic_pitch_class(key) + transpose), key->material);
             }
         }
     }
@@ -245,8 +245,8 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
         }
         for (size_t c = 0; c < span->constraint_count; c++) {
             if (span->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
-                AnalysisKey *key = &span->constraints[c].params.key;
-                *key = plan_key_of_pitch_class(util_pitch_class(analysis_key_tonic_pitch_class(key) + transpose), key->material);
+                SpelledKey *key = &span->constraints[c].params.key;
+                *key = plan_key_of_pitch_class(util_pitch_class(spelled_key_tonic_pitch_class(key) + transpose), key->material);
             }
         }
     }
@@ -264,13 +264,13 @@ int return_map_pitch(int tonic, const PitchMaterial *to, int pitch) {
 
 static void map_key(PlanConstraint *constraint, const PitchMaterial *to) {
     if (constraint->kind == PLAN_CONSTRAINT_KEY) {
-        AnalysisKey *key = &constraint->params.key;
-        *key = plan_key_of_pitch_class(analysis_key_tonic_pitch_class(key), to);
+        SpelledKey *key = &constraint->params.key;
+        *key = plan_key_of_pitch_class(spelled_key_tonic_pitch_class(key), to);
     }
 }
 
-bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, const PitchMaterial *to) {
-    int tonic = analysis_key_tonic_pitch_class(&home);
+bool return_copy_change_mode(ReturnCopy *copy, SpelledKey home, const PitchMaterial *to) {
+    int tonic = spelled_key_tonic_pitch_class(&home);
     for (size_t i = 0; i < copy->node_count; i++) {
         for (size_t c = 0; c < copy->nodes[i].constraint_count; c++) {
             map_key(&copy->nodes[i].constraints[c], to);
@@ -296,7 +296,7 @@ bool return_copy_change_mode(ReturnCopy *copy, AnalysisKey home, const PitchMate
 }
 
 int return_mode_pitch(const ReturnPayload *payload, int pitch) {
-    return payload->mode_change ? return_map_pitch(analysis_key_tonic_pitch_class(&payload->key), payload->to_material, pitch) : pitch;
+    return payload->mode_change ? return_map_pitch(spelled_key_tonic_pitch_class(&payload->key), payload->to_material, pitch) : pitch;
 }
 
 PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy, PlanNoteOperation operation) {
@@ -397,7 +397,7 @@ bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out) {
 typedef struct {
     Rational from;
     Rational to;
-    AnalysisKey key;
+    SpelledKey key;
 } KeyPiece;
 
 static bool key_pieces(const PiecePlan *plan, PlanSpan span, KeyPiece *out, size_t *count) {
@@ -438,7 +438,7 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
         return false;
     }
     for (size_t i = 0; i < na; i++) {
-        int step = util_pitch_class(analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key));
+        int step = util_pitch_class(spelled_key_tonic_pitch_class(&b[i].key) - spelled_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
             composer_key_is_minor(&a[i].key) != composer_key_is_minor(&b[i].key) || (difference >= 0 && difference != step)) {
             return false;
@@ -460,7 +460,7 @@ bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const P
         return false;
     }
     for (size_t i = 0; i < na; i++) {
-        int step = util_pitch_class(analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key));
+        int step = util_pitch_class(spelled_key_tonic_pitch_class(&b[i].key) - spelled_key_tonic_pitch_class(&a[i].key));
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
             composer_key_is_minor(&a[i].key) == composer_key_is_minor(&b[i].key) || composer_key_is_minor(&b[i].key) != composer_key_is_minor(&b[0].key) || (difference >= 0 && difference != step)) {
             return false;
@@ -612,7 +612,7 @@ bool form_return_melody_fits(const PiecePlan *plan, NodeId section) {
     if (piece_count > 1) {
         return true;
     }
-    AnalysisKey key = pieces[0].key;
+    SpelledKey key = pieces[0].key;
     if (!harmony_read_lane(plan, span, harmony_key_mode(&key), chords, &chord_count, &metre)) {
         return false;
     }

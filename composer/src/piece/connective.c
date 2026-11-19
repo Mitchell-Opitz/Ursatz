@@ -189,8 +189,8 @@ PieceResult piece_connective_write(PiecePlan *plan, NodeId section) {
     }
     int from = old->notes[downbeat].midi;
     /* The line, written backwards from its last note: one scale step from the target, on the side of the downbeat note. */
-    AnalysisKey key = plan_lane_span_payload(plan, key_span)->key;
-    int tonic = analysis_key_tonic_pitch_class(&key);
+    SpelledKey key = plan_lane_span_payload(plan, key_span)->key;
+    int tonic = spelled_key_tonic_pitch_class(&key);
     const PitchMaterial *material = key.material;
     int side = from > target ? 1 : -1;
     int line[CONNECTIVE_MAX_NOTES];

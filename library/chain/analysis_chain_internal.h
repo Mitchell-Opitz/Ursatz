@@ -83,7 +83,7 @@ struct AnalysisChain {
     struct ChainCollect *collect;   /* what the collection keeps beside the chain (chain_collect.h); owned */
     unsigned stages;
     const AnalysisNoteSet *notes;
-    const AnalysisKeyEvent *key_events;
+    const SpelledKeyEvent *key_events;
     size_t key_event_count;
 
     ChainPitches pitches;

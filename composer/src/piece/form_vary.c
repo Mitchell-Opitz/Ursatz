@@ -52,8 +52,8 @@ static long cell_ticks(const PlanMeter *meter) {
     return bar_ticks / (long)cells;
 }
 
-static bool in_scale(AnalysisKey key, int pitch) {
-    unsigned scale = util_scale_mask(analysis_key_tonic_pitch_class(&key), key.material);
+static bool in_scale(SpelledKey key, int pitch) {
+    unsigned scale = util_scale_mask(spelled_key_tonic_pitch_class(&key), key.material);
     return (scale >> util_pitch_class(pitch)) & 1u;
 }
 
@@ -62,7 +62,7 @@ static bool in_scale(AnalysisKey key, int pitch) {
  * a tone between, a neighbor tone (upper or lower, drawn from rng) when the next note is the same. Approached and left
  * by step either way. False for any other pair.
  */
-static bool choose_tone(AnalysisKey key, int from, int to, FillRng *rng, int *out) {
+static bool choose_tone(SpelledKey key, int from, int to, FillRng *rng, int *out) {
     int difference = to - from;
     if (difference == 0) {
         int up = 0;

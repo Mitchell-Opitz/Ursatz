@@ -24,11 +24,11 @@
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter THREE_FOUR = {3, 4, 0};
 /* The keys the tests read motives in: made in main, since a key carries the material of the knowledge snapshot. */
-static AnalysisKey D_MINOR;
-static AnalysisKey C_MAJOR;
-static AnalysisKey G_MAJOR;
+static SpelledKey D_MINOR;
+static SpelledKey C_MAJOR;
+static SpelledKey G_MAJOR;
 
-static MotiveOptions options_with(const PlanMeter *meter, const AnalysisKey *key) {
+static MotiveOptions options_with(const PlanMeter *meter, const SpelledKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();
@@ -54,7 +54,7 @@ static bool note_is(const Motive *motive, size_t index, int pitch, long offset_n
            time_is(note->duration, duration_num, duration_den);
 }
 
-static Motive load_notes(const char *text, const PlanMeter *meter, const AnalysisKey *key) {
+static Motive load_notes(const char *text, const PlanMeter *meter, const SpelledKey *key) {
     Motive motive;
     MotiveOptions options = options_with(meter, key);
     MotiveError error;
@@ -193,14 +193,14 @@ static void test_options(void) {
     assert(motive_from_notes_text("D4:q", test_motive_options(), &motive, &error) == MOTIVE_ERR_METER);
     assert(strcmp(error.location, "meter") == 0);
 
-    AnalysisKey key;
-    assert(request_parse_key("Bb minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 10 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
-    assert(request_parse_key("F# major", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 6 && harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
+    SpelledKey key;
+    assert(request_parse_key("Bb minor", test_knowledge(), &key) && spelled_key_tonic_pitch_class(&key) == 10 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    assert(request_parse_key("F# major", test_knowledge(), &key) && spelled_key_tonic_pitch_class(&key) == 6 && harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
     assert(!request_parse_key("H major", test_knowledge(), &key));
     assert(!request_parse_key("D dorian", test_knowledge(), &key));
     assert(!request_parse_key("C harmonic minor", test_knowledge(), &key) && !request_parse_key("D", test_knowledge(), &key));
-    assert(request_parse_key("c MINOR", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 0 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
-    assert(request_parse_key("G natural minor", test_knowledge(), &key) && analysis_key_tonic_pitch_class(&key) == 7 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    assert(request_parse_key("c MINOR", test_knowledge(), &key) && spelled_key_tonic_pitch_class(&key) == 0 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
+    assert(request_parse_key("G natural minor", test_knowledge(), &key) && spelled_key_tonic_pitch_class(&key) == 7 && harmony_key_mode(&key) == HARMONY_MODE_MINOR);
     char refusal[160];
     assert(request_key_refusal("C dorian", test_knowledge(), refusal, sizeof refusal) &&
            strcmp(refusal, "the Composer writes major and minor keys; 'dorian' is not one of them") == 0);
@@ -683,7 +683,7 @@ static void test_attach_as_given(void) {
 
 typedef MotiveResult (*Reader)(const char *, const MotiveOptions *, Motive *, MotiveError *);
 
-static Motive load_with(Reader reader, const char *text, const PlanMeter *meter, const AnalysisKey *key) {
+static Motive load_with(Reader reader, const char *text, const PlanMeter *meter, const SpelledKey *key) {
     Motive motive;
     MotiveOptions options = options_with(meter, key);
     MotiveError error;
@@ -695,7 +695,7 @@ static Motive load_with(Reader reader, const char *text, const PlanMeter *meter,
     return motive;
 }
 
-static void expect_read_error(Reader reader, const char *text, const AnalysisKey *key, MotiveResult code,
+static void expect_read_error(Reader reader, const char *text, const SpelledKey *key, MotiveResult code,
                               const char *location, const char *message) {
     Motive motive;
     MotiveOptions options = options_with(&FOUR_FOUR, key);
@@ -1013,7 +1013,7 @@ static void test_analysis_by_form(void) {
 static void test_render_in_another_key(void) {
     /* D minor 1 b3 5 1' (D4 F4 A4 D5) in G minor: the same degrees, a fourth up. */
     Motive source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
-    const AnalysisKey G_MINOR = test_key(7, "minor");
+    const SpelledKey G_MINOR = test_key(7, "minor");
     Motive moved;
     assert(motive_in_key(&source, &G_MINOR, &moved));
     assert(moved.key_source == MOTIVE_SKETCH_KEY_GIVEN && moved.tonic_pc == 7 && motive_sketch_minor(&moved));

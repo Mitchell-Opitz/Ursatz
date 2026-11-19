@@ -24,7 +24,7 @@ typedef struct {
 
 /* A section as the figure reads it: its key, chords and cells, the returned melody, and the skeleton. */
 typedef struct {
-    AnalysisKey key;
+    SpelledKey key;
     PhraseChord chords[HARMONY_MAX_CHORDS];
     size_t chord_count;
     PhraseMetre metre;

@@ -126,7 +126,7 @@ static bool add_head(const Motive *motive, ListKind kind, int pitch, char *head,
         /* The reader puts octave 0 at MIDI 60 to 71 for the tonic's pitch class, so shift 60 down first. */
         long position;
         int alteration;
-        AnalysisKey key = motive_key(motive);
+        SpelledKey key = motive_key(motive);
         motive_scale_position(&key, pitch - 60, &position, &alteration);
         long octave = position / 7;
         long degree = position % 7;

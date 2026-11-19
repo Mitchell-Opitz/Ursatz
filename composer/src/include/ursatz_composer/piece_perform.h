@@ -71,7 +71,7 @@ void piece_performance_destroy(PiecePerformance *performance);
 typedef struct {
     PiecePlan *plans[FORM_SPEC_MAX_PARTS_OF];
     ComposeOutcome outcomes[FORM_SPEC_MAX_PARTS_OF];
-    AnalysisKey keys[FORM_SPEC_MAX_PARTS_OF];
+    SpelledKey keys[FORM_SPEC_MAX_PARTS_OF];
     FormSpec *forms[FORM_SPEC_MAX_PARTS_OF]; /* owned: the built-in form each part is a piece of (an again part has none) */
     size_t count;
 } PieceParts;

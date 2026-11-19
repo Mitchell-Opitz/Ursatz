@@ -67,7 +67,7 @@ FigureSourceNote *form_figure_read_melody(const PiecePlan *plan, NodeId source, 
 }
 
 /* The key of the section: its key lane holds one span over it. */
-static bool section_key(const PiecePlan *plan, PlanSpan span, AnalysisKey *key) {
+static bool section_key(const PiecePlan *plan, PlanSpan span, SpelledKey *key) {
     LaneSpanId ids[2];
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 2) != 1) {
         return false;
@@ -158,7 +158,7 @@ FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section) {
             return NULL;
         }
     }
-    reading->notes = form_figure_read_melody(plan, ret.section, shift, mode_change, analysis_key_tonic_pitch_class(&reading->key),
+    reading->notes = form_figure_read_melody(plan, ret.section, shift, mode_change, spelled_key_tonic_pitch_class(&reading->key),
                                         to_material, &reading->note_count);
     if (!reading->notes) {
         form_figure_reading_free(reading);
@@ -295,8 +295,8 @@ bool form_figure_kept_notes(const FigureReading *reading, size_t cell, int octav
 }
 
 /* The scale a cell is figured in: the key's, with the raised seventh in minor over a chord that holds the leading tone. */
-static unsigned scale_pitch_classes(const AnalysisKey *key, unsigned chord_mask) {
-    int tonic = analysis_key_tonic_pitch_class(key);
+static unsigned scale_pitch_classes(const SpelledKey *key, unsigned chord_mask) {
+    int tonic = spelled_key_tonic_pitch_class(key);
     if (!composer_key_is_minor(key)) {
         return util_scale_mask(tonic, key->material);
     }

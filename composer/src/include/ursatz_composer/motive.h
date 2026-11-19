@@ -94,7 +94,7 @@ typedef struct {
     bool has_meter;
     PlanMeter meter;
     bool has_key;
-    AnalysisKey key;
+    SpelledKey key;
     bool has_pickup;
     /* In whole notes; the CLI converts beats. */
     Rational pickup;
@@ -118,14 +118,14 @@ typedef struct {
 
 /*
  * The meter and key of a library motive sketch (analysis/motive_sketch.h), the only mappings between the sketch's
- * bar, beat and scale and the Composer's PlanMeter and AnalysisKey. motive_meter_of is false for a bar and beat that
+ * bar, beat and scale and the Composer's PlanMeter and SpelledKey. motive_meter_of is false for a bar and beat that
  * are not a meter of 1 to 64 beats over a unit of 1, 2, 4, 8 or 16; motive_key_of is false for a sketch with no scale.
  * motive_set_meter is false for a meter that is not one. motive_set_key spells the tonic as the key does; with source UNSPECIFIED it clears the scale.
  */
 bool motive_meter_of(const MotiveSketch *sketch, PlanMeter *meter);
 bool motive_set_meter(MotiveSketch *sketch, PlanMeter meter);
-bool motive_key_of(const MotiveSketch *sketch, AnalysisKey *key);
-void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKeySource source);
+bool motive_key_of(const MotiveSketch *sketch, SpelledKey *key);
+void motive_set_key(MotiveSketch *sketch, const SpelledKey *key, MotiveSketchKeySource source);
 
 /*
  * The sounding pitch of note index: its pitch, or for a rhythm motive (pitch MOTIVE_SKETCH_PITCH_UNKNOWN) degree 1 of
@@ -134,7 +134,7 @@ void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKe
  * not a meter). Built on motive_key_of and motive_meter_of.
  */
 int motive_pitch(const Motive *motive, size_t index);
-AnalysisKey motive_key(const Motive *motive);
+SpelledKey motive_key(const Motive *motive);
 PlanMeter motive_meter(const Motive *motive);
 
 /* A motive with no notes, no key and no harmony in the meter, with no pickup: the zero value is not a valid sketch. */
@@ -289,7 +289,7 @@ char *motive_to_contour_text(const Motive *motive);
  * False, with *out untouched, for a source with no key, a note that leaves MIDI 0 to 127, or NULL arguments.
  * out may be the source.
  */
-bool motive_in_key(const Motive *source, const AnalysisKey *key, Motive *out);
+bool motive_in_key(const Motive *source, const SpelledKey *key, Motive *out);
 
 /*
  * Own harmony as text: chords separated by white space, each a Roman numeral and an optional onset.

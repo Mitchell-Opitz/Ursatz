@@ -39,7 +39,7 @@ typedef struct {
     MeterMap *map;
     AnalysisNote *notes;
     size_t note_count;
-    AnalysisKeyEvent *key_events;
+    SpelledKeyEvent *key_events;
     size_t key_event_count;
     AnalysisChain *first;  /* pass 1: the key regions from the pitch classes alone */
     AnalysisChain *chain;  /* pass 2: the key regions again, on pass 1's chords and the cadence ends as boundaries */
@@ -502,13 +502,13 @@ ChoraleChainStatus chorale_chain_run(const char *piece_dir, ChoraleScore *out, c
         goto done;
     }
     r.key_event_count = r.imported.key_signature_count;
-    r.key_events = (AnalysisKeyEvent *)calloc(r.key_event_count + 1, sizeof(AnalysisKeyEvent));
+    r.key_events = (SpelledKeyEvent *)calloc(r.key_event_count + 1, sizeof(SpelledKeyEvent));
     if (r.key_events == NULL) {
         goto done;
     }
     for (size_t i = 0; i < r.key_event_count; i++) {
         r.key_events[i].time = r.imported.key_signatures[i].position;
-        if (!analysis_key_from_fifths(r.imported.key_signatures[i].sharps_flats, test_materials()->major, &r.key_events[i].key)) {
+        if (!spelled_key_from_fifths(r.imported.key_signatures[i].sharps_flats, test_materials()->major, &r.key_events[i].key)) {
             goto done;
         }
     }

@@ -190,17 +190,17 @@ static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars,
     }
 }
 
-static void compare_key(const ChainResult *report, AnalysisKey key, Items *items) {
+static void compare_key(const ChainResult *report, SpelledKey key, Items *items) {
     char planned[32];
     char heard[32] = "none";
     bool agreed = false;
-    util_key_name(analysis_key_tonic_pitch_class(&key), key.material, planned, sizeof(planned));
+    util_key_name(spelled_key_tonic_pitch_class(&key), key.material, planned, sizeof(planned));
     if (report->key_region_count > 0) {
         const AnalysisKeyRegion *region = &report->key_regions[0];
         CommonPracticeKeyMode mode;
         if (common_practice_key_mode_of(region->material, &mode)) {
             util_key_name(region->tonic_pitch_class, region->material, heard, sizeof(heard));
-            agreed = region->tonic_pitch_class == analysis_key_tonic_pitch_class(&key) &&
+            agreed = region->tonic_pitch_class == spelled_key_tonic_pitch_class(&key) &&
                      (mode == COMMON_PRACTICE_KEY_MAJOR) == (!composer_key_is_minor(&key));
         }
     }
@@ -290,7 +290,7 @@ AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId s
         return ANALYZER_CHECK_ERR_PLAN;
     }
     PlanMeter meter = plan_lane_span_payload(plan, meter_span)->meter;
-    AnalysisKey key = plan_lane_span_payload(plan, key_span)->key;
+    SpelledKey key = plan_lane_span_payload(plan, key_span)->key;
     unsigned long bar_units = (unsigned long)meter.beats_per_bar;
     if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0 || span.length.num <= 0 ||
         ((unsigned long)span.length.num * (unsigned long)meter.beat_unit) % (span.length.den * bar_units) != 0) {
@@ -460,7 +460,7 @@ AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCh
         return ANALYZER_CHECK_ERR_PLAN;
     }
     PlanMeter meter = plan_lane_span_payload(plan, meter_span)->meter;
-    AnalysisKey key = plan_lane_span_payload(plan, key_span)->key;
+    SpelledKey key = plan_lane_span_payload(plan, key_span)->key;
     if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0) {
         return ANALYZER_CHECK_ERR_PLAN;
     }

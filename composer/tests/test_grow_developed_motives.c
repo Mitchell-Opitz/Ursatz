@@ -138,7 +138,7 @@ static const char *idea_of(const PiecePlan *plan, NodeId motive) {
 }
 
 static void check_node(const PiecePlan *plan, NodeId node, const PlanMotiveRef *ref, const Motive *basic,
-                       const AnalysisKey *key, const PlanMeter *meter, size_t *seen) {
+                       const SpelledKey *key, const PlanMeter *meter, size_t *seen) {
     const PlanNotes *notes = node_notes(plan, node);
     const PlanNotes *source = node_notes(plan, ref->motive);
     const PlanMotiveTones *tones = node_tones(plan, node);
@@ -244,7 +244,7 @@ int main(void) {
     size_t nodes = 0;
     for (size_t c = 0; c < sizeof(CASES) / sizeof(CASES[0]); c++) {
         Motive motive = load_motive(CASES[c].file);
-        AnalysisKey key = motive_key(&motive);
+        SpelledKey key = motive_key(&motive);
         PlanMeter meter = motive_meter(&motive);
         for (unsigned long seed = 1; seed <= 10; seed++) {
             GrowBriefText text;

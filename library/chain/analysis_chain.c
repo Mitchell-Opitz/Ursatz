@@ -945,7 +945,7 @@ const AnalysisChainStage analysis_chain_stages[ANALYSIS_CHAIN_STAGE_COUNT] = {
      NULL, NULL, schema_stage},
 };
 
-AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const AnalysisKeyEvent *key_events, size_t key_event_count,
+AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const SpelledKeyEvent *key_events, size_t key_event_count,
                                        const AnalysisChainConfig *config, AnalysisChain **out) {
     if (notes == NULL || out == NULL || (key_event_count > 0 && key_events == NULL)) {
         return ANALYSIS_CHAIN_ERR_NULL_ARGUMENT;

@@ -6,7 +6,7 @@
 
 #include <io/imported_score.h>
 
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "analysis/notes/analysis_note.h"
 #include "analysis/notes/analysis_note_build.h"
 #include "theory/tonality/common_practice_materials.h"
@@ -33,7 +33,7 @@ typedef struct {
     ChainScoreInputSlot *by_id; /* (note id, import index) ordered by id, for chain_score_input_import_index */
     size_t count;                 /* notes */
     AnalysisNoteSet set;
-    AnalysisKeyEvent *key_events;
+    SpelledKeyEvent *key_events;
     size_t key_event_count;
 } ChainScoreInput;
 

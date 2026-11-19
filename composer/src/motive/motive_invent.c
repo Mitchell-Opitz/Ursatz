@@ -49,7 +49,7 @@ static MotiveDevelopContext invent_context(const void *context) {
 
 typedef struct {
     PlanMeter meter;
-    AnalysisKey key;
+    SpelledKey key;
     Rational bar;
 } InventRequest;
 
@@ -236,7 +236,7 @@ bool motive_melodic_fault(const Motive *motive, const char **fault) {
     for (size_t i = 0; i < motive->note_count; i++) {
         long position;
         int alteration;
-        AnalysisKey key = motive_key(motive);
+        SpelledKey key = motive_key(motive);
         int midi = motive_pitch(motive, i);
         motive_scale_position(&key, midi, &position, &alteration);
         long degree = ((position % 7) + 7) % 7 + 1;

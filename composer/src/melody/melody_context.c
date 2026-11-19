@@ -38,7 +38,7 @@ static bool probe_length(Rational *out) {
     return rational_make(1, MELODY_FINEST_NOTE_DENOMINATOR, out) == RATIONAL_OK;
 }
 
-bool melody_chord_mask(const AnalysisKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
+bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
     int intervals[4];
     size_t count;
     int root;
@@ -62,7 +62,7 @@ bool melody_chord_mask(const AnalysisKey *key, const PhraseChord *chord, unsigne
     *mask = 0;
     *seventh = 0;
     for (size_t k = 0; k < count; k++) {
-        unsigned bit = 1u << ((analysis_key_tonic_pitch_class(key) + root + intervals[k]) % 12);
+        unsigned bit = 1u << ((spelled_key_tonic_pitch_class(key) + root + intervals[k]) % 12);
         *mask |= bit;
         if (k == 3) {
             *seventh = bit;
@@ -258,7 +258,7 @@ static bool ends_its_section(const PiecePlan *plan, NodeId owner, PlanSpan span)
     return false;
 }
 
-bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, AnalysisKey key, MelodyContext *context) {
+bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, SpelledKey key, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     size_t cells = 0;
     melody_context_zero(context);
@@ -701,7 +701,7 @@ bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext
     PlanSpan body = span;
     PlanConstraint pickup;
     LaneSpanId melody[2];
-    AnalysisKey key;
+    SpelledKey key;
     bool has_pickup = harmony_find_constraint(plan, target, owner, PLAN_CONSTRAINT_PICKUP, &pickup);
 
     /* A pickup is the start of the span: the harmony, the key and the notes after it are the phrase's. */

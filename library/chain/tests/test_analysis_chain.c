@@ -131,7 +131,7 @@ typedef struct {
     MeterMap *own;
     AnalysisNote *notes;
     size_t note_count;
-    AnalysisKeyEvent *events;
+    SpelledKeyEvent *events;
     size_t event_count;
     AnalysisNoteSet set;
 } ChainInput;
@@ -146,12 +146,12 @@ static void chain_input_init(ChainInput *in, const Reference *ref) {
     free(data);
     assert(midi_import_analysis_notes(&in->import, &in->notes, &in->note_count));
     in->event_count = in->import.key_signatures.count;
-    in->events = calloc(in->event_count + 1, sizeof(AnalysisKeyEvent));
+    in->events = calloc(in->event_count + 1, sizeof(SpelledKeyEvent));
     assert(in->events != NULL);
     for (size_t i = 0; i < in->event_count; i++) {
         const MidiKeySignatureEvent *event = &in->import.key_signatures.events[i];
         in->events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &in->events[i].key));
+        assert(spelled_key_from_fifths(event->sharps_flats, test_materials()->major, &in->events[i].key));
     }
     in->own = ref->three_four ? three_four_map() : NULL;
     in->set.notes = in->notes;

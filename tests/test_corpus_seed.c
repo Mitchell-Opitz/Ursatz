@@ -53,8 +53,8 @@ static PlanMeter four_four(void) {
     return meter;
 }
 
-static AnalysisKey key_of(int tonic, HarmonyMode mode) {
-    AnalysisKey key = test_key_mode(tonic, mode);
+static SpelledKey key_of(int tonic, HarmonyMode mode) {
+    SpelledKey key = test_key_mode(tonic, mode);
     return key;
 }
 
@@ -83,12 +83,12 @@ static CorpusPassages passages_from(const char *corpus, const char *like_path, c
     return passages;
 }
 
-static CorpusSeedResult seed_motive(const CorpusPassages *passages, const PlanMeter *meter, const AnalysisKey *key,
+static CorpusSeedResult seed_motive(const CorpusPassages *passages, const PlanMeter *meter, const SpelledKey *key,
                                     unsigned long seed, CorpusSeed *out) {
     return corpus_seed_motive(test_knowledge(), passages->items, passages->count, meter, key, seed, out);
 }
 
-static Motive bar_in(const PlanMeter *meter, const AnalysisKey *key, const char *notes) {
+static Motive bar_in(const PlanMeter *meter, const SpelledKey *key, const char *notes) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();
@@ -110,7 +110,7 @@ static Motive bar_in(const PlanMeter *meter, const AnalysisKey *key, const char 
 
 static int test_motive(void) {
     PlanMeter meter = four_four();
-    AnalysisKey d_major = key_of(2, HARMONY_MODE_MAJOR);
+    SpelledKey d_major = key_of(2, HARMONY_MODE_MAJOR);
     CorpusSeed seed;
     CorpusPassages passages = passages_from(COMPOSER_SONATINAS_CORPUS, PASSAGE, NULL);
     assert(seed_motive(&passages, &meter, &d_major, 1, &seed) == CORPUS_SEED_OK);
@@ -131,14 +131,14 @@ static int test_motive(void) {
     assert(seed.score_numerator == seed.score_denominator);
 
     /* In the key it was heard in, nothing moves. */
-    AnalysisKey c_major = key_of(0, HARMONY_MODE_MAJOR);
+    SpelledKey c_major = key_of(0, HARMONY_MODE_MAJOR);
     assert(seed_motive(&passages, &meter, &c_major, 1, &seed) == CORPUS_SEED_OK);
     expected = bar_in(&meter, &c_major, "C5:h E5:q G5:q");
     expected.key_source = MOTIVE_SKETCH_KEY_GIVEN;
     assert(motive_equal(&seed.motive, &expected));
 
     /* In A minor the first note keeps its degree (the tonic, A) and the intervals are the bar's. */
-    AnalysisKey a_minor = key_of(9, HARMONY_MODE_MINOR);
+    SpelledKey a_minor = key_of(9, HARMONY_MODE_MINOR);
     assert(seed_motive(&passages, &meter, &a_minor, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 3);
     assert(seed.motive.notes[0].pitch % 12 == 9);
@@ -177,7 +177,7 @@ static int test_motive(void) {
 
 static int test_same(void) {
     PlanMeter meter = four_four();
-    AnalysisKey d_major = key_of(2, HARMONY_MODE_MAJOR);
+    SpelledKey d_major = key_of(2, HARMONY_MODE_MAJOR);
     CorpusSeed best;
     CorpusPassages passages = passages_from(COMPOSER_SONATINAS_CORPUS, PASSAGE, NULL);
     assert(seed_motive(&passages, &meter, &d_major, 0, &best) == CORPUS_SEED_OK);
@@ -337,7 +337,7 @@ static int test_no_match(void) {
     assert(!test_file_exists("seed_none.json"));
     CorpusSeed seed;
     PlanMeter meter = four_four();
-    AnalysisKey d_major = key_of(2, HARMONY_MODE_MAJOR);
+    SpelledKey d_major = key_of(2, HARMONY_MODE_MAJOR);
     /* Nothing is analyzed: the Analyzer finds no passage, and the Composer has nothing to seed from. */
     CorpusPassages none = passages_from(COMPOSER_EMPTY_CORPUS, PASSAGE, NULL);
     assert(none.count == 0 && seed_motive(&none, &meter, &d_major, 1, &seed) == CORPUS_SEED_ERR_NO_MATCH);

@@ -2847,7 +2847,7 @@ static int test_leads(void) {
 #define MODULATES_COMPOSED_LEAST 9
 
 /* The key on the key lane at the start of section `section`. */
-static AnalysisKey key_at_start(const PiecePlan *plan, NodeId section) {
+static SpelledKey key_at_start(const PiecePlan *plan, NodeId section) {
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     PlanSpan range = {plan_node_span(plan, section).start, {1, 4096}};
     assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, range, &id, 1) == 1);
@@ -2883,12 +2883,12 @@ static int test_modulates(void) {
             if (ran == PIECE_OK) {
                 NodeId sections[FORM_SPEC_MAX_SECTIONS];
                 assert(piece_sections(plan, sections) == 4);
-                AnalysisKey home = test_key_mode(KEYS[k].pitch_class, KEYS[k].mode);
-                AnalysisKey fifth = test_key_mode(KEYS[k].pitch_class + 7, KEYS[k].mode);
-                AnalysisKey p = key_at_start(plan, sections[1]);
-                AnalysisKey s = key_at_start(plan, sections[2]);
-                assert(analysis_key_equals(&p, &fifth));
-                assert(analysis_key_equals(&s, &home));
+                SpelledKey home = test_key_mode(KEYS[k].pitch_class, KEYS[k].mode);
+                SpelledKey fifth = test_key_mode(KEYS[k].pitch_class + 7, KEYS[k].mode);
+                SpelledKey p = key_at_start(plan, sections[1]);
+                SpelledKey s = key_at_start(plan, sections[2]);
+                assert(spelled_key_equals(&p, &fifth));
+                assert(spelled_key_equals(&s, &home));
                 composed++;
             } else {
                 printf("  seed %lu: %s at %s\n", seed, piece_result_name(ran), compose_stage_name(outcome.stuck_stage));

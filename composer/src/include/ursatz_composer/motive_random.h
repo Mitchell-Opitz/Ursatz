@@ -173,7 +173,7 @@ typedef struct {
     const KnowledgeSnapshot *knowledge; /* the call's snapshot, which the rhythm and contour forms are read back through; required */
     PlanMeter meter;
     bool has_key;
-    AnalysisKey key;
+    SpelledKey key;
     MotiveSketchForm form;
     /* NULL for no style. Not owned. */
     const ComposerStyle *style;

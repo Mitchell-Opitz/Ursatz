@@ -20,7 +20,7 @@
  * message the theme request has always given; a NULL or null list is no chords. COMPOSER_OK, or COMPOSER_ERR_REQUEST.
  */
 ComposerStatus request_read_chords(const cJSON *list, const char *base, const char *what, long first_bar, const PlanMeter *meter,
-                                   const AnalysisKey *key, long bars, GivenChord *chords, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t capacity,
+                                   const SpelledKey *key, long bars, GivenChord *chords, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t capacity,
                                    size_t *chord_count, ComposerError *error);
 
 #endif

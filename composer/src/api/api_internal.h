@@ -134,7 +134,7 @@ ComposerStatus api_read_motive_extras(const cJSON *object, const char *base, con
  * COMPOSER_ERR_REQUEST naming the member.
  */
 ComposerStatus api_read_degrees_motive(const KnowledgeSnapshot *knowledge, const char *what, const char *base, const cJSON *object, const char *role,
-                                       const PlanMeter *meter, const AnalysisKey *key, Motive *out, ComposerError *error);
+                                       const PlanMeter *meter, const SpelledKey *key, Motive *out, ComposerError *error);
 /* The GROW_FUNCTION_* bits a form's "functions" list names. */
 ComposerStatus api_read_functions(const char *what, const char *base, const cJSON *functions, unsigned *out,
                                   ComposerError *error);

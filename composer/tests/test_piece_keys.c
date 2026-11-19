@@ -76,9 +76,9 @@ static PieceRequest request_of(const Scenario *scenario, const char *kind, unsig
 }
 
 /* The closely related key of `home` that is `key`, from standard-harmony's own list. False when it is none. */
-static bool related(AnalysisKey home, AnalysisKey key, HarmonyRelatedKey *out) {
+static bool related(SpelledKey home, SpelledKey key, HarmonyRelatedKey *out) {
     HarmonyMode home_mode = harmony_key_mode(&home);
-    int semitone = ((analysis_key_tonic_pitch_class(&key) - analysis_key_tonic_pitch_class(&home)) % 12 + 12) % 12;
+    int semitone = ((spelled_key_tonic_pitch_class(&key) - spelled_key_tonic_pitch_class(&home)) % 12 + 12) % 12;
     for (int i = 0; i < harmony_related_key_count(home_mode); i++) {
         HarmonyRelatedKey candidate;
         assert(harmony_related_key_at(home_mode, i, &candidate));
@@ -90,18 +90,18 @@ static bool related(AnalysisKey home, AnalysisKey key, HarmonyRelatedKey *out) {
     return false;
 }
 
-static bool same_key(AnalysisKey a, AnalysisKey b) {
-    return analysis_key_tonic_pitch_class(&a) == analysis_key_tonic_pitch_class(&b) && harmony_key_mode(&a) == harmony_key_mode(&b);
+static bool same_key(SpelledKey a, SpelledKey b) {
+    return spelled_key_tonic_pitch_class(&a) == spelled_key_tonic_pitch_class(&b) && harmony_key_mode(&a) == harmony_key_mode(&b);
 }
 
 /* The same tonic in the other mode: a change of mode on one tonic is not a modulation (R-499). */
-static bool same_tonic(AnalysisKey a, AnalysisKey b) {
-    return analysis_key_tonic_pitch_class(&a) == analysis_key_tonic_pitch_class(&b);
+static bool same_tonic(SpelledKey a, SpelledKey b) {
+    return spelled_key_tonic_pitch_class(&a) == spelled_key_tonic_pitch_class(&b);
 }
 
 typedef struct {
     PlanSpan span[32];
-    AnalysisKey key[32];
+    SpelledKey key[32];
     size_t count;
 } KeyLane;
 
@@ -141,7 +141,7 @@ static size_t tonic_changes(const KeyLane *lane) {
     return changes;
 }
 
-static AnalysisKey key_at(const KeyLane *lane, Rational time) {
+static SpelledKey key_at(const KeyLane *lane, Rational time) {
     for (size_t i = 0; i < lane->count; i++) {
         Rational end;
         assert(plan_span_end(lane->span[i], &end) == PLAN_OK);
@@ -180,7 +180,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
 static void check_plan(const PiecePlan *plan, const Scenario *scenario, const char *kind) {
     KeyLane lane = read_lane(plan);
     check_lane_tiles(plan, &lane);
-    AnalysisKey home = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey home = test_key_mode(scenario->tonic, scenario->mode);
     assert(same_key(lane.key[0], home));
     for (size_t i = 0; i < lane.count; i++) {
         HarmonyRelatedKey unused;
@@ -295,7 +295,7 @@ static int test_plans(void) {
 /* ------------------------------------------------------------ the pieces */
 
 /* Whether the chord at the start of a key change is a pivot chord between the two keys, by standard-harmony. */
-static bool opens_with_pivot(const PiecePlan *plan, AnalysisKey from, AnalysisKey to, Rational at) {
+static bool opens_with_pivot(const PiecePlan *plan, SpelledKey from, SpelledKey to, Rational at) {
     PlanSpan around = {at, {1, 1000}};
     LaneSpanId chord;
     HarmonyRelatedKey key;
@@ -600,8 +600,8 @@ static size_t melody_of(const PiecePlan *plan, NodeId section, Note *out) {
 }
 
 /* The key difference in semitones from -5 to 6 a section returned in another key is moved by (return_key_shift). */
-static int shift_between(AnalysisKey from, AnalysisKey to) {
-    int step = ((analysis_key_tonic_pitch_class(&to) - analysis_key_tonic_pitch_class(&from)) % 12 + 12) % 12;
+static int shift_between(SpelledKey from, SpelledKey to) {
+    int step = ((spelled_key_tonic_pitch_class(&to) - spelled_key_tonic_pitch_class(&from)) % 12 + 12) % 12;
     return step > 6 ? step - 12 : step;
 }
 
@@ -614,9 +614,9 @@ static int test_tonic_major(bool smoke) {
         return 2;
     }
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
-        const AnalysisKey home = test_key_mode(SCENARIOS[s].tonic, SCENARIOS[s].mode);
+        const SpelledKey home = test_key_mode(SCENARIOS[s].tonic, SCENARIOS[s].mode);
         const bool is_minor = SCENARIOS[s].mode == HARMONY_MODE_MINOR;
-        const AnalysisKey major = test_key(SCENARIOS[s].tonic, "major");
+        const SpelledKey major = test_key(SCENARIOS[s].tonic, "major");
         size_t composed = 0;
         for (unsigned long seed = 1; seed <= (smoke ? 1 : MAJOR_SEEDS); seed++) {
             PieceRequest request;
@@ -635,8 +635,8 @@ static int test_tonic_major(bool smoke) {
             /* The plan's key lane: B returns B1 in the tonic major (A major in A minor, home in C major), K and A1 are home. */
             KeyLane lane = read_lane(plan);
             check_lane_tiles(plan, &lane);
-            const AnalysisKey at_b = key_at(&lane, plan_node_span(plan, sections[2]).start);
-            const AnalysisKey at_b1 = key_at(&lane, plan_node_span(plan, sections[6]).start);
+            const SpelledKey at_b = key_at(&lane, plan_node_span(plan, sections[2]).start);
+            const SpelledKey at_b1 = key_at(&lane, plan_node_span(plan, sections[6]).start);
             assert(same_key(at_b1, is_minor ? major : home));
             assert(same_key(key_at(&lane, plan_node_span(plan, sections[7]).start), home));
             assert(same_key(key_at(&lane, plan_node_span(plan, sections[4]).start), home));

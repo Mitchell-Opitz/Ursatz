@@ -78,8 +78,8 @@ typedef struct {
     /* The span opens a new key (shape.starts_on is PIVOT): the key before it, and the degrees in the new key that a
        pivot chord can be, best first. The key lane over the span is the new key. */
     bool pivot;
-    AnalysisKey from_key;
-    AnalysisKey key;
+    SpelledKey from_key;
+    SpelledKey key;
     size_t pivot_count;
     int pivot_degrees[HARMONY_PIVOT_MAX];
     /*
@@ -228,17 +228,17 @@ bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner,
 /* The mode of the key lane over the span, else of a key constraint on the span or its owner. */
 bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, HarmonyMode *out);
 /* The key of the key lane over the span, else of a key constraint on the span or its owner. */
-bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, AnalysisKey *out);
+bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, SpelledKey *out);
 /* The key of the key lane that ends where start is, when the span of the lane after it starts there. */
-bool harmony_key_before(const PiecePlan *plan, Rational start, AnalysisKey *out);
+bool harmony_key_before(const PiecePlan *plan, Rational start, SpelledKey *out);
 /*
  * The degrees in the key `to` of the chords a pivot from the key `from` can be: triads of both (harmony_pivot_find), the
  * best of harmony_pivot_rank first, with the chords a phrase cannot open on left out (a dominant in either key, a
  * diminished triad, and in minor the minor v). 0 when the keys are not closely related.
  */
-size_t harmony_pivot_degrees(AnalysisKey from, AnalysisKey to, int degrees[HARMONY_PIVOT_MAX]);
+size_t harmony_pivot_degrees(SpelledKey from, SpelledKey to, int degrees[HARMONY_PIVOT_MAX]);
 /* Whether the chord is a pivot chord from the key `from` into the key `to`: a root-position triad both keys have. */
-bool harmony_pivot_chord_valid(AnalysisKey from, AnalysisKey to, const HarmonyChord *chord);
+bool harmony_pivot_chord_valid(SpelledKey from, SpelledKey to, const HarmonyChord *chord);
 /*
  * The meter under span, which must lie in one meter lane span and start and end on a beat of it (a beat is
  * 1/beat_unit of a whole note). A span of whole bars has no part cells (see PhraseMetre).
@@ -460,7 +460,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    AnalysisKey key;
+    SpelledKey key;
     PhraseMetre metre;
     size_t count;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -515,12 +515,12 @@ PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, Pla
 int harmony_member_degree(HarmonyMode mode, const PhraseChord *chord);
 
 /* A MIDI pitch spelled as a scale degree of the key (see harmony_bass.h); NULL when it cannot be. */
-PitchSpelling *harmony_spell_pitch(const AnalysisKey *key, int degree, int pitch);
+PitchSpelling *harmony_spell_pitch(const SpelledKey *key, int degree, int pitch);
 /* The key's tonic, spelled with the fewest accidentals, in the octave given. */
-PitchSpelling *harmony_spell_tonic(const AnalysisKey *key, int octave);
+PitchSpelling *harmony_spell_tonic(const SpelledKey *key, int octave);
 
 /* The pitch class (0 to 11) of the chord's bass member in the key. False for a chord not written here. */
-bool harmony_chord_bass_pc(const AnalysisKey *key, const PhraseChord *chord, int *pc);
+bool harmony_chord_bass_pc(const SpelledKey *key, const PhraseChord *chord, int *pc);
 
 
 /*
@@ -531,7 +531,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    AnalysisKey key;
+    SpelledKey key;
     CellMetre metre;
     bool at_start;      /* the span starts the owner node */
     bool has_cadence;   /* the span, or its owner, asks for a cadence */

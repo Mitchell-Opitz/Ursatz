@@ -171,14 +171,14 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
 }
 
 /* The key of the section: its one key lane span. */
-static AnalysisKey key_of(const PiecePlan *plan, NodeId section) {
+static SpelledKey key_of(const PiecePlan *plan, NodeId section) {
     LaneSpanId ids[2];
     assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, section), ids, 2) == 1);
     return plan_lane_span_payload(plan, ids[0])->key;
 }
 
 /* Every melody note of the section is in the scale of the key: in minor the natural minor's and the harmonic minor's (the figures use the raised seventh over V and vii only). */
-static bool melody_in_scale(const PiecePlan *plan, NodeId section, AnalysisKey key) {
+static bool melody_in_scale(const PiecePlan *plan, NodeId section, SpelledKey key) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
     static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
     LaneSpanId ids[64];
@@ -187,7 +187,7 @@ static bool melody_in_scale(const PiecePlan *plan, NodeId section, AnalysisKey k
     for (size_t s = 0; s < spans; s++) {
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[s])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
-            int degree = ((notes->notes[n].midi - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
+            int degree = ((notes->notes[n].midi - spelled_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
             if (!(harmony_key_mode(&key) == HARMONY_MODE_MAJOR ? MAJOR[degree] : MINOR[degree])) {
                 return false;
             }
@@ -208,11 +208,11 @@ static void check_parallel_plan(PiecePlan *plan) {
         }
     }
     assert(count == 3);
-    AnalysisKey home = key_of(plan, sections[0]);
-    AnalysisKey other = key_of(plan, sections[1]);
-    assert(analysis_key_tonic_pitch_class(&other) == analysis_key_tonic_pitch_class(&home) && harmony_key_mode(&other) != harmony_key_mode(&home));
-    AnalysisKey last = key_of(plan, sections[2]);
-    assert(analysis_key_equals(&last, &home));
+    SpelledKey home = key_of(plan, sections[0]);
+    SpelledKey other = key_of(plan, sections[1]);
+    assert(spelled_key_tonic_pitch_class(&other) == spelled_key_tonic_pitch_class(&home) && harmony_key_mode(&other) != harmony_key_mode(&home));
+    SpelledKey last = key_of(plan, sections[2]);
+    assert(spelled_key_equals(&last, &home));
     char reason[256] = "";
     assert(form_return_copies(plan, sections[1]));
     if (!form_figure_check(plan, sections[1], reason, sizeof(reason))) {

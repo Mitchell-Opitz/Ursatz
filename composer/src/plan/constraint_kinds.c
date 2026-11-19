@@ -371,7 +371,7 @@ static bool read_motive_ref(JsonReader *reader, const cJSON *item, const char *p
 
 static bool valid_key(const PiecePlan *plan, const PlanConstraint *constraint) {
     (void)plan;
-    return analysis_key_tonic_pitch_class(&constraint->params.key) >= 0 && analysis_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
+    return spelled_key_tonic_pitch_class(&constraint->params.key) >= 0 && spelled_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
            composer_key_valid(&constraint->params.key);
 }
 

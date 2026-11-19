@@ -1045,7 +1045,7 @@ static PiecePlan *key_spans_plan(const KeySpanCase *cases, size_t count) {
 }
 
 /* The key of span `index` of the key lane, in time order. */
-static AnalysisKey key_span_at(const PiecePlan *plan, size_t index) {
+static SpelledKey key_span_at(const PiecePlan *plan, size_t index) {
     LaneSpanId ids[8];
     PlanSpan everything = bars(0, 1000);
     assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, ids, 8) > index);
@@ -1112,11 +1112,11 @@ static void test_relation_anchors(void) {
     char *text = plan_to_json(plan, &error);
     PiecePlan *read = NULL;
     assert(text != NULL && read_resolved(text, &read, &error) == PLAN_OK);
-    AnalysisKey second = key_span_at(read, 1);
-    AnalysisKey third = key_span_at(read, 2);
-    AnalysisKey fourth = key_span_at(read, 3);
-    assert(analysis_key_tonic_pitch_class(&second) == 7 && analysis_key_tonic_pitch_class(&third) == 2 &&
-           analysis_key_tonic_pitch_class(&fourth) == 7);
+    SpelledKey second = key_span_at(read, 1);
+    SpelledKey third = key_span_at(read, 2);
+    SpelledKey fourth = key_span_at(read, 3);
+    assert(spelled_key_tonic_pitch_class(&second) == 7 && spelled_key_tonic_pitch_class(&third) == 2 &&
+           spelled_key_tonic_pitch_class(&fourth) == 7);
     assert(second.material == third.material && harmony_key_mode(&second) == HARMONY_MODE_MAJOR);
     plan_destroy(read);
     free(text);

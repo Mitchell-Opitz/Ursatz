@@ -249,9 +249,9 @@ static void check_parts_performance(const FormSpec *form, unsigned long seed, co
     static const HarmonyMode MODE[3] = {HARMONY_MODE_MAJOR, HARMONY_MODE_MINOR, HARMONY_MODE_MAJOR};
     for (size_t k = 0; k < 6; k++) {
         PlanSpan span = plan_lane_span_span(performance.plan, ids[k]);
-        const AnalysisKey *key = &plan_lane_span_payload(performance.plan, ids[k])->key;
+        const SpelledKey *key = &plan_lane_span_payload(performance.plan, ids[k])->key;
         assert(rational_cmp(span.start, whole((long long)k * 8)) == 0 && rational_cmp(span.length, whole(8)) == 0);
-        assert(analysis_key_tonic_pitch_class(key) == TONIC[k / 2] && harmony_key_mode(key) == MODE[k / 2]);
+        assert(spelled_key_tonic_pitch_class(key) == TONIC[k / 2] && harmony_key_mode(key) == MODE[k / 2]);
     }
     Rational end;
     size_t sections;
@@ -269,13 +269,13 @@ static void check_region_keys(void) {
     snprintf(parallel.minor[0], sizeof(parallel.minor[0]), "omt.relation.parallel");
     parallel.minor_count = 1;
     FillRng rng;
-    AnalysisKey key;
+    SpelledKey key;
     fill_rng_seed(&rng, 1);
-    AnalysisKey c_major = test_key(0, "major");
-    AnalysisKey a_minor = test_key(9, "minor");
-    assert(piece_region_key(test_knowledge(), c_major, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
+    SpelledKey c_major = test_key(0, "major");
+    SpelledKey a_minor = test_key(9, "minor");
+    assert(piece_region_key(test_knowledge(), c_major, &parallel, &rng, &key) && spelled_key_tonic_pitch_class(&key) == 0 &&
            harmony_key_mode(&key) == HARMONY_MODE_MINOR);
-    assert(piece_region_key(test_knowledge(), a_minor, &parallel, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
+    assert(piece_region_key(test_knowledge(), a_minor, &parallel, &rng, &key) && spelled_key_tonic_pitch_class(&key) == 9 &&
            harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
     /* Any other degree is the closely related key, as before: 6 of C major is A minor, 3 of A minor is C major. */
     FormRegion other;
@@ -284,9 +284,9 @@ static void check_region_keys(void) {
     other.major_count = 1;
     snprintf(other.minor[0], sizeof(other.minor[0]), "omt.relation.mediant");
     other.minor_count = 1;
-    assert(piece_region_key(test_knowledge(), c_major, &other, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 9 &&
+    assert(piece_region_key(test_knowledge(), c_major, &other, &rng, &key) && spelled_key_tonic_pitch_class(&key) == 9 &&
            harmony_key_mode(&key) == HARMONY_MODE_MINOR);
-    assert(piece_region_key(test_knowledge(), a_minor, &other, &rng, &key) && analysis_key_tonic_pitch_class(&key) == 0 &&
+    assert(piece_region_key(test_knowledge(), a_minor, &other, &rng, &key) && spelled_key_tonic_pitch_class(&key) == 0 &&
            harmony_key_mode(&key) == HARMONY_MODE_MAJOR);
     /* A degree that is no closely related key is refused. */
     FormRegion none;
@@ -327,9 +327,9 @@ static int test_parts(void) {
         }
         composed++;
         assert(parts.count == 3 && parts.plans[0] && parts.plans[1] && parts.plans[2] == NULL);
-        assert(analysis_key_tonic_pitch_class(&parts.keys[0]) == 0 && harmony_key_mode(&parts.keys[0]) == HARMONY_MODE_MAJOR);
-        assert(analysis_key_tonic_pitch_class(&parts.keys[1]) == 9 && harmony_key_mode(&parts.keys[1]) == HARMONY_MODE_MINOR);
-        assert(analysis_key_equals(&parts.keys[2], &parts.keys[0]));
+        assert(spelled_key_tonic_pitch_class(&parts.keys[0]) == 0 && harmony_key_mode(&parts.keys[0]) == HARMONY_MODE_MAJOR);
+        assert(spelled_key_tonic_pitch_class(&parts.keys[1]) == 9 && harmony_key_mode(&parts.keys[1]) == HARMONY_MODE_MINOR);
+        assert(spelled_key_equals(&parts.keys[2], &parts.keys[0]));
         assert(parts.forms[0] && parts.forms[1] && parts.forms[2] == NULL);
         check_parts_performance(form, seed, &parts);
         /* Second has a motive of its own: its m0 is not First's. */

@@ -391,7 +391,7 @@ static ComposerStatus read_tone_overrides(const char *what, const char *base, co
 }
 
 ComposerStatus api_read_degrees_motive(const KnowledgeSnapshot *knowledge, const char *what, const char *base, const cJSON *object, const char *role,
-                                       const PlanMeter *meter, const AnalysisKey *key, Motive *out, ComposerError *error) {
+                                       const PlanMeter *meter, const SpelledKey *key, Motive *out, ComposerError *error) {
     const char *degrees;
     const char *harmony;
     const char *form;

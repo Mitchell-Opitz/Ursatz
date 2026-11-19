@@ -102,7 +102,7 @@ static GivenResult read_placement(const PiecePlan *plan, NodeId section, size_t 
 
 /* Whether span lies in the section, in one key span, and clear of every span of the lane and voice already there. */
 static GivenResult check_room(const PiecePlan *plan, const Placement *placement, PlanLaneKind lane, int voice,
-                              PlanSpan span, AnalysisKey *key) {
+                              PlanSpan span, SpelledKey *key) {
     LaneSpanId keys[2];
     if (!plan_span_contains(placement->section, span)) {
         return GIVEN_ERR_PAST_END;
@@ -247,7 +247,7 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
         return GIVEN_ERR_METER;
     }
     PlanSpan whole = {placement.start, times(cell_length, count * cells_per_chord)};
-    AnalysisKey key;
+    SpelledKey key;
     result = check_room(plan, &placement, PLAN_LANE_HARMONY, 0, whole, &key);
     if (result != GIVEN_OK) {
         return result;
@@ -290,7 +290,7 @@ GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *
         return GIVEN_ERR_PLAN;
     }
     for (size_t i = 0; result == GIVEN_OK && i < count; i++) {
-        AnalysisKey key;
+        SpelledKey key;
         if (chords[i].onset.num < 0 || chords[i].onset.den <= 0 || chords[i].length.num <= 0 ||
             chords[i].length.den <= 0 ||
             rational_add(placement.section.start, chords[i].onset, &spans[i].start) != RATIONAL_OK) {

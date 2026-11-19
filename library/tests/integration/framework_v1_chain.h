@@ -293,7 +293,7 @@ typedef struct {
     size_t count; /* segments of the chain: those that start inside the keys scope */
     double beat_length; /* in whole notes */
 
-    AnalysisKeyEvent *key_events;
+    SpelledKeyEvent *key_events;
     size_t key_event_count;
     AnalysisChain *chain;
     CommonPracticeKeySegment *key_segments;
@@ -321,12 +321,12 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     c->beat_length = (double)x->beat_num / (double)x->beat_den;
 
     c->key_event_count = c->p.import.key_signatures.count;
-    c->key_events = (AnalysisKeyEvent *)calloc(c->key_event_count + 1, sizeof(AnalysisKeyEvent));
+    c->key_events = (SpelledKeyEvent *)calloc(c->key_event_count + 1, sizeof(SpelledKeyEvent));
     assert(c->key_events != NULL);
     for (size_t i = 0; i < c->key_event_count; i++) {
         const MidiKeySignatureEvent *event = &c->p.import.key_signatures.events[i];
         c->key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &c->key_events[i].key));
+        assert(spelled_key_from_fifths(event->sharps_flats, test_materials()->major, &c->key_events[i].key));
     }
     AnalysisNoteSet set = {c->p.notes, c->p.note_count, c->map};
     AnalysisChainConfig config = analysis_chain_config_default();

@@ -41,6 +41,7 @@ add_library(ursatz_theory
     tonality/roman_numeral_rules.c
     tonality/seventh_in_key_rules.c
     tonality/seventh_rules.c
+    tonality/spelled_key.c
     tonality/tonal_key.c
     tonality/triad_in_key_rules.c
     tonality/triad_rules.c
@@ -203,6 +204,7 @@ ursatz_public_headers(ursatz_theory
         theory/tonality/roman_numeral_rules.h
         theory/tonality/seventh_in_key_rules.h
         theory/tonality/seventh_rules.h
+        theory/tonality/spelled_key.h
         theory/tonality/tonal_key.h
         theory/tonality/triad_in_key_rules.h
         theory/tonality/triad_rules.h

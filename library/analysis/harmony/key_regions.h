@@ -13,7 +13,7 @@
 #include "model/interpretation/key.h"
 #include "theory/tonality/common_practice_materials.h"
 #include "theory/tonality/key_vocabulary.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "theory/vocabulary/key_change_extent.h"
 #include "model/time/time_span.h"
 #include "model/time/meter_map.h"
@@ -342,10 +342,10 @@ typedef struct {
     int sharps_flats;              /* -7..7 */
 } CommonPracticeKeySignatureEvent;
 
-/* The key signature event an AnalysisKeyEvent places: position is the event's time (borrowed) and sharps_flats the signature of its key,
+/* The key signature event an SpelledKeyEvent places: position is the event's time (borrowed) and sharps_flats the signature of its key,
    the major tonic's place on the line of fifths and the minor tonic's three places less. False, *out untouched, for a NULL argument, a
    NULL time or a signature beyond -7..7. */
-bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *event, CommonPracticeKeySignatureEvent *out);
+bool common_practice_key_signature_event_from_analysis(const SpelledKeyEvent *event, CommonPracticeKeySignatureEvent *out);
 
 typedef enum {
     COMMON_PRACTICE_REGION_SOURCE_PROFILE = 0,
@@ -362,10 +362,10 @@ typedef struct {
     CommonPracticeRegionSource source;
 } CommonPracticeKeyRegion;
 
-/* The AnalysisKey of a region's key_index: the tonic spelled as common_practice_key_index_tonic_name spells it, the mode major or minor and
+/* The SpelledKey of a region's key_index: the tonic spelled as common_practice_key_index_tonic_name spells it, the mode major or minor and
    the material of that mode from `materials`, id NULL. False, *out untouched, for a NULL argument or an index outside 0..23. */
 bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, const CommonPracticeMaterials *materials,
-                                             AnalysisKey *out);
+                                             SpelledKey *out);
 
 typedef struct {
     size_t from_region;            /* indices into regions[]; to_region == from_region + 1 */

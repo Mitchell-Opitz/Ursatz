@@ -229,7 +229,7 @@ static void check_bass(const Fixture *fixture, const Scenario *scenario, const H
     }
 
     /* The bass passes standard-counterpoint's melodic rules, checked by the framework from the plan. */
-    AnalysisKey key = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey key = test_key_mode(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(harmony_check_bass(fixture->plan, fixture->span, key, params, &violation));
     assert(violation == NULL);

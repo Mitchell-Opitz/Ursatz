@@ -1,7 +1,6 @@
 # The analysis group (spec/target-architecture.md 7.2): the neutral analysis types, the kernel analyses, similarity
 # scoring and every framework's analysis adapter. Sources include headers by their path from library/ (analysis/<area>/<file>.h).
 add_library(ursatz_analysis
-    notes/analysis_key.c
     notes/analysis_note.c
     notes/analysis_note_build.c
     notes/contour.c
@@ -98,7 +97,6 @@ ursatz_public_headers(ursatz_analysis
     BASE ${PROJECT_SOURCE_DIR}
     SOURCE_DIRS ${PROJECT_SOURCE_DIR}
     HEADERS
-        analysis/notes/analysis_key.h
         analysis/notes/analysis_note.h
         analysis/notes/analysis_note_build.h
         analysis/notes/analysis_segment.h

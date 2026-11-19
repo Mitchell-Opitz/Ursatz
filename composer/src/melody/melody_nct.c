@@ -27,7 +27,7 @@ static bool leap_allowed(int move) {
 }
 
 unsigned melody_scale_mask(const MelodyContext *context, size_t chord) {
-    int tonic = analysis_key_tonic_pitch_class(&context->key);
+    int tonic = spelled_key_tonic_pitch_class(&context->key);
     if (!composer_key_is_minor(&context->key)) {
         return util_scale_mask(tonic, context->key.material);
     }

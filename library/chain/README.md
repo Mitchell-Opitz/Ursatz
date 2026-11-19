@@ -30,7 +30,7 @@ const CommonPracticeKeyRegions *keys = analysis_chain_key_regions(chain);
 analysis_chain_destroy(chain);
 ```
 
-`notes` is an `AnalysisNoteSet` (sorted by `analysis_note_compare`, every note with its `NoteEvent` and a known pitch, one `MeterMap`). The key events are `AnalysisKeyEvent`s (a key signature as a key at a time). Everything is borrowed and must outlive the chain.
+`notes` is an `AnalysisNoteSet` (sorted by `analysis_note_compare`, every note with its `NoteEvent` and a known pitch, one `MeterMap`). The key events are `SpelledKeyEvent`s (a key signature as a key at a time). Everything is borrowed and must outlive the chain.
 
 Stages, in the order they run (the order of the rows of the stage table, below), with the owner each calls ([docs/analytic-job-owners.md](../docs/analytic-job-owners.md)):
 

@@ -86,8 +86,8 @@ static bool harmony_labels(const PiecePlan *plan, const PhraseProgression *progr
 }
 
 /* The degree label of a pitch in the key. */
-static const char *degree_of(const AnalysisKey *key, int pitch) {
-    return standard_tonality_chromatic_degree_label(pitch - analysis_key_tonic_pitch_class(key));
+static const char *degree_of(const SpelledKey *key, int pitch) {
+    return standard_tonality_chromatic_degree_label(pitch - spelled_key_tonic_pitch_class(key));
 }
 
 /* A `motive-nct-figure` label for every non-chord tone the melody writes: the degrees of the note and its neighbors. */
@@ -105,7 +105,7 @@ static bool nct_labels(const MelodyCandidate *melody, ComposerStyleLabels *label
         return false;
     }
     const MelodyContext *context = &melody->context;
-    const AnalysisKey *key = &context->key;
+    const SpelledKey *key = &context->key;
     for (size_t i = 0; i < melody->count; i++) {
         const char *name = NULL;
         for (size_t t = 0; t < sizeof TYPES / sizeof *TYPES; t++) {
@@ -167,7 +167,7 @@ static int plan_tonic(const PiecePlan *plan) {
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, &first, 1) == 0) {
         return 0;
     }
-    return analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, first)->key);
+    return spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, first)->key);
 }
 
 /* The motive labels of a motive-form or development candidate the motives stage offers. */

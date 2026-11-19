@@ -99,7 +99,7 @@ static bool split_key(const char *text, int *pc, char *word, size_t size) {
     return true;
 }
 
-bool request_parse_key(const char *text, const KnowledgeSnapshot *knowledge, AnalysisKey *key) {
+bool request_parse_key(const char *text, const KnowledgeSnapshot *knowledge, SpelledKey *key) {
     int pc;
     char word[REQUEST_KEY_WORD_MAX];
     CommonPracticeMaterials materials;

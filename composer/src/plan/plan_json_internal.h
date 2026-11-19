@@ -5,7 +5,7 @@
 
 #include <cJSON.h>
 #include <theory/knowledge/knowledge_snapshot.h>
-#include <analysis/notes/analysis_key.h>
+#include <theory/tonality/spelled_key.h>
 #include <theory/tonality/common_practice_materials.h>
 #include <ursatz_composer/plan_json.h>
 
@@ -52,8 +52,8 @@ bool json_read_span(JsonReader *reader, const cJSON *object, const char *path, P
 extern const char *const JSON_ACCOMPANIMENT_NAMES[JSON_ACCOMPANIMENT_COUNT];
 
 /* The members of a key as a constraint and a key span write them ("tonic", "material"), and read them. */
-bool json_key_members(cJSON *object, const AnalysisKey *key);
-bool json_read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out);
+bool json_key_members(cJSON *object, const SpelledKey *key);
+bool json_read_key_members(JsonReader *reader, const cJSON *object, const char *path, SpelledKey *out);
 /* A member that names one of `count` names: its index in *out; the path of the member is reported on a refusal. */
 bool json_read_enum(JsonReader *reader, const cJSON *item, const char *path, const char *const *names, size_t count, int *out);
 bool json_read_enum_member(JsonReader *reader, const cJSON *object, const char *path, const char *key, const char *const *names,

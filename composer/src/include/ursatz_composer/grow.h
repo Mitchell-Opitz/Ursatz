@@ -95,7 +95,7 @@ typedef struct {
 typedef struct {
     const Motive *motive;
     const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
-    AnalysisKey key;
+    SpelledKey key;
     PlanMeter meter;
     size_t bars;              /* 4 or 8; 3 to 16 with a construction */
     SectionPairing pairing; /* any of the nine beginning and ending pairings */

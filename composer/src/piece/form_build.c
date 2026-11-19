@@ -476,8 +476,8 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     SectionConstruction constructions[FORM_SPEC_MAX_SECTIONS];
     bool has_construction[FORM_SPEC_MAX_SECTIONS];
     if (!form_spec_meter_allowed(form, &request->meter) || !grow_cells_per_bar(&request->meter, &cells_per_bar) ||
-        analysis_key_tonic_pitch_class(&request->key) < 0 ||
-        analysis_key_tonic_pitch_class(&request->key) > 11 ||
+        spelled_key_tonic_pitch_class(&request->key) < 0 ||
+        spelled_key_tonic_pitch_class(&request->key) > 11 ||
         !composer_key_valid(&request->key) ||
         (request->motive && request->motive->note_count < 2) ||
         (accompanied && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
@@ -635,7 +635,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
             result = PIECE_ERR_BAD_REQUEST;
             break;
         }
-        const AnalysisKey *section_key = &plan_lane_span_payload(plan, keys_over[0])->key;
+        const SpelledKey *section_key = &plan_lane_span_payload(plan, keys_over[0])->key;
         result = piece_give_harmony(plan, sections[i], &overlay->description.harmony, &request->meter, section_key, NULL, 0);
     }
     /* A composed theme given to a section (R-610): its pairing and cadences, then its realized lanes moved and transposed to the section. */

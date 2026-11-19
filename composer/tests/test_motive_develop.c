@@ -76,13 +76,13 @@ static const Source SOURCES[] = {
     {"dotted", "G4:q. A4:e B4:q D5:q", {4, 4, 0}, 7, HARMONY_MODE_MAJOR},
     {"leading rest", "r:q E4:q G4:q C5:q", {4, 4, 0}, 0, HARMONY_MODE_MAJOR},
 };
-static AnalysisKey source_key(const Source *source) {
+static SpelledKey source_key(const Source *source) {
     return test_key_mode(source->tonic, source->mode);
 }
 
 #define SOURCE_COUNT (sizeof(SOURCES) / sizeof(SOURCES[0]))
 
-static Motive load(const char *notes, const PlanMeter *meter, const AnalysisKey *key) {
+static Motive load(const char *notes, const PlanMeter *meter, const SpelledKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();
@@ -100,7 +100,7 @@ static Motive load(const char *notes, const PlanMeter *meter, const AnalysisKey 
 }
 
 static Motive load_source(const Source *source) {
-    AnalysisKey key = source_key(source);
+    SpelledKey key = source_key(source);
     return load(source->notes, &source->meter, &key);
 }
 
@@ -173,7 +173,7 @@ static bool read_target(const Scene *scene, const Source *source, Motive *out) {
     const PlanLanePayload *payload = plan_lane_span_payload(scene->plan, ids[0]);
     Motive motive;
     motive_init(&motive, source->meter);
-    AnalysisKey key_of_source = source_key(source);
+    SpelledKey key_of_source = source_key(source);
     motive_set_key(&motive, &key_of_source, MOTIVE_SKETCH_KEY_GIVEN);
     motive_set_lane_notes(&motive, payload->notes.notes, payload->notes.note_count);
     PlanSpan span = plan_lane_span_span(scene->plan, ids[0]);
@@ -242,9 +242,9 @@ static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
 static const int MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
 
 /* The step of the key's scale a pitch is on, or LONG_MIN when it is not in the scale. */
-static long step_of(AnalysisKey key, int pitch) {
+static long step_of(SpelledKey key, int pitch) {
     const int *scale = harmony_key_mode(&key) == HARMONY_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
-    int relative = pitch - analysis_key_tonic_pitch_class(&key);
+    int relative = pitch - spelled_key_tonic_pitch_class(&key);
     long octave = relative >= 0 ? relative / 12 : -((-relative + 11) / 12);
     int rest = (int)(relative - octave * 12);
     for (int i = 0; i < 7; i++) {
@@ -280,7 +280,7 @@ static bool same_notes(const Motive *a, const Motive *b) {
 }
 
 /* The rhythm is the source's and every pitch moved by one amount: in semitones, or in steps of the scale. */
-static bool is_transposition(const Motive *source, const Motive *result, AnalysisKey key) {
+static bool is_transposition(const Motive *source, const Motive *result, SpelledKey key) {
     if (!same_rhythm(source, result)) {
         return false;
     }
@@ -300,7 +300,7 @@ static bool is_transposition(const Motive *source, const Motive *result, Analysi
 }
 
 /* The rhythm is the source's and every pitch mirrored about one pitch: in semitones, or in steps of the scale. */
-static bool is_inversion(const Motive *source, const Motive *result, AnalysisKey key) {
+static bool is_inversion(const Motive *source, const Motive *result, SpelledKey key) {
     if (!same_rhythm(source, result)) {
         return false;
     }
@@ -457,53 +457,53 @@ typedef struct {
     const char *name;
     PlanMotiveRef ref;
     /* The relation the development must have to the source. */
-    bool (*related)(const Motive *source, const Motive *result, const PlanMotiveRef *ref, AnalysisKey key);
+    bool (*related)(const Motive *source, const Motive *result, const PlanMotiveRef *ref, SpelledKey key);
 } Family;
 
-static bool related_restated(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
+static bool related_restated(const Motive *s, const Motive *r, const PlanMotiveRef *ref, SpelledKey key) {
     (void)ref;
     return same_notes(s, r) || is_transposition(s, r, key);
 }
 
-static bool related_transposed(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
+static bool related_transposed(const Motive *s, const Motive *r, const PlanMotiveRef *ref, SpelledKey key) {
     (void)ref;
     return is_transposition(s, r, key) && !same_notes(s, r);
 }
 
-static bool related_inverted(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
+static bool related_inverted(const Motive *s, const Motive *r, const PlanMotiveRef *ref, SpelledKey key) {
     (void)ref;
     return is_inversion(s, r, key);
 }
 
-static bool related_retrograde(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
+static bool related_retrograde(const Motive *s, const Motive *r, const PlanMotiveRef *ref, SpelledKey key) {
     (void)ref;
     (void)key;
     return is_retrograde(s, r);
 }
 
-static bool related_interval(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
+static bool related_interval(const Motive *s, const Motive *r, const PlanMotiveRef *ref, SpelledKey key) {
     (void)key;
     return is_interval_change(s, r, ref->step.value[2] != 0);
 }
 
-static bool related_fragment(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
+static bool related_fragment(const Motive *s, const Motive *r, const PlanMotiveRef *ref, SpelledKey key) {
     (void)ref;
     (void)key;
     return is_fragment(s, r);
 }
 
-static bool related_liquidation(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
+static bool related_liquidation(const Motive *s, const Motive *r, const PlanMotiveRef *ref, SpelledKey key) {
     (void)key;
     return is_liquidation(s, r, ref->step.value[1] != 0);
 }
 
-static bool related_augmented(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
+static bool related_augmented(const Motive *s, const Motive *r, const PlanMotiveRef *ref, SpelledKey key) {
     (void)ref;
     (void)key;
     return is_scaling(s, r, true);
 }
 
-static bool related_diminished(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
+static bool related_diminished(const Motive *s, const Motive *r, const PlanMotiveRef *ref, SpelledKey key) {
     (void)ref;
     (void)key;
     return is_scaling(s, r, false);
@@ -768,7 +768,7 @@ static void test_explicit_parameters(void) {
 
 static void test_degenerate_cases(void) {
     PlanMeter meter = {4, 4, 0};
-    AnalysisKey c_major = test_key(0, "major");
+    SpelledKey c_major = test_key(0, "major");
     Motive single = load("C4:q", &meter, &c_major);
     Motive four = load("D4:q F4:e A4:e D5:h", &meter, &c_major);
     Motive result;
@@ -914,7 +914,7 @@ static bool score_is(MotiveScore score, unsigned long num, unsigned long den) {
 /* The pickup scales with augmentation and diminution, and a tonal transposition or inversion spells F and B as degrees. */
 static void test_pickups_and_tonal_spelling(void) {
     const PlanMeter three_four = {3, 4, 0};
-    const AnalysisKey c_major = test_key(0, "major");
+    const SpelledKey c_major = test_key(0, "major");
     Motive source = load("C4:q E4:q G4:q E4:q", &three_four, &c_major);
     Motive result;
     MotiveRelationStep spec;
@@ -956,7 +956,7 @@ static void test_pickups_and_tonal_spelling(void) {
 
 static void test_recognizability(void) {
     PlanMeter meter = {4, 4, 0};
-    AnalysisKey d_minor = test_key(2, "minor");
+    SpelledKey d_minor = test_key(2, "minor");
     Motive source = load("D4:q F4:e A4:e D5:h", &meter, &d_minor);
     MotiveRecognizability r;
 

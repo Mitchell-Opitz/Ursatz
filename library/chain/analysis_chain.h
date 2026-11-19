@@ -32,7 +32,7 @@
 #include "analysis/meter/meter_analysis_syncopation.h"
 #include "analysis/harmony/roman_numeral_adapter.h"
 #include "analysis/galant/scale_analysis_detect.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "analysis/notes/analysis_note.h"
 #include "analysis/notes/sonority_segmentation.h"
 #include "analysis/texture/texture_analysis_classify.h"
@@ -208,7 +208,7 @@ typedef struct AnalysisChain AnalysisChain;
  * with key_event_count 0. config may be NULL for the defaults, which carry no knowledge snapshot (ANALYSIS_CHAIN_ERR_KNOWLEDGE). On OK, *out is owned by the caller (analysis_chain_destroy); on an error
  * *out is untouched and the status names the failing stage.
  */
-AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const AnalysisKeyEvent *key_events, size_t key_event_count,
+AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const SpelledKeyEvent *key_events, size_t key_event_count,
                                        const AnalysisChainConfig *config, AnalysisChain **out);
 
 /*

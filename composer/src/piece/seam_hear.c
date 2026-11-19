@@ -79,10 +79,10 @@ static int sign(int value) {
 }
 
 /* A pitch spelled as a degree of the key, as the counterpoint rules read intervals; NULL when it cannot be. */
-static PitchSpelling *spell(const AnalysisKey *key, int pitch) {
+static PitchSpelling *spell(const SpelledKey *key, int pitch) {
     int degree;
     int alteration;
-    if (!util_scale_degree(analysis_key_tonic_pitch_class(key), key->material, pitch, &degree,
+    if (!util_scale_degree(spelled_key_tonic_pitch_class(key), key->material, pitch, &degree,
                            &alteration)) {
         return NULL;
     }
@@ -145,8 +145,8 @@ static bool step_holds(const SeamNotes *notes) {
 }
 
 /* The diatonic step of a pitch from the key's tonic: 0 is do, 7 the octave above. */
-static int diatonic_step(const AnalysisKey *key, int pitch) {
-    int tonic = analysis_key_tonic_pitch_class(key);
+static int diatonic_step(const SpelledKey *key, int pitch) {
+    int tonic = spelled_key_tonic_pitch_class(key);
     int relative = pitch - tonic;
     int octave = relative >= 0 ? relative / 12 : -((-relative + 11) / 12);
     int degree = 1;

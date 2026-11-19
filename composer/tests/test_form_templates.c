@@ -451,7 +451,7 @@ static Motive scenario_motive(const Scenario *scenario) {
         exit(2);
     }
     motive_set_meter(&motive, (PlanMeter){scenario->beats, 4, 0});
-    AnalysisKey motive_key_value = test_key_mode(scenario->tonic, scenario->mode);
+    SpelledKey motive_key_value = test_key_mode(scenario->tonic, scenario->mode);
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     if (scenario->beats == 3) {
         /* The half note at beat 3 ends on the barline as a quarter. */
@@ -547,11 +547,11 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
         const int offset = expected[i].region ? region_offset : expected[i].key_offset;
         if (expected[i].tonic_major) {
             /* The home tonic's major key: the home key in a major piece, the parallel major in a minor one (R-517). */
-            assert(key && analysis_key_tonic_pitch_class(&key->params.key) == scenario->tonic &&
+            assert(key && spelled_key_tonic_pitch_class(&key->params.key) == scenario->tonic &&
                    harmony_key_mode(&key->params.key) == HARMONY_MODE_MAJOR);
         } else if (expected[i].second) {
             /* One of the second region's keys: vi or IV in major, VI or iv in minor (R-520). */
-            const int pc = analysis_key_tonic_pitch_class(&key->params.key);
+            const int pc = spelled_key_tonic_pitch_class(&key->params.key);
             const bool major = scenario->mode == HARMONY_MODE_MAJOR;
             assert(key && ((pc == (scenario->tonic + (major ? 9 : 8)) % 12 && harmony_key_mode(&key->params.key) == (major ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR)) ||
                            (pc == (scenario->tonic + 5) % 12 && harmony_key_mode(&key->params.key) == scenario->mode)));
@@ -561,10 +561,10 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, con
             const bool major = scenario->mode == HARMONY_MODE_MAJOR;
             const bool elaboration = expected[i].region_key == ELABORATION;
             const int up = elaboration ? (major ? 5 : 8) : expected[i].region_key == DEVELOPMENT ? (major ? 9 : 5) : (major ? 2 : 7);
-            assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + up) % 12 &&
+            assert(key && spelled_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + up) % 12 &&
                    harmony_key_mode(&key->params.key) == (elaboration ? HARMONY_MODE_MAJOR : HARMONY_MODE_MINOR));
         } else {
-            assert(key && analysis_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
+            assert(key && spelled_key_tonic_pitch_class(&key->params.key) == (scenario->tonic + offset) % 12 &&
                    harmony_key_mode(&key->params.key) == mode);
         }
         /* A figure rides on a figurate return and only there (R-497). */

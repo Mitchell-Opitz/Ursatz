@@ -327,8 +327,8 @@ static bool addition_motive(const Motive *last, Rational room, int want, Motive 
 
 bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec) {
     const GrowLayout *layout = &spec->layout;
-    AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
-    int tonic = analysis_key_tonic_pitch_class(&ends_in);
+    SpelledKey ends_in = request->has_end_change ? request->end_key : request->key;
+    int tonic = spelled_key_tonic_pitch_class(&ends_in);
     int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
                : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + composer_material_third(ends_in.material)) % 12
                                                                       : -1;

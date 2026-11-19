@@ -28,7 +28,7 @@ typedef struct {
     char letter[PLAN_SECTION_LETTER_MAX];
     size_t bars; /* 0 when the plan has no meter */
     bool has_key;
-    AnalysisKey key; /* the key the section ends in */
+    SpelledKey key; /* the key the section ends in */
     CadenceType cadences[2];
     size_t cadence_count;
     bool has_pairing;
@@ -45,7 +45,7 @@ size_t api_bars_in(const PiecePlan *plan, Rational length);
 /* {"letter", "bars", "key", "cadences", "pairing", "returns"}, as the plan command lists a section. */
 cJSON *api_section_json(const ApiSection *section);
 /* The key as "D minor". */
-const char *api_key_name(const AnalysisKey *key, char *out, size_t size);
+const char *api_key_name(const SpelledKey *key, char *out, size_t size);
 
 /* --- the plan of a request ------------------------------------------------------------------------- */
 

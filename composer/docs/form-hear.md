@@ -58,7 +58,7 @@ an evaded (subverted) cadence, and a period whose consequent opens on I6 is hear
 The Analyzer is given the key under the span's start and finds its key regions from the notes. `FormHeard.cadences` lists
 the cadences heard, each with where its arrival chord starts (from the Analyzer's report) and its `CadenceType`.
 
-`form_hear_keys(plan, span, &keys, &count)` hears the same span once and returns the key regions of the Analyzer's chain (`analysis_chain_key_regions`): a `FormHeardKey` is the region's start in whole notes from the start of the plan and its `AnalysisKey`. The caller frees `keys`; with none heard `keys` is NULL and `count` 0. The same errors as `form_hear_in`. The piece rows' `key_heard` is the region in force at a section's start in the keys of the whole piece.
+`form_hear_keys(plan, span, &keys, &count)` hears the same span once and returns the key regions of the Analyzer's chain (`analysis_chain_key_regions`): a `FormHeardKey` is the region's start in whole notes from the start of the plan and its `SpelledKey`. The caller frees `keys`; with none heard `keys` is NULL and `count` 0. The same errors as `form_hear_in`. The piece rows' `key_heard` is the region in force at a section's start in the keys of the whole piece.
 
 ## The result
 

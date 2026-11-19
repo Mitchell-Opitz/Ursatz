@@ -257,7 +257,7 @@ typedef struct {
         int bars;
         CadenceType cadence;
         PlanMotiveRef motive;
-        AnalysisKey key;
+        SpelledKey key;
         PlanSchemaRef schema;
         PlanHarmonyShape harmony_shape;
         PlanAccompaniment accompaniment;

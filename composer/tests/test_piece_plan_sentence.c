@@ -233,7 +233,7 @@ int main(void) {
     memset(&bad_key, 0, sizeof(bad_key));
     bad_key.key = test_key(7, "major");
     assert(plan_lane_span_write(plan, key_span, &bad_key) == PLAN_ERR_GIVEN_LOCKED);
-    assert(analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, key_span)->key) == 0);
+    assert(spelled_key_tonic_pitch_class(&plan_lane_span_payload(plan, key_span)->key) == 0);
 
     plan_destroy(plan);
     return 0;

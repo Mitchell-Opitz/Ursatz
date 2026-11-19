@@ -15,7 +15,7 @@
 #include "model/time/note_value.h"
 #include "model/time/time_signature.h"
 #include "io/midi_importer.h"
-#include "analysis/notes/analysis_key.h"
+#include "theory/tonality/spelled_key.h"
 #include "chain/analysis_chain.h"
 #include "chain/tests/weighted_pipeline.h"
 #include "../key_index_test_util.h"
@@ -439,12 +439,12 @@ static Score run_adapter_alone(const Piece *piece) {
    annotation's home key as a major key index (as framework_v1_chain.h builds its chain). `p` is the pipeline run of the same piece. */
 static AnalysisChain *run_analysis_chain(const WeightedPipeline *p, const MeterMap *map, const Annotation *a) {
     size_t key_event_count = p->import.key_signatures.count;
-    AnalysisKeyEvent *key_events = (AnalysisKeyEvent *)calloc(key_event_count + 1, sizeof(AnalysisKeyEvent));
+    SpelledKeyEvent *key_events = (SpelledKeyEvent *)calloc(key_event_count + 1, sizeof(SpelledKeyEvent));
     assert(key_events != NULL);
     for (size_t i = 0; i < key_event_count; i++) {
         const MidiKeySignatureEvent *event = &p->import.key_signatures.events[i];
         key_events[i].time = event->position;
-        assert(analysis_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
+        assert(spelled_key_from_fifths(event->sharps_flats, test_materials()->major, &key_events[i].key));
     }
     AnalysisNoteSet set = {p->notes, p->note_count, map};
     AnalysisChainConfig config = analysis_chain_config_default();

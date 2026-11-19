@@ -23,7 +23,7 @@ static ComposerStatus fail(ComposerError *error, const char *path, const char *f
 
 /* The chords a request gives, and what a list of them is read as: see request_chords.h. */
 ComposerStatus request_read_chords(const cJSON *list, const char *base, const char *what, long first_bar, const PlanMeter *meter,
-                                   const AnalysisKey *key, long bars, GivenChord *chords, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t capacity,
+                                   const SpelledKey *key, long bars, GivenChord *chords, char numerals[][PLAN_ROMAN_NUMERAL_MAX], size_t capacity,
                                    size_t *chord_count, ComposerError *error) {
     if (!list || cJSON_IsNull(list)) {
         return COMPOSER_OK;
