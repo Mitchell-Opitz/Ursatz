@@ -6,6 +6,8 @@
 #include <string.h>
 
 #include <cJSON.h>
+
+#include <common/json.h>
 #include <model/pitch/pitch_arithmetic.h>
 #include <theory/harmony/harmonic_function.h>
 #include <theory/tonality/tonal_key.h>
@@ -758,6 +760,13 @@ static bool read_construction(JsonReader *reader, const cJSON *item, const char 
 #define TIME_LIMIT 1000000000L
 
 static bool json_read_rational(JsonReader *reader, const cJSON *item, const char *path, Rational *out) {
+    long long value_num;
+    long long value_den;
+    /* A time in range is read by the common codec; any other value falls through to the checks that say what is wrong. */
+    if (common_json_rational_read(item, COMMON_RATIONAL_OBJECT, &value_num, &value_den) && value_num >= -TIME_LIMIT &&
+        value_num <= TIME_LIMIT && value_den <= TIME_LIMIT) {
+        return rational_make(value_num, value_den, out) == RATIONAL_OK;
+    }
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object with num and den");
     }

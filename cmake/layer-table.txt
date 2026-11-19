@@ -43,7 +43,7 @@ group L0-L5 L0-L2 events containers structure
 group model identity core time pitch events containers structure
 group theory theory-framework theory-style theory-rules theory-vocabulary theory-knowledge theory-tonality theory-harmony theory-voicing theory-counterpoint theory-form theory-meter theory-galant theory-markings
 
-uses core            identity
+uses core            identity common
 uses time            L0-L1
 uses pitch           L0-L1
 uses events          L0-L2
@@ -97,7 +97,7 @@ uses reading model theory realization plan analysis chain cjson common
 # The plan group (library/plan, P60, R-605): the section description, shared by forms, plans and piece requests.
 module plan            library/plan               prefix plan/
 group plan plan
-uses plan model theory cjson
+uses plan model theory cjson common
 only ezxml library/io/musicxml_importer.c -- one MusicXML reader (it was test architecture_third_party)
 only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge library/theory/tests/tonality/test_region_relation.c -- only the snapshot reads the embedded files, and the region relation test reads the relation entries' examples from them
 

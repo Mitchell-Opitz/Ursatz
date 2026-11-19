@@ -7,33 +7,12 @@
 
 #include <cJSON.h>
 
+#include <common/files.h>
 #include <common/hash.h>
 #include "model/identity/entity_id.h"
 #include "theory/style/style_labels.h"
 #include "theory/style/style_model_build.h"
 #include "theory/style/style_profile.h"
-
-/* The whole file in a new NUL-terminated buffer; NULL when it cannot be read. */
-static char *read_all(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    char *text = NULL;
-    size_t size = 0;
-    if (fseek(file, 0, SEEK_END) == 0) {
-        long length = ftell(file);
-        if (length >= 0 && fseek(file, 0, SEEK_SET) == 0) {
-            text = malloc((size_t)length + 1);
-            size = text ? fread(text, 1, (size_t)length, file) : 0;
-            if (text) {
-                text[size] = '\0';
-            }
-        }
-    }
-    fclose(file);
-    return text;
-}
 
 static const char *string_member(const cJSON *object, const char *name) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
@@ -65,7 +44,8 @@ StyleModelFileResult style_model_file_read_without(const char *path, const char 
         }
     }
     *out = NULL;
-    char *text = read_all(path);
+    char *text = NULL;
+    common_file_read(path, &text, NULL, NULL);
     if (!text) {
         return STYLE_MODEL_FILE_ERR_IO;
     }

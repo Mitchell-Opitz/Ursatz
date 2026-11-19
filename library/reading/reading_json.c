@@ -7,6 +7,8 @@
 
 #include <cJSON.h>
 
+#include <common/json.h>
+
 #include "model/time/musical_time.h"
 #include "model/time/time_span.h"
 
@@ -431,11 +433,16 @@ static bool read_text_member(Reader *r, const cJSON *object, const char *path, c
 }
 
 static bool read_rational(Reader *r, const cJSON *item, const char *path, Rational *out) {
+    long long num;
+    long long den;
+    /* A time in range is read by the common codec; any other value falls through to the checks that say what is wrong. */
+    if (common_json_rational_read(item, COMMON_RATIONAL_OBJECT, &num, &den) && num >= -1000000000LL && num <= 1000000000LL &&
+        den <= 1000000000LL) {
+        return rational_make(num, den, out) == RATIONAL_OK || bad(r, path, "not a time");
+    }
     if (!cJSON_IsObject(item)) {
         return bad(r, path, "expected a time {\"num\", \"den\"}");
     }
-    long long num;
-    long long den;
     char at[READING_JSON_PATH_MAX];
     const cJSON *n = member(r, item, path, "num");
     child_member(at, path, "num");
