@@ -50,7 +50,8 @@ endif()
 ursatz_test(test_document_snapshots LIBS ursatz_analyzer analyzer_test_support cjson
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots" LABELS golden slow)
 
-ursatz_test_executable(test_analysis_result LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain
+ursatz_test_executable(test_analysis_result LIBS ursatz_analyzer analyzer_test_support cjson ursatz_chain
+    INCLUDES ${PROJECT_SOURCE_DIR}/src
     DEFINITIONS URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 ursatz_test(test_analysis_result_smoke TARGET test_analysis_result ARGS smoke)
 # Over 10 s in the fast set (about 43 s of CPU measured): runs nightly.
@@ -61,7 +62,7 @@ if(URSATZ_VALGRIND)
         valgrind)
 endif()
 
-ursatz_test_executable(test_chord_sequence LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
+ursatz_test_executable(test_chord_sequence LIBS ursatz_analyzer analyzer_test_support cjson ursatz_chain)
 ursatz_test(test_chord_sequence_smoke TARGET test_chord_sequence ARGS smoke)
 ursatz_test(test_chord_sequence TARGET test_chord_sequence LABELS slow)
 if(URSATZ_VALGRIND)
@@ -291,7 +292,8 @@ if(URSATZ_JSONSCHEMA_PYTHON)
         LABELS schema slow)
 endif()
 
-ursatz_test_executable(test_style_piece LIBS ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
+ursatz_test_executable(test_style_piece LIBS ursatz_analyzer analyzer_test_support cjson ursatz_chain
+    INCLUDES ${PROJECT_SOURCE_DIR}/src)
 ursatz_test(test_style_piece_smoke TARGET test_style_piece ARGS smoke)
 # Over 10 s in the fast set (the five pieces): runs nightly.
 ursatz_test(test_style_piece TARGET test_style_piece LABELS slow)
@@ -374,29 +376,6 @@ ursatz_test(test_cli_similar COMMAND ${CMAKE_COMMAND}
     LABELS slow
     PROPERTIES FIXTURES_REQUIRED similar_motive_file)
 
-ursatz_test_executable(test_composer_api LIBS ursatz_test_support ursatz_analyzer cjson
-    DEFINITIONS URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
-    URSATZ_COMPOSER_API_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/composer_api_work")
-ursatz_test(test_composer_api_smoke TARGET test_composer_api ARGS smoke PROPERTIES RESOURCE_LOCK composer_api_work)
-# Over 10 s in the fast set (about 130 s of CPU measured): runs nightly.
-ursatz_test(test_composer_api TARGET test_composer_api LABELS slow PROPERTIES RESOURCE_LOCK composer_api_work)
-if(URSATZ_VALGRIND)
-    ursatz_test(test_composer_api_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
-        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_composer_api> smoke LABELS slow
-        valgrind PROPERTIES RESOURCE_LOCK composer_api_work)
-endif()
-
-ursatz_test_executable(test_hearing LIBS ursatz_test_support ursatz_analyzer cjson ursatz_analyzer::chain
-    INCLUDES ${PROJECT_SOURCE_DIR}/src DEFINITIONS URSATZ_HEARING_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/hearing_work")
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/hearing_work)
-ursatz_test(test_hearing_smoke TARGET test_hearing ARGS smoke PROPERTIES RESOURCE_LOCK hearing_work)
-ursatz_test(test_hearing TARGET test_hearing LABELS slow PROPERTIES RESOURCE_LOCK hearing_work)
-if(URSATZ_VALGRIND)
-    ursatz_test(test_hearing_valgrind COMMAND ${URSATZ_VALGRIND} ${URSATZ_VALGRIND_ARGS}
-        --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp $<TARGET_FILE:test_hearing> smoke LABELS slow valgrind
-        PROPERTIES RESOURCE_LOCK hearing_work)
-endif()
-
 ursatz_test_executable(test_meter_check LIBS ursatz_analyzer analyzer_test_support cjson m
     DEFINITIONS URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 ursatz_test(test_meter_check_smoke TARGET test_meter_check ARGS smoke)
@@ -431,13 +410,11 @@ endif()
 
 ursatz_test(test_analyzer_version SOURCES test_version.c LIBS ursatz_test_support ursatz_analyzer)
 
-# Consumer isolation (A20261104-31): a target linking only ursatz_analyzer cannot include a chain header; one
-# linking ursatz_analyzer::chain reads the chain. The leak target must fail to compile, so it is left out of the default
-# build and built by consumer_isolation.cmake.
+# Consumer isolation (A20261104-31): a target linking only ursatz_analyzer sees the chain's result header but cannot include a chain
+# internal header. The leak target must fail to compile, so it is left out of the default build and built by
+# consumer_isolation.cmake.
 add_library(analyzer_consumer_plain OBJECT consumer/plain.c)
 target_link_libraries(analyzer_consumer_plain PRIVATE ursatz_analyzer)
-add_library(analyzer_consumer_chain OBJECT consumer/chain.c)
-target_link_libraries(analyzer_consumer_chain PRIVATE ursatz_analyzer::chain)
 add_library(analyzer_consumer_leak_chain OBJECT EXCLUDE_FROM_ALL consumer/leak_chain.c)
 target_link_libraries(analyzer_consumer_leak_chain PRIVATE ursatz_analyzer)
 ursatz_test(test_consumer_isolation COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR}

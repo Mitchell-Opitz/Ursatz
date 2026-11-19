@@ -19,7 +19,6 @@ add_library(ursatz_analyzer STATIC
     links/motive_links.c
     links/motive_link_cache.c
     links/motive_links_render.c
-    pipeline/composer_api.c
     util/json_util.c
     util/file_util.c
     util/misc_util.c
@@ -63,11 +62,6 @@ target_link_libraries(ursatz_analyzer
     PUBLIC ursatz_io ursatz_analysis ursatz_chain
     PRIVATE cjson
 )
-
-# Reading the chain's claims (analyzer_result_chain): the chain headers reach only a consumer that links this target.
-add_library(ursatz_analyzer_chain INTERFACE)
-add_library(ursatz_analyzer::chain ALIAS ursatz_analyzer_chain)
-target_link_libraries(ursatz_analyzer_chain INTERFACE ursatz_analyzer ursatz_chain)
 
 add_executable(ursatz-analyzer main.c)
 target_include_directories(ursatz-analyzer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

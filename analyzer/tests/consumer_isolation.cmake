@@ -1,4 +1,4 @@
-# Builds the consumer targets of tests/consumer. Needs -DBUILD_DIR. The plain consumer and the chain consumer must build;
+# Builds the consumer targets of tests/consumer. Needs -DBUILD_DIR. The plain consumer must build;
 # the leak consumer must fail with a missing header, not for another reason.
 function(build_target target out_result out_log)
     execute_process(COMMAND ${CMAKE_COMMAND} --build ${BUILD_DIR} --target ${target}
@@ -7,7 +7,7 @@ function(build_target target out_result out_log)
     set(${out_log} "${log}" PARENT_SCOPE)
 endfunction()
 
-foreach(target analyzer_consumer_plain analyzer_consumer_chain)
+foreach(target analyzer_consumer_plain)
     build_target(${target} result log)
     if(NOT result EQUAL 0)
         message(FATAL_ERROR "${target} must build:\n${log}")

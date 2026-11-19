@@ -8,12 +8,13 @@
 #include <io/midi_importer.h>
 #include <model/time/tempo_map.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/composer_api.h>
-#include <ursatz_analyzer/style_profile.h>
-#include <ursatz_analyzer/version.h>
+#include <chain/analysis_chain.h>
+#include <chain/chain_style.h>
+#include <io/imported_score.h>
+#include <theory/style/style_profile.h>
 
 #include <ursatz_composer/compose.h>
+#include <ursatz_composer/composer.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/lanes.h>
@@ -174,14 +175,15 @@ static const struct {
 };
 #define MELODY_COUNT (sizeof(MELODY) / sizeof(MELODY[0]))
 
-/* A plan heard whole: the render the result borrows from, and the result with its document. */
+/* A plan heard whole: the render the chain borrows from, the score view of it and the chain (R-618). */
 typedef struct {
     RenderedPlan rendered;
     int *midi;
-    AnalyzerResult *result;
+    ImportedScore score;
+    AnalysisChain *chain;
 } Heard;
 
-/* Renders and hears a whole plan in C major with the document rendered; the caller destroys *heard. */
+/* Renders and hears a whole plan in C major through the library chain; the caller destroys *heard. */
 static void analyze(const PiecePlan *plan, Heard *heard) {
     memset(heard, 0, sizeof(*heard));
     assert(plan_render(plan, &heard->rendered) == PLAN_RENDER_OK);
@@ -190,32 +192,33 @@ static void analyze(const PiecePlan *plan, Heard *heard) {
     for (size_t i = 0; i < heard->rendered.count; i++) {
         heard->midi[i] = (int)pitch_numeric_value_position_numerator(heard->rendered.pitch_values[i]);
     }
-    AnalyzerHearing hearing;
-    memset(&hearing, 0, sizeof(hearing));
-    hearing.events = (const NoteEvent *const *)heard->rendered.events;
-    hearing.count = heard->rendered.count;
-    hearing.midi = heard->midi;
-    hearing.meter = heard->rendered.meter_map;
-    hearing.has_key = true;
-    hearing.key_tonic_pitch_class = 0;
-    hearing.key_material = knowledge_snapshot_material(test_knowledge(), "omt.material.major");
-    hearing.streams = heard->rendered.part_index;
-    AnalyzerHearingOptions options = analyzer_hearing_options_default();
-    options.analysis.knowledge = test_knowledge();
-    assert(analyzer_hear(&hearing, &options, &heard->result) == ANALYZER_OK);
+    ImportedScoreView view = {.events = (const NoteEvent *const *)heard->rendered.events,
+                              .count = heard->rendered.count,
+                              .midi = heard->midi,
+                              .meter = heard->rendered.meter_map,
+                              .streams = heard->rendered.part_index,
+                              .has_key = true,
+                              .key_fifths = 0,
+                              .key_minor = false};
+    assert(imported_score_view(&view, &heard->score) == IMPORTED_SCORE_OK);
+    AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
+    config.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    assert(analysis_chain_run_score(&heard->score, &config, &heard->chain) == ANALYSIS_CHAIN_OK);
 }
 
-/* The profile of a heard analysis: the Analyzer's document of the result, counted. */
+/* The profile of a heard analysis: the chain's style piece (chain_style_piece), counted. */
 static StyleProfile *heard_profile(const Heard *heard) {
-    char *document = analysis_document_render_result("<fragment>", heard->result);
+    StylePiece piece = {0};
     StyleProfile *profile = style_profile_create();
-    assert(document && profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK);
-    free(document);
+    assert(profile && chain_style_piece(heard->chain, &piece) && style_profile_add_piece(profile, &piece) == STYLE_PROFILE_OK);
+    style_piece_destroy(&piece);
     return profile;
 }
 
 static void heard_destroy(Heard *heard) {
-    analyzer_result_destroy(heard->result);
+    analysis_chain_destroy(heard->chain);
+    imported_score_destroy(&heard->score);
     free(heard->midi);
     rendered_plan_destroy(&heard->rendered);
 }
@@ -431,7 +434,7 @@ static void write_style(const char *path) {
     Heard analysis;
     analyze(plan, &analysis);
     StyleProfile *profile = heard_profile(&analysis);
-    assert(style_model_file_write(profile, "block", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK);
+    assert(style_model_file_write(profile, "block", composer_version(), path) == STYLE_MODEL_FILE_OK);
     style_profile_destroy(profile);
     heard_destroy(&analysis);
     plan_destroy(plan);

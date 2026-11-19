@@ -5,7 +5,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/result_chain.h>
+#include "pipeline/analysis_result_internal.h"
 #include <ursatz_analyzer/style_profile.h>
 
 #include <chain/chain_style.h>
@@ -42,7 +42,7 @@ static void check_piece(const char *fixture) {
         StyleProfile *from_chain = style_profile_create();
         StylePiece piece = {0};
         CHECKF(json && from_json && from_chain && style_profile_add_document_json(from_json, json) == STYLE_PROFILE_OK &&
-                   chain_style_piece(analyzer_result_chain(result), &piece) &&
+                   chain_style_piece(analyzer_result_run_chain(result), &piece) &&
                    style_profile_add_piece(from_chain, &piece) == STYLE_PROFILE_OK,
                "%s: profiles", fixture);
         StyleStatistic *left = NULL, *right = NULL;

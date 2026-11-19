@@ -1,5 +1,4 @@
 #include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/result_chain.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -12,8 +11,6 @@ struct AnalyzerResult {
     AnalysisChain *chain; /* owned: the library chain and its collected result */
     const ImportedScore *notes;
     AnalyzerOptions options;
-    void *owner; /* what the chain borrows, released after it (a hearing's notes) */
-    void (*owner_destroy)(void *);
 };
 
 AnalyzerOptions analyzer_options_default(void) {
@@ -26,9 +23,6 @@ void analyzer_result_destroy(AnalyzerResult *result) {
         return;
     }
     analysis_chain_destroy(result->chain);
-    if (result->owner_destroy) {
-        result->owner_destroy(result->owner);
-    }
     free(result);
 }
 
@@ -60,10 +54,6 @@ AnalyzerStatus analyzer_analyze(const ImportedScore *notes, const AnalyzerOption
     return ANALYZER_OK;
 }
 
-const AnalysisChain *analyzer_result_chain(const AnalyzerResult *result) {
-    return result && result->notes->count > 0 ? result->chain : NULL;
-}
-
 const AnalysisChain *analyzer_result_run_chain(const AnalyzerResult *result) {
     return result ? result->chain : NULL;
 }
@@ -90,9 +80,4 @@ bool analyzer_result_take_report(AnalyzerResult *result, ChainResult *report) {
     }
     chain_result_take(result->chain, report);
     return true;
-}
-
-void analyzer_result_set_owner(AnalyzerResult *result, void *owner, void (*owner_destroy)(void *)) {
-    result->owner = owner;
-    result->owner_destroy = owner_destroy;
 }

@@ -5,8 +5,7 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#include <ursatz_analyzer/composer_api.h>
-#include <ursatz_analyzer/style_profile.h>
+#include <theory/style/style_profile.h>
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>

@@ -8,7 +8,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/result_chain.h>
+#include "pipeline/analysis_result_internal.h"
 
 #include <chain/analysis_chain.h>
 
@@ -50,7 +50,7 @@ static void strip_run_metadata(cJSON *root) {
 
 static void check_chain_against_document(const char *slug, const AnalyzerResult *result, const cJSON *document) {
     const ChainResult *report = analyzer_result_report(result);
-    const AnalysisChain *chain = analyzer_result_chain(result);
+    const AnalysisChain *chain = analyzer_result_run_chain(result);
 
     /* The voice-leading and melody results are the chain's own; the document aggregates them. */
     const AnalysisChainVoiceLeading *leading = analysis_chain_voice_leading(chain);
@@ -145,7 +145,7 @@ static void check_options(const char *fixture) {
     none.stages = 0;
     CHECKF(analyzer_analyze(&notes, &none, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no stages");
     analyzer_result_destroy(NULL);
-    CHECKF(analyzer_result_chain(NULL) == NULL && analyzer_result_report(NULL) == NULL, "chain or report of NULL");
+    CHECKF(analyzer_result_run_chain(NULL) == NULL && analyzer_result_report(NULL) == NULL, "chain or report of NULL");
 
     /* A partial stage set: the chain's results, an empty report view, no export. */
     AnalyzerOptions texture = test_analyzer_options();
@@ -153,7 +153,7 @@ static void check_options(const char *fixture) {
     result = NULL;
     CHECKF(analyzer_analyze(&notes, &texture, &result) == ANALYZER_OK && result, "texture stage only");
     if (result) {
-        const AnalysisChain *chain = analyzer_result_chain(result);
+        const AnalysisChain *chain = analyzer_result_run_chain(result);
         CHECKF(analysis_chain_texture(chain) != NULL, "texture results from the texture stage");
         CHECKF(analysis_chain_cadences(chain) == NULL, "cadence results without the stage");
         CHECKF(analyzer_result_report(result)->progression_count == 0, "progressions without the report");

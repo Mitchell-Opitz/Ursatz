@@ -1,10 +1,9 @@
-/* A consumer that links only ursatz_analyzer: every public header but result_chain.h, and nothing of the chain. */
+/* A consumer that links only ursatz_analyzer: every public header, and nothing of the chain's internals. */
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <chain/chain_result.h>
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/chord_sequence.h>
-#include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/motive_links.h>

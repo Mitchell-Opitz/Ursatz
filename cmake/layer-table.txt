@@ -125,7 +125,6 @@ generated analyzer version.h ursatz_analyzer_producer_key.h
 generated chain producer_key.h chain/producer_key.h
 
 uses analyzer-api  model theory analysis chain io
-allow analyzer/include/ursatz_analyzer/result_chain.h chain -- the chain's claims, for a consumer that links ursatz_analyzer::chain
 uses analyzer      model theory analysis chain io analyzer-api cjson ezxml
 uses composer      model theory realization plan analysis chain io analyzer-api composer-api cjson
 # The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.

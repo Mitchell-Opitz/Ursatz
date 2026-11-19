@@ -12,7 +12,7 @@
 /* The notes the result borrows. */
 const ImportedScore *analyzer_result_notes(const AnalyzerResult *result);
 
-/* The chain the result ran, also for a piece with no notes (analyzer_result_chain gives NULL for that). */
+/* The chain the result ran, also for a piece with no notes. The Analyzer's tests read the chain through it. */
 const AnalysisChain *analyzer_result_run_chain(const AnalyzerResult *result);
 
 /* The snapshot the analysis read its materials from (the options knowledge). */
@@ -23,9 +23,5 @@ bool analyzer_result_report_complete(const AnalyzerResult *result);
 
 /* Moves the report out into *report (the caller releases it with chain_result_destroy); the result keeps an empty one. */
 bool analyzer_result_take_report(AnalyzerResult *result, ChainResult *report);
-
-/* Gives the result something to release after the pass (the notes a hearing built). The result frees it on destroy;
-   the owner's destroy runs after the pass is released. */
-void analyzer_result_set_owner(AnalyzerResult *result, void *owner, void (*owner_destroy)(void *));
 
 #endif
