@@ -75,6 +75,10 @@ static void test_labels(void) {
     CHECKF(style_label_progression(pair, 0) == NULL, "empty progression has no label");
 
     StyleDimension dimension;
+    CHECKF(style_category_count() == 21 && style_category_name(0) != NULL && style_category_name(21) == NULL, "the category list");
+    for (size_t i = 0; i < style_category_count(); i++) {
+        CHECKF(style_category_dimension(style_category_name(i), &dimension), "category %zu has a dimension", i);
+    }
     CHECKF(style_category_dimension("chord-progression-3", &dimension) && dimension == STYLE_DIMENSION_HARMONY, "harmony category");
     CHECKF(style_category_dimension("syncopation-per-phrase", &dimension) && dimension == STYLE_DIMENSION_RHYTHM, "rhythm category");
     CHECKF(style_category_dimension("phrase-range", &dimension) && dimension == STYLE_DIMENSION_MELODY, "melody category");

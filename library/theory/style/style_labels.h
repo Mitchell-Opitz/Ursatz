@@ -51,6 +51,10 @@ bool style_dimension_from_name(const char *name, StyleDimension *out);
 /* The dimension a category belongs to; false for a category this module does not define. */
 bool style_category_dimension(const char *category, StyleDimension *out);
 
+/* The categories this module defines, in its order: how many, and the name of the i-th (NULL out of range). */
+size_t style_category_count(void);
+const char *style_category_name(size_t index);
+
 /*
  * A Roman numeral in root position: the inversion figure is dropped and a seventh chord keeps a 7, so "V6/5",
  * "V4/3" and "V4/2" give "V7", "I6/4" gives "I" and an applied chord keeps its target ("V6/5/V" gives "V7/V").

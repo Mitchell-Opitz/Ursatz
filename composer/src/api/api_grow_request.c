@@ -21,26 +21,14 @@
 
 /* --- the style categories --------------------------------------------------------------------------------- */
 
-static const char *const STYLE_CATEGORIES[] = {
-    STYLE_CATEGORY_CHORD_NUMERAL,     STYLE_CATEGORY_CHORD_PROGRESSION_2, STYLE_CATEGORY_CHORD_PROGRESSION_3,
-    STYLE_CATEGORY_CADENCE_TYPE,      STYLE_CATEGORY_HARMONIC_RHYTHM,     STYLE_CATEGORY_DURATION,
-    STYLE_CATEGORY_METER,             STYLE_CATEGORY_SYNCOPATION,         STYLE_CATEGORY_MELODIC_INTERVAL,
-    STYLE_CATEGORY_CONTOUR,           STYLE_CATEGORY_PHRASE_RANGE,        STYLE_CATEGORY_MOTIVE_DEGREES,
-    STYLE_CATEGORY_MOTIVE_INTERVALS,  STYLE_CATEGORY_MOTIVE_RHYTHM,       STYLE_CATEGORY_MOTIVE_NCT_FIGURE,
-    STYLE_CATEGORY_THEME_FORM,        STYLE_CATEGORY_PHRASE_LENGTH,       STYLE_CATEGORY_SECTION_LETTERS,
-    STYLE_CATEGORY_MODE,              STYLE_CATEGORY_TEMPO,               STYLE_CATEGORY_NOTE_DENSITY};
-
 ComposerStatus api_style_category_check(const char *name, ComposerError *error) {
-    bool known = false;
-    for (size_t i = 0; i < sizeof STYLE_CATEGORIES / sizeof *STYLE_CATEGORIES; i++) {
-        known = known || strcmp(name, STYLE_CATEGORIES[i]) == 0;
-    }
-    if (!known) {
+    StyleDimension dimension;
+    if (!style_category_dimension(name, &dimension)) {
         char list[640];
         size_t used = 0;
         list[0] = '\0';
-        for (size_t i = 0; i < sizeof STYLE_CATEGORIES / sizeof *STYLE_CATEGORIES && used < sizeof list; i++) {
-            int written = snprintf(list + used, sizeof list - used, "%s%s", i ? ", " : "", STYLE_CATEGORIES[i]);
+        for (size_t i = 0; i < style_category_count() && used < sizeof list; i++) {
+            int written = snprintf(list + used, sizeof list - used, "%s%s", i ? ", " : "", style_category_name(i));
             used += written > 0 ? (size_t)written : 0;
         }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without",

@@ -58,6 +58,14 @@ bool style_dimension_from_name(const char *name, StyleDimension *out) {
     return false;
 }
 
+size_t style_category_count(void) {
+    return sizeof(category_table) / sizeof(category_table[0]);
+}
+
+const char *style_category_name(size_t index) {
+    return index < style_category_count() ? category_table[index].category : NULL;
+}
+
 bool style_category_dimension(const char *category, StyleDimension *out) {
     if (!category || !out) {
         return false;
