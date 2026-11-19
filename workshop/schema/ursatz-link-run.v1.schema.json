@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-link-run.v1.schema.json",
+  "title": "Motive link run, format version 1",
+  "description": "library/links/<lnk>/run.json: a run of the motive linker (scope, status, progress and, once finished, the result).",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "id",
+    "scope",
+    "status",
+    "created_at"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "format": {
+      "const": "ursatz-link-run"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "object"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "finished_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+        "done",
+        "failed"
+      ]
+    },
+    "message": {
+      "type": "string"
+    },
+    "done": {
+      "type": "integer"
+    },
+    "total": {
+      "type": "integer"
+    },
+    "skipped": {
+      "type": "array"
+    },
+    "result": {}
+  }
+}

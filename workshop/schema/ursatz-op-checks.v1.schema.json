@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-op-checks.v1.schema.json",
+  "title": "Operation marks, format version 1",
+  "description": "projects/<prj>/items/<id>/op-checks.json: the marks Michelle gave a motif's operations.",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "checks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-op-checks"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "verdict",
+          "comment",
+          "seed",
+          "notes_text",
+          "date"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "verdict": {
+            "enum": [
+              "works",
+              "wrong"
+            ]
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "notes_text": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          }
+        }
+      }
+    }
+  }
+}

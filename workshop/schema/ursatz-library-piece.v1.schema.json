@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz/workshop/schema/ursatz-library-piece.v1.schema.json",
+  "title": "Library piece, format version 1",
+  "description": "library/pieces/<id>/piece.json: the piece's filename, source format, metadata and the keys its analysis was made with (staleness).",
+  "type": "object",
+  "required": [
+    "format",
+    "format_version",
+    "filename",
+    "source_format",
+    "uploaded_at",
+    "analyzer_version",
+    "document_schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "ursatz-library-piece"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "filename": {
+      "type": "string"
+    },
+    "source_format": {
+      "enum": [
+        "midi",
+        "musicxml"
+      ]
+    },
+    "uploaded_at": {
+      "type": "string"
+    },
+    "analyzer_version": {
+      "type": "string"
+    },
+    "document_schema_version": {
+      "type": "integer"
+    },
+    "producer_key": {
+      "type": "string"
+    },
+    "composer": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

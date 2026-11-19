@@ -6,6 +6,7 @@ add_library(ursatz_workshop STATIC
     src/base/last_error.c
     src/items/collections.c
     src/items/data_check.c
+    src/items/formats.c
     src/items/ids.c
     src/items/library_pieces.c
     src/items/library_metadata.c

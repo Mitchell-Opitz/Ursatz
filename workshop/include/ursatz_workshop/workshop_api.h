@@ -19,6 +19,29 @@
 typedef struct Workshop Workshop;
 
 /*
+ * The data folder layout and its formats (R-642). The folder holds data-folder.json (format WORKSHOP_FORMAT_DATA_FOLDER); every
+ * file the workshop owns carries "format" (one of the names below) and "format_version" (a whole number from 1, the version
+ * this build writes and the newest it reads). Files other parts own keep their own versions: the analysis document, the style
+ * model, the motive link cache and a composed version's request.json.
+ */
+#define WORKSHOP_LAYOUT_VERSION 1
+#define WORKSHOP_FORMAT_DATA_FOLDER "ursatz-data-folder"
+#define WORKSHOP_FORMAT_CONFIG "ursatz-config"
+#define WORKSHOP_FORMAT_PROJECT "ursatz-project"
+#define WORKSHOP_FORMAT_ITEM "ursatz-item"
+#define WORKSHOP_FORMAT_ITEM_VERSION "ursatz-item-version"
+#define WORKSHOP_FORMAT_MOTIF_BODY "ursatz-motif-body"
+#define WORKSHOP_FORMAT_THEME_BODY "ursatz-theme-body"
+#define WORKSHOP_FORMAT_PIECE_BODY "ursatz-piece-body"
+#define WORKSHOP_FORMAT_OP_CHECKS "ursatz-op-checks"
+#define WORKSHOP_FORMAT_SUBJECT "ursatz-subject"
+#define WORKSHOP_FORMAT_LIBRARY_PIECE "ursatz-library-piece"
+#define WORKSHOP_FORMAT_COLLECTION "ursatz-collection"
+#define WORKSHOP_FORMAT_STYLE "ursatz-style"
+#define WORKSHOP_FORMAT_LINK_RUN "ursatz-link-run"
+#define WORKSHOP_FORMAT_RENDER "ursatz-render"
+
+/*
  * The settings of a workshop. A 0 member, or a NULL one, is unset: the layer below answers. data_dir is the data folder, config_path
  * the settings file (default "<data_dir>/ursatz.json"), port the HTTP port, http_threads the server's request threads and
  * job_workers the threads that run long jobs.
