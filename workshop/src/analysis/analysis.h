@@ -63,7 +63,9 @@ UrsatzStatus workshop_analysis_import_and_save(const char *pieces_dir, const uns
 /*
  * Loads one piece: its meta.json fields, its stored analysis document, and
  * the xml:id the score export writes for each note of the source, in the
- * order of the document's note_ids (R-085).
+ * order of the document's note_ids (R-085). A read changes nothing (R-645): the stored analysis is served as it is, and the
+ * detail's analysis_status names why it is stale (not "current"); workshop_analysis_ensure_current, which only job code calls,
+ * makes it current.
  *
  * URSATZ_ERR_NOT_FOUND if no piece with this id exists. On
  * URSATZ_OK, *out_detail is newly allocated and caller-owned
@@ -184,7 +186,7 @@ UrsatzStatus workshop_analysis_get_piece_playback(const char *pieces_dir, const 
 
 /*
  * The piece's text export (the Analyzer's analyzer_text_export_piece, docs/text-export.md), under the piece lock: the
- * cached import, the stored analysis.json (made current first, as workshop_analysis_get_piece does) and the title
+ * cached import, the stored analysis.json (as it is: a read writes nothing) and the title
  * from meta.json (the filename without its extension). first_measure and last_measure are an inclusive range of
  * measure numbers as written in the score; 0 and 0 export the whole piece. The GUI builds no line of the text.
  *

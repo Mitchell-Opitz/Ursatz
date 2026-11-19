@@ -1231,9 +1231,24 @@ async function fetchDocumentSections(id, names) {
 /* The piece detail with the document summary (metadata and meter), then the sections the score draws its layers
  * from. The other sections load when their tab opens (renderAnalysisTabs). The detail's `document` is the cache's
  * sections so far; `documentCache` is the cache. */
-async function loadAnalysisPiece(id) {
+async function fetchAnalysisPiece(id) {
   const res = await fetch(`/api/analyzer/pieces/${encodeURIComponent(id)}?document=summary`);
-  const data = await res.json();
+  return res.json();
+}
+
+async function loadAnalysisPiece(id) {
+  let data = await fetchAnalysisPiece(id);
+  if (data.ok && data.stale) {
+    /* The backend answers the stored analysis and says it is stale (R-645): a re-analysis job makes it current, then the piece is read
+     * again. When the job fails the stored analysis is shown as it is. */
+    const run = await BackendJobs.runJob({ url: `/api/analyzer/pieces/${encodeURIComponent(id)}/reanalyze`, method: "POST" });
+    if (run.status === 200) {
+      const fresh = await fetchAnalysisPiece(id);
+      if (fresh.ok) {
+        data = fresh;
+      }
+    }
+  }
   if (!data.ok) {
     return data;
   }

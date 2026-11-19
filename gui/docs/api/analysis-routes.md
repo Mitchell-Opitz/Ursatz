@@ -32,8 +32,9 @@ stops it between pieces and nothing is written.
   byte order). A tag repeated within one piece counts once.
 - `GET /api/analyzer/pieces/<id>`:
   `{"ok":true,"id","filename","format","uploaded_at","notation","analysis_status","note_xml_ids":[...],"document":{...}}`.
-  A stale analysis is analyzed again before it is read; when that fails, the stored document is served with
-  `analysis_status` naming why and `"stale"` set to the same name (absent when current). The header shows a stale status.
+  A read writes nothing: the stored document is served, and when it is not current `analysis_status` names why and `"stale":true` is
+  added (absent when current). The frontend then runs `POST .../reanalyze` as a job and reads the piece again. The header shows a
+  stale status.
   `notation` is the piece's notation override or `null`. `document` is the analysis document as stored. `note_xml_ids[i]` is the
   `<note xml:id>` the score export writes for note `i` of the source; a
   claim's `note_ids` are indices into this array. An unknown id returns

@@ -173,18 +173,36 @@ static void test_detail(const char *id) {
     document_analyzer_version(id, version, sizeof(version));
     check_quiet(strcmp(version, "0.0.1-old") == 0, "the document is stale before the first open");
 
+    /* A read answers the stored analysis, says it is stale and writes nothing. */
     WorkshopPieceDetail *detail = NULL;
     check_quiet(workshop_analysis_get_piece(WORKSHOP_DIR_PIECES, id, &detail) == URSATZ_OK && detail, "first open");
-    check_quiet(detail && strcmp(detail->analysis_status, "current") == 0, "the first open serves a current analysis");
+    check_quiet(detail && strcmp(detail->analysis_status, "stale_analyzer") == 0, "the first open says the analysis is stale");
     workshop_piece_detail_destroy(detail);
     document_analyzer_version(id, version, sizeof(version));
-    check_quiet(strcmp(version, analyzer_version()) == 0, "the first open analyzed the piece again");
+    check_quiet(strcmp(version, "0.0.1-old") == 0, "the first open leaves the stored analysis as it was");
+    cJSON *answer = NULL;
+    check_quiet(workshop_library_piece_json(WORKSHOP_DIR_PIECES, id, true, &answer) == URSATZ_OK && answer, "the piece's answer");
+    const cJSON *stale = cJSON_GetObjectItemCaseSensitive(answer, "stale");
+    check_quiet(cJSON_IsTrue(stale), "the piece's answer says stale: true");
+    cJSON_Delete(answer);
+
+    /* The re-analysis (a job's work) makes it current. */
+    check_quiet(workshop_analysis_ensure_current(WORKSHOP_DIR_PIECES, id) == URSATZ_OK, "re-analyze the stale piece");
+    document_analyzer_version(id, version, sizeof(version));
+    check_quiet(strcmp(version, analyzer_version()) == 0, "the re-analysis analyzed the piece again");
+    detail = NULL;
+    check_quiet(workshop_analysis_get_piece(WORKSHOP_DIR_PIECES, id, &detail) == URSATZ_OK && detail &&
+                    strcmp(detail->analysis_status, "current") == 0,
+                "the next read serves a current analysis");
+    workshop_piece_detail_destroy(detail);
+    answer = NULL;
+    check_quiet(workshop_library_piece_json(WORKSHOP_DIR_PIECES, id, true, &answer) == URSATZ_OK && answer, "the current piece's answer");
+    check_quiet(cJSON_GetObjectItemCaseSensitive(answer, "stale") == NULL, "a current piece's answer has no stale member");
+    cJSON_Delete(answer);
 
     add_marker(id);
-    detail = NULL;
-    check_quiet(workshop_analysis_get_piece(WORKSHOP_DIR_PIECES, id, &detail) == URSATZ_OK, "second open");
-    workshop_piece_detail_destroy(detail);
-    check_quiet(has_marker(id), "the second open does not analyze again");
+    check_quiet(workshop_analysis_ensure_current(WORKSHOP_DIR_PIECES, id) == URSATZ_OK, "ensure a current piece");
+    check_quiet(has_marker(id), "a current piece is not analyzed again");
 }
 
 static void test_backfill(const char *id) {
@@ -196,9 +214,16 @@ static void test_backfill(const char *id) {
     cJSON_Delete(meta);
     add_marker(id);
 
+    /* A read does not fill it in. */
     WorkshopPieceDetail *detail = NULL;
     check_quiet(workshop_analysis_get_piece(WORKSHOP_DIR_PIECES, id, &detail) == URSATZ_OK, "open an old piece.json");
     workshop_piece_detail_destroy(detail);
+    meta = test_read_json(path);
+    check_quiet(cJSON_GetObjectItemCaseSensitive(meta, "producer_key") == NULL, "a read does not write ursatz_commit");
+    cJSON_Delete(meta);
+
+    /* The job's call does, from the document, without analyzing again. */
+    check_quiet(workshop_analysis_ensure_current(WORKSHOP_DIR_PIECES, id) == URSATZ_OK, "ensure an old piece.json");
     meta = test_read_json(path);
     check_quiet(strcmp(str(meta, "producer_key"), analyzer_producer_key()) == 0,
           "ursatz_commit comes from the document");

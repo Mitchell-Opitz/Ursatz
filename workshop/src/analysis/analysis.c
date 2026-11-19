@@ -301,15 +301,10 @@ static WorkshopImportEntry *acquire_import(const char *dir_path, const char *id,
     return entry;
 }
 
-static UrsatzStatus ensure_current_unlocked(const char *pieces_dir, const char *id);
-
 static UrsatzStatus get_piece_unlocked(const char *pieces_dir, const char *id,
                                                         WorkshopPieceDetail **out_detail) {
-    /* A stored analysis from another schema, Analyzer or Ursatz is analyzed again, once. When that fails the stored
-       document is served and its status says why it is stale. */
-    if (ensure_current_unlocked(pieces_dir, id) == URSATZ_ERR_NOT_FOUND) {
-        return workshop_fail(URSATZ_ERR_NOT_FOUND, NULL);
-    }
+    /* A read changes nothing (R-645): the stored analysis is served as it is, and its status says when it is stale; a re-analysis job
+       makes it current. */
     char dir_path[320];
     if (!workshop_library_piece_dir(pieces_dir, id, dir_path, sizeof(dir_path))) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, NULL);
@@ -601,10 +596,6 @@ static UrsatzStatus get_piece_playback_unlocked(const char *pieces_dir, const ch
 
 static UrsatzStatus get_piece_export_unlocked(const char *pieces_dir, const char *id, int first_measure,
                                                               int last_measure, char **out_text) {
-    UrsatzStatus current = ensure_current_unlocked(pieces_dir, id);
-    if (current == URSATZ_ERR_NOT_FOUND) {
-        return current;
-    }
     char dir_path[320];
     if (!workshop_library_piece_dir(pieces_dir, id, dir_path, sizeof(dir_path))) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, NULL);
@@ -745,7 +736,6 @@ void workshop_piece_detail_destroy(WorkshopPieceDetail *detail) {
 UrsatzStatus workshop_analysis_get_piece(const char *pieces_dir, const char *id,
                                                         WorkshopPieceDetail **out_detail) {
     UrsatzStatus result;
-    (void)workshop_analysis_ensure_current(pieces_dir, id); /* a stale analysis is made again in a transaction of its own (B10 moves it to a job) */
     if (!workshop_library_piece_lock_enter(id, &result)) {
         return result;
     }
@@ -984,9 +974,9 @@ UrsatzStatus workshop_library_piece_json(const char *pieces_dir, const char *id,
     }
     ok = ok && cJSON_AddStringToObject(object, "analysis_status", detail->analysis_status ? detail->analysis_status : "unreadable");
     if (ok && detail->analysis_status && strcmp(detail->analysis_status, "current") != 0) {
-        /* The stored document is served as it is: a re-analysis failed (or the piece was written by a build without this check);
-           the status names why it is stale. */
-        ok = cJSON_AddStringToObject(object, "stale", detail->analysis_status) != NULL;
+        /* The stored document is served as it is: another schema, Analyzer or Ursatz wrote it (analysis_status names which). The caller
+           starts a re-analysis job and reads the piece again when it is done. */
+        ok = cJSON_AddBoolToObject(object, "stale", 1) != NULL;
     }
     for (size_t i = 0; ok && i < detail->note_count; i++) {
         cJSON *note = cJSON_CreateString(detail->note_xml_ids[i]);

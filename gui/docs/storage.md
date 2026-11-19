@@ -58,11 +58,12 @@ Staleness keys: a stored analysis is current only when its `schema_version`, `me
 `metadata.producer_key` (the Analyzer's producer key) all equal this build's (`analyzer_document_status` on `analysis.json`; Analyzer
 `staleness.h`). `meta.json` holds the same three values as `document_schema_version`, `analyzer_version` and
 `ursatz_commit`, so the Library list reads the flag without opening a document. A `meta.json` from before
-`ursatz_commit` gets it from its document's `metadata.producer_key` the first time the piece is opened (written back
-under the piece lock); with neither it is stale. A stale analysis is analyzed again once, under the piece lock, when
-the piece is opened, when a style is built from it and before a link run reads it (`workshop_analysis_ensure_current`);
-the link worker's re-analysis after a feature or format error stays as a fallback. If that analysis fails, the
-stored document is served. Motif and theme analyses are Composer output, not analysis documents, and are not checked.
+`ursatz_commit` gets it from its document's `metadata.producer_key` when the piece is analyzed or checked by a job
+(`workshop_analysis_ensure_current`, under the piece lock); with neither it is stale. A read writes nothing (R-645): opening a
+piece or its export answers the stored analysis, and the piece's answer says `"stale": true` when it is not current. A stale analysis
+is analyzed again by a job: the frontend starts a re-analysis when it opens a stale piece and reads the piece again when it is done; a
+style build and a link run check each piece they read inside their own jobs; the link worker's re-analysis after a feature or format
+error stays as a fallback. If the analysis fails, the stored document is served. Motif and theme analyses are Composer output, not analysis documents, and are not checked.
 Pieces saved by earlier versions (`pieces/<id>.db`) are ignored: they are
 not listed and cannot be opened, so upload those files again.
 
