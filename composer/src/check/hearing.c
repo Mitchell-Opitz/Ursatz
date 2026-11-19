@@ -8,18 +8,17 @@
 #include <model/time/duration.h>
 #include <model/time/musical_time.h>
 #include <model/time/temporal_anchor.h>
+#include <io/imported_score.h>
 #include <theory/tonality/common_practice_materials.h>
-
-#include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/composer_api.h>
+#include <theory/tonality/tonal_key.h>
 
 #include <ursatz_composer/lanes.h>
 
-/* Test only (hearing.h): how many spans were handed to the Analyzer. Not static, so it is not the file-scope state
+/* Test only (hearing.h): how many spans were run through the library chain. Not static, so it is not the file-scope state
    tools/ci/check-statics.sh refuses; nothing in src reads it. */
-atomic_size_t hearing_analyzer_calls_made;
+atomic_size_t hearing_chain_runs_made;
 
-/* One span heard: the result and the arrays it borrows, kept together. */
+/* One span heard: the chain, the score view it ran on and the arrays the view borrows, kept together. */
 typedef struct {
     PlanSpan span;
     const NoteEvent **events;
@@ -27,7 +26,8 @@ typedef struct {
     size_t *streams;
     size_t count;
     size_t *source; /* each heard event's index among the rendered events */
-    AnalyzerResult *result;
+    ImportedScore *score; /* the view of the events (imported_score_view); the chain borrows it */
+    AnalysisChain *chain;
 } HeardSpan;
 
 struct ComposerHearing {
@@ -38,12 +38,16 @@ struct ComposerHearing {
     HeardSpan *spans;
     size_t span_count;
     size_t span_capacity;
-    /* The snapshot the Analyzer reads its materials from (the call context's); borrowed, it outlives the hearing. */
+    /* The snapshot the chain reads its materials from (the call context's); borrowed, it outlives the hearing. */
     const KnowledgeSnapshot *knowledge;
 };
 
 static void heard_span_release(HeardSpan *heard) {
-    analyzer_result_destroy(heard->result);
+    analysis_chain_destroy(heard->chain);
+    if (heard->score) {
+        imported_score_destroy(heard->score);
+        free(heard->score);
+    }
     free(heard->events);
     free(heard->midi);
     free(heard->streams);
@@ -129,14 +133,20 @@ static HeardSpan *find_heard(ComposerHearing *hearing, PlanSpan span) {
     return NULL;
 }
 
-AnalyzerHearingOptions hearing_analyzer_options(const KnowledgeSnapshot *knowledge) {
-    AnalyzerHearingOptions options = analyzer_hearing_options_default();
-    options.analysis.harmonic_spans = false;
-    options.analysis.knowledge = knowledge;
-    return options;
+/* The key signature (sharps or flats and the mode) of a tonic pitch class and a material; false when the material has none. */
+static bool key_signature_of(int tonic, const PitchMaterial *material, int *fifths, bool *is_minor) {
+    PitchLetter letter;
+    int accidental;
+    if (!material || !standard_tonality_key_tonic_of_pitch_class_material(tonic, material, &letter, &accidental) ||
+        !standard_tonality_key_fifths_of(letter, accidental, material, fifths)) {
+        return false;
+    }
+    CommonPracticeKeyMode mode;
+    *is_minor = common_practice_key_mode_of(material, &mode) && mode == COMMON_PRACTICE_KEY_MINOR;
+    return true;
 }
 
-HearingResult hearing_piece(ComposerHearing *hearing, const AnalyzerResult **out) {
+HearingResult hearing_piece(ComposerHearing *hearing, const AnalysisChain **out) {
     if (!hearing) {
         if (out) {
             *out = NULL;
@@ -150,16 +160,16 @@ HearingResult hearing_piece(ComposerHearing *hearing, const AnalyzerResult **out
     return hearing_section(hearing, whole, out);
 }
 
-size_t hearing_source_event(const ComposerHearing *hearing, const AnalyzerResult *result, size_t index) {
+size_t hearing_source_event(const ComposerHearing *hearing, const AnalysisChain *chain, size_t index) {
     for (size_t i = 0; hearing && i < hearing->span_count; i++) {
-        if (hearing->spans[i].result == result && index < hearing->spans[i].count) {
+        if (hearing->spans[i].chain == chain && index < hearing->spans[i].count) {
             return hearing->spans[i].source[index];
         }
     }
     return (size_t)-1;
 }
 
-HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const AnalyzerResult **out) {
+HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const AnalysisChain **out) {
     if (!out) {
         return HEARING_ERR_NULL;
     }
@@ -169,7 +179,7 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
     }
     HeardSpan *cached = find_heard(hearing, span);
     if (cached) {
-        *out = cached->result;
+        *out = cached->chain;
         return HEARING_OK;
     }
     Rational end;
@@ -207,29 +217,44 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
         return HEARING_ERR_NOT_WRITTEN;
     }
     heard.count = count;
-    AnalyzerHearing input;
-    memset(&input, 0, sizeof(input));
-    input.events = (const NoteEvent *const *)heard.events;
-    input.count = count;
-    input.midi = heard.midi;
-    input.meter = rendered->meter_map;
-    input.has_key = true;
-    input.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
     /* The key's mode (major or minor) picks the major or natural minor material of the hearing's snapshot. */
     CommonPracticeMaterials materials;
     if (!common_practice_materials_resolve(hearing->knowledge, &materials, NULL, 0)) {
         heard_span_release(&heard);
         return HEARING_ERR_ANALYSIS;
     }
-    input.key_material = common_practice_material(
-        &materials, composer_key_is_minor(&key) ? COMMON_PRACTICE_KEY_MINOR : COMMON_PRACTICE_KEY_MAJOR);
-    input.streams = heard.streams;
-    AnalyzerHearingOptions options = hearing_analyzer_options(hearing->knowledge);
-    atomic_fetch_add(&hearing_analyzer_calls_made, 1);
-    AnalyzerStatus status = analyzer_hear(&input, &options, &heard.result);
-    if (status != ANALYZER_OK) {
+    ImportedScoreView view = {.events = (const NoteEvent *const *)heard.events,
+                              .count = count,
+                              .midi = heard.midi,
+                              .meter = rendered->meter_map,
+                              .streams = heard.streams,
+                              .has_key = true};
+    if (!key_signature_of(analysis_key_tonic_pitch_class(&key),
+                          common_practice_material(&materials, composer_key_is_minor(&key) ? COMMON_PRACTICE_KEY_MINOR
+                                                                                           : COMMON_PRACTICE_KEY_MAJOR),
+                          &view.key_fifths, &view.key_minor)) {
         heard_span_release(&heard);
-        return status == ANALYZER_ERR_ALLOC ? HEARING_ERR_ALLOC : HEARING_ERR_ANALYSIS;
+        return HEARING_ERR_ANALYSIS;
+    }
+    heard.score = calloc(1, sizeof(*heard.score));
+    if (!heard.score) {
+        heard_span_release(&heard);
+        return HEARING_ERR_ALLOC;
+    }
+    if (imported_score_view(&view, heard.score) != IMPORTED_SCORE_OK) {
+        free(heard.score);
+        heard.score = NULL;
+        heard_span_release(&heard);
+        return HEARING_ERR_ANALYSIS;
+    }
+    AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = hearing->knowledge;
+    config.stages = ANALYSIS_CHAIN_STAGE_ALL; /* the style distance reads the result-only stages (progressions, form plan) */
+    atomic_fetch_add(&hearing_chain_runs_made, 1);
+    AnalysisChainStatus status = analysis_chain_run_score(heard.score, &config, &heard.chain);
+    if (status != ANALYSIS_CHAIN_OK) {
+        heard_span_release(&heard);
+        return status == ANALYSIS_CHAIN_ERR_ALLOC ? HEARING_ERR_ALLOC : HEARING_ERR_ANALYSIS;
     }
     if (hearing->span_count == hearing->span_capacity) {
         size_t grown = hearing->span_capacity ? hearing->span_capacity * 2 : 8;
@@ -242,6 +267,6 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
         hearing->span_capacity = grown;
     }
     hearing->spans[hearing->span_count] = heard;
-    *out = hearing->spans[hearing->span_count++].result;
+    *out = hearing->spans[hearing->span_count++].chain;
     return HEARING_OK;
 }

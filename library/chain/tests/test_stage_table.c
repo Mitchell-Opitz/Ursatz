@@ -80,7 +80,7 @@ static void test_knowledge_refusal(void) {
 
 int main(void) {
     assert(ANALYSIS_CHAIN_STAGE_COUNT == 12u);
-    assert(ANALYSIS_CHAIN_STAGE_ALL == 0xFFFu);
+    assert(ANALYSIS_CHAIN_STAGE_PERCEPTION == 0xFFFu);
 
     unsigned seen = 0;
     unsigned earlier = 0;
@@ -97,17 +97,19 @@ int main(void) {
         }
         assert((unsigned)stage->error == (unsigned)ANALYSIS_CHAIN_ERR_SEGMENTS + index);
         assert(stage->name != NULL && stage->name[0] != '\0');
-        assert(stage->prepare != NULL || stage->run_pass != NULL || stage->finish != NULL);
+        /* The meter row has no step of its own: its bit selects the collected rhythm stage, the one meter analysis (R-616). */
+        assert(stage->prepare != NULL || stage->run_pass != NULL || stage->finish != NULL ||
+               stage->bit == ANALYSIS_CHAIN_STAGE_METER);
         assert(strcmp(analysis_chain_stage_name(stage->error), stage->name) == 0);
         for (size_t other = 0; other < row; other++) {
             assert(strcmp(analysis_chain_stages[other].name, stage->name) != 0);
         }
         earlier |= stage->bit;
     }
-    assert(seen == ANALYSIS_CHAIN_STAGE_ALL);
+    assert(seen == ANALYSIS_CHAIN_STAGE_PERCEPTION);
     assert(analysis_chain_stage_name(ANALYSIS_CHAIN_ERR_ALLOC) == NULL);
 
-    for (unsigned mask = 0; mask <= ANALYSIS_CHAIN_STAGE_ALL; mask++) {
+    for (unsigned mask = 0; mask <= ANALYSIS_CHAIN_STAGE_PERCEPTION; mask++) {
         assert(table_closure(mask) == old_stage_closure(mask));
     }
 

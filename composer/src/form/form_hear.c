@@ -7,8 +7,7 @@
 #include <theory/form/phrase_level_form.h>
 #include <theory/tonality/common_practice_materials.h>
 #include <model/time/time_span.h>
-#include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/result_chain.h>
+#include <chain/chain_result.h>
 #include <chain/analysis_chain.h>
 
 #include <ursatz_composer/lanes.h>
@@ -85,9 +84,9 @@ static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan range) 
 }
 
 /* The cadences the Analyzer heard over the span, with where each arrives (the start of the chord it arrives on). */
-static FormHearResult copy_cadences(const AnalyzerResult *result, FormHeard *out) {
-    const HarmonyCadences *cadences = analysis_chain_cadences(analyzer_result_chain(result));
-    const AnalysisReport *report = analyzer_result_report(result);
+static FormHearResult copy_cadences(const AnalysisChain *chain, FormHeard *out) {
+    const HarmonyCadences *cadences = analysis_chain_cadences(chain);
+    const ChainResult *report = analysis_chain_result(chain);
     if (!cadences || cadences->count == 0) {
         return FORM_HEAR_OK;
     }
@@ -97,20 +96,18 @@ static FormHearResult copy_cadences(const AnalyzerResult *result, FormHeard *out
     }
     for (size_t i = 0; i < cadences->count; i++) {
         size_t first = cadences->items[i].arrival_first;
-        if (first >= report->entry_count ||
-            rational_make(report->entries[first].time_numerator, report->entries[first].time_denominator,
-                          &out->cadences[i].arrival) != RATIONAL_OK) {
+        if (first >= report->entry_count) {
             return FORM_HEAR_ERR_ANALYSIS;
         }
+        out->cadences[i].arrival = report->entries[first].time;
         out->cadences[i].type = cadences->items[i].type;
     }
     out->cadence_count = cadences->count;
     return FORM_HEAR_OK;
 }
 
-/* The Analyzer's themes as heard themes. */
-static FormHearResult copy_themes(const AnalyzerResult *result, const MeterMap *meter_map, FormHeard *out) {
-    const AnalysisChain *chain = analyzer_result_chain(result);
+/* The chain's themes as heard themes. */
+static FormHearResult copy_themes(const AnalysisChain *chain, const MeterMap *meter_map, FormHeard *out) {
     const StandardFormPhrases *phrases = analysis_chain_phrases(chain);
     const StandardFormThemes *themes = analysis_chain_themes(chain);
     out->phrase_count = phrases ? phrases->count : 0;
@@ -157,7 +154,7 @@ FormHearResult form_hear_in(ComposerHearing *hearing, const PiecePlan *plan, Pla
     if (!harmony_read_metre(plan, span, &metre)) {
         return FORM_HEAR_ERR_METER;
     }
-    const AnalyzerResult *result = NULL;
+    const AnalysisChain *result = NULL;
     FormHearResult status = result_of(hearing_section(hearing, span, &result));
     if (status == FORM_HEAR_OK) {
         status = copy_cadences(result, out);
@@ -172,9 +169,9 @@ FormHearResult form_hear_in(ComposerHearing *hearing, const PiecePlan *plan, Pla
 }
 
 /* The key regions the Analyzer heard over the span, with where each starts. */
-static FormHearResult copy_keys(const AnalyzerResult *result, const CommonPracticeMaterials *materials, FormHeardKey **out,
+static FormHearResult copy_keys(const AnalysisChain *chain, const CommonPracticeMaterials *materials, FormHeardKey **out,
                                 size_t *count) {
-    const CommonPracticeKeyRegions *regions = analysis_chain_key_regions(analyzer_result_chain(result));
+    const CommonPracticeKeyRegions *regions = analysis_chain_key_regions(chain);
     if (!regions || regions->region_count == 0) {
         return FORM_HEAR_OK;
     }
@@ -224,7 +221,7 @@ FormHearResult form_hear_keys(const PiecePlan *plan, const KnowledgeSnapshot *kn
     if (status == FORM_HEAR_OK && !harmony_read_metre(plan, span, &metre)) {
         status = FORM_HEAR_ERR_METER;
     }
-    const AnalyzerResult *result = NULL;
+    const AnalysisChain *result = NULL;
     if (status == FORM_HEAR_OK) {
         status = result_of(hearing_section(hearing, span, &result));
     }

@@ -14,7 +14,7 @@
  */
 
 static void assert_score(SimilarityScore score, unsigned long numerator, unsigned long denominator) {
-    assert(score.numerator == numerator && score.denominator == denominator);
+    assert(score.num == numerator && score.den == denominator);
 }
 
 static SimilarityModel *make_model(const SimilarityDimensionWeight *weights, size_t count) {
@@ -51,8 +51,8 @@ static void test_interval_dimension(void) {
     assert_score(score, 0, 1);
 
     /* An empty sequence cannot be compared; missing arguments are reported. The output is untouched on error. */
-    score.numerator = 5;
-    score.denominator = 5;
+    score.num = 5;
+    score.den = 5;
     assert(similarity_interval_score(melody, 0, melody, 4, &score) == SIMILARITY_SCORE_ERR_INVALID_INPUT);
     assert(similarity_interval_score(NULL, 0, melody, 4, &score) == SIMILARITY_SCORE_ERR_INVALID_INPUT);
     assert(similarity_interval_score(NULL, 4, melody, 4, &score) == SIMILARITY_SCORE_ERR_NULL_ARGUMENT);
@@ -274,8 +274,8 @@ static void test_transposition_rhythm_and_extremes_under_a_model(void) {
     /* A counted dimension with nothing to compare is invalid input; missing arguments are reported. The output is
        untouched on error. */
     SimilarityInput no_rhythm = {intervals, 4, NULL, 0, NULL, 0};
-    breakdown.similarity.numerator = 7;
-    breakdown.similarity.denominator = 7;
+    breakdown.similarity.num = 7;
+    breakdown.similarity.den = 7;
     assert(similarity_score(model, &original, &no_rhythm, &breakdown) == SIMILARITY_SCORE_ERR_INVALID_INPUT);
     assert_score(breakdown.similarity, 7, 7);
     assert(similarity_score(NULL, &original, &original, &breakdown) == SIMILARITY_SCORE_ERR_NULL_ARGUMENT);

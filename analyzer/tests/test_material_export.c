@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/imported_notes.h>
+#include <io/imported_score.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/text_export.h>
 
@@ -17,36 +17,36 @@
  *     sections, a piece with loop and ending, a section with no MusicXML, the refusals, the size rule (a 2-bar motif
  *     with 6 variants is under 8 KB) and golden snapshots tests/snapshots/material-<kind>.export.txt (URSATZ_UPDATE_GOLDENS=1
  *     rewrites them; the "analyzer:" line is removed before comparing).
- *   - input_pipeline_import_memory: MusicXML and MIDI bytes read the same notes as the file; INPUT_FORMAT_AUTO tells
+ *   - imported_score_import_buffer: MusicXML and MIDI bytes read the same notes as the file; IMPORTED_FORMAT_AUTO tells
  *     them apart by their first bytes; refusals (no bytes, no format, malformed, compressed).
  */
 
 #define MATERIAL_BYTES_MOTIF_WITH_VARIANTS 8192
 
 /* Imports path from its bytes in memory and from the file; both must read the same number of notes. */
-static void check_memory_matches_file(const char *path, InputFormat format, const char *what) {
+static void check_memory_matches_file(const char *path, ImportedFormat format, const char *what) {
     size_t size = 0;
     char *bytes = test_read_file(path, &size);
     CHECKF(bytes != NULL, "%s: cannot read %s", what, path);
     if (!bytes) {
         return;
     }
-    ImportedNotes from_file;
-    ImportedNotes from_memory;
-    InputPipelineResult file_result = input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &from_file);
-    InputPipelineResult memory_result = input_pipeline_import_memory(bytes, size, format, &from_memory);
-    CHECKF(file_result == INPUT_PIPELINE_OK, "%s: file import %d", what, (int)file_result);
-    CHECKF(memory_result == INPUT_PIPELINE_OK, "%s: memory import %d", what, (int)memory_result);
-    if (file_result == INPUT_PIPELINE_OK && memory_result == INPUT_PIPELINE_OK) {
+    ImportedScore from_file;
+    ImportedScore from_memory;
+    ImportedScoreResult file_result = imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &from_file, NULL);
+    ImportedScoreResult memory_result = imported_score_import_buffer((const unsigned char *)bytes, size, format, &from_memory, NULL);
+    CHECKF(file_result == IMPORTED_SCORE_OK, "%s: file import %d", what, (int)file_result);
+    CHECKF(memory_result == IMPORTED_SCORE_OK, "%s: memory import %d", what, (int)memory_result);
+    if (file_result == IMPORTED_SCORE_OK && memory_result == IMPORTED_SCORE_OK) {
         CHECKF(from_memory.count > 0, "%s: no notes", what);
         CHECKF(from_memory.count == from_file.count, "%s: %zu notes from memory, %zu from the file", what,
                from_memory.count, from_file.count);
     }
-    if (file_result == INPUT_PIPELINE_OK) {
-        imported_notes_destroy(&from_file);
+    if (file_result == IMPORTED_SCORE_OK) {
+        imported_score_destroy(&from_file);
     }
-    if (memory_result == INPUT_PIPELINE_OK) {
-        imported_notes_destroy(&from_memory);
+    if (memory_result == IMPORTED_SCORE_OK) {
+        imported_score_destroy(&from_memory);
     }
     free(bytes);
 }
@@ -56,18 +56,18 @@ static void test_import_memory(void) {
     const char *compressed = URSATZ_MUSICXML_DIR "/pickup.mxl";
     const char *midi = URSATZ_FIXTURES_DIR "/framework-v1-corpus/Field 1.mid";
 
-    check_memory_matches_file(musicxml, INPUT_FORMAT_AUTO, "musicxml, auto");
-    check_memory_matches_file(musicxml, INPUT_FORMAT_MUSICXML, "musicxml, named");
-    check_memory_matches_file(midi, INPUT_FORMAT_AUTO, "midi, auto");
-    check_memory_matches_file(midi, INPUT_FORMAT_MIDI, "midi, named");
+    check_memory_matches_file(musicxml, IMPORTED_FORMAT_AUTO, "musicxml, auto");
+    check_memory_matches_file(musicxml, IMPORTED_FORMAT_MUSICXML, "musicxml, named");
+    check_memory_matches_file(midi, IMPORTED_FORMAT_AUTO, "midi, auto");
+    check_memory_matches_file(midi, IMPORTED_FORMAT_MIDI, "midi, named");
 
-    ImportedNotes notes;
+    ImportedScore notes;
     size_t size = 0;
     /* The importer reads no compressed MusicXML, from a file or from memory; the bytes are still taken for MusicXML. */
     char *bytes = test_read_file(compressed, &size);
     CHECKF(bytes != NULL, "cannot read %s", compressed);
     if (bytes) {
-        CHECKF(input_pipeline_import_memory(bytes, size, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_ERR_IMPORT_FAILED,
+        CHECKF(imported_score_import_buffer((const unsigned char *)bytes, size, IMPORTED_FORMAT_AUTO, &notes, NULL) == IMPORTED_SCORE_ERR_COMPRESSED,
                "compressed MusicXML");
         free(bytes);
     }
@@ -76,30 +76,30 @@ static void test_import_memory(void) {
     if (!bytes) {
         return;
     }
-    CHECKF(input_pipeline_import_memory(NULL, size, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_ERR_IMPORT_FAILED,
+    CHECKF(imported_score_import_buffer((const unsigned char *)NULL, size, IMPORTED_FORMAT_AUTO, &notes, NULL) == IMPORTED_SCORE_ERR_ARGUMENT,
            "NULL bytes");
-    CHECKF(input_pipeline_import_memory(bytes, 0, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_ERR_IMPORT_FAILED,
+    CHECKF(imported_score_import_buffer((const unsigned char *)bytes, 0, IMPORTED_FORMAT_AUTO, &notes, NULL) == IMPORTED_SCORE_ERR_ARGUMENT,
            "empty bytes");
-    CHECKF(input_pipeline_import_memory(bytes, size, INPUT_FORMAT_AUTO, NULL) == INPUT_PIPELINE_ERR_IMPORT_FAILED,
+    CHECKF(imported_score_import_buffer((const unsigned char *)bytes, size, IMPORTED_FORMAT_AUTO, NULL, NULL) == IMPORTED_SCORE_ERR_ARGUMENT,
            "NULL output");
     free(bytes);
 
     const char *text = "this is not music";
-    CHECKF(input_pipeline_import_memory(text, strlen(text), INPUT_FORMAT_AUTO, &notes) ==
-               INPUT_PIPELINE_ERR_UNKNOWN_FORMAT,
+    CHECKF(imported_score_import_buffer((const unsigned char *)text, strlen(text), IMPORTED_FORMAT_AUTO, &notes, NULL) ==
+               IMPORTED_SCORE_ERR_UNKNOWN_FORMAT,
            "text of no format");
-    CHECKF(input_pipeline_import_memory(text, strlen(text), INPUT_FORMAT_MUSICXML, &notes) ==
-               INPUT_PIPELINE_ERR_IMPORT_FAILED,
+    CHECKF(imported_score_import_buffer((const unsigned char *)text, strlen(text), IMPORTED_FORMAT_MUSICXML, &notes, NULL) ==
+               IMPORTED_SCORE_ERR_FORMAT,
            "text named as MusicXML");
-    CHECKF(input_pipeline_import_memory(text, strlen(text), INPUT_FORMAT_MIDI, &notes) ==
-               INPUT_PIPELINE_ERR_IMPORT_FAILED,
+    CHECKF(imported_score_import_buffer((const unsigned char *)text, strlen(text), IMPORTED_FORMAT_MIDI, &notes, NULL) ==
+               IMPORTED_SCORE_ERR_FORMAT,
            "text named as MIDI");
 
     bytes = test_read_file(URSATZ_MUSICXML_DIR "/malformed.musicxml", &size);
     CHECKF(bytes != NULL, "cannot read malformed.musicxml");
     if (bytes) {
-        CHECKF(input_pipeline_import_memory(bytes, size, INPUT_FORMAT_AUTO, &notes) ==
-                   INPUT_PIPELINE_ERR_IMPORT_FAILED,
+        CHECKF(imported_score_import_buffer((const unsigned char *)bytes, size, IMPORTED_FORMAT_AUTO, &notes, NULL) ==
+                   IMPORTED_SCORE_ERR_FORMAT,
                "malformed MusicXML");
         free(bytes);
     }

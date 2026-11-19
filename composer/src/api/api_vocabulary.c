@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/given.h>

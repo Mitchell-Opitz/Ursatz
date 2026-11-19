@@ -1,0 +1,652 @@
+[
+ {
+  "piece": "Mozart 545.mid",
+  "start": {
+   "measure": 1,
+   "beat": 1
+  },
+  "end": {
+   "measure": 2,
+   "beat": 1
+  },
+  "similarity": {
+   "num": 1,
+   "den": 1
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 72,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 1,
+     "den": 2
+    }
+   },
+   {
+    "midi": 76,
+    "onset": {
+     "num": 1,
+     "den": 2
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   },
+   {
+    "midi": 79,
+    "onset": {
+     "num": 3,
+     "den": 4
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 1,
+    "beat": 1,
+    "key": "C major"
+   },
+   {
+    "numeral": "V",
+    "measure": 2,
+    "beat": 1,
+    "key": "C major"
+   }
+  ]
+ },
+ {
+  "piece": "Mozart 545.mid",
+  "start": {
+   "measure": 29,
+   "beat": 1
+  },
+  "end": {
+   "measure": 30,
+   "beat": 1
+  },
+  "similarity": {
+   "num": 1,
+   "den": 1
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 72,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 1,
+     "den": 2
+    }
+   },
+   {
+    "midi": 76,
+    "onset": {
+     "num": 1,
+     "den": 2
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   },
+   {
+    "midi": 79,
+    "onset": {
+     "num": 3,
+     "den": 4
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 29,
+    "beat": 1,
+    "key": "C major"
+   },
+   {
+    "numeral": "V",
+    "measure": 30,
+    "beat": 1,
+    "key": "C major"
+   }
+  ]
+ },
+ {
+  "piece": "Mozart 545.mid",
+  "start": {
+   "measure": 70,
+   "beat": 1
+  },
+  "end": {
+   "measure": 71,
+   "beat": 1
+  },
+  "similarity": {
+   "num": 1,
+   "den": 1
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 77,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 1,
+     "den": 2
+    }
+   },
+   {
+    "midi": 81,
+    "onset": {
+     "num": 1,
+     "den": 2
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   },
+   {
+    "midi": 84,
+    "onset": {
+     "num": 3,
+     "den": 4
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 70,
+    "beat": 1,
+    "key": "F major"
+   },
+   {
+    "numeral": "V",
+    "measure": 71,
+    "beat": 1,
+    "key": "F major"
+   }
+  ]
+ },
+ {
+  "piece": "Mozart 545.mid",
+  "start": {
+   "measure": 115,
+   "beat": 1
+  },
+  "end": {
+   "measure": 116,
+   "beat": 1
+  },
+  "similarity": {
+   "num": 1,
+   "den": 1
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 77,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 1,
+     "den": 2
+    }
+   },
+   {
+    "midi": 81,
+    "onset": {
+     "num": 1,
+     "den": 2
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   },
+   {
+    "midi": 84,
+    "onset": {
+     "num": 3,
+     "den": 4
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 115,
+    "beat": 1,
+    "key": "F major"
+   },
+   {
+    "numeral": "V",
+    "measure": 116,
+    "beat": 1,
+    "key": "F major"
+   }
+  ]
+ },
+ {
+  "piece": "Clementi 36.mid",
+  "start": {
+   "measure": 12,
+   "beat": 1
+  },
+  "end": {
+   "measure": 12,
+   "beat": 3
+  },
+  "similarity": {
+   "num": 7,
+   "den": 8
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 79,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 11,
+     "den": 96
+    }
+   },
+   {
+    "midi": 83,
+    "onset": {
+     "num": 1,
+     "den": 8
+    },
+    "duration": {
+     "num": 11,
+     "den": 96
+    }
+   },
+   {
+    "midi": 86,
+    "onset": {
+     "num": 1,
+     "den": 4
+    },
+    "duration": {
+     "num": 11,
+     "den": 96
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 12,
+    "beat": 1,
+    "key": "G major"
+   },
+   {
+    "numeral": "IV",
+    "measure": 13,
+    "beat": 1,
+    "key": "G major"
+   }
+  ]
+ },
+ {
+  "piece": "Clementi 36.mid",
+  "start": {
+   "measure": 35,
+   "beat": 1
+  },
+  "end": {
+   "measure": 35,
+   "beat": 3
+  },
+  "similarity": {
+   "num": 7,
+   "den": 8
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 72,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 11,
+     "den": 96
+    }
+   },
+   {
+    "midi": 76,
+    "onset": {
+     "num": 1,
+     "den": 8
+    },
+    "duration": {
+     "num": 11,
+     "den": 96
+    }
+   },
+   {
+    "midi": 79,
+    "onset": {
+     "num": 1,
+     "den": 4
+    },
+    "duration": {
+     "num": 11,
+     "den": 96
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 35,
+    "beat": 1,
+    "key": "C major"
+   },
+   {
+    "numeral": "ii",
+    "measure": 36,
+    "beat": 1,
+    "key": "C major"
+   }
+  ]
+ },
+ {
+  "piece": "Mozart 545.mid",
+  "start": {
+   "measure": 26,
+   "beat": 1
+  },
+  "end": {
+   "measure": 26,
+   "beat": 4
+  },
+  "similarity": {
+   "num": 7,
+   "den": 8
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 79,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   },
+   {
+    "midi": 83,
+    "onset": {
+     "num": 7,
+     "den": 16
+    },
+    "duration": {
+     "num": 1,
+     "den": 16
+    }
+   },
+   {
+    "midi": 86,
+    "onset": {
+     "num": 1,
+     "den": 2
+    },
+    "duration": {
+     "num": 1,
+     "den": 16
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 26,
+    "beat": 1,
+    "key": "G major"
+   },
+   {
+    "numeral": "V7",
+    "measure": 26,
+    "beat": 4,
+    "key": "G major"
+   }
+  ]
+ },
+ {
+  "piece": "Mozart 545.mid",
+  "start": {
+   "measure": 54,
+   "beat": 1
+  },
+  "end": {
+   "measure": 54,
+   "beat": 4
+  },
+  "similarity": {
+   "num": 7,
+   "den": 8
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 79,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   },
+   {
+    "midi": 83,
+    "onset": {
+     "num": 7,
+     "den": 16
+    },
+    "duration": {
+     "num": 1,
+     "den": 16
+    }
+   },
+   {
+    "midi": 86,
+    "onset": {
+     "num": 1,
+     "den": 2
+    },
+    "duration": {
+     "num": 1,
+     "den": 16
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 54,
+    "beat": 1,
+    "key": "G major"
+   },
+   {
+    "numeral": "V7",
+    "measure": 54,
+    "beat": 4,
+    "key": "G major"
+   }
+  ]
+ },
+ {
+  "piece": "Mozart 545.mid",
+  "start": {
+   "measure": 99,
+   "beat": 1
+  },
+  "end": {
+   "measure": 99,
+   "beat": 4
+  },
+  "similarity": {
+   "num": 7,
+   "den": 8
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 72,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   },
+   {
+    "midi": 76,
+    "onset": {
+     "num": 7,
+     "den": 16
+    },
+    "duration": {
+     "num": 1,
+     "den": 16
+    }
+   },
+   {
+    "midi": 79,
+    "onset": {
+     "num": 1,
+     "den": 2
+    },
+    "duration": {
+     "num": 1,
+     "den": 16
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 99,
+    "beat": 1,
+    "key": "C major"
+   },
+   {
+    "numeral": "V7",
+    "measure": 99,
+    "beat": 4,
+    "key": "C major"
+   }
+  ]
+ },
+ {
+  "piece": "Mozart 545.mid",
+  "start": {
+   "measure": 144,
+   "beat": 1
+  },
+  "end": {
+   "measure": 144,
+   "beat": 4
+  },
+  "similarity": {
+   "num": 7,
+   "den": 8
+  },
+  "stale": false,
+  "notes": [
+   {
+    "midi": 72,
+    "onset": {
+     "num": 0,
+     "den": 1
+    },
+    "duration": {
+     "num": 1,
+     "den": 4
+    }
+   },
+   {
+    "midi": 76,
+    "onset": {
+     "num": 7,
+     "den": 16
+    },
+    "duration": {
+     "num": 1,
+     "den": 16
+    }
+   },
+   {
+    "midi": 79,
+    "onset": {
+     "num": 1,
+     "den": 2
+    },
+    "duration": {
+     "num": 1,
+     "den": 16
+    }
+   }
+  ],
+  "chords": [
+   {
+    "numeral": "I",
+    "measure": 144,
+    "beat": 1,
+    "key": "C major"
+   },
+   {
+    "numeral": "V7",
+    "measure": 144,
+    "beat": 4,
+    "key": "C major"
+   }
+  ]
+ }
+]

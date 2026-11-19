@@ -8,8 +8,9 @@
 #include "model/identity/entity_id.h"
 #include "theory/style/style_model_build.h"
 #include <ursatz_analyzer/corpus.h>
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 #include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/version.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -25,88 +26,6 @@
 
 static void make_dir(const char *path) {
     mkdir(path, 0777);
-}
-
-/* ---- labels ---- */
-
-static void check_numeral(const char *input, const char *expected) {
-    char *label = style_label_numeral(input);
-    CHECKF((label == NULL) == (expected == NULL) && (!label || strcmp(label, expected) == 0), "numeral '%s' gives '%s', expected '%s'",
-           input, label ? label : "(none)", expected ? expected : "(none)");
-    free(label);
-}
-
-static void check_interval(int semitones, const char *expected) {
-    char label[16];
-    style_label_interval(semitones, label, sizeof(label));
-    CHECKF(strcmp(label, expected) == 0, "interval %d gives '%s', expected '%s'", semitones, label, expected);
-}
-
-static void check_duration(unsigned long numerator, unsigned long denominator, const char *expected) {
-    char label[48];
-    style_label_duration(numerator, denominator, label, sizeof(label));
-    CHECKF(strcmp(label, expected) == 0, "duration %lu/%lu gives '%s', expected '%s'", numerator, denominator, label, expected);
-}
-
-static void test_labels(void) {
-    check_numeral("V", "V");
-    check_numeral("V7", "V7");
-    check_numeral("V6/5", "V7");
-    check_numeral("V4/3", "V7");
-    check_numeral("V4/2", "V7");
-    check_numeral("I6/4", "I");
-    check_numeral("I6", "I");
-    check_numeral("ii6/5", "ii7");
-    check_numeral("bVI", "bVI");
-    check_numeral("viio6", "viio");
-    check_numeral("V6/5/V", "V7/V");
-    check_numeral("V/V", "V/V");
-    check_numeral("", NULL);
-    check_numeral("hello", NULL);
-    check_numeral("V/", NULL);
-    check_numeral("V/x", NULL);
-    check_numeral("6/4", NULL);
-
-    check_interval(0, "0");
-    check_interval(2, "+2");
-    check_interval(-5, "-5");
-    check_interval(12, "+12");
-    check_interval(-12, "-12");
-    check_interval(13, "+13+");
-    check_interval(-24, "-13+");
-
-    check_duration(1, 8, "1/8");
-    check_duration(2, 16, "1/8");
-    check_duration(3, 16, "3/16");
-    check_duration(4, 4, "1/1");
-    check_duration(1, 0, "0/1");
-
-    CHECKF(strcmp(style_label_contour(3), "up") == 0 && strcmp(style_label_contour(-1), "down") == 0 &&
-               strcmp(style_label_contour(0), "same") == 0,
-           "contour labels");
-
-    const char *pair[] = {"ii", "V7", "I"};
-    char *progression = style_label_progression(pair, 3);
-    CHECKF(progression && strcmp(progression, "ii-V7-I") == 0, "progression label '%s'", progression ? progression : "(none)");
-    free(progression);
-    CHECKF(style_label_progression(pair, 0) == NULL, "empty progression has no label");
-
-    StyleDimension dimension;
-    CHECKF(style_category_dimension("chord-progression-3", &dimension) && dimension == STYLE_DIMENSION_HARMONY, "harmony category");
-    CHECKF(style_category_dimension("syncopation-per-phrase", &dimension) && dimension == STYLE_DIMENSION_RHYTHM, "rhythm category");
-    CHECKF(style_category_dimension("phrase-range", &dimension) && dimension == STYLE_DIMENSION_MELODY, "melody category");
-    CHECKF(style_category_dimension("mode", &dimension) && dimension == STYLE_DIMENSION_FORM, "form category");
-    CHECKF(style_category_dimension("motive-degrees", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
-               style_category_dimension("motive-intervals", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
-               style_category_dimension("motive-rhythm", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
-               style_category_dimension("motive-nct-figure", &dimension) && dimension == STYLE_DIMENSION_MELODY,
-           "motive categories are melody");
-    CHECKF(style_category_dimension("tempo", &dimension) && dimension == STYLE_DIMENSION_RHYTHM &&
-               style_category_dimension("note-density", &dimension) && dimension == STYLE_DIMENSION_RHYTHM,
-           "tempo and note density are rhythm");
-    CHECKF(!style_category_dimension("no-such-category", &dimension), "unknown category");
-    CHECKF(style_dimension_from_name("melody", &dimension) && dimension == STYLE_DIMENSION_MELODY, "dimension from name");
-    CHECKF(!style_dimension_from_name("timbre", &dimension), "unknown dimension name");
 }
 
 /* ---- profiles ---- */
@@ -133,7 +52,7 @@ static StyleProfile *profile_of(const char *name, size_t expected_pieces) {
 static StyleModel *model_of(StyleProfile *profile, const char *name) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s.style.json", work_dir, name);
-    CHECKF(style_model_file_write(profile, name, path) == STYLE_MODEL_FILE_OK, "cannot write %s", path);
+    CHECKF(style_model_file_write(profile, name, URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "cannot write %s", path);
     StyleModel *model = NULL;
     CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK, "cannot read %s", path);
     return model;
@@ -216,7 +135,7 @@ static char *masked_model(const char *path) {
 static void test_reference_snapshot(StyleProfile *reference) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/reference.style.json", work_dir);
-    CHECKF(style_model_file_write(reference, "reference", path) == STYLE_MODEL_FILE_OK, "cannot write the reference model");
+    CHECKF(style_model_file_write(reference, "reference", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "cannot write the reference model");
 
     char *masked = masked_model(path);
     char snapshot_path[1024];
@@ -262,7 +181,7 @@ static void test_round_trip(StyleProfile *reference) {
     style_statistics_free(from_model, model_count);
 
     /* The same profile written again gives the same bytes, and reading a file twice gives the same name. */
-    CHECKF(style_model_file_write(reference, "reference", second) == STYLE_MODEL_FILE_OK, "cannot write again");
+    CHECKF(style_model_file_write(reference, "reference", URSATZ_ANALYZER_VERSION, second) == STYLE_MODEL_FILE_OK, "cannot write again");
     char *a = test_read_file(first, NULL), *b = test_read_file(second, NULL);
     CHECKF(a && b && strcmp(a, b) == 0, "writing twice gives different bytes");
     free(a);
@@ -279,16 +198,16 @@ static void test_round_trip(StyleProfile *reference) {
 }
 
 static bool all_zero(const StyleComparison *comparison) {
-    if (!comparison->overall_present || comparison->overall.numerator != 0) {
+    if (!comparison->overall_present || comparison->overall != 0.0) {
         return false;
     }
     for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-        if (comparison->dimension_present[d] && comparison->dimension[d].numerator != 0) {
+        if (comparison->dimension_present[d] && comparison->dimension[d] != 0.0) {
             return false;
         }
     }
     for (size_t i = 0; i < comparison->category_count; i++) {
-        if (comparison->categories[i].distance.numerator != 0) {
+        if (comparison->categories[i].distance.num != 0) {
             return false;
         }
     }
@@ -349,21 +268,20 @@ static void test_chorales_and_sonatinas(void) {
         CHECKF(style_profile_compare(chorales, sonatinas, &forward) == STYLE_COMPARE_OK, "chorales against sonatinas");
         CHECKF(style_profile_compare(sonatinas, chorales, &backward) == STYLE_COMPARE_OK, "sonatinas against chorales");
         for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-            CHECKF(forward.dimension_present[d] && forward.dimension[d].numerator > 0, "%s distance is 0",
+            CHECKF(forward.dimension_present[d] && forward.dimension[d] > 0.0, "%s distance is 0",
                    style_dimension_name((StyleDimension)d));
-            CHECKF(forward.dimension[d].numerator == backward.dimension[d].numerator &&
-                       forward.dimension[d].denominator == backward.dimension[d].denominator,
+            CHECKF(forward.dimension[d] == backward.dimension[d],
                    "%s distance is not symmetric", style_dimension_name((StyleDimension)d));
             printf("chorales vs sonatinas %-8s %.4f\n", style_dimension_name((StyleDimension)d),
-                   style_rational_value(forward.dimension[d]));
+                   forward.dimension[d]);
         }
-        CHECKF(forward.overall_present && forward.overall.numerator > 0 && forward.overall.numerator <= forward.overall.denominator,
+        CHECKF(forward.overall_present && forward.overall > 0.0 && forward.overall <= 1.0,
                "overall distance out of range");
-        printf("chorales vs sonatinas overall  %.4f\n", style_rational_value(forward.overall));
+        printf("chorales vs sonatinas overall  %.4f\n", forward.overall);
         for (size_t i = 0; i < forward.category_count; i++) {
             const StyleCategoryDistance *c = &forward.categories[i];
-            CHECKF(c->distance.numerator <= c->distance.denominator, "%s distance above 1", c->category);
-            printf("chorales vs sonatinas   %-24s %.4f\n", c->category, style_rational_value(c->distance));
+            CHECKF(c->distance.num <= c->distance.den, "%s distance above 1", c->category);
+            printf("chorales vs sonatinas   %-24s %.4f\n", c->category, rational_to_double(c->distance));
         }
         style_comparison_destroy(&forward);
         style_comparison_destroy(&backward);
@@ -373,81 +291,6 @@ static void test_chorales_and_sonatinas(void) {
     style_model_destroy(sonatinas);
     style_profile_destroy(chorale_profile);
     style_profile_destroy(sonatina_profile);
-}
-
-/* ---- hand-built models ---- */
-
-static StyleModel *build_model(const char *name, const StyleStatistic *statistics, size_t count) {
-    EntityID *id = NULL;
-    StyleModel *model = NULL;
-    if (entity_id_create(name, &id) != ENTITY_ID_OK) {
-        return NULL;
-    }
-    if (style_model_from_statistics(id, name, "hand", "test", statistics, count, &model) != STYLE_MODEL_BUILD_OK) {
-        entity_id_destroy(id);
-        return NULL;
-    }
-    return model;
-}
-
-static void test_hand_distances(void) {
-    const StyleStatistic a_stats[] = {{"cadence-type", "half", 3, 4}, {"cadence-type", "perfect-authentic", 1, 4}};
-    const StyleStatistic b_stats[] = {{"cadence-type", "half", 1, 4},
-                                      {"cadence-type", "perfect-authentic", 3, 4},
-                                      {"mode", "major", 1, 1}};
-    StyleModel *a = build_model("a", a_stats, 2);
-    StyleModel *b = build_model("b", b_stats, 3);
-    CHECKF(a && b, "cannot build the hand models");
-    if (a && b) {
-        StyleComparison comparison;
-        CHECKF(style_profile_compare(a, b, &comparison) == STYLE_COMPARE_OK, "hand comparison");
-        const StyleCategoryDistance *cadence = NULL, *mode = NULL;
-        for (size_t i = 0; i < comparison.category_count; i++) {
-            if (strcmp(comparison.categories[i].category, "cadence-type") == 0) {
-                cadence = &comparison.categories[i];
-            } else if (strcmp(comparison.categories[i].category, "mode") == 0) {
-                mode = &comparison.categories[i];
-            }
-        }
-        CHECKF(cadence && cadence->distance.numerator == 1 && cadence->distance.denominator == 2, "cadence distance");
-        CHECKF(cadence && cadence->in_a && cadence->in_b && strcmp(cadence->top_a[0], "half") == 0 &&
-                   strcmp(cadence->top_b[0], "perfect-authentic") == 0 && strcmp(cadence->top_a[1], "perfect-authentic") == 0 &&
-                   cadence->top_a[2] == NULL,
-               "top labels");
-        CHECKF(mode && mode->distance.numerator == 1 && mode->distance.denominator == 1 && !mode->in_a && mode->in_b,
-               "a category in one model only is distance 1");
-        /* harmony: cadence-type only, 1/2. form: mode only, 1. Rhythm and melody have no categories. */
-        CHECKF(comparison.dimension_present[STYLE_DIMENSION_HARMONY] && comparison.dimension[STYLE_DIMENSION_HARMONY].numerator == 1 &&
-                   comparison.dimension[STYLE_DIMENSION_HARMONY].denominator == 2,
-               "harmony dimension");
-        CHECKF(comparison.dimension_present[STYLE_DIMENSION_FORM] && comparison.dimension[STYLE_DIMENSION_FORM].numerator == 1 &&
-                   comparison.dimension[STYLE_DIMENSION_FORM].denominator == 1,
-               "form dimension");
-        CHECKF(!comparison.dimension_present[STYLE_DIMENSION_RHYTHM] && !comparison.dimension_present[STYLE_DIMENSION_MELODY],
-               "empty dimensions are left out");
-        CHECKF(comparison.overall_present && comparison.overall.numerator == 3 && comparison.overall.denominator == 4,
-               "overall distance");
-        style_comparison_destroy(&comparison);
-    }
-    style_model_destroy(a);
-    style_model_destroy(b);
-}
-
-static void test_overflow(void) {
-    /* Totals so large that twice their product does not fit in 128 bits: an error, never a wrapped distance. */
-    const unsigned long big = ~0UL;
-    const StyleStatistic a_stats[] = {{"contour", "up", 1, big}};
-    const StyleStatistic b_stats[] = {{"contour", "up", 1, big - 1}};
-    StyleModel *a = build_model("big-a", a_stats, 1);
-    StyleModel *b = build_model("big-b", b_stats, 1);
-    CHECKF(a && b, "cannot build the large models");
-    if (a && b) {
-        StyleComparison comparison;
-        CHECKF(style_profile_compare(a, b, &comparison) == STYLE_COMPARE_ERR_OVERFLOW, "an overflowing comparison is refused");
-        CHECKF(comparison.category_count == 0 && comparison.categories == NULL, "nothing is left behind after an overflow");
-    }
-    style_model_destroy(a);
-    style_model_destroy(b);
 }
 
 /* ---- motive categories ---- */
@@ -628,10 +471,10 @@ static void test_refusals(void) {
 
     /* A profile with nothing in it still writes and reads. */
     StyleProfile *empty = style_profile_create();
-    CHECKF(style_model_file_write(empty, "empty", path) == STYLE_MODEL_FILE_OK, "empty write");
+    CHECKF(style_model_file_write(empty, "empty", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_OK, "empty write");
     CHECKF(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_OK && model, "empty read");
     style_model_destroy(model);
-    CHECKF(style_model_file_write(empty, "", path) == STYLE_MODEL_FILE_ERR_ARGUMENT, "an unnamed style is refused");
+    CHECKF(style_model_file_write(empty, "", URSATZ_ANALYZER_VERSION, path) == STYLE_MODEL_FILE_ERR_ARGUMENT, "an unnamed style is refused");
     style_profile_destroy(empty);
 }
 
@@ -644,7 +487,6 @@ int main(void) {
     }
     make_dir(work_dir);
 
-    test_labels();
 
     StyleProfile *reference = profile_of("reference", 5);
     if (reference) {
@@ -663,8 +505,6 @@ int main(void) {
     test_motive_categories();
     test_motive_figure_ends();
     test_chorales_and_sonatinas();
-    test_hand_distances();
-    test_overflow();
     test_refusals();
 
     return test_update_goldens() ? test_goldens_updated("test_style_profile") : test_finish("test_style_profile");

@@ -4,9 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
-#include <ursatz_analyzer/musicxml_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -312,7 +310,7 @@ static void check_returns(const cJSON *document, const cJSON *form, size_t note_
 /* The document's "repeats": one claim per repeat or return of the report, in its order, over the later run. Each is
    labelled by its kind, has no uncertainty, has its earlier run end before the later begins, and for a repeat has no
    transposition. A pinned piece lists exactly the expected runs. */
-static void check_repeats(const Piece *piece, const cJSON *document, const AnalysisReport *report, size_t note_count) {
+static void check_repeats(const Piece *piece, const cJSON *document, const ChainResult *report, size_t note_count) {
     const cJSON *repeats = test_json_member(document, "repeats");
     CHECK(cJSON_IsArray(repeats));
     CHECK((size_t)cJSON_GetArraySize(repeats) == report->repeat_count);
@@ -350,11 +348,11 @@ static void check_repeats(const Piece *piece, const cJSON *document, const Analy
 static void run_piece(const Piece *piece, const char *midi_dir, const char *musicxml_dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/%s", piece->midi ? midi_dir : musicxml_dir, piece->file);
-    ImportedNotes notes;
-    AnalysisReport report;
-    bool imported = piece->midi ? midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK
-                                : musicxml_pipeline_import_file(path, &notes) == MUSICXML_PIPELINE_OK;
-    if (!imported || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    ImportedScore notes;
+    ChainResult report;
+    bool imported = piece->midi ? imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK
+                                : imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) == IMPORTED_SCORE_OK;
+    if (!imported || !test_analyze_report(&notes, &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return;
@@ -390,8 +388,8 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
         check_repeats(piece, document, &report, notes.count);
         cJSON_Delete(document);
     }
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

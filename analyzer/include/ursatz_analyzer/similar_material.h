@@ -19,7 +19,7 @@ typedef enum {
     SIMILAR_ERR_ARGUMENT,
     SIMILAR_ERR_QUERY,  /* a query with fewer than two notes or numerals, or a text that is not numerals */
     SIMILAR_ERR_IO,     /* a file could not be read or imported */
-    SIMILAR_ERR_FORMAT, /* not an analysis document of schema version 9, or not a corpus index */
+    SIMILAR_ERR_FORMAT, /* not an analysis document of schema version 13, or not a corpus index */
     SIMILAR_ERR_ALLOC
 } SimilarResult;
 

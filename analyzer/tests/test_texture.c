@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <chain/chain_result.h>
+#include <io/imported_score.h>
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * The texture of the report, against the hand reading of Field 1 (Nocturne No. 1 in E-flat major, in 12/8), the same
@@ -81,7 +81,7 @@ static const char *annotated_category(const Annotation *a, int measure) {
     return NULL;
 }
 
-static const char *found_category(const AnalysisReport *report, int measure) {
+static const char *found_category(const ChainResult *report, int measure) {
     for (size_t i = 0; i < report->texture_passage_count; i++) {
         const AnalysisTexturePassage *passage = &report->texture_passages[i];
         if (measure >= passage->first_measure && measure <= passage->last_measure) {
@@ -91,7 +91,7 @@ static const char *found_category(const AnalysisReport *report, int measure) {
     return NULL;
 }
 
-static void check_structure(const ImportedNotes *notes, const AnalysisReport *report) {
+static void check_structure(const ImportedScore *notes, const ChainResult *report) {
     size_t highest = 0;
     for (size_t i = 0; i < notes->count; i++) {
         highest = notes->streams[i] > highest ? notes->streams[i] : highest;
@@ -129,23 +129,23 @@ static void check_structure(const ImportedNotes *notes, const AnalysisReport *re
 int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Field 1.mid", URSATZ_FIXTURES_DIR);
-    ImportedNotes notes;
-    AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK) {
+    ImportedScore notes;
+    ChainResult report;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK) {
         fprintf(stderr, "cannot import %s\n", path);
         return 1;
     }
-    if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    if (!test_analyze_report(&notes, &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
         return 1;
     }
     Annotation annotation;
     snprintf(path, sizeof(path), "%s/annotations/field1_texture.txt", URSATZ_FIXTURES_DIR);
     if (!load_annotation(path, &annotation)) {
         fprintf(stderr, "cannot read %s\n", path);
-        analysis_report_destroy(&report);
-        imported_notes_destroy(&notes);
+        chain_result_destroy(&report);
+        imported_score_destroy(&notes);
         return 1;
     }
 
@@ -185,7 +185,7 @@ int main(void) {
     printf("Field 1: change points found: %zu of %zu\n", found_changes, annotation.change_count);
     CHECK(found_changes == annotation.change_count);
 
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
     return test_finish("test_texture");
 }

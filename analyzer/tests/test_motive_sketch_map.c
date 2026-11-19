@@ -4,13 +4,12 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 #include <ursatz_analyzer/motive_links.h>
 
 #include "model/core/rational.h"
 #include "links/links_internal.h"
-#include "pipeline/motive_sketch_map.h"
+#include "chain/chain_motive_sketch.h"
 #include "test_support.h"
 #include "ursatz_test.h"
 #include "test_knowledge.h"
@@ -63,9 +62,9 @@ static bool scope_sketch(const MotiveLinkScope *scope, const char *piece_id, siz
 int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURES_DIR);
-    ImportedNotes notes;
-    AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    ImportedScore notes;
+    ChainResult report;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !test_analyze_report(&notes, &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         return 1;
     }
@@ -95,7 +94,7 @@ int main(void) {
     printf("Mozart 545: %zu motive families mapped both ways\n", mapped);
     motive_link_scope_destroy(scope);
     free(json);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
     return test_finish("test_motive_sketch_map");
 }

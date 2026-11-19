@@ -80,8 +80,10 @@ static void assert_no_rules_vocabulary(const char *file) {
 
 static void test_no_path_to_a_rule(void) {
     const char *files[] = {"style_model.h",       "style_model.c",       "style_features.h",    "style_features.c",
-                           "style_fraction.h",    "style_fraction.c",    "style_model_build.h", "style_model_build.c",
-                           "style_model_blend.h", "style_model_blend.c"};
+                           "style_labels.h",      "style_labels.c",      "style_model_build.h", "style_model_build.c",
+                           "style_model_blend.h", "style_model_blend.c",  "style_compare.h",     "style_compare.c",
+                           "style_model_file.h",  "style_model_file.c",  "style_reference.h",   "style_reference.c",
+                           "style_piece.h",       "style_piece.c",       "style_profile.h",     "style_profile.c"};
     for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); i++) {
         assert_no_rules_vocabulary(files[i]);
     }

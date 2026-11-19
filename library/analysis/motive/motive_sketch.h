@@ -243,6 +243,13 @@ int motive_sketch_degree_of_step(const MotiveSketch *sketch, long step);
  */
 size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pcs[4]);
 
+/*
+ * The chord a sketch implies: the triad of I, V, IV, vi, ii, iii or vii (degrees 1, 5, 4, 6, 2, 3, 7, in that order) that holds the most of
+ * the sketch's notes, then the most of their time; the first of them on a tie. *out is the chord at onset 0 with no seventh or inversion.
+ * false for a sketch with no scale (no chord tones) or no note a triad holds; *out is then untouched.
+ */
+bool motive_sketch_implied_chord(const MotiveSketch *sketch, MotiveSketchChord *out);
+
 /* A duration a note list can write: w h q e s t, plain or with up to two dots (binary values; see
  * motive_sketch_time_writable for triplets). */
 bool motive_sketch_expressible(Rational duration);

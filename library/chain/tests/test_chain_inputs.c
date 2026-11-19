@@ -308,11 +308,12 @@ static void test_stage_inputs(TestPiece *piece) {
     chain_form_input_destroy(&form);
 
     /* the meter input: every note of the measures, a chord change where the label changes */
-    const char *labels[64] = {0};
+    bool labels[64] = {false};
     assert(count <= 64);
     const CommonPracticeWeightedResult *results = analysis_chain_chords(chain);
-    for (size_t s = 0; s < count; s++) {
-        labels[s] = results[s].matched ? chord_label(results[s].best_chord) : NULL;
+    for (size_t s = 1; s < count; s++) {
+        labels[s] = results[s].matched && results[s - 1].matched &&
+                    strcmp(chord_label(results[s].best_chord), chord_label(results[s - 1].best_chord)) != 0;
     }
     ChainMeterInput meter;
     memset(&meter, 0, sizeof(meter));

@@ -5,8 +5,7 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#include <ursatz_analyzer/composer_api.h>
-#include <ursatz_analyzer/style_profile.h>
+#include <theory/style/style_profile.h>
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/constraint.h>
@@ -255,7 +254,7 @@ typedef struct {
 
 static double dimension_distance(const StyleComparison *comparison, StyleDimension dimension) {
     assert(comparison->dimension_present[dimension]);
-    return style_rational_value(comparison->dimension[dimension]);
+    return comparison->dimension[dimension];
 }
 
 /* A sentence composed under style (NULL for none), measured against both pure styles. */
@@ -371,7 +370,9 @@ static ComposerStyle *blend_with(const ComposerStyle *a, const ComposerStyle *b,
  * 0.6789 to sonatinas. The distance to sonatinas still does not fall with the weight (0.6789 at weight 1 against 0.6769 at 0, within
  * HARMONY_FALL_SLACK).
  */
-static const int HARMONY_BASELINE[3][2] = {{7325, 6769}, {7343, 6789}, {7343, 6789}};
+/* Re-measured at P61 B6 (the hearing on harmonic spans, R-618): the harmony distance to chorales and to sonatinas is 0.8826 and 0.7135 at weight 0,
+   0.8783 and 0.7105 at 1/2 and 1/1; the bounds hold them within one ten-thousandth. */
+static const int HARMONY_BASELINE[3][2] = {{8825, 7136}, {8782, 7106}, {8782, 7106}};
 /* How far the full weight's distance to the second style may be above the zero weight's (a known limit until B2 of P36). */
 #define HARMONY_FALL_SLACK 50
 #define MELODY_ONLY_REACH 200

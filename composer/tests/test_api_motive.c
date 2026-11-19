@@ -72,7 +72,7 @@ static void test_gui_shapes(void) {
     ComposerResponse response;
     char *request = request_with_input(COMPOSER_FIXTURE_DIR "/gui/motive-notes.txt", "notes", NULL,
                                        "{\"meter\":\"4/4\",\"key\":\"D minor\",\"pickup\":\"0\",\"harmony\":\"I V@3\","
-                                       "\"features\":[\"a:0-2\"],\"role\":\"melodic\",\"tones\":[\"2=passing\"],\"api_version\":2}");
+                                       "\"features\":[\"a:0-2\"],\"role\":\"melodic\",\"tones\":[\"2=passing\"],\"api_version\":3}");
     assert(composer_api_motive(test_context(), request, NULL, &response) == COMPOSER_OK);
     assert(response.json && !response.midi && !response.musicxml && !response.plan_json);
     expect_snapshot(&response, "motive-notes.stdout.json");
@@ -237,7 +237,7 @@ static void test_refusals(void) {
     expect_refused(request, COMPOSER_ERR_REQUEST, "/input/form", "form rhythm reads a rhythm");
     expect_refused("{\"meter\":\"4/4\"}", COMPOSER_ERR_REQUEST, "/input", "input must be");
     expect_refused("{\"input\":{},\"meter\":\"4/4\"}", COMPOSER_ERR_REQUEST, "/input/text", "text must be a string");
-    expect_refused("{\"input\":{\"text\":\"D4:q\"},\"api_version\":3}", COMPOSER_ERR_REQUEST, "/api_version", "api_version");
+    expect_refused("{\"input\":{\"text\":\"D4:q\"},\"api_version\":1}", COMPOSER_ERR_REQUEST, "/api_version", "api_version");
 
     /* Render members are refused on the render entry only by their values. */
     ComposerResponse response;

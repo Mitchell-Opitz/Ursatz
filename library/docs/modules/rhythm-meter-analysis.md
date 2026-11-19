@@ -18,7 +18,7 @@ Every result follows the durable claim pattern: an Interpretation with Framework
 | phrase | id, `TimeSpan`, cadence-arrival `TimeSpan` or none, expansion kind (none, internal, external, contraction) and measures, elided-with-next flag |
 | chord change | id, `MusicalTime`; optional |
 
-`chain_build_meter_input` (`chain/chain_inputs.h`) builds it from the import, the L2 outer-voice lines (soprano 0, bass 1, other 2), the harmonic segments and the standard-form phrases.
+`chain_build_meter_input` (`chain/chain_inputs.h`) builds it from the chain's notes, the L2 outer-voice lines (soprano 0, bass 1, other 2), the harmonic segments with the flags of the chord changes the caller gives (the harmonic rhythm's definition: another base numeral or key region) and the standard-form phrases. It is the one builder: the chain's collected rhythm stage (`chain_result_rhythm.c`, `ANALYSIS_CHAIN_STAGE_METER`) calls it, and the chain has no meter analysis of its own (R-616).
 
 `StandardMeterConfig`:
 

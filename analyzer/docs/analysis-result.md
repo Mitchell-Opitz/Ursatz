@@ -2,7 +2,7 @@
 
 The `AnalyzerResult` the analysis returns and the exports built from it. Back to the [docs index](README.md).
 
-`analyzer_analyze` (`<ursatz_analyzer/analysis_result.h>`) runs the analysis once over `ImportedNotes` and returns an
+`analyzer_analyze` (`<ursatz_analyzer/analysis_result.h>`) runs the analysis once over `ImportedScore` and returns an
 `AnalyzerResult`: the library chain's results and the report view the document is exported from (R-217, R-220, R-252,
 R-530). The analysis document is an export of the
 result, not its source.
@@ -11,7 +11,7 @@ result, not its source.
 AnalyzerResult *result = NULL;
 AnalyzerOptions options = analyzer_options_default();
 if (analyzer_analyze(&notes, &options, &result) == ANALYZER_OK) {
-    const AnalysisReport *report = analyzer_result_report(result);
+    const ChainResult *report = analyzer_result_report(result);
     char *json = analysis_document_render_result("piece.mid", result);
     ...
     analyzer_result_destroy(result);
@@ -31,9 +31,13 @@ The result borrows `notes`, which must outlive it. `analyzer_result_destroy(NULL
 
 On any status but `ANALYZER_OK`, `*out` is NULL and nothing is kept.
 
-`AnalyzerOptions.stages` holds the `ANALYSIS_CHAIN_STAGE_*` bits of `chain/analysis_chain.h` (bits 0 to 11) and
-the `ANALYZER_STAGE_*` bits for the Analyzer-only stages: progressions, harmonic rhythm, meter check, rhythm, markings
-and form plan. `analyzer_options_default()` selects all of them. A chain stage pulls in the stages
+`AnalyzerOptions.stages` holds the `ANALYSIS_CHAIN_STAGE_*` bits of `chain/analysis_chain.h`: bits 0 to 11 are the chain
+stages, bits 12 to 17 the stages of the collected result only (progressions, harmonic rhythm, meter check, rhythm,
+markings and form plan). `analyzer_options_default()` selects all of them (`ANALYSIS_CHAIN_STAGE_ALL`).
+
+The result is the library's: `analyzer_analyze` runs `analysis_chain_run_score` and holds the `AnalysisChain`;
+`analyzer_result_report` returns its `ChainResult` (`chain/chain_result.h`, R-615), the collected view the document is
+exported from. The collectors and the result-only stages live in `library/chain` ([chain README](../../library/chain/README.md)). A chain stage pulls in the stages
 it needs (see the chain header).
 
 Voicing stays on its own entry (`voicing_check.h`); counterpoint is checked with standard-counterpoint, not by the
@@ -48,14 +52,14 @@ the result holds the chain's results of the stages that ran; `analyzer_result_re
 
 ## Library results
 
-`analyzer_result_chain(result)` (`<ursatz_analyzer/result_chain.h>`) is the `AnalysisChain` of `chain/analysis_chain.h`,
-read through its accessors. It is NULL for a piece with no notes. The header and the chain's headers reach only a target that
-links `ursatz_analyzer::chain`; a target linking `ursatz_analyzer` alone sees no chain or framework header.
+The `AnalysisChain` behind a result is the Analyzer's own: `analyzer_result_run_chain` (`pipeline/analysis_result_internal.h`) gives it
+to the Analyzer's exports and tests. No public header returns it (R-620: the Composer hears through `library/chain` itself), and a target
+linking `ursatz_analyzer` sees the chain's result header (`chain/chain_result.h`) but no chain internal.
 
 ## No claim layer
 
 The result has no claims (R-530): it is the chain's results plus the report view. There is no per-area list of
-`Interpretation`s to read: a caller reads the chain's own results through `analyzer_result_chain` and the document's
+`Interpretation`s to read: a caller reads the chain's results through the report and the document's
 entries through `analyzer_result_report` or the exported document.
 
 ## Exports
@@ -64,6 +68,4 @@ entries through `analyzer_result_report` or the exported document.
 result: the same bytes as `analysis_document_build` over the same notes and report. `analysis_document_build` takes the knowledge
 snapshot the report was made with (the labels of a notated key signature are spelled with its major and natural minor materials).
 
-`run_analysis_pipeline` is a wrapper over `analyzer_analyze`: it moves the result's report out into the caller's
-`AnalysisReport`, with the same ownership as before. `AnalysisReport` and the fragment API stay until the Composer and
-the GUI have switched to the result.
+The wrapper `run_analysis_pipeline` (and `analysis_pipeline.h`) is gone (P61 B9): the GUI calls `analyzer_analyze` and `analysis_document_build_from_result`, and the Analyzer's tests call `analyzer_analyze` through `test_analyze_report` (`tests/support/test_support.h`).

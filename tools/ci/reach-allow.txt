@@ -1,5 +1,9 @@
 # Functions the reach scan (tools/ci/check-reach.sh) may list as reached by no application.
 # One "<source path> <function>" per line; the text after # says why it stays (R-559).
+analyzer/src/result/analysis_result.c analyzer_result_take_report  # no app moves a report out of a result since P61 B9 (run_analysis_pipeline is gone); the Analyzer's tests do, through test_analyze_report
+analyzer/src/result/analysis_result.c analyzer_result_run_chain  # no app reads the chain of a result since P61 B8 (the Composer hears through the library chain itself); the Analyzer's tests read it
+analyzer/src/corpus/chord_sequence.c analyzer_chord_sequence_from_document  # no app reads a chord sequence from a document text since P61 B7 (the Composer read documents through it; the Analyzer reads the tree); its tests call it
+analyzer/src/result/input_pipeline.c analyzer_import_buffer  # the GUI imports files only; bytes go in through this entry once it reads uploads from memory (R-614); its test calls it
 composer/src/plan/lanes.c plan_note_by_id  # no app finds a note by id until P62 (the edits saved with the realization name notes by id); its tests call it
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_entries  # test hook: test_analyzer_route reads the import counter
 gui/backend/src/service/import_cache.c ursatz_gui_import_cache_imports  # test hook: test_analyzer_route reads the import counter
@@ -10,9 +14,10 @@ library/analysis/harmony/chord_reading.c mask_above_root  # helper of chord_read
 library/analysis/harmony/key_regions_windows.c key_window_scores  # oracle of tests/integration/framework_v1_verification.c; moving it would copy the key regions static stages
 library/chain/analysis_chain.c analysis_chain_chord_reading  # no app reads a chord reading until P62's reading layer; its tests call it
 library/chain/analysis_chain.c segment_pitch_classes  # helper of analysis_chain_chord_reading, which no app calls until P62; its tests call it
+library/io/musicxml_importer.c musicxml_import_file  # the imported score reads a file into a buffer and calls musicxml_import_buffer (R-614); its tests call it
 library/model/pitch/pitch_material.c pitch_material_contains  # no app tests a pitch against a material until P69 (composing in modes tests pitches against materials); its tests call it
 library/model/time/duration.c duration_cmp  # the time value API has no caller until P58 B2 to B4 convert the heap callers; its tests call it
-library/model/time/meter_arithmetic.c meter_map_time_of  # the inverse of meter_map_position_of has no app caller until P61 reads the performer parts' local maps (import into performer parts); its tests call it
+library/model/time/meter_arithmetic.c meter_map_time_of  # the inverse of meter_map_position_of has no app caller until P62 (the realization built from the imported score) reads the performer parts' local maps; its tests call it
 library/model/time/tempo_map.c region_at_seconds  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/tempo_map.c region_at_time  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
 library/model/time/tempo_map.c tempo_map_seconds_at  # no app converts a tempo map to seconds until P63's playback in the workshop; its tests call it
@@ -35,14 +40,14 @@ library/realization/movement.c movement_compound_part_count  # no app calls it u
 library/realization/movement.c movement_home  # no app reads the home region until P62 (the realization codec writes it); its tests call it
 library/realization/movement.c movement_played_span_at  # no app calls it until P62 (the composer saves its realization); its tests call it
 library/realization/movement.c movement_set_ensemble  # no app calls it until P62 (the realization codec reads a movement's ensemble); its tests call it
-library/realization/performer_part.c note_named  # helper of performer_part_add_note and performer_part_set_note_flags, which no app calls until P61 (import into performer parts adds notes by id); its tests call it
-library/realization/performer_part.c performer_part_add_note  # no app calls it until P61 (import into performer parts adds notes); its tests call it
+library/realization/performer_part.c note_named  # helper of performer_part_add_note and performer_part_set_note_flags, which no app calls until P62 (the realization built from the imported score); its tests call it
+library/realization/performer_part.c performer_part_add_note  # no app calls it until P62 (the realization built from the imported score); its tests call it
 library/realization/performer_part.c performer_part_add_pedal  # no app calls it until P75 (pedal writing); its tests call it
 library/realization/performer_part.c performer_part_instrument  # no app calls it until P62 (the realization codec writes a part's instrument); its tests call it
-library/realization/performer_part.c performer_part_local_meter_map  # no app calls it until P61 (import into performer parts reads the local meter maps); its tests call it
+library/realization/performer_part.c performer_part_local_meter_map  # no app calls it until P62 (the realization built from the imported score); its tests call it
 library/realization/performer_part.c performer_part_number  # no app calls it until P62 (the realization codec writes a part's number); its tests call it
 library/realization/performer_part.c performer_part_players  # no app calls it until P62 (the realization codec writes a part's players); its tests call it
-library/realization/performer_part.c performer_part_set_local_meter_map  # no app calls it until P61 (import into performer parts); its tests call it
+library/realization/performer_part.c performer_part_set_local_meter_map  # no app calls it until P62 (the realization built from the imported score); its tests call it
 library/realization/performer_part.c performer_part_set_note_flags  # no app calls it until P62 (edits saved with the realization); its tests call it
 library/realization/work.c material_reference_valid  # helper of work_add_material, which no app calls until P62; its tests call it
 library/realization/work.c work_add_material  # no app calls it until P62 (the composer saves its realization); its tests call it
@@ -56,3 +61,6 @@ library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_chord_type_of  
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_entry  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/knowledge/knowledge_snapshot.c knowledge_snapshot_hash  # no app reads the snapshot entry list or hash yet (the snapshot hash is for a later phase); its tests call it
 library/theory/meter/meter_class_rules.c standard_meter_category  # the six-category table has no caller since the beat count comes from the groups (P58 B6); its tests call it
+
+library/chain/chain_collect.c chain_result_take  # only analyzer_result_take_report calls it, which the Analyzer's tests use (P61 B9); its tests call it
+analyzer/src/export/analysis_document.c analysis_document_render_result  # no app renders a result to document text since P61 B10 (the material export reads the tree); its tests call it

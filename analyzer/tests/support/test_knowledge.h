@@ -6,7 +6,6 @@
 #include <stdlib.h>
 
 #include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/composer_api.h>
 
 #include "theory/knowledge/knowledge_snapshot.h"
 #include "theory/tonality/common_practice_materials.h"
@@ -48,29 +47,17 @@ static inline const CommonPracticeMaterials *test_materials(void) {
     return &test_knowledge_materials_value;
 }
 
-/* The default analysis options and hearing options with the test snapshot (the defaults carry none). */
+/* The default analysis options with the test snapshot (the defaults carry none). */
 static inline AnalyzerOptions test_analyzer_options(void) {
     AnalyzerOptions options = analyzer_options_default();
     options.knowledge = test_knowledge();
     return options;
 }
 
-static inline AnalyzerHearingOptions test_hearing_options(void) {
-    AnalyzerHearingOptions options = analyzer_hearing_options_default();
-    options.analysis.knowledge = test_knowledge();
-    return options;
-}
-
-/* The same as pointers, for a call that passes `NULL` for the defaults. */
+/* The same as a pointer, for a call that passes `NULL` for the defaults. */
 static inline const AnalyzerOptions *test_analyzer_defaults(void) {
     static AnalyzerOptions options;
     options = test_analyzer_options();
-    return &options;
-}
-
-static inline const AnalyzerHearingOptions *test_hearing_defaults(void) {
-    static AnalyzerHearingOptions options;
-    options = test_hearing_options();
     return &options;
 }
 

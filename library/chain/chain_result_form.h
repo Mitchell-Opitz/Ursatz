@@ -1,0 +1,63 @@
+#ifndef URSATZ_CHAIN_CHAIN_RESULT_FORM_H
+#define URSATZ_CHAIN_CHAIN_RESULT_FORM_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include <chain/chain_result.h>
+#include <io/imported_score.h>
+
+#include "analysis/voices/outer_voice.h"
+/* Prefixed: standard-harmony has headers of the same names (analysis_input.h, analysis_phrase.h). */
+#include "analysis/form/analysis_ideas.h"
+#include "analysis/form/analysis_expansion.h"
+#include "analysis/form/analysis_theme.h"
+#include "analysis/form/analysis_input.h"
+#include "analysis/form/analysis_phrase.h"
+#include "analysis/form/analysis_repeats.h"
+#include <chain/analysis_chain.h>
+#include <chain/chain_inputs.h>
+
+#include "chain/chain_score_input.h"
+
+/*
+ * Ursatz's standard-form analysis over the library chain: phrases, then ideas and subphrases, then themes and
+ * expansions (analysis_chain_phrases, analysis_chain_ideas, analysis_chain_themes, analysis_chain_expansions), read from
+ * the outer-voice soprano, the chord segments, the meter and the cadences of the harmony stage. The analyzer adds no
+ * music theory: every phrase, idea and subphrase is the library's.
+ *
+ * A FormStage keeps the chain's form input (analysis_chain_form_input), borrowed, for what the results index into: the input's notes (the soprano as notes,
+ * consecutive voice segments on one note being one note), its cadences (ids "chain-<index into the cadences>") and the
+ * meter. The results are the chain's, borrowed: the chain, the chain input and the notes must outlive the stage.
+ * A piece the library cannot read as phrases leaves the stage without phrases; that is not an error.
+ */
+typedef struct {
+    ChainFormInput built;                  /* borrowed from the chain; the form input, for the indices the results use */
+    bool have_input;                       /* built holds an input */
+    size_t *note_indices;                  /* owned; per input note, the ImportedScore index of its first constituent note */
+    size_t note_index_count;
+    StandardFormPhrases phrases;           /* borrowed from the chain */
+    StandardFormSegmentation segmentation; /* borrowed */
+    StandardFormThemes themes;             /* borrowed */
+    StandardFormExpansions expansions;     /* borrowed */
+    const StandardFormRepeats *repeats;    /* borrowed; the chain's repeats and returns, NULL when the chain has none */
+} FormStage;
+
+/* Takes the chain's phrases, ideas, themes and expansions, and the input they index. Returns false only on
+   allocation failure. */
+bool form_stage_read(FormStage *stage, const ImportedScore *notes, const ChainScoreInput *input,
+                     const AnalysisChain *library);
+
+/* The index into the harmony stage's cadences of phrase i's cadence, or -1 when it has none. */
+long form_stage_phrase_cadence(const FormStage *stage, size_t phrase);
+/* Copies the stage's phrases, ideas, subphrases, themes and expansions into the report, each phrase with its span, the chord entries inside it (entries must be the
+   ones the stage was built from), measures, cadence and signal, and its ideas and subphrases. A stage without phrases leaves the report without.
+   Returns false only on allocation failure. */
+bool form_stage_collect(const FormStage *stage, ChainResult *report);
+/* Copies the stage's repeats and returns into the report, each with its measures, transposition and the soprano notes
+   that start in the later span. A stage without its form input leaves the report without. Call after
+   form_stage_collect. Returns false only on allocation failure. */
+bool form_stage_collect_repeats(const FormStage *stage, ChainResult *report);
+void form_stage_destroy(FormStage *stage);
+
+#endif

@@ -8,11 +8,13 @@
 #include <io/midi_importer.h>
 #include <model/time/tempo_map.h>
 
-#include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/composer_api.h>
-#include <ursatz_analyzer/style_profile.h>
+#include <chain/analysis_chain.h>
+#include <chain/chain_style.h>
+#include <io/imported_score.h>
+#include <theory/style/style_profile.h>
 
 #include <ursatz_composer/compose.h>
+#include <ursatz_composer/composer.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/lanes.h>
@@ -173,14 +175,15 @@ static const struct {
 };
 #define MELODY_COUNT (sizeof(MELODY) / sizeof(MELODY[0]))
 
-/* A plan heard whole: the render the result borrows from, and the result with its document. */
+/* A plan heard whole: the render the chain borrows from, the score view of it and the chain (R-618). */
 typedef struct {
     RenderedPlan rendered;
     int *midi;
-    AnalyzerResult *result;
+    ImportedScore score;
+    AnalysisChain *chain;
 } Heard;
 
-/* Renders and hears a whole plan in C major with the document rendered; the caller destroys *heard. */
+/* Renders and hears a whole plan in C major through the library chain; the caller destroys *heard. */
 static void analyze(const PiecePlan *plan, Heard *heard) {
     memset(heard, 0, sizeof(*heard));
     assert(plan_render(plan, &heard->rendered) == PLAN_RENDER_OK);
@@ -189,32 +192,33 @@ static void analyze(const PiecePlan *plan, Heard *heard) {
     for (size_t i = 0; i < heard->rendered.count; i++) {
         heard->midi[i] = (int)pitch_numeric_value_position_numerator(heard->rendered.pitch_values[i]);
     }
-    AnalyzerHearing hearing;
-    memset(&hearing, 0, sizeof(hearing));
-    hearing.events = (const NoteEvent *const *)heard->rendered.events;
-    hearing.count = heard->rendered.count;
-    hearing.midi = heard->midi;
-    hearing.meter = heard->rendered.meter_map;
-    hearing.has_key = true;
-    hearing.key_tonic_pitch_class = 0;
-    hearing.key_material = knowledge_snapshot_material(test_knowledge(), "omt.material.major");
-    hearing.streams = heard->rendered.part_index;
-    AnalyzerHearingOptions options = analyzer_hearing_options_default();
-    options.analysis.knowledge = test_knowledge();
-    assert(analyzer_hear(&hearing, &options, &heard->result) == ANALYZER_OK);
+    ImportedScoreView view = {.events = (const NoteEvent *const *)heard->rendered.events,
+                              .count = heard->rendered.count,
+                              .midi = heard->midi,
+                              .meter = heard->rendered.meter_map,
+                              .streams = heard->rendered.part_index,
+                              .has_key = true,
+                              .key_fifths = 0,
+                              .key_minor = false};
+    assert(imported_score_view(&view, &heard->score) == IMPORTED_SCORE_OK);
+    AnalysisChainConfig config = analysis_chain_config_default();
+    config.knowledge = test_knowledge();
+    config.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    assert(analysis_chain_run_score(&heard->score, &config, &heard->chain) == ANALYSIS_CHAIN_OK);
 }
 
-/* The profile of a heard analysis: the Analyzer's document of the result, counted. */
+/* The profile of a heard analysis: the chain's style piece (chain_style_piece), counted. */
 static StyleProfile *heard_profile(const Heard *heard) {
-    char *document = analysis_document_render_result("<fragment>", heard->result);
+    StylePiece piece = {0};
     StyleProfile *profile = style_profile_create();
-    assert(document && profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK);
-    free(document);
+    assert(profile && chain_style_piece(heard->chain, &piece) && style_profile_add_piece(profile, &piece) == STYLE_PROFILE_OK);
+    style_piece_destroy(&piece);
     return profile;
 }
 
 static void heard_destroy(Heard *heard) {
-    analyzer_result_destroy(heard->result);
+    analysis_chain_destroy(heard->chain);
+    imported_score_destroy(&heard->score);
     free(heard->midi);
     rendered_plan_destroy(&heard->rendered);
 }
@@ -430,7 +434,7 @@ static void write_style(const char *path) {
     Heard analysis;
     analyze(plan, &analysis);
     StyleProfile *profile = heard_profile(&analysis);
-    assert(style_model_file_write(profile, "block", path) == STYLE_MODEL_FILE_OK);
+    assert(style_model_file_write(profile, "block", composer_version(), path) == STYLE_MODEL_FILE_OK);
     style_profile_destroy(profile);
     heard_destroy(&analysis);
     plan_destroy(plan);
@@ -586,8 +590,8 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
         if (run.measured) {
             assert(outcome.style_distance.dimension_present[STYLE_DIMENSION_HARMONY] &&
                    outcome.style_distance.dimension_present[STYLE_DIMENSION_MELODY]);
-            run.harmony = style_rational_value(outcome.style_distance.dimension[STYLE_DIMENSION_HARMONY]);
-            run.melody = style_rational_value(outcome.style_distance.dimension[STYLE_DIMENSION_MELODY]);
+            run.harmony = outcome.style_distance.dimension[STYLE_DIMENSION_HARMONY];
+            run.melody = outcome.style_distance.dimension[STYLE_DIMENSION_MELODY];
         }
     }
     compose_outcome_destroy(&outcome);
@@ -990,7 +994,10 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
    P41's hearing, the chorales read 0.7574 styled harmony and 0.8072 styled melody. */
 /* Re-measured at P42 B7 (keys from phrases; the fixtures not re-recorded): the styled means to chorales are 0.7325 and 0.7995 (harmony,
    melody); to sonatinas 0.6663 and 0.7645, within the bounds. */
-static const int STYLED[2][2] = {{732, 799}, {666, 764}};
+/* Re-measured at P61 B6 (the hearing on harmonic spans, R-618; the harmony the Composer hears is read on spans now, as the Analyzer reads
+   it): styled harmony and melody to chorales 0.8826 and 0.7995, to sonatinas 0.7087 and 0.7606; unstyled to chorales 0.8398 and 0.8082, to
+   sonatinas 0.6720 and 0.7687. The styled harmony is further from chorales than the unstyled one (a known limit, as it was from sonatinas). */
+static const int STYLED[2][2] = {{882, 799}, {708, 760}};
 /* Re-measured at P37 B2 (ideas ranked by fidelity, R-355): the unstyled means are 0.7217 and 0.7975 to chorales, 0.6858 and 0.7575 to
    sonatinas (harmony, melody); the styled means are as before. */
 /* Re-measured at P39 B6 (the melody read from every melody note, R-377): the unstyled melody means 0.7922 and 0.7548 are closer; the
@@ -1000,7 +1007,7 @@ static const int STYLED[2][2] = {{732, 799}, {666, 764}};
    0.7922. */
 /* Re-measured at P42 B7 (keys from phrases; the fixtures not re-recorded): the unstyled means to chorales are 0.7137 and 0.8027 (harmony,
    melody); to sonatinas 0.6691 and 0.7675, as recorded. */
-static const int UNSTYLED[2][2] = {{713, 802}, {669, 767}};
+static const int UNSTYLED[2][2] = {{839, 808}, {672, 768}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};

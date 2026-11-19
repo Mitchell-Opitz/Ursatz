@@ -5,8 +5,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -103,10 +102,10 @@ int main(void) {
     assert(fwrite(buf, 1, size, file) == size);
     fclose(file);
 
-    ImportedNotes notes;
-    assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
-    AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+    ImportedScore notes;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
+    ChainResult report;
+    assert(test_analyze_report(&notes, &report));
 
     char *json = test_render_document(path, &notes, &report);
     assert(json != NULL);
@@ -378,8 +377,8 @@ int main(void) {
 
     cJSON_Delete(document);
     free(json);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
     remove(path);
     free(path);
     free(expected_document_path);

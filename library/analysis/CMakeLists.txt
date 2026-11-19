@@ -3,6 +3,7 @@
 add_library(ursatz_analysis
     notes/analysis_key.c
     notes/analysis_note.c
+    notes/analysis_note_build.c
     notes/contour.c
     notes/rhythmic_pattern.c
     notes/sonority.c
@@ -90,7 +91,6 @@ add_library(ursatz_analysis
     galant/galant_analysis_match.c
     galant/scale_analysis_claim.c
     galant/scale_analysis_detect.c
-    similarity/query_fraction.c
     similarity/similarity_model.c
     similarity/similarity_scoring.c
 )
@@ -100,6 +100,7 @@ ursatz_public_headers(ursatz_analysis
     HEADERS
         analysis/notes/analysis_key.h
         analysis/notes/analysis_note.h
+        analysis/notes/analysis_note_build.h
         analysis/notes/analysis_segment.h
         analysis/notes/contour.h
         analysis/notes/motif_window.h

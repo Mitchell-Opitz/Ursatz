@@ -226,14 +226,13 @@ ComposerStatus api_style_without_add(const char **names, size_t *count, size_t c
 
 /* --- seeding from a corpus ---------------------------------------------------------------------------- */
 
-/* The motive of a corpus passage like the passage file like_path, in the meter and key. */
-ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const char *corpus_dir, const char *like_path,
-                               const PlanMeter *meter, const AnalysisKey *key, unsigned long seed, CorpusSeed *out,
-                               ComposerError *error);
+/* The motive of one of the passages the request gives, in the meter and key. */
+ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
+                               const AnalysisKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error);
 /* The seed as the plan records it. */
 ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error);
-/* "3 stale documents in '<dir>' (analyzed by another version; run the corpus again)", or "" when none is stale. */
-void api_seed_stale_notice(const CorpusSeed *seed, const char *corpus_dir, char *out, size_t size);
+/* "3 stale documents (analyzed by another version; run the corpus again)", or "" when none is stale. */
+void api_seed_stale_notice(const CorpusSeed *seed, char *out, size_t size);
 
 /* The first node of the plan with the name, or PLAN_NODE_NONE. */
 NodeId api_find_node(const PiecePlan *plan, const char *name);

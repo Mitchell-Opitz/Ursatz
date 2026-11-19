@@ -8,7 +8,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/result_chain.h>
+#include "result/analysis_result_internal.h"
 
 #include <chain/analysis_chain.h>
 
@@ -49,8 +49,8 @@ static void strip_run_metadata(cJSON *root) {
 }
 
 static void check_chain_against_document(const char *slug, const AnalyzerResult *result, const cJSON *document) {
-    const AnalysisReport *report = analyzer_result_report(result);
-    const AnalysisChain *chain = analyzer_result_chain(result);
+    const ChainResult *report = analyzer_result_report(result);
+    const AnalysisChain *chain = analyzer_result_run_chain(result);
 
     /* The voice-leading and melody results are the chain's own; the document aggregates them. */
     const AnalysisChainVoiceLeading *leading = analysis_chain_voice_leading(chain);
@@ -91,8 +91,8 @@ static void check_snapshots(const char *slug, const char *fixture, const Analyze
 static void check_piece(const char *fixture, const char *slug) {
     char path[512];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         CHECKF(false, "%s: cannot import %s", slug, path);
         return;
     }
@@ -102,7 +102,7 @@ static void check_piece(const char *fixture, const char *slug) {
     AnalyzerStatus status = analyzer_analyze(&notes, &options, &result);
     CHECKF(status == ANALYZER_OK && result != NULL, "%s: analyze returned %d", slug, (int)status);
     if (result) {
-        const AnalysisReport *report = analyzer_result_report(result);
+        const ChainResult *report = analyzer_result_report(result);
         CHECKF(report && report->entry_count > 0, "%s: empty report view", slug);
 
         char *json = analysis_document_render_result(fixture, result);
@@ -116,22 +116,22 @@ static void check_piece(const char *fixture, const char *slug) {
         check_snapshots(slug, fixture, result);
     }
     analyzer_result_destroy(result);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 static void check_options(const char *fixture) {
     char path[512];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         CHECKF(false, "cannot import %s", path);
         return;
     }
 
-    /* The defaults: all stages, chords on harmonic spans. */
+    /* The defaults: all stages, no knowledge. */
     AnalyzerOptions defaults = analyzer_options_default();
-    CHECKF(defaults.stages == ANALYZER_STAGE_ALL && defaults.harmonic_spans && defaults.knowledge == NULL,
-           "the default options are not all stages on spans with no knowledge");
+    CHECKF(defaults.stages == ANALYSIS_CHAIN_STAGE_ALL && defaults.knowledge == NULL,
+           "the default options are not all stages with no knowledge");
 
     /* Arguments. */
     AnalyzerResult *result = (AnalyzerResult *)0x1;
@@ -145,7 +145,7 @@ static void check_options(const char *fixture) {
     none.stages = 0;
     CHECKF(analyzer_analyze(&notes, &none, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no stages");
     analyzer_result_destroy(NULL);
-    CHECKF(analyzer_result_chain(NULL) == NULL && analyzer_result_report(NULL) == NULL, "chain or report of NULL");
+    CHECKF(analyzer_result_run_chain(NULL) == NULL && analyzer_result_report(NULL) == NULL, "chain or report of NULL");
 
     /* A partial stage set: the chain's results, an empty report view, no export. */
     AnalyzerOptions texture = test_analyzer_options();
@@ -153,7 +153,7 @@ static void check_options(const char *fixture) {
     result = NULL;
     CHECKF(analyzer_analyze(&notes, &texture, &result) == ANALYZER_OK && result, "texture stage only");
     if (result) {
-        const AnalysisChain *chain = analyzer_result_chain(result);
+        const AnalysisChain *chain = analyzer_result_run_chain(result);
         CHECKF(analysis_chain_texture(chain) != NULL, "texture results from the texture stage");
         CHECKF(analysis_chain_cadences(chain) == NULL, "cadence results without the stage");
         CHECKF(analyzer_result_report(result)->progression_count == 0, "progressions without the report");
@@ -161,7 +161,7 @@ static void check_options(const char *fixture) {
         CHECKF(analysis_document_build_from_result(fixture, result) == NULL, "a document from a partial chain");
     }
     analyzer_result_destroy(result);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

@@ -6,7 +6,6 @@
 
 #include "cJSON.h"
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
 
@@ -128,18 +127,18 @@ static char *masked_index(const char *output) {
 }
 
 static char *render_single(const char *path) {
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         return NULL;
     }
-    AnalysisReport report;
-    if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
-        imported_notes_destroy(&notes);
+    ChainResult report;
+    if (!test_analyze_report(&notes, &report)) {
+        imported_score_destroy(&notes);
         return NULL;
     }
     char *json = test_render_document(path, &notes, &report);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
     return json;
 }
 

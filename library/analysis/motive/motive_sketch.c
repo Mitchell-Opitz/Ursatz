@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "model/pitch/midi_pitch.h"
 #include "model/pitch/pitch_arithmetic.h"
 #include "theory/tonality/tonal_key.h"
 
@@ -295,6 +296,43 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
     }
     return count;
 }
+
+static bool has_pitch_class(const int *pcs, size_t count, int pc) {
+    for (size_t i = 0; i < count; i++) {
+        if (pcs[i] == pc) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool motive_sketch_implied_chord(const MotiveSketch *sketch, MotiveSketchChord *out) {
+    static const int ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
+    size_t best_hits = 0;
+    Rational best_time = msk_int(0);
+    bool found = false;
+    for (int k = 0; k < 7; k++) {
+        MotiveSketchChord chord = {msk_int(0), ORDER[k], 0, 0, false};
+        int pcs[4];
+        size_t count = motive_sketch_chord_tones(sketch, &chord, pcs);
+        size_t hits = 0;
+        Rational time = msk_int(0);
+        for (size_t i = 0; i < sketch->note_count; i++) {
+            if (has_pitch_class(pcs, count, pitch_class_of_midi(sketch->notes[i].pitch))) {
+                hits++;
+                time = msk_add(time, sketch->notes[i].duration);
+            }
+        }
+        if (hits > best_hits || (hits == best_hits && hits > 0 && msk_cmp(time, best_time) > 0)) {
+            best_hits = hits;
+            best_time = time;
+            *out = chord;
+            found = true;
+        }
+    }
+    return found;
+}
+
 
 /* --- contour ----------------------------------------------------------------- */
 

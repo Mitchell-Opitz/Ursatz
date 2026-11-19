@@ -4,14 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "model/events/note_event.h"
 #include "model/time/duration.h"
 #include "model/time/musical_time.h"
 #include "model/time/temporal_anchor.h"
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * Chord coverage: the fraction of the piece's sounding notes, by duration,
@@ -58,7 +58,7 @@ static double sounding_inside(const NoteEvent *note, double start, double end) {
     return to > from ? to - from : 0.0;
 }
 
-static bool is_unclassified_tone(const AnalysisReport *report, size_t chord_index, size_t note_id) {
+static bool is_unclassified_tone(const ChainResult *report, size_t chord_index, size_t note_id) {
     for (size_t i = 0; i < report->non_chord_tone_count; i++) {
         const AnalysisNonChordTone *tone = &report->non_chord_tones[i];
         if (tone->chord_index == chord_index && tone->note_id == note_id && tone->type == NULL) {
@@ -68,18 +68,18 @@ static bool is_unclassified_tone(const AnalysisReport *report, size_t chord_inde
     return false;
 }
 
-static double coverage(const ImportedNotes *notes, const AnalysisReport *report, size_t *matched_chords) {
+static double coverage(const ImportedScore *notes, const ChainResult *report, size_t *matched_chords) {
     double total = 0.0;
     double covered = 0.0;
     *matched_chords = 0;
     for (size_t i = 0; i < report->entry_count; i++) {
-        const AnalysisReportEntry *entry = &report->entries[i];
+        const ChainEntry *entry = &report->entries[i];
         bool matched = entry->chord.label != NULL;
         if (matched) {
             (*matched_chords)++;
         }
-        double start = as_double(entry->time_numerator, entry->time_denominator);
-        double end = as_double(entry->end_numerator, entry->end_denominator);
+        double start = as_double(entry->time.num, entry->time.den);
+        double end = as_double(entry->end.num, entry->end.den);
         for (size_t n = 0; n < entry->note_id_count; n++) {
             double sounding = sounding_inside(notes->events[entry->note_ids[n]], start, end);
             total += sounding;
@@ -100,10 +100,10 @@ int main(int argc, char **argv) {
         char path[512];
         snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, PIECES[i].file);
 
-        ImportedNotes notes;
-        assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
-        AnalysisReport report;
-        assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+        ImportedScore notes;
+        assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
+        ChainResult report;
+        assert(test_analyze_report(&notes, &report));
 
         size_t matched_chords = 0;
         double fraction = coverage(&notes, &report, &matched_chords);
@@ -120,8 +120,8 @@ int main(int argc, char **argv) {
             }
         }
 
-        analysis_report_destroy(&report);
-        imported_notes_destroy(&notes);
+        chain_result_destroy(&report);
+        imported_score_destroy(&notes);
     }
 
     printf("test_chord_coverage: ok\n");

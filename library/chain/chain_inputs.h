@@ -222,8 +222,8 @@ ChainInputStatus chain_build_grid_input(const AnalysisNoteSet *notes, const Chai
 
 /*
  * The input of standard-meter's adapter (meter_analysis_input.h): the notes starting in the measures [first_measure, last_measure] (line 0
- * for a note of the outer soprano, 1 for the bass, 2 for any other), a chord change at the start of every segment whose chord label
- * differs from the one before (both non-NULL; `chord_labels` has one entry per segment, compared as text), and the phrases of the form
+ * for a note of the outer soprano, 1 for the bass, 2 for any other), a chord change at the start of every segment s from 1 on whose
+ * flag `chord_changes[s]` is set (NULL for none; one flag per segment: the caller decides what a change of chord is, R-616), and the phrases of the form
  * adapter (a span with its extension, the arrival chord of its cadence, its length change). `form`, `phrases` and `expansions` may be NULL
  * for none. The form adapter reports no elided cadences, so a detected phrase is never elided.
  */
@@ -235,7 +235,7 @@ typedef struct {
 
 /* The meter input over the measures [first_measure, last_measure]; `lines` are the voice lines (analysis_chain_outer_voices): the input reads only their note ids (which notes are the soprano and the bass), so every melody note counts, not only the one sounding at each chord segment's start. */
 ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const OuterVoiceLines *lines, const ChainSegments *segments,
-                                         const char *const *chord_labels, int first_measure, int last_measure,
+                                         const bool *chord_changes, int first_measure, int last_measure,
                                          const StandardFormInput *form, const StandardFormPhrases *phrases,
                                          const StandardFormExpansions *expansions, ChainMeterInput *out);
 void chain_meter_input_destroy(ChainMeterInput *input);

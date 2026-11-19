@@ -36,14 +36,14 @@ static const struct {
     {"musicxml", "field-5.musicxml", "field-5-musicxml", false},
 };
 
-static bool import_file(size_t i, ImportedNotes *notes) {
+static bool import_file(size_t i, ImportedScore *notes) {
     char path[512];
     if (strcmp(FILES[i].dir, "midi") == 0) {
         snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, FILES[i].file);
     } else {
         snprintf(path, sizeof(path), "%s/%s", URSATZ_MUSICXML_DIR, FILES[i].file);
     }
-    return input_pipeline_import_file(path, INPUT_FORMAT_AUTO, notes) == INPUT_PIPELINE_OK;
+    return imported_score_import_file(path, IMPORTED_FORMAT_AUTO, notes, NULL) == IMPORTED_SCORE_OK;
 }
 
 static void check_snapshot(size_t i, const char *xml, bool update) {
@@ -62,20 +62,20 @@ static void check_snapshot(size_t i, const char *xml, bool update) {
 }
 
 /* The export reads back with as many notes as the import had. */
-static void check_reimport(size_t i, const ImportedNotes *notes, const char *xml) {
+static void check_reimport(size_t i, const ImportedScore *notes, const char *xml) {
     char path[512];
     snprintf(path, sizeof(path), "%s/%s.export.musicxml", URSATZ_ANALYZER_TMP_DIR, FILES[i].stem);
     if (!test_write_file(path, xml, strlen(xml))) {
         CHECKF(false, "%s: cannot write %s", FILES[i].stem, path);
         return;
     }
-    ImportedNotes again;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_MUSICXML, &again) != INPUT_PIPELINE_OK) {
+    ImportedScore again;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &again, NULL) != IMPORTED_SCORE_OK) {
         CHECKF(false, "%s: the export does not import", FILES[i].stem);
     } else {
         CHECKF(again.count == notes->count, "%s: %zu notes after the export, %zu before", FILES[i].stem, again.count,
                notes->count);
-        imported_notes_destroy(&again);
+        imported_score_destroy(&again);
     }
     remove(path);
 }
@@ -88,7 +88,7 @@ static bool id_in_export(const char *xml, const char *id) {
     return strstr(xml, exact) != NULL || strstr(xml, suffixed) != NULL;
 }
 
-static void check_note_ids(size_t i, const ImportedNotes *notes, const char *xml) {
+static void check_note_ids(size_t i, const ImportedScore *notes, const char *xml) {
     char **ids = NULL;
     size_t count = 99;
     AnalyzerStatus status = analyzer_score_note_xml_ids(notes, &ids, &count);
@@ -114,13 +114,13 @@ static void check_note_ids(size_t i, const ImportedNotes *notes, const char *xml
 
 static void check_meter_defaulted(void) {
     for (size_t i = 0; i < sizeof(FILES) / sizeof(FILES[0]); i++) {
-        ImportedNotes notes;
+        ImportedScore notes;
         if (!import_file(i, &notes)) {
             CHECKF(false, "%s: cannot import", FILES[i].file);
             continue;
         }
         CHECKF(!analyzer_imported_meter_defaulted(&notes), "%s: the declared meter reads as defaulted", FILES[i].stem);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
     }
 
     /* Five quarter notes at division 96 and no time signature event. */
@@ -140,19 +140,19 @@ static void check_meter_defaulted(void) {
         return;
     }
     fclose(file);
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         CHECKF(false, "cannot import %s", path);
     } else {
         CHECKF(analyzer_imported_meter_defaulted(&notes), "a MIDI file with no time signature does not read as defaulted");
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
     }
     remove(path);
     CHECKF(!analyzer_imported_meter_defaulted(NULL), "NULL notes read as defaulted");
 }
 
 static void check_arguments(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
     char *xml = (char *)1;
     CHECKF(analyzer_score_export_musicxml(NULL, &xml) == ANALYZER_ERR_ARGUMENT && xml == NULL, "NULL notes");
     if (!import_file(0, &notes)) {
@@ -175,7 +175,7 @@ static void check_arguments(void) {
     CHECKF(analyzer_score_note_xml_ids(&notes, &ids, &id_count) == ANALYZER_ERR_ARGUMENT && ids == NULL,
            "ids: notes with no events");
     notes.events = events;
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {
@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
         if (smoke && !FILES[i].smoke) {
             continue;
         }
-        ImportedNotes notes;
+        ImportedScore notes;
         if (!import_file(i, &notes)) {
             CHECKF(false, "%s: cannot import", FILES[i].file);
             continue;
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
             printf("%s: %zu bytes\n", FILES[i].stem, strlen(xml));
         }
         free(xml);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
     }
     check_meter_defaulted();
     check_arguments();

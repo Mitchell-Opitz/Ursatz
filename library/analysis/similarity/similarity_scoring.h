@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+#include "model/core/rational.h"
+
 #include "analysis/similarity/similarity_model.h"
 #include "analysis/notes/contour.h"
 
@@ -54,16 +56,11 @@
  * sequence in both inputs (SIMILARITY_SCORE_ERR_INVALID_INPUT otherwise).
  */
 
-typedef struct {
-    unsigned long numerator;
-    unsigned long denominator; /* always positive */
-} SimilarityScore;
+/* A score: an exact Rational in [0, 1] (den always positive). */
+typedef Rational SimilarityScore;
 
 /* One duration, as a positive ratio of whole notes. */
-typedef struct {
-    unsigned long numerator;
-    unsigned long denominator;
-} SimilarityDuration;
+typedef Rational SimilarityDuration;
 
 /* A sequence to compare. Each array is borrowed and may be NULL with a count of 0 when that dimension is not used. */
 typedef struct {

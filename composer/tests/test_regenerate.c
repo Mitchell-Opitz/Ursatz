@@ -28,7 +28,7 @@ static RegenerateResult regenerate_one(PiecePlan *plan, FillTarget target, const
 
 /* How many spans the Analyzer has been handed so far, in all hearings of this process. */
 static size_t analyzer_calls(void) {
-    return atomic_load(&hearing_analyzer_calls_made);
+    return atomic_load(&hearing_chain_runs_made);
 }
 
 /*

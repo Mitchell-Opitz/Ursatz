@@ -4,7 +4,12 @@ add_library(ursatz_theory
     framework/framework.c
     framework/framework_singleton.c
     style/style_features.c
-    style/style_fraction.c
+    style/style_labels.c
+    style/style_compare.c
+    style/style_model_file.c
+    style/style_piece.c
+    style/style_profile.c
+    style/style_reference.c
     style/style_model.c
     style/style_model_blend.c
     style/style_model_build.c
@@ -163,6 +168,12 @@ ursatz_public_headers(ursatz_theory
         theory/framework/framework.h
         theory/framework/framework_singleton.h
         theory/style/style_features.h
+        theory/style/style_labels.h
+        theory/style/style_compare.h
+        theory/style/style_model_file.h
+        theory/style/style_piece.h
+        theory/style/style_profile.h
+        theory/style/style_reference.h
         theory/style/style_model.h
         theory/style/style_model_blend.h
         theory/style/style_model_build.h

@@ -2,20 +2,14 @@
 #define URSATZ_CHAIN_ANALYSIS_CHAIN_INTERNAL_H
 
 #include "chain/analysis_chain.h"
+#include "chain/chain_result.h"
 #include "chain/kernel_owners.h"
+#include <io/imported_score.h>
 #include "theory/tonality/common_practice_materials.h"
 
 /*
- * The fields of an AnalysisChain: analysis_chain.c writes them; tests read the meter results through
- * tests/support/chain_test_access.h. Not staged: no application includes this header.
+ * The fields of an AnalysisChain: analysis_chain.c writes them. Not staged: no application includes this header.
  */
-
-typedef struct {
-    StandardMeterSyncopations syncopations;
-    StandardMeterHemiolas hemiolas;
-    StandardMeterHypermeter hypermeter;
-    StandardMeterDensities densities;
-} AnalysisChainMeter;
 
 /* The results of the stages from the key regions to the form, which run twice when the keys are refined. */
 typedef struct {
@@ -78,10 +72,15 @@ typedef struct {
 
 extern const AnalysisChainStage analysis_chain_stages[ANALYSIS_CHAIN_STAGE_COUNT];
 
+struct ChainCollect;
+
 struct AnalysisChain {
     AnalysisChainConfig config;
     CommonPracticeMaterials materials; /* resolved once from config.knowledge; the stage configs point here */
     ChainRelationContext relation_context; /* the key the motive stage reads generic shapes in */
+    const ImportedScore *score;     /* analysis_chain_run_score: the score the notes were built from */
+    ChainResult result;             /* the collected result; empty unless collected */
+    struct ChainCollect *collect;   /* what the collection keeps beside the chain (chain_collect.h); owned */
     unsigned stages;
     const AnalysisNoteSet *notes;
     const AnalysisKeyEvent *key_events;
@@ -121,14 +120,6 @@ struct AnalysisChain {
     bool have_motive_themes;
     StandardFormMotives motives;
     bool have_motives;
-
-    ChainMeterInput meter_input;
-    bool have_meter_input;
-    AnalysisChainMeter meter;
-    bool have_syncopations;
-    bool have_hemiolas;
-    bool have_hypermeter;
-    bool have_densities;
 
     ChainTextureInput texture_input;
     bool have_texture_input;

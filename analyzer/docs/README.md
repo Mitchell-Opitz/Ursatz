@@ -15,6 +15,7 @@ Every doc in the Ursatz-Analyzer repo, one line each. Back to the [repo README](
 - [corpus.md](corpus.md): analyzing a folder into documents and a corpus index.
 - [style-profile.md](style-profile.md): style profiles, the model file and comparing styles.
 - [similar-material.md](similar-material.md): searching a corpus by motive or progression.
+- [corpus-passages.md](corpus-passages.md): the passages of a corpus as the Composer API takes them inline.
 - [motive-links.md](motive-links.md): linking motive families across pieces.
 - [input.md](input.md): input formats, notation readings, meter and measure numbers.
 
@@ -22,7 +23,6 @@ Every doc in the Ursatz-Analyzer repo, one line each. Back to the [repo README](
 
 - [library.md](library.md): the public headers, CMake targets and pipeline stages.
 - [gui-api.md](gui-api.md): the entries the GUI calls.
-- [composer-api.md](composer-api.md): the entries the Composer calls.
 - [analysis-result.md](analysis-result.md): the `AnalyzerResult`.
 
 ## Formats and schemas

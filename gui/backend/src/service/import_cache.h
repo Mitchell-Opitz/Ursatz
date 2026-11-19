@@ -20,7 +20,7 @@
 typedef struct UrsatzGuiImportEntry UrsatzGuiImportEntry;
 
 /* Imports the source into *out; false when it cannot. */
-typedef bool (*UrsatzGuiImportFn)(void *context, ImportedNotes *out);
+typedef bool (*UrsatzGuiImportFn)(void *context, ImportedScore *out);
 
 /*
  * The entry of piece_id for version, imported with import(context, ...) when there is none (or the version
@@ -33,7 +33,7 @@ UrsatzGuiImportEntry *ursatz_gui_import_cache_acquire(const char *piece_id, cons
 
 void ursatz_gui_import_cache_release(UrsatzGuiImportEntry *entry);
 
-const ImportedNotes *ursatz_gui_import_entry_notes(const UrsatzGuiImportEntry *entry);
+const ImportedScore *ursatz_gui_import_entry_notes(const UrsatzGuiImportEntry *entry);
 
 /* The cached score: the MusicXML text (owned by the entry) or NULL when none was stored yet. */
 const char *ursatz_gui_import_entry_score(const UrsatzGuiImportEntry *entry, bool *out_meter_defaulted);

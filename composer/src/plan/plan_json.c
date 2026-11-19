@@ -9,7 +9,7 @@
 #include <model/pitch/pitch_arithmetic.h>
 #include <theory/harmony/harmonic_function.h>
 #include <theory/tonality/tonal_key.h>
-#include <ursatz_analyzer/version.h>
+#include <chain/analysis_chain.h>
 #include <ursatz_composer/composer.h>
 #include <theory/galant/galant_prototypes.h>
 #include <analysis/texture/texture_rules.h>
@@ -414,7 +414,7 @@ static cJSON *metadata_json(const PiecePlan *plan) {
     cJSON *object = cJSON_CreateObject();
     const char *analyzer = plan_analyzer_version(plan);
     if (object && !(plan_json_add(object, "composer_version", cJSON_CreateString(composer_version())) &&
-                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(ursatz_analyzer_producer_key())) &&
+                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(analysis_chain_producer_key())) &&
                     (analyzer[0] == '\0' || plan_json_add(object, "analyzer_version", cJSON_CreateString(analyzer))))) {
         cJSON_Delete(object);
         return NULL;

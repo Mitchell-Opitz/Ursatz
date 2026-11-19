@@ -74,7 +74,7 @@ Motives related to one motive, best first ([cli-develop.md](../cli-develop.md)).
 ### `composer_api_grow(context, request_json, job, out)`
 
 A theme grown from a motive ([cli-grow.md](../cli-grow.md)). The request is the motive request, or, in place of `input`,
-`corpus` (a corpus directory) with `like` (a passage file): the first bar of a similar passage becomes the motive and the
+`corpus_passages` (the passages of a corpus like a passage, found by the Analyzer, best first; [schema](../../schema/api/corpus-passages.schema.json)): the first bar of a similar passage becomes the motive and the
 document reports it as `source` (not with `harmony`, `features` or `role`). The brief:
 
 | Member | Value |

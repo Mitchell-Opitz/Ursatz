@@ -51,7 +51,7 @@ uses relationship    model
 uses interpretation  model
 uses io              model realization ezxml
 uses theory-framework    model
-uses theory-style        model
+uses theory-style        model theory-tonality cjson
 uses theory-rules        model theory-framework
 uses theory-vocabulary   model
 uses theory-knowledge    model cjson
@@ -102,11 +102,21 @@ only library/theory/knowledge/knowledge_embedded.h library/theory/knowledge libr
 
 # The analysis chain: the model, theory and analysis groups, never an application.
 module chain library/chain prefix chain/
-uses chain model theory analysis
+uses chain model theory analysis io
 
 # Applications. A library header an application includes is a staged public header.
 module analyzer-api  analyzer/include  prefix ursatz_analyzer/
 module analyzer      analyzer/src      root analyzer/src analyzer/include
+# The Analyzer's sources by job (R-621's neighbour, A20261115-608): util at the bottom, then store and result, then export, style, corpus
+# and links, and the command line over all of them.
+module analyzer-util   analyzer/src/util   root analyzer/src analyzer/include
+module analyzer-store  analyzer/src/store  root analyzer/src analyzer/include
+module analyzer-result analyzer/src/result root analyzer/src analyzer/include
+module analyzer-export analyzer/src/export root analyzer/src analyzer/include
+module analyzer-style  analyzer/src/style  root analyzer/src analyzer/include
+module analyzer-corpus analyzer/src/corpus root analyzer/src analyzer/include
+module analyzer-links  analyzer/src/links  root analyzer/src analyzer/include
+module analyzer-cli    analyzer/src/cli    root analyzer/src analyzer/include
 module composer-api  composer/include  prefix ursatz_composer/composer_api.h
 module composer      composer/src      prefix ursatz_composer/  root composer/src composer/src/include composer/include
 module composer-cli  composer/cli
@@ -121,13 +131,23 @@ target ursatz_io io
 target ursatz_realization realization
 target ursatz_plan plan
 staged model theory analysis chain io realization plan analyzer-api analyzer composer
-generated analyzer version.h ursatz_analyzer_producer_key.h
+generated analyzer ursatz_analyzer/version.h ursatz_analyzer/producer_key.h
+generated chain producer_key.h chain/producer_key.h
 
-uses analyzer-api  model theory analysis io
-allow analyzer/include/ursatz_analyzer/result_chain.h chain -- the chain's claims, for a consumer that links ursatz_analyzer::chain
+uses analyzer-api  model theory analysis chain io
 uses analyzer      model theory analysis chain io analyzer-api cjson ezxml
-uses composer      model theory realization plan analysis chain io analyzer-api composer-api cjson
-uses composer-cli  composer-api cjson
+uses analyzer-util   model theory analysis chain io analyzer-api cjson ezxml
+uses analyzer-store  model theory analysis chain io analyzer-api cjson ezxml analyzer-util
+uses analyzer-result model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store
+uses analyzer-export model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
+uses analyzer-style  model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
+# corpus.c writes the corpus index from the document builder's own entry: the one edge into another folder's *_internal.h.
+uses analyzer-corpus model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h
+uses analyzer-links  model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result
+uses analyzer-cli    model theory analysis chain io analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links
+uses composer      model theory realization plan analysis chain io composer-api cjson
+# The Composer CLI finds the corpus passages with the Analyzer (analyzer_corpus_passages_like) and gives them to the Composer API inline (R-619): orchestration until P64's one CLI.
+uses composer-cli  composer-api analyzer-api cjson
 uses gui           analyzer-api composer-api cjson civetweb
 allow gui/backend/src/service/knowledge_service.h theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
 allow gui/backend/src/service/knowledge_service.c theory -- the backend builds the one knowledge snapshot (library/theory/knowledge) and passes it to the Analyzer
@@ -280,6 +300,14 @@ module composer-consumer  composer/tests/consumer
 module gui-tests          gui/backend/tests         root gui/backend/tests gui/backend/src
 uses analyzer-tests test-support
 like analyzer-tests analyzer
+like analyzer-tests analyzer-util
+like analyzer-tests analyzer-store
+like analyzer-tests analyzer-result
+like analyzer-tests analyzer-export
+like analyzer-tests analyzer-style
+like analyzer-tests analyzer-corpus
+like analyzer-tests analyzer-links
+like analyzer-tests analyzer-cli
 uses composer-tests test-support
 like composer-tests composer
 uses gui-tests test-support
@@ -293,4 +321,6 @@ forbid composer get_target_property\([^)]*SOURCE_DIR|\.\./library/tests|\.\./ana
 forbid gui get_target_property\([^)]*SOURCE_DIR|\.\./library/tests -- an application reads no library sources
 forbid gui URSATZ_GUI_LIBRARY_DIR|URSATZ_GUI_TEST_URSATZ_DIR -- GUI tests read the root fixtures, not library folders
 forbid analyzer URSATZ_ANALYZER_FIXTURE_DIR -- one fixtures folder
+forbid composer/src ursatz_analyzer -- the Composer includes and links no Analyzer: it hears through the library chain and the Analyzer is its sibling (R-620); only the CLI and the GUI call both
+forbid composer/CMakeLists.txt ursatz_analyzer -- the Composer links no Analyzer target (R-620)
 forbid composer/src/CMakeLists.txt target_link_libraries\(ursatz_composer\s+(PUBLIC|INTERFACE) -- a Composer consumer sees no library or Analyzer header

@@ -6,8 +6,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -128,14 +127,14 @@ static void write_piece(const char *path, const Measure *measures, size_t measur
 /* ---- Analysis ---- */
 
 typedef struct {
-    ImportedNotes notes;
-    AnalysisReport report;
+    ImportedScore notes;
+    ChainResult report;
     cJSON *document;
 } Analyzed;
 
 static void analyze(const char *path, Analyzed *out) {
-    if (midi_pipeline_import_file(path, &out->notes) != MIDI_PIPELINE_OK ||
-        !run_analysis_pipeline(&out->notes, test_knowledge(), &out->report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &out->notes, NULL) != IMPORTED_SCORE_OK ||
+        !test_analyze_report(&out->notes, &out->report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         exit(1);
     }
@@ -150,8 +149,8 @@ static void analyze(const char *path, Analyzed *out) {
 
 static void release(Analyzed *analyzed) {
     cJSON_Delete(analyzed->document);
-    analysis_report_destroy(&analyzed->report);
-    imported_notes_destroy(&analyzed->notes);
+    chain_result_destroy(&analyzed->report);
+    imported_score_destroy(&analyzed->notes);
 }
 
 static const char *text(const cJSON *object, const char *key) {

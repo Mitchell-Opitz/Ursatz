@@ -23,47 +23,12 @@ static bool is_chord_tone(const MotiveSketch *sketch, const MotiveSketchChord *c
     return false;
 }
 
-static bool has_pitch_class(const int *pcs, size_t count, int pc) {
-    for (size_t i = 0; i < count; i++) {
-        if (pcs[i] == pc) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/*
- * The chord whose triad holds the most notes, then the most time, the first of I V IV vi ii iii vii on a tie. The
- * library's harmony relations make the same choice for a sketch without chords (motive_relation.c, not exported).
- */
+/* The chord the motive implies (the library's motive_sketch_implied_chord), for a motive with a scale in full form that validates. */
 bool motive_implied_chord(const Motive *motive, MotiveSketchChord *out) {
-    static const int ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
     if (!motive || !out || !motive->has_scale || motive->form != MOTIVE_SKETCH_FORM_FULL || !motive_sketch_validate(motive)) {
         return false;
     }
-    size_t best_hits = 0;
-    Rational best_time = msk_int(0);
-    bool found = false;
-    for (int k = 0; k < 7; k++) {
-        MotiveSketchChord chord = {msk_int(0), ORDER[k], 0, 0, false};
-        int pcs[4];
-        size_t count = motive_sketch_chord_tones(motive, &chord, pcs);
-        size_t hits = 0;
-        Rational time = msk_int(0);
-        for (size_t i = 0; i < motive->note_count; i++) {
-            if (has_pitch_class(pcs, count, util_pitch_class(motive->notes[i].pitch))) {
-                hits++;
-                time = msk_add(time, motive->notes[i].duration);
-            }
-        }
-        if (hits > best_hits || (hits == best_hits && hits > 0 && msk_cmp(time, best_time) > 0)) {
-            best_hits = hits;
-            best_time = time;
-            *out = chord;
-            found = true;
-        }
-    }
-    return found;
+    return motive_sketch_implied_chord(motive, out);
 }
 
 static MotiveSketchChord triad(int degree, Rational onset) {

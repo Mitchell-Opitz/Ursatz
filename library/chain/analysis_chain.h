@@ -37,6 +37,8 @@
 #include "analysis/notes/sonority_segmentation.h"
 #include "analysis/texture/texture_analysis_classify.h"
 #include "chain/chain_inputs.h"
+#include "chain/chain_result.h"
+#include <io/imported_score.h>
 #include "analysis/harmony/weighted_chord_identification.h"
 #include "theory/knowledge/knowledge_snapshot.h"
 
@@ -82,7 +84,21 @@
 #define ANALYSIS_CHAIN_STAGE_MELODY        (1u << 10)
 #define ANALYSIS_CHAIN_STAGE_SCHEMAS       (1u << 11)
 #define ANALYSIS_CHAIN_STAGE_COUNT         12u
-#define ANALYSIS_CHAIN_STAGE_ALL           ((1u << ANALYSIS_CHAIN_STAGE_COUNT) - 1u)
+/*
+ * The stages of the result only (R-615): the collected result of analysis_chain_run_score has six stages that no chain stage
+ * computes, switched by these bits (the values the Analyzer's ANALYZER_STAGE_* had). analysis_chain_run ignores them.
+ */
+#define ANALYSIS_CHAIN_STAGE_PROGRESSIONS    (1u << 12)
+#define ANALYSIS_CHAIN_STAGE_HARMONIC_RHYTHM (1u << 13)
+#define ANALYSIS_CHAIN_STAGE_METER_CHECK     (1u << 14)
+/* Bit 15 is unused: it was ANALYSIS_CHAIN_STAGE_RHYTHM, the collected rhythm stage, which is now the chain's one meter analysis
+   (ANALYSIS_CHAIN_STAGE_METER, R-616). */
+#define ANALYSIS_CHAIN_STAGE_MARKINGS        (1u << 16)
+#define ANALYSIS_CHAIN_STAGE_FORM_PLAN       (1u << 17)
+/* The twelve chain stages: the result is collected when a run has all of them. */
+#define ANALYSIS_CHAIN_STAGE_PERCEPTION      ((1u << ANALYSIS_CHAIN_STAGE_COUNT) - 1u)
+/* Every stage, the result-only ones included. */
+#define ANALYSIS_CHAIN_STAGE_ALL             ((1u << 18) - 1u)
 
 /*
  * The seventh penalty (CommonPracticeWeightedConfig.seventh_penalty) of the chord identification on harmonic spans (R-376). A span reads
@@ -159,6 +175,11 @@ typedef struct {
 
 AnalysisChainConfig analysis_chain_config_default(void);
 
+/* The library's producer key (R-620): 16 hex digits, a hash of the library sources that produce an analysis (model, theory, analysis, io,
+   chain and the vendored cJSON and ezxml; no test, doc or app). It changes when any of them changes and not otherwise. A plan and the
+   Composer's versions record it as `ursatz_commit`. */
+const char *analysis_chain_producer_key(void);
+
 typedef enum {
     ANALYSIS_CHAIN_OK = 0,
     ANALYSIS_CHAIN_ERR_NULL_ARGUMENT,
@@ -190,8 +211,30 @@ typedef struct AnalysisChain AnalysisChain;
 AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const AnalysisKeyEvent *key_events, size_t key_event_count,
                                        const AnalysisChainConfig *config, AnalysisChain **out);
 
+/*
+ * Runs the chain on an imported score and collects its result (R-615). The note set and key events are built from the score
+ * (the score's notes, their spelling when it is notated, its streams as tracks, its meter map and key signature events), the
+ * stages run as analysis_chain_run runs them (config->stages & ANALYSIS_CHAIN_STAGE_PERCEPTION), and when the config has every
+ * perception stage the ChainResult is collected (analysis_chain_result), with the result-only stages whose bits the config has.
+ * config may be NULL for the defaults, which carry no knowledge snapshot (ANALYSIS_CHAIN_ERR_KNOWLEDGE). A score with no notes
+ * gives a chain with nothing run and an empty result. The score is borrowed and must outlive the chain. On OK, *out is owned by
+ * the caller (analysis_chain_destroy); on an error *out is untouched.
+ */
+AnalysisChainStatus analysis_chain_run_score(const ImportedScore *score, const AnalysisChainConfig *config,
+                                             AnalysisChain **out);
+
 /* NULL is a no-op. */
 void analysis_chain_destroy(AnalysisChain *chain);
+
+/* The collected result of analysis_chain_run_score. Never NULL: empty when it was not collected (a run of fewer stages, no score
+   notes, analysis_chain_run). */
+const ChainResult *analysis_chain_result(const AnalysisChain *chain);
+
+/* The score analysis_chain_run_score ran on; NULL after analysis_chain_run. */
+const ImportedScore *analysis_chain_score(const AnalysisChain *chain);
+
+/* Moves the collected result out into *out (the caller releases it with chain_result_destroy); the chain keeps an empty one. */
+void chain_result_take(AnalysisChain *chain, ChainResult *out);
 
 /* --- the results --- */
 

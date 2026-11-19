@@ -4,8 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -97,7 +96,7 @@ static void check_chords(const cJSON *document, size_t *cadential_six_fours) {
     CHECK(labelled > 0);
 }
 
-static void check_prolongations(const cJSON *document, const AnalysisReport *report) {
+static void check_prolongations(const cJSON *document, const ChainResult *report) {
     static const char *const REASONS[] = {"passing-six-four", "neighbor-six-four", "arpeggiating-six-four",
                                           "tonic-line", "applied"};
     const cJSON *prolongations = test_json_member(document, "prolongations");
@@ -126,9 +125,9 @@ static void check_prolongations(const cJSON *document, const AnalysisReport *rep
 static void run_piece(const Piece *piece) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
-    ImportedNotes notes;
-    AnalysisReport report;
-    if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    ImportedScore notes;
+    ChainResult report;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) != IMPORTED_SCORE_OK || !test_analyze_report(&notes, &report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return;
@@ -147,8 +146,8 @@ static void run_piece(const Piece *piece) {
         printf("%s: %zu cadential six-fours, %zu prolongations\n", piece->name, cadential, report.prolongation_count);
         cJSON_Delete(document);
     }
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

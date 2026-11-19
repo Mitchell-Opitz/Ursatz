@@ -4,12 +4,11 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <chain/chain_result.h>
+#include "chain/chain_result_progressions.h"
+#include <io/imported_score.h>
 
 #include "cJSON.h"
-#include "pipeline/progression_pipeline.h"
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -36,8 +35,8 @@
 
 /* A report whose entries are the tokens of spec, separated by spaces: "<region>:<numeral>" for a labelled chord in
    that key region, "-" for a chord with no numeral. */
-static AnalysisReport report_of(const char *spec) {
-    AnalysisReport report;
+static ChainResult report_of(const char *spec) {
+    ChainResult report;
     memset(&report, 0, sizeof(report));
     char *copy = strdup(spec);
     size_t count = 0;
@@ -45,10 +44,10 @@ static AnalysisReport report_of(const char *spec) {
         count += (*p == ' ') ? 1 : 0;
     }
     count++;
-    report.entries = calloc(count, sizeof(AnalysisReportEntry));
+    report.entries = calloc(count, sizeof(ChainEntry));
     char *save = NULL;
     for (char *token = strtok_r(copy, " ", &save); token; token = strtok_r(NULL, " ", &save)) {
-        AnalysisReportEntry *entry = &report.entries[report.entry_count++];
+        ChainEntry *entry = &report.entries[report.entry_count++];
         if (token[0] == '-') {
             continue;
         }
@@ -62,7 +61,7 @@ static AnalysisReport report_of(const char *spec) {
 }
 
 static bool is_pattern(const AnalysisProgression *progression, const char *label) {
-    char *actual = progression_label(progression);
+    char *actual = chain_progression_label(progression);
     bool same = actual && strcmp(actual, label) == 0;
     free(actual);
     return same;
@@ -79,7 +78,7 @@ static void check_occurrence(const AnalysisProgression *progression, size_t inde
 static void test_held_chords(void) {
     /* I I IV V V I I IV V I: held chords merge, so I IV V I occurs twice (entries 0-6 and 5-9), sharing the held I,
        and all of its parts are inside it. */
-    AnalysisReport report = report_of("0:I 0:I 0:IV 0:V 0:V 0:I 0:I 0:IV 0:V 0:I");
+    ChainResult report = report_of("0:I 0:I 0:IV 0:V 0:V 0:I 0:I 0:IV 0:V 0:I");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count == 1);
     if (report.progression_count == 1) {
@@ -89,12 +88,12 @@ static void test_held_chords(void) {
         check_occurrence(&report.progressions[0], 0, 0, 6);
         check_occurrence(&report.progressions[0], 1, 5, 9);
     }
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
 }
 
 static void test_region_break(void) {
     /* A run does not cross from key region 0 into 1: V > I never occurs, I > V occurs once in each. */
-    AnalysisReport report = report_of("0:I 0:V 1:I 1:V");
+    ChainResult report = report_of("0:I 0:V 1:I 1:V");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count == 1);
     if (report.progression_count == 1) {
@@ -103,12 +102,12 @@ static void test_region_break(void) {
         check_occurrence(&report.progressions[0], 0, 0, 1);
         check_occurrence(&report.progressions[0], 1, 2, 3);
     }
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
 }
 
 static void test_unlabelled_break(void) {
     /* A chord with no numeral breaks a run, in the same key region too. */
-    AnalysisReport report = report_of("0:I 0:V - 0:I 0:V");
+    ChainResult report = report_of("0:I 0:V - 0:I 0:V");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count == 1);
     if (report.progression_count == 1) {
@@ -116,13 +115,13 @@ static void test_unlabelled_break(void) {
         check_occurrence(&report.progressions[0], 0, 0, 1);
         check_occurrence(&report.progressions[0], 1, 3, 4);
     }
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
 }
 
 static void test_containment(void) {
     /* I V I V I V: I > V occurs three times and stays. V > I, I > V > I and V > I > V occur twice, each only inside
        I > V > I > V (also twice), so only that one remains with I > V. */
-    AnalysisReport report = report_of("0:I 0:V 0:I 0:V 0:I 0:V");
+    ChainResult report = report_of("0:I 0:V 0:I 0:V 0:I 0:V");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count == 2);
     if (report.progression_count == 2) {
@@ -131,13 +130,13 @@ static void test_containment(void) {
         CHECK(is_pattern(&report.progressions[1], "I > V > I > V"));
         CHECK(report.progressions[1].occurrence_count == 2);
     }
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
 }
 
 static void test_rank_ties(void) {
     /* Equal counts rank the longer pattern first, then the earlier. I > IV occurs twice, vi > ii twice, I > IV > V
        twice (so I > IV is dropped as part of it, but vi > ii stays). */
-    AnalysisReport report = report_of("0:I 0:IV 0:V 0:vi 0:ii 0:I 0:IV 0:V 0:vi 0:ii");
+    ChainResult report = report_of("0:I 0:IV 0:V 0:vi 0:ii 0:I 0:IV 0:V 0:vi 0:ii");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count >= 1);
     if (report.progression_count >= 1) {
@@ -148,29 +147,29 @@ static void test_rank_ties(void) {
                   (before->occurrence_count == after->occurrence_count && before->length >= after->length));
         }
     }
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
 }
 
 static void test_length_limit(void) {
     /* Seven different chords twice: runs stop at six chords, so no progression is longer. */
-    AnalysisReport report = report_of("0:I 0:ii 0:iii 0:IV 0:V 0:vi 0:vii 0:I 0:ii 0:iii 0:IV 0:V 0:vi 0:vii");
+    ChainResult report = report_of("0:I 0:ii 0:iii 0:IV 0:V 0:vi 0:vii 0:I 0:ii 0:iii 0:IV 0:V 0:vi 0:vii");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count > 0);
     for (size_t i = 0; i < report.progression_count; i++) {
         CHECK(report.progressions[i].length >= 2 && report.progressions[i].length <= 6);
     }
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
 }
 
 static void test_no_repeat(void) {
-    AnalysisReport report = report_of("0:I 0:IV 0:V 0:ii");
+    ChainResult report = report_of("0:I 0:IV 0:V 0:ii");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count == 0);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
     report = report_of("0:I");
     CHECK(progression_stage_collect(&report));
     CHECK(report.progression_count == 0);
-    analysis_report_destroy(&report);
+    chain_result_destroy(&report);
 }
 
 /* ---- Reference pieces ---- */
@@ -207,7 +206,7 @@ static void check_occurrence_chords(const cJSON *document, const cJSON *progress
     CHECK(next == cJSON_GetArraySize(pattern));
 }
 
-static void check_progressions(const cJSON *document, const AnalysisReport *report) {
+static void check_progressions(const cJSON *document, const ChainResult *report) {
     const cJSON *progressions = test_json_member(document, "progressions");
     CHECK((size_t)cJSON_GetArraySize(progressions) == report->progression_count);
     CHECK(cJSON_GetArraySize(progressions) > 0);
@@ -251,10 +250,10 @@ static void check_progressions(const cJSON *document, const AnalysisReport *repo
     }
 }
 
-static cJSON *analyze(const Piece *piece, AnalysisReport *report, ImportedNotes *notes) {
+static cJSON *analyze(const Piece *piece, ChainResult *report, ImportedScore *notes) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
-    if (midi_pipeline_import_file(path, notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(notes, test_knowledge(), report)) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, notes, NULL) != IMPORTED_SCORE_OK || !test_analyze_report(notes, report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         test_failure_count++;
         return NULL;
@@ -267,22 +266,22 @@ static cJSON *analyze(const Piece *piece, AnalysisReport *report, ImportedNotes 
 }
 
 static void run_piece(const Piece *piece) {
-    ImportedNotes notes;
-    AnalysisReport report;
+    ImportedScore notes;
+    ChainResult report;
     cJSON *document = analyze(piece, &report, &notes);
     if (document) {
         check_progressions(document, &report);
         printf("%s: %zu progressions\n", piece->name, report.progression_count);
         cJSON_Delete(document);
-        analysis_report_destroy(&report);
-        imported_notes_destroy(&notes);
+        chain_result_destroy(&report);
+        imported_score_destroy(&notes);
     }
 }
 
 /* Bach 114's most common progression ends on the tonic. */
 static void check_bach_top(void) {
-    ImportedNotes notes;
-    AnalysisReport report;
+    ImportedScore notes;
+    ChainResult report;
     cJSON *document = analyze(&PIECES[0], &report, &notes);
     if (!document) {
         return;
@@ -296,8 +295,8 @@ static void check_bach_top(void) {
         CHECK(strcmp(cJSON_GetArrayItem(pattern, cJSON_GetArraySize(pattern) - 1)->valuestring, "I") == 0);
     }
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

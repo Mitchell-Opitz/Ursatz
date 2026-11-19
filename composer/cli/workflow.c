@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ursatz_analyzer/corpus_passages.h>
+
 #include "cli_context.h"
 #include "cli_options.h"
 
@@ -244,14 +246,63 @@ double cli_json_number(const cJSON *object, const char *name) {
     return cJSON_IsNumber(item) ? item->valuedouble : 0;
 }
 
-void cli_print_notices(cJSON *document) {
+const char *cli_corpus_notice_text(const char *notice, const char *corpus_dir, char *out, size_t size) {
+    const char *at = corpus_dir ? strstr(notice, " (analyzed by another version") : NULL;
+    if (!at || strstr(notice, "stale documents") == NULL) {
+        return notice;
+    }
+    snprintf(out, size, "%.*s in '%s'%s", (int)(at - notice), notice, corpus_dir, at);
+    return out;
+}
+
+void cli_print_corpus_notices(cJSON *document, const char *corpus_dir) {
     const cJSON *notice = NULL;
     cJSON_ArrayForEach(notice, cJSON_GetObjectItemCaseSensitive(document, "notices")) {
         if (cJSON_IsString(notice)) {
-            fprintf(stderr, "Warning: %s\n", notice->valuestring);
+            char text[1400];
+            fprintf(stderr, "Warning: %s\n", cli_corpus_notice_text(notice->valuestring, corpus_dir, text, sizeof text));
         }
     }
     cJSON_DeleteItemFromObjectCaseSensitive(document, "notices");
+}
+
+void cli_print_notices(cJSON *document) {
+    cli_print_corpus_notices(document, NULL);
+}
+
+cJSON *cli_corpus_passages(const char *corpus_dir, const char *like_path, const char *numerals, int *status) {
+    AnalyzerCorpusPassages found;
+    const char *what = like_path ? like_path : numerals;
+    const KnowledgeSnapshot *knowledge = cli_context()->knowledge;
+    AnalyzerPassagesStatus searched = like_path ? analyzer_corpus_passages_like(corpus_dir, knowledge, like_path, 10, &found)
+                                                : analyzer_corpus_passages_numerals(corpus_dir, knowledge, numerals, 100, &found);
+    if (searched == ANALYZER_PASSAGES_ERR_QUERY) {
+        *status = cli_fail(CLI_EXIT_USAGE, "cannot read %s as a passage to look for", what);
+        return NULL;
+    }
+    if (searched == ANALYZER_PASSAGES_ERR_CORPUS) {
+        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read the corpus '%s' (the output directory of ursatz-analyzer --corpus)",
+                           corpus_dir);
+        return NULL;
+    }
+    if (searched != ANALYZER_PASSAGES_OK) {
+        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", knowledge ? "out of memory" : "a knowledge snapshot is required");
+        return NULL;
+    }
+    if (found.count == 0) {
+        analyzer_corpus_passages_destroy(&found);
+        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "no passage of the corpus '%s' is similar to %s (a score of 1/2 or more)",
+                           corpus_dir, what);
+        return NULL;
+    }
+    char *text = analyzer_corpus_passages_to_json(&found);
+    analyzer_corpus_passages_destroy(&found);
+    cJSON *array = text ? cJSON_Parse(text) : NULL;
+    free(text);
+    if (!array) {
+        *status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    return array;
 }
 
 /* What was heard in a section, in words: the "heard" text, or "kept" for a section outside the scope. */

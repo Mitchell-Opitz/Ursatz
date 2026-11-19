@@ -806,22 +806,24 @@ typedef struct {
     size_t as_requested; /* sections heard as the form they ask for */
 } Baseline;
 
+/* Re-recorded at P61 B6 (the Composer hears on harmonic spans, R-618), sections heard as requested: minuet 30 to 29, trio 45 to 41,
+   scherzo 28 to 26, figured-variations 126 to 123, large-rondo 116 to 110, sonatina-tonic-major 51 to 48. */
 static const Baseline BASELINES[] = {
     {"binary", 30, 60, 20},     {"rounded-binary", 40, 120, 58},
     {"ternary", 39, 117, 51},    {"variations", 60, 220, 184},
     {"loop", 40, 60, 32},       {"layered", 60, 180, 74},
-    {"minuet", 35, 105, 30},     {"trio", 36, 108, 45},
-    {"scherzo", 34, 272, 28},
-    {"figured-variations", 39, 272, 126},
+    {"minuet", 35, 105, 29},     {"trio", 36, 108, 41},
+    {"scherzo", 34, 272, 26},
+    {"figured-variations", 39, 272, 123},
     {"main-and-subordinate", 40, 220, 58},
     {"andante-aba", 20, 80, 36},
     {"andante-abab", 20, 120, 43},
     {"small-rondo-ababa", 20, 140, 46},
     {"small-rondo-abaca", 20, 120, 46},
-    {"large-rondo", 20, 180, 116},
+    {"large-rondo", 20, 180, 110},
     {"sonata-rondo", 15, 150, 75},
     {"sonatina", 13, 169, 46},
-    {"sonatina-tonic-major", 15, 195, 51},
+    {"sonatina-tonic-major", 15, 195, 48},
 };
 
 static const Baseline *baseline_of(const char *kind) {

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 #include "test_support.h"
 #include "ursatz_test.h"
 
@@ -90,7 +90,7 @@ static void write_file(const char *path, const Track *tracks, size_t track_count
     fclose(file);
 }
 
-static void expect_part(const ImportedNotes *notes, size_t part, const char *id, const char *name, int program,
+static void expect_part(const ImportedScore *notes, size_t part, const char *id, const char *name, int program,
                         int staff_count) {
     const ImportedPart *p = &notes->source.parts[part];
     assert(strcmp(p->id, id) == 0);
@@ -101,18 +101,18 @@ static void expect_part(const ImportedNotes *notes, size_t part, const char *id,
 
 /* The reference pieces: a piano file is one part with two staves, whether it came as two hand tracks or as one. */
 
-static long note_pitch(const ImportedNotes *notes, size_t i) {
+static long note_pitch(const ImportedScore *notes, size_t i) {
     return pitch_numeric_value_position_numerator(notes->pitch_values[i]);
 }
 
 /* The measure of a note in a piece in 4/4 that starts on a barline: the whole notes before it, plus one. */
-static long note_measure(const ImportedNotes *notes, size_t i) {
+static long note_measure(const ImportedScore *notes, size_t i) {
     const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
     return (long)(onset->value.num / onset->value.den) + 1;
 }
 
 /* The stream that holds the lower notes: the one with the lower mean pitch. */
-static size_t lower_stream(const ImportedNotes *notes) {
+static size_t lower_stream(const ImportedScore *notes) {
     double total[2] = {0.0, 0.0};
     size_t count[2] = {0, 0};
     for (size_t i = 0; i < notes->count; i++) {
@@ -124,13 +124,13 @@ static size_t lower_stream(const ImportedNotes *notes) {
     return total[0] / (double)count[0] < total[1] / (double)count[1] ? 0 : 1;
 }
 
-static void import_reference(const char *name, ImportedNotes *notes) {
+static void import_reference(const char *name, ImportedScore *notes) {
     char path[1024];
     snprintf(path, sizeof path, "%s/framework-v1-corpus/%s.mid", URSATZ_FIXTURES_DIR, name);
-    assert(midi_pipeline_import_file(path, notes) == MIDI_PIPELINE_OK);
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, notes, NULL) == IMPORTED_SCORE_OK);
 }
 
-static void expect_one_piano_part(const ImportedNotes *notes) {
+static void expect_one_piano_part(const ImportedScore *notes) {
     assert(notes->source.part_count == 1);
     assert(notes->source.parts[0].staff_count == 2);
     assert(strcmp(notes->source.parts[0].id, "P1") == 0);
@@ -144,7 +144,7 @@ static void expect_one_piano_part(const ImportedNotes *notes) {
 /* Two hand tracks: one part, each note's stream is its track, the left hand's notes are on staff 2 and the right
    hand's on staff 1 in every measure from first to last, and (when high is true) at least one left hand note there
    is at middle C or above, so the staff is the track's and not the pitch's. */
-static void expect_hands(const ImportedNotes *notes, long first, long last, bool high) {
+static void expect_hands(const ImportedScore *notes, long first, long last, bool high) {
     expect_one_piano_part(notes);
     size_t left = lower_stream(notes);
     size_t checked = 0;
@@ -164,18 +164,18 @@ static void expect_hands(const ImportedNotes *notes, long first, long last, bool
 }
 
 static void check_reference_pieces(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
 
     /* Clementi: left hand on staff 2 in m11 (a measure the left hand crosses above the right) and m16 to m23. */
     import_reference("Clementi 36", &notes);
     expect_hands(&notes, 11, 11, false);
     expect_hands(&notes, 16, 23, true);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     /* Field 1 has two tracks as well. */
     import_reference("Field 1", &notes);
     expect_hands(&notes, 1, 1000, false);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     /* One track: one part, one stream, the staff decided per note. Bach 114 and Field 5 only join the part. */
     import_reference("Bach 114", &notes);
@@ -183,14 +183,14 @@ static void check_reference_pieces(void) {
     for (size_t i = 0; i < notes.count; i++) {
         assert(notes.streams[i] == 0);
     }
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     import_reference("Field 5", &notes);
     expect_one_piano_part(&notes);
     for (size_t i = 0; i < notes.count; i++) {
         assert(notes.streams[i] == 0);
     }
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     /* Mozart: the Alberti figure C4 G4 E4 G4 C4 G4 E4 G4 of m1 is on staff 2, the melody on staff 1. */
     import_reference("Mozart 545", &notes);
@@ -220,7 +220,7 @@ static void check_reference_pieces(void) {
         assert(note_pitch(&notes, i) == alberti[seen++]);
     }
     assert(seen == lower);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(void) {
@@ -256,11 +256,11 @@ int main(void) {
 
     char *path = test_temp_path("test_midi_parts.mid");
     write_file(path, tracks, 5);
-    ImportedNotes notes;
-    assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
+    ImportedScore notes;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     remove(path);
 
-    assert(notes.source.format == INPUT_FORMAT_MIDI);
+    assert(notes.source.format == IMPORTED_FORMAT_MIDI);
     assert(notes.source.part_count == 6);
     expect_part(&notes, 0, "P1", "Strings - Violin", 40, 1);
     expect_part(&notes, 1, "P2", "Strings - Cello", 42, 1);
@@ -289,7 +289,7 @@ int main(void) {
         assert(notes.source.part_index[i] == expected_part);
         assert(notes.source.staff[i] == expected_staff);
     }
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     /* A set-tempo event at tick 0 (400000 microseconds per quarter, 150 per minute) is the declared opening tempo; one
        that first comes later leaves the opening undeclared. */
@@ -301,11 +301,11 @@ int main(void) {
     put_note(&tempo_track, 0, 0, 60);
     put_end(&tempo_track);
     write_file(path, &tempo_track, 1);
-    assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     remove(path);
     assert(notes.source.tempo_declared);
     assert(notes.source.initial_quarters_per_minute > 149.99 && notes.source.initial_quarters_per_minute < 150.01);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 
     Track late_track = {{0}, 0};
     put_note(&late_track, 0, 0, 60);
@@ -315,10 +315,10 @@ int main(void) {
     }
     put_end(&late_track);
     write_file(path, &late_track, 1);
-    assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     remove(path);
     assert(!notes.source.tempo_declared);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     free(path);
     check_reference_pieces();
     puts("test_midi_parts: ok");

@@ -1131,7 +1131,7 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
      */
     MotiveSketchChord implied;
     if (options->implied_start && !options->contour && from.chord_count == 0 && to.chord_count > 0 && from.has_scale &&
-        from.form == MOTIVE_SKETCH_FORM_FULL && mch_implied_chord(&from, &implied)) {
+        from.form == MOTIVE_SKETCH_FORM_FULL && motive_sketch_implied_chord(&from, &implied)) {
         level[0][1] = level[0][0];
         level[0][1].sketch.chords[0] = implied;
         level[0][1].sketch.chord_count = 1;

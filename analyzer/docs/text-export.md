@@ -9,7 +9,7 @@ plain text, so it can be pasted into a conversation: "measure 27 is flagged as X
 addressed by a measure number as it is written in the score, and every claim sits in the measure where it starts.
 
 The notes are not read from the imported notes directly. The export writes the score MusicXML the Score tab draws
-(`analyzer_score_export_musicxml`), reads it back (the reader is private, `io/score_text_reader.h`) and prints
+(`analyzer_score_export_musicxml`) and reads the layout the writer prints (`io/score_layout.h`, `analyzer_score_layout`; nothing is read back from the XML) and prints
 what it finds, so the text shows exactly what the Score tab shows, wrong spelling and wrong tuplets included. The claims
 come from the analysis document ([analysis-document.md](analysis-document.md)) and nothing is added to it: the export
 changes neither `analysis.json`, its schema nor the score MusicXML.
@@ -117,7 +117,7 @@ the last measure. A first measure greater than the last, a negative number, or a
 
 ```c
 AnalyzerTextExportOptions analyzer_text_export_options_default(void);
-AnalyzerStatus analyzer_text_export_piece(const ImportedNotes *notes, const char *document_json,
+AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
                                           const AnalyzerTextExportOptions *options, char **text);
 ```
 

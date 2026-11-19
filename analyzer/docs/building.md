@@ -15,12 +15,12 @@ build that meets one returns no document. Pitch names, letters, pitch classes an
 read, formatted and resolved to a root by `standard-tonality/roman_numeral_grammar.h`. Degree semitones come from `standard-tonality/tonal_key.h`
 (`standard_tonality_degree_semitone`), a root name's pitch class from `pitch_spelling_parse_name` and `pitch_class_of_letter`, a
 MIDI pitch class from `pitch_class_of_midi`, a doubling read from `standard-voicing/doubling_reading.h`, and rhythm density's
-onset snap from `time/score_time.h` (`score_time_snap`), with a phrase span read from the fields of its `TimeSpan`. Time comparisons use `rational_cmp`. `StyleRational` and the meter
-check's own fraction stay until the library owns them.
+onset snap from `time/score_time.h` (`score_time_snap`), with a phrase span read from the fields of its `TimeSpan`. Time comparisons use `rational_cmp`. The meter
+check's own fraction stays until the library owns it.
 
 ## Tests
 
-Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): it compiles the test with `-UNDEBUG` and sets its timeout (120 s, 1800 s for `slow`). Labels: `slow` (nightly only), `valgrind` (memcheck runs, always with `slow`) and `schema`. The three schema tests (`test_analysis_document_schema`, `test_corpus_index_schema`, `test_style_model_schema`) are registered only when python3 with jsonschema is installed; `-DURSATZ_REQUIRE=jsonschema` makes the configure fail when it is not. The CLI tests that validate output on the side skip that step without it. Tests that write a fixed scratch file take a `RESOURCE_LOCK`, so they never run together. Smoke runs: `<name>_smoke` tests run the same program on Bach 114 alone (under 2 s each, in the fast set) for `test_measure_locations`, `test_chord_coverage`, `test_roman_numerals`, `test_cadences`, `test_harmonic_function`, `test_progressions`, `test_phrases`, `test_themes`, `test_form_plan`, `test_schemas`, `test_musicxml_midi_agreement`, `test_meter_check`, `test_text_export_snapshots` and `test_similar_material`; `test_analysis_document_schema_smoke` validates the Bach 114 document, and `test_cli_style_profile_smoke` and `test_cli_similar_smoke` run a two-piece corpus. Nightly only, because each needs a whole-corpus output and a smoke or CLI test covers the path: `test_motives` and `test_motive_sketch_map` (Mozart 545 only), `test_long_labels`, `test_corpus_key_estimation`, `test_analyzer_corpus`, `test_style_profile`, `test_corpus_index_schema` and `test_style_model_schema`. Test inputs come from the root `tests/fixtures/`; `URSATZ_FIXTURES_DIR` names it. Checks, file and JSON helpers come from the root `tests/support/ursatz_test.h`; `tests/support/` here keeps only what is Analyzer-specific.
+Every test is registered with `ursatz_test()` (`cmake/UrsatzTest.cmake` at the repository root): it compiles the test with `-UNDEBUG` and sets its timeout (120 s, 1800 s for `slow`). Labels: `slow` (nightly only), `valgrind` (memcheck runs, always with `slow`) and `schema`. The three schema tests (`test_analysis_document_schema`, `test_corpus_index_schema`, `test_style_model_schema`) are registered only when python3 with jsonschema is installed; `-DURSATZ_REQUIRE=jsonschema` makes the configure fail when it is not. The CLI tests that validate output on the side skip that step without it. Tests that write a fixed scratch file take a `RESOURCE_LOCK`, so they never run together. Smoke runs: `<name>_smoke` tests run the same program on Bach 114 alone (under 2 s each, in the fast set) for `test_measure_locations`, `test_chord_coverage`, `test_roman_numerals`, `test_cadences`, `test_harmonic_function`, `test_progressions`, `test_phrases`, `test_themes`, `test_form_plan`, `test_schemas`, `test_musicxml_midi_agreement`, `test_meter_check`, `test_text_export_snapshots` and `test_similar_material`; `test_analysis_document_schema_smoke` validates the Bach 114 document, and `test_cli_style_profile_smoke` and `test_cli_similar_smoke` run a two-piece corpus. Nightly only, because each needs a whole-corpus output and a smoke or CLI test covers the path: `test_motives` and `test_motive_sketch_map` (Mozart 545 only), `test_long_labels`, `test_corpus_key_estimation`, `test_analyzer_corpus`, `test_style_profile`, `test_style_piece`, `test_corpus_index_schema` and `test_style_model_schema`. Test inputs come from the root `tests/fixtures/`; `URSATZ_FIXTURES_DIR` names it. Checks, file and JSON helpers come from the root `tests/support/ursatz_test.h`; `tests/support/` here keeps only what is Analyzer-specific.
 
 Tests:
 
@@ -83,10 +83,13 @@ Tests:
   against `tests/snapshots/corpus-index.reference.json`, each document byte for byte equal to a single-file run, and
   the resume rules. `test_cli_corpus` checks the flags and exit codes (and that an index of schema version 1 is written again). `test_corpus_index_schema` validates the index
   against the schema (see below).
-- `test_style_profile`: the style labels on hand cases, the profile of the `reference` corpus against
+- `test_style_profile`: the profile of the `reference` corpus against
   `tests/snapshots/style-model.reference.json`, the model file round trip, the distances between the `chorales` and
   `sonatinas` corpora CMake builds in the build tree, and the refusals. `test_cli_style_profile` checks the flags and exit
-  codes. `test_style_model_schema` validates the model file against the schema (see below).
+  codes. `test_style_model_schema` validates the model file against the schema (see below). `test_style_piece` checks, on the five
+  reference pieces, that a profile counted from the document's JSON has the statistics of one counted from `chain_style_piece`
+  (`test_style_piece_smoke`: Bach 114). The labels, the counting on hand-made pieces, the comparison and the model file are
+  tested in the library (`theory_style_labels`, `theory_style_profile`, `theory_style_compare`, `theory_style_model_file`).
 - `test_chord_sequence`: the joined chord sequence of a document on the five reference pieces (each chord a run of document entries that no neighbour continues), a held chord, a key region change, an unlabelled entry and the refusals. `test_chord_sequence_smoke` (Bach 114) runs in CI.
 - `test_playback`, `test_score_export`: the playback JSON and the MusicXML score of the five reference pieces and `pickup.musicxml`, `field-5.musicxml` against `tests/snapshots/gui/`, a value scale of 2, the numbers behind the JSON and the refusals. The `_smoke` runs (Bach 114, pickup) and valgrind runs are quick.
 - `test_similar_material`: the similar material search over the `reference` corpus: the opening of Mozart 545 as a
@@ -110,10 +113,10 @@ Tests:
 
 The layer table (`cmake/layer-table.txt`, test `layer_table`, run with the fast set) fails when `src/` or `include/` includes an
 Ursatz header that is not under a staged public root of the build, names a `*_internal.h` of Ursatz, when a CMake
-file reads `SOURCE_DIR` of an Ursatz target or a path under `library/tests`, or when a public header other than
-`result_chain.h` includes a chain or framework header. It prints each offending line.
+file reads `SOURCE_DIR` of an Ursatz target or a path under `library/tests`, or when a public header includes a chain
+header other than the staged result header. It prints each offending line.
 `test_consumer_isolation` builds the targets of `tests/consumer`: one linking only `ursatz_analyzer` compiles every public
-header but `result_chain.h`, and cannot include a chain or framework header.
+header, and cannot include a chain internal header.
 
 ## File scope state check
 

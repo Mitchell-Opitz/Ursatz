@@ -19,18 +19,18 @@ Plans a whole short piece from a form template ([cli-plan.md](../cli-plan.md)); 
 |---|---|
 | `form`, `key`, `material` (or the old `mode`), `meter`, `bars`, `count`, `modulate` | the options of the command. `key` is a tonic with `material`, or tonic and mode ("D minor"). With `given` and no `form` the form is a binary form of 16 bars and the given material goes in section B |
 | `motive` | `{"input": {"format", "text"}, "source": "<name>"}`: a motive request ([Motive requests](motives.md#motive-requests)) read in the plan's meter and key; `source` is the name shown for it (the command gives the file) |
-| `corpus`, `like` | a corpus directory and a passage file in it to look for: the motive is the first bar of a similar passage (`motive_source` in the result). `corpus` needs `like` or a `like_progression` given; `like` and `motive` are exclusive |
+| `corpus_passages` | the passages of a corpus like a passage, found by the Analyzer (`analyzer_corpus_passages_like`), best first: the motive is the first bar of one of them (`motive_source` in the result). `corpus_passages` and `motive` are exclusive. `corpus` and `like` of API 2 are refused |
 | `accompaniment`, `texture` | as the options |
 | `seed` | 0 to 4294967295, default from the clock |
 | `style`, `style_weight`, `style_without`, `blend`, `blend_weight`, `blend_weights` | a style model path and its options; the plan keeps the paths |
-| `given` | a list of `{"kind": "melody"\|"bass"\|"progression"\|"like_progression", "motive": {...} (melody, bass), "numerals": "I IV V I" (progression kinds), "at": "B:3" (the section's letter, then the bar), "cells", "source"}`; at most 8. `at` is needed unless the form is defaulted |
+| `given` | a list of `{"kind": "melody"\|"bass"\|"progression"\|"like_progression", "motive": {...} (melody, bass), "numerals": "I IV V I" (progression kinds), "corpus_passages": [...] (like_progression: the passages found for its numerals), "at": "B:3" (the section's letter, then the bar), "cells", "source"}`; at most 8. `at` is needed unless the form is defaulted |
 
 `json`: what `plan --format json` prints, without `file`: `{"form", "bars", "key", "meter", "seed", "modulate", "motive",
 "motive_source", "accompaniment", "sections": [{"letter", "bars", "key", "cadences", "pairing", "returns"}], "given",
 "style", "blend"}`, with the members the text output reads: `accompaniment_texture`, `defaulted_form` and `notices`
 (strings: stale documents of the corpus). `plan_json` is the plan. A request the form has no size for, a motive that does
-not fit a bar, a passage no corpus entry matches, or material that does not fit its section is refused with the path of
-the member (`/form`, `/bars`, `/like`, `/given/<i>`, `/given/<i>/at`). Schemas: `plan.request.schema.json`,
+not fit a bar, no passage of `corpus_passages` that gives a motive, or material that does not fit its section is refused with the path of
+the member (`/form`, `/bars`, `/corpus_passages`, `/given/<i>`, `/given/<i>/at`). Schemas: `plan.request.schema.json`,
 `plan.response.schema.json`.
 
 ### `composer_api_fill(context, request_json, job, out)`

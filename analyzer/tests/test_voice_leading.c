@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/musicxml_pipeline.h>
+#include <chain/chain_result.h>
+#include <io/imported_score.h>
 
 #include "ursatz_test.h"
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * The voice leading of the report, on a constructed four-part chorale (tests/musicxml/chorale-voice-leading.musicxml,
@@ -19,17 +19,17 @@
  */
 
 /* The entry starts at the beginning of the given measure of the 4/4 piece (measure 1 is time 0). */
-static bool starts_measure(const AnalysisReport *report, size_t entry, int measure) {
-    const AnalysisReportEntry *e = &report->entries[entry];
-    return e->time_numerator == (long)(measure - 1) * (long)e->time_denominator;
+static bool starts_measure(const ChainResult *report, size_t entry, int measure) {
+    const ChainEntry *e = &report->entries[entry];
+    return e->time.num == (long)(measure - 1) * (long)e->time.den;
 }
 
 static void check_chorale(const char *dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/chorale-voice-leading.musicxml", dir);
-    ImportedNotes notes;
-    AnalysisReport report;
-    if (musicxml_pipeline_import_file(path, &notes) != MUSICXML_PIPELINE_OK || !run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+    ImportedScore notes;
+    ChainResult report;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) != IMPORTED_SCORE_OK || !test_analyze_report(&notes, &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return;
@@ -73,8 +73,8 @@ static void check_chorale(const char *dir) {
         }
     }
 
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
 }
 
 int main(void) {

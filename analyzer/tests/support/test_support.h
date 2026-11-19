@@ -7,8 +7,8 @@
 
 #include <cJSON.h>
 
-#include <ursatz_analyzer/analysis_report.h>
-#include <ursatz_analyzer/imported_notes.h>
+#include <chain/chain_result.h>
+#include <io/imported_score.h>
 
 /* A format 0 MIDI file with one track into buf; returns its size. */
 size_t test_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body, size_t track_body_size);
@@ -24,10 +24,14 @@ bool test_within(const cJSON *inner, const cJSON *outer);
 
 /* analysis_document_build, then analysis_document_to_json, for an input path, its notes and report. Returns a heap
    string the caller frees, or NULL on allocation failure. */
-char *test_render_document(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report);
+char *test_render_document(const char *input_path, const ImportedScore *notes, const ChainResult *report);
 
 /* Imports a file (the format is detected), runs the pipeline and returns the parsed analysis document the
    caller deletes. Asserts on any failure. */
 cJSON *test_analyze_midi(const char *path);
+
+/* Analyzes imported notes with the test snapshot (analyzer_analyze, every stage) and moves the report view out into *report, which the
+   caller releases with chain_result_destroy. false when the analysis fails. */
+bool test_analyze_report(const ImportedScore *notes, ChainResult *report);
 
 #endif

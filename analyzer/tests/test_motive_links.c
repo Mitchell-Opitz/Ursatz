@@ -4,8 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/musicxml_pipeline.h>
+#include <io/imported_score.h>
 #include <ursatz_analyzer/motive_links.h>
 
 #include "cJSON.h"
@@ -29,20 +28,20 @@ static bool analyze_fixtures(void) {
     for (int i = 0; i < PIECES; i++) {
         char path[512];
         snprintf(path, sizeof path, "%s/%s", URSATZ_LINKS_DIR, piece_ids[i]);
-        ImportedNotes notes;
-        AnalysisReport report;
-        if (musicxml_pipeline_import_file(path, &notes) != MUSICXML_PIPELINE_OK) {
+        ImportedScore notes;
+        ChainResult report;
+        if (imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, &notes, NULL) != IMPORTED_SCORE_OK) {
             fprintf(stderr, "cannot import %s\n", path);
             return false;
         }
-        if (!run_analysis_pipeline(&notes, test_knowledge(), &report)) {
+        if (!test_analyze_report(&notes, &report)) {
             fprintf(stderr, "cannot analyze %s\n", path);
-            imported_notes_destroy(&notes);
+            imported_score_destroy(&notes);
             return false;
         }
         documents[i] = test_render_document(path, &notes, &report);
-        analysis_report_destroy(&report);
-        imported_notes_destroy(&notes);
+        chain_result_destroy(&report);
+        imported_score_destroy(&notes);
         if (!documents[i]) {
             return false;
         }

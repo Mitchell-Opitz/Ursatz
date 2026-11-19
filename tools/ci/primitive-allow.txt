@@ -1,0 +1,12 @@
+# Copies of shared primitives that stay (tools/ci/check-primitives.sh, R-622).
+# One "<path> <pattern>  # reason, phase" per line; patterns: gcd, int128, type, pitch-names, scale-steps, numerals.
+composer/src/include/ursatz_composer/style.h type  # ComposerRatio, the style share ratio in the Composer's own words; P62 (the Composer's layers)
+composer/src/style/style_internal.h gcd  # wide_gcd on the 128-bit Wide of the style share ratios; P62 (the Composer's layers)
+composer/src/style/style_internal.h int128  # Wide, the 128-bit integer the style share ratios compare in; P62 (the Composer's layers)
+composer/src/motive/motive_random_common.c int128  # a widened product in the random motive's draws; P62 (the Composer's layers)
+composer/src/piece/piece_keys.c pitch-names  # the twelve key names of the piece keys' text; P62 (the Composer's layers)
+composer/src/util/position.h gcd  # position_gcd is Euclid's gcd of two Rational lengths, not an integer gcd; P62 (the Composer's layers)
+composer/cli/motive_text.c type  # a local Rational of the motive text printer; P64 (one CLI)
+composer/cli/motive_text.c pitch-names  # the CLI's name table of the motive text; P64 (one CLI)
+composer/cli/counterpoint.c pitch-names  # the CLI's name table of the counterpoint text; P64 (one CLI)
+library/io/musicxml_score.c int128  # kept: a widened product comparison of a notated value, not a number type

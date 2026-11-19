@@ -68,6 +68,5 @@ int rational_cmp_unsigned(unsigned long long an, unsigned long long ad, unsigned
 /* Checked unsigned steps for the fraction types whose fields use the full unsigned range. Return false
    on overflow and leave *out untouched. */
 bool rational_checked_mul_unsigned(unsigned long long a, unsigned long long b, unsigned long long *out);
-bool rational_checked_add_unsigned(unsigned long long a, unsigned long long b, unsigned long long *out);
 
 #endif

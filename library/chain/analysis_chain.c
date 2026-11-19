@@ -1,5 +1,6 @@
 #include "chain/analysis_chain.h"
 #include "chain/analysis_chain_internal.h"
+#include "chain/chain_collect.h"
 
 #include <limits.h>
 #include <stdlib.h>
@@ -20,7 +21,7 @@
 AnalysisChainConfig analysis_chain_config_default(void) {
     AnalysisChainConfig config;
     memset(&config, 0, sizeof(config));
-    config.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    config.stages = ANALYSIS_CHAIN_STAGE_PERCEPTION;
     config.segmentation = adaptive_segmentation_config_default();
     config.weighting = common_practice_weighted_config_default();
     config.key_regions = common_practice_key_regions_config_default(NULL); /* the chain sets the snapshot's materials */
@@ -107,6 +108,7 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     if (chain == NULL) {
         return;
     }
+    chain_collect_destroy_results(chain);
     if (chain->have_sequences) {
         scale_sequence_matches_destroy(&chain->sequences);
     }
@@ -155,21 +157,6 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     if (chain->have_texture_input) {
         chain_texture_input_destroy(&chain->texture_input);
     }
-    if (chain->have_densities) {
-        standard_meter_densities_destroy(&chain->meter.densities);
-    }
-    if (chain->have_hypermeter) {
-        standard_meter_hypermeter_destroy(&chain->meter.hypermeter);
-    }
-    if (chain->have_hemiolas) {
-        standard_meter_hemiolas_destroy(&chain->meter.hemiolas);
-    }
-    if (chain->have_syncopations) {
-        standard_meter_syncopations_destroy(&chain->meter.syncopations);
-    }
-    if (chain->have_meter_input) {
-        chain_meter_input_destroy(&chain->meter_input);
-    }
     if (chain->have_motives) {
         standard_form_motives_destroy(&chain->motives);
     }
@@ -206,6 +193,7 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     if (chain->have_pitches) {
         chain_pitches_destroy(&chain->pitches);
     }
+    chain_collect_destroy_input(chain);
     free(chain);
 }
 
@@ -551,43 +539,6 @@ static AnalysisChainStatus motive_stage(AnalysisChain *chain) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     chain->have_motives = true;
-    return ANALYSIS_CHAIN_OK;
-}
-
-static AnalysisChainStatus meter_stage(AnalysisChain *chain) {
-    Pass *p = &chain->pass;
-    const char **labels = calloc(chain->segs.count > 0 ? chain->segs.count : 1, sizeof(char *));
-    if (labels == NULL) {
-        return ANALYSIS_CHAIN_ERR_ALLOC;
-    }
-    for (size_t s = 0; s < chain->count; s++) {
-        labels[s] = p->chords[s].matched ? chord_label(p->chords[s].best_chord) : NULL;
-    }
-    int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
-    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->lines, &chain->segs, labels, chain->config.first_measure,
-                                                     last, &p->form_input.input, &p->phrases, &p->expansions, &chain->meter_input);
-    free(labels);
-    if (built != CHAIN_INPUT_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_meter_input = true;
-    const StandardMeterInput *input = &chain->meter_input.input;
-    if (standard_meter_find_syncopations(input, &chain->config.meter, &chain->meter.syncopations) != STANDARD_METER_ANALYSIS_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_syncopations = true;
-    if (standard_meter_find_hemiolas(input, &chain->config.meter, &chain->meter.hemiolas) != STANDARD_METER_ANALYSIS_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_hemiolas = true;
-    if (standard_meter_find_hypermeter(input, &chain->config.meter, &chain->meter.hypermeter) != STANDARD_METER_ANALYSIS_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_hypermeter = true;
-    if (standard_meter_find_densities(input, &chain->config.meter, &chain->meter.densities) != STANDARD_METER_ANALYSIS_OK) {
-        return ANALYSIS_CHAIN_ERR_METER;
-    }
-    chain->have_densities = true;
     return ANALYSIS_CHAIN_OK;
 }
 
@@ -984,7 +935,7 @@ const AnalysisChainStage analysis_chain_stages[ANALYSIS_CHAIN_STAGE_COUNT] = {
      "cadences", NULL, pass_cadences, NULL},
     {ANALYSIS_CHAIN_STAGE_FORM, ANALYSIS_CHAIN_STAGE_CADENCES, false, STAGE_ERROR(6), "form", NULL, pass_form, motive_stage},
     {ANALYSIS_CHAIN_STAGE_METER, ANALYSIS_CHAIN_STAGE_FORM | ANALYSIS_CHAIN_STAGE_CHORDS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES, false,
-     STAGE_ERROR(7), "meter", NULL, NULL, meter_stage},
+     STAGE_ERROR(7), "meter", NULL, NULL, NULL},
     {ANALYSIS_CHAIN_STAGE_TEXTURE, 0, true, STAGE_ERROR(8), "texture", NULL, NULL, texture_stage},
     {ANALYSIS_CHAIN_STAGE_VOICE_LEADING, ANALYSIS_CHAIN_STAGE_CADENCES | ANALYSIS_CHAIN_STAGE_SEGMENTS, true, STAGE_ERROR(9),
      "voice leading", NULL, NULL, voice_leading_stage},
@@ -1030,7 +981,7 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
         chain->config.form.relation_match = chain_match_motive_relation;
         chain->config.form.relation_context = &chain->relation_context;
     }
-    chain->stages = stage_closure(config->stages);
+    chain->stages = stage_closure(config->stages & ANALYSIS_CHAIN_STAGE_PERCEPTION);
     chain->notes = notes;
     chain->key_events = key_events;
     chain->key_event_count = key_event_count;

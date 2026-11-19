@@ -5,7 +5,7 @@ What the Ursatz-Composer is, how its parts fit and where each is documented. Bac
 ## Purpose
 
 - A seeded, reproducible composing partner: a piece is a plan that is filled top-down, bottom-up or middle-out.
-- It holds plan structure and composing decisions only; theory comes from the Ursatz frameworks and what a listener hears comes from the Analyzer.
+- It holds plan structure and composing decisions only; theory comes from the Ursatz frameworks and what a listener hears comes from the library chain (`library/chain`, R-618).
 - Every result carries its provenance: the seed, the inputs and the generators that produced it.
 - It is a C11 static library (`ursatz_composer`) behind one public header, plus a CLI that is a client of the same API.
 
@@ -14,11 +14,11 @@ What the Ursatz-Composer is, how its parts fit and where each is documented. Bac
 | Direction | Part | How it is linked |
 |---|---|---|
 | Below | The library in [`library/`](../../library/docs/architecture.md) (kernel and frameworks) | target `ursatz`, linked PRIVATE |
-| Below | The Analyzer in [`analyzer/`](../../analyzer/docs/architecture.md) (hearing, styles, corpus) | target `ursatz_analyzer`, linked PRIVATE |
+| Sibling | The Analyzer in [`analyzer/`](../../analyzer/docs/architecture.md) | none: the Composer links no Analyzer target and includes no Analyzer header (R-620); only the CLIs and the GUI call both |
 | Vendored | cJSON 1.7.18 | `third_party/cjson`, added by the root before the parts |
 | Above | The GUI in [`gui/`](../../gui/docs/architecture.md) | links `ursatz_composer` and includes only `composer_api.h` |
 
-All four are built by the root `CMakeLists.txt`, in that order.
+All four are built by the root `CMakeLists.txt`, in that order. The Composer hears through `library/chain` (`ursatz_chain`).
 
 ## Module map
 
@@ -39,7 +39,7 @@ All four are built by the root `CMakeLists.txt`, in that order.
 | `src/texture/` | The accompaniment and four-part voicing operators | [accompaniment.md](accompaniment.md), [voicing.md](voicing.md) |
 | `src/piece/` | The one piece builder (`form_build.c`; `form_build_request.c` lays out the sections of a form the request gives, the game loop), keys and cadences from a form, the piece plan and the compose run | [piece.md](piece.md) |
 | `src/grow/` | Growing a theme from a motive; `theme_shape.c` is the table of what a theme of each beginning and ending is made of (ideas, slots, roles, places, lengths) | [grow.md](grow.md) |
-| `src/check/` | Hearing a render through the Analyzer, the check loop, the explanation | [analyzer-check.md](analyzer-check.md), [explain.md](explain.md) |
+| `src/check/` | Hearing a render through the library chain, the check loop, the explanation | [analyzer-check.md](analyzer-check.md), [explain.md](explain.md) |
 | `src/style/` | Style models, blending, style checks, seeding from a corpus | [style.md](style.md) |
 | `src/util/` | Private helpers the sources share | [structure.md](structure.md) |
 | `cli/` | The `ursatz-composer` command | [cli.md](cli.md) |
@@ -78,10 +78,9 @@ All entries are in `include/ursatz_composer/composer_api.h`; the entry index is 
 
 | Entry used | From which repo | For what |
 |---|---|---|
-| `analyzer_hear`, `analyzer_result_report`, `analyzer_result_violations`, `analyzer_result_chain` (`<ursatz_analyzer/composer_api.h>`) | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/composer-api.md) | Hearing one render of the plan: cadences, key regions, form, faults, style distance |
-| `analyzer_version`, `analyzer_producer_key` (`<ursatz_analyzer/version.h>`) | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/composer-api.md) | The versions written into a plan and returned by `composer_api_versions` |
-| `analyzer_chord_sequence_free`, similar material and corpus readers (`<ursatz_analyzer/similar_material.h>`) | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/composer-api.md) | Seeding a piece from a corpus; staleness of analyzed documents |
-| Style profile and labels (`<ursatz_analyzer/style_profile.h>`, `style_labels.h`) | [Ursatz-Analyzer](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/composer-api.md) | Style models the harmony and melody stages prefer |
+| `imported_score_view` (`<io/imported_score.h>`), `analysis_chain_run_score`, `analysis_chain_result` (`<chain/analysis_chain.h>`), `chain_result_voice_faults` (`<chain/chain_result.h>`), `chain_style_distance` (`<chain/chain_style.h>`) | [library chain](../../library/chain/README.md) | Hearing one render of the plan: cadences, key regions, form, faults, style distance |
+| `analysis_chain_producer_key` (`<chain/analysis_chain.h>`) | [library chain](../../library/chain/README.md) | The producer key written into a plan and returned by `composer_api_versions` as `ursatz_commit` (R-620) |
+| `theory/style/style_labels.h`, `style_compare.h`, `style_model_file.h`, `style_reference.h` | library theory (`library/theory/style`) | Style models the harmony and melody stages prefer, their category names and the distance of a heard piece from one |
 | `<standard-harmony/...>`, `<standard-counterpoint/...>`, `<standard-voicing/...>`, `<standard-texture/...>`, `<standard-tonality/...>`, `<standard-form/...>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) | Theory rules: phrase model, melodic moves, voicing, scales, phrase form |
 | `<analysis/motive_sketch.h>`, `<analysis/motive_relation.h>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md) | The motive value and the relation steps that make a motive from another |
 | `<realization/work.h>`, `<realization/movement.h>`, `<realization/piano_reduction.h>`, `<io/movement_export.h>`, `<theory/knowledge/instrument.h>` | [Ursatz](https://github.com/Mitchell-Opitz/Ursatz/blob/main/library/docs/modules/realization.md) | A rendered plan as a work of one movement, its lines assigned to one piano part (the K12 piano and solo-piano ensemble of the call's knowledge snapshot), and its MIDI and MusicXML (`render/movement_build.c`, `render/export.c`) |
@@ -97,7 +96,7 @@ One `composer_api_theme` request, from the reply's side:
 2. The request is read into motives, slots, ideas, chords and the brief.
 3. `grow_build_plan_checked` plans the theme's structure (sentence, period or hybrid) as a piece plan with one section ([grow.md](grow.md)).
 4. `grow_run` runs a compose run over that section: the stages write the motives, harmony, bass and melody, each through the fill loop with its seed, retries and records ([fill-loop.md](fill-loop.md), [grow-harmony.md](grow-harmony.md)).
-5. With `check` set, the Analyzer check renders the plan once and hears the section through `analyzer_hear`; a planned cadence or key not heard, or a hard voice-leading fault, rejects the run ([analyzer-check.md](analyzer-check.md)).
+5. With `check` set, the Analyzer check renders the plan once and hears the section through the library chain (`analysis_chain_run_score`); a planned cadence or key not heard, or a hard voice-leading fault, rejects the run ([analyzer-check.md](analyzer-check.md)).
 6. `form_hear_in` reports the form heard in the theme, kept in the outcome without rejecting ([form-hear.md](form-hear.md), [grow-hearing.md](grow-hearing.md)).
 7. The plan is rendered for MIDI and MusicXML when the request asks: the render becomes a work of one movement whose lines are all assigned to one piano part (R-599), and the library's movement export writes the file ([export.md](export.md)).
 8. The reply is a `ComposerResponse`: the theme document in `json`, the plan, the MIDI bytes and the MusicXML text; the caller frees it with `composer_response_destroy` ([api.md](api.md#memory)).

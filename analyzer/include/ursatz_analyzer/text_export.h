@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/imported_notes.h>
+#include <io/imported_score.h>
 #include <theory/knowledge/knowledge_snapshot.h>
 
 /*
@@ -38,7 +38,7 @@ AnalyzerTextExportOptions analyzer_text_export_options_default(void);
  * URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION, or an empty range (first greater than last, or no measure in range);
  * ANALYZER_ERR_LIBRARY when the score cannot be written or read back; ANALYZER_ERR_ALLOC.
  */
-AnalyzerStatus analyzer_text_export_piece(const ImportedNotes *notes, const char *document_json,
+AnalyzerStatus analyzer_text_export_piece(const ImportedScore *notes, const char *document_json,
                                           const AnalyzerTextExportOptions *options, char **text);
 
 /* A name and its value, printed as "<name>: <value>" on one line (a line break in either becomes a space). */

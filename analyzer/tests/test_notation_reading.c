@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/notation_reading.h>
+#include <io/imported_score.h>
 
 #include "model/core/provenance_reference.h"
 #include "model/core/voice_reference.h"
@@ -31,8 +31,8 @@ static const char *musicxml(const char *name) {
     return path_buffer;
 }
 
-static void load(const char *name, ImportedNotes *notes) {
-    assert(input_pipeline_import_file(musicxml(name), INPUT_FORMAT_MUSICXML, notes) == INPUT_PIPELINE_OK);
+static void load(const char *name, ImportedScore *notes) {
+    assert(imported_score_import_file(musicxml(name), IMPORTED_FORMAT_MUSICXML, notes, NULL) == IMPORTED_SCORE_OK);
 }
 
 /* Same token bytes. */
@@ -86,28 +86,28 @@ static bool time_is(const MusicalTime *time, long numerator, unsigned long denom
     return time->value.num == numerator && time->value.den == denominator;
 }
 
-static NotationReading reading_of(const char *meter, const char *scale, const char *pickup) {
-    NotationReading reading = notation_reading_none();
-    assert(!meter || notation_reading_parse_meter(meter, &reading));
-    assert(!scale || notation_reading_parse_scale(scale, &reading));
-    assert(!pickup || notation_reading_parse_pickup(pickup, &reading));
+static ImportedReading reading_of(const char *meter, const char *scale, const char *pickup) {
+    ImportedReading reading = imported_reading_none();
+    assert(!meter || imported_reading_parse_meter(meter, &reading));
+    assert(!scale || imported_reading_parse_scale(scale, &reading));
+    assert(!pickup || imported_reading_parse_pickup(pickup, &reading));
     return reading;
 }
 
 static void test_parsers(void) {
-    NotationReading r = notation_reading_none();
-    assert(!r.has_meter && !r.has_pickup && r.scale_numerator == 1 && r.scale_denominator == 1);
+    ImportedReading r = imported_reading_none();
+    assert(!r.has_meter && !r.has_pickup && r.scale.num == 1 && r.scale.den == 1);
 
-    assert(notation_reading_parse_meter("3/4", &r) && r.has_meter && r.beats == 3 && r.beat_type == 4);
-    assert(notation_reading_parse_meter("12/8", &r) && r.beats == 12 && r.beat_type == 8);
-    assert(notation_reading_parse_meter("64/16", &r) && r.beats == 64 && r.beat_type == 16);
+    assert(imported_reading_parse_meter("3/4", &r) && r.has_meter && r.beats == 3 && r.beat_type == 4);
+    assert(imported_reading_parse_meter("12/8", &r) && r.beats == 12 && r.beat_type == 8);
+    assert(imported_reading_parse_meter("64/16", &r) && r.beats == 64 && r.beat_type == 16);
 
-    NotationReading kept = r;
+    ImportedReading kept = r;
     const char *bad_meters[] = {"", "3", "3/", "/4", "3/3", "0/4", "65/4", "3/32", "3/0", "-3/4", "3/4x", " 3/4", "3 /4", NULL};
     for (int i = 0; bad_meters[i]; i++) {
-        assert(!notation_reading_parse_meter(bad_meters[i], &r));
+        assert(!imported_reading_parse_meter(bad_meters[i], &r));
     }
-    assert(!notation_reading_parse_meter(NULL, &r));
+    assert(!imported_reading_parse_meter(NULL, &r));
     assert(memcmp(&r, &kept, sizeof r) == 0); /* a failed parse leaves the reading untouched */
 
     struct {
@@ -116,35 +116,35 @@ static void test_parsers(void) {
         unsigned long denominator;
     } scales[] = {{"1/4", 1, 4}, {"1/2", 1, 2}, {"1", 1, 1}, {"2", 2, 1}, {"4", 4, 1}, {"2/1", 2, 1}};
     for (size_t i = 0; i < sizeof scales / sizeof scales[0]; i++) {
-        assert(notation_reading_parse_scale(scales[i].text, &r));
-        assert(r.scale_numerator == scales[i].numerator && r.scale_denominator == scales[i].denominator);
+        assert(imported_reading_parse_scale(scales[i].text, &r));
+        assert(r.scale.num == scales[i].numerator && (unsigned long)r.scale.den == scales[i].denominator);
     }
     const char *bad_scales[] = {"", "0", "3", "8", "1/3", "1/8", "2/3", "3/2", "-2", "1/0", "x", "2x", NULL};
     for (int i = 0; bad_scales[i]; i++) {
         kept = r;
-        assert(!notation_reading_parse_scale(bad_scales[i], &r));
+        assert(!imported_reading_parse_scale(bad_scales[i], &r));
         assert(memcmp(&r, &kept, sizeof r) == 0);
     }
 
-    assert(notation_reading_parse_pickup("1/4", &r) && r.has_pickup && r.pickup_numerator == 1 && r.pickup_denominator == 4);
-    assert(notation_reading_parse_pickup("3/8", &r) && r.pickup_numerator == 3 && r.pickup_denominator == 8);
+    assert(imported_reading_parse_pickup("1/4", &r) && r.has_pickup && r.pickup.num == 1 && r.pickup.den == 4);
+    assert(imported_reading_parse_pickup("3/8", &r) && r.pickup.num == 3 && r.pickup.den == 8);
     const char *bad_pickups[] = {"", "0", "0/4", "1/0", "-1/4", "1/", "/4", "1/4/2", "a", NULL};
     for (int i = 0; bad_pickups[i]; i++) {
-        assert(!notation_reading_parse_pickup(bad_pickups[i], &r));
+        assert(!imported_reading_parse_pickup(bad_pickups[i], &r));
     }
-    assert(r.pickup_numerator == 3 && r.pickup_denominator == 8);
+    assert(r.pickup.num == 3 && r.pickup.den == 8);
 }
 
 /* Scale 2 doubles every start and duration and keeps everything else about each note. */
 static void test_scale_keeps_identity(void) {
-    ImportedNotes before;
-    ImportedNotes notes;
+    ImportedScore before;
+    ImportedScore notes;
     load("bach-114.musicxml", &before);
     load("bach-114.musicxml", &notes);
     assert(notes.count > 100);
 
-    NotationReading reading = reading_of(NULL, "2", NULL);
-    assert(notation_reading_apply(&notes, &reading) == NOTATION_READING_OK);
+    ImportedReading reading = reading_of(NULL, "2", NULL);
+    assert(imported_reading_apply(&notes, &reading) == IMPORTED_READING_OK);
     assert(notes.count == before.count);
     for (size_t i = 0; i < notes.count; i++) {
         const NoteEvent *old = before.events[i];
@@ -174,48 +174,47 @@ static void test_scale_keeps_identity(void) {
     assert(meter_map_measure_count(before.meter.meter_map, &before.meter.end_time, &old_measures) == METER_MAP_OK);
     assert(meter_map_measure_count(notes.meter.meter_map, &notes.meter.end_time, &new_measures) == METER_MAP_OK);
     assert(new_measures >= 2 * old_measures - 1 && new_measures <= 2 * old_measures);
-    assert(notes.source.reading_applied && notes.source.reading.scale_numerator == 2);
+    assert(notes.source.reading_applied && notes.source.reading.scale.num == 2);
     assert(!before.source.reading_applied);
 
     /* Scale 1 changes nothing but is recorded. */
-    NotationReading none = notation_reading_none();
-    ImportedNotes same;
+    ImportedReading none = imported_reading_none();
+    ImportedScore same;
     load("bach-114.musicxml", &same);
-    assert(notation_reading_apply(&same, &none) == NOTATION_READING_OK && same.source.reading_applied);
+    assert(imported_reading_apply(&same, &none) == IMPORTED_READING_OK && same.source.reading_applied);
     for (size_t i = 0; i < same.count; i++) {
         assert(same_note_by_value(same.events[i], before.events[i]));
     }
 
-    imported_notes_destroy(&same);
-    imported_notes_destroy(&notes);
-    imported_notes_destroy(&before);
+    imported_score_destroy(&same);
+    imported_score_destroy(&notes);
+    imported_score_destroy(&before);
 }
 
 /* Tempo markings, dynamics and key signature events are scaled with the notes. */
 static void test_scales_markings(void) {
-    ImportedNotes before;
-    ImportedNotes notes;
+    ImportedScore before;
+    ImportedScore notes;
     load("markings.musicxml", &before);
     load("markings.musicxml", &notes);
     assert(before.source.tempo_marking_count >= 1 && before.source.dynamics_count >= 2);
 
-    NotationReading reading = reading_of(NULL, "1/2", NULL);
-    assert(notation_reading_apply(&notes, &reading) == NOTATION_READING_OK);
+    ImportedReading reading = reading_of(NULL, "1/2", NULL);
+    assert(imported_reading_apply(&notes, &reading) == IMPORTED_READING_OK);
     bool later = false;
     for (size_t i = 0; i < notes.source.tempo_marking_count; i++) {
         const ImportedTempoMarking *old = &before.source.tempo_markings[i];
         const ImportedTempoMarking *now = &notes.source.tempo_markings[i];
-        assert(now->position_numerator * (long)old->position_denominator * 2 ==
-               old->position_numerator * (long)now->position_denominator);
+        assert(now->position.num * old->position.den * 2 == old->position.num * now->position.den);
         assert(strcmp(now->text ? now->text : "", old->text ? old->text : "") == 0);
-        later = later || old->position_numerator > 0;
+        later = later || old->position.num > 0;
     }
     for (size_t i = 0; i < notes.source.dynamics_count; i++) {
         const ImportedDynamic *old = &before.source.dynamics[i];
         const ImportedDynamic *now = &notes.source.dynamics[i];
-        assert(now->start_numerator * (long)old->start_denominator * 2 == old->start_numerator * (long)now->start_denominator);
-        assert(now->end_numerator * (long)old->end_denominator * 2 == old->end_numerator * (long)now->end_denominator);
-        later = later || old->start_numerator > 0;
+        assert(now->start.num * old->start.den * 2 == old->start.num * now->start.den);
+        assert(now->end.num * old->end.den * 2 == old->end.num * now->end.den);
+        later = later || old->start.num > 0;
     }
     assert(later);
     for (size_t i = 0; i < notes.key_signature_events.count; i++) {
@@ -225,18 +224,18 @@ static void test_scales_markings(void) {
                old->value.num * (long)now->value.den);
     }
 
-    imported_notes_destroy(&notes);
-    imported_notes_destroy(&before);
+    imported_score_destroy(&notes);
+    imported_score_destroy(&before);
 }
 
 /* 3/4 with a pickup: a pickup region (measure 0) of a quarter, then 3/4 from there. */
 static void test_meter_with_pickup(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
     load("bach-114.musicxml", &notes);
     assert(!meter_map_has_pickup(notes.meter.meter_map));
 
-    NotationReading reading = reading_of("3/4", NULL, "1/4");
-    assert(notation_reading_apply(&notes, &reading) == NOTATION_READING_OK);
+    ImportedReading reading = reading_of("3/4", NULL, "1/4");
+    assert(imported_reading_apply(&notes, &reading) == IMPORTED_READING_OK);
     const MeterMap *map = notes.meter.meter_map;
     assert(meter_map_region_count(map) == 2);
     assert(meter_map_has_pickup(map) && meter_map_first_measure_number(map) == 0);
@@ -249,26 +248,26 @@ static void test_meter_with_pickup(void) {
     assert(notes.source.reading_applied && notes.source.reading.has_meter && notes.source.reading.has_pickup);
 
     /* No pickup: one region of the reading's meter. */
-    ImportedNotes plain;
+    ImportedScore plain;
     load("bach-114.musicxml", &plain);
-    NotationReading meter_only = reading_of("6/8", NULL, NULL);
-    assert(notation_reading_apply(&plain, &meter_only) == NOTATION_READING_OK);
+    ImportedReading meter_only = reading_of("6/8", NULL, NULL);
+    assert(imported_reading_apply(&plain, &meter_only) == IMPORTED_READING_OK);
     assert(meter_map_region_count(plain.meter.meter_map) == 1 && !meter_map_has_pickup(plain.meter.meter_map));
     const TimeSignature *six_eight = meter_map_region_time_signature(meter_map_region(plain.meter.meter_map, 0));
     assert(time_signature_top_number(six_eight) == 6 && time_signature_bottom_number(six_eight) == 8);
 
     /* A pickup alone keeps the map's meter. */
-    ImportedNotes alone;
+    ImportedScore alone;
     load("bach-114.musicxml", &alone);
-    NotationReading pickup_only = reading_of(NULL, NULL, "1/8");
-    assert(notation_reading_apply(&alone, &pickup_only) == NOTATION_READING_OK);
+    ImportedReading pickup_only = reading_of(NULL, NULL, "1/8");
+    assert(imported_reading_apply(&alone, &pickup_only) == IMPORTED_READING_OK);
     assert(meter_map_has_pickup(alone.meter.meter_map) && meter_map_region_count(alone.meter.meter_map) == 2);
     const TimeSignature *kept = meter_map_region_time_signature(meter_map_region(alone.meter.meter_map, 1));
     assert(time_signature_top_number(kept) == 4 && time_signature_bottom_number(kept) == 4);
 
-    imported_notes_destroy(&alone);
-    imported_notes_destroy(&plain);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&alone);
+    imported_score_destroy(&plain);
+    imported_score_destroy(&notes);
 }
 
 typedef struct {
@@ -282,7 +281,7 @@ typedef struct {
     bool applied;
 } Snapshot;
 
-static Snapshot snapshot(const ImportedNotes *notes) {
+static Snapshot snapshot(const ImportedScore *notes) {
     const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(notes->events[0]));
     Snapshot snapshot;
     memset(&snapshot, 0, sizeof snapshot); /* so the padding compares equal */
@@ -298,26 +297,26 @@ static Snapshot snapshot(const ImportedNotes *notes) {
 }
 
 static void test_failure_leaves_notes_unchanged(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
     load("bach-114.musicxml", &notes);
-    ImportedNotes reference;
+    ImportedScore reference;
     load("bach-114.musicxml", &reference);
     Snapshot before = snapshot(&notes);
 
-    NotationReading too_long = reading_of("3/4", "2", "3/4"); /* a pickup of a whole measure */
-    assert(notation_reading_apply(&notes, &too_long) == NOTATION_READING_ERR_INVALID);
-    NotationReading longer = reading_of("3/4", NULL, "1/1");
-    assert(notation_reading_apply(&notes, &longer) == NOTATION_READING_ERR_INVALID);
-    NotationReading bad_scale = notation_reading_none();
-    bad_scale.scale_numerator = 3;
-    assert(notation_reading_apply(&notes, &bad_scale) == NOTATION_READING_ERR_INVALID);
-    NotationReading bad_meter = notation_reading_none();
+    ImportedReading too_long = reading_of("3/4", "2", "3/4"); /* a pickup of a whole measure */
+    assert(imported_reading_apply(&notes, &too_long) == IMPORTED_READING_ERR_INVALID);
+    ImportedReading longer = reading_of("3/4", NULL, "1/1");
+    assert(imported_reading_apply(&notes, &longer) == IMPORTED_READING_ERR_INVALID);
+    ImportedReading bad_scale = imported_reading_none();
+    bad_scale.scale = rational_ratio(3, 1);
+    assert(imported_reading_apply(&notes, &bad_scale) == IMPORTED_READING_ERR_INVALID);
+    ImportedReading bad_meter = imported_reading_none();
     bad_meter.has_meter = true;
     bad_meter.beats = 3;
     bad_meter.beat_type = 3;
-    assert(notation_reading_apply(&notes, &bad_meter) == NOTATION_READING_ERR_INVALID);
-    assert(notation_reading_apply(NULL, &too_long) == NOTATION_READING_ERR_NULL_ARGUMENT);
-    assert(notation_reading_apply(&notes, NULL) == NOTATION_READING_ERR_NULL_ARGUMENT);
+    assert(imported_reading_apply(&notes, &bad_meter) == IMPORTED_READING_ERR_INVALID);
+    assert(imported_reading_apply(NULL, &too_long) == IMPORTED_READING_ERR_NULL_ARGUMENT);
+    assert(imported_reading_apply(&notes, NULL) == IMPORTED_READING_ERR_NULL_ARGUMENT);
 
     Snapshot after = snapshot(&notes);
     assert(memcmp(&before, &after, sizeof before) == 0);
@@ -326,8 +325,8 @@ static void test_failure_leaves_notes_unchanged(void) {
     }
     assert(!notes.source.reading_applied);
 
-    imported_notes_destroy(&reference);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&reference);
+    imported_score_destroy(&notes);
 }
 
 /*
@@ -336,7 +335,7 @@ static void test_failure_leaves_notes_unchanged(void) {
  * the 4/4 reading); scaled they arrive on beat 1 of measures 40 and 56. This checks positions only.
  */
 static void test_bach_114_three_four(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
     load("bach-114.musicxml", &notes);
     NoteEvent *first_arrival = NULL;
     NoteEvent *second_arrival = NULL;
@@ -357,8 +356,8 @@ static void test_bach_114_three_four(void) {
     snprintf(first_copy, sizeof first_copy, "%s", first_id);
     snprintf(second_copy, sizeof second_copy, "%s", second_id);
 
-    NotationReading reading = reading_of("3/4", "2", NULL);
-    assert(notation_reading_apply(&notes, &reading) == NOTATION_READING_OK);
+    ImportedReading reading = reading_of("3/4", "2", NULL);
+    assert(imported_reading_apply(&notes, &reading) == IMPORTED_READING_OK);
 
     size_t measures = 0;
     assert(meter_map_measure_count(notes.meter.meter_map, &notes.meter.end_time, &measures) == METER_MAP_OK);
@@ -385,7 +384,7 @@ static void test_bach_114_three_four(void) {
         assert(musical_time_same(span.start, *start)); /* beat 1 of the measure */
     }
 
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(void) {

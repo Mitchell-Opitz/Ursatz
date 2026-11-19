@@ -1,9 +1,9 @@
 #ifndef URSATZ_ANALYZER_ANALYSIS_DOCUMENT_H
 #define URSATZ_ANALYZER_ANALYSIS_DOCUMENT_H
 
-#include <ursatz_analyzer/analysis_report.h>
+#include <chain/chain_result.h>
 #include <ursatz_analyzer/analysis_result.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 /*
  * The analysis document: the structured, versioned output described by
@@ -19,7 +19,7 @@ typedef struct AnalysisDocument AnalysisDocument;
 
 /*
  * Builds the analysis document for one piece from the imported notes
- * and the report run_analysis_pipeline produced for them. Fills
+ * and the report an AnalyzerResult holds for them (analyzer_analyze). Fills
  * metadata, meter, keys, chords, outer voices and notes; every other section is an empty array, or
  * null for form. Only the basename of input_path is recorded.
  *
@@ -30,7 +30,7 @@ typedef struct AnalysisDocument AnalysisDocument;
  * or NULL on allocation failure or a NULL or incomplete snapshot. It does not reference notes, report or knowledge
  * after returning.
  */
-AnalysisDocument *analysis_document_build(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report,
+AnalysisDocument *analysis_document_build(const char *input_path, const ImportedScore *notes, const ChainResult *report,
                                           const KnowledgeSnapshot *knowledge);
 
 /*

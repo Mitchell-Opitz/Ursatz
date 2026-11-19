@@ -33,7 +33,7 @@
  *                step of the stage's record, its chosen candidate is the record's chosen entry, its runners-up are the
  *                best of the others by score, its rejected candidates are the record's, with the checker's reasons;
  *                the style term is in the score; each section carries its analyzer check
- *   rejections   a period in A minor 3/4 composed with the check: a run the analysis contradicted is in
+ *   rejections   a period in G major 6/8 composed with the check: a run the analysis contradicted is in
  *                ComposeOutcome.rejections and in the explanation, with the items that disagreed
  *   same         the same seed gives the same JSON and the same text
  *   cli          fill and grow --explain write JSON for a name ending in .json and text otherwise; a fill record without a
@@ -62,20 +62,21 @@ static PiecePlan *rounded_binary(void) {
     return plan;
 }
 
-/* A period of 8 bars in A minor 3/4 grown from a motive, the plan the Analyzer most often disagrees with. */
-static PiecePlan *period_a_minor(Motive *motive) {
+/* A period of 8 bars in G major 6/8 grown from a motive, a plan the Analyzer disagrees with in 7 of 10 seeds. It was A minor 3/4 until
+   P61 B6 (the Composer hears on harmonic spans, R-618): the Analyzer then agreed with every seed of it (and with 300 seeds). */
+static PiecePlan *period_g_major(Motive *motive) {
     PiecePlan *plan = NULL;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();
     options.has_meter = true;
-    options.meter.beats_per_bar = 3;
-    options.meter.beat_unit = 4;
-    assert(motive_from_notes_text("C5:q E5:e D5:e B4:q", &options, motive, NULL) == MOTIVE_OK);
+    options.meter.beats_per_bar = 6;
+    options.meter.beat_unit = 8;
+    assert(motive_from_notes_text("B4:q A4:e G4:e F#4:e D4:e", &options, motive, NULL) == MOTIVE_OK);
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key = test_key(9, "minor");
+    request.key = test_key(7, "major");
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = SECTION_BEGINNING_ANTECEDENT;
@@ -258,7 +259,7 @@ static int test_rejections(void) {
     bool found = false;
     for (unsigned long seed = 1; seed <= 10 && !found; seed++) {
         Motive motive;
-        PiecePlan *plan = period_a_minor(&motive);
+        PiecePlan *plan = period_g_major(&motive);
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
         config.knowledge = test_knowledge();

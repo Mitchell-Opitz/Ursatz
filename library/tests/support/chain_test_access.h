@@ -4,11 +4,7 @@
 #include "chain/analysis_chain.h"
 #include "chain/analysis_chain_internal.h"
 
-/* What the tests read of an AnalysisChain: its meter results. No application reads them, so they are not in ursatz_chain/analysis_chain.h. */
-
-static inline const AnalysisChainMeter *analysis_chain_meter(const AnalysisChain *chain) {
-    return chain != NULL && chain->have_densities ? &chain->meter : NULL;
-}
+/* What the tests read of an AnalysisChain beyond its public accessors: the stage table. */
 
 /* The name of the stage whose failure a status reports, or NULL for a status that is not a stage's. */
 static inline const char *analysis_chain_stage_name(AnalysisChainStatus status) {

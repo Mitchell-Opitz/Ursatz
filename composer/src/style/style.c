@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/composer_api.h>
+#include <theory/style/style_reference.h>
+
+#include <ursatz_composer/composer.h>
 
 typedef struct {
     char *label;
@@ -27,8 +29,9 @@ struct ComposerStyle {
     size_t category_count;
     char **without; /* the categories the style was read without, in the order given, no repeats */
     size_t without_count;
-    AnalyzerStyleReference *reference; /* the model with the without list applied, for the distances; NULL when the
-                                          Analyzer refuses the list (an unknown category) */
+    StyleReference *reference; /* the model with the without list applied, for the distances (style_reference_create, with the
+                                  Composer's version as the model version); NULL when the library refuses the list (an
+                                  unknown category) */
 };
 
 const char *composer_style_result_name(ComposerStyleResult result) {
@@ -63,7 +66,7 @@ void composer_style_destroy(ComposerStyle *style) {
         free(style->without[i]);
     }
     free(style->without);
-    analyzer_style_reference_destroy(style->reference);
+    style_reference_destroy(style->reference);
     style_model_destroy(style->model);
     free(style);
 }
@@ -123,15 +126,15 @@ static ComposerStyleResult read_statistics(ComposerStyle *style) {
 }
 
 /*
- * Prepares the style's distances once (analyzer_style_reference_create): the model with the without list dropped. An
+ * Prepares the style's distances once (style_reference_create): the model with the without list dropped. An
  * unknown category name leaves no reference, and composer_style_measure_in then reports it as an analysis failure.
  */
 static ComposerStyleResult refresh_reference(ComposerStyle *style) {
-    analyzer_style_reference_destroy(style->reference);
+    style_reference_destroy(style->reference);
     style->reference = NULL;
-    AnalyzerStatus status = analyzer_style_reference_create(style->model, (const char *const *)style->without,
-                                                            style->without_count, &style->reference);
-    return status == ANALYZER_ERR_ALLOC ? COMPOSER_STYLE_ERR_ALLOC : COMPOSER_STYLE_OK;
+    StyleReferenceResult status = style_reference_create(style->model, (const char *const *)style->without,
+                                                         style->without_count, composer_version(), &style->reference);
+    return status == STYLE_REFERENCE_ERR_ALLOC ? COMPOSER_STYLE_ERR_ALLOC : COMPOSER_STYLE_OK;
 }
 
 ComposerStyleResult composer_style_from_model(StyleModel *model, size_t pieces, ComposerStyle **out) {
@@ -245,7 +248,7 @@ const char *composer_style_without_at(const ComposerStyle *style, size_t i) {
     return style && i < style->without_count ? style->without[i] : NULL;
 }
 
-const AnalyzerStyleReference *composer_style_reference(const ComposerStyle *style) {
+const StyleReference *composer_style_reference(const ComposerStyle *style) {
     return style ? style->reference : NULL;
 }
 

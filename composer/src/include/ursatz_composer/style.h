@@ -5,8 +5,10 @@
 #include <stddef.h>
 
 #include <theory/tonality/common_practice_materials.h>
-#include <ursatz_analyzer/style_labels.h>
-#include <ursatz_analyzer/style_profile.h>
+#include "theory/style/style_labels.h"
+#include "theory/style/style_compare.h"
+#include "theory/style/style_model.h"
+#include "theory/style/style_model_file.h"
 
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece_plan.h>

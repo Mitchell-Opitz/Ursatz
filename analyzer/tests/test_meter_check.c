@@ -6,9 +6,8 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/notation_reading.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -34,18 +33,18 @@ static const char *musicxml(const char *name) {
 }
 
 typedef struct {
-    ImportedNotes notes;
-    AnalysisReport report;
+    ImportedScore notes;
+    ChainResult report;
     cJSON *document;
 } Analysis;
 
-static void analyze(const char *name, const NotationReading *reading, Analysis *analysis) {
+static void analyze(const char *name, const ImportedReading *reading, Analysis *analysis) {
     memset(analysis, 0, sizeof(*analysis));
-    assert(input_pipeline_import_file(musicxml(name), INPUT_FORMAT_MUSICXML, &analysis->notes) == INPUT_PIPELINE_OK);
+    assert(imported_score_import_file(musicxml(name), IMPORTED_FORMAT_MUSICXML, &analysis->notes, NULL) == IMPORTED_SCORE_OK);
     if (reading) {
-        assert(notation_reading_apply(&analysis->notes, reading) == NOTATION_READING_OK);
+        assert(imported_reading_apply(&analysis->notes, reading) == IMPORTED_READING_OK);
     }
-    assert(run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report));
+    assert(test_analyze_report(&analysis->notes, &analysis->report));
     char *json = test_render_document(musicxml(name), &analysis->notes, &analysis->report);
     assert(json);
     analysis->document = cJSON_Parse(json);
@@ -55,8 +54,8 @@ static void analyze(const char *name, const NotationReading *reading, Analysis *
 
 static void analysis_destroy(Analysis *analysis) {
     cJSON_Delete(analysis->document);
-    analysis_report_destroy(&analysis->report);
-    imported_notes_destroy(&analysis->notes);
+    chain_result_destroy(&analysis->report);
+    imported_score_destroy(&analysis->notes);
 }
 
 static double number(const cJSON *object, const char *key) {
@@ -99,8 +98,8 @@ static void check_claim(const Analysis *analysis) {
 
     const cJSON *declared = test_json_member(claim, "declared");
     assert(reading_is(declared, check->effective.beats, check->effective.beat_type,
-                      (double)check->effective.scale_numerator / (double)check->effective.scale_denominator,
-                      (double)check->effective.pickup_numerator / (double)check->effective.pickup_denominator));
+                      (double)check->effective.scale.num / (double)check->effective.scale.den,
+                      (double)check->effective.pickup.num / (double)check->effective.pickup.den));
     assert(fabs(number(declared, "score") - check->effective.score) < 1e-9);
     assert(check->effective.score >= 0.0 && check->effective.score <= 1.0);
 
@@ -134,8 +133,8 @@ static void test_bach_as_declared(void) {
 
 /* With the alternative applied the check runs on the effective meter and offers nothing. */
 static void test_bach_with_reading_applied(void) {
-    NotationReading reading = notation_reading_none();
-    assert(notation_reading_parse_meter("3/4", &reading) && notation_reading_parse_scale("2", &reading));
+    ImportedReading reading = imported_reading_none();
+    assert(imported_reading_parse_meter("3/4", &reading) && imported_reading_parse_scale("2", &reading));
     Analysis analysis;
     analyze("bach-114.musicxml", &reading, &analysis);
     check_claim(&analysis);
@@ -173,16 +172,16 @@ static void test_clementi_has_no_alternative(void) {
 
 /* A piece without chord segments has no claim and no meter check. */
 static void test_empty_score(void) {
-    ImportedNotes notes;
-    if (input_pipeline_import_file(musicxml("empty-score.musicxml"), INPUT_FORMAT_MUSICXML, &notes) !=
-        INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(musicxml("empty-score.musicxml"), IMPORTED_FORMAT_MUSICXML, &notes, NULL) !=
+        IMPORTED_SCORE_OK) {
         return; /* the importer refuses an empty score: nothing to check */
     }
-    AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+    ChainResult report;
+    assert(test_analyze_report(&notes, &report));
     assert(!report.meter_check.present);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

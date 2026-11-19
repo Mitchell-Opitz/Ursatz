@@ -8,10 +8,16 @@ An extension above the numbered stack. It may include kernel L0 to L8 and the fr
 
 ## Contents
 
-- `analysis_chain.h/.c`: `analysis_chain_run` and the opaque `AnalysisChain` that owns every result (below).
+- `analysis_chain.h/.c`: `analysis_chain_run` and the opaque `AnalysisChain` that owns every result (below); `chain_collect.c` adds `analysis_chain_run_score` and the collected result (below).
 - `chain_inputs.h`: the input builders, one per framework input, each owning what it allocates with a matching `_destroy`. A failed builder leaves its output untouched. `ChainInputStatus` names the failure. They sit in one file per stage, `chain_inputs_<stage>.c` (segments, keys, outer_voices, cadences, form, meter, texture, voice_leading, melody, schemas), over `chain_inputs_common.c` (the note key order, the measure reader and the degree parser) and its unstaged header `chain_inputs_internal.h`.
 - `analysis_chain_internal.h`: the `AnalysisChain` struct and the stage table (below). Not staged.
 - `form_bridge.h/.c`: `chain_form_boundary_detect` (standard-form's boundary detector, over the kernel's Phrase Boundary Detection) and `chain_form_match_windows` (standard-form's window matcher, over the kernel's Motif Window Matching).
+
+## The collected result (R-615)
+
+`analysis_chain_run_score(score, &config, &chain)` runs the chain on an imported score (`io/imported_score.h`) and, when the config has every chain stage (`ANALYSIS_CHAIN_STAGE_PERCEPTION`), collects the chain's results into one `ChainResult` (`chain/chain_result.h`, staged: the entries, key regions, cadences, phrases, themes, motives, melodies, densities, the voice leading, the schemas and the rest), read with `analysis_chain_result(chain)` (never NULL; empty when nothing was collected) and `analysis_chain_score(chain)` (the borrowed score; NULL after `analysis_chain_run`). The six stages that exist only in the result (progressions, harmonic rhythm, meter check, rhythm, markings, form plan) run when their bits are set (`ANALYSIS_CHAIN_STAGE_PROGRESSIONS` to `_FORM_PLAN`, bits 12 to 17; `ANALYSIS_CHAIN_STAGE_ALL` has them, `_PERCEPTION` the twelve chain stages); `analysis_chain_run` ignores them. A score with no notes gives a chain with nothing run and an empty result. `chain_result_take` moves the result out; `chain_result_destroy` releases one.
+
+The collectors are the files `chain_result_<area>.c` (key regions, chords, outer voices, numerals, harmony, form, form plan, motive, melody, progressions, harmonic rhythm, meter check, rhythm, texture, markings, voice leading, voicing check, schemas, spelling); `chain_collect.c` runs them in order after the chain, over the views of the chain's results (`ChainCollect`, private) and the neutral input built from the score by `chain_score_input.c` (on `analysis_note_set_build`). They read the chain's accessors and its prepared voice grid; one note index map (`chain_collect_map_notes`) serves the form and motive collectors. The public helpers the readers share are `chain_key_label`, `chain_tonic_prefers_flats`, `chain_key_signature_major_tonic`, `chain_progression_label` and `chain_voicing_framework_name` (`chain_result.h`); `chain_motive_sketch.h` is the motive features' sketch reader (staged: the Analyzer's motive links read it).
 
 ## The run
 
@@ -37,7 +43,7 @@ Stages, in the order they run (the order of the rows of the stage table, below),
 | `OUTER_VOICES` | `chain_build_pitches` | `outer_voice_extract`, on the segmentation without the merge over unchanged harmony |
 | `CADENCES` | `chain_build_harmony_segments`, `chain_add_boundary_cadences`, `chain_confirm_key_changes` | `harmony_analysis_find_cadences` |
 | `FORM` | `chain_build_form_input`, `chain_build_grid_input`, `chain_build_motive_input` | the phrase grid and the cadence claims (final pass, below), `standard_form_segment_phrases` (kernel detector injected) or its grid form, ideas, themes, expansions, motive families (kernel window matcher injected) |
-| `METER` | `chain_build_meter_input` | standard-meter: syncopations, hemiolas, hypermeter, density |
+| `METER` | (none: the collected rhythm stage, `chain_result_rhythm.c`, builds the input with `chain_build_meter_input`) | standard-meter: syncopations, hemiolas, hypermeter, density, tuplets (R-616: one meter analysis; the chain has no meter step of its own, the stage bit selects the collected stage) |
 | `TEXTURE` | `chain_build_texture_input` | `voice_separate`, standard-texture |
 | `VOICE_LEADING` | `chain_build_voice_grid` | `standard_counterpoint_classify_motions`, perfect intervals, harmony resolutions |
 | `MELODY` | `chain_build_melody_line` | standard-counterpoint melody: intervals, contour, climax, leap recovery, non-chord tones (relabelled by the injected kernel classifier) |

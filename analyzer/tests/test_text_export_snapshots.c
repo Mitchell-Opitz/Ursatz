@@ -41,13 +41,13 @@ static char *export_piece(const char *fixture) {
     char path[512];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
 
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         return NULL;
     }
     AnalyzerResult *result = NULL;
     if (analyzer_analyze(&notes, test_analyzer_defaults(), &result) != ANALYZER_OK) {
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
         return NULL;
     }
     char *document = analysis_document_render_result(fixture, result);
@@ -60,7 +60,7 @@ static char *export_piece(const char *fixture) {
         }
     }
     free(document);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
     return text;
 }
 

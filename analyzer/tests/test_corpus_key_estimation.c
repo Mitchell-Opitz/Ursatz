@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 #include "test_knowledge.h"
+#include "test_support.h"
 
 /*
  * The home key of the six reference pieces: the key with the most total time over the key regions Ursatz's key-region detection finds.
@@ -32,12 +32,12 @@ static const CorpusCase CASES[] = {
 
 int main(void) {
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++) {
-        ImportedNotes notes;
-        MidiPipelineResult import_result = midi_pipeline_import_file(CASES[i].path, &notes);
-        assert(import_result == MIDI_PIPELINE_OK);
+        ImportedScore notes;
+        ImportedScoreResult import_result = imported_score_import_file(CASES[i].path, IMPORTED_FORMAT_MIDI, &notes, NULL);
+        assert(import_result == IMPORTED_SCORE_OK);
 
-        AnalysisReport report;
-        assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+        ChainResult report;
+        assert(test_analyze_report(&notes, &report));
         assert(report.key_region_count > 0);
         assert(report.entry_count > 0);
 
@@ -48,8 +48,8 @@ int main(void) {
             assert(0);
         }
 
-        analysis_report_destroy(&report);
-        imported_notes_destroy(&notes);
+        chain_result_destroy(&report);
+        imported_score_destroy(&notes);
     }
 
     printf("test_corpus_key_estimation: ok\n");

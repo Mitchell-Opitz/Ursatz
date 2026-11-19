@@ -300,6 +300,60 @@ static void test_chord_tones(void) {
     assert(motive_sketch_chord_tones(&sketch, &minor_tonic, pcs) == 0);
 }
 
+/* The implied chord: the triad that holds the most notes, then the most time, the first of I V IV vi ii iii vii on a tie. */
+static void test_implied_chord(void) {
+    MotiveSketchChord chord;
+    memset(&chord, 0, sizeof(chord));
+
+    /* C D E G: the tonic triad holds three notes, no other more than two. */
+    MotiveSketch sketch = four_quarters();
+    assert(motive_sketch_implied_chord(&sketch, &chord));
+    assert(chord.degree == 1 && chord.onset.num == 0 && !chord.seventh && chord.inversion == 0);
+
+    /* E G: I (C E G) and iii (E G B) both hold the two; the tonic comes first in the order. */
+    MotiveSketch tie = four_quarters();
+    tie.notes[0].pitch = 64;
+    tie.notes[1].pitch = 67;
+    tie.note_count = 2;
+    assert(motive_sketch_implied_chord(&tie, &chord) && chord.degree == 1);
+
+    /* D F: ii (D F A) and vii (B D F) tie on notes and on time; ii comes first. */
+    tie.notes[0].pitch = 62;
+    tie.notes[1].pitch = 65;
+    assert(motive_sketch_implied_chord(&tie, &chord) && chord.degree == 2);
+
+    /* D (a half note), F and B: vii (B D F) holds all three notes, ii (D F A) two. */
+    tie.notes[0].duration = q(1, 2);
+    tie.notes[1].onset = q(1, 2);
+    tie.notes[1].duration = q(1, 4);
+    tie.notes[2] = tie.notes[1];
+    tie.notes[2].pitch = 59;
+    tie.notes[2].onset = q(3, 4);
+    tie.note_count = 3;
+    assert(motive_sketch_implied_chord(&tie, &chord) && chord.degree == 7);
+
+    /* Time breaks a tie of notes: D (a half note) and C (a quarter) are one note each in I, V, IV, vi and ii; the triad of the
+       longer note, V (G B D), wins over I although I comes first, and V comes before ii. */
+    MotiveSketch timed = four_quarters();
+    timed.notes[0].pitch = 62;
+    timed.notes[0].duration = q(1, 2);
+    timed.notes[1].pitch = 60;
+    timed.notes[1].onset = q(1, 2);
+    timed.note_count = 2;
+    assert(motive_sketch_implied_chord(&timed, &chord) && chord.degree == 5);
+
+    /* No note, no chord: *out is left as it was. */
+    MotiveSketch empty = four_quarters();
+    empty.note_count = 0;
+    chord.degree = 99;
+    assert(!motive_sketch_implied_chord(&empty, &chord) && chord.degree == 99);
+
+    /* No scale, no chord tones. */
+    MotiveSketch bare = four_quarters();
+    bare.has_scale = false;
+    assert(!motive_sketch_implied_chord(&bare, &chord) && chord.degree == 99);
+}
+
 static void test_expressible_durations(void) {
     assert(motive_sketch_expressible(q(1, 1)));
     assert(motive_sketch_expressible(q(1, 4)));
@@ -405,6 +459,7 @@ int main(void) {
     test_contour_normalize();
     test_steps_without_a_scale();
     test_chord_tones();
+    test_implied_chord();
     test_expressible_durations();
     test_triplet_times();
     test_strength();

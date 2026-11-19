@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/corpus-passages.schema.json",
+  "title": "Corpus passages",
+  "description": "Passages of an analyzed corpus, ranked best first, that a grow or plan request seeds a motive or a progression from (R-619). The Analyzer finds them (analyzer_corpus_passages_like, analyzer_corpus_passages_numerals; analyzer_corpus_passages_to_json writes this array); the Composer does not search. A passage with a similarity of 1/2 or more is a match.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "piece",
+      "start",
+      "end",
+      "similarity",
+      "notes",
+      "chords"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "piece": {
+        "type": "string",
+        "maxLength": 511,
+        "description": "The piece's path in the corpus, as the corpus index lists it."
+      },
+      "start": {
+        "type": "object",
+        "required": [
+          "measure",
+          "beat"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "measure": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "beat": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "description": "Where the passage starts: a measure and the beat plus the fraction of it."
+      },
+      "end": {
+        "type": "object",
+        "required": [
+          "measure",
+          "beat"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "measure": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "beat": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "description": "Where the last note or chord of the passage ends."
+      },
+      "similarity": {
+        "type": "object",
+        "required": [
+          "num",
+          "den"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "num": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "den": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "description": "The Analyzer's score from 0 to 1 as a fraction; 1 is identical."
+      },
+      "stale": {
+        "type": "boolean",
+        "description": "The document was analyzed by another version; it is used all the same."
+      },
+      "notes": {
+        "type": "array",
+        "description": "The soprano notes of the passage, onsets from its start.",
+        "items": {
+          "type": "object",
+          "required": [
+            "midi",
+            "onset",
+            "duration"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "midi": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 127
+            },
+            "onset": {
+              "type": "object",
+              "required": [
+                "num",
+                "den"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "num": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "den": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "duration": {
+              "type": "object",
+              "required": [
+                "num",
+                "den"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "num": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "den": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "chords": {
+        "type": "array",
+        "description": "The chords of the piece in time order, as the analysis document joins them.",
+        "items": {
+          "type": "object",
+          "required": [
+            "numeral",
+            "measure",
+            "beat"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "numeral": {
+              "type": "string",
+              "maxLength": 23
+            },
+            "measure": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "beat": {
+              "type": "number",
+              "minimum": 0
+            },
+            "key": {
+              "type": "string",
+              "maxLength": 23,
+              "description": "The key label of the entry the chord starts at, such as C major."
+            }
+          }
+        }
+      }
+    }
+  }
+}

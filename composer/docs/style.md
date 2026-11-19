@@ -98,8 +98,8 @@ The scores the fill loop compares have to stay below 2^32, so a sum that would n
 
 ## Distance
 
-After a complete run with a style the whole plan is heard through the Analyzer (the run's one hearing, `analyzer_hear`) and the
-result is compared with the style by `analyzer_result_style_distance` against an `AnalyzerStyleReference` that
+After a complete run with a style the whole plan is heard through the library chain (the run's one hearing, `analysis_chain_run_score`) and the
+result is compared with the style by `chain_style_distance` against a `StyleReference` (`theory/style/style_reference.h`) that
 `composer_style_load_without` prepares once with the style (the without list applied when it is created, and again when
 `composer_style_add_without` changes it; `composer_style_measure_in`). That measure is independent of the closeness the Composer
 scores with. It is `ComposeOutcome.style_distance` (0 is the style, 1 is nothing alike), per dimension and overall, and is
@@ -177,9 +177,11 @@ through the melody, so a melody weight reaches the harmony it measures a little.
 ## Seeding from a corpus
 
 A style says what a corpus is like; seeding starts a piece from a passage of it. The corpus is the output directory of
-`ursatz-analyzer --corpus <folder> --out <dir>`, the same one the Analyzer's `--similar` searches. The search is the
-Analyzer's (`similar_query_from_file`, `similar_material_find`, see its `docs/similar-material.md`) and reads only the
-analysis documents (R-079).
+`ursatz-analyzer --corpus <folder> --out <dir>`, the same one the Analyzer's `--similar` searches. The Composer does not
+search it (R-619): the Analyzer finds the passages (`analyzer_corpus_passages_like`, `analyzer_corpus_passages_numerals`,
+`<ursatz_analyzer/corpus_passages.h>`, see the Analyzer's `docs/corpus-passages.md`) and the request gives them inline,
+ranked best first, as `corpus_passages` (`schema/api/corpus-passages.schema.json`). The command line keeps its flags and does
+the finding itself, so what follows reads the same for it.
 
 ```sh
 ursatz-composer grow --from-corpus corpus-out --like passage.mid --into sentence --key "D major" --meter 4/4 --seed 3 --out theme.json
@@ -188,30 +190,36 @@ ursatz-composer plan --form rounded-binary --key "D major" --meter 4/4 --from-co
 ```
 
 **A motive.** `--like <file>` (a MIDI or MusicXML passage, with `--from-corpus <dir>`) replaces the motive input of `grow`
-and `--motive` of `plan`. `corpus_seed_motive(dir, passage, meter, key, seed, &out)` (`<ursatz_composer/corpus_seed.h>`)
-takes the best ten matches scoring 1/2 or more, keeps those within 1/10 of the best and picks one with the seeded generator
-(`fill_rng`), so the same seed gives the same choice. From the start of the matched passage it takes the notes that start in
-one bar of the meter, the last cut at the barline, and moves them by one interval so the first note keeps its scale degree in
-the requested key, the source key being the key its analysis heard there (the key of the chord at the passage). In the same
+and `--motive` of `plan`; the request member is `corpus_passages` (the best ten passages scoring 1/2 or more).
+`corpus_seed_motive(knowledge, passages, count, meter, key, seed, &out)` (`<ursatz_composer/corpus_seed.h>`) keeps the
+passages within 1/10 of the best one's similarity (the first) and picks one with the seeded generator (`fill_rng`), so the
+same seed gives the same choice. From the start of the passage it takes the notes that start in one bar of the meter, the last
+cut at the barline, and moves them by one interval so the first note keeps its scale degree in the requested key, the source
+key being the key its analysis heard there (the key label of the last chord that starts at or before the passage). In the same
 mode that is a plain transposition (Mozart 545's opening bar, C major, seeds D5 half, F#5 quarter, A5 quarter in D major);
-from major to minor the first note takes the same degree of the other scale and the others keep their intervals. A match with
+from major to minor the first note takes the same degree of the other scale and the others keep their intervals. A passage with
 fewer than two notes in the bar is passed over for the next. The result is a `Motive` in the requested key (`MOTIVE_SKETCH_KEY_GIVEN`).
 
 **A progression.** `--like-progression "<numerals>"` goes after `--from-corpus` like a `--given-progression` and takes the
-same `--at` and `--cells`: the chords placed are those of the passage of the corpus that best matches the numerals
+same `--at` and `--cells`; in a request it is a `given` of kind `like_progression` with its `numerals` and its own
+`corpus_passages` (the best hundred, found for those numerals; the number of numerals is the `wanted` chords). The chords
+placed are those of the first passage whose `wanted` chords, from the one that starts where the passage does, the plan can place
 (`corpus_seed_progression`). The Analyzer writes a passage in the notation of its own key (`i iv V i` in a minor key) and the
-plan reads numerals in the mode of the key they are placed in, so the passage is the best of the best hundred whose every
-chord the plan can place under the requested key's mode. There is no seed: the best match is the first the Analyzer ranks.
+plan reads numerals in the mode of the key they are placed in, so a passage is passed over when a chord cannot be placed under
+the requested key's mode. There is no seed: the first passage that works is used.
 
 **What is reported.** The text output names the source piece, its measures and the score (`motive from Mozart 545.mid m.1
 b.1 - m.2 b.1, score 1/1`; `progression from ...`), the JSON output has `source` (grow), `motive_source` (plan) and `from`
 (a progression), and the plan JSON records it in a `source` constraint: on the motive node `m0` for a motive, on the section
-for a progression (`docs/plan-format.md`). Nothing reads the note when the plan is filled.
+for a progression (`docs/plan-format.md`). A passage marked `stale` (its document was analyzed by another version) is used all the
+same and the result says so in `notices`: `N stale documents (analyzed by another version; run the corpus again)`, which the
+command line prints with the corpus directory (`N stale documents in '<dir>' (...)`). Nothing reads the note when the plan is filled.
 
 A corpus with no passage scoring 1/2 or more, or none analyzed, exits 2 with `no passage of the corpus ... is similar to ...`
-and nothing is written. A passage that is not a MIDI or MusicXML file, or numerals the Analyzer cannot read, is a usage
-error; a directory that is not a corpus output is exit 2. Only one bar of melody is taken: for more, cut the passage into a
-file and give it to `plan --given-melody`.
+and nothing is written (the command line finds that out before the request; a request with no passage, or none with two notes
+in its first bar, is `COMPOSER_ERR_UNSATISFIABLE` at `/corpus_passages`). A passage that is not a MIDI or MusicXML file, or
+numerals the Analyzer cannot read, is a usage error; a directory that is not a corpus output is exit 2. Only one bar of melody is
+taken: for more, cut the passage into a file and give it to `plan --given-melody`.
 
 ## The test styles
 

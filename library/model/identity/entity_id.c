@@ -30,6 +30,14 @@ EntityIDResult entity_id_create(const char *value, EntityID **out) {
     return ENTITY_ID_OK;
 }
 
+EntityID *entity_id_copy(const EntityID *id) {
+    EntityID *copy = NULL;
+    if (id == NULL) {
+        return NULL;
+    }
+    return entity_id_create(entity_id_value(id), &copy) == ENTITY_ID_OK ? copy : NULL;
+}
+
 void entity_id_destroy(EntityID *id) {
     if (id == NULL) {
         return;

@@ -65,8 +65,11 @@ typedef struct {
 } Baseline;
 
 /* Of 10 runs and, for the progression, 30 sections (3 a run); the melody has 2 a run, as the bass does. */
-static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 19, 18}, {10, 5, 19}, {10, 19, 17}};
+static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 17, 16}, {10, 6, 21}, {10, 19, 17}};
 /* P46 B1 (given melody in a binary B, R-448): 20 sections a run set; 19 heard, 18 cadences. */
+/* P61 B6 (the Composer hears with the Analyzer's settings, harmonic spans on, R-618): the melody's sections heard 19 to 17 of 20 and
+   cadences 18 to 16; the progression's sections heard 5 to 6 of 30 and cadences 19 to 21; the bass's hold (19 and 17). Measured at
+   seeds 1 to 10. */
 /* Re-recorded at P36 B1 (every idea is the step its ref names): the melody's sections heard rose from 18 to 26 and its cadences
    stay at 16; the progression's rose from 2 to 8 and 19 to 21; the bass's from 19 to 20 and 17 to 19. */
 /* P36 B2 (the material holds what grow-theme makes, R-349): the progression's sections heard 8 to 7 of 30; completed and cadences hold. */

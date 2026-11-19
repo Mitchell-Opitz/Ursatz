@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include <theory/vocabulary/cadence_type.h>
-#include <ursatz_analyzer/staleness.h>
 
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/fill_record.h>
@@ -134,6 +133,14 @@ cJSON *api_section_json(const ApiSection *section) {
 
 /* --- the plan of a request ------------------------------------------------------------------------- */
 
+/* Whether a JSON object is an analysis document of the Analyzer: a number `schema_version` and a `metadata` object whose
+   `analyzer_version` is text. The Composer reads none (R-620); it only names one. */
+static bool looks_like_analysis_document(const cJSON *document) {
+    const cJSON *metadata = cJSON_GetObjectItemCaseSensitive(document, "metadata");
+    return cJSON_IsNumber(cJSON_GetObjectItemCaseSensitive(document, "schema_version")) && cJSON_IsObject(metadata) &&
+           cJSON_IsString(cJSON_GetObjectItemCaseSensitive(metadata, "analyzer_version"));
+}
+
 ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSON *request, const char *name, char **text, ComposerError *error) {
     char path[64];
     snprintf(path, sizeof path, "/%s", name);
@@ -150,7 +157,7 @@ ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSO
     PlanJsonError detail;
     PlanResult read = plan_from_json_resolved(knowledge, printed, &plan, &detail);
     if (read != PLAN_OK) {
-        if (read == PLAN_ERR_FORMAT && analyzer_document_status(printed) != ANALYZER_DOCUMENT_UNREADABLE) {
+        if (read == PLAN_ERR_FORMAT && looks_like_analysis_document(member)) {
             cJSON_free(printed);
             return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path,
                             "the input is an Ursatz-Analyzer analysis document, not a plan; it describes a piece that is "

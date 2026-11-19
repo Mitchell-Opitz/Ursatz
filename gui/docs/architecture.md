@@ -53,8 +53,8 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 
 | Service | Entry used | From | For |
 |---|---|---|---|
-| `analysis_service.c` | `input_pipeline_import_file`, `run_analysis_pipeline`, `analysis_document_build`, `analyzer_document_status`, `analyzer_score_export_musicxml`, `analyzer_imported_meter_defaulted`, `analyzer_playback_build` | Analyzer | import, analysis, score and playback of a piece |
-| `playback_service.c` | `input_pipeline_import_file`, `analyzer_playback_build` | Analyzer | playback of a stored file |
+| `analysis_service.c` | `analyzer_import_file`, `analyzer_analyze`, `analysis_document_build_from_result`, `analyzer_document_status`, `analyzer_score_export_musicxml`, `analyzer_imported_meter_defaulted`, `analyzer_playback_build` | Analyzer | import, analysis, score and playback of a piece |
+| `playback_service.c` | `analyzer_import_file`, `analyzer_playback_build` | Analyzer | playback of a stored file |
 | `style_service.c`, `link_service.c` | `style_profile_*`, `style_model_*`, `motive_link_scope_*`, `motive_links_run` | Analyzer | style models and motive links |
 | `motif_service.c`, `theme_service.c`, `piece_service.c`, `compose_common.c` | `composer_api_*`, listed in [Backend services](backend-modules.md#backend-services-and-who-calls-the-composer) | Composer | motifs, themes, pieces, export, vocabulary |
 
@@ -63,8 +63,8 @@ Handlers are in `backend/src/routes/`. Paths under `/api/materials/` are shorten
 One piece, from file to composed motif, across four repos.
 
 1. **GUI.** The browser sends the file to `POST /api/analyzer/pieces` (`routes/analyzer.c`).
-2. **Analyzer** ([architecture](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md)). `analysis_service.c` calls `input_pipeline_import_file`.
-3. **Ursatz** ([architecture](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md)). The Analyzer's pipeline runs the Ursatz frameworks (`run_analysis_pipeline`) and `analysis_document_build` makes the analysis document.
+2. **Analyzer** ([architecture](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/architecture.md)). `analysis_service.c` calls `analyzer_import_file`.
+3. **Ursatz** ([architecture](https://github.com/Mitchell-Opitz/Ursatz/blob/main/docs/architecture.md)). The Analyzer's pipeline runs the Ursatz frameworks (`analyzer_analyze`) and `analysis_document_build_from_result` makes the analysis document.
 4. **GUI.** The service writes `analysis.json` and `meta.json` under the piece lock ([Piece store](storage.md#piece-store)), and the table fills in.
 5. **GUI and Analyzer.** Opening a piece asks for the summary, the sections the score draws, the MusicXML (`analyzer_score_export_musicxml`) and the playback (`analyzer_playback_build`); the frontend draws and plays them ([views](views/analysis-and-score.md)).
 6. **GUI and Composer** ([architecture](https://github.com/Mitchell-Opitz/Ursatz-Composer/blob/main/docs/architecture.md)). A service builds a Composer request and calls a `composer_api_*` entry in process; long runs use the job queue ([Jobs](api/composer-routes.md#jobs)).
@@ -74,7 +74,7 @@ One piece, from file to composed motif, across four repos.
 
 | Action | Route | GUI service | Answered by |
 |---|---|---|---|
-| Import or analyze a piece | `POST /api/analyzer/pieces`, `.../<id>/reanalyze` | `analysis_service.c` | Analyzer: `input_pipeline_import_file`, `run_analysis_pipeline` |
+| Import or analyze a piece | `POST /api/analyzer/pieces`, `.../<id>/reanalyze` | `analysis_service.c` | Analyzer: `analyzer_import_file`, `analyzer_analyze` |
 | Open the Score | `GET .../musicxml`, `.../document?sections=` | `analysis_service.c` | Analyzer: `analyzer_score_export_musicxml`, `analysis_document_to_json` |
 | Play | `GET .../pieces/<id>/playback` | `playback_service.c` | Analyzer: `analyzer_playback_build` |
 | Create, analyze and save a motif | `POST /api/materials/items`, `.../<id>/versions`, `.../reanalyze` | `motif_service.c` | Composer: `composer_api_motive` |
@@ -114,7 +114,7 @@ Analyzer or Composer function from inside `routes/`, it belongs in `service/` in
 
 The Analyzer library (`analyzer/`, linked as
 `ursatz_analyzer`) is the only analysis path: `analysis_service.c` calls
-`input_pipeline_import_file`, `run_analysis_pipeline` and
+`analyzer_import_file`, `analyzer_analyze` and
 `analysis_document_build`; the piece detail's note ids, the score
 (`analyzer_score_export_musicxml`, `analyzer_imported_meter_defaulted`) and the
 playback (`analyzer_playback_build`) also come from the Analyzer. The file

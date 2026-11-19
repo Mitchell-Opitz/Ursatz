@@ -47,8 +47,9 @@ static const char *const GIVEN_KIND_NAMES[] = {"melody", "progression", "bass"};
 typedef struct {
     GivenKind kind;
     const char *source;     /* the name to show: a file, or the numerals of a progression */
-    const char *numerals;   /* the numerals of a progression (or those to look for with from_corpus) */
-    bool from_corpus;       /* like_progression: numerals are looked for in the corpus and replaced by the passage's */
+    const char *numerals;   /* the numerals of a progression (or those the passages were found for with like_progression) */
+    bool from_corpus;       /* like_progression: the numerals are replaced by those of the first passage of `passages` that works */
+    const cJSON *passages;  /* like_progression: its corpus_passages */
     char found_numerals[1024];
     CorpusSeed found;
     const cJSON *motive;    /* the motive request of a melody or bass line */
@@ -69,8 +70,7 @@ typedef struct {
     bool modulate;
     const cJSON *motive;
     const char *motive_source;
-    const char *from_corpus;
-    const char *like_path;
+    const cJSON *passages; /* corpus_passages: the motive is taken from one of them */
     const char *accompaniment_text;
     const char *texture_text;
     const char *style_path;
@@ -104,6 +104,18 @@ typedef struct {
     size_t notice_count;
     const KnowledgeSnapshot *knowledge; /* the call context's */
 } PlanBuild;
+
+/* How many numerals text holds: the tokens between spaces, tabs and '-'. */
+static size_t numeral_count(const char *text) {
+    size_t count = 0;
+    bool inside = false;
+    for (const char *c = text; *c; c++) {
+        bool separator = *c == ' ' || *c == '\t' || *c == '-';
+        count += !separator && !inside;
+        inside = !separator;
+    }
+    return count;
+}
 
 /* --- reading the request --------------------------------------------------------------------------- */
 
@@ -195,6 +207,18 @@ static ComposerStatus read_given(PlanBuild *state, ComposerError *error) {
             if (!given->source) {
                 given->source = given->numerals;
             }
+            if (given->from_corpus) {
+                size_t wanted = numeral_count(given->numerals);
+                given->passages = cJSON_GetObjectItemCaseSensitive(item, "corpus_passages");
+                if (!cJSON_IsArray(given->passages)) {
+                    return api_fail(error, COMPOSER_ERR_REQUEST, base,
+                                    "a like_progression needs its corpus_passages (found by analyzer_corpus_passages_numerals)");
+                }
+                if (wanted < 2 || wanted > CORPUS_SEED_MAX_NUMERALS) {
+                    return api_fail(error, COMPOSER_ERR_REQUEST, base, "a like_progression takes 2 to %d numerals, not %zu",
+                                    CORPUS_SEED_MAX_NUMERALS, wanted);
+                }
+            }
         } else {
             given->motive = cJSON_GetObjectItemCaseSensitive(item, "motive");
             if (!cJSON_IsObject(given->motive)) {
@@ -226,8 +250,6 @@ static ComposerStatus read_request(PlanBuild *state, ComposerError *error) {
         !api_read_material(root, NULL, false, &state->material_text, &state->material_member, error) ||
         !api_member_string(root, "meter", &state->meter_text, &present, error) ||
         !api_member_bool(root, "modulate", &state->modulate, &present, error) ||
-        !api_member_string(root, "corpus", &state->from_corpus, &present, error) ||
-        !api_member_string(root, "like", &state->like_path, &present, error) ||
         !api_member_string(root, "accompaniment", &state->accompaniment_text, &present, error) ||
         !api_member_string(root, "texture", &state->texture_text, &present, error) ||
         !api_member_string(root, "style", &state->style_path, &present, error) ||
@@ -413,18 +435,17 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     if (status != COMPOSER_OK) {
         return status;
     }
-    bool likes_progression = false;
-    for (size_t i = 0; i < state->given_count; i++) {
-        likes_progression = likes_progression || state->given[i].from_corpus;
+    if (cJSON_GetObjectItemCaseSensitive(state->root, "corpus") || cJSON_GetObjectItemCaseSensitive(state->root, "like")) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, cJSON_GetObjectItemCaseSensitive(state->root, "corpus") ? "/corpus" : "/like",
+                        "corpus and like are gone (Composer API 3.0): give corpus_passages, the passages found by "
+                        "analyzer_corpus_passages_like");
     }
-    if ((state->like_path || likes_progression) && !state->from_corpus) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "%s needs corpus <dir>", state->like_path ? "like" : "like_progression");
+    state->passages = cJSON_GetObjectItemCaseSensitive(state->root, "corpus_passages");
+    if (cJSON_IsNull(state->passages)) {
+        state->passages = NULL;
     }
-    if (state->from_corpus && !state->like_path && !likes_progression) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/corpus", "corpus needs like <file> or a like_progression \"<numerals>\"");
-    }
-    if (state->like_path && state->motive) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/like", "like and motive both give the motive; use one");
+    if (state->passages && state->motive) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/corpus_passages", "corpus_passages and motive both give the motive; use one");
     }
     if (state->accompaniment_text || state->texture_text) {
         state->has_accompaniment = true;
@@ -466,28 +487,21 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
 
 /* --- the corpus ------------------------------------------------------------------------------------ */
 
-static void add_notice(PlanBuild *state, const CorpusSeed *seed, const char *dir) {
+static void add_notice(PlanBuild *state, const CorpusSeed *seed) {
     if (seed->stale_documents == 0 || state->notice_count == MAX_NOTICES) {
         return;
     }
     char text[1200];
-    snprintf(text, sizeof text, "%zu stale documents in '%s' (analyzed by another version; run the corpus again)",
-             seed->stale_documents, dir);
+    api_seed_stale_notice(seed, text, sizeof text);
     state->notices[state->notice_count] = strdup(text);
     state->notice_count += state->notices[state->notice_count] != NULL;
 }
 
-static ComposerStatus seed_failure(CorpusSeedResult result, const char *corpus_dir, const char *what, const char *path,
-                                   ComposerError *error) {
+/* A seed that failed: `what` is what the passages were to give (a motive, or the chords for numerals) and path the member. */
+static ComposerStatus seed_failure(CorpusSeedResult result, const char *what, const char *path, ComposerError *error) {
     switch (result) {
     case CORPUS_SEED_ERR_NO_MATCH:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "no passage of the corpus '%s' is similar to %s (a score of 1/2 or more)",
-                        corpus_dir, what);
-    case CORPUS_SEED_ERR_QUERY:
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "cannot read %s as a passage to look for", what);
-    case CORPUS_SEED_ERR_CORPUS:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus",
-                        "cannot read the corpus '%s' (the output directory of ursatz-analyzer --corpus)", corpus_dir);
+        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "no passage of corpus_passages gives %s", what);
     default:
         return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "%s", corpus_seed_result_name(result));
     }
@@ -719,15 +733,22 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
     Motive *motive = calloc(1, sizeof(*motive));
     bool has_motive = false;
     ComposerStatus status = motive ? COMPOSER_OK : api_fail_alloc(error);
-    if (status == COMPOSER_OK && state->like_path) {
-        CorpusSeedResult result =
-            corpus_seed_motive(state->knowledge, state->from_corpus, state->like_path, &state->meter, &state->key, state->seed,
-                               &state->seed_found);
-        if (result == CORPUS_SEED_OK) {
-            add_notice(state, &state->seed_found, state->from_corpus);
-            status = seed_source(&state->seed_found, &state->source, error);
+    if (status == COMPOSER_OK && state->passages) {
+        CorpusPassages passages = {0};
+        char path[sizeof error->path];
+        char message[sizeof error->message];
+        if (!corpus_passages_from_json(state->passages, &passages, path, sizeof path, message, sizeof message)) {
+            status = api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", message);
         } else {
-            status = seed_failure(result, state->from_corpus, state->like_path, "/like", error);
+            CorpusSeedResult result = corpus_seed_motive(state->knowledge, passages.items, passages.count, &state->meter,
+                                                         &state->key, state->seed, &state->seed_found);
+            corpus_passages_destroy(&passages);
+            if (result == CORPUS_SEED_OK) {
+                add_notice(state, &state->seed_found);
+                status = seed_source(&state->seed_found, &state->source, error);
+            } else {
+                status = seed_failure(result, "a motive (it needs two or more notes in its first bar)", "/corpus_passages", error);
+            }
         }
         if (status == COMPOSER_OK) {
             state->seeded = true;
@@ -740,15 +761,27 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
         if (!given->from_corpus) {
             continue;
         }
-        CorpusSeedResult result =
-            corpus_seed_progression(state->knowledge, state->from_corpus, given->numerals, harmony_key_mode(&state->key), &given->found);
-        if (result != CORPUS_SEED_OK) {
-            char path[64];
-            snprintf(path, sizeof path, "/given/%zu", i);
-            status = seed_failure(result, state->from_corpus, given->numerals, path, error);
+        char path[sizeof error->path];
+        char message[sizeof error->message];
+        CorpusPassages passages = {0};
+        char inner[96];
+        snprintf(path, sizeof path, "/given/%zu/corpus_passages", i);
+        if (!corpus_passages_from_json(given->passages, &passages, inner, sizeof inner, message, sizeof message)) {
+            snprintf(path, sizeof path, "/given/%zu%s", i, inner);
+            status = api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", message);
             break;
         }
-        add_notice(state, &given->found, state->from_corpus);
+        CorpusSeedResult result = corpus_seed_progression(state->knowledge, passages.items, passages.count,
+                                                          numeral_count(given->numerals), harmony_key_mode(&state->key),
+                                                          &given->found);
+        corpus_passages_destroy(&passages);
+        if (result != CORPUS_SEED_OK) {
+            char what[1100];
+            snprintf(what, sizeof what, "chords the plan can place for '%s'", given->numerals);
+            status = seed_failure(result, what, path, error);
+            break;
+        }
+        add_notice(state, &given->found);
         size_t used = 0;
         given->found_numerals[0] = '\0';
         for (size_t n = 0; n < given->found.numeral_count && used + 1 < sizeof given->found_numerals; n++) {

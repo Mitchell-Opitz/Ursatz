@@ -31,7 +31,7 @@ typedef enum {
     MOTIVE_LINKS_OK = 0,
     MOTIVE_LINKS_ERR_ARGUMENT,    /* a NULL argument, an option out of range, or a piece id added twice */
     MOTIVE_LINKS_ERR_IO,          /* a file could not be read */
-    MOTIVE_LINKS_ERR_FORMAT,      /* not an analysis document of schema version 9, a corpus index or a cache file */
+    MOTIVE_LINKS_ERR_FORMAT,      /* not an analysis document of schema version 13, a corpus index or a cache file */
     MOTIVE_LINKS_ERR_NO_FEATURES, /* a motive family without features: analyze the piece again */
     MOTIVE_LINKS_ERR_ALLOC
 } MotiveLinksResult;

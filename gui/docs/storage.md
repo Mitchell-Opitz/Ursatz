@@ -80,7 +80,7 @@ half a write. All of them are in `service/analysis_service.c` and take the lock 
 ### Import cache
 
 `service/import_cache.c` keeps the imported notes of up to 8 pieces, so opening a piece imports its source once: the
-detail's note ids, `/musicxml`, `/musicxml/meta` and `/playback` share one `ImportedNotes`. An entry belongs to one
+detail's note ids, `/musicxml`, `/musicxml/meta` and `/playback` share one `ImportedScore`. An entry belongs to one
 piece id and one source version (the notation fields of `meta.json` plus the source file's size and modification
 time); a different version imports again. It also holds the exported score (with the title and composer added) and
 whether the meter was defaulted, so a second `/musicxml` exports nothing. The least recently used entry that no

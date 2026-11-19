@@ -17,12 +17,12 @@
  * Private: not installed, not part of the API.
  *
  * One hearing of a plan, shared by every check of one compose run (R-257, boundary rule 7): the plan is rendered once,
- * every written lane, and what a listener finds in a section of the written music is the Analyzer's result over the
- * events inside the section's span (analyzer_hear, B-C-9). The events are borrowed from the render, never copied; the
- * result of a span is kept until the hearing is destroyed, so the next check of the same span reads the same result.
+ * every written lane, and what a listener finds in a section of the written music is the library chain's result over the
+ * events inside the section's span (analysis_chain_run_score on an imported_score_view, R-618). The events are borrowed from the render, never copied; the
+ * chain of a span is kept until the hearing is destroyed, so the next check of the same span reads the same result.
  *
  * Times in a result are in whole notes from the start of the plan, the bars of its meter map counted from the plan start.
- * The key given to the Analyzer is the key lane's key under the span's start.
+ * The key given to the chain is the key lane's key under the span's start.
  */
 
 typedef struct ComposerHearing ComposerHearing;
@@ -33,12 +33,12 @@ typedef enum {
     HEARING_ERR_ALLOC,
     HEARING_ERR_PLAN,     /* the plan cannot be rendered, has no meter, or no key under the span's start */
     HEARING_ERR_NOT_WRITTEN, /* no note of the plan starts inside the span */
-    HEARING_ERR_ANALYSIS  /* the Analyzer refused or failed */
+    HEARING_ERR_ANALYSIS  /* the chain refused or failed */
 } HearingResult;
 
 /*
  * Renders plan once. *out is released with hearing_destroy; NULL on failure. The plan and the knowledge snapshot (the call
- * context's, which the Analyzer hears the spans with) must outlive the hearing; HEARING_ERR_NULL for a NULL knowledge.
+ * context's, which the chain hears the spans with) must outlive the hearing; HEARING_ERR_NULL for a NULL knowledge.
  */
 HearingResult hearing_create(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, ComposerHearing **out);
 
@@ -48,9 +48,9 @@ const RenderedPlan *hearing_rendered(const ComposerHearing *hearing);
 /* The plan the hearing was made from. */
 const PiecePlan *hearing_plan(const ComposerHearing *hearing);
 
-/* Test only: how many spans, in all hearings of this process so far, were handed to analyzer_hear. A test reads it before
+/* Test only: how many spans, in all hearings of this process so far, were run through the chain. A test reads it before
    and after a run to see which sections the run heard. */
-extern atomic_size_t hearing_analyzer_calls_made;
+extern atomic_size_t hearing_chain_runs_made;
 
 /* NULL is a no-op. */
 void hearing_destroy(ComposerHearing *hearing);

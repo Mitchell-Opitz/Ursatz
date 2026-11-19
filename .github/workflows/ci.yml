@@ -41,8 +41,10 @@ jobs:
       # Boundary checks, run from the repository root against the build.
       - name: Check file scope state
         run: bash tools/ci/check-statics.sh analyzer composer
-      - name: Check that music is heard through the Analyzer
+      - name: Check that music is heard through the library chain
         run: bash tools/ci/check-hearing.sh
+      - name: Check shared primitives have one owner
+        run: bash tools/ci/check-primitives.sh
       - name: Check frontend theory
         run: bash tools/ci/check-frontend-theory.sh
       - name: Reach scan (every function reached by an application)

@@ -3,17 +3,19 @@
 `<ursatz_composer/analyzer_check.h>`, `src/check/analyzer_check.c`, and `compose_candidates` in
 `<ursatz_composer/compose.h>`. R-080: the Analyzer is the contradiction gate of a composed section, not a score. Back to the [docs index](README.md).
 
-A realized section is heard through the Analyzer's result over the notes that start in it: the plan is rendered once with
-every lane (`plan_render`), `analyzer_hear` (`<ursatz_analyzer/composer_api.h>`) analyzes the section's span in the plan's
-meter map and the key the plan has at the section's start, and what the Analyzer hears is compared with what the plan asked
-for. The result is the one hearing of the run (`src/check/hearing.h`, see [form-hear.md](form-hear.md)): the form, the
-returns and the style distance read the same render. Cadences, chord entries and key regions are read from the result's
-report (`analyzer_result_report`, the export view), and faults from `analyzer_result_violations`. Times in the report are in
-whole notes from the start of the plan, and the check counts bars from the section's start.
+A realized section is heard through the library chain's result over the notes that start in it: the plan is rendered once with
+every lane (`plan_render`), the section's span is borrowed into an `ImportedScore` (`imported_score_view`, in the plan's meter
+map and the key the plan has at the section's start) and run by `analysis_chain_run_score` (`<chain/analysis_chain.h>`), and
+what the chain hears is compared with what the plan asked for. The chain is the one hearing of the run
+(`src/check/hearing.h`, see [form-hear.md](form-hear.md)): the form, the returns and the style distance read the same render.
+Cadences, chord entries and key regions are read from the chain's result (`analysis_chain_result`, a `ChainResult`), and faults
+from `chain_result_voice_faults` (`<chain/chain_result.h>`). Times in the result are in whole notes from the start of the plan,
+and the check counts bars from the section's start.
 
-The hearing reads one chord per segment (`harmonic_spans` false in `hearing_analyzer_options`), not the harmonic spans the
-Analyzer's own output reads. The checks, compose rates and baselines were recorded on that reading, and on spans the Analyzer
-misreads the Composer's two-voice texture at cadences until P40 and P41 (R-378, R-379). P41 moves the hearing to spans.
+The hearing runs the chain with its default configuration and every stage (the Analyzer's settings): the chords are read on
+harmonic spans, as the Analyzer's own output reads them (R-618). Until P61 B6 the hearing read one chord per segment, the reading
+the checks, compose rates and baselines were recorded on (R-378, R-379); the baselines are re-recorded in
+[testing/span-hearing.md](testing/span-hearing.md).
 
 ## What is compared
 

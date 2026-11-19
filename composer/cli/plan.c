@@ -28,6 +28,7 @@ typedef struct {
     bool from_corpus;   /* --like-progression */
     const char *at_text;
     const char *cells_text;
+    cJSON *passages; /* --like-progression: the passages like its numerals, found by the Analyzer */
 } GivenOption;
 
 typedef struct {
@@ -42,6 +43,7 @@ typedef struct {
     const char *motive_path;
     const char *from_corpus;
     const char *like_path;
+    cJSON *passages; /* the passages like --like, found by the Analyzer */
     const char *accompaniment_text;
     const char *texture_text;
     const char *seed_text;
@@ -224,6 +226,19 @@ static int check_options(Options *options) {
     if ((!options->form_text && options->given_count == 0) || !options->key_text || !options->meter_text || !options->out_path) {
         return cli_fail(CLI_EXIT_USAGE, "plan needs --form, --key, --meter and --out (see --help)\n%s", PLAN_USAGE_LINE);
     }
+    bool likes_progression = false;
+    for (size_t i = 0; i < options->given_count; i++) {
+        likes_progression = likes_progression || options->given[i].from_corpus;
+    }
+    if ((options->like_path || likes_progression) && !options->from_corpus) {
+        return cli_fail(CLI_EXIT_USAGE, "%s needs --from-corpus <dir>", options->like_path ? "--like" : "--like-progression");
+    }
+    if (options->from_corpus && !options->like_path && !likes_progression) {
+        return cli_fail(CLI_EXIT_USAGE, "--from-corpus needs --like <file> or --like-progression \"<numerals>\"");
+    }
+    if (options->like_path && options->motive_path) {
+        return cli_fail(CLI_EXIT_USAGE, "--like and --motive both give the motive; use one");
+    }
     if (options->format_text) {
         if (cli_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
@@ -320,7 +335,6 @@ static cJSON *build_request(const Options *options, Held *held) {
               add_text(request, "key", options->key_text) && add_text(request, "material", options->material_text) &&
               add_text(request, "meter", options->meter_text) && add_text(request, "bars", options->bars_text) &&
               add_text(request, "count", options->count_text) && (!options->modulate || cJSON_AddTrueToObject(request, "modulate")) &&
-              add_text(request, "corpus", options->from_corpus) && add_text(request, "like", options->like_path) &&
               add_text(request, "accompaniment", options->accompaniment_text) && add_text(request, "texture", options->texture_text) &&
               add_text(request, "seed", options->seed_text) && add_text(request, "style", options->style_path) &&
               add_text(request, "style_weight", options->style_weight_text) && add_text(request, "blend", options->blend_path) &&
@@ -332,6 +346,13 @@ static cJSON *build_request(const Options *options, Held *held) {
     if (ok && options->without.count > 0) {
         ok = cJSON_AddItemToObject(request, "style_without", without);
         without = ok ? NULL : without;
+    }
+    if (ok && options->passages) {
+        cJSON *passages = cJSON_Duplicate(options->passages, true);
+        ok = passages && cJSON_AddItemToObject(request, "corpus_passages", passages);
+        if (!ok) {
+            cJSON_Delete(passages);
+        }
     }
     if (ok && options->motive_path) {
         cJSON *motive = motive_request(options, options->motive_path, held);
@@ -345,6 +366,13 @@ static cJSON *build_request(const Options *options, Held *held) {
              add_text(item, "at", option->at_text) && add_text(item, "cells", option->cells_text);
         if (ok && option->kind == GIVEN_PROGRESSION) {
             ok = cJSON_AddStringToObject(item, "numerals", option->source) != NULL;
+            if (ok && option->passages) {
+                cJSON *passages = cJSON_Duplicate(option->passages, true);
+                ok = passages && cJSON_AddItemToObject(item, "corpus_passages", passages);
+                if (!ok) {
+                    cJSON_Delete(passages);
+                }
+            }
         } else if (ok) {
             cJSON *motive = motive_request(options, option->source, held);
             ok = motive && cJSON_AddItemToObject(item, "motive", motive);
@@ -473,6 +501,8 @@ static const char *input_name(const Options *options, const char *path) {
     return options->motive_path;
 }
 
+static int request_plan(Options *options_in);
+
 int run_plan(int argc, char **argv) {
     Options options;
     int status = read_options(argc, argv, &options);
@@ -487,6 +517,30 @@ int run_plan(int argc, char **argv) {
     if (status != 0) {
         return status;
     }
+    /* The passages are found here, by the Analyzer, and given to the API inline (R-619). */
+    if (options.like_path) {
+        options.passages = cli_corpus_passages(options.from_corpus, options.like_path, NULL, &status);
+    }
+    for (size_t i = 0; status == 0 && i < options.given_count; i++) {
+        GivenOption *given = &options.given[i];
+        if (given->from_corpus) {
+            given->passages = cli_corpus_passages(options.from_corpus, NULL, given->source, &status);
+        }
+    }
+    if (status == 0) {
+        status = request_plan(&options);
+    }
+    cJSON_Delete(options.passages);
+    for (size_t i = 0; i < options.given_count; i++) {
+        cJSON_Delete(options.given[i].passages);
+    }
+    return status;
+}
+
+/* Builds the request, calls the API and prints the result. */
+static int request_plan(Options *options_in) {
+    Options options = *options_in;
+    int status = 0;
     Held held;
     memset(&held, 0, sizeof held);
     cJSON *request = build_request(&options, &held);
@@ -506,7 +560,7 @@ int run_plan(int argc, char **argv) {
         CliFile file = {options.out_path, CLI_FILE_PLAN, plan, NULL, 0, false};
         status = document && plan ? cli_write_files(&file, 1) : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
         if (status == 0) {
-            cli_print_notices(document);
+            cli_print_corpus_notices(document, options.from_corpus);
             if (options.json) {
                 cJSON_DeleteItemFromObjectCaseSensitive(document, "accompaniment_texture");
                 cJSON_DeleteItemFromObjectCaseSensitive(document, "defaulted_form");

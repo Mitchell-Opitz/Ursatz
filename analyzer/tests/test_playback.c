@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/notation_reading.h>
+#include <io/imported_score.h>
 #include <ursatz_analyzer/playback.h>
 
 #include "test_support.h"
@@ -44,10 +44,10 @@ static void file_path(size_t i, char *path, size_t size) {
     }
 }
 
-static bool import_file(size_t i, ImportedNotes *notes) {
+static bool import_file(size_t i, ImportedScore *notes) {
     char path[512];
     file_path(i, path, sizeof(path));
-    return input_pipeline_import_file(path, INPUT_FORMAT_AUTO, notes) == INPUT_PIPELINE_OK;
+    return imported_score_import_file(path, IMPORTED_FORMAT_AUTO, notes, NULL) == IMPORTED_SCORE_OK;
 }
 
 static void check_snapshot(size_t i, const char *json, bool update) {
@@ -65,7 +65,7 @@ static void check_snapshot(size_t i, const char *json, bool update) {
     free(expected);
 }
 
-static void check_numbers(const char *stem, const ImportedNotes *notes, const AnalyzerPlayback *playback) {
+static void check_numbers(const char *stem, const ImportedScore *notes, const AnalyzerPlayback *playback) {
     CHECKF(playback->tempo_source != NULL, "%s: no tempo source", stem);
     CHECKF(playback->tempo_count >= 1, "%s: no tempo region", stem);
     CHECKF(playback->note_count == notes->count, "%s: %zu playback notes for %zu imported", stem, playback->note_count,
@@ -101,17 +101,16 @@ static double round_to_milli(double value) {
 
 /* A value scale of 2 multiplies the tempo of every region by 2; a MIDI file's region positions too. */
 static void check_scale(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
     if (!import_file(0, &notes)) {
         CHECKF(false, "scale: cannot import %s", FILES[0].file);
         return;
     }
     AnalyzerPlayback before, after;
     CHECKF(analyzer_playback_build(&notes, &before) == ANALYZER_OK, "scale: build before");
-    NotationReading reading = notation_reading_none();
-    reading.scale_numerator = 2;
-    reading.scale_denominator = 1;
-    CHECKF(notation_reading_apply(&notes, &reading) == NOTATION_READING_OK, "scale: apply");
+    ImportedReading reading = imported_reading_none();
+    reading.scale = rational_ratio(2, 1);
+    CHECKF(imported_reading_apply(&notes, &reading) == IMPORTED_READING_OK, "scale: apply");
     CHECKF(analyzer_playback_build(&notes, &after) == ANALYZER_OK, "scale: build after");
     CHECKF(after.tempo_count == before.tempo_count, "scale: %zu regions after, %zu before", after.tempo_count,
            before.tempo_count);
@@ -127,11 +126,11 @@ static void check_scale(void) {
     CHECKF(rational_cmp(after.end, before.end) > 0, "scale: the end did not move");
     analyzer_playback_destroy(&before);
     analyzer_playback_destroy(&after);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 static void check_arguments(void) {
-    ImportedNotes notes;
+    ImportedScore notes;
     AnalyzerPlayback playback;
     char *json = (char *)1;
     CHECKF(analyzer_playback_build(NULL, &playback) == ANALYZER_ERR_ARGUMENT, "NULL notes");
@@ -151,7 +150,7 @@ static void check_arguments(void) {
     notes.tempo_map = map;
     analyzer_playback_destroy(&playback);
     analyzer_playback_destroy(NULL);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {
@@ -162,7 +161,7 @@ int main(int argc, char **argv) {
         if (smoke && !FILES[i].smoke) {
             continue;
         }
-        ImportedNotes notes;
+        ImportedScore notes;
         if (!import_file(i, &notes)) {
             CHECKF(false, "%s: cannot import", FILES[i].file);
             continue;
@@ -183,7 +182,7 @@ int main(int argc, char **argv) {
         }
         free(json);
         analyzer_playback_destroy(&playback);
-        imported_notes_destroy(&notes);
+        imported_score_destroy(&notes);
     }
     check_scale();
     check_arguments();

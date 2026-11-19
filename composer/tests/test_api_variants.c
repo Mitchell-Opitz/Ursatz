@@ -99,7 +99,7 @@ static void test_operations(void) {
 static void test_variants(void) {
     ComposerResponse response;
     const char *const gui = "{\"functions\":[\"beginning\",\"continuation\"],\"distance\":\"medium\",\"count\":4,\"seed\":3,"
-                            "\"api_version\":2}";
+                            "\"api_version\":3}";
     char *request = variants_basic_request(gui);
     assert(composer_api_variants(test_context(), request, NULL, &response) == COMPOSER_OK);
     expect_snapshot(&response, "variants-basic.stdout.json");
@@ -493,7 +493,7 @@ static void test_cancel(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "2.2") == 0);
+    assert(strcmp(composer_api_version(), "3.0") == 0);
     test_operations();
     test_variants();
     test_recognize();

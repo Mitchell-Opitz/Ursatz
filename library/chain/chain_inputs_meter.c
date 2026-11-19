@@ -52,7 +52,7 @@ static StandardMeterExpansionKind meter_expansion_of(int kind) {
 }
 
 ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const OuterVoiceLines *lines, const ChainSegments *segments,
-                                         const char *const *chord_labels, int first_measure, int last_measure,
+                                         const bool *chord_changes, int first_measure, int last_measure,
                                          const StandardFormInput *form, const StandardFormPhrases *phrases,
                                          const StandardFormExpansions *expansions, ChainMeterInput *out) {
     if (notes == NULL || lines == NULL || segments == NULL || out == NULL) {
@@ -92,8 +92,8 @@ ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const Out
         standard_meter_input_init(&build.input, notes->map, build.notes, build.note_count) != STANDARD_METER_ANALYSIS_OK) {
         status = CHAIN_INPUT_ERR_BAD_NOTES;
     }
-    for (size_t s = 1; chord_labels != NULL && s < segments->count && status == CHAIN_INPUT_OK; s++) {
-        if (chord_labels[s] == NULL || chord_labels[s - 1] == NULL || strcmp(chord_labels[s], chord_labels[s - 1]) == 0) {
+    for (size_t s = 1; chord_changes != NULL && s < segments->count && status == CHAIN_INPUT_OK; s++) {
+        if (!chord_changes[s]) {
             continue;
         }
         const MusicalTime *start = &sonority_time_window(segments->sonorities.items[s].sonority)->start;

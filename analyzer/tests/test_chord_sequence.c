@@ -9,7 +9,7 @@
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/style_labels.h>
+#include "theory/style/style_labels.h"
 
 #include <chain/analysis_chain.h>
 
@@ -81,8 +81,8 @@ static size_t check_against_entries(const char *slug, const cJSON *document, con
 static void check_piece(const char *fixture, const char *slug) {
     char path[512];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, fixture);
-    ImportedNotes notes;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+    ImportedScore notes;
+    if (imported_score_import_file(path, IMPORTED_FORMAT_AUTO, &notes, NULL) != IMPORTED_SCORE_OK) {
         CHECKF(false, "%s: cannot import %s", slug, path);
         return;
     }
@@ -107,7 +107,7 @@ static void check_piece(const char *fixture, const char *slug) {
         free(json);
     }
     analyzer_result_destroy(result);
-    imported_notes_destroy(&notes);
+    imported_score_destroy(&notes);
 }
 
 /* ---- cases ---- */

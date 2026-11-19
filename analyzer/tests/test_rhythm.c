@@ -5,8 +5,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -43,18 +42,18 @@
 /* --- the analysis of a file --- */
 
 typedef struct {
-    ImportedNotes notes;
-    AnalysisReport report;
+    ImportedScore notes;
+    ChainResult report;
     cJSON *document;
 } Analysis;
 
 static bool analyze(const char *path, Analysis *analysis) {
     memset(analysis, 0, sizeof(*analysis));
-    if (midi_pipeline_import_file(path, &analysis->notes) != MIDI_PIPELINE_OK) {
+    if (imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &analysis->notes, NULL) != IMPORTED_SCORE_OK) {
         return false;
     }
-    if (!run_analysis_pipeline(&analysis->notes, test_knowledge(), &analysis->report)) {
-        imported_notes_destroy(&analysis->notes);
+    if (!test_analyze_report(&analysis->notes, &analysis->report)) {
+        imported_score_destroy(&analysis->notes);
         return false;
     }
     char *json = test_render_document(path, &analysis->notes, &analysis->report);
@@ -65,8 +64,8 @@ static bool analyze(const char *path, Analysis *analysis) {
 
 static void analysis_destroy(Analysis *analysis) {
     cJSON_Delete(analysis->document);
-    analysis_report_destroy(&analysis->report);
-    imported_notes_destroy(&analysis->notes);
+    chain_result_destroy(&analysis->report);
+    imported_score_destroy(&analysis->notes);
 }
 
 /* The rhythm claims with the label, in document order. */
@@ -84,7 +83,7 @@ static size_t claims_of(const cJSON *document, const char *label, const cJSON **
 /* --- the structure of the claims --- */
 
 static void check_structure(const Analysis *analysis) {
-    const AnalysisReport *report = &analysis->report;
+    const ChainResult *report = &analysis->report;
     const cJSON *rhythm = test_json_member(analysis->document, "rhythm");
     size_t expected = report->density_count + report->syncopation_count + report->hemiola_count +
                       report->hypermeter_count + report->tuplet_count + (report->meter_check.present ? 1 : 0);
@@ -111,8 +110,8 @@ static void check_structure(const Analysis *analysis) {
         unsigned counted = 0;
         for (unsigned b = 0; b < density->bin_count; b++) {
             counted += density->bins[b].count;
-            CHECK(b == 0 || density->bins[b].numerator * (long)density->bins[b - 1].denominator >
-                                density->bins[b - 1].numerator * (long)density->bins[b].denominator);
+            CHECK(b == 0 || density->bins[b].value.num * (long)density->bins[b - 1].value.den >
+                                density->bins[b - 1].value.num * (long)density->bins[b].value.den);
         }
         CHECK(density->bins_truncated || counted == density->notes);
     }
@@ -183,7 +182,7 @@ static double rate(size_t hits, size_t total) {
 }
 
 static void check_field5(const Analysis *analysis, const Annotation *annotation, bool target) {
-    const AnalysisReport *report = &analysis->report;
+    const ChainResult *report = &analysis->report;
     size_t sync_hits = 0;
     for (size_t i = 0; i < annotation->syncopation_count; i++) {
         bool found = false;

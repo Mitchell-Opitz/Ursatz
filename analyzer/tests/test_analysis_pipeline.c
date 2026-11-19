@@ -4,8 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
+#include <io/imported_score.h>
 
 #include "test_support.h"
 #include "ursatz_test.h"
@@ -69,33 +68,33 @@ int main(void) {
     assert(fwrite(buf, 1, size, file) == size);
     fclose(file);
 
-    ImportedNotes notes;
-    assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
+    ImportedScore notes;
+    assert(imported_score_import_file(path, IMPORTED_FORMAT_MIDI, &notes, NULL) == IMPORTED_SCORE_OK);
     assert(notes.count == 11);
 
-    AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, test_knowledge(), &report));
+    ChainResult report;
+    assert(test_analyze_report(&notes, &report));
     assert(report.key_region_count > 0);
     /* Harmonic spans: D F A read as one ii, and the B with the closing C E G D as one iii; three chords where the
        sonority segmentation gave six. */
     assert(report.entry_count == 3);
 
-    assert(report.entries[0].time_numerator == 0);
+    assert(report.entries[0].time.num == 0);
     assert(strcmp(report.entries[0].chord_label, "I") == 0);
     assert(strcmp(report.entries[0].key_label, "C major") == 0);
 
-    assert(report.entries[1].time_numerator == 1);
-    assert(report.entries[1].time_denominator == 4);
+    assert(report.entries[1].time.num == 1);
+    assert(report.entries[1].time.den == 4);
     assert(strcmp(report.entries[1].chord_label, "ii") == 0);
     assert(strcmp(report.entries[1].key_label, "C major") == 0);
 
-    assert(report.entries[2].time_numerator == 1);
-    assert(report.entries[2].time_denominator == 1);
+    assert(report.entries[2].time.num == 1);
+    assert(report.entries[2].time.den == 1);
     assert(strcmp(report.entries[2].chord_label, "iii") == 0);
     assert(strcmp(report.entries[2].key_label, "C major") == 0);
 
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
     remove(path);
     free(path);
 

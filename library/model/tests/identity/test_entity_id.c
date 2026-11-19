@@ -60,6 +60,18 @@ static void test_round_trip(void) {
     entity_id_destroy(restored);
 }
 
+static void test_copy(void) {
+    EntityID *id = NULL;
+    assert(entity_id_create("note-7", &id) == ENTITY_ID_OK);
+    EntityID *copy = entity_id_copy(id);
+    assert(copy != NULL && copy != id);
+    assert(entity_id_equals(id, copy));
+    assert(strcmp(entity_id_value(copy), "note-7") == 0);
+    assert(entity_id_copy(NULL) == NULL);
+    entity_id_destroy(copy);
+    entity_id_destroy(id);
+}
+
 int main(void) {
     test_create_rejects_null();
     test_create_rejects_empty();
@@ -67,5 +79,6 @@ int main(void) {
     test_equals_same_value();
     test_equals_different_value();
     test_round_trip();
+    test_copy();
     return 0;
 }

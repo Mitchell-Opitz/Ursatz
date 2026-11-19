@@ -4,9 +4,7 @@
 #include <string.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/midi_pipeline.h>
-#include <ursatz_analyzer/musicxml_pipeline.h>
+#include <io/imported_score.h>
 
 #include "cJSON.h"
 
@@ -41,10 +39,10 @@ static void check_claim(const cJSON *claim, size_t note_count) {
     }
 }
 
-static bool analyze(const char *path, bool midi, ImportedNotes *notes, AnalysisReport *report, cJSON **document) {
-    bool imported = midi ? midi_pipeline_import_file(path, notes) == MIDI_PIPELINE_OK
-                         : musicxml_pipeline_import_file(path, notes) == MUSICXML_PIPELINE_OK;
-    if (!imported || !run_analysis_pipeline(notes, test_knowledge(), report)) {
+static bool analyze(const char *path, bool midi, ImportedScore *notes, ChainResult *report, cJSON **document) {
+    bool imported = midi ? imported_score_import_file(path, IMPORTED_FORMAT_MIDI, notes, NULL) == IMPORTED_SCORE_OK
+                         : imported_score_import_file(path, IMPORTED_FORMAT_MUSICXML, notes, NULL) == IMPORTED_SCORE_OK;
+    if (!imported || !test_analyze_report(notes, report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
         test_failure_count++;
         return false;
@@ -77,8 +75,8 @@ static const char *part_cadence(const cJSON *document, const cJSON *part) {
 static void check_sentence(const char *dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/sentence.musicxml", dir);
-    ImportedNotes notes;
-    AnalysisReport report;
+    ImportedScore notes;
+    ChainResult report;
     cJSON *document = NULL;
     if (!analyze(path, false, &notes, &report, &document)) {
         return;
@@ -115,15 +113,15 @@ static void check_sentence(const char *dir) {
     /* a balanced sentence is neither expanded nor contracted */
     CHECK(test_json_member(cJSON_GetArrayItem(test_json_member(document, "phrases"), 0), "expansions") == NULL);
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
 }
 
 static void check_period(const char *dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/period.musicxml", dir);
-    ImportedNotes notes;
-    AnalysisReport report;
+    ImportedScore notes;
+    ChainResult report;
     cJSON *document = NULL;
     if (!analyze(path, false, &notes, &report, &document)) {
         return;
@@ -159,15 +157,15 @@ static void check_period(const char *dir) {
         CHECK(cJSON_IsFalse(test_json_member(theme, "cadences_usual")));
     }
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
 }
 
 static void check_compound_period(const char *dir) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/compound-period.musicxml", dir);
-    ImportedNotes notes;
-    AnalysisReport report;
+    ImportedScore notes;
+    ChainResult report;
     cJSON *document = NULL;
     if (!analyze(path, false, &notes, &report, &document)) {
         return;
@@ -194,8 +192,8 @@ static void check_compound_period(const char *dir) {
         CHECK(strcmp(part_cadence(document, cJSON_GetArrayItem(parts, 1)), "perfect-authentic") == 0);
     }
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
 }
 
 /* The phrase claims of the document, indexed. */
@@ -328,8 +326,8 @@ static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid"},
 static void check_piece(const Piece *piece) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURES_DIR, piece->file);
-    ImportedNotes notes;
-    AnalysisReport report;
+    ImportedScore notes;
+    ChainResult report;
     cJSON *document = NULL;
     if (!analyze(path, true, &notes, &report, &document)) {
         return;
@@ -345,8 +343,8 @@ static void check_piece(const Piece *piece) {
     check_themes(document, notes.count);
     check_expansions(document);
     cJSON_Delete(document);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    chain_result_destroy(&report);
+    imported_score_destroy(&notes);
 }
 
 int main(int argc, char **argv) {

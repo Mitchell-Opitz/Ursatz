@@ -27,10 +27,8 @@
 #include <cJSON.h>
 
 #include <ursatz_analyzer/analysis_document.h>
-#include <ursatz_analyzer/analysis_pipeline.h>
-#include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/input_pipeline.h>
-#include <ursatz_analyzer/notation_reading.h>
 #include <ursatz_analyzer/playback.h>
 #include <ursatz_analyzer/score_export.h>
 #include <ursatz_analyzer/staleness.h>
@@ -77,8 +75,8 @@ static void remove_piece_dir(const char *dir_path) {
 #endif
 }
 
-static const char *format_label(InputFormat format) {
-    return format == INPUT_FORMAT_MIDI ? "midi" : "musicxml";
+static const char *format_label(ImportedFormat format) {
+    return format == IMPORTED_FORMAT_MIDI ? "midi" : "musicxml";
 }
 
 static const char *analyzer_version_string(void) {
@@ -221,10 +219,10 @@ static bool meta_notation_read(const cJSON *meta, UrsatzGuiNotation *out) {
 
 /* True when every set member of n is text the Analyzer reads. */
 static bool notation_is_valid(const UrsatzGuiNotation *n) {
-    NotationReading reading = notation_reading_none();
-    return (n->meter[0] == '\0' || notation_reading_parse_meter(n->meter, &reading)) &&
-           (n->value_scale[0] == '\0' || notation_reading_parse_scale(n->value_scale, &reading)) &&
-           (n->pickup[0] == '\0' || notation_reading_parse_pickup(n->pickup, &reading));
+    ImportedReading reading = imported_reading_none();
+    return (n->meter[0] == '\0' || imported_reading_parse_meter(n->meter, &reading)) &&
+           (n->value_scale[0] == '\0' || imported_reading_parse_scale(n->value_scale, &reading)) &&
+           (n->pickup[0] == '\0' || imported_reading_parse_pickup(n->pickup, &reading));
 }
 
 /* Sets (n) or removes (NULL) meta's "notation" object. */
@@ -280,8 +278,8 @@ static bool has_extension(const char *filename, const char *extension) {
 /* The stored source file's name: source.mid for MIDI; for MusicXML
    source.xml / source.mxl when the upload had that extension, else
    source.musicxml. */
-static const char *source_file_name(InputFormat format, const char *original_filename) {
-    if (format == INPUT_FORMAT_MIDI) {
+static const char *source_file_name(ImportedFormat format, const char *original_filename) {
+    if (format == IMPORTED_FORMAT_MIDI) {
         return "source.mid";
     }
     if (has_extension(original_filename, ".xml")) {
@@ -294,26 +292,28 @@ static const char *source_file_name(InputFormat format, const char *original_fil
 }
 
 static bool find_source_path(const char *dir_path, char *out, size_t out_size);
-static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes *out);
+static bool import_piece(const char *dir_path, ImportedFormat format, ImportedScore *out);
 
 /* Imports the piece's source (with its notation override, if any) and runs it
    through the Analyzer. On OK, *out_json is the analysis document (caller frees). */
-static UrsatzGuiAnalysisResult analyze_source_file(const char *dir_path, InputFormat format, char **out_json) {
+static UrsatzGuiAnalysisResult analyze_source_file(const char *dir_path, ImportedFormat format, char **out_json) {
     char source_path[400];
-    ImportedNotes notes;
+    ImportedScore notes;
     if (!find_source_path(dir_path, source_path, sizeof(source_path)) || !import_piece(dir_path, format, &notes)) {
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
-    AnalysisReport report;
-    if (!run_analysis_pipeline(&notes, ursatz_gui_knowledge(), &report)) {
-        imported_notes_destroy(&notes);
+    AnalyzerOptions options = analyzer_options_default();
+    options.knowledge = ursatz_gui_knowledge();
+    AnalyzerResult *result = NULL;
+    if (analyzer_analyze(&notes, &options, &result) != ANALYZER_OK) {
+        imported_score_destroy(&notes);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
-    AnalysisDocument *document = analysis_document_build(source_path, &notes, &report, ursatz_gui_knowledge());
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    AnalysisDocument *document = analysis_document_build_from_result(source_path, result);
+    analyzer_result_destroy(result);
+    imported_score_destroy(&notes);
     if (!document) {
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
@@ -367,8 +367,8 @@ static UrsatzGuiAnalysisResult save_new_piece(const char *pieces_dir, const char
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
-    InputFormat format = input_format_detect(upload_path);
-    if (format == INPUT_FORMAT_AUTO) {
+    ImportedFormat format = imported_format_detect(upload_path);
+    if (format == IMPORTED_FORMAT_AUTO) {
         remove_piece_dir(dir_path);
         return URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT;
     }
@@ -616,14 +616,14 @@ static bool piece_dir_path(const char *pieces_dir, const char *id, char *out, si
     return ursatz_gui_path_is_dir(out);
 }
 
-static InputFormat format_from_label(const char *label) {
+static ImportedFormat format_from_label(const char *label) {
     if (label && strcmp(label, "midi") == 0) {
-        return INPUT_FORMAT_MIDI;
+        return IMPORTED_FORMAT_MIDI;
     }
     if (label && strcmp(label, "musicxml") == 0) {
-        return INPUT_FORMAT_MUSICXML;
+        return IMPORTED_FORMAT_MUSICXML;
     }
-    return INPUT_FORMAT_AUTO;
+    return IMPORTED_FORMAT_AUTO;
 }
 
 /* Writes the path of the piece's stored source file into out. */
@@ -641,10 +641,10 @@ static bool find_source_path(const char *dir_path, char *out, size_t out_size) {
 /* Imports the piece's stored source and applies the notation override kept in
    its meta.json, if any (R-110). The analysis, the score and playback all
    read the piece through this, so they agree on its meter and note values. */
-static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes *out) {
+static bool import_piece(const char *dir_path, ImportedFormat format, ImportedScore *out) {
     char source_path[400];
     if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
-        input_pipeline_import_file(source_path, format, out) != INPUT_PIPELINE_OK) {
+        analyzer_import_file(source_path, format, out, NULL, 0) != ANALYZER_OK) {
         return false;
     }
     cJSON *meta = read_meta_file(dir_path);
@@ -654,12 +654,12 @@ static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes
     if (!has_notation) {
         return true;
     }
-    NotationReading reading = notation_reading_none();
-    if ((notation.meter[0] != '\0' && !notation_reading_parse_meter(notation.meter, &reading)) ||
-        (notation.value_scale[0] != '\0' && !notation_reading_parse_scale(notation.value_scale, &reading)) ||
-        (notation.pickup[0] != '\0' && !notation_reading_parse_pickup(notation.pickup, &reading)) ||
-        notation_reading_apply(out, &reading) != NOTATION_READING_OK) {
-        imported_notes_destroy(out);
+    ImportedReading reading = imported_reading_none();
+    if ((notation.meter[0] != '\0' && !imported_reading_parse_meter(notation.meter, &reading)) ||
+        (notation.value_scale[0] != '\0' && !imported_reading_parse_scale(notation.value_scale, &reading)) ||
+        (notation.pickup[0] != '\0' && !imported_reading_parse_pickup(notation.pickup, &reading)) ||
+        imported_reading_apply(out, &reading) != IMPORTED_READING_OK) {
+        imported_score_destroy(out);
         return false;
     }
     return true;
@@ -692,10 +692,10 @@ static bool file_stamp(const char *path, char *out, size_t out_size) {
 
 typedef struct {
     const char *dir_path;
-    InputFormat format;
+    ImportedFormat format;
 } ImportRequest;
 
-static bool import_piece_for_cache(void *context, ImportedNotes *out) {
+static bool import_piece_for_cache(void *context, ImportedScore *out) {
     const ImportRequest *request = context;
     return import_piece(request->dir_path, request->format, out);
 }
@@ -703,7 +703,7 @@ static bool import_piece_for_cache(void *context, ImportedNotes *out) {
 /* The cached import of the piece (import_cache.h), made when there is none for the current notation and source
    file. Called with the piece lock held; release the entry with ursatz_gui_import_cache_release. NULL when the
    source does not import (*out_failed true) or memory ran out. */
-static UrsatzGuiImportEntry *acquire_import(const char *dir_path, const char *id, InputFormat format,
+static UrsatzGuiImportEntry *acquire_import(const char *dir_path, const char *id, ImportedFormat format,
                                                 bool *out_failed) {
     *out_failed = true;
     char source_path[400];
@@ -1012,7 +1012,7 @@ static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const 
     }
     ursatz_gui_import_cache_invalidate(id);
     const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
-    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    ImportedFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
 
     char *document_json = NULL;
     UrsatzGuiAnalysisResult result = analyze_source_file(dir_path, format, &document_json);
@@ -1208,7 +1208,7 @@ static UrsatzGuiAnalysisResult get_piece_musicxml_unlocked(const char *pieces_di
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
     const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
-    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    ImportedFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
     /* The Library shows the filename without its extension as the title. */
     char *title = meta_string_copy(meta, "filename");
     char *composer = meta_string_copy(meta, "composer");
@@ -1242,7 +1242,7 @@ static UrsatzGuiAnalysisResult get_piece_musicxml_unlocked(const char *pieces_di
             return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
         }
     } else {
-        const ImportedNotes *notes = ursatz_gui_import_entry_notes(import);
+        const ImportedScore *notes = ursatz_gui_import_entry_notes(import);
         AnalyzerStatus status = analyzer_score_export_musicxml(notes, &xml);
         meter_defaulted = analyzer_imported_meter_defaulted(notes);
 
@@ -1289,7 +1289,7 @@ static UrsatzGuiAnalysisResult get_piece_meter_defaulted_unlocked(const char *pi
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
     const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
-    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    ImportedFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
     cJSON_Delete(meta);
 
     bool import_failed = false;
@@ -1313,7 +1313,7 @@ static UrsatzGuiAnalysisResult get_piece_playback_unlocked(const char *pieces_di
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
     const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
-    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    ImportedFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
     cJSON_Delete(meta);
 
     bool import_failed = false;
@@ -1321,7 +1321,7 @@ static UrsatzGuiAnalysisResult get_piece_playback_unlocked(const char *pieces_di
     if (!import) {
         return import_failed ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
-    const ImportedNotes *notes = ursatz_gui_import_entry_notes(import);
+    const ImportedScore *notes = ursatz_gui_import_entry_notes(import);
 
     AnalyzerPlayback playback;
     AnalyzerStatus status = analyzer_playback_build(notes, &playback);
@@ -1358,7 +1358,7 @@ static UrsatzGuiAnalysisResult get_piece_export_unlocked(const char *pieces_dir,
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
     const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
-    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    ImportedFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
     char *title = meta_string_copy(meta, "filename");
     cJSON_Delete(meta);
     if (!title) {
