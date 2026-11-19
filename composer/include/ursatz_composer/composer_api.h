@@ -36,10 +36,12 @@
  * 3.0 seeds from passages given inline (R-619): grow and plan take "corpus_passages" (found by the Analyzer, ranked best first) where they took
  * "corpus" and "like", which are refused, and a "like_progression" given carries its own "corpus_passages". The reply's "versions" has no
  * "analyzer_version" from B8 of P61 on.
+ * 3.1 writes plan format 6 (R-626): the versions response gives "plan_format_version" 6 and gains "composition_key", the key of the code that
+ * composes. The plan object an API gives or takes is a plan of the current format (the formats before it are read).
  */
 
 #define COMPOSER_API_VERSION_MAJOR 3
-#define COMPOSER_API_VERSION_MINOR 0
+#define COMPOSER_API_VERSION_MINOR 1
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -101,7 +103,7 @@ typedef struct {
 /* Frees and zeroes the response. Safe on a zeroed response and when called twice. */
 void composer_response_destroy(ComposerResponse *response);
 
-/* json: {"composer_version", "api_version", "analyzer_version", "ursatz_commit", "plan_format_version"} */
+/* json: {"composer_version", "api_version", "ursatz_commit", "composition_key", "plan_format_version"} */
 ComposerStatus composer_api_versions(ComposerResponse *out);
 
 /*

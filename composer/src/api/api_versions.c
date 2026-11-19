@@ -31,6 +31,7 @@ ComposerStatus composer_api_versions(ComposerResponse *out) {
     if (!root || !cJSON_AddStringToObject(root, "composer_version", composer_version()) ||
         !cJSON_AddStringToObject(root, "api_version", composer_api_version()) ||
         !cJSON_AddStringToObject(root, "ursatz_commit", analysis_chain_producer_key()) ||
+        !cJSON_AddStringToObject(root, "composition_key", composer_composition_key()) ||
         !cJSON_AddNumberToObject(root, "plan_format_version", URSATZ_PLAN_FORMAT_VERSION)) {
         cJSON_Delete(root);
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
