@@ -37,6 +37,8 @@ ursatz_test(piece_metadata LIBS ursatz_gui_core ursatz_test_support WORKING_DIRE
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/id_service)
 ursatz_test(id_service LIBS ursatz_gui_core ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/id_service)
+# The one status-to-HTTP table of the routes and the last error the services keep for them (R-639).
+ursatz_test(gui_http_status SOURCES test_http_status.c LIBS ursatz_gui_core ursatz_test_support)
 # The test makes one data folder per case in its own working directory and removes it.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data_check)
 ursatz_test(data_check LIBS ursatz_gui_core ursatz_test_support WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/data_check)
