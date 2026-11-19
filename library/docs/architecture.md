@@ -6,8 +6,8 @@ Ursatz is organized into seven groups under `library/`: `model/` (value types), 
 
 ## Purpose
 
-Ursatz is the base library of the platform: a theory-neutral C11 representation of musical material (events, structures, relationships, interpretations, contexts, provenance) with exact time and pitch.
-Theory lives in 11 Theory Frameworks that produce interpretations under a named framework, and the analysis chain runs them over imported notes.
+Ursatz is the base library of the platform: a theory-neutral C11 representation of musical material (events, structures, contexts, provenance) with exact time and pitch.
+Theory lives in 11 Theory Frameworks, and the analysis chain runs them over imported notes.
 The library imports MIDI and MusicXML, analyzes and exports MusicXML.
 It owns every analysis algorithm (R-217); the apps orchestrate and render.
 
@@ -43,8 +43,6 @@ The headers the apps include are the staged public headers (`build/library/publi
 | model/events | `dynamics.h`, `note_event.h` and 1 more | `NoteEvent` | The canonical note. | [events](modules/events.md) |
 | model/containers | `section.h` | `Section` | The section container, grouping phrases. | [containers](modules/containers.md) |
 | model/structure | `cadence.h`, `motif.h` and 3 more | `PhraseOccurrence`, `Structure` | Occurrences of structures. | [structure](modules/structure.md) |
-| model/relationship | `relationship.h` | `Relationship` | Typed link between two entities. | [relationship](modules/relationship.md) |
-| model/interpretation | `chord.h`, `claim_interpretation.h` and 4 more | `Interpretation`, `Chord`, `Uncertainty` | Claims under a named framework, with uncertainty. | [interpretation](modules/interpretation.md) |
 | theory/framework | `framework.h`, `framework_singleton.h` | `Framework`, `framework_singleton_get` | The Theory Framework type and its singleton helper. | [theory](modules/theory.md) |
 | theory/style | `style_features.h`, `style_model.h` and 2 more | `StyleModel` | Style models built from corpus statistics. | [theory](modules/theory.md) |
 | theory/rules | `context.h`, `preference.h` | `Rule`, `Constraint`, `Preference`, `Context` | The rule objects and the opaque Context. | [rules](modules/rules.md), [context](modules/context.md) |
@@ -102,7 +100,7 @@ One file through the library:
 3. The caller turns the import into neutral `AnalysisNote`s (`analysis/notes/analysis_note.h`); the library's tests use `tests/import_notes_test_util.h`.
 4. `analysis_chain_run` (`chain/analysis_chain.h`) takes the notes and a config whose `knowledge` is the snapshot the caller built (the chain resolves the four common-practice materials from it once, and a config without one is refused), and runs the stages in order: segments, key regions, weighted chords, Roman numerals, outer voices, cadences, phrase form and motives, meter, texture, voice leading, melody, schemas and sequences ([analytic-job-owners](analytic-job-owners.md)).
 5. Each stage builds its input with `chain_inputs.h` and calls the owner of its job: an `analysis/<area>/` adapter or analysis.
-6. Results are `Interpretation`s and framework result structs, owned by the `AnalysisChain` and read through its `analysis_chain_*` accessors.
+6. Results are framework result structs, owned by the `AnalysisChain` and read through its `analysis_chain_*` accessors. The chain collects them into the `ChainResult` the reading is built from (`reading/reading_build.h`).
 7. The caller reads the results, or exports the notes with `export`.
 
 ## Finding things

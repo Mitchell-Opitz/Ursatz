@@ -8,7 +8,7 @@ The library is seven groups, each one folder under `library/` and one CMake targ
 
 | Group | Target | Areas |
 |---|---|---|
-| `model/` | `ursatz_model` | `identity`, `core`, `time`, `pitch`, `events`, `containers`, `structure`, `relationship`, `interpretation`: the value types (the former layers L0 to L6 without `context` and `semantics`, in that order) |
+| `model/` | `ursatz_model` | `identity`, `core`, `time`, `pitch`, `events`, `containers`, `structure`: the value types (the former layers L0 to L6 without `context` and `semantics`, in that order) |
 | `theory/` | `ursatz_theory` | `framework` (the Framework type and singleton), `style`, `rules` (Rule, Constraint, Preference, Context), `vocabulary` (shared theory enums), `tonality`, `harmony`, `voicing`, `counterpoint`, `form`, `meter`, `galant`, `markings`: the rule libraries and vocabularies |
 | `realization/` | `ursatz_realization` | lines, performer parts, scoring assignments, movements and works, one folder, on `model` and `theory` |
 | `plan/` | `ursatz_plan` | the section description shared by forms, plans and piece requests, one folder, on `model` and `theory` (and cJSON for its codec) |
@@ -34,5 +34,5 @@ The rules are enforced by `cmake/layer-table.txt` (test `layer_table`, in the fa
 
 ## Resolved issues
 
-- **Interpretation-family to Framework** (Dependency Spec §7.1, closed). `Interpretation`, `Chord`, and `Key` (L6) carry an optional `FrameworkReference` (`core`, L1) rather than a live `Framework` reference. `Chord`, `Key` and `Texture` require it at construction. Detail in `docs/modules/l6-notes.md`.
+- **Interpretation-family to Framework** (Dependency Spec §7.1, closed by P62 B11). The `Interpretation`, `Chord`, `Key`, `Texture` and `Relationship` types and the claims built from them were deleted: the stages write typed results, the vocabulary gives `ChordCandidate` and `KeyStructure` values, and what a reader says about a realization is a reading (`library/reading`).
 - **Reference-type Registry synchronization.** `VoiceReference` and `ProvenanceReference` are authorized in the System Registry and implemented in `core`. See `docs/modules/core.md`.

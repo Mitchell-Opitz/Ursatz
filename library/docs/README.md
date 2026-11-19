@@ -37,8 +37,6 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 - [docs/modules/structure.md](modules/structure.md): L5 structure: occurrences of structures.
 - [docs/modules/context.md](modules/context.md): L6 context: the opaque Context type.
 - [docs/modules/semantics.md](modules/semantics.md): L6 semantics: shared theory vocabulary and neutral analysis inputs.
-- [docs/modules/relationship.md](modules/relationship.md): L6 relationship: typed links between entities.
-- [docs/modules/interpretation.md](modules/interpretation.md): L6 interpretation: claims, chords, keys, uncertainty.
 - [docs/modules/theory.md](modules/theory.md): L7 theory: Theory Framework type, style models.
 - [docs/modules/knowledge.md](modules/knowledge.md): L7 knowledge: the snapshot of knowledge entries, the instrument kind.
 - [docs/modules/realization.md](modules/realization.md): Realization: lines, performer parts, scoring assignments.

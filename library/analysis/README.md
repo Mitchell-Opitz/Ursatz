@@ -30,8 +30,9 @@ common-practice-minimal's is [harmony/README.md](harmony/README.md), standard-te
 
 - **Neutral input.** An adapter accepts the neutral types of `notes/` through mapping functions that copy field for
   field, so a caller writes no converter.
-- **Claims.** An adapter builds its durable claims through `model/interpretation/claim_interpretation.h`; each
-  `analysis/<area>/*claim.c` is a one-line call with the framework's id and short name.
+- **Results.** An adapter's results are plain typed structs (a claim struct holds the fields of one finding, with an
+  uncertainty); no claim objects are built (P62 B11). The stages that hand a group of notes on build a `Structure` shell
+  with `notes/note_group.h`. What a reader says about a realization is a reading (`library/reading`).
 - **Owner injection.** An adapter that needs another analysis takes it as an injected callback and never re-derives it
   ([analytic-job-owners.md](../docs/analytic-job-owners.md)).
 - **Building and testing.** The root build compiles `ursatz_analysis` and adds `library/analysis/tests/`, one folder
