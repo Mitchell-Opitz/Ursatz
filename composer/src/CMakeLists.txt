@@ -102,6 +102,7 @@ add_library(ursatz_composer STATIC
     melody/melody_fill.c
     preferences/preferences.c
     form/form_hear.c
+    form/form_record.c
     form/form_spec.c
     form/form_builtin.c
     form/return_hear.c

@@ -71,8 +71,6 @@ const char *grow_slot_name(GrowSlot slot);
 
 /* "basic idea", "repetition", "contrasting idea", ... as the plan's idea nodes are named. */
 const char *grow_idea_name(GrowIdea idea);
-/* Whether a theme of the pairing has the idea. */
-bool grow_idea_in_pairing(const SectionPairing *pairing, GrowIdea idea);
 
 /* How far a contrasting idea strays from the basic idea's rhythm (R-475): a similar contrast or a distant one. */
 typedef enum { GROW_CONTRAST_SIMILAR, GROW_CONTRAST_DISTANT, GROW_CONTRAST_DISTANCE_COUNT } GrowContrastDistance;

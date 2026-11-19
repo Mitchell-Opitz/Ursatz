@@ -32,7 +32,6 @@ PieceResult piece_add_material(Plan *plan, const Motive *motive, const PlanSourc
                                PlanSpan material, Rational bar, NodeId *out);
 
 /* Records the form a plan was built from (name, document version, the built-in document's hash, checks, closing), R-608. */
-PieceResult piece_set_form_record(Plan *plan, const FormSpec *form);
 
 /*
  * A motive of its own for a section in the material (R-610): the node `own <section>` holds the motive from the bar bar_index of

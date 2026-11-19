@@ -10,6 +10,7 @@
 #include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
+#include "form/form_record.h"
 #include "piece/piece_internal.h"
 #include "util/plan_util.h"
 #include "util/util.h"
@@ -28,32 +29,6 @@ static Rational bars_of(Rational bar, size_t count) {
         out.den = 1;
     }
     return out;
-}
-
-const FormSpecSize *form_spec_default_size(const FormSpec *form) {
-    for (size_t i = 0; form && i < form->size_count; i++) {
-        if (form->sizes[i].is_default) {
-            return &form->sizes[i];
-        }
-    }
-    return NULL;
-}
-
-const FormSpecSize *form_spec_size(const FormSpec *form, size_t bars, size_t count) {
-    if (!form || form->request_sections) {
-        return NULL;
-    }
-    if (bars == 0 && count == 0) {
-        return form_spec_default_size(form);
-    }
-    for (size_t i = 0; i < form->size_count; i++) {
-        const FormSpecSize *size = &form->sizes[i];
-        /* A count picks the size with it, and bars then must match; bars alone pick the first size with them. */
-        if (count != 0 ? size->count == count && (bars == 0 || size->bars == bars) : size->bars == bars) {
-            return size;
-        }
-    }
-    return NULL;
 }
 
 /*
@@ -420,22 +395,6 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
     *theme_bars = shortest;
     *idea_bars = basic;
     return true;
-}
-
-PieceResult piece_set_form_record(Plan *plan, const FormSpec *form) {
-    PlanFormRecord record;
-    memset(&record, 0, sizeof(record));
-    snprintf(record.name, sizeof(record.name), "%s", form->name);
-    record.version = FORM_SPEC_VERSION;
-    for (size_t i = 0; i < form_spec_builtin_count(); i++) {
-        if (strcmp(form_spec_builtin_name(i), form->name) == 0) {
-            const char *hash = form_spec_builtin_hash(i);
-            snprintf(record.hash, sizeof(record.hash), "%s", hash ? hash : "");
-        }
-    }
-    record.checks = form->checks;
-    record.closing = form->closing;
-    return piece_result_of_plan(plan_set_form_record(plan, &record));
 }
 
 PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, Plan **out) {

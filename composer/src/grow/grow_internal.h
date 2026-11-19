@@ -18,28 +18,6 @@
 /* Fragments of the basic idea are this many notes at most; the first is the leading ones of the motive. */
 #define GROW_FRAGMENT_MAX 3
 
-/*
- * The motives the ideas of a theme are made from, by slot: slot k is the motive node m<k> in the material. The slot
- * is the idea's place, and what an idea is depends on the pairing:
- *   1  a presentation's repetition, or the contrasting idea of an antecedent or a compound basic idea
- *   2  a continuation's first fragment, a consequent's restated basic idea, or a cadential ending's first idea
- *   3  a continuation's second fragment, a consequent's contrasting idea, or a cadential ending's second idea
- *   4  a continuation's cadential idea
- */
-typedef enum {
-    GROW_PLACE_BASIC,
-    GROW_PLACE_REPETITION,
-    GROW_PLACE_FRAGMENT_1,
-    GROW_PLACE_FRAGMENT_2,
-    GROW_PLACE_CADENTIAL,
-    GROW_PLACE_COUNT,
-    GROW_PLACE_CONTRAST = GROW_PLACE_REPETITION,
-    GROW_PLACE_RESTATED = GROW_PLACE_FRAGMENT_1,
-    GROW_PLACE_CONSEQUENT_CONTRAST = GROW_PLACE_FRAGMENT_2,
-    GROW_PLACE_CADENTIAL_1 = GROW_PLACE_FRAGMENT_1,
-    GROW_PLACE_CADENTIAL_2 = GROW_PLACE_FRAGMENT_2
-} GrowPlace;
-
 /* How a presentation repeats its basic idea (ch. V). */
 typedef enum { GROW_REPEAT_EXACT, GROW_REPEAT_DOMINANT_FORM, GROW_REPEAT_SEQUENCE, GROW_REPEAT_COUNT } GrowRepetition;
 
@@ -343,17 +321,6 @@ bool grow_extensions_draw(const GrowThemeRequest *request, GrowThemeSpec *spec);
 /* The bars the made motives of the spec's extensions take in the material, one bar at least each. */
 size_t grow_extended_bars(const GrowThemeSpec *spec, Rational bar);
 /*
- * The bars of a construction as grow_layout_of lays them out (R-468): its beginning and its ending with their stretches
- * and repeats, the idea after an evaded cadence (not in the ending) and the addition (after it).
- */
-typedef struct {
-    size_t beginning;
-    size_t ending;
-    size_t evaded;
-    size_t addition;
-} GrowConstructionBars;
-void grow_construction_bars(const SectionPairing *pairing, const SectionConstruction *construction, GrowConstructionBars *out);
-/*
  * Where the ideas and the extensions of a construction lie, as grow_construction_describe counts them: 0-based first bars
  * and bars, a stretched idea with its stretch, an extension with its bars made explicit (a stretch spans the idea it
  * lengthens). An idea the pairing does not have has 0 bars; `halves` are the halves' bars, the ending with the idea after an
@@ -367,8 +334,6 @@ typedef struct {
     size_t extension_bars[SECTION_CONSTRUCTION_EXTENSIONS];
 } GrowConstructionSpans;
 void grow_construction_spans(const SectionPairing *pairing, const SectionConstruction *construction, GrowConstructionSpans *out);
-/* The bars the extensions of a construction add to its ideas' (R-468), as grow_layout_of lays them out. */
-size_t grow_construction_extra_bars(const SectionPairing *pairing, const SectionConstruction *construction);
 /*
  * The sentence grow_construction_describe writes for the theme section's CONSTRUCTION and THEME_PAIRING constraints, ""
  * (and 0) for a section without a construction.
@@ -432,10 +397,6 @@ GrowSlot grow_idea_slot(const SectionPairing *pairing, GrowPlace idea, bool *fir
 bool grow_slot_used(const SectionPairing *pairing, GrowSlot slot, size_t *units);
 /* Whether the idea's motive is one given for it: its own (R-206), or its slot's for the slot's first idea. */
 bool grow_idea_own(const GrowThemeSpec *spec, GrowPlace idea);
-/* The place an idea has under a pairing; false when the pairing has no such idea. */
-bool grow_idea_place(const SectionPairing *pairing, GrowIdea idea, GrowPlace *place);
-/* The eighths of the theme the idea at a place has. */
-size_t grow_place_units(const SectionPairing *pairing, GrowPlace place);
 /* The material node of an idea's own motive ("i<k>"), else PLAN_NODE_NONE. */
 NodeId grow_find_idea_node(const Plan *plan, GrowIdea idea);
 /* The name of the idea's material node. */

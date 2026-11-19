@@ -7,49 +7,11 @@
 
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
+#include "form/form_record.h"
 #include "piece/piece_internal.h"
 #include "util/plan_util.h"
 
 #define MAX_CADENCES 2
-
-/* The sections of the plan in order, and the material's id (not a section of the piece). */
-static size_t sections_of(const Plan *plan, NodeId *sections) {
-    size_t count = 0;
-    NodeId form = plan_root(plan);
-    for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
-        NodeId child = plan_node_child_at(plan, form, i);
-        bool material = plan_section_has_role(plan, child, SECTION_ROLE_MATERIAL) || plan_section_has_role(plan, child, SECTION_ROLE_SEAM);
-        if (!material && count < FORM_SPEC_MAX_SECTIONS) {
-            sections[count++] = child;
-        }
-    }
-    return count;
-}
-
-/*
- * The size of the form whose sections the plan has: as many, in the same proportions (a size of the form at another
- * scale has the same sections in the same places). The first such size; NULL for none.
- */
-static const FormSpecSize *size_of_plan(const FormSpec *form, const Plan *plan, const NodeId *sections, size_t count) {
-    for (size_t z = 0; z < form->size_count; z++) {
-        const FormSpecSize *size = &form->sizes[z];
-        bool match = size->section_count == count && size->sections[0].bars > 0;
-        Rational first = plan_node_span(plan, sections[0]).length;
-        for (size_t i = 1; match && i < count; i++) {
-            Rational left;
-            Rational right;
-            match = size->sections[i].bars > 0 &&
-                    rational_mul_int(plan_node_span(plan, sections[i]).length, (long long)size->sections[0].bars, &left) ==
-                        RATIONAL_OK &&
-                    rational_mul_int(first, (long long)size->sections[i].bars, &right) == RATIONAL_OK &&
-                    rational_cmp(left, right) == 0;
-        }
-        if (match) {
-            return size;
-        }
-    }
-    return NULL;
-}
 
 /* The cadences of the section in order: the one it ends in, then an antecedent's weak one. Returns how many. */
 static size_t section_cadences(const Plan *plan, NodeId section, CadenceType *out) {
@@ -97,7 +59,7 @@ PieceResult piece_plan_cadences(Plan *plan, const FormSpec *form, const FormSpec
         return PIECE_ERR_NULL;
     }
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
-    size_t count = sections_of(plan, sections);
+    size_t count = form_record_sections(plan, sections);
     if (count != keys->count || count != size->section_count || count == 0) {
         return PIECE_ERR_BAD_REQUEST;
     }
@@ -131,33 +93,6 @@ PieceResult piece_plan_cadences(Plan *plan, const FormSpec *form, const FormSpec
     return PIECE_OK;
 }
 
-bool piece_form_record_migrate(Plan *plan) {
-    NodeId root = plan_root(plan);
-    const char *root_name = root == PLAN_NODE_NONE ? NULL : plan_node_name(plan, root);
-    for (size_t i = 0; root_name && !plan_form_record(plan) && i < form_spec_builtin_count(); i++) {
-        if (strcmp(root_name, form_spec_builtin_plan_name(i)) != 0) {
-            continue;
-        }
-        FormSpec *form = NULL;
-        FormSpecResult parsed = form_spec_builtin(form_spec_builtin_name(i), &form);
-        if (parsed != FORM_SPEC_OK) {
-            return parsed != FORM_SPEC_ERR_ALLOC;
-        }
-        bool ok = piece_set_form_record(plan, form) == PIECE_OK;
-        NodeId sections[FORM_SPEC_MAX_SECTIONS];
-        size_t count = sections_of(plan, sections);
-        const FormSpecSize *size = ok && form->closing && count > 0 ? size_of_plan(form, plan, sections, count) : NULL;
-        for (size_t s = 0; ok && size && s < count; s++) {
-            SectionDescription described = *plan_section_or_empty(plan, sections[s]);
-            described.closed = size->sections[s].closed;
-            ok = plan_node_set_section(plan, sections[s], &described) == PLAN_OK;
-        }
-        form_spec_destroy(form);
-        return ok;
-    }
-    return true;
-}
-
 static void fail(PieceCadenceCheck *out, const char *what, size_t section) {
     out->ok = false;
     snprintf(out->reason, sizeof(out->reason), "%s (section %zu)", what, section);
@@ -174,7 +109,7 @@ bool piece_check_cadences(const Plan *plan, PieceCadenceCheck *out) {
         return true; /* nothing to check: a plan of no form, or a form that does not close (loop, layered, game loop) */
     }
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
-    size_t count = sections_of(plan, sections);
+    size_t count = form_record_sections(plan, sections);
     if (count == 0) {
         return false;
     }

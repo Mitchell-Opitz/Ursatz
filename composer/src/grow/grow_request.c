@@ -65,23 +65,6 @@ const char *grow_idea_name(GrowIdea idea) {
     return theme_shape_idea_name(idea);
 }
 
-bool grow_idea_place(const SectionPairing *pairing, GrowIdea idea, GrowPlace *place) {
-    const ThemeShapeIdea *row = theme_shape_idea_in(pairing, idea);
-    if (row && place) {
-        *place = (GrowPlace)row->place;
-    }
-    return row != NULL;
-}
-
-bool grow_idea_in_pairing(const SectionPairing *pairing, GrowIdea idea) {
-    return theme_shape_idea_in(pairing, idea) != NULL;
-}
-
-size_t grow_place_units(const SectionPairing *pairing, GrowPlace place) {
-    const ThemeShapeIdea *row = theme_shape_place_in(pairing, (unsigned)place);
-    return row ? row->units : 2;
-}
-
 const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size) {
     snprintf(buffer, size, "i%d", (int)idea);
     return buffer;

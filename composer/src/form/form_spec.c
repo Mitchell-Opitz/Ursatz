@@ -1231,3 +1231,29 @@ FormSpecResult form_spec_parse(const char *json, FormSpec **out, FormSpecError *
 void form_spec_destroy(FormSpec *form) {
     free(form);
 }
+
+const FormSpecSize *form_spec_default_size(const FormSpec *form) {
+    for (size_t i = 0; form && i < form->size_count; i++) {
+        if (form->sizes[i].is_default) {
+            return &form->sizes[i];
+        }
+    }
+    return NULL;
+}
+
+const FormSpecSize *form_spec_size(const FormSpec *form, size_t bars, size_t count) {
+    if (!form || form->request_sections) {
+        return NULL;
+    }
+    if (bars == 0 && count == 0) {
+        return form_spec_default_size(form);
+    }
+    for (size_t i = 0; i < form->size_count; i++) {
+        const FormSpecSize *size = &form->sizes[i];
+        /* A count picks the size with it, and bars then must match; bars alone pick the first size with them. */
+        if (count != 0 ? size->count == count && (bars == 0 || size->bars == bars) : size->bars == bars) {
+            return size;
+        }
+    }
+    return NULL;
+}

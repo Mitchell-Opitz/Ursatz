@@ -11,6 +11,7 @@
 #include <ursatz_composer/piece_plan_keys.h>
 #include <plan/plan_state.h>
 
+#include "form/form_record.h"
 #include "piece/piece_internal.h"
 #include "util/plan_util.h"
 

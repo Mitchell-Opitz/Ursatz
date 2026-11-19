@@ -131,4 +131,60 @@ const char *theme_shape_idea_name(GrowIdea idea);
 /* The slot row; NULL for an invalid slot. */
 const ThemeShapeSlot *theme_shape_slot(GrowSlot slot);
 
+/* --- where the ideas lie ---------------------------------------------------- */
+
+/*
+ * The places of the ideas of a theme: slot k is the motive node m<k> in the material, the idea's place, and what an idea is
+ * depends on the pairing:
+ *   1  a presentation's repetition, or the contrasting idea of an antecedent or a compound basic idea
+ *   2  a continuation's first fragment, a consequent's restated basic idea, or a cadential ending's first idea
+ *   3  a continuation's second fragment, a consequent's contrasting idea, or a cadential ending's second idea
+ *   4  a continuation's cadential idea
+ */
+typedef enum {
+    GROW_PLACE_BASIC,
+    GROW_PLACE_REPETITION,
+    GROW_PLACE_FRAGMENT_1,
+    GROW_PLACE_FRAGMENT_2,
+    GROW_PLACE_CADENTIAL,
+    GROW_PLACE_COUNT,
+    GROW_PLACE_CONTRAST = GROW_PLACE_REPETITION,
+    GROW_PLACE_RESTATED = GROW_PLACE_FRAGMENT_1,
+    GROW_PLACE_CONSEQUENT_CONTRAST = GROW_PLACE_FRAGMENT_2,
+    GROW_PLACE_CADENTIAL_1 = GROW_PLACE_FRAGMENT_1,
+    GROW_PLACE_CADENTIAL_2 = GROW_PLACE_FRAGMENT_2
+} GrowPlace;
+
+/* The place the theme's last idea holds under the pairing. */
+GrowPlace theme_shape_last_place(const SectionPairing *pairing);
+/* The place an idea has under a pairing; false when the pairing has no such idea. */
+bool grow_idea_place(const SectionPairing *pairing, GrowIdea idea, GrowPlace *place);
+/* Whether a theme of the pairing has the idea. */
+bool grow_idea_in_pairing(const SectionPairing *pairing, GrowIdea idea);
+/* The eighths of the theme the idea at a place has. */
+size_t grow_place_units(const SectionPairing *pairing, GrowPlace place);
+
+/*
+ * The bars of each place of the construction (with its stretches), of the repeats that follow it, and of the evaded idea
+ * and the addition after the last place, in the order the extensions are listed.
+ */
+void theme_shape_construction_places(const SectionPairing *pairing, const SectionConstruction *construction,
+                                     size_t bars[GROW_PLACE_COUNT], size_t repeated[GROW_PLACE_COUNT], size_t *evaded,
+                                     size_t *addition);
+
+/*
+ * The bars of a construction as grow_layout_of lays them out (R-468): its beginning and its ending with their stretches
+ * and repeats, the idea after an evaded cadence (not in the ending) and the addition (after it).
+ */
+typedef struct {
+    size_t beginning;
+    size_t ending;
+    size_t evaded;
+    size_t addition;
+} GrowConstructionBars;
+void grow_construction_bars(const SectionPairing *pairing, const SectionConstruction *construction, GrowConstructionBars *out);
+
+/* The bars the extensions of a construction add to its ideas' (R-468), as grow_layout_of lays them out. */
+size_t grow_construction_extra_bars(const SectionPairing *pairing, const SectionConstruction *construction);
+
 #endif
