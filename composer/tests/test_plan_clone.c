@@ -237,7 +237,7 @@ static void test_stamp(void) {
     /* The Composer's own stamp. */
     PlanProducer own = composer_plan_producer(test_knowledge());
     assert(strcmp(own.name, "ursatz-composer") == 0 && strcmp(own.version, composer_version()) == 0);
-    assert(strlen(own.producer_key) == 16 && own.composition_key[0] == '\0');
+    assert(strlen(own.producer_key) == 16 && strcmp(own.composition_key, composer_composition_key()) == 0 && strlen(own.composition_key) == 16);
     assert(strcmp(own.knowledge_hash, knowledge_snapshot_hash(test_knowledge())) == 0);
     assert(composer_plan_producer(NULL).knowledge_hash[0] == '\0');
     plan_destroy(plan);

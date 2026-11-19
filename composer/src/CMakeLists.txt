@@ -164,9 +164,36 @@ add_custom_command(
     COMMENT "Embedding the form documents"
     VERBATIM)
 target_sources(ursatz_composer PRIVATE ${COMPOSER_FORM_DATA})
+# The Composer's composition key (R-626): a hash of the sources that compose a piece (the Composer's sources and forms, and the
+# library groups it is made of, with the vendored cJSON), stamped in every plan the Composer writes (composer_composition_key).
+# A change to a test, a doc or an app leaves it as it was.
+get_filename_component(URSATZ_REPO_ROOT ${PROJECT_SOURCE_DIR}/.. ABSOLUTE)
+set(composition_sources "")
+foreach(key_dir IN ITEMS composer/src library/model library/theory library/realization library/plan library/analysis library/io library/chain third_party/cjson)
+    file(GLOB_RECURSE found CONFIGURE_DEPENDS RELATIVE ${URSATZ_REPO_ROOT}
+        ${URSATZ_REPO_ROOT}/${key_dir}/*.c ${URSATZ_REPO_ROOT}/${key_dir}/*.h)
+    list(APPEND composition_sources ${found})
+endforeach()
+file(GLOB found CONFIGURE_DEPENDS RELATIVE ${URSATZ_REPO_ROOT} ${URSATZ_REPO_ROOT}/composer/forms/*.json)
+list(APPEND composition_sources ${found})
+list(FILTER composition_sources EXCLUDE REGEX "/tests/")
+list(SORT composition_sources)
+list(TRANSFORM composition_sources PREPEND "${URSATZ_REPO_ROOT}/" OUTPUT_VARIABLE composition_key_files)
+string(REPLACE ";" "\n" composition_key_text "${composition_sources}")
+set(composition_key_list ${PROJECT_BINARY_DIR}/composition_sources.txt)
+file(CONFIGURE OUTPUT ${composition_key_list} CONTENT "${composition_key_text}\n" @ONLY)
+set(composition_key_header ${PROJECT_BINARY_DIR}/composer_generated/composer/composition_key.h)
+add_custom_command(
+    OUTPUT ${composition_key_header}
+    COMMAND ${CMAKE_COMMAND} -DROOT=${URSATZ_REPO_ROOT} -DLIST=${composition_key_list} -DOUT=${composition_key_header}
+            -DMACRO=URSATZ_COMPOSER_COMPOSITION_KEY -P ${URSATZ_REPO_ROOT}/cmake/ProducerKey.cmake
+    DEPENDS ${composition_key_files} ${composition_key_list} ${URSATZ_REPO_ROOT}/cmake/ProducerKey.cmake
+    COMMENT "Computing the Composer composition key"
+    VERBATIM)
+target_sources(ursatz_composer PRIVATE ${composition_key_header})
 target_include_directories(ursatz_composer
     PUBLIC ${PROJECT_SOURCE_DIR}/include
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR}/composer_generated
 )
 target_link_libraries(ursatz_composer
     PRIVATE ursatz_io ursatz_realization ursatz_plan ursatz_analysis ursatz_chain cjson
