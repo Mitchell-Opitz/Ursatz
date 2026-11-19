@@ -163,7 +163,7 @@ void workshop_compose_stage_discard(const WorkshopComposeStage *stage) {
 UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *id, bool has_seed,
                                              long long seed, bool update_uses, const UrsatzJob *job,
                                              cJSON **out_item, UrsatzError *error) {
-    UrsatzStatus result = update_uses ? workshop_theme_update_sources(id, error)
+    UrsatzStatus result = update_uses ? kind->update_sources(id, error)
                                               : URSATZ_OK;
     if (result != URSATZ_OK) {
         return result;
@@ -205,7 +205,7 @@ UrsatzStatus workshop_compose_item(const WorkshopComposeKind *kind, const char *
     if (result == URSATZ_OK && has_brief) {
         char name[256];
         snprintf(name, sizeof(name), "%s brief", common_json_string(meta, "name"));
-        result = workshop_theme_build_brief(brief_json, name, style_path, &brief_summary, error);
+        result = kind->build_brief(brief_json, name, style_path, &brief_summary, error);
     }
     if (result == URSATZ_OK) {
         result = kind->build_request(body, stage.absolute, has_brief ? style_path : NULL, &request, error);

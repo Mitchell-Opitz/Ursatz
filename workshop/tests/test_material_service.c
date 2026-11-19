@@ -12,6 +12,14 @@
 
 #define OK URSATZ_OK
 
+static char g_forgotten[64];
+static int g_forgotten_count;
+
+static void record_forgotten(const char *item_id) {
+    snprintf(g_forgotten, sizeof(g_forgotten), "%s", item_id);
+    g_forgotten_count++;
+}
+
 static char g_dir[512];
 
 static const char *kMotifBody =
@@ -281,7 +289,10 @@ static void test_items_and_versions(void) {
     check_quiet(workshop_material_item_list(NULL, NULL, &list) == OK && cJSON_GetArraySize(list) == 3, "items persist");
     cJSON_Delete(list);
 
+    workshop_store_set_forget_item(record_forgotten);
     check_quiet(workshop_material_item_delete(theme, false) == OK, "delete the theme");
+    workshop_store_set_forget_item(NULL);
+    check_quiet(g_forgotten_count == 1 && strcmp(g_forgotten, theme) == 0, "an item delete calls the forget hook once with the item id");
     check_quiet(workshop_material_item_get(theme, &meta, NULL) == URSATZ_ERR_NOT_FOUND, "theme is gone");
     char theme_dir[700];
     snprintf(theme_dir, sizeof(theme_dir), "%s/items/%s/v1.json", g_dir, theme);

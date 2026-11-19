@@ -8,7 +8,6 @@
 
 #include <cJSON.h>
 
-#include "themes.h"
 #include "ursatz_composer/composer_api.h"
 
 /* What the theme and the piece service share when they compose an item into a new version: the small JSON helpers and
@@ -38,6 +37,11 @@ typedef struct {
                                           UrsatzError *error);
     /* Runs the Composer API on run->request and writes the version's files into run->stage. */
     UrsatzStatus (*run)(const WorkshopComposeRun *run, cJSON **out_summary, UrsatzError *error);
+    /* Brings the uses of item id up to their latest versions (the compose of a piece or a theme with update_uses). */
+    UrsatzStatus (*update_sources)(const char *id, UrsatzError *error);
+    /* Builds the brief's style file at path from brief_json and answers its summary (caller frees). */
+    UrsatzStatus (*build_brief)(const cJSON *brief_json, const char *name, const char *path, cJSON **out_summary,
+                                       UrsatzError *error);
     /* The note of the new version. */
     void (*note)(const cJSON *summary, char *note, size_t note_size);
     /* The body of the new version; takes ownership of summary and brief_summary. */

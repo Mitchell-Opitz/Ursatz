@@ -663,7 +663,8 @@ static void theme_note(const cJSON *summary, char *note, size_t note_size) {
 }
 
 static const WorkshopComposeKind kThemeKind = {"theme",            "the item is not a theme", composable,
-                                                build_theme_request, run_theme,            theme_note,
+                                                build_theme_request, run_theme,            workshop_theme_update_sources,
+                                                workshop_theme_build_brief, theme_note,
                                                 body_with_result};
 
 UrsatzStatus workshop_theme_validate(const cJSON *body, bool *complete, cJSON **out_request, UrsatzError *error) {

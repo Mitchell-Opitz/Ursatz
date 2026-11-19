@@ -35,6 +35,9 @@
 extern char store_dir[300];
 extern bool store_ready;
 extern WorkshopLock store_lock;
+/* Calls the forget hook (workshop_store_set_forget_item) for item_id, if there is one. */
+void store_forget_item(const char *item_id);
+
 #define LOCK() workshop_lock_acquire(&store_lock)
 #define UNLOCK() workshop_lock_release(&store_lock)
 

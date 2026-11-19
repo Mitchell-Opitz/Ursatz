@@ -1,10 +1,20 @@
 #include "store_internal.h"
-#include "composition/motifs.h"
 #include "ids.h"
 
 char store_dir[300];
 bool store_ready = false;
 WorkshopLock store_lock = WORKSHOP_LOCK_INIT;
+static void (*g_forget_item)(const char *item_id);
+
+void workshop_store_set_forget_item(void (*forget)(const char *item_id)) {
+    g_forget_item = forget;
+}
+
+void store_forget_item(const char *item_id) {
+    if (g_forget_item) {
+        g_forget_item(item_id);
+    }
+}
 
 bool store_is_valid_id(const char *id) {
     if (!id || id[0] == '\0' || strlen(id) > ID_MAX_BYTES) {

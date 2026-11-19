@@ -611,7 +611,8 @@ static void piece_note(const cJSON *summary, char *note, size_t note_size) {
 }
 
 static const WorkshopComposeKind kPieceKind = {"piece",       "the item is not a piece", composable,
-                                                build_request, run_piece_item,            piece_note,
+                                                build_request, run_piece_item,            workshop_theme_update_sources,
+                                                workshop_theme_build_brief, piece_note,
                                                 body_with_result};
 
 UrsatzStatus workshop_piece_validate(const cJSON *body, bool *complete, cJSON **out_request, UrsatzError *error) {

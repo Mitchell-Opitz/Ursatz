@@ -1,6 +1,5 @@
 #include "store_internal.h"
 #include "composition/composer_client.h"
-#include "subjects.h"
 
 /*
  * Returns in *out a copy of body whose uses each carry a fresh "copy" of the
@@ -708,7 +707,7 @@ UrsatzStatus workshop_material_item_delete(const char *id, bool force) {
     cJSON_Delete(users);
     /* Subjects take their own lock, so this runs with the material lock released. */
     for (size_t i = 0; i < removed.count; i++) {
-        workshop_subject_forget_item(removed.ids[i]);
+        store_forget_item(removed.ids[i]);
     }
     id_set_free(&variants);
     id_set_free(&removed);

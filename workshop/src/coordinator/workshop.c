@@ -10,8 +10,15 @@
 #include <common/json.h>
 
 #include "coordinator.h"
+#include "items/store.h"
+#include "items/subjects.h"
 
 #include <limits.h>
+
+/* The store's hook for an item an item delete removed: the subjects drop their links to it (items/store.h). */
+static void forget_item_in_subjects(const char *item_id) {
+    (void)workshop_subject_forget_item(item_id);
+}
 
 UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, UrsatzError *error) {
     *out = NULL;
@@ -55,12 +62,14 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
     workshop->port = resolved->port;
     workshop->http_threads = resolved->http_threads;
     workshop->job_workers = resolved->job_workers;
+    workshop_store_set_forget_item(forget_item_in_subjects);
     *out = workshop;
     return URSATZ_OK;
 }
 
 void workshop_close(Workshop *workshop) {
     if (workshop) {
+        workshop_store_set_forget_item(NULL);
         workshop_knowledge_shutdown();
         workshop_data_lock_release(workshop->lock_descriptor);
     }

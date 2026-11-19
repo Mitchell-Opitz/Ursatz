@@ -238,6 +238,11 @@ static void test_relations(void) {
     free(c);
 }
 
+/* What the coordinator registers at open: the store tells the subjects about an item an item delete removed. */
+static void forget_item_in_subjects(const char *item_id) {
+    (void)workshop_subject_forget_item(item_id);
+}
+
 static void test_forget(void) {
     char *a = new_subject("A", "character");
     char *b = new_subject("B", "idea");
@@ -360,6 +365,7 @@ int main(void) {
 
     check_quiet(workshop_material_service_init(g_materials), "init materials");
     check_quiet(workshop_subject_service_init(g_subjects), "init subjects");
+    workshop_store_set_forget_item(forget_item_in_subjects);
 
     /* A Library piece is a directory with a meta.json; the subject service only asks whether it exists. */
     mkdir("pieces", 0755);

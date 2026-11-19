@@ -268,7 +268,7 @@ subjects/
   the items or pieces it linked.
 - Deleting a Library piece (`DELETE /api/analyzer/pieces/<id>`) calls
   `workshop_subject_forget_piece`, and `workshop_material_item_delete`
-  calls `workshop_subject_forget_item`, so a subject never keeps a link to
+  calls the hook of `workshop_subject_forget_item`, so a subject never keeps a link to
   something that is gone. A failure there is logged, not answered.
 - `workshop_subject_list` returns the subjects in name order with
   `item_count`, `piece_count` and `related_count`. `workshop_subject_groups`

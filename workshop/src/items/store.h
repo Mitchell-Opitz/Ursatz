@@ -42,6 +42,13 @@ bool workshop_material_service_init(const char *dir);
 /* Forgets the store's directory. Nothing persistent is freed or deleted. */
 void workshop_material_service_shutdown(void);
 
+/*
+ * The function the store calls for every item an item delete removes, after it released its lock (the subjects drop their links to
+ * it: the coordinator registers workshop_subject_forget_item's adapter at open, so the store includes no subjects header).
+ * NULL (the start state) calls nothing.
+ */
+void workshop_store_set_forget_item(void (*forget)(const char *item_id));
+
 /* --- projects ------------------------------------------------------------ */
 
 /*
