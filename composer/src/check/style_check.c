@@ -12,7 +12,7 @@
 #include <theory/form/phrase_level_form.h>
 
 #include <plan/plan_constraint.h>
-#include <ursatz_composer/grow.h>
+#include <ursatz_composer/grow_types.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/harmony_prolong.h>
 #include <plan/plan_lanes.h>

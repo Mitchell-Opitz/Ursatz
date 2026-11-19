@@ -7,7 +7,6 @@
 #include <ursatz_composer/motive_analysis.h>
 
 #include "grow/grow_internal.h"
-#include "check/style_check.h"
 #include "style/style_internal.h"
 #include "structure/plan_util.h"
 

@@ -13,7 +13,6 @@
 #include <plan/plan_state.h>
 
 #include "harmony/harmony_internal.h"
-#include "melody/melody_internal.h"
 #include "util/util.h"
 
 /* The scale degree of the bass member of the chord, which names the letter of its note. */

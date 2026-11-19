@@ -11,7 +11,6 @@
 
 #include "structure/plan_util.h"
 #include "harmony/harmony_internal.h"
-#include "melody/melody_internal.h"
 #include "util/util.h"
 
 /*

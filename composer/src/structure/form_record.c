@@ -5,7 +5,6 @@
 
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/piece_plan_keys.h>
 
 #include "structure/plan_util.h"
 

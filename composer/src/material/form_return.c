@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "material/form_return_internal.h"

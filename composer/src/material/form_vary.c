@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "grow/grow_internal.h"
 #include "material/form_return_internal.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 #include <plan/plan_common.h>
 

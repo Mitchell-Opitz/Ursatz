@@ -6,7 +6,6 @@
 #include <plan/plan_lanes.h>
 #include <plan/plan_state.h>
 
-#include "piece/piece_internal.h"
 #include "structure/plan_util.h"
 
 /*

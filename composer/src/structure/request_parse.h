@@ -9,7 +9,7 @@
 #include <plan/plan_constraint.h>
 #include <plan/plan_lanes.h>
 #include <plan/plan.h>
-#include <ursatz_composer/style.h>
+#include <model/core/rational.h>
 
 /* The values a request or a command line names, as text: shared by the CLI and the API (src/api). Private: not installed. */
 

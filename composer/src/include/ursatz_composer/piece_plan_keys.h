@@ -10,6 +10,7 @@
 #include <ursatz_composer/piece.h>
 #include <plan/plan_json.h>
 #include <plan/plan.h>
+#include "structure/form_record.h"
 
 /*
  * The keys of a piece plan (R-069). A section is in the home key, or in a closely related key
@@ -100,13 +101,6 @@ typedef struct {
  * check: `closing` is read from the record and each section's `closed` from its description.
  */
 bool piece_check_cadences(const Plan *plan, PieceCadenceCheck *out);
-
-/*
- * A plan of a format before 5 has no form record: this gives it the record of the built-in form whose plan name is its root node's
- * name, and each section's `closed` from that form's size (the first size with the plan's sections in its proportions). A plan of
- * no built-in form is left as it is. False only when out of memory; nothing is Given yet when the plan reader calls it.
- */
-bool piece_form_record_migrate(Plan *plan);
 
 /*
  * What the Composer adds to the plan reader (plan_json.h): its keys are made of the major and the natural minor only, and a plan of

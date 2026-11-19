@@ -5,7 +5,7 @@
 
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
-#include <ursatz_composer/grow.h>
+#include <ursatz_composer/grow_types.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
 

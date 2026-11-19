@@ -10,9 +10,7 @@
 
 #include <ursatz_composer/theme_shape.h>
 
-#include <ursatz_composer/harmony_phrase.h>
-
-#include "grow/grow_internal.h"
+#include "structure/plan_util.h"
 #include "structure/request_parse.h"
 
 /* ------------------------------------------------------------- the vocabularies the document names */

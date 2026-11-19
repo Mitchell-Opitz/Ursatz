@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #include <ursatz_composer/form_spec.h>
-#include <ursatz_composer/piece.h>
+#include "structure/plan_util.h"
 #include <plan/plan.h>
 
 /* Private: not installed, not part of the API. */
@@ -20,5 +20,12 @@ const FormSpecSize *form_record_size_of_plan(const FormSpec *form, const Plan *p
 
 /* Records the form a plan was built from in it (name, version, the hash of the built-in document, checks, closing). */
 PieceResult piece_set_form_record(Plan *plan, const FormSpec *form);
+
+/*
+ * A plan of a format before 5 has no form record: this gives it the record of the built-in form whose plan name is its root node's
+ * name, and each section's `closed` from that form's size (the first size with the plan's sections in its proportions). A plan of
+ * no built-in form is left as it is. False only when out of memory; nothing is Given yet when the plan reader calls it.
+ */
+bool piece_form_record_migrate(Plan *plan);
 
 #endif
