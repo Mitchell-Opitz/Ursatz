@@ -13,9 +13,12 @@
 #include <ursatz_analyzer/text_export.h>
 #include <ursatz_analyzer/style_profile.h>
 #include <ursatz_analyzer/version.h>
+#include <reading/reading_json.h>
+#include <realization/realization_json.h>
 
 #include <theory/knowledge/knowledge_snapshot.h>
 
+#include "corpus/corpus_internal.h"
 #include "store/corpus_walk.h"
 #include "result/run_file.h"
 #include "util/file_util.h"
@@ -54,7 +57,7 @@ static bool write_output(const char *path, const char *what, const char *written
 static void print_usage(const char *program) {
     fprintf(stderr,
             "Usage: %s [--json] [--input-format midi|musicxml] [--meter <n/d>] [--value-scale <n or n/d>] "
-            "[--pickup <n/d>] <input-file-path>\n"
+            "[--pickup <n/d>] [--layers <dir>] <input-file-path>\n"
             "       %s --corpus <dir> [--out <dir>] [--resume]\n"
             "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n"
             "       %s --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]\n"
@@ -64,6 +67,31 @@ static void print_usage(const char *program) {
             "[--format text|json]\n"
             "       %s export [--input-format midi|musicxml] [--measures <first>-<last>] [--title <text>] <input-file-path>\n",
             program, program, program, program, program, program, program);
+}
+
+/* Writes <dir>/<relative> (making the folders), false with a message on stderr when it cannot. */
+static bool write_layer_file(const char *dir, const char *relative, const char *text) {
+    char *path = corpus_join(dir, relative);
+    bool ok = path && corpus_make_parent_dirs(path) && file_write_atomic(path, text);
+    if (!ok) {
+        fprintf(stderr, "Error: cannot write '%s'\n", path ? path : relative);
+    }
+    free(path);
+    return ok;
+}
+
+/* The layers of an analyzed piece (R-630): the realization once and the Analyzer's reading of it. */
+static bool write_layers(const char *dir, const AnalyzerResult *result) {
+    char *realization = realization_work_to_json(analyzer_result_realization(result), NULL);
+    char *reading = reading_to_json(analyzer_result_reading(result), NULL);
+    bool ok = realization && reading && write_layer_file(dir, "realization.json", realization) &&
+              write_layer_file(dir, "readings/analyzer.json", reading);
+    if (!realization || !reading) {
+        fprintf(stderr, "Error: cannot write the layers of the analysis to '%s'\n", dir);
+    }
+    free(realization);
+    free(reading);
+    return ok;
 }
 
 static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, void *user) {
@@ -656,6 +684,7 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     SimilarOptions similar_options = similar_options_default();
     ImportedReading reading = imported_reading_none();
     bool reading_set = false; /* --meter, --value-scale or --pickup given */
+    const char *layers_dir = NULL;
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         if (strcmp(arg, "--json") == 0) {
@@ -741,6 +770,12 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
             }
         } else if (strcmp(arg, "--resume") == 0) {
             corpus_resume = true;
+        } else if (strcmp(arg, "--layers") == 0) {
+            if (i + 1 >= argc || layers_dir) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            layers_dir = argv[++i];
         } else if (strcmp(arg, "--meter") == 0 || strcmp(arg, "--value-scale") == 0 || strcmp(arg, "--pickup") == 0) {
             bool (*parse)(const char *, ImportedReading *) = strcmp(arg, "--meter") == 0
                                                                  ? imported_reading_parse_meter
@@ -759,6 +794,12 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
         } else {
             path = arg;
         }
+    }
+    if (layers_dir && (link_dir || link_cache || link_depth || link_candidates || similar_dir || motive_file || progression ||
+                       similar_flags || compare_a || without_count > 0 || format_set || style_dir || style_name || corpus_dir ||
+                       corpus_out || corpus_resume)) {
+        print_usage(argv[0]);
+        return 1;
     }
     if (link_dir || link_cache || link_depth || link_candidates) {
         if (!link_dir || similar_dir || motive_file || progression || similar_flags || compare_a || without_count > 0 ||
@@ -836,6 +877,12 @@ static int run_main(int argc, char *argv[], const KnowledgeSnapshot *knowledge) 
     case RUN_FILE_ERR_ALLOC:
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
         return 1;
+    }
+
+    if (layers_dir && !write_layers(layers_dir, result)) {
+        analyzer_result_destroy(result);
+        imported_score_destroy(&notes);
+        return 2;
     }
 
     AnalysisDocument *document = analyzer_run_file_document(path, &notes, result);
