@@ -1,6 +1,6 @@
 #include <ursatz_composer/style.h>
 
-#include "style_internal.h"
+#include "style/style_internal.h"
 
 #include <string.h>
 

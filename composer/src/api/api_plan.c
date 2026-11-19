@@ -18,7 +18,7 @@
 #include "api_workflow.h"
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /*

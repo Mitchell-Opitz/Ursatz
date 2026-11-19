@@ -1,4 +1,4 @@
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -8,7 +8,7 @@
 
 #include <model/pitch/pitch_arithmetic.h>
 
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 bool request_equals_ignore_case(const char *a, const char *b) {

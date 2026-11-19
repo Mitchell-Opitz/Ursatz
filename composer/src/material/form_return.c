@@ -7,9 +7,9 @@
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
-#include "piece/form_return_internal.h"
+#include "material/form_return_internal.h"
 #include "util/util.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include <plan/plan_constraint.h>
 
 /* The most key spans a section is read across: a section holds at most two keys, with a few to spare. */

@@ -13,7 +13,7 @@
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 #include "motive/motive_internal.h"
 #include <plan/plan_common.h>

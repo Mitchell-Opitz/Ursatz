@@ -7,7 +7,7 @@
 #include <ursatz_composer/motive_connect.h>
 #include <ursatz_composer/variant_registry.h>
 
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "support/test_knowledge.h"
 
 /*

@@ -6,7 +6,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <plan/plan_state.h>
 
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/position.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"

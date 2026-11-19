@@ -12,7 +12,7 @@
 
 #include "api_internal.h"
 #include "api_vocabulary.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /* Variants and recognize (docs/api.md): the requests of the `variants` and `recognize` commands, and their documents. */
 

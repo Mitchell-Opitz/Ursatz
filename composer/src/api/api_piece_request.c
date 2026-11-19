@@ -15,8 +15,8 @@
 #include "api_piece.h"
 #include "util/util.h"
 #include "api_workflow.h"
-#include "util/plan_util.h"
-#include "util/request_parse.h"
+#include "structure/plan_util.h"
+#include "structure/request_parse.h"
 #include <ursatz_composer/piece_plan_keys.h>
 
 /*

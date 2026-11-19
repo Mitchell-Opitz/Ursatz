@@ -15,7 +15,7 @@
 #include <plan/plan_state.h>
 
 #include "check/hearing_result.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 #define MAX_CADENCES 2

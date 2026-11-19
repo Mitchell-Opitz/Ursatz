@@ -21,8 +21,8 @@
 #include <ursatz_composer/form_hear.h>
 #include <plan/plan_lanes.h>
 
-#include "form/form_internal.h"
-#include "util/plan_util.h"
+#include "check/form_internal.h"
+#include "structure/plan_util.h"
 
 /* The most themes read across a plan: nine sections, each with a few themes. */
 #define MAX_THEMES 64

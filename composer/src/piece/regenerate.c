@@ -8,7 +8,7 @@
 #include <plan/plan_edit.h>
 #include <plan/plan_state.h>
 
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "grow/grow_internal.h"
 
 const char *regenerate_result_name(RegenerateResult result) {

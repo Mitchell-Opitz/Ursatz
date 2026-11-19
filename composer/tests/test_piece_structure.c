@@ -9,7 +9,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece.h>
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"

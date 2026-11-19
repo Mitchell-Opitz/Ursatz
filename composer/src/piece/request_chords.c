@@ -1,4 +1,4 @@
-#include "util/request_chords.h"
+#include "piece/request_chords.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -8,7 +8,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
 
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 static ComposerStatus fail(ComposerError *error, const char *path, const char *format, ...) {
     if (error) {

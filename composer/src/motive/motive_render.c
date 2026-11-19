@@ -6,7 +6,7 @@
 #include <plan/plan_lanes.h>
 #include <plan/plan_state.h>
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 static bool add_given_span(Plan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
     LaneSpanId id;

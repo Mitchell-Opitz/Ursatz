@@ -13,7 +13,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "util/util.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* The leap, in semitones, that a step the other way must follow. */
 #define SEAM_LEAP 7

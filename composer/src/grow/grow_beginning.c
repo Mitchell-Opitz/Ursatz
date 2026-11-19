@@ -2,7 +2,7 @@
 
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* The shape of the chords of the first half: a phrase model if it has room for its cadence, else the cadential one. */
 static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, const GrowThemeSpec *spec, CadenceType cadence) {

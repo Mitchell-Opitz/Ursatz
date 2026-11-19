@@ -6,8 +6,8 @@
 
 #include "api_internal.h"
 #include "api_workflow.h"
-#include "util/plan_util.h"
-#include "util/request_parse.h"
+#include "structure/plan_util.h"
+#include "structure/request_parse.h"
 
 /* The lanes a request or a command names, and the spans of a node a regenerate may write again. */
 

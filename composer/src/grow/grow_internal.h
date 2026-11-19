@@ -6,7 +6,7 @@
 #include <ursatz_composer/variant_registry.h>
 
 #include "motive/motive_fidelity.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* The bars the material section holds: room for the motive and every motive made from it. */
 #define GROW_MATERIAL_BARS 8

@@ -12,8 +12,8 @@
 #include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
-#include "util/plan_util.h"
-#include "util/request_chords.h"
+#include "structure/plan_util.h"
+#include "piece/request_chords.h"
 
 #define NUMERALS_MAX 32
 #define CHORDS_MAX 16

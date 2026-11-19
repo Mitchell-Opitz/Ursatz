@@ -9,7 +9,7 @@
 #include <plan/plan_state.h>
 
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * The motivic development operators: Grow operators for a Constrained motive node that carries a motive_ref

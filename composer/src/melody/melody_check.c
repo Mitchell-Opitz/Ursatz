@@ -20,7 +20,7 @@
 
 #include "util/shaping.h"
 #include "melody/melody_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /*

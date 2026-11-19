@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "check/hearing.h"
-#include "form/form_internal.h"
+#include "check/form_internal.h"
 #include "motive/motive_internal.h"
 #include "support/test_knowledge.h"
 #include "support/test_support.h"

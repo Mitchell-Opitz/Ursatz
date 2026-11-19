@@ -6,8 +6,8 @@
 
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
-#include "piece/form_figure_internal.h"
-#include "util/plan_util.h"
+#include "material/form_figure_internal.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /* The tests' check oracles, moved unchanged from the operators' files (see test_oracles.h). */

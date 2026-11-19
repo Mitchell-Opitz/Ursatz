@@ -10,9 +10,9 @@
 #include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
-#include "form/form_record.h"
+#include "structure/form_record.h"
 #include "piece/piece_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /* The placeholder note an open melody span holds until motive-invent writes it. */

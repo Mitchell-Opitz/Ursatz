@@ -10,7 +10,7 @@
 #include <ursatz_composer/motive_random.h>
 
 #include "api_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /* Random motives (docs/api.md): the request of the `random-motive` command. */

@@ -15,7 +15,7 @@
 #include "check/hearing.h"
 #include "check/hearing_result.h"
 #include "render/movement_build.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char *path, const char *format, ...) {

@@ -13,7 +13,7 @@
 #include <plan/plan_edit.h>
 #include <plan/plan_state.h>
 #include <ursatz_composer/render.h>
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 static uint64_t hash_value(uint64_t hash, uint64_t value) {
     for (int i = 0; i < 8; i++) {

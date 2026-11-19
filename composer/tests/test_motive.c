@@ -9,7 +9,7 @@
 #include <plan/plan_json.h>
 #include <plan/plan_state.h>
 
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "support/test_composer.h"
 #include "support/test_knowledge.h"
 #include "support/test_support.h"

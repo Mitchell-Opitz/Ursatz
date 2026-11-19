@@ -12,7 +12,7 @@
 #include <plan/plan_lanes.h>
 #include <ursatz_composer/motive.h>
 #include <plan/plan.h>
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 struct GrowPoolForm;
 

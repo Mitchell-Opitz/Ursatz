@@ -13,7 +13,7 @@
 #include <plan/plan_lanes.h>
 
 #include "check/hearing_result.h"
-#include "form/form_internal.h"
+#include "check/form_internal.h"
 #include "harmony/harmony_internal.h"
 
 const char *form_hear_result_name(FormHearResult result) {

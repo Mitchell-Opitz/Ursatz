@@ -1,5 +1,5 @@
 #include "harmony/harmony_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 #include <theory/meter/metric_position_rules.h>
 #include <model/time/note_value.h>

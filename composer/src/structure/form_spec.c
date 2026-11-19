@@ -13,7 +13,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 
 #include "grow/grow_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /* ------------------------------------------------------------- the vocabularies the document names */
 

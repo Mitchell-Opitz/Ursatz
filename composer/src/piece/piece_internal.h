@@ -9,7 +9,7 @@
 #include <ursatz_composer/piece.h>
 
 #include "grow/grow_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* Each section's own motive, the four motives grow-theme makes for its ideas and the ones it makes beside them (GROW_MADE_NODES). */
 #define MATERIAL_BARS_PER_SECTION (5 + GROW_MADE_NODES)

@@ -6,7 +6,7 @@
 #include <plan/plan_constraint.h>
 #include <plan/plan_lanes.h>
 #include <plan/plan_state.h>
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* The dependents found so far, without repeats. */
 typedef struct {

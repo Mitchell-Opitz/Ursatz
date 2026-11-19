@@ -7,9 +7,9 @@
 
 #include <plan/plan_constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
-#include "form/form_record.h"
+#include "structure/form_record.h"
 #include "piece/piece_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 #define MAX_CADENCES 2
 

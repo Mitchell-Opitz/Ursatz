@@ -10,7 +10,7 @@
 
 #include "support/test_knowledge.h"
 #include "ursatz_test.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /*
  * The Composer's knowledge: a key text is a tonic and the word of a material the snapshot knows, and the Composer writes

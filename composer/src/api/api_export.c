@@ -9,8 +9,8 @@
 #include <ursatz_composer/render.h>
 
 #include "api_internal.h"
-#include "util/request_parse.h"
-#include "util/plan_util.h"
+#include "structure/request_parse.h"
+#include "structure/plan_util.h"
 #include <ursatz_composer/piece_plan_keys.h>
 
 static const char *skip_reason_text(RenderSkipReason reason) {

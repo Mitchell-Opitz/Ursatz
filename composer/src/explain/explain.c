@@ -15,7 +15,7 @@
 #include "util/composer_json.h"
 #include "check/style_check.h"
 #include "style/style_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner-voice"};
 static const char *const OUTCOME_NAMES[] = {"applied", "no-operator", "all-rejected"};

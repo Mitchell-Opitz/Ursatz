@@ -1,4 +1,4 @@
-#include "form/form_record.h"
+#include "structure/form_record.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -7,7 +7,7 @@
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/piece_plan_keys.h>
 
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* The form a plan was built from (R-608): its record, the migration of plans that have none, and what the checks read of the plan's sections. */
 

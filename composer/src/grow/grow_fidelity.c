@@ -9,7 +9,7 @@
 #include "grow/grow_internal.h"
 #include "check/style_check.h"
 #include "style/style_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * An idea's fidelity to its source, read from the plan (R-354). The idea's melody span names its motive node (the span's

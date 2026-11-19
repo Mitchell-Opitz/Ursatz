@@ -9,7 +9,7 @@
 #include <plan/plan_state.h>
 
 #include "piece/piece_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/position.h"
 #include "util/util.h"
 

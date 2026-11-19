@@ -20,9 +20,9 @@
 #include <plan/plan_state.h>
 #include "check/hearing.h"
 #include <ursatz_composer/key_hear.h>
-#include "form/form_internal.h"
-#include "util/plan_util.h"
-#include "util/request_parse.h"
+#include "check/form_internal.h"
+#include "structure/plan_util.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /* A key lane span before it is added: its key, the relation that reached it from home (NULL for home) and where it lies. */

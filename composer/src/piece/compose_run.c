@@ -26,12 +26,12 @@
 #include <ursatz_composer/voicing.h>
 
 #include "check/hearing.h"
-#include "form/form_internal.h"
+#include "check/form_internal.h"
 #include "grow/grow_internal.h"
 #include "piece/piece_internal.h"
 #include "check/style_check.h"
 #include "style/style_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* How many times the melody stage is run before it is given up on, and how far apart the seeds of the runs are. */
 #define COMPOSE_MELODY_ATTEMPTS 6

@@ -20,9 +20,9 @@
 #include "api_internal.h"
 #include "api_vocabulary.h"
 #include "grow/grow_internal.h"
-#include "util/plan_util.h"
-#include "util/request_chords.h"
-#include "util/request_parse.h"
+#include "structure/plan_util.h"
+#include "piece/request_chords.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /*

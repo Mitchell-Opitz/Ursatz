@@ -6,7 +6,7 @@
 #include <ursatz_composer/motive_analysis.h>
 
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * The developments of a motive. Each of the kinds applies the library relation of the same name

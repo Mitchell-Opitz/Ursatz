@@ -5,7 +5,7 @@
 #include <ursatz_composer/motive.h>
 
 #include "api_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /* The motive request members (docs/api.md): meter, key, pickup, harmony, features, role, and the input to read. */
 

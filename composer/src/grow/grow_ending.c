@@ -9,7 +9,7 @@
 
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/position.h"
 #include "motive/motive_internal.h"
 #include "util/util.h"

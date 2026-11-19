@@ -1,4 +1,4 @@
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 #include <string.h>
 

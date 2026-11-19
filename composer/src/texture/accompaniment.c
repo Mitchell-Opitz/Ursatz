@@ -8,7 +8,7 @@
 #include <ursatz_composer/locks.h>
 
 #include "texture/texture_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /* The fewest semitones a voice moves per chord change, on average, for the candidate to score for it. */

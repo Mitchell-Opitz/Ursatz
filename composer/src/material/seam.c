@@ -7,7 +7,7 @@
 #include <plan/plan_state.h>
 
 #include "piece/piece_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * The seam (R-171): the bar the loop leads into, a Given copy of the body's first bar. The copy is made through

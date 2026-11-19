@@ -26,7 +26,7 @@ while IFS= read -r hit; do
 done < <(
     grep -rnE "\b($detectors)" src cli --include='*.c' --include='*.h' || true
     grep -rnE "\b$render" src cli --include='*.c' --include='*.h' |
-        grep -vE '^src/(check/hearing|render/export|render/render|fill/variations)\.c:|^src/include/ursatz_composer/render\.h:' || true
+        grep -vE '^src/(check/hearing|render/export|render/render|candidates/variations)\.c:|^src/include/ursatz_composer/render\.h:' || true
     grep -rnE "\b$run" src cli --include='*.c' --include='*.h' |
         grep -vE '^src/(check/hearing|texture/accompaniment_hear)\.c:' || true
     grep -rnE "\b($results)[[:space:]]*\(" src cli --include='*.c' --include='*.h' |

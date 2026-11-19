@@ -12,7 +12,7 @@
 #include "api_internal.h"
 #include "api_piece.h"
 #include "api_workflow.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /* `grow` as a composer API entry (docs/cli-grow.md), and the helpers the entries that seed from a corpus or read a style share. */

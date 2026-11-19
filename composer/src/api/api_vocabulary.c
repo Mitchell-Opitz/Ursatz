@@ -20,8 +20,8 @@
 #include "api_piece.h"
 #include "api_workflow.h"
 #include "api_vocabulary.h"
-#include "util/plan_util.h"
-#include "util/request_parse.h"
+#include "structure/plan_util.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /* --- the tables ------------------------------------------------------------------------------------------ */

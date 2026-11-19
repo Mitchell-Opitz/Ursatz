@@ -13,7 +13,7 @@
 #include "api_piece.h"
 #include "api_workflow.h"
 #include "motive/motive_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 #include "util/util.h"
 
 /* `counterpoint` as a composer API entry (docs/cli-counterpoint.md): a counter-melody against a line, in strict species. */

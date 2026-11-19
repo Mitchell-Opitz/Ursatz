@@ -16,7 +16,7 @@
 
 #include "api_workflow.h"
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* `develop` as a composer API entry (docs/cli-develop.md): motives related to one motive, best first. */
 

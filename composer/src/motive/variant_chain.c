@@ -14,7 +14,7 @@
 #include "motive/motive_internal.h"
 #include "motive/variant_internal.h"
 #include "util/composer_json.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /* How many draws of its open parameters a refused step gets. */
 #define VARIANT_DRAWS 16

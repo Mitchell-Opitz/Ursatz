@@ -1,7 +1,7 @@
 add_library(ursatz_composer STATIC
     composer.c
-    util/request_parse.c
-    util/request_chords.c
+    structure/request_parse.c
+    piece/request_chords.c
     api/api_internal.c
     api/api_versions.c
     api/api_export.c
@@ -30,21 +30,21 @@ add_library(ursatz_composer STATIC
     util/job.c
     util/util.c
     util/composer_json.c
-    util/plan_util.c
+    structure/plan_util.c
     style/style.c
     style/style_blend.c
     style/style_labels.c
-    style/style_check.c
-    style/style_measure.c
-    style/corpus_seed.c
+    check/style_check.c
+    check/style_measure.c
+    api/corpus_seed.c
     check/analyzer_check.c
     check/hearing.c
     check/key_hear.c
-    check/explain.c
+    explain/explain.c
     render/render.c
     render/movement_build.c
     render/export.c
-    fill/fill_target.c
+    structure/fill_target.c
     fill/fill_operator.c
     fill/fill_loop.c
     fill/fill_rng.c
@@ -52,7 +52,7 @@ add_library(ursatz_composer STATIC
     fill/generation_record.c
     fill/fill_record.c
     fill/fill_suggest.c
-    fill/variations.c
+    candidates/variations.c
     harmony/harmony_roman.c
     harmony/harmony_mask.c
     harmony/harmony_rhythm.c
@@ -101,15 +101,15 @@ add_library(ursatz_composer STATIC
     melody/melody_realize.c
     melody/melody_fill.c
     preferences/preferences.c
-    form/form_hear.c
-    form/form_record.c
-    form/form_spec.c
-    form/form_builtin.c
-    form/return_hear.c
+    check/form_hear.c
+    structure/form_record.c
+    structure/form_spec.c
+    structure/form_builtin.c
+    check/return_hear.c
     grow/grow_request.c
     grow/grow_theme.c
     grow/grow_layout.c
-    grow/theme_shape.c
+    structure/theme_shape.c
     grow/grow_develop.c
     grow/grow_fidelity.c
     grow/grow_segments.c
@@ -120,25 +120,25 @@ add_library(ursatz_composer STATIC
     grow/grow_coda.c
     grow/grow_check.c
     grow/grow_form.c
-    grow/grow_run.c
-    piece/form_return.c
-    piece/given.c
-    piece/seam.c
+    piece/grow_run.c
+    material/form_return.c
+    material/given.c
+    material/seam.c
     piece/piece_reopen.c
-    piece/seam_hear.c
-    piece/connective.c
+    harmony/seam_hear.c
+    material/connective.c
     piece/section_harmony.c
     piece/piece_perform.c
-    piece/form_vary.c
-    piece/form_figure.c
+    material/form_vary.c
+    material/form_figure.c
     piece/form_build.c
     piece/form_build_request.c
     piece/piece_keys.c
     piece/piece_cadences.c
     piece/compose_run.c
-    piece/compose_candidates.c
-    piece/lock.c
-    piece/depend.c
+    candidates/compose_candidates.c
+    structure/lock.c
+    structure/depend.c
     piece/regenerate.c
     texture/accompaniment.c
     texture/accompaniment_pattern.c
@@ -146,7 +146,7 @@ add_library(ursatz_composer STATIC
     texture/voicing.c
     texture/voicing_check.c
     texture/voicing_search.c
-    texture/texture_check.c
+    piece/texture_check.c
     counterpoint/counterpoint_write.c
     counterpoint/counterpoint_species.c
     counterpoint/counterpoint_check.c

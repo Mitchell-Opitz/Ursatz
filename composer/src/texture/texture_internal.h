@@ -7,7 +7,7 @@
 #include <ursatz_composer/accompaniment.h>
 
 #include "harmony/harmony_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/position.h"
 
 /* Time inside the operator is a Rational position in whole notes from the start of the target (util/position.h). */

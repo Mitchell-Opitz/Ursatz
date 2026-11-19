@@ -11,7 +11,7 @@
 
 #include "motive/motive_internal.h"
 #include "util/composer_json.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * The registry table. A row names its library relation (analysis/motive_relation.h); its parameters are the relation's,

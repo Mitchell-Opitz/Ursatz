@@ -10,11 +10,11 @@
 #include <plan/plan_state.h>
 
 #include "grow/grow_internal.h"
-#include "piece/form_return_internal.h"
-#include "form/form_record.h"
+#include "material/form_return_internal.h"
+#include "structure/form_record.h"
 #include "piece/piece_internal.h"
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /*

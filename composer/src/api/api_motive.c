@@ -11,7 +11,7 @@
 #include <ursatz_composer/motive_tones.h>
 
 #include "api_internal.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /* "3=passing": the 1-based note and its role (the --tone option's value). */
 static ComposerStatus read_tone(const char *text, size_t note_count, const char *path, MotiveToneOverride *out,

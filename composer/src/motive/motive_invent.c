@@ -12,7 +12,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /*

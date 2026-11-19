@@ -21,7 +21,7 @@
 #include <plan/plan_constraint.h>
 #include <plan/plan_state.h>
 #include "render/render_notes.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 const char *rendered_part_lane_name(const RenderedPart *part) {

@@ -9,7 +9,7 @@
 
 #include "api_grow.h"
 #include "api_workflow.h"
-#include "util/request_parse.h"
+#include "structure/request_parse.h"
 
 /* `fill` as a composer API entry (docs/cli-fill.md): a plan realized in stages. */
 

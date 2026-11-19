@@ -14,8 +14,8 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <plan/plan_state.h>
 #include "check/hearing.h"
-#include "form/form_internal.h"
-#include "util/plan_util.h"
+#include "check/form_internal.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 /* ------------------------------------------------------------- the check */

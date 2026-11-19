@@ -7,7 +7,7 @@
 #include <ursatz_composer/motive_tones.h>
 #include <plan/plan_state.h>
 #include <ursatz_composer/seam_hear.h>
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 #include "util/util.h"
 
 void melody_context_zero(MelodyContext *context) {

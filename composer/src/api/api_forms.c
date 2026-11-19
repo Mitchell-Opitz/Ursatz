@@ -12,7 +12,7 @@
 #include "api_internal.h"
 #include "api_piece.h"
 #include "api_vocabulary.h"
-#include "util/plan_util.h"
+#include "structure/plan_util.h"
 
 /*
  * composer_api_forms (R-428): the built-in forms as the Pieces view needs them: the sections of every size with their roles,
