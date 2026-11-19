@@ -6,6 +6,7 @@
 #include "base/knowledge.h"
 #include "items/collections.h"
 #include "items/subjects.h"
+#include "items/layers.h"
 #include "items/txn.h"
 #include "items/library_pieces.h"
 
@@ -24,6 +25,9 @@
 
 #include <ursatz_analyzer/analyzer_api.h>
 
+#include <realization/realization_json.h>
+#include <reading/reading_json.h>
+
 #include <common/files.h>
 #include <common/strings.h>
 
@@ -36,7 +40,8 @@ static bool import_piece(const char *dir_path, ImportedFormat format, ImportedSc
 
 /* Imports the piece's source (with its notation override, if any) and runs it
    through the Analyzer. On OK, *out_json is the analysis document (caller frees). */
-static UrsatzStatus analyze_source_file(const char *dir_path, ImportedFormat format, char **out_json) {
+static UrsatzStatus analyze_source_file(const char *dir_path, ImportedFormat format, char **out_json, char **out_realization,
+                                        char **out_reading) {
     char source_path[400];
     ImportedScore notes;
     if (!workshop_library_source_path(dir_path, source_path, sizeof(source_path)) || !import_piece(dir_path, format, &notes)) {
@@ -51,19 +56,55 @@ static UrsatzStatus analyze_source_file(const char *dir_path, ImportedFormat for
         return workshop_fail(URSATZ_ERR_FORMAT, NULL);
     }
 
+    /* The two layers of the result: its realization, and the Analyzer's reading of it, which names that realization by its digest. */
+    RealizationJsonError realization_error;
+    ReadingJsonError reading_error;
+    const Work *work = analyzer_result_realization(result);
+    const Reading *reading = analyzer_result_reading(result);
+    *out_realization = work ? realization_work_to_json(work, &realization_error) : NULL;
+    *out_reading = reading ? reading_to_json(reading, &reading_error) : NULL;
+    if (!*out_realization || !*out_reading) {
+        free(*out_realization);
+        free(*out_reading);
+        *out_realization = NULL;
+        *out_reading = NULL;
+        analyzer_result_destroy(result);
+        imported_score_destroy(&notes);
+        return workshop_fail(URSATZ_ERR_FORMAT, NULL);
+    }
+
     AnalysisDocument *document = analyzer_document_build(source_path, result);
     analyzer_result_destroy(result);
     imported_score_destroy(&notes);
-    if (!document) {
-        return workshop_fail(URSATZ_ERR_ALLOC, NULL);
-    }
-    char *json = analyzer_document_to_json(document);
+    char *json = document ? analyzer_document_to_json(document) : NULL;
     analyzer_document_destroy(document);
     if (!json) {
+        free(*out_realization);
+        free(*out_reading);
+        *out_realization = NULL;
+        *out_reading = NULL;
         return workshop_fail(URSATZ_ERR_ALLOC, NULL);
     }
     *out_json = json;
     return URSATZ_OK;
+}
+
+/* Writes realization.json and readings/analyzer.json beside the analysis in dir_path (the staging folder of an import, or the piece's own folder, staged
+ * in the transaction of a re-analysis). */
+static bool write_layers(const char *dir_path, const char *realization, const char *reading) {
+    char path[400];
+    char folder[400];
+    if (snprintf(path, sizeof(path), "%s/realization.json", dir_path) >= (int)sizeof(path) ||
+        snprintf(folder, sizeof(folder), "%s/readings", dir_path) >= (int)sizeof(folder)) {
+        return false;
+    }
+    if (!workshop_library_write_file(path, realization, strlen(realization))) {
+        return false;
+    }
+    if (snprintf(path, sizeof(path), "%s/analyzer.json", folder) >= (int)sizeof(path) || common_dir_make(folder, NULL) != URSATZ_OK) {
+        return false;
+    }
+    return workshop_library_write_file(path, reading, strlen(reading));
 }
 
 /* Writes the upload into the staging folder dir_path of a new piece and analyzes it. On failure the folder is removed. The transaction of the
@@ -94,7 +135,9 @@ static UrsatzStatus save_new_piece(const char *dir_path, const unsigned char *da
     }
 
     char *document_json = NULL;
-    result = analyze_source_file(dir_path, format, &document_json);
+    char *realization_json = NULL;
+    char *reading_json = NULL;
+    result = analyze_source_file(dir_path, format, &document_json, &realization_json, &reading_json);
     if (result != URSATZ_OK) {
         common_dir_remove(dir_path, NULL);
         return result;
@@ -102,8 +145,11 @@ static UrsatzStatus save_new_piece(const char *dir_path, const unsigned char *da
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    bool written = (common_file_write_atomic(analysis_path, document_json, strlen(document_json), NULL) == URSATZ_OK);
+    bool written = (common_file_write_atomic(analysis_path, document_json, strlen(document_json), NULL) == URSATZ_OK) &&
+                   write_layers(dir_path, realization_json, reading_json);
     free(document_json);
+    free(realization_json);
+    free(reading_json);
     if (!written) {
         common_dir_remove(dir_path, NULL);
         return workshop_fail(URSATZ_ERR_IO, NULL);
@@ -346,7 +392,9 @@ static UrsatzStatus reanalyze_unlocked(const char *pieces_dir, const char *id) {
     ImportedFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
 
     char *document_json = NULL;
-    UrsatzStatus result = analyze_source_file(dir_path, format, &document_json);
+    char *realization_json = NULL;
+    char *reading_json = NULL;
+    UrsatzStatus result = analyze_source_file(dir_path, format, &document_json, &realization_json, &reading_json);
     if (result != URSATZ_OK) {
         cJSON_Delete(meta);
         return result;
@@ -354,8 +402,11 @@ static UrsatzStatus reanalyze_unlocked(const char *pieces_dir, const char *id) {
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    bool ok = workshop_library_write_file(analysis_path, document_json, strlen(document_json));
+    bool ok = workshop_library_write_file(analysis_path, document_json, strlen(document_json)) &&
+              write_layers(dir_path, realization_json, reading_json);
     free(document_json);
+    free(realization_json);
+    free(reading_json);
 
     ok = ok && workshop_library_meta_set_string(meta, "analyzer_version", analyzer_version()) &&
          workshop_library_meta_set_number(meta, "document_schema_version", ANALYZER_DOCUMENT_SCHEMA_VERSION) &&
@@ -971,6 +1022,16 @@ UrsatzStatus workshop_library_piece_json(const char *pieces_dir, const char *id,
     if (ok && sections) {
         ok = cJSON_AddItemToObject(object, "document_sections", sections);
         sections = ok ? NULL : sections;
+    }
+    /* The layers beside the analysis (R-644): the realization and the readings, or null for a piece analyzed before they were kept. */
+    if (ok) {
+        char piece_dir[320];
+        cJSON *layers = NULL;
+        if (!workshop_library_piece_dir(pieces_dir, detail->id, piece_dir, sizeof(piece_dir)) || workshop_layers_describe(piece_dir, &layers) != URSATZ_OK ||
+            !cJSON_AddItemToObject(object, "layers", layers)) {
+            cJSON_Delete(layers);
+            ok = false;
+        }
     }
     /* The subjects that link this piece (R-117). */
     cJSON *subjects = ok ? workshop_subjects_for_piece(detail->id) : NULL;

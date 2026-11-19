@@ -8,6 +8,7 @@ add_library(ursatz_workshop STATIC
     src/items/data_check.c
     src/items/formats.c
     src/items/ids.c
+    src/items/layers.c
     src/items/journal.c
     src/items/layout.c
     src/items/migrate.c
@@ -53,7 +54,7 @@ ursatz_public_headers(ursatz_workshop
 # query and command API (and the files of src/ include one another as "<folder>/<name>.h").
 target_include_directories(ursatz_workshop PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(ursatz_workshop
-    PUBLIC ursatz_common ursatz_composer ursatz_analyzer ursatz_theory cjson
+    PUBLIC ursatz_common ursatz_composer ursatz_analyzer ursatz_theory ursatz_realization ursatz_reading cjson
 )
 target_compile_options(ursatz_workshop PRIVATE -Wall -Wextra -Wpedantic)
 if(URSATZ_TESTS)

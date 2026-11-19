@@ -17,6 +17,7 @@
 
 #include "items/formats.h"
 #include "items/journal.h"
+#include "items/layers.h"
 #include "items/layout.h"
 
 #define PATH_BYTES 1024
@@ -347,8 +348,44 @@ static bool is_body_format(const char *name) {
            strcmp(name, WORKSHOP_FORMAT_PIECE_BODY) == 0;
 }
 
+/* The parent of path's parent folder, "<dir>/realization.json" in out (the realization a readings/<name>.json is about). */
+static bool realization_beside(const char *path, char *out, size_t size) {
+    char folder[PATH_BYTES];
+    snprintf(folder, sizeof(folder), "%s", path);
+    char *slash = strrchr(folder, '/'); /* the file */
+    if (!slash) {
+        return false;
+    }
+    *slash = '\0';
+    slash = strrchr(folder, '/'); /* the readings folder */
+    if (!slash) {
+        return false;
+    }
+    *slash = '\0';
+    return snprintf(out, size, "%s/%s", folder, WORKSHOP_FILE_REALIZATION) < (int)size;
+}
+
+/* Checks a layer file: a realization must read, a reading must read and name the realization beside it (the one this transaction staged, the one in the
+ * same pending folder, or the one already in place). */
+static UrsatzStatus validate_layer(const WorkshopTxn *txn, const char *actual, const char *final_path, UrsatzError *error) {
+    if (workshop_layers_is_realization_path(final_path)) {
+        return workshop_layers_check_realization(actual, final_path, error);
+    }
+    char realization_final[PATH_BYTES];
+    char realization_actual[PATH_BYTES];
+    if (!realization_beside(final_path, realization_final, sizeof(realization_final)) || !realization_beside(actual, realization_actual, sizeof(realization_actual))) {
+        return ursatz_error_set(error, URSATZ_ERR_FORMAT, final_path, "%s names no realization beside it", final_path);
+    }
+    const char *staged = workshop_txn_read_path(txn, realization_final);
+    const char *use = strcmp(staged, realization_final) != 0 ? staged : common_path_exists(realization_actual) ? realization_actual : realization_final;
+    return workshop_layers_check_reading(actual, final_path, use, error);
+}
+
 /* Checks one staged file as it will be at final_path. */
-static UrsatzStatus validate_file(const char *actual, const char *final_path, UrsatzError *error) {
+static UrsatzStatus validate_file(const WorkshopTxn *txn, const char *actual, const char *final_path, UrsatzError *error) {
+    if (workshop_layers_is_realization_path(final_path) || workshop_layers_is_reading_path(final_path)) {
+        return validate_layer(txn, actual, final_path, error);
+    }
     const char *format = workshop_format_of_path(final_path);
     if (format) {
         cJSON *object = NULL;
@@ -372,13 +409,13 @@ static UrsatzStatus validate_file(const char *actual, const char *final_path, Ur
     return URSATZ_OK;
 }
 
-static UrsatzStatus validate_entry(const char *actual, const char *final_path, UrsatzError *error) {
+static UrsatzStatus validate_entry(const WorkshopTxn *txn, const char *actual, const char *final_path, UrsatzError *error) {
     struct stat info;
     if (stat(actual, &info) != 0) {
         return ursatz_error_set(error, URSATZ_ERR_FORMAT, final_path, "%s was staged and is missing", final_path);
     }
     if (!S_ISDIR(info.st_mode)) {
-        return validate_file(actual, final_path, error);
+        return validate_file(txn, actual, final_path, error);
     }
     CommonNames names = {0};
     UrsatzStatus status = common_dir_list(actual, &names, error);
@@ -389,7 +426,7 @@ static UrsatzStatus validate_entry(const char *actual, const char *final_path, U
             snprintf(virtual_path, sizeof(virtual_path), "%s/%s", final_path, names.items[i]) >= (int)sizeof(virtual_path)) {
             status = ursatz_error_set(error, URSATZ_ERR_IO, final_path, "a path under %s is too long", final_path);
         } else {
-            status = validate_entry(child, virtual_path, error);
+            status = validate_entry(txn, child, virtual_path, error);
         }
     }
     common_names_free(&names);
@@ -485,7 +522,7 @@ UrsatzStatus workshop_txn_commit(WorkshopTxn *txn, UrsatzError *error) {
     CRASH(AFTER_STAGE);
     UrsatzStatus status = URSATZ_OK;
     for (size_t i = 0; status == URSATZ_OK && i < txn->write_count; i++) {
-        status = validate_entry(txn->writes[i].pending, txn->writes[i].final, error);
+        status = validate_entry(txn, txn->writes[i].pending, txn->writes[i].final, error);
     }
     if (status != URSATZ_OK) {
         workshop_txn_abort(txn);
