@@ -1,6 +1,8 @@
 #ifndef URSATZ_WORKSHOP_COORDINATOR_COORDINATOR_H
 #define URSATZ_WORKSHOP_COORDINATOR_COORDINATOR_H
 
+#include <stdbool.h>
+
 #include <ursatz_workshop/workshop_api.h>
 
 #include "base/knowledge.h"
@@ -16,6 +18,7 @@ struct Workshop {
     int job_workers;
     int lock_descriptor; /* the data folder's lock, held until close */
     char recovery[512];  /* what the open recovered from the journal, "" when nothing (workshop_recovery_summary) */
+    bool started;        /* workshop_start ran and workshop_stop has not */
 };
 
 /*

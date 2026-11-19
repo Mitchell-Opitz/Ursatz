@@ -2,7 +2,8 @@
 
 #include "ursatz_check.h"
 #include "routes/route_util.h"
-#include "workshop_internal.h"
+#include "base/http_status.h"
+#include "base/last_error.h"
 
 /* The one status-to-HTTP table (R-639): every status, with an error that names no path, one that names a path, and no error. */
 
@@ -36,16 +37,18 @@ static void test_table(void) {
         check_quiet(workshop_http_status(rows[i].status, NULL) == rows[i].plain, "a status without an error");
         check_quiet(workshop_http_status(rows[i].status, &without) == rows[i].plain, "a status whose error names no path");
         check_quiet(workshop_http_status(rows[i].status, &with) == rows[i].with_path, "a status whose error names a path");
+        /* the GUI's table is the same one (the workshop's is for the job results it keeps) */
+        check_quiet(ursatz_gui_http_status(rows[i].status, NULL) == rows[i].plain, "the GUI's table: a status without an error");
+        check_quiet(ursatz_gui_http_status(rows[i].status, &without) == rows[i].plain, "the GUI's table: an error that names no path");
+        check_quiet(ursatz_gui_http_status(rows[i].status, &with) == rows[i].with_path, "the GUI's table: an error that names a path");
     }
 }
 
 static void test_last_error(void) {
     check_quiet(workshop_fail(URSATZ_ERR_NOT_FOUND, "item not found") == URSATZ_ERR_NOT_FOUND, "fail returns its status");
     check_quiet(strcmp(workshop_last_error()->message, "item not found") == 0, "fail keeps the message");
-    check_quiet(strcmp(ursatz_gui_failure_message("fallback"), "item not found") == 0, "the failure message is the kept one");
     workshop_fail(URSATZ_ERR_CONFLICT, NULL);
     check_quiet(workshop_last_error()->message[0] == '\0', "a failure without a message clears the last one");
-    check_quiet(strcmp(ursatz_gui_failure_message("fallback"), "fallback") == 0, "the fallback answers when there is no message");
 
     UrsatzError given = error_at("/key");
     workshop_fail_with(URSATZ_ERR_REQUEST, &given);

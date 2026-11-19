@@ -134,6 +134,15 @@ UrsatzStatus workshop_query(Workshop *workshop, const char *name, const cJSON *p
 UrsatzStatus workshop_command(Workshop *workshop, const cJSON *command, const WorkshopBytes *bytes, WorkshopReply *reply,
                               UrsatzError *error);
 
+/*
+ * Starts what the workshop runs once it is open (the stores, the motive link run index and the job queue) and makes the data folder the
+ * working directory of the process, which the services' relative paths need; workshop_stop cancels every job, joins the workers and shuts
+ * the stores. A query or command before workshop_start answers URSATZ_ERR_INTERNAL, and workshop_close stops a started workshop. A second
+ * start is a no-op, and so is a stop of a workshop that is not started.
+ */
+UrsatzStatus workshop_start(Workshop *workshop, UrsatzError *error);
+void workshop_stop(Workshop *workshop);
+
 /* Stops what the workshop holds, releases the data folder and frees the workshop. NULL is a no-op. */
 void workshop_close(Workshop *workshop);
 

@@ -9,17 +9,12 @@
 #include <civetweb.h>
 
 #include "route_util.h"
-#include "workshop_internal.h"
 
 static const char *kLinksPrefix = "/api/links";
 
 /* --- scope ---------------------------------------------------------------- */
 
 /* --- handlers ------------------------------------------------------------- */
-
-static int send_link_failure(struct mg_connection *conn, UrsatzStatus result) {
-  return ursatz_gui_send_service_failure(conn, result, "link operation failed");
-}
 
 /* {"ok":true,<key>:value}; takes value. */
 static int send_ok_with(struct mg_connection *conn, int status, const char *key, cJSON *value) {
@@ -99,7 +94,7 @@ static int links_handler(struct mg_connection *conn, void *cbdata) {
   }
 
   if (strncmp(rest, "runs/", 5) == 0) {
-    if (!path_id(rest + 5, id, sizeof(id)) || !workshop_collection_is_valid_id(id)) {
+    if (!path_id(rest + 5, id, sizeof(id)) || !ursatz_gui_valid_id(id)) {
       return ursatz_gui_send_failure(conn, 404, "run not found");
     }
     if (strcmp(method, "GET") == 0) {
@@ -113,7 +108,7 @@ static int links_handler(struct mg_connection *conn, void *cbdata) {
   }
 
   if (strncmp(rest, "pieces/", 7) == 0) {
-    if (!path_id(rest + 7, id, sizeof(id)) || !workshop_collection_is_valid_id(id)) {
+    if (!path_id(rest + 7, id, sizeof(id)) || !ursatz_gui_valid_id(id)) {
       return ursatz_gui_send_failure(conn, 404, "piece not found");
     }
     if (strcmp(method, "GET") == 0) {

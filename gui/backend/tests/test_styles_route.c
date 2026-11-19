@@ -35,7 +35,7 @@
 /* The full test serves on 18769, the smoke run (the argument smoke) on 18779, so both can run at once. */
 static const char *g_port = "18769";
 #define PORT g_port
-#include "workshop_internal.h"
+#include "coordinator/services.h"
 
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);

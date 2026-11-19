@@ -15,7 +15,7 @@
 #include <cJSON.h>
 
 #include "ursatz_check.h"
-#include "workshop_internal.h"
+#include "coordinator/services.h"
 
 /* An exchange with a JSON body: the answer's body parsed as JSON (the caller deletes it), its status in *status. */
 typedef cJSON *(*VersionCheckExchange)(const char *method, const char *path, const char *body, int *status);

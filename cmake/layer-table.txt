@@ -146,7 +146,7 @@ module composer-request composer/src/api composer/src/preferences composer/src/i
 group composer-core composer-util composer-structure composer-fill composer-render composer-style
 group composer-operators composer-harmony composer-motive composer-melody composer-texture composer-counterpoint composer-material
 module composer-cli  composer/cli
-module gui           gui/backend/src   root gui/backend/src workshop/src
+module gui           gui/backend/src   root gui/backend/src
 # The workshop (R-641): the API header, the coordinator and the service folders, lowest first (P63 B4, B5). Files of workshop/src include
 # one another as "<folder>/<name>.h" (the root dir workshop/src), their own folder's as "<name>.h".
 module workshop-api         workshop/include           prefix ursatz_workshop/workshop_api.h
@@ -157,7 +157,6 @@ module workshop-analysis    workshop/src/analysis      root workshop/src
 module workshop-composition workshop/src/composition   root workshop/src
 module workshop-rendering   workshop/src/rendering     root workshop/src
 module workshop-coordinator workshop/src/coordinator   root workshop/src workshop/include
-module workshop-internal    workshop/src/workshop_internal.h  root workshop/src -- the one header the GUI routes include until B11
 # A CMake target builds these modules; an include between two modules of one target needs no staging, one between targets (or from
 # an application) must name a staged header, and a staged header nothing outside its target includes is an error.
 target ursatz_model model
@@ -212,11 +211,10 @@ uses workshop-analysis workshop-base workshop-items workshop-jobs common compose
 uses workshop-composition workshop-base workshop-items workshop-analysis workshop-jobs common composer-api analyzer-api cjson
 uses workshop-rendering workshop-base workshop-items workshop-analysis workshop-composition common composer-api analyzer-api cjson
 uses workshop-coordinator workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-composition workshop-rendering composer-api analyzer-api common cjson
-uses workshop-internal workshop-api workshop-base workshop-jobs workshop-items workshop-analysis workshop-composition workshop-rendering
 allow workshop/src/items/body_rules.c composition/composer_client.h -- the body rules and the references read the Composer's vocabulary and forms; B14 moves the checks into the Composer
 allow workshop/src/items/body_migrate.c composition/composer_client.h -- the body rules and the references read the Composer's vocabulary and forms; B14 moves the checks into the Composer
 allow workshop/src/items/references.c composition/composer_client.h -- the body rules and the references read the Composer's vocabulary and forms; B14 moves the checks into the Composer
-uses gui           cjson civetweb common theory-style workshop-api workshop-internal -- the routes include workshop_internal.h until B11 gives the GUI the query and command API
+uses gui           cjson civetweb common workshop-api
 allow composer/cli/cli_context.c theory -- the command builds the one knowledge snapshot (library/theory/knowledge) and hands it to the Composer API in its call context
 only composer/src/api/api_internal.h composer/src/api -- API internals stay in the API layer
 
@@ -379,7 +377,7 @@ like analyzer-tests analyzer-cli
 like analyzer-tests analyzer-internal
 uses composer-tests test-support
 like composer-tests composer-request
-uses gui-tests test-support analyzer-api composer-api workshop-base
+uses gui-tests test-support analyzer-api composer-api workshop-base workshop-coordinator theory-style -- the route tests of the internals include the workshop's service header (they link ursatz_workshop_internal)
 uses workshop-tests test-support
 like workshop-tests workshop-coordinator
 like workshop-tests workshop-base

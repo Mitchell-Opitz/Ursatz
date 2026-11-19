@@ -11,10 +11,8 @@
 
 #include "jobs.h"
 #include "route_util.h"
-#include "workshop_internal.h"
 #include "materials.h"
 
-static const char *kPiecesDir = WORKSHOP_DIR_PIECES;
 static const size_t kReadChunkSize = 65536;
 static const size_t kMaxUploadSize = 64 * 1024 * 1024;
 

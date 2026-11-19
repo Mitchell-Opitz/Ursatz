@@ -118,7 +118,7 @@ int ursatz_gui_motifs_op_checks_get(struct mg_connection *conn, const char *id) 
 
 /* The failures of the op-checks write: the store's message with the status of the table, the path of a refusal counted (422). */
 static int failed_op_checks(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return send_failure(conn, workshop_http_status(status, error), error->message);
+  return send_failure(conn, ursatz_gui_http_status(status, error), error->message);
 }
 
 /* PUT /api/materials/items/<id>/op-checks {checks}: replaces the marks. The file is not a version. */

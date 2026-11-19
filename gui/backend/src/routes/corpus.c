@@ -9,7 +9,6 @@
 #include <civetweb.h>
 
 #include "route_util.h"
-#include "workshop_internal.h"
 
 static const char *kCorpusPrefix = "/api/corpus";
 
@@ -127,7 +126,7 @@ static int corpus_handler(struct mg_connection *conn, void *cbdata) {
   memcpy(corpus_id, rest, corpus_id_len);
   corpus_id[corpus_id_len] = '\0';
 
-  if (!workshop_collection_is_valid_id(corpus_id)) {
+  if (!ursatz_gui_valid_id(corpus_id)) {
     send_ok_false(conn, "invalid id");
     return 200;
   }
@@ -168,7 +167,7 @@ static int corpus_handler(struct mg_connection *conn, void *cbdata) {
 
   if (after_pieces[0] == '/' && after_pieces[1] != '\0') {
     const char *piece_id = after_pieces + 1;
-    if (!workshop_collection_is_valid_id(piece_id)) {
+    if (!ursatz_gui_valid_id(piece_id)) {
       send_ok_false(conn, "invalid piece_id");
       return 200;
     }

@@ -61,9 +61,12 @@ ursatz_public_headers(ursatz_workshop
     HEADERS
         ursatz_workshop/workshop_api.h
 )
-# workshop_internal.h, the one header the GUI routes include for the services, stays visible to the GUI backend until B11 gives it the
-# query and command API (and the files of src/ include one another as "<folder>/<name>.h").
-target_include_directories(ursatz_workshop PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+# The files of src/ include one another as "<folder>/<name>.h"; only the API header (include/) is visible to the programs that use the
+# workshop. The tests of the internals link ursatz_workshop_internal, which adds src/ to the include path (B11 gives them the engine archive).
+target_include_directories(ursatz_workshop PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_library(ursatz_workshop_internal INTERFACE)
+target_include_directories(ursatz_workshop_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ursatz_workshop_internal INTERFACE ursatz_workshop)
 target_link_libraries(ursatz_workshop
     PUBLIC ursatz_common ursatz_composer ursatz_analyzer ursatz_theory ursatz_realization ursatz_reading cjson
 )

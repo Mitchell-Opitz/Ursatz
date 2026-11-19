@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "workshop_internal.h"
+#include "coordinator/services.h"
 
 static int write_fixture(const char *folder, const char *name, const char *text) {
   if (!text) {

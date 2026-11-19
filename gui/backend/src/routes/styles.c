@@ -10,17 +10,12 @@
 
 #include "jobs.h"
 #include "route_util.h"
-#include "workshop_internal.h"
 
 static const char *kStylesPrefix = "/api/styles";
 
-static int send_style_failure(struct mg_connection *conn, UrsatzStatus result) {
-  return ursatz_gui_send_service_failure(conn, result, "style operation failed");
-}
-
 /* The failures of a style command: the status of the table, no queue a 503. */
 static int failed_style_command(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return ursatz_gui_send_failure(conn, status == URSATZ_ERR_INTERNAL && strstr(error->message, "queue") ? 503 : workshop_http_status(status, NULL),
+  return ursatz_gui_send_failure(conn, status == URSATZ_ERR_INTERNAL && strstr(error->message, "queue") ? 503 : ursatz_gui_http_status(status, NULL),
                                  error->message);
 }
 
@@ -92,7 +87,7 @@ static int styles_handler(struct mg_connection *conn, void *cbdata) {
   id[id_len] = '\0';
 
   /* An id that cannot name a style is an unknown style. */
-  if (!workshop_collection_is_valid_id(id)) {
+  if (!ursatz_gui_valid_id(id)) {
     return ursatz_gui_send_failure(conn, 404, "style not found");
   }
 

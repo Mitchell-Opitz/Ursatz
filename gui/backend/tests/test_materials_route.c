@@ -44,7 +44,7 @@ static bool ok_true(const cJSON *json) {
 
 #include "support/server_support.h"
 #include "routes/materials.h"
-#include "workshop_internal.h"
+#include "coordinator/services.h"
 #include "ursatz_check.h"
 #include "server.h"
 #include "test_http.h"

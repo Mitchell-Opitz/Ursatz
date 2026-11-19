@@ -13,11 +13,13 @@
 /* The largest request body ursatz_gui_read_json_body accepts. */
 #define URSATZ_GUI_JSON_BODY_MAX_BYTES (1024 * 1024)
 
-/* The message of this thread's last service failure (service/last_error.h), or fallback when the failing call gave none. */
-const char *ursatz_gui_failure_message(const char *fallback);
+/* The HTTP status of a failed workshop call (R-639): 200 for OK, 400 for a request refused (422 when the error names the request member at fault),
+ * 422 for UNSATISFIABLE, 404 for NOT_FOUND, 409 for CONFLICT, 499 for CANCELLED, 500 for every other failure. error may be NULL (no path). */
+int ursatz_gui_http_status(UrsatzStatus status, const UrsatzError *error);
 
-/* Answers a failed service call: the HTTP status of the table for status and the last error, with its message (or fallback). */
-int ursatz_gui_send_service_failure(struct mg_connection *conn, UrsatzStatus status, const char *fallback);
+/* Whether text can name a stored item: 1 to 255 letters, digits, '-' and '_'. The workshop checks the same again; a route uses it to answer a
+ * path no item can have as not found without a call. */
+bool ursatz_gui_valid_id(const char *text);
 
 /* Sends body as application/json with the given status line. Returns status. */
 int ursatz_gui_send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body);

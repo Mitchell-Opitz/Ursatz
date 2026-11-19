@@ -10,11 +10,6 @@ static const char *kSubjectsPrefix = "/api/subjects";
 
 /* --- subjects ------------------------------------------------------------ */
 
-static int send_subject_failure(struct mg_connection *conn, UrsatzStatus result) {
-  return ursatz_gui_send_service_failure(conn, result, "subject store failure");
-}
-
-
 static int handle_list_subjects(struct mg_connection *conn) {
   return QUERY(conn, "subject.list", failed_material, false, NULL);
 }

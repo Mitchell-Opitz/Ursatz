@@ -30,7 +30,7 @@
 #include "support/server_support.h"
 #include "ursatz_check.h"
 #include "server.h"
-#include "workshop_internal.h"
+#include "coordinator/services.h"
 #include "test_http.h"
 
 /* The full test serves on 18766, the smoke run (the argument smoke) on 18778, so both can run at once. */

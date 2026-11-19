@@ -14,6 +14,10 @@
 #include "items/recover.h"
 #include "items/store.h"
 #include "items/subjects.h"
+#include "items/collections.h"
+#include "analysis/links.h"
+#include "jobs/job_queue.h"
+#include <unistd.h>
 
 #include <limits.h>
 
@@ -82,7 +86,62 @@ UrsatzStatus workshop_open(const WorkshopConfig *resolved, Workshop **out, Ursat
     return URSATZ_OK;
 }
 
+/* The services read and write the data folder by relative paths (items/layout.h), so the process works in it once the workshop runs. */
+UrsatzStatus workshop_start(Workshop *workshop, UrsatzError *error) {
+    if (!workshop) {
+        return ursatz_error_set(error, URSATZ_ERR_REQUEST, "", "no workshop to start");
+    }
+    if (workshop->started) {
+        return URSATZ_OK;
+    }
+    if (chdir(workshop->data_dir) != 0) {
+        return ursatz_error_set(error, URSATZ_ERR_IO, workshop->data_dir, "cannot enter the data folder %s", workshop->data_dir);
+    }
+    /* Collections, materials, subjects and the motive link runs are files the stores prepare once here; long Composer and Analyzer runs go
+     * to worker threads, which are up before any query or command. */
+    if (!ursatz_gui_collection_service_init()) {
+        return ursatz_error_set(error, URSATZ_ERR_IO, "", "the collections cannot be read");
+    }
+    if (!workshop_material_service_init()) {
+        workshop_collection_service_shutdown();
+        return ursatz_error_set(error, URSATZ_ERR_IO, "", "the materials cannot be read");
+    }
+    if (!workshop_subject_service_init()) {
+        workshop_material_service_shutdown();
+        workshop_collection_service_shutdown();
+        return ursatz_error_set(error, URSATZ_ERR_IO, "", "the subjects cannot be read");
+    }
+    if (!workshop_link_service_init()) {
+        workshop_subject_service_shutdown();
+        workshop_material_service_shutdown();
+        workshop_collection_service_shutdown();
+        return ursatz_error_set(error, URSATZ_ERR_IO, "", "the motive link runs cannot be read");
+    }
+    if (!workshop_jobs_start((size_t)workshop->job_workers)) {
+        workshop_link_service_shutdown();
+        workshop_subject_service_shutdown();
+        workshop_material_service_shutdown();
+        workshop_collection_service_shutdown();
+        return ursatz_error_set(error, URSATZ_ERR_INTERNAL, "", "the job workers cannot start");
+    }
+    workshop->started = true;
+    return URSATZ_OK;
+}
+
+void workshop_stop(Workshop *workshop) {
+    if (!workshop || !workshop->started) {
+        return;
+    }
+    workshop_jobs_stop(); /* cancels what runs and joins the workers, after the last request is answered */
+    workshop_link_service_shutdown();
+    workshop_subject_service_shutdown();
+    workshop_material_service_shutdown();
+    workshop_collection_service_shutdown();
+    workshop->started = false;
+}
+
 void workshop_close(Workshop *workshop) {
+    workshop_stop(workshop);
     if (workshop) {
         workshop_store_set_forget_item(NULL);
         workshop_knowledge_shutdown();

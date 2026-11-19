@@ -2,8 +2,6 @@
 
 #include <civetweb.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <unistd.h>
 
 #include "routes/analyzer.h"
 #include "routes/composer.h"
@@ -13,9 +11,7 @@
 #include "routes/materials.h"
 #include "routes/subjects.h"
 #include "routes/styles.h"
-#include "workshop_internal.h"
 
-/* Every store path below is relative to the data folder, which is the backend's working directory once the server starts. */
 static Workshop *g_workshop = NULL;
 
 Workshop *ursatz_gui_workshop(void) {
@@ -32,59 +28,22 @@ struct mg_context *ursatz_gui_server_start(Workshop *workshop, const char *liste
       NULL,
   };
 
-  const char *data_dir = workshop_data_dir(workshop);
-  if (chdir(data_dir) != 0) {
-    fprintf(stderr, "ursatz-gui-backend: cannot enter the data folder %s\n", data_dir);
-    return NULL;
-  }
-
-  /* Collections are files under collections/ (see
-   * service/collection_service.h); the store is prepared once here. */
-  if (!ursatz_gui_collection_service_init()) {
-    return NULL;
-  }
-
-  /* Materials and subjects are files too (service/material_service.h,
-   * service/subject_service.h), prepared beside collections. */
-  if (!workshop_material_service_init()) {
-    workshop_collection_service_shutdown();
-    return NULL;
-  }
-  if (!workshop_subject_service_init()) {
-    workshop_material_service_shutdown();
-    workshop_collection_service_shutdown();
-    return NULL;
-  }
-
-  /* Motive link runs and their cache are files too (service/link_service.h). */
-  if (!workshop_link_service_init()) {
-    workshop_subject_service_shutdown();
-    workshop_material_service_shutdown();
-    workshop_collection_service_shutdown();
-    return NULL;
-  }
-
-  /* Long Composer runs go to worker threads (service/job_queue.h); the workers are up before any route. */
-  if (!workshop_jobs_start((size_t)workshop_job_workers(workshop))) {
-    workshop_link_service_shutdown();
-    workshop_subject_service_shutdown();
-    workshop_material_service_shutdown();
-    workshop_collection_service_shutdown();
+  /* The workshop starts its stores and its job workers before any route (it also makes the data folder the working directory). */
+  UrsatzError error = {{0}, {0}};
+  if (workshop_start(workshop, &error) != URSATZ_OK) {
+    fprintf(stderr, "ursatz-gui-backend: %s\n", error.message);
     return NULL;
   }
 
   struct mg_context *ctx = mg_start(NULL, NULL, options);
   if (!ctx) {
-    workshop_jobs_stop();
-    workshop_link_service_shutdown();
-    workshop_subject_service_shutdown();
-    workshop_material_service_shutdown();
-    workshop_collection_service_shutdown();
+    workshop_stop(workshop);
     return NULL;
   }
 
   /* Route registration: each tool module registers itself here. This is
    * the only place that wires tool routes into the running server. */
+  g_workshop = workshop;
   ursatz_gui_analyzer_register(ctx);
   ursatz_gui_corpus_register(ctx);
   ursatz_gui_composer_register(ctx);
@@ -93,8 +52,6 @@ struct mg_context *ursatz_gui_server_start(Workshop *workshop, const char *liste
   ursatz_gui_subjects_register(ctx);
   ursatz_gui_links_register(ctx);
   ursatz_gui_jobs_register(ctx);
-
-  g_workshop = workshop;
   return ctx;
 }
 
@@ -102,10 +59,6 @@ void ursatz_gui_server_stop(struct mg_context *ctx) {
   if (ctx) {
     mg_stop(ctx);
   }
-  workshop_jobs_stop(); /* cancels what runs and joins the workers, after the last request is answered */
-  workshop_link_service_shutdown();
-  workshop_subject_service_shutdown();
-  workshop_material_service_shutdown();
-  workshop_collection_service_shutdown();
+  workshop_stop(g_workshop); /* cancels what runs and joins the workers, after the last request is answered */
   g_workshop = NULL;
 }

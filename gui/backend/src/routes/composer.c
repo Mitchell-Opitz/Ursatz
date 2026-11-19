@@ -10,7 +10,6 @@
 
 #include "route_util.h"
 #include "../server.h"
-#include "workshop_internal.h"
 
 static const char *kComposerPrefix = "/api/composer";
 #define MAX_SEGMENTS 8
@@ -25,7 +24,7 @@ static int send_error(struct mg_connection *conn, int status, const char *error)
 
 /* The failure of a Composer query: {"error"} with the status of the table. */
 static int failed_composer(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return send_error(conn, workshop_http_status(status, NULL), error->message);
+  return send_error(conn, ursatz_gui_http_status(status, NULL), error->message);
 }
 
 /* GET /api/composer/status: the versions this build holds, from the workshop. "version" keeps the text the command printed; api_version,

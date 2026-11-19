@@ -12,6 +12,9 @@
 
 static const char *kJobsPrefix = "/api/jobs";
 
+/* A job id is shorter than this (the workshop checks it again). */
+static const size_t kJobIdBytes = 32;
+
 static int send_error(struct mg_connection *conn, int status, const char *error) {
   cJSON *object = cJSON_CreateObject();
   if (object) {
@@ -21,26 +24,9 @@ static int send_error(struct mg_connection *conn, int status, const char *error)
   return ursatz_gui_send_object(conn, status, object);
 }
 
-int ursatz_gui_jobs_send_accepted(struct mg_connection *conn, const char *kind, WorkshopJobFn run, void *input,
-                                  void (*free_input)(void *)) {
-  char id[WORKSHOP_JOB_ID_BYTES];
-  if (!workshop_job_submit(kind, run, input, free_input, id)) {
-    return send_error(conn, 503, "the job queue is not running");
-  }
-  cJSON *object = cJSON_CreateObject();
-  cJSON *job = object ? cJSON_AddObjectToObject(object, "job") : NULL;
-  if (!job || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddStringToObject(job, "id", id) ||
-      !cJSON_AddStringToObject(job, "kind", kind) ||
-      !cJSON_AddStringToObject(job, "state", workshop_job_state_name(WORKSHOP_JOB_QUEUED))) {
-    cJSON_Delete(object);
-    return send_error(conn, 500, "out of memory");
-  }
-  return ursatz_gui_send_object(conn, 202, object);
-}
-
 /* The failure of a job query: {"ok": false, "error"} with the status of the table. */
 static int failed_job(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return send_error(conn, workshop_http_status(status, NULL), error->message);
+  return send_error(conn, ursatz_gui_http_status(status, NULL), error->message);
 }
 
 /* GET /api/jobs/<id>: {"ok": true, "job": {id, kind, state, stage, done, total, http_status?, result?}}. */
@@ -62,7 +48,7 @@ static int handle_delete(struct mg_connection *conn, const char *id) {
   cJSON_Delete(command);
   workshop_reply_destroy(&reply);
   if (status != URSATZ_OK) {
-    return send_error(conn, workshop_http_status(status, NULL), error.message);
+    return send_error(conn, ursatz_gui_http_status(status, NULL), error.message);
   }
   mg_printf(conn, "HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n");
   return 204;
@@ -74,7 +60,7 @@ static int jobs_handler(struct mg_connection *conn, void *cbdata) {
   const char *uri = info->local_uri;
   size_t prefix_len = strlen(kJobsPrefix);
   if (strncmp(uri, kJobsPrefix, prefix_len) != 0 || uri[prefix_len] != '/' || uri[prefix_len + 1] == '\0' ||
-      strchr(uri + prefix_len + 1, '/') != NULL || strlen(uri + prefix_len + 1) >= WORKSHOP_JOB_ID_BYTES) {
+      strchr(uri + prefix_len + 1, '/') != NULL || strlen(uri + prefix_len + 1) >= kJobIdBytes) {
     return send_error(conn, 404, "not found");
   }
   const char *id = uri + prefix_len + 1;

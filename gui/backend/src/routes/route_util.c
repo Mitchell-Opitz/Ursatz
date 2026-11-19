@@ -1,6 +1,5 @@
 #include "route_util.h"
 #include "../server.h"
-#include "workshop_internal.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -162,13 +161,37 @@ cJSON *ursatz_gui_read_json_body(struct mg_connection *conn, int *status_or_null
   return ursatz_gui_read_json_body_max(conn, URSATZ_GUI_JSON_BODY_MAX_BYTES, status_or_null);
 }
 
-const char *ursatz_gui_failure_message(const char *fallback) {
-  const UrsatzError *error = workshop_last_error();
-  return error->message[0] != '\0' ? error->message : fallback;
+int ursatz_gui_http_status(UrsatzStatus status, const UrsatzError *error) {
+  switch (status) {
+    case URSATZ_OK:
+      return 200;
+    case URSATZ_ERR_REQUEST:
+      return error && error->path[0] != '\0' ? 422 : 400;
+    case URSATZ_ERR_UNSATISFIABLE:
+      return 422;
+    case URSATZ_ERR_NOT_FOUND:
+      return 404;
+    case URSATZ_ERR_CONFLICT:
+      return 409;
+    case URSATZ_ERR_CANCELLED:
+      return 499;
+    default:
+      return 500;
+  }
 }
 
-int ursatz_gui_send_service_failure(struct mg_connection *conn, UrsatzStatus status, const char *fallback) {
-  return ursatz_gui_send_failure(conn, workshop_http_status(status, workshop_last_error()), ursatz_gui_failure_message(fallback));
+bool ursatz_gui_valid_id(const char *text) {
+  size_t length = text ? strlen(text) : 0;
+  if (length == 0 || length > 255) {
+    return false;
+  }
+  for (size_t i = 0; i < length; i++) {
+    unsigned char c = (unsigned char)text[i];
+    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-' || c == '_')) {
+      return false;
+    }
+  }
+  return true;
 }
 
 cJSON *ursatz_gui_query_params(const struct mg_request_info *info) {
@@ -303,7 +326,7 @@ cJSON *ursatz_gui_request_params(struct mg_connection *conn, ...) {
 }
 
 int ursatz_gui_failed_message(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return ursatz_gui_send_failure(conn, workshop_http_status(status, NULL), error->message);
+  return ursatz_gui_send_failure(conn, ursatz_gui_http_status(status, NULL), error->message);
 }
 
 int ursatz_gui_failed_error(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
@@ -314,7 +337,7 @@ int ursatz_gui_failed_error(struct mg_connection *conn, UrsatzStatus status, con
     text = cJSON_PrintUnformatted(object);
   }
   cJSON_Delete(object);
-  int http = workshop_http_status(status, NULL);
+  int http = ursatz_gui_http_status(status, NULL);
   if (!text) {
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"error\":\"out of memory\"}");
   }

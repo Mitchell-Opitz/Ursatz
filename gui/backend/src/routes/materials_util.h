@@ -15,7 +15,6 @@
 
 #include "jobs.h"
 #include "route_util.h"
-#include "workshop_internal.h"
 
 static const size_t kMaxRequestBodySize = 256 * 1024;
 static const int kMaxSegments = 8;
@@ -89,10 +88,6 @@ static inline const char *optional_string(const cJSON *body, const char *key, bo
     return NULL;
   }
   return item->valuestring;
-}
-
-static inline int send_material_failure(struct mg_connection *conn, UrsatzStatus result) {
-  return ursatz_gui_send_service_failure(conn, result, "material store failure");
 }
 
 /* The value of a query parameter into out; false when absent or too long. */
@@ -191,11 +186,6 @@ static inline int failed_material(struct mg_connection *conn, UrsatzStatus statu
 
 static inline int failed_material_error(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
   return ursatz_gui_failed_error(conn, status, error);
-}
-
-/* The failure answer of a workshop call: the status its error says (the Composer's refusal path travels as "path"). */
-static inline int send_service_error(struct mg_connection *conn, UrsatzStatus status, const UrsatzError *error) {
-  return send_failure_at(conn, workshop_http_status(status, NULL), error->message, error->path);
 }
 
 #endif /* URSATZ_GUI_ROUTE_MATERIALS_UTIL_H */
