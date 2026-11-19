@@ -11,7 +11,7 @@
  */
 #define CONTENT_HASH_FNV1A64_OFFSET 14695981039346656037ULL
 
-/* Folds size bytes into hash: (hash xor byte) times 1099511628211, for each byte in order. */
+/* Folds size bytes into hash: for each byte in order, hash xor the byte, times the FNV prime (content_hash.c). */
 uint64_t content_hash_fnv1a64(uint64_t hash, const void *data, size_t size);
 
 /* The hash as 16 lowercase hexadecimal digits and a terminating NUL. */

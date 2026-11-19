@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Fails when a shared primitive is copied outside its owner (R-622): a gcd function, __int128, a type named *Rational, *Fraction
-# or *Ratio, a table of the twelve pitch-class names, a scale-step table of integers, or a table of Roman numeral names. Scans
-# library/, analyzer/, composer/ and gui/backend/src (C and H files, no tests/ folder). The owners are library/model/core/rational.{c,h},
-# library/model/pitch/, library/theory/tonality/ and knowledge/. A hit that stays is listed in tools/ci/primitive-allow.txt as
-# "<path> <pattern>  # reason, phase" (patterns: gcd, int128, type, pitch-names, scale-steps, numerals). Prints each other hit as
+# or *Ratio, a table of the twelve pitch-class names, a scale-step table of integers, a Roman numeral table, or the FNV-1a 64 prime.
+# Scans library/, analyzer/, composer/ and gui/backend/src (C and H files, no tests/ folder). The owners are
+# library/model/core/rational.{c,h}, library/model/core/content_hash.c (the FNV prime), library/model/pitch/, library/theory/tonality/
+# and knowledge/. A hit that stays is listed in tools/ci/primitive-allow.txt as "<path> <pattern>  # reason, phase" (patterns: gcd,
+# int128, type, pitch-names, scale-steps, numerals, fnv). Prints each other hit as
 # "FAIL <file>:<line> <pattern>: <text>".
 set -euo pipefail
 
@@ -15,7 +16,7 @@ import os, re, sys
 
 root = sys.argv[1]
 scan = ["library", "analyzer", "composer", "gui/backend/src"]
-owners = ["library/model/core/rational.c", "library/model/core/rational.h", "library/model/pitch/", "library/theory/tonality/", "knowledge/"]
+owners = ["library/model/core/rational.c", "library/model/core/rational.h", "library/model/core/content_hash.c", "library/model/pitch/", "library/theory/tonality/", "knowledge/"]
 
 allowed = set()
 with open(os.path.join(root, "tools/ci/primitive-allow.txt"), encoding="utf-8") as handle:
@@ -31,7 +32,8 @@ TYPE = re.compile(r"\}\s*\w*(?:Rational|Fraction|Ratio)\s*;|typedef\s[^;{]*\s\w*
 PITCH_NAMES = re.compile(r'"C"\s*,\s*"(?:C#|Db|Cs)"\s*,\s*"D"\s*,\s*"(?:D#|Eb|Ds)"\s*,\s*"E"\s*,\s*"F"')
 SCALE_STEPS = re.compile(r"\{\s*(?:0\s*,\s*2\s*,\s*4\s*,\s*5\s*,\s*7\s*,\s*9\s*,\s*11|0\s*,\s*2\s*,\s*3\s*,\s*5\s*,\s*7\s*,\s*8\s*,\s*(?:10|11)|2\s*,\s*2\s*,\s*1\s*,\s*2\s*,\s*2\s*,\s*2\s*,\s*1)\s*\}")
 NUMERALS = re.compile(r'"I"\s*,\s*"II"\s*,\s*"III"\s*,\s*"IV"|"i"\s*,\s*"ii"\s*,\s*"iii"\s*,\s*"iv"')
-PATTERNS = [("gcd", GCD), ("int128", INT128), ("type", TYPE), ("pitch-names", PITCH_NAMES), ("scale-steps", SCALE_STEPS), ("numerals", NUMERALS)]
+FNV = re.compile(r"1099511628211|0x100000001b3", re.I)
+PATTERNS = [("fnv", FNV), ("gcd", GCD), ("int128", INT128), ("type", TYPE), ("pitch-names", PITCH_NAMES), ("scale-steps", SCALE_STEPS), ("numerals", NUMERALS)]
 
 failed = 0
 for top in scan:
