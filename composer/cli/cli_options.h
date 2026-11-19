@@ -52,6 +52,13 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
 /* Prints the document with 2-space indent and one space after each colon, as the commands write JSON. */
 void cli_print_json(const cJSON *document);
 
+/*
+ * The layers of a composed result into dir (made, with dir/readings): plan.json (the response's plan_json), realization.json and
+ * readings/composer.json (the "realization" and "reading" members of the response document, printed as cli_print_json does). The
+ * response was asked with "layers": true. Returns 0, or CLI_EXIT_WRITE after printing "cannot write '<file>'".
+ */
+int cli_write_layers(const char *dir, const ComposerResponse *response);
+
 /* The --style-without values as given; the API checks that each is a style category and how many there are. */
 typedef struct {
     const char *names[CLI_LIST_CAPACITY];

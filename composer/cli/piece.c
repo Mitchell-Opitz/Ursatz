@@ -26,6 +26,7 @@ typedef struct {
     bool check;
     bool plain_midi;
     const char *input;
+    const char *layers;     /* the folder of the three layers of the first version */
     char form[64];          /* the form of the request: "game-loop" for schema version 1 */
     const char *from;       /* the loop plan to work on (regenerate) */
     const char *request;    /* the request that plan was made from */
@@ -61,6 +62,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --check                  analyze both versions with the Ursatz Analyzer and pass over a seed whose analysis\n");
     fprintf(out, "                           contradicts the plan\n");
     fprintf(out, "  --out <loop-plan.json>   write the first version's plan (the loop's) as JSON\n");
+    fprintf(out, "  --layers <dir>           write the first version's three layers: plan.json, realization.json and readings/composer.json\n");
     fprintf(out, "  --ending-out <file>      write the ending version's plan as JSON (a form with an ending version only)\n");
     fprintf(out, "  --midi <file>            write the first version as a MIDI file, with loopStart and loopEnd markers for a loop\n");
     fprintf(out, "  --musicxml <file>        write the first version as MusicXML\n");
@@ -100,6 +102,8 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->seed;
         } else if (strcmp(arg, "--out") == 0) {
             target = &options->out;
+        } else if (strcmp(arg, "--layers") == 0) {
+            target = &options->layers;
         } else if (strcmp(arg, "--ending-out") == 0) {
             target = &options->ending_out;
         } else if (strcmp(arg, "--midi") == 0) {
@@ -171,7 +175,7 @@ static int check_edit_options(const Options *options) {
                 return cli_fail(CLI_EXIT_USAGE, "--variations needs --lane, --count and --out-dir\n%s", PIECE_VARIATIONS_USAGE_LINE);
             }
             if (options->out || options->ending_out || options->midi || options->musicxml || options->ending_midi ||
-                options->ending_musicxml || options->explain) {
+                options->ending_musicxml || options->explain || options->layers) {
                 return cli_fail(CLI_EXIT_USAGE, "--variations writes its files to --out-dir; the other output options do not apply");
             }
         } else if (options->count || options->out_dir) {
@@ -287,7 +291,8 @@ static int build_request(const Options *options, cJSON *piece, char **out) {
     if (ok && !options->variations) {
         ok = cJSON_AddBoolToObject(request, "midi", options->midi != NULL) &&
              cJSON_AddBoolToObject(request, "musicxml", options->musicxml != NULL) &&
-             cJSON_AddBoolToObject(request, "ending_musicxml", options->ending_musicxml != NULL);
+             cJSON_AddBoolToObject(request, "ending_musicxml", options->ending_musicxml != NULL) &&
+             (!options->layers || cJSON_AddTrueToObject(request, "layers"));
         if (ok && options->explain) {
             size_t length = strlen(options->explain);
             bool json = length >= 5 && cli_equals_ignore_case(options->explain + length - 5, ".json");
@@ -433,6 +438,8 @@ static void print_json(cJSON *document, const Options *options, const CliPending
     cJSON_DeleteItemFromObjectCaseSensitive(document, "plans");
     cJSON_DeleteItemFromObjectCaseSensitive(document, "explanation");
     cJSON_DeleteItemFromObjectCaseSensitive(document, "ending_musicxml");
+    cJSON_DeleteItemFromObjectCaseSensitive(document, "realization");
+    cJSON_DeleteItemFromObjectCaseSensitive(document, "reading");
     cJSON *files = cJSON_AddArrayToObject(document, "files");
     for (size_t i = 0; files && i < pending_count; i++) {
         cJSON_AddItemToArray(files, cJSON_CreateString(pending[i].final_path));
@@ -449,6 +456,9 @@ static int emit(const Options *options, const ComposerResponse *response, bool j
     CliPendingFile pending[OUTPUT_MAX];
     size_t pending_count = 0;
     int status = write_files(options, response, document, pending, &pending_count);
+    if (status == 0 && options->layers) {
+        status = cli_write_layers(options->layers, response);
+    }
     if (status == 0 && json) {
         print_json(document, options, pending, pending_count);
     } else if (status == 0) {

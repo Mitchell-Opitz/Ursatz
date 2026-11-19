@@ -15,13 +15,13 @@ int run_piece(int argc, char **argv);
 /* The line of the usage text that names the subcommand. */
 #define PIECE_USAGE_LINE                                                                                          \
     "       ursatz-composer piece <request.json> [--seed <n>] [--check] [--out <loop-plan.json>] "                \
-    "[--ending-out <ending-plan.json>] [--midi <loop.mid>] [--musicxml <loop.musicxml>] [--ending-midi <file>] " \
+    "[--layers <dir>] [--ending-out <ending-plan.json>] [--midi <loop.mid>] [--musicxml <loop.musicxml>] [--ending-midi <file>] " \
     "[--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]"
 
 /* The line that regenerates a section of a loop plan the command wrote. */
 #define PIECE_REGENERATE_USAGE_LINE                                                                               \
     "       ursatz-composer piece --from <loop-plan.json> --request <request.json> --regenerate <section id>|none " \
-    "[--lane harmony|bass|melody|inner|all] [--seed <n>] [--check] [--out <loop-plan.json>] [--ending-out <file>] " \
+    "[--lane harmony|bass|melody|inner|all] [--seed <n>] [--check] [--out <loop-plan.json>] [--layers <dir>] [--ending-out <file>] " \
     "[--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] " \
     "[--explain <file>] [--format text|json]"
 

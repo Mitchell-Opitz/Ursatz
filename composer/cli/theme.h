@@ -21,6 +21,6 @@ int run_theme(int argc, char **argv);
 /* The line of the usage text that names the subcommand. */
 #define THEME_USAGE_LINE                                                                                          \
     "       ursatz-composer theme <request.json> [--seed <n>] [--suggest <n>] [--check] [--out <file.json>] "     \
-    "[--midi <file>] [--musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]"
+    "[--layers <dir>] [--midi <file>] [--musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]"
 
 #endif
