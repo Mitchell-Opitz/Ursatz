@@ -618,7 +618,7 @@ static UrsatzStatus write_text(Build *build, const char *kind, const char *id, c
       .section_count = build->draft_count,
       .knowledge = workshop_knowledge_snapshot(),
   };
-  UrsatzError analyzer_error = {{0}};
+  UrsatzError analyzer_error = {{0}, {0}};
   UrsatzStatus status = analyzer_text_export_material(&material, text, &analyzer_error);
   free(sections);
   if (status == URSATZ_OK) {

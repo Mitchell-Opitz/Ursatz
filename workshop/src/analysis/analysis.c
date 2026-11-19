@@ -369,7 +369,7 @@ static void meta_backfill_ursatz_commit(const char *dir_path, cJSON *meta, const
         if (text) {
             char meta_path[400];
             snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-            (common_file_write_atomic(meta_path, text, strlen(text), NULL) == URSATZ_OK);
+            (void)common_file_write_atomic(meta_path, text, strlen(text), NULL); /* best effort: the backfill is made again on the next read */
             free(text);
         }
     }

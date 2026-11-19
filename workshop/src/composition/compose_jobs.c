@@ -105,7 +105,7 @@ void workshop_compose_job_run(void *input, const UrsatzJob *composer_job, Worksh
   const WorkshopComposeJob *job = input;
   cJSON *item = NULL;
   cJSON *made = NULL;
-  UrsatzError error = {{0}};
+  UrsatzError error = {{0}, {0}};
   UrsatzStatus result = URSATZ_ERR_INTERNAL;
   const char *invalid_text = "invalid piece";
   const char *failed_text = "the piece could not be composed";

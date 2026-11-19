@@ -623,7 +623,7 @@ static void mark_interrupted(void) {
             set_member(run, "finished_at", cJSON_CreateString(now));
             char *text = cJSON_PrintUnformatted(run);
             if (text) {
-                (common_file_write_atomic(path, text, strlen(text), NULL) == URSATZ_OK);
+                (void)common_file_write_atomic(path, text, strlen(text), NULL);
             }
             free(text);
         }
