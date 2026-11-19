@@ -1,6 +1,6 @@
 # Hearing the phrase form
 
-`form_hear_in` (`src/form/form_internal.h`, over the run's hearing) hears the phrase-level form of a written plan through the library chain.
+`form_hear_in` (`src/check/form_internal.h`, over the run's hearing) hears the phrase-level form of a written plan through the library chain.
 There is one analysis path in the Composer (R-257, R-618): the plan is rendered once, `analysis_chain_run_score` (`<chain/analysis_chain.h>`)
 runs on the notes that start inside the span (an `ImportedScore` view), and `form_hear_in` reads the themes, phrases and cadences of the
 chain (`analysis_chain_themes`, `analysis_chain_phrases`, `analysis_chain_cadences`) and its entries from `analysis_chain_result`. It is how

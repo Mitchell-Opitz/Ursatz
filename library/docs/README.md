@@ -74,6 +74,9 @@ Every Markdown doc in the repository, by topic. [Back to the repository README](
 
 ## Formats and schemas
 
+- Plan, format 6: [docs/modules/plan-format.md](modules/plan-format.md), schema [plan/schema/plan.v6.schema.json](../plan/schema/plan.v6.schema.json).
+- Realization, format 1 (`ursatz-realization`): [docs/modules/realization.md](modules/realization.md), schema [realization/schema/realization.v1.schema.json](../realization/schema/realization.v1.schema.json).
+- Reading, format 1 (`ursatz-reading`): [docs/modules/reading.md](modules/reading.md), schema [reading/schema/reading.v1.schema.json](../reading/schema/reading.v1.schema.json).
 - [docs/modules/export.md](modules/export.md): The MusicXML output format and its limits.
 - [docs/modules/io-midi.md](modules/io-midi.md): The MIDI input format reading.
 - [docs/modules/io-musicxml.md](modules/io-musicxml.md): The MusicXML input subset.

@@ -15,6 +15,18 @@ Each part builds on the library. The Analyzer and the Composer are siblings: nei
 
 `third_party/` holds the vendored cJSON, ezxml and civetweb. Nothing is fetched at configure time.
 
+## The three layers
+
+What the platform holds about a piece is in three layers, each a JSON file with its own schema (R-625 to R-636, P62):
+
+| Layer | What it is | Format | Schema |
+|---|---|---|---|
+| Realization | the music as written: lines, performer parts and their notes, the meters and the tempo; one per piece | `ursatz-realization` 1 | [realization.v1.schema.json](library/realization/schema/realization.v1.schema.json) |
+| Reading | what one reader (the Analyzer, the Composer or a person) says about one realization, as claims naming its notes; the realization is named by its digest | `ursatz-reading` 1 | [reading.v1.schema.json](library/reading/schema/reading.v1.schema.json) |
+| Plan | the piece as a tree of sections with its lanes: what the Composer composes from | `ursatz-plan` 6 | [plan.v6.schema.json](library/plan/schema/plan.v6.schema.json) |
+
+`ursatz-analyzer --layers <dir>` writes the realization and the Analyzer's reading; `--model-plan <file>` writes the plan a reading gives (`reading_to_plan`). `ursatz-composer theme`, `piece` and `fill` take `--layers <dir>` and write the plan, the realization and the Composer's reading of it. See [library/docs/modules/reading.md](library/docs/modules/reading.md).
+
 ## Build and test
 
 From the repository root:

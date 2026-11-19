@@ -11,6 +11,7 @@ Path `library/reading/`, target `ursatz_reading`, on `model`, `theory`, `realiza
 | `reading.h` | `Reading`, `ReadingSource`, `ReadingTarget`, the eight claim types, `reading_create`, `reading_destroy`, the `reading_add_*` writers and the `reading_*_count` and `reading_*_at` readers |
 | `reading_build.h` | `reading_build`: the reading of a chain run |
 | `reading_json.h` | `reading_to_json`, `reading_from_json`, `ReadingJsonError` |
+| `reading_plan.h` | `reading_to_plan` (R-635): the minimal plan a reading gives over a movement: the form over the piece, the meters, a section for each top-level section claim, the keys of the region claims and the chords with a numeral, all Given, no notes, `derived_from` naming the reading and the realization digest; a reading with no region is refused; `ReadingPlanError` |
 
 ## The reading
 

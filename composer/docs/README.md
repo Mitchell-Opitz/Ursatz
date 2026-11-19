@@ -103,4 +103,5 @@ Index of every Composer doc, grouped by what you want to do. Back to the [reposi
 - [changelog-archive-4.md](changelog-archive-4.md): the changelog entries of L4 and P47.
 - [changelog-archive-5.md](changelog-archive-5.md): the changelog entries of L3, P46 and L2.
 - [changelog-archive-7.md](changelog-archive-7.md): the changelog entries of P55, P53 and P52.
+- [changelog-archive-8.md](changelog-archive-8.md): the changelog entries of P60 and P59.
 - [changelog-archive-6.md](changelog-archive-6.md): the changelog entries of P45, L1 and P44.

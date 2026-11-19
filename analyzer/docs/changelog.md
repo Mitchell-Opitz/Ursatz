@@ -1,0 +1,7 @@
+# Changelog
+
+The Analyzer's changes by phase. Back to the [docs index](README.md).
+
+## Unreleased (phase P62)
+
+The Analyzer writes the layers and the model plan (R-630, R-631, R-635; B9 to B11, B14). `AnalyzerResult` holds the realization of the piece (`imported_score_realization`) and the Analyzer's reading of it (`reading_build`), `analyzer_result_realization` and `analyzer_result_reading`. `ursatz-analyzer --layers <dir> <input>` writes `realization.json` and `readings/analyzer.json` (the schemas in `library/realization/schema` and `library/reading/schema`); `--model-plan <file> <input>` writes the plan the reading gives (`reading_to_plan`, `derived_from` naming the reading and the realization digest, no notes). The analysis document is an export of the reading (`analysis_document_build_from_reading`): its builder is split by area (`document_*.c`) and its bytes are pinned by `test_document_bytes_smoke` (`bach-114.analysis.bytes.json`); the five snapshots and the text exports are as they were. The stages write typed results (`ChordCandidate`, `KeyStructure`) where they wrote claims, and the claim types are gone from the library, so the document and the corpus index are as they were. `tools/annotations/annotation_to_reading.py` turns a verified annotation into a person's reading of the same realization (`tests/fixtures/readings/mozart-545.michelle.json`). See [analysis-result.md](analysis-result.md).

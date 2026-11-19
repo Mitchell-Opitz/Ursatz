@@ -8,6 +8,7 @@ Every doc in the Ursatz-Analyzer repo, one line each. Back to the [repo README](
 
 ## Build and test
 
+- [changelog.md](changelog.md): the Analyzer's changes by phase.
 - [building.md](building.md): build requirements, the test list, the include and file scope checks, the theory taken from the library.
 
 ## Using it
