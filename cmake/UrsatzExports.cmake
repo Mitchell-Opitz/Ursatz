@@ -11,6 +11,7 @@
 # (tools/ci/check-reach.sh) turns it OFF, as it reads the plain archives.
 
 find_program(URSATZ_OBJCOPY objcopy)
+find_program(URSATZ_NM nm)
 find_program(URSATZ_LD ld)
 set(_ursatz_localize_default OFF)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND URSATZ_OBJCOPY AND URSATZ_LD)

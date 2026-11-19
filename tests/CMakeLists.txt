@@ -7,6 +7,14 @@ ursatz_test(layer_table COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/cmake/
 # No copy of a shared primitive (a gcd, a 128-bit integer, a rational type, the pitch and Roman numeral names, the scale steps) outside its owner
 # (tools/ci/check-primitives.sh, R-622); what stays is in tools/ci/primitive-allow.txt.
 ursatz_test(primitive_owners COMMAND bash ${CMAKE_SOURCE_DIR}/tools/ci/check-primitives.sh)
+# Each application library exports only the names of its export file (R-640; the workshop joins in P63 B11).
+if(URSATZ_NM AND URSATZ_LOCALIZE_EXPORTS)
+    ursatz_test(app_exports COMMAND ${CMAKE_COMMAND} -DNM=${URSATZ_NM}
+        "-DCHECKS=$<TARGET_FILE:ursatz_analyzer>|${CMAKE_SOURCE_DIR}/analyzer/src/exports.txt;$<TARGET_FILE:ursatz_composer>|${CMAKE_SOURCE_DIR}/composer/src/exports.txt"
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/check_exports.cmake)
+else()
+    message(STATUS "Ursatz tests: app_exports is not registered (needs nm and URSATZ_LOCALIZE_EXPORTS)")
+endif()
 
 # Test support every part shares: checks, files, temp paths and JSON (tests/support/ursatz_test.h), and the HTTP client of
 # the GUI backend tests (tests/support/test_http.h). A part's own helpers stay in its tests/support folder.
