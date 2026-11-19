@@ -18,17 +18,6 @@
 /* The leap, in semitones, that a step the other way must follow. */
 #define SEAM_LEAP 7
 
-NodeId seam_section_at(const Plan *plan, Rational time) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
-            rational_cmp(plan_node_span(plan, id).start, time) == 0 &&
-            plan_section_has_role(plan, id, SECTION_ROLE_SEAM)) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
-}
-
 /*
  * The chord of a numeral in the mode. A numeral that does not parse (an applied chord) stands for the representative
  * chord of the function the plan gives it: I, IV or V.

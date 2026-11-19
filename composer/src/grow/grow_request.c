@@ -135,10 +135,6 @@ bool grow_slot_used(const SectionPairing *pairing, GrowSlot slot, size_t *units)
     return used;
 }
 
-bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells) {
-    return harmony_rhythm_cells_per_bar(meter, cells);
-}
-
 GrowMotiveFit grow_motive_fit(const Motive *motive, Rational bar, size_t idea_bars) {
     Rational span = {0, 1};
     long long bars = 0;

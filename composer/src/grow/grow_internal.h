@@ -6,19 +6,14 @@
 #include <ursatz_composer/variant_registry.h>
 
 #include "motive/motive_fidelity.h"
+#include "util/plan_util.h"
 
 /* The bars the material section holds: room for the motive and every motive made from it. */
 #define GROW_MATERIAL_BARS 8
 #define GROW_THEME_NAME "theme"
-#define GROW_MATERIAL_NAME "material"
-#define GROW_SOURCE_NAME "m0"
 #define GROW_ACCOMPANIMENT_NAME "acc"
 /* The material nodes of the slot motives: "s1" contrasting, "s2" continuation, "s3" cadential (grow.h GrowSlot). */
 
-/* The pitch of the note an open bass, melody or inner voice span holds until an operator writes it. */
-#define BASS_PLACEHOLDER 40
-#define MELODY_PLACEHOLDER 60
-#define INNER_PLACEHOLDER 55
 #define GROW_PAYLOAD_MAGIC 0x47525731UL
 /* Fragments of the basic idea are this many notes at most; the first is the leading ones of the motive. */
 #define GROW_FRAGMENT_MAX 3
@@ -270,12 +265,6 @@ PlanResult grow_add_melody_written(GrowBuild *build, NodeId idea, const PlanMoti
 /* The key lane over the section: see grow_theme.c. False when the lane does not tile the section. */
 bool grow_read_keys(const Plan *plan, GrowThemeRequest *request);
 /* The first bar of the material section a run of `wanted` motive bars can go in (see grow_theme.c). */
-/*
- * The most motives grow-theme makes in the material, one bar each: the two segments of the fragments and a liquidation for each of
- * the two fragments and the cadential idea (apply takes a bar for every one it makes).
- */
-#define GROW_MADE_NODES 5
-
 size_t grow_first_free_bar(const Plan *plan, NodeId material, PlanSpan material_span, Rational bar, size_t wanted);
 
 /*
@@ -484,9 +473,6 @@ bool grow_construction_buildable(const PlanMeter *meter, size_t bars, const Sect
                                  CadenceType cadence, CadenceType first, const SectionConstruction *construction);
 /* Whether an accompaniment can be written in the meter, as a homophonic texture, Alberti only in a simple meter. */
 bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment);
-
-/* The cells in a bar the harmony operators place chords on; false for a meter they do not support. */
-bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells);
 
 /* How a motif compares with the idea it fills: shorter (grown to the idea), as long (placed as written), longer. */
 typedef enum { GROW_FIT_SHORTER, GROW_FIT_WHOLE, GROW_FIT_LONGER } GrowMotiveFit;

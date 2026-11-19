@@ -190,8 +190,6 @@ void melody_context_zero(MelodyContext *context);
 /* The figures that may put a non-chord tone on a strong beat (the checker's strong_figures). */
 #define MELODY_STRONG_FIGURES (MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION | MELODY_NCT_RETARDATION)
 
-/* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
-bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
 /* The index of the chord sounding at a position of the phrase. */
 size_t melody_chord_at(const MelodyContext *context, Rational position);
 
@@ -314,7 +312,7 @@ bool melody_nct_types(const MelodyCandidate *melody, unsigned *types);
 bool melody_nct_survey(const MelodyCandidate *melody, unsigned *types, bool *unclassified);
 /* The MELODY_NCT_ bit of a NonChordTone (an int), 0 for a type the operator has no bit for. */
 unsigned melody_nct_bit(int tone);
-/* The SHAPING_ bits (check/shaping.h) of the shaping rules the melody does not hold, whatever params.plain_shaping says. */
+/* The SHAPING_ bits (util/shaping.h) of the shaping rules the melody does not hold, whatever params.plain_shaping says. */
 unsigned melody_shaping_broken(const MelodyCandidate *melody);
 /* The checker's verdict on a melody candidate's payload. */
 bool melody_check(const void *payload, FillCheck *out);
@@ -340,8 +338,5 @@ bool melody_realize(const MelodyContext *context, const MelodyFillParams *params
  * five. Returns how many.
  */
 size_t melody_realize_shifts(const MelodyContext *context, const MelodyFillParams *params, int *shifts);
-
-/* How many of the standard counterpoint melodic rules have a soft preference. */
-unsigned melody_melodic_soft_rules(void);
 
 #endif

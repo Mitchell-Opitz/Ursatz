@@ -10,6 +10,7 @@
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
 #include <plan/plan_lanes.h>
+#include "util/plan_util.h"
 
 /*
  * The phrase-model harmony operator: a Fill operator for harmony lane spans.
@@ -41,12 +42,6 @@
  */
 
 #define HARMONY_PHRASE_OPERATOR_NAME "harmony-phrase-model"
-
-/*
- * Whether the harmony operators can write for a meter: 2/4, 3/4, 4/4 and 6/8, where a chord may start on a
- * strong beat.
- */
-bool harmony_meter_supported(const PlanMeter *meter);
 
 /*
  * The fewest cells a phrase can have and still end in the cadence, in a meter the operators support; 0 for any

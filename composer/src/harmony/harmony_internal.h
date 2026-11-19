@@ -205,9 +205,6 @@ bool harmony_read_lane_keys(const Plan *plan, PlanSpan span, HarmonyMode mode, P
 /* What the recognizer hears at the end of the phrase, and whether it arrives on the last chord. */
 bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at_end);
 
-/* How many cells a bar of the meter has, which is where a chord may start: one per accent beat of a simple meter, one per
-   beat group of a compound one (R-590). False for a meter not supported. */
-bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells);
 /* The strength of the cell with this index in its bar: the first is strong, any other medium. */
 BeatStrength harmony_rhythm_cell_strength(size_t cell_in_bar);
 
@@ -367,7 +364,7 @@ typedef struct {
     unsigned soft_held;
     unsigned soft_total;
     CadenceType heard;
-    unsigned shaping_broken; /* SHAPING_ bits of the shaping rules that did not hold (see check/shaping.h) */
+    unsigned shaping_broken; /* SHAPING_ bits of the shaping rules that did not hold (see util/shaping.h) */
 } PhraseVerdict;
 
 /*
@@ -574,5 +571,10 @@ bool harmony_skeleton_bass(SkeletonCandidate *skeleton, const HarmonyBassParams 
  * carrying the cadence.
  */
 PlanResult harmony_skeleton_apply(Plan *plan, const SkeletonCandidate *skeleton);
+
+/* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
+bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
+/* How many of the standard counterpoint melodic rules have a soft preference. */
+unsigned melody_melodic_soft_rules(void);
 
 #endif

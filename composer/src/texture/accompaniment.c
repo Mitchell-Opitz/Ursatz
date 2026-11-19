@@ -79,45 +79,6 @@ bool accomp_chord_tones(const SpelledKey *key, const PhraseChord *chord, int pcs
     return true;
 }
 
-/* The notes of a lane over the target that sound inside it, from its start. False if any span there is open. */
-bool accomp_read_line(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span, Rational origin,
-                      Rational length, AccompLine *out, size_t *count) {
-    LaneSpanId ids[ACCOMP_MAX_LINE];
-    size_t found = plan_lane_find(plan, lane, voice, span, ids, ACCOMP_MAX_LINE);
-    *count = 0;
-    if (found == 0 || found > ACCOMP_MAX_LINE) {
-        return false;
-    }
-    for (size_t i = 0; i < found; i++) {
-        Rational base;
-        const PlanNotes *notes;
-        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED) {
-            return false;
-        }
-        base = plan_lane_span_span(plan, ids[i]).start;
-        notes = &plan_lane_span_payload(plan, ids[i])->notes;
-        for (size_t n = 0; n < notes->note_count; n++) {
-            Rational duration = notes->notes[n].duration;
-            if (!position_is_positive(duration)) {
-                return false;
-            }
-            Rational onset = position_add(position_sub(base, origin), notes->notes[n].offset);
-            Rational end = position_add(onset, duration);
-            if (rational_cmp(end, POSITION_ZERO) <= 0 || rational_cmp(onset, length) >= 0) {
-                continue;
-            }
-            if (*count >= ACCOMP_MAX_LINE) {
-                return false;
-            }
-            out[*count].onset = rational_cmp(onset, POSITION_ZERO) < 0 ? POSITION_ZERO : onset;
-            out[*count].end = rational_cmp(end, length) > 0 ? length : end;
-            out[*count].pitch = notes->notes[n].midi;
-            (*count)++;
-        }
-    }
-    return true;
-}
-
 /* The span of voice (2 or 3) that is to be written with the target: none, or an open one over the same time. */
 bool accomp_read_voice(const Plan *plan, int voice, PlanSpan span, LaneSpanId *out) {
     LaneSpanId ids[2];

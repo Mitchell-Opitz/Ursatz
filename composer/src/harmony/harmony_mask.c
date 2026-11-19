@@ -1,0 +1,49 @@
+#include "harmony/harmony_internal.h"
+
+#include <theory/counterpoint/melodic_rules.h>
+#include <theory/harmony/harmony_applied.h>
+
+#include "util/util.h"
+
+/* The chord masks and the melodic rule count the melody, the accompaniment and the counterpoint read through the harmony. */
+
+bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
+    int intervals[4];
+    size_t count;
+    int root;
+    if (chord->applied) {
+        if (!harmony_applied_intervals(&chord->applied_chord, intervals, &count)) {
+            return false;
+        }
+        root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
+    } else {
+        if (!harmony_diatonic_intervals(harmony_key_mode(key), &chord->chord, intervals, &count)) {
+            return false;
+        }
+        /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
+        root = composer_key_is_minor(key) && chord->chord.leading_tone
+                   ? 11
+                   : harmony_applied_scale_semitone(harmony_key_mode(key), chord->chord.degree);
+    }
+    if (root < 0) {
+        return false;
+    }
+    *mask = 0;
+    *seventh = 0;
+    for (size_t k = 0; k < count; k++) {
+        unsigned bit = 1u << ((spelled_key_tonic_pitch_class(key) + root + intervals[k]) % 12);
+        *mask |= bit;
+        if (k == 3) {
+            *seventh = bit;
+        }
+    }
+    return true;
+}
+
+unsigned melody_melodic_soft_rules(void) {
+    unsigned count = 0;
+    for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
+        count += standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)rule) != NULL;
+    }
+    return count;
+}

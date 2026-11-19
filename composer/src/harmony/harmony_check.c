@@ -24,7 +24,7 @@
 #include <ursatz_composer/harmony_sequence.h>
 #include <ursatz_composer/seam_hear.h>
 
-#include "check/shaping.h"
+#include "util/shaping.h"
 #include "harmony/harmony_internal.h"
 #include "util/util.h"
 

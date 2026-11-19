@@ -6,23 +6,18 @@
 
 #include <ursatz_composer/accompaniment.h>
 
-#include "melody/melody_internal.h"
+#include "harmony/harmony_internal.h"
+#include "util/plan_util.h"
+#include "util/position.h"
 
 /* Time inside the operator is a Rational position in whole notes from the start of the target (util/position.h). */
 #define ACCOMP_VOICES 3
 #define ACCOMP_MAX_NOTES 256
-#define ACCOMP_MAX_LINE 256
 #define ACCOMP_MAX_BEATS 64
 #define ACCOMP_PAYLOAD_MAGIC 0x41434331UL
 /* An eighth note, the step of the arpeggiated and Alberti figures. */
 #define ACCOMP_EIGHTH ((Rational){1, 8})
 
-/* One sounding note of the bass or the melody, clipped to the target. */
-typedef struct {
-    Rational onset;
-    Rational end;
-    int pitch;
-} AccompLine;
 
 /* The most notes of an accompaniment motive. */
 #define ACCOMP_MAX_MOTIVE 64
@@ -101,9 +96,6 @@ bool accomp_read(const Plan *plan, LaneSpanId target, AccompContext *out);
 
 /* The pitch classes of a chord in the key, root first (3 or 4 of them). */
 bool accomp_chord_tones(const SpelledKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
-/* The notes of a lane and voice over a span that sound inside it, from origin; false if any span there is open. */
-bool accomp_read_line(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span, Rational origin,
-                      Rational length, AccompLine *out, size_t *count);
 /* The span of an inner voice (2 or 3) that is to be written with a target: none, or an open one over the same time. */
 bool accomp_read_voice(const Plan *plan, int voice, PlanSpan span, LaneSpanId *out);
 

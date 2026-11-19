@@ -53,6 +53,7 @@ add_library(ursatz_composer STATIC
     fill/fill_suggest.c
     fill/variations.c
     harmony/harmony_roman.c
+    harmony/harmony_mask.c
     harmony/harmony_rhythm.c
     harmony/harmony_request.c
     harmony/harmony_progression.c
@@ -200,7 +201,7 @@ target_link_libraries(ursatz_composer
 )
 # The tests reach the internal headers and the libraries the sources use; no consumer does.
 add_library(ursatz_composer_internal INTERFACE)
-target_include_directories(ursatz_composer_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(ursatz_composer_internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ursatz_composer_internal INTERFACE
     ursatz_io ursatz_realization ursatz_plan ursatz_reading ursatz_analysis ursatz_chain cjson
 )

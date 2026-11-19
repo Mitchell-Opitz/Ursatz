@@ -17,26 +17,6 @@
 /* The placeholder note an open melody span holds until motive-invent writes it. */
 #define INVENT_PLACEHOLDER 60
 
-const char *piece_result_name(PieceResult result) {
-    switch (result) {
-    case PIECE_OK:
-        return "ok";
-    case PIECE_ERR_NULL:
-        return "null argument";
-    case PIECE_ERR_ALLOC:
-        return "allocation failed";
-    case PIECE_ERR_MOTIVE_TOO_LONG:
-        return "motive too long";
-    case PIECE_ERR_BAD_REQUEST:
-        return "bad request";
-    case PIECE_ERR_STUCK:
-        return "stuck";
-    case PIECE_ERR_BAD_SIZE:
-        return "bad size";
-    }
-    return "unknown";
-}
-
 size_t piece_material_bars_of(size_t section_count, size_t motive_bars) {
     return motive_bars + MATERIAL_BARS_PER_SECTION * motive_bars * section_count;
 }

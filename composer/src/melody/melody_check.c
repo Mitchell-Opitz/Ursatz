@@ -18,7 +18,7 @@
 #include <plan/plan_state.h>
 #include <ursatz_composer/seam_hear.h>
 
-#include "check/shaping.h"
+#include "util/shaping.h"
 #include "melody/melody_internal.h"
 #include "util/plan_util.h"
 #include "util/util.h"
@@ -238,14 +238,6 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, u
 /* The pitch spelled as a degree of the key; the caller destroys it. */
 static PitchSpelling *spell_melody(const SpelledKey *key, int pitch) {
     return harmony_spell_pitch(key, pitch_degree(key, pitch), pitch);
-}
-
-unsigned melody_melodic_soft_rules(void) {
-    unsigned count = 0;
-    for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
-        count += standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)rule) != NULL;
-    }
-    return count;
 }
 
 static unsigned harmonic_soft_rules(void) {

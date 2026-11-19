@@ -38,39 +38,6 @@ static bool probe_length(Rational *out) {
     return rational_make(1, MELODY_FINEST_NOTE_DENOMINATOR, out) == RATIONAL_OK;
 }
 
-bool melody_chord_mask(const SpelledKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
-    int intervals[4];
-    size_t count;
-    int root;
-    if (chord->applied) {
-        if (!harmony_applied_intervals(&chord->applied_chord, intervals, &count)) {
-            return false;
-        }
-        root = harmony_applied_root_semitone(harmony_key_mode(key), &chord->applied_chord);
-    } else {
-        if (!harmony_diatonic_intervals(harmony_key_mode(key), &chord->chord, intervals, &count)) {
-            return false;
-        }
-        /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = composer_key_is_minor(key) && chord->chord.leading_tone
-                   ? 11
-                   : harmony_applied_scale_semitone(harmony_key_mode(key), chord->chord.degree);
-    }
-    if (root < 0) {
-        return false;
-    }
-    *mask = 0;
-    *seventh = 0;
-    for (size_t k = 0; k < count; k++) {
-        unsigned bit = 1u << ((spelled_key_tonic_pitch_class(key) + root + intervals[k]) % 12);
-        *mask |= bit;
-        if (k == 3) {
-            *seventh = bit;
-        }
-    }
-    return true;
-}
-
 size_t melody_chord_at(const MelodyContext *context, Rational position) {
     size_t chord = 0;
     for (size_t i = 1; i < context->count; i++) {

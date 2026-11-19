@@ -8,7 +8,9 @@
 
 #include <ursatz_composer/counterpoint.h>
 
-#include "texture/texture_internal.h"
+#include "harmony/harmony_internal.h"
+#include "util/plan_util.h"
+#include "util/position.h"
 
 /* The most notes of the given line: standard-counterpoint's most bars. */
 #define CP_MAX_NOTES 64

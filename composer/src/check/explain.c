@@ -11,7 +11,7 @@
 #include <plan/plan_lanes.h>
 #include <ursatz_composer/regenerate.h>
 
-#include "check/shaping.h"
+#include "util/shaping.h"
 #include "util/composer_json.h"
 #include "style/style_internal.h"
 #include "util/plan_util.h"
