@@ -99,6 +99,9 @@ static ImportedScoreResult plan_parts(const ImportedSource *source, PartPlan **o
 }
 
 static ImportedScoreResult map_error(RealizationResult result) {
+    if (result == REALIZATION_OK) {
+        return IMPORTED_SCORE_OK;
+    }
     return result == REALIZATION_ERR_ALLOC ? IMPORTED_SCORE_ERR_ALLOC : IMPORTED_SCORE_ERR_FORMAT;
 }
 
