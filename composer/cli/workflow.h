@@ -37,14 +37,14 @@ void cli_read_plan_held(const char *path, cJSON **plan, CliHeldFailure *held);
  * "cannot read plan '<file>': x". When the failure is at /plan and the file could not be read (held), the held message
  * is printed instead. Returns the exit status.
  */
-int cli_fail_plan_api(ComposerStatus status, const ComposerError *error, const char *plan_file, const CliHeldFailure *held);
+int cli_fail_plan_api(UrsatzStatus status, const UrsatzError *error, const char *plan_file, const CliHeldFailure *held);
 
 /* --- calling --------------------------------------------------------------------------------------- */
 
 /* Calls the entry with the request (taken and deleted). */
-typedef ComposerStatus (*CliEntry)(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+typedef UrsatzStatus (*CliEntry)(const ComposerContext *context, const char *request_json, const UrsatzJob *job,
                                    ComposerResponse *out);
-ComposerStatus cli_call(CliEntry entry, cJSON *request, ComposerResponse *out);
+UrsatzStatus cli_call(CliEntry entry, cJSON *request, ComposerResponse *out);
 
 /* --- the node a command works on ------------------------------------------------------------------- */
 
@@ -152,6 +152,6 @@ void cli_print_candidates_text(const cJSON *document);
 void cli_print_composed_json(cJSON *document, const char *const *files, size_t file_count);
 
 /* The stuck report of a failed fill or regenerate: the error line, the targets left open and why. */
-int cli_report_stuck(const ComposerError *error, const ComposerResponse *response);
+int cli_report_stuck(const UrsatzError *error, const ComposerResponse *response);
 
 #endif

@@ -122,7 +122,7 @@ static size_t numeral_count(const char *text) {
 /* --- reading the request --------------------------------------------------------------------------- */
 
 /* A whole number from 0 to maximum, a JSON number or digits; "<name> must be a whole number, not '<value>'". */
-static bool read_number(const cJSON *object, const char *name, unsigned long maximum, unsigned long *out, ComposerError *error) {
+static bool read_number(const cJSON *object, const char *name, unsigned long maximum, unsigned long *out, UrsatzError *error) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
     if (!item || cJSON_IsNull(item)) {
         return true;
@@ -136,7 +136,7 @@ static bool read_number(const cJSON *object, const char *name, unsigned long max
     if (!request_parse_whole_number(text, maximum, out)) {
         char path[64];
         snprintf(path, sizeof path, "/%s", name);
-        api_fail(error, COMPOSER_ERR_REQUEST, path, "%s must be a whole number, not '%s'", name, text);
+        api_fail(error, URSATZ_ERR_REQUEST, path, "%s must be a whole number, not '%s'", name, text);
         return false;
     }
     return true;
@@ -157,31 +157,31 @@ static bool member_text(const cJSON *object, const char *name, char *out, size_t
     return true;
 }
 
-static ComposerStatus read_given(PlanBuild *state, ComposerError *error) {
+static UrsatzStatus read_given(PlanBuild *state, UrsatzError *error) {
     const cJSON *list = cJSON_GetObjectItemCaseSensitive(state->root, "given");
     if (!list || cJSON_IsNull(list)) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     if (!cJSON_IsArray(list)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/given", "given must be a list of phrases, progressions and bass lines");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/given", "given must be a list of phrases, progressions and bass lines");
     }
     const cJSON *item = NULL;
     cJSON_ArrayForEach(item, list) {
         char base[48];
         snprintf(base, sizeof base, "/given/%zu", state->given_count);
         if (state->given_count == MAX_GIVEN) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/given", "plan takes %d given phrases, progressions and bass lines at most",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/given", "plan takes %d given phrases, progressions and bass lines at most",
                             MAX_GIVEN);
         }
         if (!cJSON_IsObject(item)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, base, "a given material must be an object");
+            return api_fail(error, URSATZ_ERR_REQUEST, base, "a given material must be an object");
         }
         Given *given = &state->given[state->given_count];
         const char *kind = NULL;
         bool present = false;
         if (!api_member_string(item, "kind", &kind, &present, error) || !kind) {
-            return kind ? COMPOSER_ERR_REQUEST
-                        : api_fail(error, COMPOSER_ERR_REQUEST, base, "a given material needs a kind: melody, progression, "
+            return kind ? URSATZ_ERR_REQUEST
+                        : api_fail(error, URSATZ_ERR_REQUEST, base, "a given material needs a kind: melody, progression, "
                                                                       "like_progression or bass");
         }
         given->from_corpus = strcmp(kind, "like_progression") == 0;
@@ -192,19 +192,19 @@ static ComposerStatus read_given(PlanBuild *state, ComposerError *error) {
         } else if (strcmp(kind, "progression") == 0 || given->from_corpus) {
             given->kind = GIVEN_PROGRESSION;
         } else {
-            return api_fail(error, COMPOSER_ERR_REQUEST, base,
+            return api_fail(error, URSATZ_ERR_REQUEST, base,
                             "kind must be melody, progression, like_progression or bass, not '%s'", kind);
         }
         if (!api_member_string(item, "source", &given->source, &present, error) ||
             !api_member_string(item, "at", &given->at_text, &present, error)) {
-            return COMPOSER_ERR_REQUEST;
+            return URSATZ_ERR_REQUEST;
         }
         if (given->kind == GIVEN_PROGRESSION) {
             if (!api_member_string(item, "numerals", &given->numerals, &present, error)) {
-                return COMPOSER_ERR_REQUEST;
+                return URSATZ_ERR_REQUEST;
             }
             if (!given->numerals) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, base, "a %s needs its numerals", kind);
+                return api_fail(error, URSATZ_ERR_REQUEST, base, "a %s needs its numerals", kind);
             }
             if (!given->source) {
                 given->source = given->numerals;
@@ -213,23 +213,23 @@ static ComposerStatus read_given(PlanBuild *state, ComposerError *error) {
                 size_t wanted = numeral_count(given->numerals);
                 given->passages = cJSON_GetObjectItemCaseSensitive(item, "corpus_passages");
                 if (!cJSON_IsArray(given->passages)) {
-                    return api_fail(error, COMPOSER_ERR_REQUEST, base,
+                    return api_fail(error, URSATZ_ERR_REQUEST, base,
                                     "a like_progression needs its corpus_passages (found by analyzer_corpus_passages_numerals)");
                 }
                 if (wanted < 2 || wanted > CORPUS_SEED_MAX_NUMERALS) {
-                    return api_fail(error, COMPOSER_ERR_REQUEST, base, "a like_progression takes 2 to %d numerals, not %zu",
+                    return api_fail(error, URSATZ_ERR_REQUEST, base, "a like_progression takes 2 to %d numerals, not %zu",
                                     CORPUS_SEED_MAX_NUMERALS, wanted);
                 }
             }
         } else {
             given->motive = cJSON_GetObjectItemCaseSensitive(item, "motive");
             if (!cJSON_IsObject(given->motive)) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, base, "a given %s needs a \"motive\" object", kind);
+                return api_fail(error, URSATZ_ERR_REQUEST, base, "a given %s needs a \"motive\" object", kind);
             }
             if (!given->source) {
                 given->source = "";
                 if (!api_member_string(given->motive, "source", &given->source, &present, error)) {
-                    return COMPOSER_ERR_REQUEST;
+                    return URSATZ_ERR_REQUEST;
                 }
                 given->source = given->source ? given->source : "";
             }
@@ -237,14 +237,14 @@ static ComposerStatus read_given(PlanBuild *state, ComposerError *error) {
         const cJSON *cells = cJSON_GetObjectItemCaseSensitive(item, "cells");
         given->has_cells = cells && !cJSON_IsNull(cells);
         if (given->has_cells && given->kind != GIVEN_PROGRESSION) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, base, "cells goes with a progression, not '%s'", given->source);
+            return api_fail(error, URSATZ_ERR_REQUEST, base, "cells goes with a progression, not '%s'", given->source);
         }
         state->given_count++;
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-static ComposerStatus read_request(PlanBuild *state, ComposerError *error) {
+static UrsatzStatus read_request(PlanBuild *state, UrsatzError *error) {
     const cJSON *root = state->root;
     bool present = false;
     if (!api_member_string(root, "form", &state->form_text, &present, error) ||
@@ -259,7 +259,7 @@ static ComposerStatus read_request(PlanBuild *state, ComposerError *error) {
         !api_member_string(root, "blend", &state->blend_path, &present, error) ||
         !api_member_string(root, "blend_weight", &state->blend_weight_text, &present, error) ||
         !api_member_string(root, "blend_weights", &state->blend_weights_text, &present, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     state->motive = cJSON_GetObjectItemCaseSensitive(root, "motive");
     if (cJSON_IsNull(state->motive)) {
@@ -267,28 +267,28 @@ static ComposerStatus read_request(PlanBuild *state, ComposerError *error) {
     }
     if (state->motive) {
         if (!cJSON_IsObject(state->motive)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/motive", "motive must be a motive request: {\"input\": {...}}");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/motive", "motive must be a motive request: {\"input\": {...}}");
         }
         if (!api_member_string(state->motive, "source", &state->motive_source, &present, error)) {
-            return COMPOSER_ERR_REQUEST;
+            return URSATZ_ERR_REQUEST;
         }
     }
     const cJSON *without = cJSON_GetObjectItemCaseSensitive(root, "style_without");
     if (without && !cJSON_IsNull(without)) {
         if (!cJSON_IsArray(without)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without must be a list of style categories");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without must be a list of style categories");
         }
         const cJSON *name = NULL;
         cJSON_ArrayForEach(name, without) {
             if (!cJSON_IsString(name)) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without must be a list of style categories");
+                return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without must be a list of style categories");
             }
-            ComposerStatus known = api_style_category_check(name->valuestring, error);
-            if (known != COMPOSER_OK) {
+            UrsatzStatus known = api_style_category_check(name->valuestring, error);
+            if (known != URSATZ_OK) {
                 return known;
             }
             if (state->without_count == PLAN_STYLE_WITHOUT_MAX) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without names at most %d style categories",
+                return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without names at most %d style categories",
                                 PLAN_STYLE_WITHOUT_MAX);
             }
             state->without[state->without_count++] = name->valuestring;
@@ -304,37 +304,37 @@ static unsigned long cells_in_bar(const PlanMeter *meter) {
 }
 
 /* "B", "B:3", "A'" and "A':5": the section's letter and the bar (from 1) of it. */
-static ComposerStatus read_at(Given *given, size_t index, bool form_defaulted, ComposerError *error) {
+static UrsatzStatus read_at(Given *given, size_t index, bool form_defaulted, UrsatzError *error) {
     char path[64];
     snprintf(path, sizeof path, "/given/%zu/at", index);
     if (!given->at_text) {
         if (!form_defaulted) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "'%s' needs an at: the section it goes in, \"B\" or \"B:3\"",
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "'%s' needs an at: the section it goes in, \"B\" or \"B:3\"",
                             given->source);
         }
         snprintf(given->letter, sizeof(given->letter), "%s", DEFAULT_GIVEN_SECTION);
         given->bar = 1;
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     const char *colon = strchr(given->at_text, ':');
     size_t length = colon ? (size_t)(colon - given->at_text) : strlen(given->at_text);
     if (length == 0 || length >= sizeof(given->letter)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path,
+        return api_fail(error, URSATZ_ERR_REQUEST, path,
                         "at '%s' must be a section's letter, then optionally a colon and a bar from 1", given->at_text);
     }
     snprintf(given->letter, sizeof(given->letter), "%.*s", (int)length, given->at_text);
     given->bar = 1;
     if (colon && (!request_parse_whole_number(colon + 1, 100000, &given->bar) || given->bar < 1)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "at '%s': the bar must be a whole number from 1", given->at_text);
+        return api_fail(error, URSATZ_ERR_REQUEST, path, "at '%s': the bar must be a whole number from 1", given->at_text);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-static ComposerStatus check_given(PlanBuild *state, ComposerError *error) {
+static UrsatzStatus check_given(PlanBuild *state, UrsatzError *error) {
     for (size_t i = 0; i < state->given_count; i++) {
         Given *given = &state->given[i];
-        ComposerStatus status = read_at(given, i, state->form_defaulted, error);
-        if (status != COMPOSER_OK) {
+        UrsatzStatus status = read_at(given, i, state->form_defaulted, error);
+        if (status != URSATZ_OK) {
             return status;
         }
         given->cells = cells_in_bar(&state->meter);
@@ -346,16 +346,16 @@ static ComposerStatus check_given(PlanBuild *state, ComposerError *error) {
             unsigned long cells = 0;
             member_text(item, "cells", text, sizeof text);
             if (!request_parse_whole_number(text, 64, &cells) || cells < 1) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, path, "cells must be a whole number from 1, not '%s'", text);
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "cells must be a whole number from 1, not '%s'", text);
             }
             given->cells = cells;
         }
         state->given_melodies += given->kind == GIVEN_MELODY;
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
+static UrsatzStatus check_request(PlanBuild *state, UrsatzError *error) {
     if (!state->form_text && state->given_count > 0) {
         /* Given material with no form to put it in: the B of a binary form. */
         state->form_text = "binary";
@@ -363,7 +363,7 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
         state->bars = DEFAULT_GIVEN_BARS;
     }
     if (!state->form_text || !state->key_text || !state->meter_text) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "the request needs a form, a key and a meter");
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "the request needs a form, a key and a meter");
     }
     FormSpecResult found = form_spec_builtin(state->form_text, &state->form);
     if (found == FORM_SPEC_ERR_ALLOC) {
@@ -384,22 +384,22 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
                 form_spec_destroy(listed);
             }
         }
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/form", "unknown form '%s'; the forms are %s", state->form_text, names);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/form", "unknown form '%s'; the forms are %s", state->form_text, names);
     }
     /* The key is a tonic, with the material from "material" (major by default), or tonic and key word together. */
     bool has_mode_in_key = strchr(state->key_text, ' ') != NULL;
     char member_path[32];
     snprintf(member_path, sizeof member_path, "/%s", state->material_member);
     if (has_mode_in_key && state->material_text) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, member_path, "key '%s' names a mode already; leave out %s",
+        return api_fail(error, URSATZ_ERR_REQUEST, member_path, "key '%s' names a mode already; leave out %s",
                         state->key_text, state->material_member);
     }
     const PitchMaterial *picked = NULL;
     if (state->material_text) {
         ApiMaterialKind kind;
-        ComposerStatus resolved = api_resolve_material(state->knowledge, state->material_member, member_path,
+        UrsatzStatus resolved = api_resolve_material(state->knowledge, state->material_member, member_path,
                                                        state->material_text, 0, &picked, &kind, error);
-        if (resolved != COMPOSER_OK) {
+        if (resolved != URSATZ_OK) {
             return resolved;
         }
     }
@@ -407,9 +407,9 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
                  picked ? picked->key_word : "major") >= (int)sizeof(state->key_request) ||
         !request_parse_key(state->key_request, state->knowledge, &state->key)) {
         if (api_fail_unsupported_key(error, "/key", state->knowledge, state->key_request)) {
-            return COMPOSER_ERR_REQUEST;
+            return URSATZ_ERR_REQUEST;
         }
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/key",
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\" with mode "
                         "\"minor\", or \"D minor\"",
                         state->key_text);
@@ -420,7 +420,7 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     }
     if (!read_number(state->root, "bars", SIZE_SEARCH_MAX * 8, &state->bars, error) ||
         !read_number(state->root, "count", 64, &state->count, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     char bars_text[48];
     char count_text[48];
@@ -429,16 +429,16 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     if (!form_spec_size(state->form, state->bars, state->count)) {
         char sizes[160];
         api_form_sizes_text(state->form, sizes, sizeof(sizes));
-        return api_fail(error, COMPOSER_ERR_REQUEST, has_bars ? "/bars" : "/count", "%s has no size of %s%s%s%s%s; it has %s",
+        return api_fail(error, URSATZ_ERR_REQUEST, has_bars ? "/bars" : "/count", "%s has no size of %s%s%s%s%s; it has %s",
                         state->form->name, has_bars ? bars_text : "", has_bars ? " bars" : "",
                         has_bars && has_count ? " with " : "", has_count ? "count " : "", has_count ? count_text : "", sizes);
     }
-    ComposerStatus status = check_given(state, error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = check_given(state, error);
+    if (status != URSATZ_OK) {
         return status;
     }
     if (cJSON_GetObjectItemCaseSensitive(state->root, "corpus") || cJSON_GetObjectItemCaseSensitive(state->root, "like")) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, cJSON_GetObjectItemCaseSensitive(state->root, "corpus") ? "/corpus" : "/like",
+        return api_fail(error, URSATZ_ERR_REQUEST, cJSON_GetObjectItemCaseSensitive(state->root, "corpus") ? "/corpus" : "/like",
                         "corpus and like are gone (Composer API 3.0): give corpus_passages, the passages found by "
                         "analyzer_corpus_passages_like");
     }
@@ -447,44 +447,44 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
         state->passages = NULL;
     }
     if (state->passages && state->motive) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/corpus_passages", "corpus_passages and motive both give the motive; use one");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/corpus_passages", "corpus_passages and motive both give the motive; use one");
     }
     if (state->accompaniment_text || state->texture_text) {
         state->has_accompaniment = true;
         status = api_read_accompaniment(state->accompaniment_text, state->texture_text, state->meter_text, &state->meter,
                                         &state->accompaniment, error);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             return status;
         }
     }
     if (state->style_weight_text && !state->style_path) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_weight", "style_weight needs style");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style_weight", "style_weight needs style");
     }
     if (state->without_count > 0 && !state->style_path) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without needs style");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without needs style");
     }
     if (state->style_weight_text && !request_parse_ratio(state->style_weight_text, &state->style_weight)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_weight",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style_weight",
                         "style_weight must be a fraction like 1/2 or a whole number, not '%s'", state->style_weight_text);
     }
     if (state->style_path && strlen(state->style_path) >= PLAN_STYLE_PATH_MAX) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style", "style path is longer than %d characters", PLAN_STYLE_PATH_MAX - 1);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style", "style path is longer than %d characters", PLAN_STYLE_PATH_MAX - 1);
     }
     if (state->blend_path && strlen(state->blend_path) >= PLAN_STYLE_PATH_MAX) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/blend", "blend path is longer than %d characters", PLAN_STYLE_PATH_MAX - 1);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/blend", "blend path is longer than %d characters", PLAN_STYLE_PATH_MAX - 1);
     }
     status = api_read_blend(state->style_path != NULL, state->blend_path, state->blend_weight_text, state->blend_weights_text,
                             &state->blend_weights, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     bool seeded = false;
     unsigned long seed = 0;
     if (!api_member_whole(state->root, "seed", 0, API_SEED_MAX, &seed, &seeded, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     state->seed = seeded ? seed : api_default_seed();
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the corpus ------------------------------------------------------------------------------------ */
@@ -499,35 +499,25 @@ static void add_notice(PlanBuild *state, const CorpusSeed *seed) {
     state->notice_count += state->notices[state->notice_count] != NULL;
 }
 
-/* A seed that failed: `what` is what the passages were to give (a motive, or the chords for numerals) and path the member. */
-static ComposerStatus seed_failure(CorpusSeedResult result, const char *what, const char *path, ComposerError *error) {
-    switch (result) {
-    case CORPUS_SEED_ERR_NO_MATCH:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "no passage of corpus_passages gives %s", what);
-    default:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "%s", corpus_seed_result_name(result));
-    }
-}
-
-static ComposerStatus add_source(Plan *plan, NodeId node, const CorpusSeed *seed, ComposerError *error) {
+static UrsatzStatus add_source(Plan *plan, NodeId node, const CorpusSeed *seed, UrsatzError *error) {
     PlanConstraint constraint;
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = PLAN_CONSTRAINT_SOURCE;
-    ComposerStatus status = api_seed_source(seed, &constraint.params.source, error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = api_seed_source(seed, &constraint.params.source, error);
+    if (status != URSATZ_OK) {
         return status;
     }
     if (node == PLAN_NODE_NONE || plan_node_add_constraint(plan, node, &constraint) != PLAN_OK) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot record the source of the seeded material in the plan");
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "", "cannot record the source of the seeded material in the plan");
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the motives ----------------------------------------------------------------------------------- */
 
 /* The motive request object read in the plan's meter and key: input, meter and key. */
-static ComposerStatus read_motive(const PlanBuild *state, const cJSON *motive, const char *base, Motive *out,
-                                  ComposerError *error) {
+static UrsatzStatus read_motive(const PlanBuild *state, const cJSON *motive, const char *base, Motive *out,
+                                  UrsatzError *error) {
     cJSON *request = cJSON_CreateObject();
     const cJSON *input = cJSON_GetObjectItemCaseSensitive(motive, "input");
     if (!request || !cJSON_AddStringToObject(request, "meter", state->meter_text) ||
@@ -536,7 +526,7 @@ static ComposerStatus read_motive(const PlanBuild *state, const cJSON *motive, c
         cJSON_Delete(request);
         return api_fail_alloc(error);
     }
-    ComposerStatus status = api_read_motive(request, base, state->knowledge, out, NULL, error);
+    UrsatzStatus status = api_read_motive(request, base, state->knowledge, out, NULL, error);
     cJSON_Delete(request);
     return status;
 }
@@ -559,7 +549,7 @@ static NodeId section_named(const Plan *plan, const char *letter, char *names, s
 }
 
 /* Places the given material in the plan. */
-static ComposerStatus place_given(PlanBuild *state, Plan *plan, ComposerError *error) {
+static UrsatzStatus place_given(PlanBuild *state, Plan *plan, UrsatzError *error) {
     for (size_t i = 0; i < state->given_count; i++) {
         const Given *given = &state->given[i];
         char names[128];
@@ -567,7 +557,7 @@ static ComposerStatus place_given(PlanBuild *state, Plan *plan, ComposerError *e
         snprintf(path, sizeof path, "/given/%zu", i);
         NodeId section = section_named(plan, given->letter, names, sizeof(names));
         if (section == PLAN_NODE_NONE) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "at '%s': the piece has no section '%s'; its sections are %s",
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "at '%s': the piece has no section '%s'; its sections are %s",
                             given->at_text ? given->at_text : given->letter, given->letter, names);
         }
         GivenResult placed;
@@ -576,11 +566,11 @@ static ComposerStatus place_given(PlanBuild *state, Plan *plan, ComposerError *e
             char *numerals[MAX_NUMERALS];
             size_t count = 0;
             if (snprintf(text, sizeof(text), "%s", given->numerals) >= (int)sizeof(text)) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, path, "the progression is too long");
+                return api_fail(error, URSATZ_ERR_REQUEST, path, "the progression is too long");
             }
             for (char *token = strtok(text, " \t,|"); token; token = strtok(NULL, " \t,|")) {
                 if (count == MAX_NUMERALS) {
-                    return api_fail(error, COMPOSER_ERR_REQUEST, path, "a progression has %d chords at most", MAX_NUMERALS);
+                    return api_fail(error, URSATZ_ERR_REQUEST, path, "a progression has %d chords at most", MAX_NUMERALS);
                 }
                 numerals[count++] = token;
             }
@@ -592,8 +582,8 @@ static ComposerStatus place_given(PlanBuild *state, Plan *plan, ComposerError *e
             }
             char base[96];
             snprintf(base, sizeof base, "%s/motive", path);
-            ComposerStatus status = read_motive(state, given->motive, base, line, error);
-            if (status != COMPOSER_OK) {
+            UrsatzStatus status = read_motive(state, given->motive, base, line, error);
+            if (status != URSATZ_OK) {
                 free(line);
                 return status;
             }
@@ -604,17 +594,17 @@ static ComposerStatus place_given(PlanBuild *state, Plan *plan, ComposerError *e
             free(line);
         }
         if (placed != GIVEN_OK) {
-            return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, path, "cannot place the given %s '%s' at %s:%lu: %s",
+            return api_fail(error, URSATZ_ERR_UNSATISFIABLE, path, "cannot place the given %s '%s' at %s:%lu: %s",
                             GIVEN_KIND_NAMES[given->kind], given->source, given->letter, given->bar, given_result_name(placed));
         }
         if (given->from_corpus) {
-            ComposerStatus recorded = add_source(plan, section, &given->found, error);
-            if (recorded != COMPOSER_OK) {
+            UrsatzStatus recorded = add_source(plan, section, &given->found, error);
+            if (recorded != URSATZ_OK) {
                 return recorded;
             }
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the result ------------------------------------------------------------------------------------ */
@@ -717,16 +707,16 @@ static cJSON *plan_document(const PlanBuild *state, const Plan *plan) {
 
 /* --- the entry ------------------------------------------------------------------------------------- */
 
-static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *error) {
+static UrsatzStatus build_plan(PlanBuild *state, Plan **out, UrsatzError *error) {
     Motive *motive = calloc(1, sizeof(*motive));
     bool has_motive = false;
-    ComposerStatus status = motive ? COMPOSER_OK : api_fail_alloc(error);
-    if (status == COMPOSER_OK && state->passages) {
+    UrsatzStatus status = motive ? URSATZ_OK : api_fail_alloc(error);
+    if (status == URSATZ_OK && state->passages) {
         CorpusPassages passages = {0};
         char path[sizeof error->path];
         char message[sizeof error->message];
         if (!corpus_passages_from_json(state->passages, &passages, path, sizeof path, message, sizeof message)) {
-            status = api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", message);
+            status = api_fail(error, URSATZ_ERR_REQUEST, path, "%s", message);
         } else {
             CorpusSeedResult result = corpus_seed_motive(state->knowledge, passages.items, passages.count, &state->meter,
                                                          &state->key, state->seed, &state->seed_found);
@@ -735,16 +725,16 @@ static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *er
                 add_notice(state, &state->seed_found);
                 status = api_seed_source(&state->seed_found, &state->source, error);
             } else {
-                status = seed_failure(result, "a motive (it needs two or more notes in its first bar)", "/corpus_passages", error);
+                status = api_seed_failure(result, "a motive (it needs two or more notes in its first bar)", "/corpus_passages", error);
             }
         }
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             state->seeded = true;
             *motive = state->seed_found.motive;
             has_motive = true;
         }
     }
-    for (size_t i = 0; status == COMPOSER_OK && i < state->given_count; i++) {
+    for (size_t i = 0; status == URSATZ_OK && i < state->given_count; i++) {
         Given *given = &state->given[i];
         if (!given->from_corpus) {
             continue;
@@ -756,7 +746,7 @@ static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *er
         snprintf(path, sizeof path, "/given/%zu/corpus_passages", i);
         if (!corpus_passages_from_json(given->passages, &passages, inner, sizeof inner, message, sizeof message)) {
             snprintf(path, sizeof path, "/given/%zu%s", i, inner);
-            status = api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", message);
+            status = api_fail(error, URSATZ_ERR_REQUEST, path, "%s", message);
             break;
         }
         CorpusSeedResult result = corpus_seed_progression(state->knowledge, passages.items, passages.count,
@@ -766,7 +756,7 @@ static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *er
         if (result != CORPUS_SEED_OK) {
             char what[1100];
             snprintf(what, sizeof what, "chords the plan can place for '%s'", given->numerals);
-            status = seed_failure(result, what, path, error);
+            status = api_seed_failure(result, what, path, error);
             break;
         }
         add_notice(state, &given->found);
@@ -783,11 +773,11 @@ static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *er
         given->numerals = given->found_numerals;
         given->source = given->found_numerals;
     }
-    if (status == COMPOSER_OK && state->motive) {
+    if (status == URSATZ_OK && state->motive) {
         status = read_motive(state, state->motive, "/motive", motive, error);
-        has_motive = status == COMPOSER_OK;
+        has_motive = status == URSATZ_OK;
     }
-    if (status == COMPOSER_OK && state->style_path) {
+    if (status == URSATZ_OK && state->style_path) {
         ComposerStyle *style = NULL;
         if (state->blend_path) {
             status = api_load_blend(state->style_path, state->blend_path, &state->blend_weights, state->without,
@@ -798,7 +788,7 @@ static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *er
         }
         composer_style_destroy(style);
     }
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         free(motive);
         return status;
     }
@@ -841,37 +831,37 @@ static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *er
         size_t theme_bars = 8;
         size_t idea_bars = 2;
         (void)piece_basic_idea(&request, &theme_bars, &idea_bars);
-        ComposerStatus failed =
+        UrsatzStatus failed =
                built == PIECE_ERR_MOTIVE_TOO_LONG
                    ? api_fail_motif_long(error, "/motive", request.motive, &state->meter, theme_bars, idea_bars)
                : built == PIECE_ERR_BAD_SIZE
-                   ? api_fail(error, COMPOSER_ERR_REQUEST, "/form", "%s has no such size", state->form->name)
+                   ? api_fail(error, URSATZ_ERR_REQUEST, "/form", "%s has no such size", state->form->name)
                : built == PIECE_ERR_BAD_REQUEST
-                   ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
+                   ? api_fail(error, URSATZ_ERR_UNSATISFIABLE, "",
                               "this piece cannot be planned as asked: the motive needs at least two notes, and each "
                               "section must be one the harmony operators can write in %s",
                               state->meter_text)
-                   : api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", piece_result_name(built));
+                   : api_fail(error, URSATZ_ERR_UNSATISFIABLE, "", "%s", piece_result_name(built));
         free(motive);
         return failed;
     }
     free(motive);
     status = place_given(state, plan, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         plan_destroy(plan);
         return status;
     }
     *out = plan;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus composer_api_plan(const ComposerContext *context, const char *request_json,
-                                 const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_plan(const ComposerContext *context, const char *request_json,
+                                 const UrsatzJob *job, ComposerResponse *out) {
     (void)job;
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     PlanBuild *state = calloc(1, sizeof(*state));
@@ -879,22 +869,22 @@ ComposerStatus composer_api_plan(const ComposerContext *context, const char *req
     if (state) {
         state->knowledge = context->knowledge;
     }
-    ComposerStatus status = state ? api_parse_request(request_json, (cJSON **)&state->root, &out->error) : api_fail_alloc(&out->error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = state ? api_parse_request(request_json, (cJSON **)&state->root, &out->error) : api_fail_alloc(&out->error);
+    if (status == URSATZ_OK) {
         status = read_request(state, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = check_request(state, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = build_plan(state, &plan, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         cJSON *document = plan_document(state, plan);
         ApiOutputs outputs;
         memset(&outputs, 0, sizeof outputs);
         status = document ? api_render_outputs(context->knowledge, plan, &outputs, document, out) : api_fail_alloc(&out->error);
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_respond_json(out, document);
         } else {
             cJSON_Delete(document);
@@ -909,8 +899,8 @@ ComposerStatus composer_api_plan(const ComposerContext *context, const char *req
         form_spec_destroy(state->form);
         free(state);
     }
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }

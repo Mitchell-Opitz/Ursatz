@@ -103,7 +103,7 @@ void ursatz_gui_compose_job_free(void *input) {
   }
 }
 
-void ursatz_gui_compose_job_run(void *input, const ComposerJob *composer_job, UrsatzGuiJobResult *out) {
+void ursatz_gui_compose_job_run(void *input, const UrsatzJob *composer_job, UrsatzGuiJobResult *out) {
   const UrsatzGuiComposeJob *job = input;
   cJSON *item = NULL;
   cJSON *made = NULL;

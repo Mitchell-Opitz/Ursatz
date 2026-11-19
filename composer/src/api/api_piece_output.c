@@ -160,10 +160,10 @@ cJSON *api_piece_document(const PieceSpec *request, const PieceMade *piece, cons
 }
 
 /* The loop version's MIDI file and MusicXML: the MIDI file has the loopStart and loopEnd markers. */
-ComposerStatus api_piece_render_loop(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
+UrsatzStatus api_piece_render_loop(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
                                   ComposerResponse *out) {
     if (!outputs->midi && !outputs->musicxml) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     PlanExportOptions loop_options = request->export_options;
     Rational start;
@@ -177,31 +177,31 @@ ComposerStatus api_piece_render_loop(const KnowledgeSnapshot *knowledge, const P
     RenderedPlan rendered;
     PlanExportError detail;
     if (plan_export_render(output, &rendered, &detail) != PLAN_EXPORT_OK) {
-        return api_fail(&out->error, COMPOSER_ERR_REQUEST, outputs->midi ? "/midi" : "/musicxml", "cannot render the plan");
+        return api_fail(&out->error, URSATZ_ERR_REQUEST, outputs->midi ? "/midi" : "/musicxml", "cannot render the plan");
     }
-    ComposerStatus status = COMPOSER_OK;
+    UrsatzStatus status = URSATZ_OK;
     if (outputs->midi &&
         rendered_plan_midi_bytes(knowledge, &rendered, &loop_options, &out->midi, &out->midi_size, &detail) != PLAN_EXPORT_OK) {
-        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/midi", "cannot write the MIDI file: %s", detail.message);
+        status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/midi", "cannot write the MIDI file: %s", detail.message);
     }
-    if (status == COMPOSER_OK && outputs->musicxml &&
+    if (status == URSATZ_OK && outputs->musicxml &&
         rendered_plan_musicxml_text(knowledge, &rendered, &request->export_options, &out->musicxml, &detail) != PLAN_EXPORT_OK) {
-        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/musicxml", "cannot write the MusicXML: %s", detail.message);
+        status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/musicxml", "cannot write the MusicXML: %s", detail.message);
     }
     rendered_plan_destroy(&rendered);
     return status;
 }
 
-ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const Plan *plan, char **out, ComposerError *error) {
+UrsatzStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const Plan *plan, char **out, UrsatzError *error) {
     RenderedPlan rendered;
     PlanExportError detail;
     *out = NULL;
     if (plan_export_render(plan, &rendered, &detail) != PLAN_EXPORT_OK) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/musicxml", "cannot render the plan");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/musicxml", "cannot render the plan");
     }
-    ComposerStatus status = COMPOSER_OK;
+    UrsatzStatus status = URSATZ_OK;
     if (rendered_plan_musicxml_text(knowledge, &rendered, &request->export_options, out, &detail) != PLAN_EXPORT_OK) {
-        status = api_fail(error, COMPOSER_ERR_REQUEST, "/musicxml", "cannot write the MusicXML: %s", detail.message);
+        status = api_fail(error, URSATZ_ERR_REQUEST, "/musicxml", "cannot write the MusicXML: %s", detail.message);
     }
     rendered_plan_destroy(&rendered);
     return status;
@@ -212,7 +212,7 @@ ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const Piec
  * MusicXML as "ending_musicxml", and with musicxml_versions the MusicXML of every version after the first as
  * "musicxml_versions": {<name>: ...} to the document.
  */
-ComposerStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *document, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
+UrsatzStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *document, const PieceSpec *request, const PieceMade *piece, const ApiPieceOutputs *outputs,
                                   ComposerResponse *out) {
     cJSON *plans = cJSON_CreateObject();
     bool plans_ok = plans != NULL;
@@ -227,7 +227,7 @@ ComposerStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *
         char *text = explanation_text(request, piece, outputs->explain == 2);
         if (!text || !cJSON_AddStringToObject(document, "explanation", text)) {
             free(text);
-            return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "cannot write the explanation");
+            return api_fail(&out->error, URSATZ_ERR_INTERNAL, "", "cannot write the explanation");
         }
         free(text);
     }
@@ -235,8 +235,8 @@ ComposerStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *
         cJSON *musicxml = cJSON_CreateObject();
         for (size_t i = 1; musicxml && i < piece->version_count; i++) {
             char *text = NULL;
-            ComposerStatus status = api_piece_musicxml(knowledge, request, api_piece_version_output_plan(&piece->versions[i]), &text, &out->error);
-            if (status != COMPOSER_OK) {
+            UrsatzStatus status = api_piece_musicxml(knowledge, request, api_piece_version_output_plan(&piece->versions[i]), &text, &out->error);
+            if (status != URSATZ_OK) {
                 cJSON_Delete(musicxml);
                 return status;
             }
@@ -253,8 +253,8 @@ ComposerStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *
     }
     if (outputs->ending_musicxml) {
         char *text = NULL;
-        ComposerStatus status = api_piece_musicxml(knowledge, request, api_piece_version_output_plan(&piece->versions[1]), &text, &out->error);
-        if (status != COMPOSER_OK) {
+        UrsatzStatus status = api_piece_musicxml(knowledge, request, api_piece_version_output_plan(&piece->versions[1]), &text, &out->error);
+        if (status != URSATZ_OK) {
             return status;
         }
         bool added = cJSON_AddStringToObject(document, "ending_musicxml", text) != NULL;
@@ -264,9 +264,9 @@ ComposerStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *
         }
     }
     if (outputs->layers) {
-        ComposerStatus layered = api_layers_json(knowledge, api_piece_version_output_plan(&piece->versions[0]), &request->export_options,
+        UrsatzStatus layered = api_layers_json(knowledge, api_piece_version_output_plan(&piece->versions[0]), &request->export_options,
                                                  document, &out->error);
-        if (layered != COMPOSER_OK) {
+        if (layered != URSATZ_OK) {
             return layered;
         }
     }
@@ -274,8 +274,8 @@ ComposerStatus api_piece_add_outputs(const KnowledgeSnapshot *knowledge, cJSON *
     PlanProducer producer = composer_plan_producer(knowledge);
     out->plan_json = plan_to_json(api_piece_version_output_plan(&piece->versions[0]), &producer, &detail);
     if (!out->plan_json) {
-        return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "cannot write the plan: %s", detail.message);
+        return api_fail(&out->error, URSATZ_ERR_INTERNAL, "", "cannot write the plan: %s", detail.message);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 

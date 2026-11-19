@@ -20,11 +20,11 @@
 cJSON *api_seed_json(const CorpusSeed *seed);
 
 /* The seed as the plan records it. */
-ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error);
+UrsatzStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, UrsatzError *error);
 
 /* The motive of one of the passages the request gives, in the meter and key. */
-ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
-                               const SpelledKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error);
+UrsatzStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
+                               const SpelledKey *key, unsigned long seed, CorpusSeed *out, UrsatzError *error);
 
 /* "3 stale documents (analyzed by another version; run the corpus again)", or "" when none is stale. */
 void api_seed_stale_notice(const CorpusSeed *seed, char *out, size_t size);

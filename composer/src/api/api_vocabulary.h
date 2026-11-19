@@ -58,8 +58,8 @@ extern const ApiThemePart API_THEME_ENDINGS[];    /* continuation, consequent, c
 #define API_VARIANTS_DRAWS_PER_COUNT 4 /* with "functions" or "distance", up to this many chains for each variant asked for */
 #define API_VARIANTS_SEED_MAX (4294967295UL - API_VARIANTS_COUNT_MAX * API_VARIANTS_DRAWS_PER_COUNT)
 
-/* COMPOSER_ERR_REQUEST at path: the meter is not one of API_METERS ("meter '3/8' is not supported; use 2/4, 3/4, 4/4 or 6/8"). */
-ComposerStatus api_fail_meter(ComposerError *error, const char *path, const char *text);
+/* URSATZ_ERR_REQUEST at path: the meter is not one of API_METERS ("meter '3/8' is not supported; use 2/4, 3/4, 4/4 or 6/8"). */
+UrsatzStatus api_fail_meter(UrsatzError *error, const char *path, const char *text);
 
 /* True for a cadence type a theme can end in (PAC, IAC or HC). */
 bool api_theme_cadence_ok(int cadence_type);

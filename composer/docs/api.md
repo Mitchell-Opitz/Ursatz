@@ -24,24 +24,24 @@ changes on additions: a new entry, a new optional request member, a new response
 version a client written against 1.0 keeps working with 1.n, if it ignores response members it does not know. The Composer
 version (`composer_api_versions`, the project version) is separate: it follows the releases, not the API.
 
-Every request may carry `"api_version": <major>`. A different major is refused with `COMPOSER_ERR_REQUEST` and the path
+Every request may carry `"api_version": <major>`. A different major is refused with `URSATZ_ERR_REQUEST` and the path
 `/api_version` (`api_version must be 3`), so `"api_version": 1` and `"api_version": 2` are refused now. A request without it is taken as the major of the library.
 
 ## Status
 
-Every entry returns a `ComposerStatus`. The CLI maps it to its exit code.
+Every entry returns a `UrsatzStatus`. The CLI maps it to its exit code.
 
 | Status | Meaning | CLI exit |
 |---|---|---|
-| `COMPOSER_OK` | the response is filled | 0 |
-| `COMPOSER_ERR_REQUEST` | the request is malformed or asks for something invalid | 1 |
-| `COMPOSER_ERR_UNSATISFIABLE` | the request is valid but nothing satisfies it (a stuck run) | 2 |
-| `COMPOSER_ERR_CANCELLED` | the job's `cancelled` callback returned true | none; the CLI has no cancel |
-| `COMPOSER_ERR_ALLOC` | out of memory | 1 |
-| `COMPOSER_ERR_INTERNAL` | a failure that is not the request's | 1 |
+| `URSATZ_OK` | the response is filled | 0 |
+| `URSATZ_ERR_REQUEST` | the request is malformed or asks for something invalid | 1 |
+| `URSATZ_ERR_UNSATISFIABLE` | the request is valid but nothing satisfies it (a stuck run) | 2 |
+| `URSATZ_ERR_CANCELLED` | the job's `cancelled` callback returned true | none; the CLI has no cancel |
+| `URSATZ_ERR_ALLOC` | out of memory | 1 |
+| `URSATZ_ERR_INTERNAL` | a failure that is not the request's | 1 |
 
-`COMPOSER_ERR_ALLOC` and `COMPOSER_ERR_INTERNAL` are 1 unless a command did otherwise before. A failure to write a file is
-the CLI's own (the API writes none) and stays 3 where it was 3 (`export` has always given 1). The statuses are the numbers 0 (`COMPOSER_OK`) to 5 (`COMPOSER_ERR_INTERNAL`); the library has no function that names one.
+`URSATZ_ERR_ALLOC` and `URSATZ_ERR_INTERNAL` are 1 unless a command did otherwise before. A failure to write a file is
+the CLI's own (the API writes none) and stays 3 where it was 3 (`export` has always given 1). The statuses are the numbers 0 (`URSATZ_OK`) to 5 (`URSATZ_ERR_INTERNAL`); the library has no function that names one.
 
 On any failure `ComposerResponse.error` holds `message` and `path`, the JSON Pointer of the request member at fault
 (`"/tempo"`, `"/plan/form/children/1"`), or `""` when no member is at fault. Nothing else is set.
@@ -57,7 +57,7 @@ material of the snapshot, a key text is a tonic and the word of a material (`"D 
 entry, in any case), and the scale, the third and the signature of a key are read from the material.
 
 A NULL context, a context with a NULL `knowledge`, or a snapshot that lacks one of the four materials of common practice
-(`omt.material.major`, `.natural-minor`, `.harmonic-minor`, `.melodic-minor`) is `COMPOSER_ERR_REQUEST` with the message `a knowledge
+(`omt.material.major`, `.natural-minor`, `.harmonic-minor`, `.melodic-minor`) is `URSATZ_ERR_REQUEST` with the message `a knowledge
 snapshot is required` (or the missing id), and the path `""`. The entries that take none are `composer_api_version`,
 `composer_api_versions`, `composer_api_variant_operations` and `composer_api_forms`, which read no key.
 
@@ -78,7 +78,7 @@ bytes. A request string is only read during the call.
 
 ## Jobs
 
-`const ComposerJob *job` carries progress and cancel for the entries that take long. A NULL job, or a NULL member, means no
+`const UrsatzJob *job` carries progress and cancel for the entries that take long. A NULL job, or a NULL member, means no
 reports and no cancel.
 
 - `progress(user, stage, done, total)` is called at the start of each stage and once per target of a fill loop. The stages
@@ -87,10 +87,10 @@ reports and no cancel.
   limit; a fill loop that starts again, as the melody does from the next seed, begins at 0), `"grow"` (one candidate) and
   `"export"`.
 - `cancelled(user)` is asked at the same points. When it returns true the run stops there, frees what it built and the
-  entry returns `COMPOSER_ERR_CANCELLED`. The plan the run was filling is left as far as it got and is not returned.
+  entry returns `URSATZ_ERR_CANCELLED`. The plan the run was filling is left as far as it got and is not returned.
 - Both are called from the calling thread only.
 
-In the library, `FillConfig`, `ComposeConfig` and `GrowConfig` carry `const ComposerJob *job` (NULL by default); a cancel is
+In the library, `FillConfig`, `ComposeConfig` and `GrowConfig` carry `const UrsatzJob *job` (NULL by default); a cancel is
 `FillOutcome.cancelled`, `ComposeOutcome.cancelled` and `GrowOutcome.cancelled` with the module's existing failure value
 (`FILL_ERR_OPERATOR_FAILED`, `PIECE_ERR_STUCK`, `GROW_ERR_STUCK`). `compose_run` tries no further round and
 `compose_candidates` no further candidate after a cancel. With no job nothing changes: the same seed gives the same plan.
@@ -129,15 +129,15 @@ the path says:
 
 | Error | Status | `path` |
 |---|---|---|
-| text that is not JSON, or not an object | `COMPOSER_ERR_REQUEST` | `""` |
-| `"api_version"` of another major | `COMPOSER_ERR_REQUEST` | `/api_version` |
-| a member of the wrong type or value | `COMPOSER_ERR_REQUEST` | the member: `/tempo`, `/features/1`, `/input/format`, `/given/0/at` |
-| a plan that does not read | `COMPOSER_ERR_REQUEST` | `/plan` and the place in the plan: `/plan/form/children/1/span` |
-| a section or node the plan does not have | `COMPOSER_ERR_REQUEST` | `/section`, `/node` |
-| an input that is a motive but not a usable one (a pickup the bar cannot hold, notes sounding together) | `COMPOSER_ERR_UNSATISFIABLE` | `/input/text` |
-| a file the request names that cannot be read (a style), or `corpus_passages` none of which can seed | `COMPOSER_ERR_UNSATISFIABLE` | `/style`, `/corpus_passages` |
-| a valid request no seed can satisfy | `COMPOSER_ERR_UNSATISFIABLE` | `""` |
-| the job's `cancelled` returned true | `COMPOSER_ERR_CANCELLED` | `""` |
+| text that is not JSON, or not an object | `URSATZ_ERR_REQUEST` | `""` |
+| `"api_version"` of another major | `URSATZ_ERR_REQUEST` | `/api_version` |
+| a member of the wrong type or value | `URSATZ_ERR_REQUEST` | the member: `/tempo`, `/features/1`, `/input/format`, `/given/0/at` |
+| a plan that does not read | `URSATZ_ERR_REQUEST` | `/plan` and the place in the plan: `/plan/form/children/1/span` |
+| a section or node the plan does not have | `URSATZ_ERR_REQUEST` | `/section`, `/node` |
+| an input that is a motive but not a usable one (a pickup the bar cannot hold, notes sounding together) | `URSATZ_ERR_UNSATISFIABLE` | `/input/text` |
+| a file the request names that cannot be read (a style), or `corpus_passages` none of which can seed | `URSATZ_ERR_UNSATISFIABLE` | `/style`, `/corpus_passages` |
+| a valid request no seed can satisfy | `URSATZ_ERR_UNSATISFIABLE` | `""` |
+| the job's `cancelled` returned true | `URSATZ_ERR_CANCELLED` | `""` |
 
 `message` is for a person: it names the member by its request name (`tempo must be from 20 to 400`). A client that shows the
 error next to a form field uses `path`.
@@ -161,8 +161,8 @@ The stage each entry reports at the start (`done` of `total`), besides the compo
 | `composer_api_develop` | `develop` |
 
 `composer_api_versions`, `composer_api_variant_operations`, `composer_api_vocabulary`, `composer_api_forms`, `composer_api_validate`,
-`composer_api_plan` and `composer_api_lock` are quick: they report nothing and never return `COMPOSER_ERR_CANCELLED`. A
-cancel is honored at the next report; the entry frees what it built and returns `COMPOSER_ERR_CANCELLED` with no document
+`composer_api_plan` and `composer_api_lock` are quick: they report nothing and never return `URSATZ_ERR_CANCELLED`. A
+cancel is honored at the next report; the entry frees what it built and returns `URSATZ_ERR_CANCELLED` with no document
 and no plan. Progress and cancel run on the thread that called the entry: a client that shows progress from another thread
 hands the value over itself.
 
@@ -211,8 +211,8 @@ int main(void) {
     ComposerContext context = {knowledge};
 
     ComposerResponse response;
-    ComposerStatus status = composer_api_theme(&context, request, NULL, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_theme(&context, request, NULL, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "status %d: %s (at '%s')\n", (int)status, response.error.message, response.error.path);
         composer_response_destroy(&response);
         knowledge_snapshot_destroy(knowledge);

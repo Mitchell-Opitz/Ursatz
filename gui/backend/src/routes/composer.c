@@ -25,14 +25,14 @@ static int send_error(struct mg_connection *conn, int status, const char *error)
 }
 
 /* GET /api/composer/status: the versions the Composer was built with (composer_api_versions). "version" keeps the
- * text the command printed; api_version, analyzer_version (the Analyzer's, the GUI links both apps) and ursatz_commit are additive. */
+ * text the command printed; api_version, analyzer_version (the Analyzer's, the GUI links both apps) and producer_key are additive. */
 static int handle_status(struct mg_connection *conn) {
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus composer_status = composer_api_versions(&response);
+  UrsatzStatus composer_status = composer_api_versions(&response);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(composer_status, &response, &reply);
-  cJSON *versions = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  cJSON *versions = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (!versions) {
     cJSON *object = cJSON_CreateObject();
     if (object) {
@@ -45,17 +45,17 @@ static int handle_status(struct mg_connection *conn) {
   ursatz_gui_composer_reply_destroy(&reply);
   const cJSON *composer_version = cJSON_GetObjectItemCaseSensitive(versions, "composer_version");
   const cJSON *api_version = cJSON_GetObjectItemCaseSensitive(versions, "api_version");
-  const cJSON *ursatz_commit = cJSON_GetObjectItemCaseSensitive(versions, "ursatz_commit");
+  const cJSON *producer_key = cJSON_GetObjectItemCaseSensitive(versions, "producer_key");
   char version[128];
   snprintf(version, sizeof(version), "ursatz-composer %s", cJSON_IsString(composer_version) ? composer_version->valuestring : "");
   cJSON *object = cJSON_CreateObject();
   bool built = object && cJSON_IsString(composer_version) && cJSON_IsString(api_version) &&
-               cJSON_IsString(ursatz_commit) &&
+               cJSON_IsString(producer_key) &&
                cJSON_AddTrueToObject(object, "ok") && cJSON_AddTrueToObject(object, "available") &&
                cJSON_AddStringToObject(object, "version", version) &&
                cJSON_AddStringToObject(object, "api_version", api_version->valuestring) &&
                cJSON_AddStringToObject(object, "analyzer_version", ursatz_analyzer_version()) &&
-               cJSON_AddStringToObject(object, "ursatz_commit", ursatz_commit->valuestring);
+               cJSON_AddStringToObject(object, "producer_key", producer_key->valuestring);
   cJSON_Delete(versions);
   if (!built) {
     cJSON_Delete(object);

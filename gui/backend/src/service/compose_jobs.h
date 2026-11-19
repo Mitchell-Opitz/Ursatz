@@ -44,7 +44,7 @@ UrsatzGuiComposeJob *ursatz_gui_compose_job_new(UrsatzGuiComposeOp op, const cha
 void ursatz_gui_compose_job_free(void *input);
 
 /* The UrsatzGuiJobFn of every compose job. */
-void ursatz_gui_compose_job_run(void *input, const ComposerJob *job, UrsatzGuiJobResult *out);
+void ursatz_gui_compose_job_run(void *input, const UrsatzJob *job, UrsatzGuiJobResult *out);
 
 /* Fills out with object (freed) as the answer with the given status, or the out-of-memory failure. */
 void ursatz_gui_job_result_json(UrsatzGuiJobResult *out, int status, cJSON *object);
@@ -52,7 +52,7 @@ void ursatz_gui_job_result_json(UrsatzGuiJobResult *out, int status, cJSON *obje
 /* Fills out with {"ok": false, "error": message} and the status. */
 void ursatz_gui_job_result_failure(UrsatzGuiJobResult *out, int status, const char *message);
 
-/* The same with the request member at fault as "path" (the Composer's ComposerError.path); no path member when it is NULL
+/* The same with the request member at fault as "path" (the Composer's UrsatzError.path); no path member when it is NULL
  * or empty. */
 void ursatz_gui_job_result_failure_at(UrsatzGuiJobResult *out, int status, const char *message, const char *path);
 

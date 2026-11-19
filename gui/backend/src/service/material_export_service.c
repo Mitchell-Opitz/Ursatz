@@ -335,7 +335,7 @@ static const char *render_motif(Build *build, const cJSON *motif) {
   const char *xml = NULL;
   if (ursatz_gui_composer_reply_refused(&reply)) {
     fail(build, URSATZ_GUI_MATERIAL_EXPORT_REFUSED, reply.message[0] ? reply.message : "composer could not render the motif");
-  } else if (reply.status != COMPOSER_OK || !reply.musicxml) {
+  } else if (reply.status != URSATZ_OK || !reply.musicxml) {
     fail(build, URSATZ_GUI_MATERIAL_EXPORT_FAILED, "composer could not render the motif");
   } else {
     xml = keep_string(build, strdup(reply.musicxml));

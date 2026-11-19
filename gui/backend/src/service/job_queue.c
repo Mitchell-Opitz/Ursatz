@@ -29,7 +29,7 @@ typedef struct Job {
   UrsatzGuiJobFn run;
   void *input;
   void (*free_input)(void *);
-  ComposerJob composer_job;
+  UrsatzJob composer_job;
   time_t finished_at;
   struct Job *next;
 } Job;

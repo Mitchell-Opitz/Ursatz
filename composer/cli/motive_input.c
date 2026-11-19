@@ -148,11 +148,11 @@ int motive_input_text_request(const MotiveInput *input, cJSON **out, MotiveFile 
         char *text = cJSON_PrintUnformatted(request);
         ComposerResponse response;
         memset(&response, 0, sizeof response);
-        ComposerStatus status = text ? composer_api_motive_from_midi(cli_context(), bytes, size, text, NULL, &response) : COMPOSER_ERR_ALLOC;
+        UrsatzStatus status = text ? composer_api_motive_from_midi(cli_context(), bytes, size, text, NULL, &response) : URSATZ_ERR_ALLOC;
         free(text);
         free(bytes);
         cJSON_Delete(request);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             int failed = cli_fail_api(status, &response.error, input->path);
             composer_response_destroy(&response);
             return failed;
@@ -179,10 +179,10 @@ int motive_input_text_request(const MotiveInput *input, cJSON **out, MotiveFile 
     return 0;
 }
 
-int motive_input_fail(const MotiveFile *file, ComposerStatus status, const ComposerError *error,
+int motive_input_fail(const MotiveFile *file, UrsatzStatus status, const UrsatzError *error,
                       const MotiveInputNames *names) {
     /* A bad option is reported before a file that cannot be read, as it always was. */
-    if (file->read_status != 0 && status != COMPOSER_ERR_REQUEST) {
+    if (file->read_status != 0 && status != URSATZ_ERR_REQUEST) {
         return cli_fail(file->read_status, "%s", file->read_error);
     }
     const char *name = strncmp(error->path, "/accompaniment_motive", 21) == 0 && names->accompaniment ? names->accompaniment

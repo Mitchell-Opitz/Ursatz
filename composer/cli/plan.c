@@ -288,12 +288,12 @@ static cJSON *motive_request(const Options *options, const char *path, Held *hel
         char *printed = ok ? cJSON_PrintUnformatted(midi_request) : NULL;
         cJSON_Delete(midi_request);
         ComposerResponse response;
-        ComposerStatus status = printed ? composer_api_motive_from_midi(cli_context(), (const uint8_t *)bytes, size, printed, NULL, &response)
-                                        : COMPOSER_ERR_ALLOC;
+        UrsatzStatus status = printed ? composer_api_motive_from_midi(cli_context(), (const uint8_t *)bytes, size, printed, NULL, &response)
+                                        : URSATZ_ERR_ALLOC;
         cJSON_free(printed);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             held->failed = true;
-            held->status = status == COMPOSER_ERR_REQUEST ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE;
+            held->status = status == URSATZ_ERR_REQUEST ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE;
             snprintf(held->message, sizeof held->message, "cannot load '%s': %s", path, response.error.message);
             composer_response_destroy(&response);
             text = "";
@@ -548,9 +548,9 @@ static int request_plan(Options *options_in) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus called = cli_call(composer_api_plan, request, &response);
-    bool load_failure = called != COMPOSER_OK && strncmp(response.error.message, "cannot load the input", 21) == 0;
-    if (called != COMPOSER_OK && !(held.failed && load_failure)) {
+    UrsatzStatus called = cli_call(composer_api_plan, request, &response);
+    bool load_failure = called != URSATZ_OK && strncmp(response.error.message, "cannot load the input", 21) == 0;
+    if (called != URSATZ_OK && !(held.failed && load_failure)) {
         status = cli_fail_api(called, &response.error, input_name(&options, response.error.path));
     } else if (held.failed) {
         status = cli_fail(held.status, "%s", held.message);

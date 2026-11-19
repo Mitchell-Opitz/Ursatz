@@ -40,13 +40,13 @@ static const char *lane_word(PlanLaneKind lane) {
     return lane == PLAN_LANE_HARMONY ? "harmony" : lane == PLAN_LANE_BASS ? "bass" : lane == PLAN_LANE_MELODY ? "melody" : "inner";
 }
 
-ComposerStatus api_piece_read_lanes(const cJSON *lanes, const char *path, PieceEdit *edit, ComposerError *error) {
+UrsatzStatus api_piece_read_lanes(const cJSON *lanes, const char *path, PieceEdit *edit, UrsatzError *error) {
     edit->lane_count = 0;
     if (!lanes || cJSON_IsNull(lanes)) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     if (!cJSON_IsArray(lanes)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"lanes\" must be a list of harmony, bass, melody or inner");
+        return api_fail(error, URSATZ_ERR_REQUEST, path, "\"lanes\" must be a list of harmony, bass, melody or inner");
     }
     const cJSON *item = NULL;
     size_t at = 0;
@@ -55,14 +55,14 @@ ComposerStatus api_piece_read_lanes(const cJSON *lanes, const char *path, PieceE
         snprintf(member, sizeof member, "%s/%zu", path, at++);
         PlanLaneKind lane;
         if (!cJSON_IsString(item)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, member, "a lane must be harmony, bass, melody, inner or all");
+            return api_fail(error, URSATZ_ERR_REQUEST, member, "a lane must be harmony, bass, melody, inner or all");
         }
         if (request_equals_ignore_case(item->valuestring, "all")) {
             edit->lane_count = 0;
-            return COMPOSER_OK;
+            return URSATZ_OK;
         }
         if (!api_lane_from_name(item->valuestring, &lane)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, member, "lane must be harmony, bass, melody, inner or all, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, member, "lane must be harmony, bass, melody, inner or all, not '%s'",
                             item->valuestring);
         }
         bool known = false;
@@ -73,7 +73,7 @@ ComposerStatus api_piece_read_lanes(const cJSON *lanes, const char *path, PieceE
             edit->lanes[edit->lane_count++] = lane;
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 void api_piece_lanes_name(const PieceEdit *edit, char *out, size_t size) {
@@ -126,8 +126,8 @@ static bool is_node_target(const FillTarget *targets, size_t count, NodeId node)
  * seam's copy of that bar dropped and the sections the loop's end holds back reopened, so the seam stage copies the new bar
  * and writes the end against it.
  */
-static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit, Plan **out, FillTarget **targets,
-                                size_t *count, char *what, size_t what_size, ComposerError *error) {
+static UrsatzStatus open_edit(const PieceSpec *request, const PieceEdit *edit, Plan **out, FillTarget **targets,
+                                size_t *count, char *what, size_t what_size, UrsatzError *error) {
     PlanJsonError plan_error;
     Plan *plan = NULL;
     bool sized = !request->form->request_sections;
@@ -135,7 +135,7 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
     *targets = NULL;
     *count = 0;
     if (plan_from_json_resolved(request->knowledge, edit->text, composer_plan_read_hooks(), &plan, &plan_error) != PLAN_OK) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the %s: %s", sized ? "plan" : "loop plan",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/from", "cannot read the %s: %s", sized ? "plan" : "loop plan",
                         plan_error.message);
     }
     char member[64];
@@ -143,21 +143,21 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
     if (node == PLAN_NODE_NONE) {
         plan_destroy(plan);
         snprintf(member, sizeof member, "%s/section", edit->path);
-        return api_fail(error, COMPOSER_ERR_REQUEST, member, "the %s has no section '%s'", sized ? "plan" : "loop plan",
+        return api_fail(error, URSATZ_ERR_REQUEST, member, "the %s has no section '%s'", sized ? "plan" : "loop plan",
                         edit->section);
     }
     snprintf(member, sizeof member, "%s/lanes", edit->path);
     bool theme = !sized && request_fill(request, edit->section) == PIECE_FILL_THEME;
     if (theme && edit->lane_count == 0) {
         plan_destroy(plan);
-        return api_fail(error, COMPOSER_ERR_REQUEST, member,
+        return api_fail(error, URSATZ_ERR_REQUEST, member,
                         "section '%s' is filled with a theme: regenerate it with lanes harmony, bass, melody or inner",
                         edit->section);
     }
     for (size_t l = 0; theme && l < edit->lane_count; l++) {
         if (edit->lanes[l] == PLAN_LANE_MELODY || edit->lanes[l] == PLAN_LANE_INNER_VOICE) {
             plan_destroy(plan);
-            return api_fail(error, COMPOSER_ERR_REQUEST, member,
+            return api_fail(error, URSATZ_ERR_REQUEST, member,
                             "section '%s' is filled with a theme: its melody and inner voices are the theme's own; regenerate its "
                             "harmony or bass, or fill the section another way",
                             edit->section);
@@ -185,8 +185,8 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
     FillTarget *found = NULL;
     size_t found_count = 0;
     if (edit->lane_count == 0) {
-        ComposerStatus status = api_lane_targets(plan, node, false, PLAN_LANE_HARMONY, &found, &found_count, error);
-        if (status != COMPOSER_OK) {
+        UrsatzStatus status = api_lane_targets(plan, node, false, PLAN_LANE_HARMONY, &found, &found_count, error);
+        if (status != URSATZ_OK) {
             plan_destroy(plan);
             return status;
         }
@@ -194,13 +194,13 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
     for (size_t l = 0; l < edit->lane_count; l++) {
         FillTarget *lane_targets = NULL;
         size_t lane_count = 0;
-        ComposerStatus status = api_lane_targets(plan, node, true, edit->lanes[l], &lane_targets, &lane_count, error);
-        FillTarget *grown = status == COMPOSER_OK ? realloc(found, (found_count + lane_count + 1) * sizeof(FillTarget)) : NULL;
-        if (status != COMPOSER_OK || !grown) {
+        UrsatzStatus status = api_lane_targets(plan, node, true, edit->lanes[l], &lane_targets, &lane_count, error);
+        FillTarget *grown = status == URSATZ_OK ? realloc(found, (found_count + lane_count + 1) * sizeof(FillTarget)) : NULL;
+        if (status != URSATZ_OK || !grown) {
             free(lane_targets);
             free(found);
             plan_destroy(plan);
-            return status != COMPOSER_OK ? status : api_fail_alloc(error);
+            return status != URSATZ_OK ? status : api_fail_alloc(error);
         }
         found = grown;
         memcpy(found + found_count, lane_targets, lane_count * sizeof(FillTarget));
@@ -222,7 +222,7 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
         free(all);
         free(found);
         plan_destroy(plan);
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot reopen the seam");
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "", "cannot reopen the seam");
     }
     memcpy(all, found, found_count * sizeof(FillTarget));
     size_t total = found_count;
@@ -235,11 +235,11 @@ static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit,
     *out = plan;
     *targets = all;
     *count = total;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
-                                         PieceVersion *loop, PieceResult *result, ComposerError *error) {
+UrsatzStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
+                                         PieceVersion *loop, PieceResult *result, UrsatzError *error) {
     memset(loop, 0, sizeof(*loop));
     *result = PIECE_OK;
     if (!edit->section) {
@@ -247,10 +247,10 @@ ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEd
         PlanJsonError plan_error;
         if (plan_from_json_resolved(request->knowledge, edit->text, composer_plan_read_hooks(), &loop->plan, &plan_error) != PLAN_OK) {
             *result = PIECE_ERR_BAD_REQUEST;
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "cannot read the %s: %s",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/from", "cannot read the %s: %s",
                             request->form->request_sections ? "loop plan" : "plan", plan_error.message);
         }
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     Plan *plan = NULL;
     FillTarget *targets = NULL;
@@ -258,8 +258,8 @@ ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEd
     char what[96];
     ComposeConfig config;
     api_piece_make_config(request, check, seed, &config);
-    ComposerStatus status = open_edit(request, edit, &plan, &targets, &count, what, sizeof(what), error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = open_edit(request, edit, &plan, &targets, &count, what, sizeof(what), error);
+    if (status != URSATZ_OK) {
         *result = PIECE_ERR_BAD_REQUEST;
         return status;
     }
@@ -272,23 +272,23 @@ ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEd
     }
     if (ran == REGENERATE_ERR_STUCK) {
         *result = PIECE_ERR_STUCK;
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     if (ran != REGENERATE_OK) {
         *result = PIECE_ERR_BAD_REQUEST;
         return api_refused(ran, what, error);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* One try from a seed: the first plan written again, then the ending version built from it with seed + 20 when the form has one. */
-ComposerStatus api_piece_regenerate(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
-                                       PieceMade *piece, PieceResult *result, ComposerError *error) {
+UrsatzStatus api_piece_regenerate(const PieceSpec *request, const PieceEdit *edit, bool check, unsigned long seed,
+                                       PieceMade *piece, PieceResult *result, UrsatzError *error) {
     memset(piece, 0, sizeof(*piece));
     piece->seed = seed;
     piece->version_count = api_piece_version_count(request);
-    ComposerStatus status = api_piece_regenerate_loop(request, edit, check, seed, &piece->versions[0], result, error);
-    if (status == COMPOSER_OK && *result == PIECE_OK && piece->version_count == 2) {
+    UrsatzStatus status = api_piece_regenerate_loop(request, edit, check, seed, &piece->versions[0], result, error);
+    if (status == URSATZ_OK && *result == PIECE_OK && piece->version_count == 2) {
         *result = api_piece_compose_ending(request, check, seed, piece);
     }
     return status;

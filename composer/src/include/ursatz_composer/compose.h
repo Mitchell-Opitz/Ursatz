@@ -111,7 +111,7 @@ typedef struct {
     /* NULL for none. Reported once per stage (compose_stage_name, stage index, COMPOSE_STAGE_COUNT) and handed to every fill
        loop (FillConfig.job). A cancel ends the run with PIECE_ERR_STUCK and outcome->cancelled; the plan is then partly
        filled and no further round or candidate is tried. */
-    const ComposerJob *job;
+    const UrsatzJob *job;
     /*
      * The form whose checks the run makes (form_spec.h: its `checks` name which of hearing each theme section as its
      * shape, hearing the returns, checking the keys, checking the cadences and hearing the seam run; a check not named

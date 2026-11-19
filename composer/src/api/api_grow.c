@@ -38,7 +38,7 @@
 
 /* --- styles ------------------------------------------------------------------------------------------ */
 
-ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const Rational *option_tempo, ComposerError *error) {
+UrsatzStatus api_grow_set_tempo_and_mode(GrowSetup *out, const Rational *option_tempo, UrsatzError *error) {
     out->tempo.num = 0;
     out->tempo.den = 0;
     out->tempo_from = "none";
@@ -54,13 +54,13 @@ ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const Rational *optio
         if (!composer_style_mode(out->style, out->materials, &material)) {
             char member_path[32];
             snprintf(member_path, sizeof member_path, "/%s", out->text->material_member);
-            return api_fail(error, COMPOSER_ERR_REQUEST, member_path, "%s style needs a style with a mode category",
+            return api_fail(error, URSATZ_ERR_REQUEST, member_path, "%s style needs a style with a mode category",
                             out->text->material_member);
         }
         composer_key_set_material(&out->key, material);
     }
     out->mode_from = from_style ? "style" : "request";
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- growing ---------------------------------------------------------------------------------------- */
@@ -330,7 +330,7 @@ static GrowResult grow_one(const GrowSetup *setup, unsigned long seed, size_t at
     return ran;
 }
 
-ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError *error) {
+UrsatzStatus api_grow_run(const GrowSetup *setup, GrowRun *run, UrsatzError *error) {
     memset(run, 0, sizeof(*run));
     run->chord_bar = -1;
     run->last_seed = setup->seed;
@@ -338,14 +338,14 @@ ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError 
     unsigned long tries = (unsigned long)GROW_MAX_SEED_TRIES * setup->suggest;
     for (unsigned long attempt = 0; attempt < tries && run->made < setup->suggest; attempt++) {
         if (job_step(setup->job, "grow", (unsigned)attempt, (unsigned)tries)) {
-            return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+            return api_fail(error, URSATZ_ERR_CANCELLED, "", "cancelled");
         }
         GrowTheme theme;
         bool cancelled = false;
         run->last_seed = (setup->seed + attempt) & GROW_SEED_MAX;
         GrowResult result = grow_one(setup, run->last_seed, attempt, &theme, run, &cancelled);
         if (cancelled) {
-            return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+            return api_fail(error, URSATZ_ERR_CANCELLED, "", "cancelled");
         }
         if (result == GROW_OK) {
             bool repeated = false;
@@ -364,19 +364,19 @@ ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError 
             bool named = setup->material || strncmp(refusal->path, "/construction", 13) == 0 ||
                          strcmp(refusal->path, "/bars") == 0;
             return refusal->message[0] != '\0'
-                       ? api_fail(error, COMPOSER_ERR_UNSATISFIABLE, named ? refusal->path : "", "%s", refusal->message)
-                       : api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", grow_result_name(result));
+                       ? api_fail(error, URSATZ_ERR_UNSATISFIABLE, named ? refusal->path : "", "%s", refusal->message)
+                       : api_fail(error, URSATZ_ERR_UNSATISFIABLE, "", "%s", grow_result_name(result));
         }
     }
     if (run->made == 0 && run->chord_bar >= 0) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, setup->material ? "/chords" : "", "the given chords in bar %ld do not allow the %s",
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, setup->material ? "/chords" : "", "the given chords in bar %ld do not allow the %s",
                         run->chord_bar, text->cadence ? text->cadence : "PAC");
     }
     if (run->made == 0) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "",
                         "no theme could be grown for %s, %s, %zu bars, %s from seeds %lu to %lu", text->key, text->meter,
                         setup->bars, text->into, setup->seed, run->last_seed);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 

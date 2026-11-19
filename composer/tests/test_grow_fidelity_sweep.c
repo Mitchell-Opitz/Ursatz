@@ -166,10 +166,10 @@ int main(void) {
                 int composed = 0;
                 for (unsigned long seed = 1; seed <= SEEDS; seed++) {
                     GrowRun run;
-                    ComposerError error;
+                    UrsatzError error;
                     memset(&error, 0, sizeof(error));
                     setup.seed = seed;
-                    if (api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1) {
+                    if (api_grow_run(&setup, &run, &error) == URSATZ_OK && run.made == 1) {
                         composed++;
                         read_theme(run.themes[0].plan, &motive, (GrowDevelopment)development, stats);
                     }

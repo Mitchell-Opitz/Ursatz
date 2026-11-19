@@ -18,8 +18,8 @@ Renders a plan once and exports it, as `ursatz-composer export` does.
 
 `json`: `{"skipped": [{"span", "lane", "reason"}]}`, the lane spans the render left out, with the reasons the CLI prints on
 stderr (`"not Given or Realized"`, `"source material"`, `"not in the layer"`, `"seam"`, `"lane is not rendered yet"`).
-A plan that does not read is `COMPOSER_ERR_REQUEST` with the path of the member (`/plan/format`); a plan with no Given or
-Realized note is `COMPOSER_ERR_REQUEST` with `/plan`. Schema: `schema/api/export.schema.json`.
+A plan that does not read is `URSATZ_ERR_REQUEST` with the path of the member (`/plan/format`); a plan with no Given or
+Realized note is `URSATZ_ERR_REQUEST` with `/plan`. Schema: `schema/api/export.schema.json`.
 
 ## Motive requests
 
@@ -31,7 +31,7 @@ takes the bytes of a MIDI file instead of `input`.
 | `input.text` | the motive as text: a note list, a degree list, a rhythm, a contour, a motive document (JSON) or a MusicXML document |
 | `input.format` | `"auto"` (default; the text is detected as the CLI detects a file), `"notes"`, `"degrees"`, `"rhythm"`, `"contour"`, `"json"` or `"musicxml"` |
 | `input.form` | `"full"` (default), `"rhythm"` or `"contour"`: a rhythm or a contour is read by its own reader; a `format` that says otherwise is refused |
-| `meter` | `"4/4"`: the meter, for input that has none (a note list); an input that declares another meter is `COMPOSER_ERR_UNSATISFIABLE` |
+| `meter` | `"4/4"`: the meter, for input that has none (a note list); an input that declares another meter is `URSATZ_ERR_UNSATISFIABLE` |
 | `key` | `"D minor"`: replaces a key the input states |
 | `pickup` | the beats before the first barline, counted in beats of the motive's meter: a number or a string (`1`, `"1/2"`); default 0 |
 | `harmony` | the motive's own chords as Roman numerals with onsets in beats after `@` (`"I V6@2 I@3"`); `""` clears the harmony the input has |
@@ -39,9 +39,9 @@ takes the bytes of a MIDI file instead of `input`.
 | `role` | `"melodic"` (default) or `"accompaniment"` |
 | `tones` | tone labels by 1-based note: `["3=passing", "2=chord"]`; the roles are `chord`, `passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`, `changing-tone` and `pedal`; needs a motive with a key and pitches |
 
-A member that is not valid is `COMPOSER_ERR_REQUEST` with its path (`/meter`, `/harmony`, `/features/1`, `/tones/0`,
+A member that is not valid is `URSATZ_ERR_REQUEST` with its path (`/meter`, `/harmony`, `/features/1`, `/tones/0`,
 `/input/format`). Text that is not a motive of the kind asked for, or a pickup, chord or feature the motive cannot hold,
-is `COMPOSER_ERR_UNSATISFIABLE` with the path `/input/text` (`""` for MIDI bytes) and the library's message and location.
+is `URSATZ_ERR_UNSATISFIABLE` with the path `/input/text` (`""` for MIDI bytes) and the library's message and location.
 Schema: `schema/api/motive.request.schema.json`.
 
 Key and meter text. Every entry reads a `key` and a `meter` with one parser (`request_parse_key`, `request_parse_meter`): a key is a tonic letter, an optional `#` or `b`, a space and `major` or `minor` in any case (`"D minor"`, `"F# major"`); a meter is whole numbers only, 1 to 64 beats over a beat unit of 1, 2, 4, 8 or 16 (`"3/4"`, `"6/8"`), with no sign and no white space.
@@ -56,7 +56,7 @@ scale degrees, implied harmony, base harmony, the segments and the tone labels w
 ## `composer_api_motive_from_midi(context, bytes, size, request_json, job, out)`
 
 The same for a motive that is a Standard MIDI File (type 0 or 1), read in memory. The request has the members above
-without `input`. A buffer that is not a MIDI file, or holds notes sounding together, is `COMPOSER_ERR_UNSATISFIABLE`.
+without `input`. A buffer that is not a MIDI file, or holds notes sounding together, is `URSATZ_ERR_UNSATISFIABLE`.
 
 ## `composer_api_motive_render(context, request_json, job, out)`
 
@@ -64,14 +64,14 @@ The motive request, and the motive is rendered.
 
 | Member | Value |
 |---|---|
-| `render_key` | `"G minor"`: hear the motive in this key, the same degrees; default its own key. A motive with no key, or a note that leaves the MIDI range, is `COMPOSER_ERR_UNSATISFIABLE` with `/render_key` |
+| `render_key` | `"G minor"`: hear the motive in this key, the same degrees; default its own key. A motive with no key, or a note that leaves the MIDI range, is `URSATZ_ERR_UNSATISFIABLE` with `/render_key` |
 | `tempo` | quarter notes per minute from 20 to 400, a whole number or a string like `"195/2"` |
 | `musicxml` | `true` to fill `musicxml` (a pickup is an implicit first measure); default `false` |
 | `midi` | `true` to fill `midi` and `midi_size`; default `false` |
 
 `json` is the analysis document with the top-level `rendered` object, `{"key", "notes": [{"midi_pitch", "offset",
 "duration"}]}`, the motive as it sounds with offsets from its first note. A file that cannot be made is
-`COMPOSER_ERR_UNSATISFIABLE` with the path `/midi` or `/musicxml`. The render entry takes text input only; the CLI, which
+`URSATZ_ERR_UNSATISFIABLE` with the path `/midi` or `/musicxml`. The render entry takes text input only; the CLI, which
 may read a MIDI file and render it, reads the file with `composer_api_motive_from_midi` and passes the motive document it
 answers with as the `json` input of the render request.
 
@@ -101,11 +101,11 @@ seed. The request is the motive request (above, without `tones`) with these memb
 `harmony`, `functions`, `derivation`, `recognizability`, `remoteness` and `motive` (the motive document of the motive
 entry). `skipped` (`[{"op", "reason"}]`) for `each_op`. `notices` (strings, only when there are any) say which seeds were
 skipped because a chain did not apply, and that fewer variants than asked for suit the functions and distance; the CLI
-prints them on stderr. Nothing is made: `COMPOSER_ERR_UNSATISFIABLE`, as is a chain with a step the motive refuses
+prints them on stderr. Nothing is made: `URSATZ_ERR_UNSATISFIABLE`, as is a chain with a step the motive refuses
 (`step 2 of the chain: ...`).
 
 Progress is reported once for each variant tried, stage `"variants"` (`done` of `total` draws, or registry rows for
-`each_op`), and a cancel is honored there with `COMPOSER_ERR_CANCELLED`. Schemas: `schema/api/variants.request.schema.json`,
+`each_op`), and a cancel is honored there with `URSATZ_ERR_CANCELLED`. Schemas: `schema/api/variants.request.schema.json`,
 `variants.response.schema.json`.
 
 ## `composer_api_recognize(context, request_json, job, out)`
@@ -138,11 +138,11 @@ range are drawn from defaults in the Composer.
 | `form` | `"full"` (default), `"rhythm"` or `"contour"` |
 | `strategy` | `"segments"` (default) or `"drawn"`: how the motive is made (below). Anything else is a refusal with `/strategy` |
 | `role` | `"melodic"` or `"accompaniment"` |
-| `style` | a style model file: 8 candidates are drawn for each motive and the closest to it kept. A file that cannot be read is `COMPOSER_ERR_UNSATISFIABLE` with `/style` |
+| `style` | a style model file: 8 candidates are drawn for each motive and the closest to it kept. A file that cannot be read is `URSATZ_ERR_UNSATISFIABLE` with `/style` |
 | `style_without` | up to 8 style categories read without; needs `style` |
 | `count` | 1 to 16, default 1 |
 | `seed` | 0 to 4294967295, default from the clock |
-| `preferences` | the settings document of [preferences.md](../preferences.md) (API 1.12; the L2 rhythm, ending and long non-chord tone members since 1.15, the L3 syncopation, skip and chord plan members since 1.17; the L4 melody and contrast members since 1.19, accepted and echoed here). Its `motif` group steers the `"segments"` strategy; a bad member is refused with its path under `/preferences`, and a given `motif.plan` that does not fit the meter, bars, shapes or endings allowed with `COMPOSER_ERR_REQUEST` at `/preferences/motif/plan` (`validate` leaves that to the run) |
+| `preferences` | the settings document of [preferences.md](../preferences.md) (API 1.12; the L2 rhythm, ending and long non-chord tone members since 1.15, the L3 syncopation, skip and chord plan members since 1.17; the L4 melody and contrast members since 1.19, accepted and echoed here). Its `motif` group steers the `"segments"` strategy; a bad member is refused with its path under `/preferences`, and a given `motif.plan` that does not fit the meter, bars, shapes or endings allowed with `URSATZ_ERR_REQUEST` at `/preferences/motif/plan` (`validate` leaves that to the run) |
 
 **Strategy.** `"segments"` builds each motive the way a motive is made, from segments (Schoenberg's motives): one to three
 segments, `a`, its repeat `a'` on the next chord and a new `b`, with one chord on each segment from a harmony plan (`I V`,

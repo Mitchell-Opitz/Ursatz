@@ -97,7 +97,7 @@ static bool parse_pitch(const KnowledgeSnapshot *knowledge, const char *text, in
 
 /* A member given as text or as a number, as the text; NULL when absent or null. */
 static bool member_text(const cJSON *request, const char *name, char *buffer, size_t size, const char **out,
-                        ComposerError *error) {
+                        UrsatzError *error) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, name);
     *out = NULL;
     if (!item || cJSON_IsNull(item)) {
@@ -114,7 +114,7 @@ static bool member_text(const cJSON *request, const char *name, char *buffer, si
     }
     char path[sizeof error->path];
     snprintf(path, sizeof path, "/%s", name);
-    api_fail(error, COMPOSER_ERR_REQUEST, path, "%s must be a number or text", name);
+    api_fail(error, URSATZ_ERR_REQUEST, path, "%s must be a number or text", name);
     return false;
 }
 
@@ -453,14 +453,14 @@ static bool parse_op(const char *text, Op *out) {
 }
 
 /* Reads the members that say how the operation is done, and which of them were given. */
-static ComposerStatus read_flags(const cJSON *request, Flags *flags, char (*buffers)[32], ComposerError *error) {
+static UrsatzStatus read_flags(const cJSON *request, Flags *flags, char (*buffers)[32], UrsatzError *error) {
     const char **texts[] = {&flags->by, &flags->degree, NULL, &flags->axis, &flags->interval, &flags->amount, NULL,
                             &flags->position, &flags->length, &flags->min, &flags->drop, NULL, &flags->ratio};
     memset(flags, 0, sizeof(*flags));
     for (int bit = 0; bit < 13; bit++) {
         if (texts[bit]) {
             if (!member_text(request, FLAG_NAMES[bit], buffers[bit], 32, texts[bit], error)) {
-                return COMPOSER_ERR_REQUEST;
+                return URSATZ_ERR_REQUEST;
             }
             if (*texts[bit]) {
                 flags->given |= 1u << bit;
@@ -469,14 +469,14 @@ static ComposerStatus read_flags(const cJSON *request, Flags *flags, char (*buff
             bool value = false;
             bool found;
             if (!api_member_bool(request, FLAG_NAMES[bit], &value, &found, error)) {
-                return COMPOSER_ERR_REQUEST;
+                return URSATZ_ERR_REQUEST;
             }
             if (value) {
                 flags->given |= 1u << bit;
             }
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* The notes written on the target once suggestion index is applied to a copy of the plan. */
@@ -499,23 +499,23 @@ static bool suggestion_motive(const Scene *scene, const FillSuggestions *suggest
 }
 
 /* The files of the best candidate: the source and that candidate applied to the plan. */
-static ComposerStatus render_best(const KnowledgeSnapshot *knowledge, Scene *scene, const FillSuggestions *suggestions,
+static UrsatzStatus render_best(const KnowledgeSnapshot *knowledge, Scene *scene, const FillSuggestions *suggestions,
                                   const ApiOutputs *outputs, cJSON *document, ComposerResponse *out) {
     FillResult applied = fill_apply_suggestion(scene->plan, suggestions, 0);
     if (applied != FILL_OK) {
-        return api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot build the plan to write (fill result %d)", (int)applied);
+        return api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "cannot build the plan to write (fill result %d)", (int)applied);
     }
     return api_render_outputs(knowledge, scene->plan, outputs, document, out);
 }
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
 
-ComposerStatus composer_api_develop(const ComposerContext *context, const char *request_json,
-                                    const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_develop(const ComposerContext *context, const char *request_json,
+                                    const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *request = NULL;
@@ -533,47 +533,47 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
     bool found;
     Op op = OP_RESTATE;
     memset(&outputs, 0, sizeof(outputs));
-    ComposerStatus status = api_parse_request(request_json, &request, &out->error);
-    if (status == COMPOSER_OK && !api_member_string(request, "op", &op_text, &found, &out->error)) {
-        status = COMPOSER_ERR_REQUEST;
-    } else if (status == COMPOSER_OK && !found) {
-        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/op", "the request needs \"op\"");
+    UrsatzStatus status = api_parse_request(request_json, &request, &out->error);
+    if (status == URSATZ_OK && !api_member_string(request, "op", &op_text, &found, &out->error)) {
+        status = URSATZ_ERR_REQUEST;
+    } else if (status == URSATZ_OK && !found) {
+        status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/op", "the request needs \"op\"");
     }
-    if (status == COMPOSER_OK && !parse_op(op_text, &op)) {
-        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/op",
+    if (status == URSATZ_OK && !parse_op(op_text, &op)) {
+        status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/op",
                           "unknown operation '%s'; use restate, invert, retrograde, interval, fragment, liquidate, "
                           "augment or diminish",
                           op_text);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = read_flags(request, &flags, buffers, &out->error);
     }
-    if (status == COMPOSER_OK && (flags.given & ~OP_FLAGS[op])) {
-        for (int bit = 0; bit < 13 && status == COMPOSER_OK; bit++) {
+    if (status == URSATZ_OK && (flags.given & ~OP_FLAGS[op])) {
+        for (int bit = 0; bit < 13 && status == URSATZ_OK; bit++) {
             if (flags.given & ~OP_FLAGS[op] & (1u << bit)) {
                 char path[64];
                 snprintf(path, sizeof path, "/%s", FLAG_NAMES[bit]);
-                status = api_fail(&out->error, COMPOSER_ERR_REQUEST, path, "%s does not apply to %s", FLAG_NAMES[bit], OP_NAMES[op]);
+                status = api_fail(&out->error, URSATZ_ERR_REQUEST, path, "%s does not apply to %s", FLAG_NAMES[bit], OP_NAMES[op]);
             }
         }
     }
-    if (status == COMPOSER_OK &&
+    if (status == URSATZ_OK &&
         (!api_member_whole(request, "seed", 0, 4294967295UL, &seed, &found, &out->error) ||
          !api_member_whole(request, "suggest", 1, MAX_SUGGEST, &suggest, &found, &out->error))) {
-        status = COMPOSER_ERR_REQUEST;
+        status = URSATZ_ERR_REQUEST;
     }
-    if (status == COMPOSER_OK && !found) {
+    if (status == URSATZ_OK && !found) {
         suggest = DEFAULT_SUGGEST;
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_read_outputs(request, false, &outputs, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_read_motive(request, "", context->knowledge, &source, NULL, &out->error);
     }
     MotiveDevelopContext develop_context;
     PlanMotiveRef ref;
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         char problem_text[160];
         const char *problem = NULL;
         motive_develop_context_default(&develop_context);
@@ -583,10 +583,10 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
         develop_context.materials = &materials;
         develop_context.candidates = (size_t)suggest * 3 > 12 ? (size_t)suggest * 3 : 12;
         if (!build_ref(context->knowledge, &flags, op, &source, &develop_context.min_length, &ref, &problem, problem_text, sizeof(problem_text))) {
-            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "%s", problem);
+            status = api_fail(&out->error, URSATZ_ERR_REQUEST, "", "%s", problem);
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         registry = fill_registry_create();
         if (!registry || motive_develop_register(registry, &develop_context) != FILL_OK) {
             status = api_fail_alloc(&out->error);
@@ -596,7 +596,7 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
             have_scene = true;
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         FillConfig config;
         memset(&config, 0, sizeof(config));
         config.seed = seed;
@@ -605,19 +605,19 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
         config.job = job;
         FillTarget target = {FILL_TARGET_NODE, scene.target};
         if (job_step(job, "develop", 0, 1)) {
-            status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+            status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
         } else if (fill_suggest(scene.plan, registry, &config, target, (size_t)suggest, &suggestions) != FILL_OK) {
             status = job && job->cancelled && job->cancelled(job->user)
-                         ? api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled")
-                         : api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "the development could not be run");
+                         ? api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled")
+                         : api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "the development could not be run");
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         size_t count = fill_suggestions_count(suggestions);
         char text[2048];
         motive_text(&source, text, sizeof(text));
         if (count == 0) {
-            status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "no %s development can be made from %s as asked",
+            status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "no %s development can be made from %s as asked",
                               OP_NAMES[op], text);
         } else {
             cJSON *document = cJSON_CreateObject();
@@ -629,12 +629,12 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
                 cJSON_Delete(list);
                 status = api_fail_alloc(&out->error);
             }
-            const CandidateSet *set = status == COMPOSER_OK ? fill_suggestions_set(suggestions) : NULL;
-            for (size_t i = 0; status == COMPOSER_OK && i < count; i++) {
+            const CandidateSet *set = status == URSATZ_OK ? fill_suggestions_set(suggestions) : NULL;
+            for (size_t i = 0; status == URSATZ_OK && i < count; i++) {
                 const Candidate *candidate = candidate_set_candidate_at(set, i);
                 Motive development;
                 if (!suggestion_motive(&scene, suggestions, i, &source, &development)) {
-                    status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot read candidate %zu", i + 1);
+                    status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "cannot read candidate %zu", i + 1);
                     break;
                 }
                 motive_text(&development, text, sizeof(text));
@@ -649,10 +649,10 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
                     status = api_fail_alloc(&out->error);
                 }
             }
-            if (status == COMPOSER_OK && (outputs.midi || outputs.musicxml || outputs.layers)) {
+            if (status == URSATZ_OK && (outputs.midi || outputs.musicxml || outputs.layers)) {
                 status = render_best(context->knowledge, &scene, suggestions, &outputs, document, out);
             }
-            if (status == COMPOSER_OK) {
+            if (status == URSATZ_OK) {
                 status = api_respond_json(out, document);
             } else {
                 cJSON_Delete(document);
@@ -665,8 +665,8 @@ ComposerStatus composer_api_develop(const ComposerContext *context, const char *
         plan_destroy(scene.plan);
     }
     cJSON_Delete(request);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }

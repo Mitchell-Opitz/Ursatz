@@ -42,7 +42,7 @@ bool ursatz_gui_motif_validate(const char *kind, const cJSON *request, UrsatzGui
  * the input, 499 for a cancel, else 500) and message set. */
 cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions,
                                      const char *distance, bool each_op, const cJSON *chain, int count, double seed,
-                                     const ComposerJob *job, int *status, char *message, size_t message_size);
+                                     const UrsatzJob *job, int *status, char *message, size_t message_size);
 
 /* The request member at fault of the last refused ursatz_gui_motif_run_variants on this thread, "" when none. */
 const char *ursatz_gui_motif_variants_path(void);

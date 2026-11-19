@@ -121,6 +121,7 @@ module analyzer-corpus analyzer/src/corpus root analyzer/src analyzer/include
 module analyzer-links  analyzer/src/links  root analyzer/src analyzer/include
 module analyzer-cli    analyzer/src/cli    root analyzer/src analyzer/include
 module composer-api  composer/include  prefix ursatz_composer/composer_api.h
+uses composer-api common
 # The Composer (R-636): each folder of composer/src is a module; a src/include/ursatz_composer header belongs to the module whose files implement it.
 module composer-util composer/src/util composer/src/composer.c composer/src/include/ursatz_composer/composer.h root composer/src composer/src/include composer/include
 module composer-structure composer/src/structure composer/src/include/ursatz_composer/fill_target.h composer/src/include/ursatz_composer/form_spec.h composer/src/include/ursatz_composer/locks.h composer/src/include/ursatz_composer/theme_shape.h root composer/src composer/src/include composer/include
@@ -169,7 +170,7 @@ uses analyzer-style  model theory analysis chain io realization reading analyzer
 uses analyzer-corpus model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result export/analysis_document_internal.h common
 uses analyzer-links  model theory analysis chain io realization reading analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result common
 uses analyzer-cli    model theory analysis chain io realization reading plan analyzer-api cjson ezxml analyzer-util analyzer-store analyzer-result analyzer-export analyzer-style analyzer-corpus analyzer-links common
-# The Composer's layers (R-636, survey 2.5; util, fill, grow and piece include the public API header for ComposerJob, ComposerStatus and ComposerError): a module includes only the ones below it; the table fails on an include upward or between siblings not listed.
+# The Composer's layers (R-636, survey 2.5; util, fill, grow and piece include the public API header for UrsatzJob, UrsatzStatus and UrsatzError): a module includes only the ones below it; the table fails on an include upward or between siblings not listed.
 uses composer-util model theory realization plan reading analysis chain io cjson composer-api common
 uses composer-structure model theory realization plan reading analysis chain io cjson composer-util common
 uses composer-fill model theory realization plan reading analysis chain io cjson composer-api composer-structure composer-util common
@@ -365,4 +366,4 @@ forbid gui URSATZ_GUI_LIBRARY_DIR|URSATZ_GUI_TEST_URSATZ_DIR -- GUI tests read t
 forbid analyzer URSATZ_ANALYZER_FIXTURE_DIR -- one fixtures folder
 forbid composer/src ursatz_analyzer -- the Composer includes and links no Analyzer: it hears through the library chain and the Analyzer is its sibling (R-620); only the CLI and the GUI call both
 forbid composer/CMakeLists.txt ursatz_analyzer -- the Composer links no Analyzer target (R-620)
-forbid composer/src/CMakeLists.txt target_link_libraries\(ursatz_composer\s+(PUBLIC|INTERFACE) -- a Composer consumer sees no library or Analyzer header
+forbid composer/src/CMakeLists.txt target_link_libraries\(ursatz_composer\s+(PUBLIC|INTERFACE)\s+(?!ursatz_common\b) -- a Composer consumer sees no library or Analyzer header, only the common part its API header names (R-639)

@@ -266,9 +266,9 @@ static void composes_under(const GrowContrast *settings, size_t count) {
                     setup.tempo_from = "none";
                     setup.contrast = &settings[s];
                     GrowRun run;
-                    ComposerError error;
+                    UrsatzError error;
                     memset(&error, 0, sizeof(error));
-                    composed += api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1 ? 1 : 0;
+                    composed += api_grow_run(&setup, &run, &error) == URSATZ_OK && run.made == 1 ? 1 : 0;
                     api_grow_run_destroy(&run);
                 }
                 printf("distance {%u, %u} new material %u, %s %s: %u of %d composed\n", settings[s].distance[0],

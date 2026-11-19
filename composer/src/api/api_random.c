@@ -30,10 +30,10 @@ static unsigned long mix_seed(unsigned long seed) {
 }
 
 /* Reads the members that make the options, without the style. drawn_mode and drawn_meter are set to what was drawn. */
-static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot *knowledge,
+static UrsatzStatus read_options(const cJSON *request, const KnowledgeSnapshot *knowledge,
                                    MotiveRandomOptions *out,
                                    bool *accompaniment, bool *has_role, const char **drawn_mode, const char **drawn_meter,
-                                   ComposerPreferences *preferences, bool *has_preferences, ComposerError *error) {
+                                   ComposerPreferences *preferences, bool *has_preferences, UrsatzError *error) {
     memset(out, 0, sizeof *out);
     out->knowledge = knowledge;
     *drawn_mode = NULL;
@@ -43,7 +43,7 @@ static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot
     bool has_seed = false;
     if (!api_member_whole(request, "count", 1, MOTIVE_RANDOM_MAX_COUNT, &count, NULL, error) ||
         !api_member_whole(request, "seed", 0, 4294967295UL, &seed, &has_seed, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     out->count = count;
     out->seed = has_seed ? seed : api_default_seed();
@@ -59,11 +59,11 @@ static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot
     if (!api_read_material(request, NULL, true, &mode_text, &material_member, error) ||
         !api_member_string(request, "meter", &meter_text, &has_meter, error) ||
         !api_member_string(request, "key", &key_text, &present, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     bool has_key = present;
     if (!has_meter) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "meter is required, as in 4/4 or 6/8");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/meter", "meter is required, as in 4/4 or 6/8");
     }
     unsigned long mixed = mix_seed(out->seed);
     if (request_equals_ignore_case(mode_text, "random")) {
@@ -78,93 +78,93 @@ static ComposerStatus read_options(const cJSON *request, const KnowledgeSnapshot
         char member_path[32];
         ApiMaterialKind kind;
         snprintf(member_path, sizeof member_path, "/%s", material_member);
-        ComposerStatus resolved = api_resolve_material(knowledge, material_member, member_path, mode_text, 0, &out->material,
+        UrsatzStatus resolved = api_resolve_material(knowledge, material_member, member_path, mode_text, 0, &out->material,
                                                        &kind, error);
-        if (resolved != COMPOSER_OK) {
+        if (resolved != URSATZ_OK) {
             return resolved;
         }
     }
     if (!request_parse_meter(meter_text, &out->meter)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/meter",
                         "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8", meter_text);
     }
     if (has_key) {
         if (!request_parse_key(key_text, knowledge, &out->key)) {
             if (api_fail_unsupported_key(error, "/key", knowledge, key_text)) {
-                return COMPOSER_ERR_REQUEST;
+                return URSATZ_ERR_REQUEST;
             }
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/key",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/key",
                             "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                             "for example \"D minor\"",
                             key_text);
         }
         if (composer_key_is_minor(&out->key) != composer_material_is_minor(out->material)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/key", "key '%s' is not %s, the mode asked for", key_text,
+            return api_fail(error, URSATZ_ERR_REQUEST, "/key", "key '%s' is not %s, the mode asked for", key_text,
                             mode_text);
         }
         out->has_key = true;
     }
     out->form = MOTIVE_SKETCH_FORM_FULL;
     if (!api_member_string(request, "form", &form_text, &present, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (present && !motive_form_parse(form_text, &out->form)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/form", "form must be full, rhythm or contour, not '%s'", form_text);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/form", "form must be full, rhythm or contour, not '%s'", form_text);
     }
     out->strategy = MOTIVE_RANDOM_STRATEGY_SEGMENTS;
     if (!api_member_string(request, "strategy", &strategy_text, &present, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (present && !motive_random_strategy_parse(strategy_text, &out->strategy)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/strategy", "strategy must be segments or drawn, not '%s'",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/strategy", "strategy must be segments or drawn, not '%s'",
                         strategy_text);
     }
     if (!api_member_string(request, "role", &role_text, has_role, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (*has_role && !motive_role_parse(role_text, accompaniment)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/role", "role must be melodic or accompaniment, not '%s'", role_text);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/role", "role must be melodic or accompaniment, not '%s'", role_text);
     }
     /* The motif group steers the segments strategy; the drawn strategy keeps its constants (R-304). */
     if (!api_read_preferences(request, preferences, has_preferences, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     out->preferences = *has_preferences ? &preferences->motif : NULL;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* The style of "style", without the categories of "style_without". NULL for none. */
-static ComposerStatus read_style(const cJSON *request, ComposerStyle **style, ComposerError *error) {
+static UrsatzStatus read_style(const cJSON *request, ComposerStyle **style, UrsatzError *error) {
     *style = NULL;
     const char *path = NULL;
     bool has_style = false;
     if (!api_member_string(request, "style", &path, &has_style, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     const char *without[STYLE_WITHOUT_MAX];
     size_t without_count = 0;
     const cJSON *list = cJSON_GetObjectItemCaseSensitive(request, "style_without");
     if (list && !cJSON_IsNull(list)) {
         if (!cJSON_IsArray(list)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without must be a list of categories");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without must be a list of categories");
         }
         if (cJSON_GetArraySize(list) > STYLE_WITHOUT_MAX) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without has at most %d categories",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without has at most %d categories",
                             STYLE_WITHOUT_MAX);
         }
         for (int i = 0; i < cJSON_GetArraySize(list); i++) {
             const cJSON *item = cJSON_GetArrayItem(list, i);
             if (!cJSON_IsString(item)) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without must be a list of categories");
+                return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without must be a list of categories");
             }
             without[without_count++] = item->valuestring;
         }
     }
     if (without_count > 0 && !has_style) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without needs style");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without needs style");
     }
     return has_style ? api_load_style(path, without, without_count, "/style", "/style_without", style, error)
-                     : COMPOSER_OK;
+                     : URSATZ_OK;
 }
 
 /* {"seed", "motives": [<motive document>]}. NULL on failure. */
@@ -205,9 +205,9 @@ static cJSON *random_document(unsigned long seed, const Motive *motives, size_t 
     return document;
 }
 
-static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot *knowledge, const ComposerJob *job,
+static UrsatzStatus make_random(const cJSON *request, const KnowledgeSnapshot *knowledge, const UrsatzJob *job,
                                   ComposerResponse *out) {
-    ComposerError *error = &out->error;
+    UrsatzError *error = &out->error;
     MotiveRandomOptions options;
     bool accompaniment = false;
     bool has_role = false;
@@ -215,19 +215,19 @@ static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot 
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, knowledge, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    UrsatzStatus status = read_options(request, knowledge, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     ComposerStyle *style = NULL;
     status = read_style(request, &style, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     if (job_step(job, "random-motive", 0, 1)) {
         composer_style_destroy(style);
-        return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+        return api_fail(error, URSATZ_ERR_CANCELLED, "", "cancelled");
     }
     options.style = style;
     Motive motives[MOTIVE_RANDOM_MAX_COUNT];
@@ -235,11 +235,11 @@ static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot 
     MotiveRandomResult result = motive_random(&options, motives, &made);
     composer_style_destroy(style);
     if (result == MOTIVE_RANDOM_ERR_PLAN) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/preferences/motif/plan",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/preferences/motif/plan",
                         "the motif plan does not fit the meter, bars, shapes or endings allowed");
     }
     if (result != MOTIVE_RANDOM_OK) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot make random motives (%s)",
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "", "cannot make random motives (%s)",
                         motive_random_result_name(result));
     }
     for (size_t i = 0; has_role && i < made; i++) {
@@ -247,13 +247,13 @@ static ComposerStatus make_random(const cJSON *request, const KnowledgeSnapshot 
     }
     cJSON *document = random_document(options.seed, motives, made, drawn_mode ? options.material->id : NULL, drawn_meter, has_preferences ? &preferences : NULL);
     if (!document) {
-        return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     return api_respond_json(out, document);
 }
 
-ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, cJSON *filled,
-                                   ComposerError *error) {
+UrsatzStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJSON *request, cJSON *filled,
+                                   UrsatzError *error) {
     MotiveRandomOptions options;
     bool accompaniment = false;
     bool has_role = false;
@@ -261,14 +261,14 @@ ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJS
     const char *drawn_meter = NULL;
     ComposerPreferences preferences;
     bool has_preferences = false;
-    ComposerStatus status = read_options(request, knowledge, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
+    UrsatzStatus status = read_options(request, knowledge, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter,
                                          &preferences, &has_preferences, error);
     ComposerStyle *style = NULL;
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = read_style(request, &style, error);
         composer_style_destroy(style);
     }
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     /* The seed the draws were made from is the request's own, or the one read from the clock. */
@@ -285,26 +285,26 @@ ComposerStatus api_random_validate(const KnowledgeSnapshot *knowledge, const cJS
         cJSON_DeleteItemFromObjectCaseSensitive(filled, "meter");
         ok = ok && cJSON_AddStringToObject(filled, "meter", drawn_meter);
     }
-    return ok ? COMPOSER_OK : api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+    return ok ? URSATZ_OK : api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
 }
 
-ComposerStatus composer_api_random_motive(const ComposerContext *context, const char *request_json,
-                                          const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_random_motive(const ComposerContext *context, const char *request_json,
+                                          const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *request = NULL;
-    ComposerStatus status = api_parse_request(request_json, &request, &out->error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = api_parse_request(request_json, &request, &out->error);
+    if (status != URSATZ_OK) {
         return status;
     }
     status = make_random(request, context->knowledge, job, out);
     cJSON_Delete(request);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }

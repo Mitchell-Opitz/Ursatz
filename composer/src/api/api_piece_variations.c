@@ -38,8 +38,8 @@ static void variations_destroy(Variation *items, size_t count) {
  * <version, its "plan" the plan object>, "loop_markers": {"start", "end"}}], "kept", "requested", "seeds_tried"}. The first
  * version is "loop" for the game loop and "piece" for a form with sizes, which has no loop markers.
  */
-static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceEdit *edit, const Variation *items, size_t kept,
-                                  size_t tried, unsigned long requested, bool musicxml, cJSON **result, ComposerError *error) {
+static UrsatzStatus variations_document(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PieceEdit *edit, const Variation *items, size_t kept,
+                                  size_t tried, unsigned long requested, bool musicxml, cJSON **result, UrsatzError *error) {
     char lanes[64];
     GrowBrief brief;
     memset(&brief, 0, sizeof(brief));
@@ -74,8 +74,8 @@ static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, co
         }
         if (ok && musicxml) {
             char *text = NULL;
-            ComposerStatus rendered = api_piece_musicxml(knowledge, request, variation->version.plan, &text, error);
-            if (rendered != COMPOSER_OK) {
+            UrsatzStatus rendered = api_piece_musicxml(knowledge, request, variation->version.plan, &text, error);
+            if (rendered != URSATZ_OK) {
                 cJSON_Delete(entry);
                 cJSON_Delete(document);
                 return rendered;
@@ -96,38 +96,38 @@ static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, co
         return api_fail_alloc(error);
     }
     *result = document;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* "variations": {"section", "lanes", "count"}. */
-static ComposerStatus read_variations(const cJSON *root, PieceEdit *edit, unsigned long *count, ComposerError *error) {
+static UrsatzStatus read_variations(const cJSON *root, PieceEdit *edit, unsigned long *count, UrsatzError *error) {
     const cJSON *variations = cJSON_GetObjectItemCaseSensitive(root, "variations");
     const char *section = NULL;
     bool present;
     if (!cJSON_IsObject(variations)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/variations", "the request needs \"variations\": {\"section\", \"lanes\", \"count\"}");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/variations", "the request needs \"variations\": {\"section\", \"lanes\", \"count\"}");
     }
     if (!api_request_string(variations, "/variations", "section", true, &section, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (!api_member_whole(variations, "count", 1, PIECE_VARIATIONS_MAX, count, &present, error)) {
         snprintf(error->path, sizeof error->path, "/variations/count");
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (!present) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/variations/count", "the request needs \"count\": 1 to %d",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/variations/count", "the request needs \"count\": 1 to %d",
                         PIECE_VARIATIONS_MAX);
     }
     edit->section = section;
     return api_piece_read_lanes(cJSON_GetObjectItemCaseSensitive(variations, "lanes"), "/variations/lanes", edit, error);
 }
 
-ComposerStatus composer_api_piece_variations(const ComposerContext *context, const char *request_json,
-                                             const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_piece_variations(const ComposerContext *context, const char *request_json,
+                                             const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *root = NULL;
@@ -148,28 +148,28 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
     memset(&edit, 0, sizeof(edit));
     edit.path = "/variations";
     memset(items, 0, sizeof(items));
-    ComposerStatus status = request ? api_parse_request(request_json, &root, &out->error) : api_fail_alloc(&out->error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = request ? api_parse_request(request_json, &root, &out->error) : api_fail_alloc(&out->error);
+    if (status == URSATZ_OK) {
         if (!api_member_bool(root, "check", &check, &present, &out->error) ||
             !api_member_bool(root, "plain_midi", &plain_midi, &present, &out->error) ||
             !api_member_bool(root, "musicxml", &musicxml, &present, &out->error) ||
             !api_member_whole(root, "seed", 0, PIECE_SEED_MAX, &seed, &seeded, &out->error) ||
             !api_member_string(root, "style", &style, &present, &out->error)) {
-            status = COMPOSER_ERR_REQUEST;
+            status = URSATZ_ERR_REQUEST;
         }
         seed = seeded ? seed : api_default_seed();
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = read_variations(root, &edit, &requested, &out->error);
     }
-    if (status == COMPOSER_OK && !cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(root, "request"))) {
-        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/request", "the request needs \"request\": the piece request");
+    if (status == URSATZ_OK && !cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(root, "request"))) {
+        status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/request", "the request needs \"request\": the piece request");
     }
-    if (status == COMPOSER_OK && !cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(root, "from"))) {
-        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/from", "the request needs \"from\": the loop plan to vary");
+    if (status == URSATZ_OK && !cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(root, "from"))) {
+        status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/from", "the request needs \"from\": the loop plan to vary");
     }
     uint64_t original_signature = 0;
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         plan_text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(root, "from"));
         edit.text = plan_text;
         Plan *original = NULL;
@@ -177,23 +177,23 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
         if (!plan_text) {
             status = api_fail_alloc(&out->error);
         } else if (plan_from_json_resolved(context->knowledge, plan_text, composer_plan_read_hooks(), &original, &plan_error) != PLAN_OK) {
-            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/from", "cannot read the loop plan: %s", plan_error.message);
+            status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/from", "cannot read the loop plan: %s", plan_error.message);
         } else {
             original_signature = plan_signature(original);
             plan_destroy(original);
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_piece_read_request(request, context->knowledge, &materials, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request",
                                         style, plain_midi, job, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_piece_refuse_performed(request, &out->error);
     }
     unsigned total = (unsigned)(PIECE_SEEDS_PER_VARIATION * requested);
-    for (size_t attempt = 0; status == COMPOSER_OK && kept < requested && attempt < total; attempt++) {
+    for (size_t attempt = 0; status == URSATZ_OK && kept < requested && attempt < total; attempt++) {
         if (job_step(job, "variations", (unsigned)attempt, total)) {
-            status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+            status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
             break;
         }
         Variation *next = &items[kept];
@@ -201,7 +201,7 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
         PieceResult result;
         status = api_piece_regenerate_loop(request, &edit, check, used, &next->version, &result, &out->error);
         tried++;
-        bool keep = status == COMPOSER_OK && result == PIECE_OK;
+        bool keep = status == URSATZ_OK && result == PIECE_OK;
         if (keep) {
             next->signature = plan_signature(next->version.plan);
             keep = next->signature != original_signature;
@@ -216,15 +216,15 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
             api_piece_version_destroy(&next->version);
         }
     }
-    if (status == COMPOSER_OK && kept == 0) {
-        status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "",
+    if (status == URSATZ_OK && kept == 0) {
+        status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "",
                           "no version of section '%s' that differs from the plan was found in %zu seeds from %lu", edit.section,
                           tried, seed);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         cJSON *document = NULL;
         status = variations_document(context->knowledge, request, &edit, items, kept, tried, requested, musicxml, &document, &out->error);
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_respond_json(out, document);
         }
     }
@@ -235,8 +235,8 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
     free(request);
     cJSON_free(plan_text);
     cJSON_Delete(root);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }

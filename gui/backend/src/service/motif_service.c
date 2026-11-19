@@ -23,7 +23,7 @@ static const char *optional_string(const cJSON *body, const char *key, bool *bad
 
 /* ---- the Composer calls of a motif (R-219) ----------------------------- */
 
-typedef ComposerStatus (*MotifEntry)(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+typedef UrsatzStatus (*MotifEntry)(const ComposerContext *context, const char *request_json, const UrsatzJob *job,
                                      ComposerResponse *out);
 
 /* Prints request, calls entry and moves the answer into reply. False when the request could not be printed. */
@@ -35,7 +35,7 @@ static bool motif_call(MotifEntry entry, const cJSON *request, UrsatzGuiComposer
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = entry(ursatz_gui_composer_context(), text, NULL, &response);
+  UrsatzStatus status = entry(ursatz_gui_composer_context(), text, NULL, &response);
   free(text);
   ursatz_gui_composer_reply_take(status, &response, reply);
   return true;
@@ -66,7 +66,7 @@ bool ursatz_gui_motif_motive_from_midi(const unsigned char *bytes, size_t size, 
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_motive_from_midi(ursatz_gui_composer_context(), bytes, size, text, NULL, &response);
+  UrsatzStatus status = composer_api_motive_from_midi(ursatz_gui_composer_context(), bytes, size, text, NULL, &response);
   free(text);
   ursatz_gui_composer_reply_take(status, &response, reply);
   return true;
@@ -75,7 +75,7 @@ bool ursatz_gui_motif_motive_from_midi(const unsigned char *bytes, size_t size, 
 void ursatz_gui_motif_variant_operations(UrsatzGuiComposerReply *reply) {
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_variant_operations(&response);
+  UrsatzStatus status = composer_api_variant_operations(&response);
   ursatz_gui_composer_reply_take(status, &response, reply);
 }
 
@@ -88,7 +88,7 @@ bool ursatz_gui_motif_validate(const char *kind, const cJSON *request, UrsatzGui
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_validate(ursatz_gui_composer_context(), kind, text, &response);
+  UrsatzStatus status = composer_api_validate(ursatz_gui_composer_context(), kind, text, &response);
   free(text);
   ursatz_gui_composer_reply_take(status, &response, reply);
   return true;
@@ -260,7 +260,7 @@ const char *ursatz_gui_motif_variants_path(void) {
    (negative: the clock). job reports progress and asks for cancel. On success returns the Composer's document; otherwise
    NULL with *status (400 when the Composer refuses the input, 499 for a cancel, else 500) and message set. */
 cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions, const char *distance,
-                           bool each_op, const cJSON *chain, int count, double seed, const ComposerJob *job, int *status,
+                           bool each_op, const cJSON *chain, int count, double seed, const UrsatzJob *job, int *status,
                            char *message, size_t message_size) {
   g_variants_path[0] = '\0';
   bool bad = false;
@@ -316,11 +316,11 @@ cJSON *ursatz_gui_motif_run_variants(const cJSON *motif, const cJSON *basic_body
   }
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus composer_status = composer_api_variants(ursatz_gui_composer_context(), text, job, &response);
+  UrsatzStatus composer_status = composer_api_variants(ursatz_gui_composer_context(), text, job, &response);
   free(text);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(composer_status, &response, &reply);
-  cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (document) {
     /* the command printed the notices on stderr, not in the document */
     cJSON_DeleteItemFromObjectCaseSensitive(document, "notices");
@@ -452,7 +452,7 @@ UrsatzGuiMotifAnalysis ursatz_gui_motif_analyze_body(cJSON *version_body, const 
     snprintf(refusal, refusal_size, "%s", reply.message[0] ? reply.message : "composer could not read the motif");
     snprintf(refusal_path, refusal_path_size, "%s", reply.path);
   } else {
-    analysis = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+    analysis = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
     if (!analysis) {
       snprintf(analysis_error, URSATZ_GUI_MOTIF_ANALYSIS_ERROR_SIZE, "composer could not analyze the motif%s%.300s",
                reply.message[0] ? ": " : "", reply.message);

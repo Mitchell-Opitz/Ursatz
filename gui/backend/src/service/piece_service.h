@@ -36,7 +36,7 @@
  * receives a one-line reason.
  */
 UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, long long seed, bool update_uses,
-                                                  const ComposerJob *job, cJSON **out_item, char *message,
+                                                  const UrsatzJob *job, cJSON **out_item, char *message,
                                                   size_t message_size);
 
 /*
@@ -62,7 +62,7 @@ UrsatzGuiThemeResult ursatz_gui_piece_validate(const cJSON *body, bool *complete
  * without one). On any other result no version is written and no folder is left; message receives a one-line reason.
  */
 UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, const char *section_id, const char *lane,
-                                                 bool has_seed, long long seed, const ComposerJob *job, cJSON **out_item,
+                                                 bool has_seed, long long seed, const UrsatzJob *job, cJSON **out_item,
                                                  char *message, size_t message_size);
 
 /*
@@ -75,7 +75,7 @@ UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, co
  * of the section), caller-owned.
  */
 UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, const char *section_id, const char *lane,
-                                                 int count, bool has_seed, long long seed, const ComposerJob *job,
+                                                 int count, bool has_seed, long long seed, const UrsatzJob *job,
                                                  cJSON **out_result, char *message, size_t message_size);
 
 /*
@@ -84,7 +84,7 @@ UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, co
  * is the source's with result replaced, the note "chose variation <index> seed <n>". NOT_FOUND when the set or the
  * variation is not there; otherwise as ursatz_gui_piece_regenerate.
  */
-UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int set, int index, const ComposerJob *job,
+UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int set, int index, const UrsatzJob *job,
                                              cJSON **out_item, char *message, size_t message_size);
 
 /*

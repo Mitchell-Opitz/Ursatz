@@ -220,7 +220,7 @@ static void test_summaries(void) {
         "\"cadential\": null}, \"accompaniment\": null, \"voicing\": null, \"style\": null, \"style_weight\": \"1/2\", "
         "\"without\": [], \"tempo\": null, \"seed\": 1}";
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &response) == URSATZ_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
     const cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");

@@ -100,10 +100,10 @@ void api_choice_join(const ApiChoice *table, const char *separator, const char *
     }
 }
 
-ComposerStatus api_fail_meter(ComposerError *error, const char *path, const char *text) {
+UrsatzStatus api_fail_meter(UrsatzError *error, const char *path, const char *text) {
     char list[64];
     api_choice_list(API_METERS, list, sizeof list);
-    return api_fail(error, COMPOSER_ERR_REQUEST, path, "meter '%s' is not supported; use %s", text, list);
+    return api_fail(error, URSATZ_ERR_REQUEST, path, "meter '%s' is not supported; use %s", text, list);
 }
 
 /* --- labels of the lists the library holds ----------------------------------------------------------------- */
@@ -644,17 +644,17 @@ static bool add_relations(cJSON *root, const KnowledgeSnapshot *knowledge) {
     return list != NULL;
 }
 
-ComposerStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
+UrsatzStatus composer_api_vocabulary(const ComposerContext *context, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *root = cJSON_CreateObject();
     if (!root || !api_vocabulary_build(root, &materials) || !add_relations(root, context->knowledge) || !add_schemas(root, &materials)) {
         cJSON_Delete(root);
-        return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     return api_respond_json(out, root);
 }

@@ -447,7 +447,7 @@ static bool add_form(cJSON *list, const FormSpec *form) {
            add_sizes(entry, form) && add_request_members(entry, form);
 }
 
-ComposerStatus composer_api_forms(ComposerResponse *out) {
+UrsatzStatus composer_api_forms(ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     cJSON *root = cJSON_CreateObject();
     cJSON *list = root ? cJSON_AddArrayToObject(root, "forms") : NULL;
@@ -462,7 +462,7 @@ ComposerStatus composer_api_forms(ComposerResponse *out) {
             cJSON_Delete(root);
             return result == FORM_SPEC_ERR_ALLOC
                        ? api_fail_alloc(&out->error)
-                       : api_fail(&out->error, COMPOSER_ERR_INTERNAL, "", "the built-in form '%s' does not parse",
+                       : api_fail(&out->error, URSATZ_ERR_INTERNAL, "", "the built-in form '%s' does not parse",
                                   form_spec_builtin_name(i));
         }
         bool added = add_form(list, form);

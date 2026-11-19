@@ -31,22 +31,22 @@ void ursatz_gui_compose_failure_path_clear(void) {
     g_failure_path[0] = '\0';
 }
 
-UrsatzGuiThemeResult ursatz_gui_compose_failure(ComposerStatus status, const ComposerResponse *response, char *message,
+UrsatzGuiThemeResult ursatz_gui_compose_failure(UrsatzStatus status, const ComposerResponse *response, char *message,
                                                 size_t message_size) {
     snprintf(g_failure_path, sizeof(g_failure_path), "%s", response ? response->error.path : "");
     if (response && response->error.message[0] != '\0') {
         common_copy_text(message, message_size, response->error.message);
     }
     switch (status) {
-        case COMPOSER_OK:
+        case URSATZ_OK:
             return URSATZ_GUI_THEME_OK;
-        case COMPOSER_ERR_REQUEST:
+        case URSATZ_ERR_REQUEST:
             return URSATZ_GUI_THEME_ERR_INVALID;
-        case COMPOSER_ERR_UNSATISFIABLE:
+        case URSATZ_ERR_UNSATISFIABLE:
             return URSATZ_GUI_THEME_ERR_UNPROCESSABLE;
-        case COMPOSER_ERR_CANCELLED:
+        case URSATZ_ERR_CANCELLED:
             return URSATZ_GUI_THEME_ERR_CANCELLED;
-        case COMPOSER_ERR_ALLOC:
+        case URSATZ_ERR_ALLOC:
             return URSATZ_GUI_THEME_ERR_ALLOC;
         default:
             return URSATZ_GUI_THEME_ERR_FAILED;
@@ -62,12 +62,12 @@ UrsatzGuiThemeResult ursatz_gui_compose_write_plan(const cJSON *plan, const char
     cJSON_Delete(request);
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = text ? composer_api_export(ursatz_gui_composer_context(), text, NULL, &response) : COMPOSER_ERR_ALLOC;
+    UrsatzStatus status = text ? composer_api_export(ursatz_gui_composer_context(), text, NULL, &response) : URSATZ_ERR_ALLOC;
     free(text);
     UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
-    if (status != COMPOSER_OK || !response.plan_json) {
-        result = status == COMPOSER_OK ? URSATZ_GUI_THEME_ERR_FAILED : ursatz_gui_compose_failure(status, &response, message, message_size);
-        if (status == COMPOSER_OK) {
+    if (status != URSATZ_OK || !response.plan_json) {
+        result = status == URSATZ_OK ? URSATZ_GUI_THEME_ERR_FAILED : ursatz_gui_compose_failure(status, &response, message, message_size);
+        if (status == URSATZ_OK) {
             common_copy_text(message, message_size, "the plan could not be written");
         }
     } else if (!(common_file_write_atomic(path, response.plan_json, strlen(response.plan_json), NULL) == URSATZ_OK)) {
@@ -79,7 +79,7 @@ UrsatzGuiThemeResult ursatz_gui_compose_write_plan(const cJSON *plan, const char
 }
 
 UrsatzGuiThemeResult ursatz_gui_compose_export(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml,
-                                               const cJSON *loop, const ComposerJob *job, ComposerResponse *response,
+                                               const cJSON *loop, const UrsatzJob *job, ComposerResponse *response,
                                                char *message, size_t message_size) {
     cJSON *request = cJSON_CreateObject();
     bool ok = request && cJSON_AddItemToObject(request, "plan", cJSON_Duplicate(plan, 1)) &&
@@ -106,9 +106,9 @@ UrsatzGuiThemeResult ursatz_gui_compose_export(const cJSON *plan, double qpm, bo
         return URSATZ_GUI_THEME_ERR_ALLOC;
     }
     memset(response, 0, sizeof(*response));
-    ComposerStatus status = composer_api_export(ursatz_gui_composer_context(), printed, job, response);
+    UrsatzStatus status = composer_api_export(ursatz_gui_composer_context(), printed, job, response);
     free(printed);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         UrsatzGuiThemeResult result = ursatz_gui_compose_failure(status, response, message, message_size);
         composer_response_destroy(response);
         return result;
@@ -186,7 +186,7 @@ void ursatz_gui_compose_stage_discard(const UrsatzGuiComposeStage *stage) {
 }
 
 UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, const char *id, bool has_seed,
-                                             long long seed, bool update_uses, const ComposerJob *job,
+                                             long long seed, bool update_uses, const UrsatzJob *job,
                                              cJSON **out_item, char *message, size_t message_size) {
     UrsatzGuiThemeResult result = update_uses ? ursatz_gui_theme_update_sources(id, message, message_size)
                                               : URSATZ_GUI_THEME_OK;

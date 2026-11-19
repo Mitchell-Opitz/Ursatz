@@ -12,23 +12,23 @@
 /* `variations` and `harmonize` as composer API entries (docs/cli-variations.md): several distinct versions of a node. */
 
 /* The MusicXML of a version as it is in memory (its ids are the ones a plan file renumbers). */
-static ComposerStatus variation_musicxml(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, char **text, ComposerError *error) {
+static UrsatzStatus variation_musicxml(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, char **text, UrsatzError *error) {
     RenderedPlan rendered;
     PlanExportError detail;
     *text = NULL;
     if (plan_export_render(plan, &rendered, &detail) != PLAN_EXPORT_OK) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
     }
     PlanExportResult result = rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, text, &detail);
     rendered_plan_destroy(&rendered);
     if (result != PLAN_EXPORT_OK) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, const PlanVariations *variations, const ApiOutputs *outputs, unsigned long requested,
-                                          cJSON **result, ComposerError *error) {
+static UrsatzStatus variations_document(const KnowledgeSnapshot *knowledge, const PlanVariations *variations, const ApiOutputs *outputs, unsigned long requested,
+                                          cJSON **result, UrsatzError *error) {
     cJSON *document = cJSON_CreateObject();
     cJSON *list = document ? cJSON_AddArrayToObject(document, "variations") : NULL;
     bool ok = list != NULL;
@@ -43,8 +43,8 @@ static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, co
         }
         if (ok && outputs->musicxml) {
             char *text = NULL;
-            ComposerStatus rendered = variation_musicxml(knowledge, variation->plan, outputs, &text, error);
-            if (rendered != COMPOSER_OK) {
+            UrsatzStatus rendered = variation_musicxml(knowledge, variation->plan, outputs, &text, error);
+            if (rendered != URSATZ_OK) {
                 cJSON_Delete(entry);
                 cJSON_Delete(document);
                 return rendered;
@@ -70,14 +70,14 @@ static ComposerStatus variations_document(const KnowledgeSnapshot *knowledge, co
         return api_fail_alloc(error);
     }
     *result = document;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-static ComposerStatus run_variations(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+static UrsatzStatus run_variations(const ComposerContext *context, const char *request_json, const UrsatzJob *job,
                                      ComposerResponse *out, bool harmonize) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, NULL, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *root = NULL;
@@ -94,42 +94,42 @@ static ComposerStatus run_variations(const ComposerContext *context, const char 
     PlanVariations variations;
     bool made = false;
     memset(&variations, 0, sizeof(variations));
-    ComposerStatus status = api_parse_request(request_json, &root, &out->error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = api_parse_request(request_json, &root, &out->error);
+    if (status == URSATZ_OK) {
         status = api_read_target(root, &target, &out->error);
-        if (status == COMPOSER_OK && harmonize && (!target.section || target.has_lane)) {
-            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "harmonize needs \"section\" (a letter) and no lane");
+        if (status == URSATZ_OK && harmonize && (!target.section || target.has_lane)) {
+            status = api_fail(&out->error, URSATZ_ERR_REQUEST, "", "harmonize needs \"section\" (a letter) and no lane");
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_read_outputs(root, false, &outputs, &out->error);
-        if (status == COMPOSER_OK && outputs.layers) {
-            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/layers", "variations have no layers: ask for them from the request that made the plan");
+        if (status == URSATZ_OK && outputs.layers) {
+            status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/layers", "variations have no layers: ask for them from the request that made the plan");
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         if (!api_member_whole(root, "count", 1, PLAN_VARIATIONS_MAX, &count, &present, &out->error) ||
             !api_member_whole(root, "seed", 0, API_SEED_MAX, &seed, &seeded, &out->error)) {
-            status = COMPOSER_ERR_REQUEST;
+            status = URSATZ_ERR_REQUEST;
         } else if (!present) {
-            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/count", "the request needs \"count\": 1 to %d", PLAN_VARIATIONS_MAX);
+            status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/count", "the request needs \"count\": 1 to %d", PLAN_VARIATIONS_MAX);
         }
         seed = seeded ? seed : api_default_seed();
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_plan_from_text(context->knowledge, text, "plan", &plan, &out->error);
     }
     char what[96] = "";
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         api_target_describe(plan, &target, what, sizeof what);
         if (job_step(job, "variations", 0, (unsigned)count)) {
-            status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+            status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         ComposeConfig config;
         memset(&config, 0, sizeof(config));
         config.seed = seed;
@@ -139,37 +139,37 @@ static ComposerStatus run_variations(const ComposerContext *context, const char 
         if (harmonize) {
             NodeId section;
             status = api_target_node(plan, &target, &section, &out->error);
-            ran = status == COMPOSER_OK ? plan_harmonizations(plan, section, &config, count, &variations) : REGENERATE_ERR_NULL;
-            made = status == COMPOSER_OK;
-            if (status == COMPOSER_OK && ran == REGENERATE_ERR_BAD_TARGET) {
-                status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "",
+            ran = status == URSATZ_OK ? plan_harmonizations(plan, section, &config, count, &variations) : REGENERATE_ERR_NULL;
+            made = status == URSATZ_OK;
+            if (status == URSATZ_OK && ran == REGENERATE_ERR_BAD_TARGET) {
+                status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "",
                                   "%s has no given melody over all its bars to harmonize (plan it with a given melody and fill it)",
                                   what);
-            } else if (status == COMPOSER_OK && ran != REGENERATE_OK) {
+            } else if (status == URSATZ_OK && ran != REGENERATE_OK) {
                 status = api_refused(ran, what, &out->error);
             }
         } else {
             status = api_target_list(plan, &target, &targets, &target_count, &out->error);
-            ran = status == COMPOSER_OK ? plan_variations(plan, targets, target_count, &config, count, &variations)
+            ran = status == URSATZ_OK ? plan_variations(plan, targets, target_count, &config, count, &variations)
                                         : REGENERATE_ERR_NULL;
-            made = status == COMPOSER_OK;
-            if (status == COMPOSER_OK && ran != REGENERATE_OK) {
+            made = status == URSATZ_OK;
+            if (status == URSATZ_OK && ran != REGENERATE_OK) {
                 status = api_refused(ran, what, &out->error);
             }
         }
     }
-    if (status == COMPOSER_OK && job_cancelled(job)) {
-        status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+    if (status == URSATZ_OK && job_cancelled(job)) {
+        status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
     }
-    if (status == COMPOSER_OK && variations.count == 0) {
-        status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "",
+    if (status == URSATZ_OK && variations.count == 0) {
+        status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "",
                           "no version of %s that differs from the plan was found in %zu seeds from %lu", what,
                           variations.seeds_tried, seed);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         cJSON *document = NULL;
         status = variations_document(context->knowledge, &variations, &outputs, count, &document, &out->error);
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_respond_json(out, document);
         }
     }
@@ -180,20 +180,20 @@ static ComposerStatus run_variations(const ComposerContext *context, const char 
     free(text);
     plan_destroy(plan);
     cJSON_Delete(root);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }
     return status;
 }
 
-ComposerStatus composer_api_variations(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+UrsatzStatus composer_api_variations(const ComposerContext *context, const char *request_json, const UrsatzJob *job,
                                        ComposerResponse *out) {
     return run_variations(context, request_json, job, out, false);
 }
 
-ComposerStatus composer_api_harmonize(const ComposerContext *context, const char *request_json, const ComposerJob *job,
+UrsatzStatus composer_api_harmonize(const ComposerContext *context, const char *request_json, const UrsatzJob *job,
                                       ComposerResponse *out) {
     return run_variations(context, request_json, job, out, true);
 }

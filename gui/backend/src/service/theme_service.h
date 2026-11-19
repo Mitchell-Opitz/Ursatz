@@ -43,7 +43,7 @@ typedef enum {
  * receives a one-line reason.
  */
 UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
-                                              const ComposerJob *job, cJSON **out_item, char *message,
+                                              const UrsatzJob *job, cJSON **out_item, char *message,
                                               size_t message_size);
 
 /*

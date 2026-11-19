@@ -38,7 +38,7 @@
 /* ------------------------------------------------------------- the entry */
 
 /* The piece request members of the API request that are not the piece request: what to make besides the document. */
-static ComposerStatus read_outputs(const cJSON *request, ApiPieceOutputs *outputs, bool *plain_midi, ComposerError *error) {
+static UrsatzStatus read_outputs(const cJSON *request, ApiPieceOutputs *outputs, bool *plain_midi, UrsatzError *error) {
     bool present;
     const char *explain = NULL;
     memset(outputs, 0, sizeof(*outputs));
@@ -50,7 +50,7 @@ static ComposerStatus read_outputs(const cJSON *request, ApiPieceOutputs *output
         !api_member_bool(request, "layers", &outputs->layers, &present, error) ||
         !api_member_bool(request, "plain_midi", plain_midi, &present, error) ||
         !api_member_string(request, "explain", &explain, &present, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (explain) {
         if (strcmp(explain, "text") == 0) {
@@ -58,14 +58,14 @@ static ComposerStatus read_outputs(const cJSON *request, ApiPieceOutputs *output
         } else if (strcmp(explain, "json") == 0) {
             outputs->explain = 2;
         } else {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
+            return api_fail(error, URSATZ_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* The loop plan to work on, as JSON text, and the section to write again: "from" and "regenerate". */
-static ComposerStatus read_edit(const cJSON *request, char **text, PieceEdit *edit, const cJSON **section, ComposerError *error) {
+static UrsatzStatus read_edit(const cJSON *request, char **text, PieceEdit *edit, const cJSON **section, UrsatzError *error) {
     const cJSON *from = cJSON_GetObjectItemCaseSensitive(request, "from");
     const cJSON *regenerate = cJSON_GetObjectItemCaseSensitive(request, "regenerate");
     memset(edit, 0, sizeof(*edit));
@@ -74,11 +74,11 @@ static ComposerStatus read_edit(const cJSON *request, char **text, PieceEdit *ed
     *section = NULL;
     bool has_regenerate = regenerate && !cJSON_IsNull(regenerate);
     if (!from || cJSON_IsNull(from)) {
-        return has_regenerate ? api_fail(error, COMPOSER_ERR_REQUEST, "/regenerate", "\"regenerate\" goes with \"from\", the loop plan")
-                              : COMPOSER_OK;
+        return has_regenerate ? api_fail(error, URSATZ_ERR_REQUEST, "/regenerate", "\"regenerate\" goes with \"from\", the loop plan")
+                              : URSATZ_OK;
     }
     if (!cJSON_IsObject(from)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/from", "\"from\" must be a plan object");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/from", "\"from\" must be a plan object");
     }
     *text = cJSON_PrintUnformatted(from);
     if (!*text) {
@@ -86,15 +86,15 @@ static ComposerStatus read_edit(const cJSON *request, char **text, PieceEdit *ed
     }
     edit->text = *text;
     if (!has_regenerate) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     if (!cJSON_IsObject(regenerate)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/regenerate", "\"regenerate\" must be {\"section\": <id>, \"lanes\": [...]}");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/regenerate", "\"regenerate\" must be {\"section\": <id>, \"lanes\": [...]}");
     }
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(regenerate, "section");
     if (item && !cJSON_IsNull(item)) {
         if (!cJSON_IsString(item)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/regenerate/section", "\"section\" must be a section id");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/regenerate/section", "\"section\" must be a section id");
         }
         edit->section = item->valuestring;
         *section = item;
@@ -102,8 +102,8 @@ static ComposerStatus read_edit(const cJSON *request, char **text, PieceEdit *ed
     return api_piece_read_lanes(cJSON_GetObjectItemCaseSensitive(regenerate, "lanes"), "/regenerate/lanes", edit, error);
 }
 
-ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,
-                                      unsigned long first_seed, unsigned long last_seed, ComposerError *error) {
+UrsatzStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,
+                                      unsigned long first_seed, unsigned long last_seed, UrsatzError *error) {
     if (result == PIECE_ERR_MOTIVE_TOO_LONG) {
         size_t theme_bars = 8;
         size_t idea_bars = 2;
@@ -111,7 +111,7 @@ ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult resu
         return api_fail_motif_long(error, "/motive", request->request.motive, &request->request.meter, theme_bars, idea_bars);
     }
     if (result == PIECE_ERR_BAD_REQUEST) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/request",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/request",
                         "this piece cannot be built as asked: a theme fill must be as long as its section, in the same meter and "
                         "mode; a progression must be readable and fit its section");
     }
@@ -125,7 +125,7 @@ ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult resu
         }
         const ComposeRejection *rejection =
             stuck->outcome.rejection_count > 0 ? &stuck->outcome.rejections[stuck->outcome.rejection_count - 1] : NULL;
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "",
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "",
                         "no piece could be composed from seeds %lu to %lu (the last was stuck in the %s version, %s stage%s%s)%s",
                         first_seed, last_seed, api_piece_version_name(request, (size_t)(stuck - last->versions)),
                         rejection && rejection->stage[0] ? rejection->stage : "?", rejection ? ", " : "",
@@ -135,15 +135,15 @@ ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult resu
                             ? "; a section of whole bars needs 2 bars at least to hold its cadence"
                             : "");
     }
-    return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", piece_result_name(result));
+    return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "", "%s", piece_result_name(result));
 }
 
-ComposerStatus composer_api_piece(const ComposerContext *context, const char *request_json,
-                                  const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_piece(const ComposerContext *context, const char *request_json,
+                                  const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *root = NULL;
@@ -163,45 +163,45 @@ ComposerStatus composer_api_piece(const ComposerContext *context, const char *re
     const char *style = NULL;
     memset(&piece, 0, sizeof(piece));
     memset(&edit, 0, sizeof(edit));
-    ComposerStatus status = request ? api_parse_request(request_json, &root, &out->error) : api_fail_alloc(&out->error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = request ? api_parse_request(request_json, &root, &out->error) : api_fail_alloc(&out->error);
+    if (status == URSATZ_OK) {
         const cJSON *corpus = cJSON_GetObjectItemCaseSensitive(root, "corpus");
         if (corpus && !cJSON_IsNull(corpus)) {
-            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/corpus", "a piece takes no corpus");
+            status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/corpus", "a piece takes no corpus");
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = read_outputs(root, &outputs, &plain_midi, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         if (!api_member_bool(root, "check", &check, &present, &out->error) ||
             !api_member_whole(root, "seed", 0, PIECE_SEED_MAX, &seed, &seeded, &out->error) ||
             !api_member_string(root, "style", &style, &style_present, &out->error)) {
-            status = COMPOSER_ERR_REQUEST;
+            status = URSATZ_ERR_REQUEST;
         }
         seed = seeded ? seed : api_default_seed();
     }
-    if (status == COMPOSER_OK && !cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(root, "request"))) {
-        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/request", "the request needs \"request\": the piece request");
+    if (status == URSATZ_OK && !cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(root, "request"))) {
+        status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/request", "the request needs \"request\": the piece request");
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = read_edit(root, &plan_text, &edit, &section, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_piece_read_request(request, context->knowledge, &materials, cJSON_GetObjectItemCaseSensitive(root, "request"), "/request",
                                         style, plain_midi, job, &out->error);
     }
-    if (status == COMPOSER_OK && edit.text) {
+    if (status == URSATZ_OK && edit.text) {
         status = api_piece_refuse_performed(request, &out->error);
     }
-    if (status == COMPOSER_OK && outputs.ending_musicxml && api_piece_version_count(request) < 2) {
-        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/ending_musicxml", "the %s form has no ending version",
+    if (status == URSATZ_OK && outputs.ending_musicxml && api_piece_version_count(request) < 2) {
+        status = api_fail(&out->error, URSATZ_ERR_REQUEST, "/ending_musicxml", "the %s form has no ending version",
                           request->form->name);
     }
     PieceResult result = PIECE_ERR_STUCK;
     unsigned long last_seed = seed;
     /* The seeds are tried one after another; a stuck run is passed over, and a request no seed can mend ends the search. */
-    for (unsigned attempt = 0; status == COMPOSER_OK && attempt < PIECE_SEED_TRIES && result == PIECE_ERR_STUCK; attempt++) {
+    for (unsigned attempt = 0; status == URSATZ_OK && attempt < PIECE_SEED_TRIES && result == PIECE_ERR_STUCK; attempt++) {
         if (job_step(job, "seed", attempt, PIECE_SEED_TRIES)) {
             status = api_piece_fail_cancelled(&out->error);
             break;
@@ -214,20 +214,20 @@ ComposerStatus composer_api_piece(const ComposerContext *context, const char *re
         } else {
             result = api_piece_compose(request, check, last_seed, &piece);
         }
-        if (status == COMPOSER_OK && api_piece_cancelled(&piece)) {
+        if (status == URSATZ_OK && api_piece_cancelled(&piece)) {
             status = api_piece_fail_cancelled(&out->error);
         }
     }
-    if (status == COMPOSER_OK && result != PIECE_OK) {
+    if (status == URSATZ_OK && result != PIECE_OK) {
         status = api_piece_fail_compose(request, result, &piece, seed, last_seed, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         cJSON *document = api_piece_document(request, &piece, &edit, section, edit.text != NULL);
         status = document ? api_piece_add_outputs(context->knowledge, document, request, &piece, &outputs, out) : api_fail_alloc(&out->error);
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_piece_render_loop(context->knowledge, request, &piece, &outputs, out);
         }
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_respond_json(out, document);
         } else {
             cJSON_Delete(document);
@@ -242,8 +242,8 @@ ComposerStatus composer_api_piece(const ComposerContext *context, const char *re
     free(request);
     cJSON_free(plan_text);
     cJSON_Delete(root);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }

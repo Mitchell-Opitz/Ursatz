@@ -4,8 +4,8 @@ Core versions, vocabulary and validation entries of the Composer API. Back to th
 
 ## `composer_api_versions(out)`
 
-`json`: `{"composer_version", "api_version", "ursatz_commit", "composition_key", "plan_format_version"}` (the plan format is 6, `composition_key` the key of the code that composes, both API 3.1), the versions the
-Composer was built with (the Analyzer's, and its producer key, held in `ursatz_commit` until the next versions rename it, are the ones a plan or
+`json`: `{"composer_version", "api_version", "producer_key", "composition_key", "plan_format_version"}` (the plan format is 6, `composition_key` the key of the code that composes, both API 3.1), the versions the
+Composer was built with (the Analyzer's, and its producer key, held in `producer_key` since API 4.0, are the ones a plan or
 an analysis is stale against). Schema: `schema/api/versions.schema.json`.
 
 ## Vocabularies: `composer_api_vocabulary(context, out)`
@@ -47,7 +47,7 @@ Differences from the GUI tables it replaces (Ursatz-GUI `049adaf`; the Composer'
 
 ## Forms: `composer_api_forms(out)`
 
-The built-in forms, in registry order (API 1.13, R-428): what the Pieces view needs to offer a form and show its sections without a table of its own. No request; quick, no job, never cancelled; `COMPOSER_ERR_INTERNAL` if a built-in does not parse. `json` is `{"forms": [...]}`, each form:
+The built-in forms, in registry order (API 1.13, R-428): what the Pieces view needs to offer a form and show its sections without a table of its own. No request; quick, no job, never cancelled; `URSATZ_ERR_INTERNAL` if a built-in does not parse. `json` is `{"forms": [...]}`, each form:
 
 | Member | Entries |
 |---|---|
@@ -70,9 +70,9 @@ Reads a request as its entry does and composes nothing, so an application can ch
 - `motive`: `meter` (the motive's, when the request has none and the input declares one), `role` (`melodic`), `input.format` (`auto`) and `input.form` (`full`) when absent; `harmony` as `[{"numeral", "onset"}]`, the numerals as the library writes them (`V7`, `bVII65`) and the onsets in beats of the meter in the request syntax (`"0"`, `"3/2"`). Own harmony takes upper case numerals with an optional figure and `@onset` (`I V@3/2 V7@3`); a slash chord or a lower case numeral is refused at `/harmony`.
 - `piece`: the `cadence` of every section that has none (`piece_default_cadences`: the last of the intro and of the loop `HC`, the last ending `PAC`, any other `IAC`) and the default ending section (`end`, `PAC`, an empty fill) when the request has no ending.
 - `random_motive`: the `seed` (the request's, or the one read from the clock) and the `material` (an id) and `meter` a `"random"` drew from it (R-269).
-- `theme`: the request as it is, once its plan is built without seeding. A request that Compose would refuse before it seeds (the pairing, the bars, the construction, the cadences, a motif that is too long or does not suit its place, an accompaniment or voicing that is not valid, a given chord that cannot arrive the cadence) is refused with `COMPOSER_ERR_UNSATISFIABLE`, the reason and the path of its field: [theme-request.md](../theme-request.md#refusals-before-composing). One refusal is given at a time, the first.
+- `theme`: the request as it is, once its plan is built without seeding. A request that Compose would refuse before it seeds (the pairing, the bars, the construction, the cadences, a motif that is too long or does not suit its place, an accompaniment or voicing that is not valid, a given chord that cannot arrive the cadence) is refused with `URSATZ_ERR_UNSATISFIABLE`, the reason and the path of its field: [theme-request.md](../theme-request.md#refusals-before-composing). One refusal is given at a time, the first.
 
-A request an entry would refuse is refused the same way, with its message and path. An unknown `kind` is `COMPOSER_ERR_REQUEST` with the path `/kind`. A style model named in the request is read.
+A request an entry would refuse is refused the same way, with its message and path. An unknown `kind` is `URSATZ_ERR_REQUEST` with the path `/kind`. A style model named in the request is read.
 
 ## API 2.0: materials
 

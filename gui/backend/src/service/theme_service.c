@@ -564,11 +564,11 @@ static UrsatzGuiThemeResult run_theme(const UrsatzGuiComposeRun *run, cJSON **ou
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = composer_api_theme(ursatz_gui_composer_context(), text, run->job, &response);
+    UrsatzStatus status = composer_api_theme(ursatz_gui_composer_context(), text, run->job, &response);
     free(text);
     UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
     cJSON *document = NULL;
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         result = ursatz_gui_compose_failure(status, &response, message, message_size);
     } else if (!(document = cJSON_Parse(response.json)) || !response.plan_json || !response.midi || !response.musicxml) {
         common_copy_text(message, message_size, "composer output unreadable");
@@ -695,7 +695,7 @@ UrsatzGuiThemeResult ursatz_gui_theme_validate(const cJSON *body, bool *complete
 }
 
 UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
-                                              const ComposerJob *job, cJSON **out_item, char *message,
+                                              const UrsatzJob *job, cJSON **out_item, char *message,
                                               size_t message_size) {
     if (out_item) {
         *out_item = NULL;

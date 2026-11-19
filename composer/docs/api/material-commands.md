@@ -33,8 +33,8 @@ A chord progression for one phrase, with a bass line ([cli-progression.md](../cl
 `suggest`, `"alternatives": [{"heard", "chords"}]` in place of the last two; `plan` and `musicxml` in each entry when
 asked, and `notices` (strings) when fewer alternatives than asked for were found. `list_schemas`: `{"schemas": [{"name",
 "function", "materials"}], "sequences": [name]}`. Progress per seed tried (`"progression"`) and for each fill stage; a cancel
-is `COMPOSER_ERR_CANCELLED`. A phrase too short for the cadence, a schema that cannot be written in the key and a request no
-seed completes are `COMPOSER_ERR_UNSATISFIABLE`. Schemas: `progression.request.schema.json`,
+is `URSATZ_ERR_CANCELLED`. A phrase too short for the cadence, a schema that cannot be written in the key and a request no
+seed completes are `URSATZ_ERR_UNSATISFIABLE`. Schemas: `progression.request.schema.json`,
 `progression.response.schema.json`.
 
 ### `composer_api_counterpoint(context, request_json, job, out)`
@@ -53,7 +53,7 @@ request of the line (any length) with:
 [{"name", "hard_held", "soft_held"}]}]}` with `note` = `{"midi_pitch", "offset": {"num", "den"}, "duration": {"num",
 "den"}}`, `plan` and `musicxml` in each result when asked and `notices` when fewer than `suggest` were found. A line the
 species cannot be written against, or no counter-melody that holds the rules from the seeds tried (16 for each one asked
-for), is `COMPOSER_ERR_UNSATISFIABLE`. Progress per seed (`"counterpoint"`). Schemas: `counterpoint.request.schema.json`,
+for), is `URSATZ_ERR_UNSATISFIABLE`. Progress per seed (`"counterpoint"`). Schemas: `counterpoint.request.schema.json`,
 `counterpoint.response.schema.json`.
 
 ### `composer_api_develop(context, request_json, job, out)`
@@ -68,7 +68,7 @@ Motives related to one motive, best first ([cli-develop.md](../cli-develop.md)).
 | `midi`, `musicxml`, `tempo`, `plain_midi` | the files of the source and the best candidate; `plan_json` is their plan |
 
 `json`: `{"source": "<note list>", "operation", "seed", "candidates": [{"index", "label", "score_numerator",
-"score_denominator", "text"}]}`. A development that can be made from nothing is `COMPOSER_ERR_UNSATISFIABLE`. Progress once
+"score_denominator", "text"}]}`. A development that can be made from nothing is `URSATZ_ERR_UNSATISFIABLE`. Progress once
 (`"develop"`). Schemas: `develop.request.schema.json`, `develop.response.schema.json`.
 
 ### `composer_api_grow(context, request_json, job, out)`
@@ -90,5 +90,5 @@ document reports it as `source` (not with `harmony`, `features` or `role`). The 
 
 `json`: what `grow --format json` prints, without the files, with `plan`, `musicxml` and `explanation` in each theme when
 asked and `notices` (strings: stale documents of the corpus; fewer themes than asked for). Progress per compose stage and
-per seed tried (`"grow"`); a cancel is `COMPOSER_ERR_CANCELLED` with no partial plan. Schemas: `grow.request.schema.json`,
+per seed tried (`"grow"`); a cancel is `URSATZ_ERR_CANCELLED` with no partial plan. Schemas: `grow.request.schema.json`,
 `grow.response.schema.json`.

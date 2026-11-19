@@ -110,7 +110,7 @@ typedef struct {
     bool suggested;                          /* "suggest" was given: the text output numbers the themes */
     const GrowFidelityTable *fidelity;       /* NULL for the defaults; not owned */
     const MelodyFillParams *melody;          /* NULL for the defaults; not owned */
-    const ComposerJob *job;
+    const UrsatzJob *job;
     const KnowledgeSnapshot *knowledge;      /* the call context's; required, must outlive the run */
     const CommonPracticeMaterials *materials; /* its materials, resolved once for the call; read by api_grow_read_brief */
 } GrowSetup;
@@ -140,14 +140,14 @@ typedef struct {
  * Sets the tempo (from "option_tempo", else the style) and the mode of the key (mode "style" takes the style's) in out,
  * after the style is loaded. option_tempo has the tempo given with the request or NULL.
  */
-ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const Rational *option_tempo, ComposerError *error);
+UrsatzStatus api_grow_set_tempo_and_mode(GrowSetup *out, const Rational *option_tempo, UrsatzError *error);
 
 /*
  * Tries the seeds one after another: a stuck run is passed over, and a theme that is the same as one already made is not
- * counted. COMPOSER_ERR_UNSATISFIABLE when none can be made, COMPOSER_ERR_CANCELLED when the job says so. The run holds
+ * counted. URSATZ_ERR_UNSATISFIABLE when none can be made, URSATZ_ERR_CANCELLED when the job says so. The run holds
  * what was made, also on failure; destroy it either way.
  */
-ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError *error);
+UrsatzStatus api_grow_run(const GrowSetup *setup, GrowRun *run, UrsatzError *error);
 
 /*
  * The GrowRequest the theme is built from for a seed (the plan does not depend on it today): the setup's brief and its

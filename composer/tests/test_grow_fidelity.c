@@ -106,9 +106,9 @@ int main(int argc, char **argv) {
             setup.suggest = 1;
             setup.seed = seed;
             GrowRun run;
-            ComposerError error;
+            UrsatzError error;
             memset(&error, 0, sizeof(error));
-            assert(api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1);
+            assert(api_grow_run(&setup, &run, &error) == URSATZ_OK && run.made == 1);
             const Plan *plan = run.themes[0].plan;
             NodeId source_node = grow_find_source(plan);
             assert(source_node != PLAN_NODE_NONE);

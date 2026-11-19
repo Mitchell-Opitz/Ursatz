@@ -52,20 +52,10 @@ cJSON *api_seed_json(const CorpusSeed *seed) {
     return object;
 }
 
-static ComposerStatus seed_failure(CorpusSeedResult result, ComposerError *error) {
-    switch (result) {
-    case CORPUS_SEED_ERR_NO_MATCH:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus_passages",
-                        "no passage of corpus_passages gives a motive (it needs two or more notes in its first bar)");
-    default:
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/corpus_passages", "%s", corpus_seed_result_name(result));
-    }
-}
-
-ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error) {
+UrsatzStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, UrsatzError *error) {
     memset(out, 0, sizeof(*out));
     if (snprintf(out->piece, PLAN_SOURCE_PIECE_MAX, "%s", seed->piece) >= PLAN_SOURCE_PIECE_MAX) {
-        return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "", "the source piece's path is too long to record");
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "", "the source piece's path is too long to record");
     }
     out->start_measure = seed->start_measure;
     out->start_beat = seed->start_beat;
@@ -73,13 +63,14 @@ ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, Composer
     out->end_beat = seed->end_beat;
     out->score_numerator = seed->score_numerator;
     out->score_denominator = seed->score_denominator;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
-                               const SpelledKey *key, unsigned long seed, CorpusSeed *out, ComposerError *error) {
+UrsatzStatus api_seed_motive(const KnowledgeSnapshot *knowledge, const CorpusPassages *passages, const PlanMeter *meter,
+                               const SpelledKey *key, unsigned long seed, CorpusSeed *out, UrsatzError *error) {
     CorpusSeedResult result = corpus_seed_motive(knowledge, passages->items, passages->count, meter, key, seed, out);
-    return result == CORPUS_SEED_OK ? COMPOSER_OK : seed_failure(result, error);
+    return result == CORPUS_SEED_OK ? URSATZ_OK
+                                    : api_seed_failure(result, "a motive (it needs two or more notes in its first bar)", "/corpus_passages", error);
 }
 
 void api_seed_stale_notice(const CorpusSeed *seed, char *out, size_t size) {

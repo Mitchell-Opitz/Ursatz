@@ -53,7 +53,7 @@ typedef struct {
 } State;
 
 static bool string_or_number(const cJSON *request, const char *name, char *buffer, size_t size, const char **out,
-                             ComposerError *error) {
+                             UrsatzError *error) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, name);
     *out = NULL;
     if (!item || cJSON_IsNull(item)) {
@@ -67,14 +67,14 @@ static bool string_or_number(const cJSON *request, const char *name, char *buffe
     } else {
         char path[sizeof error->path];
         snprintf(path, sizeof path, "/%s", name);
-        api_fail(error, COMPOSER_ERR_REQUEST, path, "%s must be text or a number", name);
+        api_fail(error, URSATZ_ERR_REQUEST, path, "%s must be text or a number", name);
         return false;
     }
     return true;
 }
 
 /* The members of the brief as the text the options of grow take. */
-static ComposerStatus read_brief(const cJSON *request, GrowRequestText *brief, ComposerError *error) {
+static UrsatzStatus read_brief(const cJSON *request, GrowRequestText *brief, UrsatzError *error) {
     GrowBriefText *text = &brief->text;
     const char *weight = NULL;
     bool voicing = false;
@@ -96,7 +96,7 @@ static ComposerStatus read_brief(const cJSON *request, GrowRequestText *brief, C
         !api_member_string(request, "blend_weight", &brief->blend_weight, &found, error) ||
         !api_member_string(request, "blend_weights", &brief->blend_weights, &found, error) ||
         !string_or_number(request, "bars", brief->bars_text, sizeof brief->bars_text, &text->bars, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     text->voicing = voicing;
     text->has_style = brief->style != NULL;
@@ -105,25 +105,25 @@ static ComposerStatus read_brief(const cJSON *request, GrowRequestText *brief, C
     const cJSON *without = cJSON_GetObjectItemCaseSensitive(request, "style_without");
     if (without && !cJSON_IsNull(without)) {
         if (!cJSON_IsArray(without)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without must be a list of categories");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without must be a list of categories");
         }
         const cJSON *category = NULL;
         cJSON_ArrayForEach(category, without) {
             if (!cJSON_IsString(category)) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without must be a list of categories");
+                return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without must be a list of categories");
             }
-            ComposerStatus added = api_style_without_add(brief->without, &text->without_count, WITHOUT_MAX,
+            UrsatzStatus added = api_style_without_add(brief->without, &text->without_count, WITHOUT_MAX,
                                                          category->valuestring, error);
-            if (added != COMPOSER_OK) {
+            if (added != URSATZ_OK) {
                 return added;
             }
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* The motive request with the key the brief settled on, and the meter and the role of an accompaniment motive. */
-static ComposerStatus make_lines(State *state, ComposerError *error) {
+static UrsatzStatus make_lines(State *state, UrsatzError *error) {
     char key[24];
     util_key_name(spelled_key_tonic_pitch_class(&state->setup.key), state->setup.key.material, key,
                   sizeof key);
@@ -148,10 +148,10 @@ static ComposerStatus make_lines(State *state, ComposerError *error) {
             return api_fail_alloc(error);
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutputOptions *outputs, ComposerError *error) {
+static UrsatzStatus grow_prepare(State *state, const UrsatzJob *job, ApiOutputOptions *outputs, UrsatzError *error) {
     const cJSON *request = state->request;
     GrowSetup *setup = &state->setup;
     bool found;
@@ -161,48 +161,48 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
     const cJSON *passages_member = cJSON_GetObjectItemCaseSensitive(request, "corpus_passages");
     bool has_passages = passages_member && !cJSON_IsNull(passages_member);
     if (cJSON_GetObjectItemCaseSensitive(request, "corpus") || cJSON_GetObjectItemCaseSensitive(request, "like")) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, cJSON_GetObjectItemCaseSensitive(request, "corpus") ? "/corpus" : "/like",
+        return api_fail(error, URSATZ_ERR_REQUEST, cJSON_GetObjectItemCaseSensitive(request, "corpus") ? "/corpus" : "/like",
                         "corpus and like are gone (Composer API 3.0): give corpus_passages, the passages found by "
                         "analyzer_corpus_passages_like");
     }
     bool has_input = cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(request, "input"));
     if (has_passages && has_input) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/corpus_passages", "give a motive input or corpus_passages, not both");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/corpus_passages", "give a motive input or corpus_passages, not both");
     }
     if (!has_passages && !has_input) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/input", "the request needs an input (a motive) or corpus_passages");
+        return api_fail(error, URSATZ_ERR_REQUEST, "/input", "the request needs an input (a motive) or corpus_passages");
     }
-    ComposerStatus status = read_brief(request, &state->brief, error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = read_brief(request, &state->brief, error);
+    if (status != URSATZ_OK) {
         return status;
     }
     status = api_grow_read_brief(&state->brief.text, setup, error);
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_grow_read_construction(request, setup, error);
     }
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     ComposerStyleWeights weights;
     memset(&weights, 0, sizeof(weights));
     status = api_read_blend(state->brief.style != NULL, state->brief.blend, state->brief.blend_weight, state->brief.blend_weights,
                             &weights, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     if (!api_member_whole(request, "suggest", 1, GROW_MAX_SUGGESTIONS, &suggest, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     setup->suggest = found ? suggest : 1;
     setup->suggested = found;
     bool seeded = false;
     if (!api_member_whole(request, "seed", 0, GROW_SEED_MAX, &seed, &seeded, error) ||
         !api_member_bool(request, "check", &check, &found, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     setup->seed = seeded ? seed : api_default_seed();
     status = api_read_output_options(request, outputs, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     setup->check = check;
@@ -212,7 +212,7 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
     /* The tempo of the request wins over the style's, and is the tempo of the files. */
     PlanExportOptions tempo_options = plan_export_options_default();
     status = api_read_tempo(request, &tempo_options, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     const cJSON *tempo_member = cJSON_GetObjectItemCaseSensitive(request, "tempo");
@@ -224,7 +224,7 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
     if (state->brief.style) {
         status = api_load_blend(state->brief.style, state->brief.blend, &weights, state->brief.without,
                                 state->brief.text.without_count, &state->style, error);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             return status;
         }
     }
@@ -233,7 +233,7 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
     setup->without_count = state->brief.text.without_count;
     Rational option_tempo = {outputs->export_options.tempo_numerator, outputs->export_options.tempo_denominator};
     status = api_grow_set_tempo_and_mode(setup, has_tempo ? &option_tempo : NULL, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     if (!has_tempo && setup->tempo.den > 0) {
@@ -242,13 +242,13 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
     }
 
     status = make_lines(state, error);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         return status;
     }
     if (has_passages) {
         if (cJSON_GetObjectItemCaseSensitive(request, "harmony") || cJSON_GetObjectItemCaseSensitive(request, "features") ||
             cJSON_GetObjectItemCaseSensitive(request, "role")) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/harmony",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/harmony",
                             "harmony, features and role describe a motive input, not one seeded from a corpus");
         }
         /* The passage is chosen once, by the first seed; the seeds tried after it grow from the same motive. */
@@ -256,14 +256,14 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
         char path[sizeof error->path];
         char message[sizeof error->message];
         if (!corpus_passages_from_json(passages_member, &passages, path, sizeof path, message, sizeof message)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", message);
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "%s", message);
         }
         status = api_seed_motive(setup->knowledge, &passages, &setup->meter, &setup->key, setup->seed, &setup->seed_found, error);
         corpus_passages_destroy(&passages);
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_seed_source(&setup->seed_found, &setup->source, error);
         }
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             return status;
         }
         api_seed_stale_notice(&setup->seed_found, state->stale, sizeof state->stale);
@@ -271,27 +271,27 @@ static ComposerStatus grow_prepare(State *state, const ComposerJob *job, ApiOutp
         state->motive = setup->seed_found.motive;
     } else {
         status = api_read_motive(state->line, "", state->setup.knowledge, &state->motive, NULL, error);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             return status;
         }
     }
     if (state->accompaniment_line) {
         status = api_read_motive(state->accompaniment_line, "/accompaniment_motive", state->setup.knowledge, &state->accompaniment_motive,
                                 NULL, error);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             return status;
         }
         setup->accompaniment_motive = &state->accompaniment_motive;
     }
     setup->motive = &state->motive;
     setup->text = &state->brief.text;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the outputs ----------------------------------------------------------------------------------------- */
 
 /* Adds, to each theme of the document, its plan (with "plans"), its explanation and its MusicXML (when asked). */
-static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON *document, const GrowRun *run, const ApiOutputOptions *outputs, ComposerError *error) {
+static UrsatzStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSON *document, const GrowRun *run, const ApiOutputOptions *outputs, UrsatzError *error) {
     cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     for (size_t k = 0; k < run->made; k++) {
         cJSON *item = cJSON_GetArrayItem(themes, (int)k);
@@ -324,12 +324,12 @@ static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSO
             PlanExportError detail;
             char *text = NULL;
             if (plan_export_render(theme->plan, &rendered, &detail) != PLAN_EXPORT_OK) {
-                return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
+                return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/musicxml", "cannot render the plan");
             }
             PlanExportResult written = rendered_plan_musicxml_text(knowledge, &rendered, &outputs->export_options, &text, &detail);
             rendered_plan_destroy(&rendered);
             if (written != PLAN_EXPORT_OK) {
-                return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
+                return api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/musicxml", "cannot write the MusicXML file: %s", detail.message);
             }
             bool ok = cJSON_AddStringToObject(item, "musicxml", text) != NULL;
             free(text);
@@ -338,11 +338,11 @@ static ComposerStatus add_theme_members(const KnowledgeSnapshot *knowledge, cJSO
             }
         }
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* The plan, the MIDI file and the MusicXML of the first theme. */
-static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, cJSON *document,
+static UrsatzStatus render_first(const KnowledgeSnapshot *knowledge, const GrowTheme *theme, const ApiOutputOptions *outputs, cJSON *document,
                                    ComposerResponse *out) {
     ApiOutputs files;
     memset(&files, 0, sizeof(files));
@@ -353,7 +353,7 @@ static ComposerStatus render_first(const KnowledgeSnapshot *knowledge, const Gro
     return api_render_outputs(knowledge, theme->plan, &files, document, out);
 }
 
-static ComposerStatus add_notices(cJSON *document, const State *state, const ApiOutputOptions *outputs, ComposerError *error) {
+static UrsatzStatus add_notices(cJSON *document, const State *state, const ApiOutputOptions *outputs, UrsatzError *error) {
     (void)outputs;
     char only[96] = "";
     if (state->setup.suggested && state->run.made < state->setup.suggest) {
@@ -361,24 +361,24 @@ static ComposerStatus add_notices(cJSON *document, const State *state, const Api
                  state->run.made == 1 ? "" : "s");
     }
     if (!state->stale[0] && !only[0]) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     cJSON *notices = cJSON_AddArrayToObject(document, "notices");
     if (!notices || (state->stale[0] && !cJSON_AddItemToArray(notices, cJSON_CreateString(state->stale))) ||
         (only[0] && !cJSON_AddItemToArray(notices, cJSON_CreateString(only)))) {
         return api_fail_alloc(error);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* --- the entry -------------------------------------------------------------------------------------------- */
 
-ComposerStatus composer_api_grow(const ComposerContext *context, const char *request_json,
-                                 const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_grow(const ComposerContext *context, const char *request_json,
+                                 const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     State state;
@@ -387,24 +387,24 @@ ComposerStatus composer_api_grow(const ComposerContext *context, const char *req
     memset(&outputs, 0, sizeof(outputs));
     state.setup.knowledge = context->knowledge;
     state.setup.materials = &materials;
-    ComposerStatus status = api_parse_request(request_json, &state.request, &out->error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = api_parse_request(request_json, &state.request, &out->error);
+    if (status == URSATZ_OK) {
         status = grow_prepare(&state, job, &outputs, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         state.ran = true;
         status = api_grow_run(&state.setup, &state.run, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         cJSON *document = api_grow_result_json(&state.setup, &state.run, NULL);
         status = document ? add_theme_members(context->knowledge, document, &state.run, &outputs, &out->error) : api_fail_alloc(&out->error);
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = add_notices(document, &state, &outputs, &out->error);
         }
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = render_first(context->knowledge, &state.run.themes[0], &outputs, document, out);
         }
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_respond_json(out, document);
         } else {
             cJSON_Delete(document);
@@ -417,8 +417,8 @@ ComposerStatus composer_api_grow(const ComposerContext *context, const char *req
     cJSON_Delete(state.line);
     cJSON_Delete(state.accompaniment_line);
     cJSON_Delete(state.request);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         composer_response_destroy(out);
         out->error = error;
     }

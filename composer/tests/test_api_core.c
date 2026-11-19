@@ -37,24 +37,24 @@ static char *export_request(const char *plan_text, const char *options) {
 }
 
 static void test_versions(void) {
-    assert(strcmp(composer_api_version(), "3.2") == 0);
-    assert(strcmp(test_status_name(COMPOSER_OK), "ok") == 0);
-    assert(strcmp(test_status_name(COMPOSER_ERR_REQUEST), "request") == 0);
-    assert(strcmp(test_status_name(COMPOSER_ERR_UNSATISFIABLE), "unsatisfiable") == 0);
-    assert(strcmp(test_status_name(COMPOSER_ERR_CANCELLED), "cancelled") == 0);
-    assert(strcmp(test_status_name(COMPOSER_ERR_ALLOC), "alloc") == 0);
-    assert(strcmp(test_status_name(COMPOSER_ERR_INTERNAL), "internal") == 0);
+    assert(strcmp(composer_api_version(), "4.0") == 0);
+    assert(strcmp(test_status_name(URSATZ_OK), "ok") == 0);
+    assert(strcmp(test_status_name(URSATZ_ERR_REQUEST), "request") == 0);
+    assert(strcmp(test_status_name(URSATZ_ERR_UNSATISFIABLE), "unsatisfiable") == 0);
+    assert(strcmp(test_status_name(URSATZ_ERR_CANCELLED), "cancelled") == 0);
+    assert(strcmp(test_status_name(URSATZ_ERR_ALLOC), "alloc") == 0);
+    assert(strcmp(test_status_name(URSATZ_ERR_INTERNAL), "internal") == 0);
 
     ComposerResponse response;
-    assert(composer_api_versions(&response) == COMPOSER_OK);
+    assert(composer_api_versions(&response) == URSATZ_OK);
     assert(response.json && !response.plan_json && !response.midi && !response.musicxml && response.midi_size == 0);
     assert(strstr(response.json, "\"composer_version\":\"" ) != NULL);
     char expected[64];
     snprintf(expected, sizeof expected, "\"composer_version\":\"%s\"", composer_version());
     assert(strstr(response.json, expected));
-    assert(strstr(response.json, "\"api_version\":\"3.2\""));
+    assert(strstr(response.json, "\"api_version\":\"4.0\""));
     assert(strstr(response.json, "\"analyzer_version\"") == NULL); /* R-620: the Composer knows no Analyzer */
-    assert(strstr(response.json, "\"ursatz_commit\":\""));
+    assert(strstr(response.json, "\"producer_key\":\""));
     snprintf(expected, sizeof expected, "\"composition_key\":\"%s\"", composer_composition_key());
     assert(strstr(response.json, expected));
     snprintf(expected, sizeof expected, "\"plan_format_version\":%d", URSATZ_PLAN_FORMAT_VERSION);
@@ -68,9 +68,9 @@ static void test_export(void) {
     size_t midi_size = 0;
     char *midi = test_must_read_file(COMPOSER_SNAPSHOT_DIR "/grow-period.mid", &midi_size);
 
-    char *request = export_request(plan_text, "\"midi\":true,\"musicxml\":true,\"api_version\":3");
+    char *request = export_request(plan_text, "\"midi\":true,\"musicxml\":true,\"api_version\":4");
     ComposerResponse response;
-    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == URSATZ_OK);
     free(request);
     assert(response.midi && response.midi_size == midi_size && memcmp(response.midi, midi, midi_size) == 0);
     assert(response.musicxml && strstr(response.musicxml, "<score-partwise"));
@@ -81,33 +81,33 @@ static void test_export(void) {
 
     /* A format not asked for is not made; a tempo is written into the file. */
     request = export_request(plan_text, "\"midi\":true,\"tempo\":\"195/2\"");
-    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == URSATZ_OK);
     free(request);
     assert(response.midi && !response.musicxml && response.midi_size > 0);
     assert(response.midi_size != midi_size);
     composer_response_destroy(&response);
 
     request = export_request(plan_text, "\"midi\":true,\"plain_midi\":true,\"tempo\":null");
-    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == URSATZ_OK);
     free(request);
     assert(response.midi && response.midi_size < midi_size);
     composer_response_destroy(&response);
 
     /* The plan file text is the plan as the library writes plan files; with no format asked for, nothing is rendered. */
     request = export_request(plan_text, "\"plan_file\":true");
-    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == URSATZ_OK);
     free(request);
     assert(response.plan_json && strstr(response.plan_json, "\"format\": \"ursatz-plan\""));
     assert(!response.midi && !response.musicxml);
     /* The text is a plan file: it exports to the same MIDI. */
     request = export_request(response.plan_json, "\"midi\":true");
     composer_response_destroy(&response);
-    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == URSATZ_OK);
     free(request);
     assert(response.midi && response.midi_size == midi_size && memcmp(response.midi, midi, midi_size) == 0);
     composer_response_destroy(&response);
     request = export_request(plan_text, "\"plan_file\":true,\"midi\":true");
-    assert(composer_api_export(test_context(), request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_export(test_context(), request, NULL, &response) == URSATZ_OK);
     free(request);
     assert(response.plan_json && response.midi && response.midi_size == midi_size);
     composer_response_destroy(&response);
@@ -116,9 +116,9 @@ static void test_export(void) {
     free(midi);
 }
 
-static void expect_refused(const char *request, ComposerStatus status, const char *path) {
+static void expect_refused(const char *request, UrsatzStatus status, const char *path) {
     ComposerResponse response;
-    ComposerStatus result = composer_api_export(test_context(), request, NULL, &response);
+    UrsatzStatus result = composer_api_export(test_context(), request, NULL, &response);
     assert(result == status);
     assert(strcmp(response.error.path, path) == 0);
     assert(response.error.message[0] != '\0');
@@ -129,29 +129,29 @@ static void expect_refused(const char *request, ComposerStatus status, const cha
 static void test_refusals(void) {
     char *plan_text = test_must_read_file(COMPOSER_SNAPSHOT_DIR "/grow-period.plan.json", NULL);
     char *request = export_request(plan_text, "\"midi\":true,\"api_version\":1");
-    expect_refused(request, COMPOSER_ERR_REQUEST, "/api_version");
+    expect_refused(request, URSATZ_ERR_REQUEST, "/api_version");
     free(request);
     request = export_request(plan_text, "\"midi\":true,\"tempo\":5");
-    expect_refused(request, COMPOSER_ERR_REQUEST, "/tempo");
+    expect_refused(request, URSATZ_ERR_REQUEST, "/tempo");
     free(request);
     request = export_request(plan_text, "\"midi\":\"yes\"");
-    expect_refused(request, COMPOSER_ERR_REQUEST, "/midi");
+    expect_refused(request, URSATZ_ERR_REQUEST, "/midi");
     free(request);
     request = export_request(plan_text, "\"plan_file\":\"yes\"");
-    expect_refused(request, COMPOSER_ERR_REQUEST, "/plan_file");
+    expect_refused(request, URSATZ_ERR_REQUEST, "/plan_file");
     free(request);
     free(plan_text);
 
-    expect_refused("{not json", COMPOSER_ERR_REQUEST, "");
-    expect_refused("[]", COMPOSER_ERR_REQUEST, "");
-    expect_refused(NULL, COMPOSER_ERR_REQUEST, "");
-    expect_refused("{\"midi\":true}", COMPOSER_ERR_REQUEST, "/plan");
-    expect_refused("{\"plan\":{\"format\":\"nope\"},\"midi\":true}", COMPOSER_ERR_REQUEST, "/plan/format");
+    expect_refused("{not json", URSATZ_ERR_REQUEST, "");
+    expect_refused("[]", URSATZ_ERR_REQUEST, "");
+    expect_refused(NULL, URSATZ_ERR_REQUEST, "");
+    expect_refused("{\"midi\":true}", URSATZ_ERR_REQUEST, "/plan");
+    expect_refused("{\"plan\":{\"format\":\"nope\"},\"midi\":true}", URSATZ_ERR_REQUEST, "/plan/format");
 }
 
 static void test_destroy(void) {
     ComposerResponse response;
-    assert(composer_api_versions(&response) == COMPOSER_OK);
+    assert(composer_api_versions(&response) == URSATZ_OK);
     composer_response_destroy(&response);
     assert(!response.json && !response.plan_json && !response.midi && !response.musicxml && response.midi_size == 0);
     composer_response_destroy(&response);
@@ -162,7 +162,7 @@ static void test_destroy(void) {
     composer_response_destroy(NULL);
 
     /* A failed entry leaves a response that is safe to destroy. */
-    assert(composer_api_export(test_context(), "{}", NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_export(test_context(), "{}", NULL, &response) == URSATZ_ERR_REQUEST);
     composer_response_destroy(&response);
     composer_response_destroy(&response);
 }

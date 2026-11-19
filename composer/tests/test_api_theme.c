@@ -138,11 +138,11 @@ static void test_snapshots(void) {
     for (size_t i = 0; i < CASE_COUNT; i++) {
         char *request = case_request(&CASES[i]);
         ComposerResponse response;
-        ComposerStatus status = composer_api_theme(test_context(), request, NULL, &response);
-        if (status != COMPOSER_OK) {
+        UrsatzStatus status = composer_api_theme(test_context(), request, NULL, &response);
+        if (status != URSATZ_OK) {
             fprintf(stderr, "theme-%s: %s: %s\n", CASES[i].name, test_status_name(status), response.error.message);
         }
-        assert(status == COMPOSER_OK);
+        assert(status == URSATZ_OK);
         expect_case(&CASES[i], &response);
         write_pair(CASES[i].name, request, &response);
         composer_response_destroy(&response);
@@ -178,7 +178,7 @@ static const cJSON *member(const cJSON *object, const char *name) {
 }
 
 /* The request of a case with seed `seed`, composed: the status, and the response. */
-static ComposerStatus compose_uneven(const char *fixture, unsigned seed, cJSON *edits, char **request, ComposerResponse *response) {
+static UrsatzStatus compose_uneven(const char *fixture, unsigned seed, cJSON *edits, char **request, ComposerResponse *response) {
     char *text = test_must_read_file(fixture, NULL);
     cJSON *json = cJSON_Parse(text);
     free(text);
@@ -201,20 +201,20 @@ static void test_uneven(void) {
         const Uneven *item = &UNEVEN[i];
         ComposerResponse response;
         char *request = NULL;
-        ComposerStatus status = COMPOSER_ERR_UNSATISFIABLE;
-        for (unsigned seed = 1; seed <= 16 && status != COMPOSER_OK; seed++) {
+        UrsatzStatus status = URSATZ_ERR_UNSATISFIABLE;
+        for (unsigned seed = 1; seed <= 16 && status != URSATZ_OK; seed++) {
             if (request) {
                 free(request);
             }
             status = compose_uneven(item->fixture, seed, NULL, &request, &response);
-            if (status != COMPOSER_OK) {
+            if (status != URSATZ_OK) {
                 composer_response_destroy(&response);
             }
         }
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             fprintf(stderr, "%s: no seed from 1 to 16 composes\n", item->tag);
         }
-        assert(status == COMPOSER_OK);
+        assert(status == URSATZ_OK);
         cJSON *document = cJSON_Parse(response.json);
         assert(document);
         assert(!cJSON_GetObjectItemCaseSensitive(document, "construction")); /* none was given: nothing to echo */
@@ -259,11 +259,11 @@ static void test_given_construction(void) {
     assert(edits && given && cJSON_AddItemToObject(edits, "construction", given) && cJSON_AddNullToObject(edits, "bars"));
     ComposerResponse response;
     char *request = NULL;
-    ComposerStatus status = compose_uneven(THEME("uneven-period.json"), 1, edits, &request, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = compose_uneven(THEME("uneven-period.json"), 1, edits, &request, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "given construction: %s: %s\n", test_status_name(status), response.error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document && member(document, "bars")->valuedouble == 10);
     const cJSON *echoed = member(document, "construction");
@@ -283,7 +283,7 @@ static void test_given_construction(void) {
 static void test_plain_has_no_construction(void) {
     char *request = case_request(&CASES[0]);
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), request, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &response) == URSATZ_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document && cJSON_IsNull(member(cJSON_GetArrayItem(member(document, "themes"), 0), "construction")));
     cJSON_Delete(document);
@@ -325,14 +325,14 @@ static const cJSON *first_theme(const cJSON *document) {
 static void test_preferences(void) {
     ComposerResponse plain;
     char *request = preferences_request(2, NULL);
-    assert(composer_api_theme(test_context(), request, NULL, &plain) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &plain) == URSATZ_OK);
     free(request);
     cJSON *plain_document = cJSON_Parse(plain.json);
     assert(plain_document && !cJSON_GetObjectItemCaseSensitive(plain_document, "preferences"));
 
     ComposerResponse empty;
     request = preferences_request(2, "{}");
-    assert(composer_api_theme(test_context(), request, NULL, &empty) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &empty) == URSATZ_OK);
     free(request);
     cJSON *empty_document = cJSON_Parse(empty.json);
     assert(empty_document && cJSON_GetObjectItemCaseSensitive(empty_document, "preferences"));
@@ -348,7 +348,7 @@ static void test_preferences(void) {
         "\"development\": {\"fidelity_minimum\": {\"balanced\": {\"presentation\": \"1/1\"}}}}";
     ComposerResponse set;
     request = preferences_request(2, given);
-    assert(composer_api_theme(test_context(), request, NULL, &set) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &set) == URSATZ_OK);
     write_pair("preferences", request, &set);
     free(request);
     cJSON *document = cJSON_Parse(set.json);
@@ -412,14 +412,14 @@ static bool has_source(const cJSON *document, const char *source) {
 static void test_l4_preferences(void) {
     ComposerResponse plain;
     char *request = period_request(2, NULL);
-    assert(composer_api_theme(test_context(), request, NULL, &plain) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &plain) == URSATZ_OK);
     free(request);
     cJSON *plain_document = cJSON_Parse(plain.json);
     assert(plain_document && !has_source(plain_document, "new"));
 
     ComposerResponse set;
     request = period_request(2, "{\"development\": {\"contrast\": {\"new_material\": 20}}}");
-    assert(composer_api_theme(test_context(), request, NULL, &set) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &set) == URSATZ_OK);
     free(request);
     cJSON *document = cJSON_Parse(set.json);
     assert(document && has_source(document, "new"));
@@ -433,7 +433,7 @@ static void test_l4_preferences(void) {
         "{\"melody\": {\"closure\": {\"final\": 0, \"first\": 0}, \"rhythm_repeat_bars\": 0, \"leaps\": 0, \"register\": 0}, "
         "\"development\": {\"contrast\": {\"distance\": {\"similar\": 1, \"distant\": 0}, \"new_material\": 0}}}";
     request = period_request(2, defaults);
-    assert(composer_api_theme(test_context(), request, NULL, &set) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), request, NULL, &set) == URSATZ_OK);
     free(request);
     document = cJSON_Parse(set.json);
     assert(document && cJSON_GetObjectItemCaseSensitive(document, "preferences"));
@@ -458,7 +458,7 @@ static void test_suggest_plans_explain(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == URSATZ_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
     const cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
@@ -494,7 +494,7 @@ static void test_developments(void) {
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), printed, NULL, &response) == URSATZ_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
     const cJSON *theme = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
@@ -562,9 +562,9 @@ static void test_cancel_first(void) {
     char *request = case_request(&CASES[0]);
     Watch watch;
     memset(&watch, 0, sizeof(watch));
-    ComposerJob job = {on_progress, cancel_at_first, &watch};
+    UrsatzJob job = {on_progress, cancel_at_first, &watch};
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), request, &job, &response) == COMPOSER_ERR_CANCELLED);
+    assert(composer_api_theme(test_context(), request, &job, &response) == URSATZ_ERR_CANCELLED);
     assert(watch.steps >= 1 && watch.grow_reported);
     assert(!response.json && !response.plan_json && !response.midi && !response.musicxml);
     composer_response_destroy(&response);
@@ -577,8 +577,8 @@ static void test_progress(void) {
     ComposerResponse response;
     /* A job that never cancels reports the stages and gives the snapshot. */
     memset(&watch, 0, sizeof(watch));
-    ComposerJob quiet = {on_progress, never_cancel, &watch};
-    assert(composer_api_theme(test_context(), request, &quiet, &response) == COMPOSER_OK);
+    UrsatzJob quiet = {on_progress, never_cancel, &watch};
+    assert(composer_api_theme(test_context(), request, &quiet, &response) == URSATZ_OK);
     assert(watch.grow_reported && watch.compose_reported);
     expect_case(&CASES[0], &response);
     composer_response_destroy(&response);
@@ -600,7 +600,7 @@ static void *run_worker(void *argument) {
     for (int i = 0; i < 2; i++) {
         char *request = case_request(worker->cases[i]);
         ComposerResponse response;
-        assert(composer_api_theme(test_context(), request, NULL, &response) == COMPOSER_OK);
+        assert(composer_api_theme(test_context(), request, NULL, &response) == URSATZ_OK);
         worker->json[i] = strdup(response.json);
         worker->plan[i] = strdup(response.plan_json);
         worker->midi_size[i] = response.midi_size;
@@ -653,7 +653,7 @@ static void test_threads(void) {
 /* --- refused requests ---------------------------------------------------------------------------- */
 
 /* The one-motive request with each member of `edits` ({name, JSON text or NULL to remove}) set. */
-static ComposerStatus refuse_with(const char *const edits[][2], size_t count, ComposerResponse *response) {
+static UrsatzStatus refuse_with(const char *const edits[][2], size_t count, ComposerResponse *response) {
     char *text = test_must_read_file(THEME("one-motive.json"), NULL);
     cJSON *request = cJSON_Parse(text);
     free(text);
@@ -668,13 +668,13 @@ static ComposerStatus refuse_with(const char *const edits[][2], size_t count, Co
     assert(cJSON_AddNumberToObject(request, "seed", 1));
     char *printed = cJSON_PrintUnformatted(request);
     cJSON_Delete(request);
-    ComposerStatus status = composer_api_theme(test_context(), printed, NULL, response);
+    UrsatzStatus status = composer_api_theme(test_context(), printed, NULL, response);
     free(printed);
     return status;
 }
 
 /* The one-motive request with member `name` set to the JSON text `value` (NULL removes it). */
-static ComposerStatus refuse(const char *name, const char *value, ComposerResponse *response) {
+static UrsatzStatus refuse(const char *name, const char *value, ComposerResponse *response) {
     const char *const edits[][2] = {{name, value}};
     return refuse_with(edits, 1, response);
 }
@@ -683,7 +683,7 @@ static ComposerStatus refuse(const char *name, const char *value, ComposerRespon
 static void expect_development(const char *value, const char *expected) {
     const char *const edits[][2] = {{"development", value}, {"explain", "\"text\""}};
     ComposerResponse response;
-    assert(refuse_with(edits, 2, &response) == COMPOSER_OK);
+    assert(refuse_with(edits, 2, &response) == URSATZ_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
     const cJSON *brief = cJSON_GetObjectItemCaseSensitive(document, "brief");
@@ -705,9 +705,9 @@ static void test_development_setting(void) {
     expect_development("\"theme\"", "theme");
 }
 
-static void expect_refused(const char *name, const char *value, ComposerStatus status, const char *path, const char *message) {
+static void expect_refused(const char *name, const char *value, UrsatzStatus status, const char *path, const char *message) {
     ComposerResponse response;
-    ComposerStatus got = refuse(name, value, &response);
+    UrsatzStatus got = refuse(name, value, &response);
     if (got != status || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
         fprintf(stderr, "%s: %s '%s' at '%s', expected %s '%s' at '%s'\n", name, test_status_name(got),
                 response.error.message, response.error.path, test_status_name(status), message, path);
@@ -728,13 +728,13 @@ static void expect_motif_refused(const char *meter, const char *degrees, const c
              degrees);
     const char *const edits[][2] = {{"motives", motives}, {"meter", meter}, {"bars", bars}};
     ComposerResponse response;
-    ComposerStatus status = refuse_with(edits, 3, &response);
-    if (status != COMPOSER_ERR_UNSATISFIABLE || strcmp(response.error.path, "/slots/basic") != 0 ||
+    UrsatzStatus status = refuse_with(edits, 3, &response);
+    if (status != URSATZ_ERR_UNSATISFIABLE || strcmp(response.error.path, "/slots/basic") != 0 ||
         !strstr(response.error.message, message)) {
         fprintf(stderr, "%s: %s '%s' at '%s'\n", message, test_status_name(status), response.error.message,
                 response.error.path);
     }
-    assert(status == COMPOSER_ERR_UNSATISFIABLE);
+    assert(status == URSATZ_ERR_UNSATISFIABLE);
     assert(strcmp(response.error.path, "/slots/basic") == 0);
     assert(strstr(response.error.message, message));
     composer_response_destroy(&response);
@@ -752,11 +752,11 @@ static void test_two_bar_motif(void) {
                           "\"harmony\": null, \"features\": [], \"role\": \"melodic\"}]";
     const char *const edits[][2] = {{"motives", motives}, {"meter", "\"3/4\""}};
     ComposerResponse response;
-    ComposerStatus status = refuse_with(edits, 2, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = refuse_with(edits, 2, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "2-bar 3/4: %s: %s at '%s'\n", test_status_name(status), response.error.message, response.error.path);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(document, "themes")) == 1);
     cJSON_Delete(document);
@@ -772,11 +772,11 @@ static void test_part_length_motif(void) {
                           "\"harmony\": null, \"features\": [], \"role\": \"melodic\"}]";
     const char *const edits[][2] = {{"motives", motives}};
     ComposerResponse response;
-    ComposerStatus status = refuse_with(edits, 1, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = refuse_with(edits, 1, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "4-bar motif: %s: %s at '%s'\n", test_status_name(status), response.error.message, response.error.path);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     composer_response_destroy(&response);
 
     const char *two = "[{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:w 3:w 5:w 3:w\", \"pickup\": \"0\", "
@@ -785,14 +785,14 @@ static void test_part_length_motif(void) {
                       "\"harmony\": null, \"features\": [], \"role\": \"melodic\"}]";
     const char *const slot_edits[][2] = {{"motives", two}, {"slots", "{\"basic\": \"A\", \"contrasting\": \"B\"}"}};
     status = refuse_with(slot_edits, 2, &response);
-    assert(status == COMPOSER_ERR_REQUEST);
+    assert(status == URSATZ_ERR_REQUEST);
     assert(strcmp(response.error.path, "/slots/contrasting") == 0);
     assert(strstr(response.error.message, "the basic motif fills the whole presentation; leave the contrasting idea out"));
     composer_response_destroy(&response);
 
     const char *const idea_edits[][2] = {{"motives", two}, {"ideas", "{\"repetition\": \"B\"}"}};
     status = refuse_with(idea_edits, 2, &response);
-    assert(status == COMPOSER_ERR_REQUEST);
+    assert(status == URSATZ_ERR_REQUEST);
     assert(strcmp(response.error.path, "/ideas/repetition") == 0);
     composer_response_destroy(&response);
 }
@@ -800,56 +800,56 @@ static void test_part_length_motif(void) {
 static void test_refused(void) {
     /* A motive that names a file in place of its content. */
     expect_refused("motives",
-                   "[{\"id\": \"A\", \"form\": \"full\", \"path\": \"motive.mid\", \"pickup\": \"0\"}]", COMPOSER_ERR_REQUEST,
+                   "[{\"id\": \"A\", \"form\": \"full\", \"path\": \"motive.mid\", \"pickup\": \"0\"}]", URSATZ_ERR_REQUEST,
                    "/motives/0/path", "a motive carries its content");
-    expect_refused("motives", "[{\"id\": \"A\", \"degrees\": \"1:q 3:e 5:e 1':h\", \"forms\": []}]", COMPOSER_ERR_REQUEST,
+    expect_refused("motives", "[{\"id\": \"A\", \"degrees\": \"1:q 3:e 5:e 1':h\", \"forms\": []}]", URSATZ_ERR_REQUEST,
                    "/motives/0/forms", "saved forms are no longer read");
-    expect_refused("schema_version", "1", COMPOSER_ERR_REQUEST, "/schema_version", "\"schema_version\": 2");
-    expect_refused("schema", "\"other\"", COMPOSER_ERR_REQUEST, "/schema", "ursatz-theme-request");
-    expect_refused("into", NULL, COMPOSER_ERR_REQUEST, "/into", "the request needs \"into\"");
-    expect_refused("into", "\"rondo\"", COMPOSER_ERR_REQUEST, "/into", "into must be sentence, period or hybrid");
-    expect_refused("key", "\"H\"", COMPOSER_ERR_REQUEST, "/key", "unknown key 'H'");
-    expect_refused("ideas", "{\"first idea\": \"A\"}", COMPOSER_ERR_REQUEST, "/ideas", "unknown idea 'first idea'");
-    expect_refused("ideas", "{\"repetition\": \"B\"}", COMPOSER_ERR_REQUEST, "/ideas/repetition", "which the request does not have");
-    expect_refused("chords", "[{\"bar\": 9, \"text\": \"I\"}]", COMPOSER_ERR_REQUEST, "/chords/0", "the theme has bars 0 to 7");
-    expect_refused("style", "\"no-such-style.json\"", COMPOSER_ERR_UNSATISFIABLE, "/style", "cannot read style");
-    expect_refused("development", "\"wild\"", COMPOSER_ERR_REQUEST, "/development", "development must be melody, balanced or theme");
-    expect_refused("development", "3", COMPOSER_ERR_REQUEST, "/development", "development");
-    expect_refused("tempo", "500", COMPOSER_ERR_REQUEST, "/tempo", "tempo must be from 20 to 400");
-    expect_refused("explain", "\"xml\"", COMPOSER_ERR_REQUEST, "/explain", "explain must be");
+    expect_refused("schema_version", "1", URSATZ_ERR_REQUEST, "/schema_version", "\"schema_version\": 2");
+    expect_refused("schema", "\"other\"", URSATZ_ERR_REQUEST, "/schema", "ursatz-theme-request");
+    expect_refused("into", NULL, URSATZ_ERR_REQUEST, "/into", "the request needs \"into\"");
+    expect_refused("into", "\"rondo\"", URSATZ_ERR_REQUEST, "/into", "into must be sentence, period or hybrid");
+    expect_refused("key", "\"H\"", URSATZ_ERR_REQUEST, "/key", "unknown key 'H'");
+    expect_refused("ideas", "{\"first idea\": \"A\"}", URSATZ_ERR_REQUEST, "/ideas", "unknown idea 'first idea'");
+    expect_refused("ideas", "{\"repetition\": \"B\"}", URSATZ_ERR_REQUEST, "/ideas/repetition", "which the request does not have");
+    expect_refused("chords", "[{\"bar\": 9, \"text\": \"I\"}]", URSATZ_ERR_REQUEST, "/chords/0", "the theme has bars 0 to 7");
+    expect_refused("style", "\"no-such-style.json\"", URSATZ_ERR_UNSATISFIABLE, "/style", "cannot read style");
+    expect_refused("development", "\"wild\"", URSATZ_ERR_REQUEST, "/development", "development must be melody, balanced or theme");
+    expect_refused("development", "3", URSATZ_ERR_REQUEST, "/development", "development");
+    expect_refused("tempo", "500", URSATZ_ERR_REQUEST, "/tempo", "tempo must be from 20 to 400");
+    expect_refused("explain", "\"xml\"", URSATZ_ERR_REQUEST, "/explain", "explain must be");
     /* A setting out of its limit, one that is unknown, and one of the wrong type, each at its path under /preferences. */
-    expect_refused("preferences", "{\"melody\": {\"keep\": 17}}", COMPOSER_ERR_REQUEST, "/preferences/melody/keep", "1 to 16");
-    expect_refused("preferences", "{\"motif\": {\"bars\": {\"one\": 0, \"two\": 0}}}", COMPOSER_ERR_REQUEST, "/preferences/motif/bars",
+    expect_refused("preferences", "{\"melody\": {\"keep\": 17}}", URSATZ_ERR_REQUEST, "/preferences/melody/keep", "1 to 16");
+    expect_refused("preferences", "{\"motif\": {\"bars\": {\"one\": 0, \"two\": 0}}}", URSATZ_ERR_REQUEST, "/preferences/motif/bars",
                    "");
-    expect_refused("preferences", "{\"bogus\": 1}", COMPOSER_ERR_REQUEST, "/preferences/bogus", "");
-    expect_refused("preferences", "3", COMPOSER_ERR_REQUEST, "/preferences", "preferences must be an object");
+    expect_refused("preferences", "{\"bogus\": 1}", URSATZ_ERR_REQUEST, "/preferences/bogus", "");
+    expect_refused("preferences", "3", URSATZ_ERR_REQUEST, "/preferences", "preferences must be an object");
     /* A length and a construction (B5 of P47), each at its path. */
-    expect_refused("bars", "2", COMPOSER_ERR_REQUEST, "/bars", "bars must be 3 to 16, not '2'");
-    expect_refused("bars", "17", COMPOSER_ERR_REQUEST, "/bars", "bars must be 3 to 16, not '17'");
-    expect_refused("bars", "15", COMPOSER_ERR_UNSATISFIABLE, "/bars", "no construction makes a 15-bar sentence from this motif");
-    expect_refused("construction", "[]", COMPOSER_ERR_REQUEST, "/construction", "must be null or");
-    expect_refused("construction", "{\"ideas\": {\"bogus\": 1}}", COMPOSER_ERR_REQUEST, "/construction/ideas/bogus", "unknown idea");
+    expect_refused("bars", "2", URSATZ_ERR_REQUEST, "/bars", "bars must be 3 to 16, not '2'");
+    expect_refused("bars", "17", URSATZ_ERR_REQUEST, "/bars", "bars must be 3 to 16, not '17'");
+    expect_refused("bars", "15", URSATZ_ERR_UNSATISFIABLE, "/bars", "no construction makes a 15-bar sentence from this motif");
+    expect_refused("construction", "[]", URSATZ_ERR_REQUEST, "/construction", "must be null or");
+    expect_refused("construction", "{\"ideas\": {\"bogus\": 1}}", URSATZ_ERR_REQUEST, "/construction/ideas/bogus", "unknown idea");
     expect_refused("construction", "{\"ideas\": {\"basic idea\": 2, \"repetition\": 2, \"fragment 1\": 1, \"fragment 2\": 1, "
                                   "\"cadential\": 3}}",
-                   COMPOSER_ERR_UNSATISFIABLE, "/construction/ideas", "the ideas are 9 bars; the theme has 8");
+                   URSATZ_ERR_UNSATISFIABLE, "/construction/ideas", "the ideas are 9 bars; the theme has 8");
     expect_refused("construction",
                    "{\"ideas\": {\"basic idea\": 2, \"repetition\": 2, \"fragment 1\": 1, \"fragment 2\": 1, \"cadential\": 2}, "
                    "\"extensions\": [{\"kind\": \"echo\"}]}",
-                   COMPOSER_ERR_REQUEST, "/construction/extensions/0/kind", "kind must be repeat, stretch, addition or evaded");
+                   URSATZ_ERR_REQUEST, "/construction/extensions/0/kind", "kind must be repeat, stretch, addition or evaded");
     expect_refused("construction",
                    "{\"ideas\": {\"basic idea\": 2, \"repetition\": 2, \"fragment 1\": 1, \"fragment 2\": 1, \"cadential\": 2}, "
                    "\"extensions\": [{\"kind\": \"stretch\", \"idea\": \"fragment 1\", \"bars\": 1}]}",
-                   COMPOSER_ERR_UNSATISFIABLE, "/construction/extensions/0", "cannot follow the fragment 1");
+                   URSATZ_ERR_UNSATISFIABLE, "/construction/extensions/0", "cannot follow the fragment 1");
     /* A theme no seed can write: a last bar V under a perfect cadence. */
-    expect_refused("chords", "[{\"bar\": 7, \"text\": \"V\"}]", COMPOSER_ERR_UNSATISFIABLE, "/chords/0", "chords bar 7: V cannot end a PAC");
-    expect_refused("chords", "[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 7, \"text\": \"I6\"}]", COMPOSER_ERR_UNSATISFIABLE,
+    expect_refused("chords", "[{\"bar\": 7, \"text\": \"V\"}]", URSATZ_ERR_UNSATISFIABLE, "/chords/0", "chords bar 7: V cannot end a PAC");
+    expect_refused("chords", "[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 7, \"text\": \"I6\"}]", URSATZ_ERR_UNSATISFIABLE,
                    "/chords/1", "chords bar 7: i6 cannot end a PAC; the cadence needs a tonic chord in root position");
 
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), "{\"api_version\": 7}", NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_theme(test_context(), "{\"api_version\": 7}", NULL, &response) == URSATZ_ERR_REQUEST);
     assert(strcmp(response.error.path, "/api_version") == 0);
     composer_response_destroy(&response);
-    assert(composer_api_theme(test_context(), "not json", NULL, &response) == COMPOSER_ERR_REQUEST);
+    assert(composer_api_theme(test_context(), "not json", NULL, &response) == URSATZ_ERR_REQUEST);
     composer_response_destroy(&response);
 }
 

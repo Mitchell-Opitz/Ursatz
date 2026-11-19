@@ -293,8 +293,8 @@ static int run_command(int argc, char **argv, bool harmonize) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus called = cli_call(harmonize ? composer_api_harmonize : composer_api_variations, request, &response);
-    if (called != COMPOSER_OK) {
+    UrsatzStatus called = cli_call(harmonize ? composer_api_harmonize : composer_api_variations, request, &response);
+    if (called != URSATZ_OK) {
         status = cli_fail_plan_api(called, &response.error, options.input, &held);
     } else {
         cJSON *document = cJSON_Parse(response.json);

@@ -48,7 +48,7 @@ static Rational rational(const cJSON *object, const char *name) {
 static void key_text(long tonic, const char *material, char *out, size_t size) {
     ComposerResponse response;
     memset(&response, 0, sizeof response);
-    cJSON *vocabulary = composer_api_vocabulary(cli_context(), &response) == COMPOSER_OK ? cJSON_Parse(response.json) : NULL;
+    cJSON *vocabulary = composer_api_vocabulary(cli_context(), &response) == URSATZ_OK ? cJSON_Parse(response.json) : NULL;
     const char *spelling = NULL;
     const char *word = NULL;
     const cJSON *entry = NULL;

@@ -30,12 +30,12 @@ static bool default_string(cJSON *object, const char *name, const char *value) {
     return (item && !cJSON_IsNull(item)) || cJSON_AddStringToObject(object, name, value) != NULL;
 }
 
-static ComposerStatus validate_motive(const cJSON *request, const KnowledgeSnapshot *knowledge, cJSON *filled,
-                                      ComposerError *error) {
+static UrsatzStatus validate_motive(const cJSON *request, const KnowledgeSnapshot *knowledge, cJSON *filled,
+                                      UrsatzError *error) {
     Motive motive;
     MotiveOptions options;
-    ComposerStatus status = api_read_motive(request, "", knowledge, &motive, &options, error);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = api_read_motive(request, "", knowledge, &motive, &options, error);
+    if (status != URSATZ_OK) {
         return status;
     }
     PlanMeter meter = motive_meter(&motive);
@@ -63,38 +63,38 @@ static ComposerStatus validate_motive(const cJSON *request, const KnowledgeSnaps
             }
         }
     }
-    return ok ? COMPOSER_OK : api_fail_alloc(error);
+    return ok ? URSATZ_OK : api_fail_alloc(error);
 }
 
-ComposerStatus composer_api_validate(const ComposerContext *context, const char *kind, const char *request_json,
+UrsatzStatus composer_api_validate(const ComposerContext *context, const char *kind, const char *request_json,
                                      ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     CommonPracticeMaterials materials;
-    ComposerStatus context_status = api_require_knowledge(context, &materials, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, &materials, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
-    ComposerError *error = &out->error;
+    UrsatzError *error = &out->error;
     cJSON *request = NULL;
     cJSON *filled = NULL;
     cJSON *root = NULL;
-    ComposerStatus status = kind ? COMPOSER_OK : api_fail(error, COMPOSER_ERR_REQUEST, "/kind", "kind is missing");
-    if (status == COMPOSER_OK && strcmp(kind, "motive") != 0 && strcmp(kind, "theme") != 0 && strcmp(kind, "piece") != 0 &&
+    UrsatzStatus status = kind ? URSATZ_OK : api_fail(error, URSATZ_ERR_REQUEST, "/kind", "kind is missing");
+    if (status == URSATZ_OK && strcmp(kind, "motive") != 0 && strcmp(kind, "theme") != 0 && strcmp(kind, "piece") != 0 &&
         strcmp(kind, "random_motive") != 0) {
-        status = api_fail(error, COMPOSER_ERR_REQUEST, "/kind", "kind must be motive, theme, piece or random_motive, not '%s'",
+        status = api_fail(error, URSATZ_ERR_REQUEST, "/kind", "kind must be motive, theme, piece or random_motive, not '%s'",
                           kind);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_parse_request(request_json, &request, error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         filled = cJSON_Duplicate(request, true);
         root = cJSON_CreateObject();
         if (!filled || !root) {
             status = api_fail_alloc(error);
         }
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         if (strcmp(kind, "motive") == 0) {
             status = validate_motive(request, context->knowledge, filled, error);
         } else if (strcmp(kind, "theme") == 0) {
@@ -105,14 +105,14 @@ ComposerStatus composer_api_validate(const ComposerContext *context, const char 
             status = api_random_validate(context->knowledge, request, filled, error);
         }
     }
-    if (status == COMPOSER_OK && !cJSON_AddItemToObject(root, "request", filled)) {
+    if (status == URSATZ_OK && !cJSON_AddItemToObject(root, "request", filled)) {
         status = api_fail_alloc(error);
-    } else if (status == COMPOSER_OK) {
+    } else if (status == URSATZ_OK) {
         filled = NULL;
     }
     cJSON_Delete(filled);
     cJSON_Delete(request);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         cJSON_Delete(root);
         return status;
     }

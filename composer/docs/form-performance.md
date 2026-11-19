@@ -80,7 +80,7 @@ section in the composed plan, so a repeat's row is its source's at its own start
 ## Regenerate and variations are Later
 
 A performed form is composed whole. The piece entry with `from` (regenerate) and the piece variations entry answer
-`COMPOSER_ERR_REQUEST` at `/request/form`: `regenerate and variations of the <label> form are Later: it is composed whole`.
+`URSATZ_ERR_REQUEST` at `/request/form`: `regenerate and variations of the <label> form are Later: it is composed whole`.
 
 ## Leading into a section
 

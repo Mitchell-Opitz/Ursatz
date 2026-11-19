@@ -52,13 +52,13 @@ Realizes a plan ([cli-fill.md](../cli-fill.md)): every open theme section is com
 "heard", "heard_as_requested", "cadences"}], "analyzer", "style_distance", "returns": {"planned", "heard", "pairs"},
 "given"}`; `candidates_tried` is added for the text output. `realized` is `true` for a plan that had nothing to fill. A
 section outside the scope of the hearing has `"heard": null` and `"in_scope": false`. `given` is present when the plan
-has Given material and says whether the run left it as it was; a run that changed it is `COMPOSER_ERR_UNSATISFIABLE`.
+has Given material and says whether the run left it as it was; a run that changed it is `URSATZ_ERR_UNSATISFIABLE`.
 `plan_json`, `midi` and `musicxml` are the realized plan and its files.
 
-A plan no seed completes is `COMPOSER_ERR_UNSATISFIABLE` with the message `the plan could not be completed from seeds <a> to
+A plan no seed completes is `URSATZ_ERR_UNSATISFIABLE` with the message `the plan could not be completed from seeds <a> to
 <b>: stuck at the <stage> stage`, and **`json` is set** to `{"stuck": {"first", "last", "stage", "key_rejected", "open":
 [{"what", "reason"}], "more"}}`: the targets the run left open (at most 24, `more` counts the rest) and why. A cancel is
-`COMPOSER_ERR_CANCELLED`. Progress is reported for each seed (`"seed"`) and each compose stage. Schemas:
+`URSATZ_ERR_CANCELLED`. Progress is reported for each seed (`"seed"`) and each compose stage. Schemas:
 `fill.request.schema.json`, `fill.response.schema.json`.
 
 ### `composer_api_lock(context, request_json, job, out)`
@@ -66,7 +66,7 @@ A plan no seed completes is `COMPOSER_ERR_UNSATISFIABLE` with the message `the p
 Locks a node, or one lane of it, as Given ([cli-regenerate.md](../cli-regenerate.md#lock)). The node is `"node"` (an id of the
 plan) or `"section"` (a form letter), exactly one, with an optional `"lane"` (`harmony`, `bass`, `melody`, `inner`). `json`:
 `{"locked": {"nodes", "spans"}, "what": "section A"}`, the nodes and lane spans that are Given now; `plan_json` is the plan.
-A node with a span still open is `COMPOSER_ERR_UNSATISFIABLE`; a node or section the plan does not have has the path `/node`
+A node with a span still open is `URSATZ_ERR_UNSATISFIABLE`; a node or section the plan does not have has the path `/node`
 or `/section`. Schemas: `lock.request.schema.json`, `lock.response.schema.json`.
 
 ### `composer_api_regenerate(context, request_json, job, out)`
@@ -74,7 +74,7 @@ or `/section`. Schemas: `lock.request.schema.json`, `lock.response.schema.json`.
 Writes one node of a filled plan again and what depends on it ([cli-regenerate.md](../cli-regenerate.md)). Members: `plan`,
 the node as for `lock`, `seed`, and `midi`, `musicxml`, `plain_midi`, `tempo`. `json` is the document of `fill` with
 `"reopened": {"sections": ["B"], "spans": {"harmony", "bass", "melody", "inner_voice"}}` after `realized`: what was
-reopened. A locked or unwritable node is `COMPOSER_ERR_UNSATISFIABLE` with the reason; a stuck run is reported as for `fill`.
+reopened. A locked or unwritable node is `URSATZ_ERR_UNSATISFIABLE` with the reason; a stuck run is reported as for `fill`.
 Schemas: `regenerate.request.schema.json`, `regenerate.response.schema.json`.
 
 ### `composer_api_variations(context, request_json, job, out)` and `composer_api_harmonize(context, request_json, job, out)`
@@ -84,5 +84,5 @@ Several distinct versions of a node ([cli-variations.md](../cli-variations.md)):
 from the ones kept before. Members: `plan`, the node as for `lock` (`harmonize`: `section` only, whose whole melody is
 Given), `count` (1 to 16, required), `seed`, and `musicxml`, `plain_midi`, `tempo`. `json`: `{"variations": [{"index", "seed",
 "plan": <plan object>, "musicxml", "sections": [...]}], "kept", "requested", "seeds_tried"}`; the MIDI file of a version is
-`composer_api_export` of its plan. No version that differs from the plan is `COMPOSER_ERR_UNSATISFIABLE`. Schemas:
+`composer_api_export` of its plan. No version that differs from the plan is `URSATZ_ERR_UNSATISFIABLE`. Schemas:
 `variations.request.schema.json`, `variations.response.schema.json` (both entries).

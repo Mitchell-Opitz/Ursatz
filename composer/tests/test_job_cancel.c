@@ -75,7 +75,7 @@ static void test_cancel(void) {
     Watch watch;
     memset(&watch, 0, sizeof watch);
     watch.cancel_at = 3;
-    ComposerJob job = {on_progress, on_cancelled, &watch};
+    UrsatzJob job = {on_progress, on_cancelled, &watch};
     ComposeConfig config;
     memset(&config, 0, sizeof config);
     config.knowledge = test_knowledge();
@@ -113,7 +113,7 @@ static void test_progress(void) {
     Plan *plan = theme_fill_plan();
     Watch watch;
     memset(&watch, 0, sizeof watch);
-    ComposerJob job = {on_progress, on_cancelled, &watch};
+    UrsatzJob job = {on_progress, on_cancelled, &watch};
     ComposeConfig config;
     memset(&config, 0, sizeof config);
     config.knowledge = test_knowledge();
@@ -138,11 +138,11 @@ static void test_same_plan(void) {
     config.seed = 3;
     ComposeOutcome outcome;
     char *texts[3];
-    ComposerJob none = {NULL, NULL, NULL};
+    UrsatzJob none = {NULL, NULL, NULL};
     Watch watch;
     memset(&watch, 0, sizeof watch);
-    ComposerJob watching = {on_progress, on_cancelled, &watch};
-    const ComposerJob *jobs[3] = {NULL, &none, &watching};
+    UrsatzJob watching = {on_progress, on_cancelled, &watch};
+    const UrsatzJob *jobs[3] = {NULL, &none, &watching};
     for (int i = 0; i < 3; i++) {
         Plan *plan = theme_fill_plan();
         config.job = jobs[i];
@@ -167,7 +167,7 @@ static void test_fill_job(void) {
     Watch watch;
     memset(&watch, 0, sizeof watch);
     watch.cancel_at = 1;
-    ComposerJob job = {on_progress, on_cancelled, &watch};
+    UrsatzJob job = {on_progress, on_cancelled, &watch};
     FillConfig config;
     memset(&config, 0, sizeof config);
     config.job = &job;

@@ -268,9 +268,9 @@ int run_theme(int argc, char **argv) {
         return status;
     }
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_theme(cli_context(), request, NULL, &response);
+    UrsatzStatus api_status = composer_api_theme(cli_context(), request, NULL, &response);
     cJSON_free(request);
-    if (api_status != COMPOSER_OK) {
+    if (api_status != URSATZ_OK) {
         status = cli_fail_api(api_status, &response.error, NULL);
         composer_response_destroy(&response);
         return status;

@@ -31,9 +31,9 @@ static char *printed(cJSON *json) {
     return text;
 }
 
-static ComposerStatus run(cJSON *request, ComposerResponse *response) {
+static UrsatzStatus run(cJSON *request, ComposerResponse *response) {
     char *text = printed(request);
-    ComposerStatus status = composer_api_piece(test_context(), text, NULL, response);
+    UrsatzStatus status = composer_api_piece(test_context(), text, NULL, response);
     free(text);
     cJSON_Delete(request);
     return status;
@@ -79,12 +79,12 @@ static cJSON *chords_harmony(int bar, const char *text) {
 
 static void expect_refusal(cJSON *request, const char *path, const char *message) {
     ComposerResponse response;
-    ComposerStatus status = run(request, &response);
-    if (status != COMPOSER_ERR_REQUEST || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
+    UrsatzStatus status = run(request, &response);
+    if (status != URSATZ_ERR_REQUEST || strcmp(response.error.path, path) != 0 || !strstr(response.error.message, message)) {
         fprintf(stderr, "'%s' at '%s' (status %d), expected '%s' at '%s'\n", response.error.message, response.error.path, (int)status,
                 message, path);
     }
-    assert(status == COMPOSER_ERR_REQUEST && strcmp(response.error.path, path) == 0 && strstr(response.error.message, message));
+    assert(status == URSATZ_ERR_REQUEST && strcmp(response.error.path, path) == 0 && strstr(response.error.message, message));
     composer_response_destroy(&response);
 }
 
@@ -131,11 +131,11 @@ static size_t given_chords(const cJSON *plan, double from, double to, char numer
 
 static char *loop_plan(cJSON *piece) {
     ComposerResponse response;
-    ComposerStatus status = run(wrap(piece), &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = run(wrap(piece), &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "%s\n", response.error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     char *plan = strdup(response.plan_json);
     composer_response_destroy(&response);
     return plan;
@@ -166,11 +166,11 @@ static void test_progression_is_the_old_fill(void) {
 
 static void test_schema(void) {
     ComposerResponse response;
-    ComposerStatus status = run(wrap(ternary("major", overlay("B", "harmony", schema_harmony("prinner")))), &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = run(wrap(ternary("major", overlay("B", "harmony", schema_harmony("prinner")))), &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "ternary with a schema: %s\n", response.error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON *plan = cJSON_Parse(response.plan_json);
     composer_response_destroy(&response);
     assert(plan);
@@ -195,11 +195,11 @@ static void test_schema(void) {
 
 static void test_chords(void) {
     ComposerResponse response;
-    ComposerStatus status = run(wrap(ternary("minor", overlay("B", "harmony", chords_harmony(2, "V")))), &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = run(wrap(ternary("minor", overlay("B", "harmony", chords_harmony(2, "V")))), &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "ternary with chords: %s\n", response.error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON *plan = cJSON_Parse(response.plan_json);
     composer_response_destroy(&response);
     assert(plan);
@@ -224,7 +224,7 @@ static void test_refusals(void) {
     char *body = printed(theme_request);
     cJSON_Delete(theme_request);
     ComposerResponse response;
-    assert(composer_api_theme(test_context(), body, NULL, &response) == COMPOSER_OK);
+    assert(composer_api_theme(test_context(), body, NULL, &response) == URSATZ_OK);
     free(body);
     cJSON *plan = cJSON_Parse(response.plan_json);
     composer_response_destroy(&response);

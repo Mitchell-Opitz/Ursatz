@@ -282,7 +282,7 @@ static int write_sample_file(const Options *options, unsigned long index, const 
 static int print_default_settings(void) {
     ComposerResponse response;
     memset(&response, 0, sizeof response);
-    if (composer_api_vocabulary(cli_context(), &response) != COMPOSER_OK) {
+    if (composer_api_vocabulary(cli_context(), &response) != URSATZ_OK) {
         composer_response_destroy(&response);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read the vocabulary");
     }
@@ -342,8 +342,8 @@ static int manifest_add(const Manifest *manifest, unsigned long index, unsigned 
 
 /* --- the samples ----------------------------------------------------------------------------- */
 
-static void refuse(Sample *sample, ComposerStatus status, const ComposerError *error) {
-    const char *kind = status == COMPOSER_ERR_UNSATISFIABLE ? "stuck" : "refused";
+static void refuse(Sample *sample, UrsatzStatus status, const UrsatzError *error) {
+    const char *kind = status == URSATZ_ERR_UNSATISFIABLE ? "stuck" : "refused";
     if (error->path[0]) {
         snprintf(sample->status, sizeof sample->status, "%s: %.64s: %.400s", kind, error->path, error->message);
     } else {
@@ -391,7 +391,7 @@ static cJSON *render_request(const Options *options, const cJSON *motive) {
 }
 
 /* Calls an API entry with the request object (consumed). */
-static ComposerStatus call(ComposerStatus (*entry)(const ComposerContext *, const char *, const ComposerJob *, ComposerResponse *),
+static UrsatzStatus call(UrsatzStatus (*entry)(const ComposerContext *, const char *, const UrsatzJob *, ComposerResponse *),
                            cJSON *request, ComposerResponse *response) {
     memset(response, 0, sizeof *response);
     char *text = request ? cJSON_PrintUnformatted(request) : NULL;
@@ -399,9 +399,9 @@ static ComposerStatus call(ComposerStatus (*entry)(const ComposerContext *, cons
     if (!text) {
         response->error.message[0] = '\0';
         snprintf(response->error.message, sizeof response->error.message, "out of memory");
-        return COMPOSER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
-    ComposerStatus status = entry(cli_context(), text, NULL, response);
+    UrsatzStatus status = entry(cli_context(), text, NULL, response);
     cJSON_free(text);
     return status;
 }
@@ -409,8 +409,8 @@ static ComposerStatus call(ComposerStatus (*entry)(const ComposerContext *, cons
 /* One motif: a random motive, rendered to MIDI and MusicXML, and its API response as json. */
 static int make_motif(const Options *options, unsigned long index, unsigned long seed, const cJSON *preferences, Sample *sample) {
     ComposerResponse drawn;
-    ComposerStatus status = call(composer_api_random_motive, random_motive_request(options, seed, preferences), &drawn);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = call(composer_api_random_motive, random_motive_request(options, seed, preferences), &drawn);
+    if (status != URSATZ_OK) {
         refuse(sample, status, &drawn.error);
         composer_response_destroy(&drawn);
         return 0;
@@ -421,7 +421,7 @@ static int make_motif(const Options *options, unsigned long index, unsigned long
     ComposerResponse rendered;
     status = call(composer_api_motive_render, render_request(options, cJSON_GetObjectItemCaseSensitive(first, "motive")), &rendered);
     cJSON_Delete(document);
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         refuse(sample, status, &rendered.error);
         composer_response_destroy(&rendered);
         return 0;
@@ -496,8 +496,8 @@ static int read_motif_file(const Options *options, cJSON **document) {
     }
     /* A MIDI file was read already; its motive is the text input of the request. */
     ComposerResponse response;
-    ComposerStatus called = call(composer_api_motive, request, &response);
-    if (called != COMPOSER_OK) {
+    UrsatzStatus called = call(composer_api_motive, request, &response);
+    if (called != URSATZ_OK) {
         MotiveInputNames names = {options->motif_path, NULL, NULL, NULL};
         status = motive_input_fail(&file, called, &response.error, &names);
     } else {
@@ -509,7 +509,7 @@ static int read_motif_file(const Options *options, cJSON **document) {
 }
 
 /* The same analysis for a generated motive of a random motive response. */
-static ComposerStatus analyze_motive(const cJSON *motive, ComposerResponse *response) {
+static UrsatzStatus analyze_motive(const cJSON *motive, ComposerResponse *response) {
     cJSON *request = cJSON_CreateObject();
     cJSON *input = request ? cJSON_AddObjectToObject(request, "input") : NULL;
     char *text = motive ? cJSON_PrintUnformatted(motive) : NULL;
@@ -587,8 +587,8 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
         request = theme_request_from_motive(options, motif_document, seed, preferences);
     } else {
         ComposerResponse drawn;
-        ComposerStatus status = call(composer_api_random_motive, random_motive_request(options, seed, preferences), &drawn);
-        if (status != COMPOSER_OK) {
+        UrsatzStatus status = call(composer_api_random_motive, random_motive_request(options, seed, preferences), &drawn);
+        if (status != URSATZ_OK) {
             refuse(sample, status, &drawn.error);
             composer_response_destroy(&drawn);
             return 0;
@@ -599,7 +599,7 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
         ComposerResponse analyzed;
         status = analyze_motive(cJSON_GetObjectItemCaseSensitive(first, "motive"), &analyzed);
         cJSON_Delete(document);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             refuse(sample, status, &analyzed.error);
             composer_response_destroy(&analyzed);
             return 0;
@@ -614,8 +614,8 @@ static int make_theme(const Options *options, unsigned long index, unsigned long
         return 0;
     }
     ComposerResponse response;
-    ComposerStatus status = call(composer_api_theme, request, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = call(composer_api_theme, request, &response);
+    if (status != URSATZ_OK) {
         refuse(sample, status, &response.error);
         composer_response_destroy(&response);
         return 0;
@@ -645,10 +645,10 @@ static int validate_options(const Options *options, const cJSON *preferences) {
         return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
     memset(&response, 0, sizeof response);
-    ComposerStatus status = composer_api_validate(cli_context(), "random_motive", text, &response);
+    UrsatzStatus status = composer_api_validate(cli_context(), "random_motive", text, &response);
     cJSON_free(text);
     int result = 0;
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         const char *settings = strncmp(response.error.path, "/preferences", 12) == 0 ? options->settings_path : NULL;
         if (settings) {
             result = cli_fail(CLI_EXIT_USAGE, "settings '%s': %s: %s", settings, response.error.path + 12, response.error.message);

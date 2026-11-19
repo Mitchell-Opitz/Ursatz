@@ -8,7 +8,7 @@
 
 /*
  * The job queue (R-219, R-274): long Composer runs go to worker threads so no request thread waits on a compose. A job
- * is memory only (lost on restart). It reports progress from the Composer's ComposerJob callbacks and can be cancelled.
+ * is memory only (lost on restart). It reports progress from the Composer's UrsatzJob callbacks and can be cancelled.
  * Finished jobs are kept for 10 minutes or the newest 64, whichever drops them first.
  */
 
@@ -32,7 +32,7 @@ typedef struct {
 
 /* Runs on a worker thread. input is what ursatz_gui_job_submit was given; job carries the progress and cancel
  * callbacks for the Composer entry (pass it on). Sets out->http_status and out->json. */
-typedef void (*UrsatzGuiJobFn)(void *input, const ComposerJob *job, UrsatzGuiJobResult *out);
+typedef void (*UrsatzGuiJobFn)(void *input, const UrsatzJob *job, UrsatzGuiJobResult *out);
 
 /* A copy of a job's state; result is the reply JSON (heap, free it with ursatz_gui_job_info_destroy) once finished. */
 typedef struct {

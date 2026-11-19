@@ -183,7 +183,7 @@ static void test_motif(const char *project, char **out_id) {
   cJSON *new_request = read ? ursatz_gui_motif_request(member_of(read, "motif")) : NULL;
   bool asked = old_request && new_request && ursatz_gui_motif_motive(old_request, &before) &&
                ursatz_gui_motif_motive(new_request, &after);
-  check_quiet(asked && before.status == COMPOSER_OK && after.status == COMPOSER_OK && before.json && after.json &&
+  check_quiet(asked && before.status == URSATZ_OK && after.status == URSATZ_OK && before.json && after.json &&
                   strcmp(before.json, after.json) == 0,
               "the old motif and the read motif have the same analysis");
   cJSON *reply = after.json ? cJSON_Parse(after.json) : NULL;
@@ -221,9 +221,9 @@ static bool theme_reference(const cJSON *request, ComposerResponse *out) {
   char *text = ok ? cJSON_PrintUnformatted(api) : NULL;
   cJSON_Delete(api);
   memset(out, 0, sizeof(*out));
-  ComposerStatus status = text ? composer_api_theme(ursatz_gui_composer_context(), text, NULL, out) : COMPOSER_ERR_ALLOC;
+  UrsatzStatus status = text ? composer_api_theme(ursatz_gui_composer_context(), text, NULL, out) : URSATZ_ERR_ALLOC;
   free(text);
-  return status == COMPOSER_OK && out->midi && out->musicxml;
+  return status == URSATZ_OK && out->midi && out->musicxml;
 }
 
 static void test_theme(const char *project, const char *motif) {
@@ -308,9 +308,9 @@ static bool piece_reference(const cJSON *request, ComposerResponse *out) {
   char *text = ok ? cJSON_PrintUnformatted(api) : NULL;
   cJSON_Delete(api);
   memset(out, 0, sizeof(*out));
-  ComposerStatus status = text ? composer_api_piece(ursatz_gui_composer_context(), text, NULL, out) : COMPOSER_ERR_ALLOC;
+  UrsatzStatus status = text ? composer_api_piece(ursatz_gui_composer_context(), text, NULL, out) : URSATZ_ERR_ALLOC;
   free(text);
-  return status == COMPOSER_OK && out->midi && out->musicxml;
+  return status == URSATZ_OK && out->midi && out->musicxml;
 }
 
 static void test_piece(const char *project, const char *motif) {

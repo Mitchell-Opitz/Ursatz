@@ -258,8 +258,8 @@ int run_progression(int argc, char **argv) {
             cJSON_Delete(request);
             return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
         }
-        ComposerStatus listed = cli_call(composer_api_progression, request, &response);
-        if (listed != COMPOSER_OK) {
+        UrsatzStatus listed = cli_call(composer_api_progression, request, &response);
+        if (listed != URSATZ_OK) {
             status = cli_fail_api(listed, &response.error, NULL);
         } else {
             cJSON *names = cJSON_Parse(response.json);
@@ -274,8 +274,8 @@ int run_progression(int argc, char **argv) {
     if (!request) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    ComposerStatus called = cli_call(composer_api_progression, request, &response);
-    if (called != COMPOSER_OK) {
+    UrsatzStatus called = cli_call(composer_api_progression, request, &response);
+    if (called != URSATZ_OK) {
         status = cli_fail_api(called, &response.error, NULL);
         composer_response_destroy(&response);
         return status;

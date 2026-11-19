@@ -131,11 +131,11 @@ static void check(const ApiFamily *family, const ApiCase *row) {
              "\"key\": \"%s\", \"mode\": \"%s\", \"meter\": \"4/4\", \"bars\": %d, \"motive\": null}, \"seed\": 1}",
              family->form, row->key, row->mode, family->bars);
     ComposerResponse response;
-    ComposerStatus status = composer_api_piece(test_context(), request, NULL, &response);
-    if (status != COMPOSER_OK) {
+    UrsatzStatus status = composer_api_piece(test_context(), request, NULL, &response);
+    if (status != URSATZ_OK) {
         fprintf(stderr, "test_api_%s: %s: %s\n", family->name, test_status_name(status), response.error.message);
     }
-    assert(status == COMPOSER_OK);
+    assert(status == URSATZ_OK);
     cJSON *document = cJSON_Parse(response.json);
     assert(document);
     family->check(document, row);

@@ -608,7 +608,7 @@ static void test_game_loop(void) {
 
 int main(void) {
     ComposerResponse response;
-    assert(composer_api_forms(&response) == COMPOSER_OK);
+    assert(composer_api_forms(&response) == URSATZ_OK);
     assert(response.json);
     test_write_text("api_forms_response_core.json", response.json);
     forms = cJSON_Parse(response.json);

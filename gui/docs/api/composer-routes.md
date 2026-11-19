@@ -11,7 +11,7 @@ links the Composer library (the root build's `composer` target; the command is b
 cJSON, Ursatz and Analyzer targets the root builds, so one version of each is in the build. A request is a cJSON
 object printed to text, never an argument list; `service/composer_client.c` moves the answer into an
 `UrsatzGuiComposerReply` (`status`, `json`, `plan_json`, `midi`, `musicxml`, and the refusal `message` and `path`). The
-CLI's exit 1 is `COMPOSER_ERR_REQUEST`, exit 2 `COMPOSER_ERR_UNSATISFIABLE`; a request error is 400 and an unsatisfiable
+CLI's exit 1 is `URSATZ_ERR_REQUEST`, exit 2 `URSATZ_ERR_UNSATISFIABLE`; a request error is 400 and an unsatisfiable
 request is 422 on every route, each with the Composer's message and the `path` of the request member at fault (additive
 to `error`); anything else is a failure of the run (500, or 499 when cancelled).
 
@@ -44,7 +44,7 @@ are the Composer's to read: it refuses what it does not read with a message and 
 Routes (bodies are JSON; success bodies have `"ok":true`):
 
 - `GET /api/composer/status`: `{"ok":true,"available":true,"version":"ursatz-composer 0.4.0","api_version":"1.1",
-  "analyzer_version":"0.5.0","ursatz_commit":"..."}` from `composer_api_versions` (`ursatz_commit` holds the Analyzer's producer key until the next version renames it) (the last three are additive).
+  "analyzer_version":"0.5.0","producer_key":"..."}` from `composer_api_versions` (`producer_key` holds the Analyzer's producer key; the member was `ursatz_commit` before API 4.0) (the last three are additive).
 
 - `GET /api/composer/vocabulary`: the lists the Composer reads (`composer_api_vocabulary`), built once and kept: meters
   with their beats and second chord beat, modes, keys and `pitch_class_names`, cadences, pickups for each meter, the

@@ -8,7 +8,7 @@
 
 #include <cJSON.h>
 
-void ursatz_gui_composer_reply_take(ComposerStatus status, ComposerResponse *response, UrsatzGuiComposerReply *reply) {
+void ursatz_gui_composer_reply_take(UrsatzStatus status, ComposerResponse *response, UrsatzGuiComposerReply *reply) {
   memset(reply, 0, sizeof(*reply));
   reply->status = status;
   if (!response) {
@@ -49,10 +49,10 @@ static cJSON *g_vocabulary_tree = NULL;
 static void vocabulary_build(void) {
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_vocabulary(ursatz_gui_composer_context(), &response);
+  UrsatzStatus status = composer_api_vocabulary(ursatz_gui_composer_context(), &response);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(status, &response, &reply);
-  if (reply.status == COMPOSER_OK && reply.json) {
+  if (reply.status == URSATZ_OK && reply.json) {
     g_vocabulary = reply.json;
     reply.json = NULL;
     g_vocabulary_tree = cJSON_Parse(g_vocabulary);
@@ -72,10 +72,10 @@ static cJSON *g_forms_tree = NULL;
 static void forms_build(void) {
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_forms(&response);
+  UrsatzStatus status = composer_api_forms(&response);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(status, &response, &reply);
-  if (reply.status == COMPOSER_OK && reply.json) {
+  if (reply.status == URSATZ_OK && reply.json) {
     g_forms = reply.json;
     reply.json = NULL;
     g_forms_tree = cJSON_Parse(g_forms);
@@ -116,14 +116,14 @@ static void build_copy(char *out, size_t out_size, const cJSON *item) {
 static void build_read(void) {
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_versions(&response);
+  UrsatzStatus status = composer_api_versions(&response);
   UrsatzGuiComposerReply reply;
   ursatz_gui_composer_reply_take(status, &response, &reply);
-  cJSON *versions = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  cJSON *versions = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (versions) {
     build_copy(g_build_api, sizeof(g_build_api), cJSON_GetObjectItemCaseSensitive(versions, "api_version"));
     build_copy(g_build_composer, sizeof(g_build_composer), cJSON_GetObjectItemCaseSensitive(versions, "composer_version"));
-    build_copy(g_build_ursatz, sizeof(g_build_ursatz), cJSON_GetObjectItemCaseSensitive(versions, "ursatz_commit"));
+    build_copy(g_build_ursatz, sizeof(g_build_ursatz), cJSON_GetObjectItemCaseSensitive(versions, "producer_key"));
   }
   cJSON_Delete(versions);
   ursatz_gui_composer_reply_destroy(&reply);
@@ -255,16 +255,16 @@ bool ursatz_gui_composer_material_of_word(const char *word, char *out, size_t ou
 }
 
 bool ursatz_gui_composer_reply_refused(const UrsatzGuiComposerReply *reply) {
-  return reply->status == COMPOSER_ERR_REQUEST || reply->status == COMPOSER_ERR_UNSATISFIABLE;
+  return reply->status == URSATZ_ERR_REQUEST || reply->status == URSATZ_ERR_UNSATISFIABLE;
 }
 
 int ursatz_gui_composer_reply_failure_status(const UrsatzGuiComposerReply *reply) {
   switch (reply->status) {
-    case COMPOSER_ERR_UNSATISFIABLE:
+    case URSATZ_ERR_UNSATISFIABLE:
       return 422;
-    case COMPOSER_ERR_REQUEST:
+    case URSATZ_ERR_REQUEST:
       return 400;
-    case COMPOSER_ERR_CANCELLED:
+    case URSATZ_ERR_CANCELLED:
       return 499;
     default:
       return 500;

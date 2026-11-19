@@ -57,8 +57,8 @@ static void test_key_words(void) {
     assert(spelled_key_equals(&built, &(SpelledKey){NULL, PITCH_LETTER_A, 0, test_materials()->natural_minor}));
 }
 
-static void expect_refused(ComposerStatus status, const ComposerResponse *response) {
-    assert(status == COMPOSER_ERR_REQUEST);
+static void expect_refused(UrsatzStatus status, const ComposerResponse *response) {
+    assert(status == URSATZ_ERR_REQUEST);
     assert(strcmp(response->error.message, "a knowledge snapshot is required") == 0);
 }
 
@@ -89,14 +89,14 @@ static void test_context_required(void) {
 
     /* The same request with the snapshot is read. */
     memset(&response, 0, sizeof(response));
-    assert(composer_api_motive(test_context(), REQUEST, NULL, &response) == COMPOSER_OK && response.json != NULL);
+    assert(composer_api_motive(test_context(), REQUEST, NULL, &response) == URSATZ_OK && response.json != NULL);
     composer_response_destroy(&response);
 
     /* A key of a material the Composer does not write is refused at the key, naming the word. */
     memset(&response, 0, sizeof(response));
     assert(composer_api_motive(test_context(),
                                "{\"input\": {\"text\": \"D4:q F4:q A4:q\"}, \"meter\": \"4/4\", \"key\": \"C dorian\"}", NULL,
-                               &response) == COMPOSER_ERR_REQUEST);
+                               &response) == URSATZ_ERR_REQUEST);
     assert(strcmp(response.error.path, "/key") == 0);
     assert(strstr(response.error.message, "the Composer writes major and minor keys; 'dorian' is not one of them") != NULL);
     composer_response_destroy(&response);

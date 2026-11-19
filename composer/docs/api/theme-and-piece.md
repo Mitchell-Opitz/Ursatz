@@ -6,7 +6,7 @@ Theme, piece and piece variations entries of the Composer API. Back to the [docs
 
 Grows a theme from the theme request v2 of [theme-request.md](../theme-request.md) (`"schema": "ursatz-theme-request"`,
 `"schema_version": 2`). Its motives are inline: each motive object carries its content in `degrees`, a motive with a `path`
-or a `file` member is refused with `COMPOSER_ERR_REQUEST` and the path `/motives/<n>/path` (the caller reads files). A
+or a `file` member is refused with `URSATZ_ERR_REQUEST` and the path `/motives/<n>/path` (the caller reads files). A
 member of the brief that is not valid is refused with its path (`/into`, `/key`, `/slots/basic`, `/chords/<n>`, `/style`).
 The options the `theme` command takes are members of the same object:
 
@@ -34,7 +34,7 @@ The request has no `corpus` member: a theme is grown from its motives only.
 "density", "without"}, "chords": [{"bar", "text"}], "themes": [{"seed", "structure", "construction", "chords", "developments", "slots",
 "score", "requested", "heard", "heard_as_requested", "heard_text", "style_distance"}], "preferences"}`, the last when the request had the member (API 1.11: the full document with the defaults filled in). `construction` (API 1.18): at the root the construction as the request gave it, `{"ideas", "extensions"}` (only when it gave one); in each theme `null` for a theme without one, else `{"halves": [h1, h2], "ideas": [{"idea", "bars", "first_bar"}], "extensions": [{"kind", "idea", "bars", "first_bar", "varied"}], "reason": "given"|"motive"|"length", "text"}`, bars counted from 1: `halves` the two halves' bars (the second with the idea an evaded cadence brings back), `ideas` in order with a stretched idea's stretch counted in its bars, an extension's `bars` and `first_bar` explicit (a stretch spans its idea; `idea` is `null` for an addition and an evaded cadence), and `text` the sentence of [grow-construction.md](../grow-construction.md#choosing-a-construction) that says why the theme is as long as it is. `plan_json`: the plan of the first
 theme. Each item of `developments` is `{"motive", "idea", "development", "segment", "summary", "fidelity", "minimum", "heard", "heard_agrees"}`: `segment` is the label of the motif's segment the idea is made from or `null`, `summary` one line naming the idea, its source and its operation (API 1.8, [explain.md](../explain.md#the-summary-line-of-a-developed-idea)). `fidelity` is how close the notes the melody holds are to the idea's source, from 0 to 1 (three decimals); `minimum` is the least the melody stage accepts for the idea's role under the development setting, 0 for an idea whose operation makes it differ from its source (a liquidation, a fragment by notes, an inversion), which is ranked and never refused; `heard` is the relation the recognizer hears between the two, in words (`"exact"`, `"transposed -1 step of the key's scale"`, `"not recognized"`), and `heard_agrees` whether it is the one the operation intended. All four are `null` for an idea with no melody to measure (API 1.10, [explain.md](../explain.md#intended-against-heard)). The basic idea is not an item. Progress is reported once for each seed tried (`"grow"`) and for each compose stage of the run; a cancel is
-`COMPOSER_ERR_CANCELLED` with no document and no plan. A request no seed can write is `COMPOSER_ERR_UNSATISFIABLE`
+`URSATZ_ERR_CANCELLED` with no document and no plan. A request no seed can write is `URSATZ_ERR_UNSATISFIABLE`
 (`the given chords in bar <n> do not allow the PAC`, `no theme could be grown for ...`). The same request and seed give the
 same theme on any thread; the entry keeps no state, so requests may run at the same time. Schemas:
 `theme.request.schema.json`, `theme.response.schema.json`.
@@ -49,7 +49,7 @@ model (R-267):
 
 | Member | Value |
 |---|---|
-| `request` | the piece request object, as the file holds it, except that a section filled with a theme carries `"plan": <plan object>` (a path is refused with `COMPOSER_ERR_REQUEST` and the path `/request/sections/<i>/fill/plan`; the caller reads the file) and may carry `"source": "<name>"`, the name shown as the section's source in the result (default `theme plan`) |
+| `request` | the piece request object, as the file holds it, except that a section filled with a theme carries `"plan": <plan object>` (a path is refused with `URSATZ_ERR_REQUEST` and the path `/request/sections/<i>/fill/plan`; the caller reads the file) and may carry `"source": "<name>"`, the name shown as the section's source in the result (default `theme plan`) |
 | `from` | the plan object of an earlier piece (its first member of `plans`, or `plan_json`); absent to compose a piece |
 | `regenerate` | with `from`: `{"section": "<section id>", "lanes": ["bass", ...]}`; the section of a form with sizes is the name of a section of the plan (`B`, `variation 2`), else refused at `/regenerate/section`. `lanes` holds `harmony`, `bass`, `melody`, `inner`; none, or `all`, is the whole section. A section filled with a theme needs `harmony` or `bass`. A `null` or absent `section` (or no `regenerate`) reopens nothing: the loop plan is kept and the ending version is built again |
 | `seed` | 0 to 4294967295 (a number or a string of digits), default from the clock; the seeds after it are tried (up to 16) when one gets stuck |
@@ -74,12 +74,12 @@ complete loop plan has no open theme section, so only a plan with open sections 
 version is `composer_api_export` of `plans.ending`; its MusicXML comes with `ending_musicxml` because the `xml:id` of
 its notes carry the span ids of the plan in memory, which a plan file renumbers.
 
-A form with `repeats` (R-485, [form-performance.md](../form-performance.md)) is composed once and performed in order, written out: its `plans` member, plan file, MIDI file and MusicXML are the performed plan (A A B A1 B A1), and the hearing members are the composed plan's. A row of a performed version is one for each performed section, its `start` and `beats` the performed section's and every other member its source's, so a repeat's row is its source's at its own start. `from` (regenerate) and the variations entry refuse such a form with `COMPOSER_ERR_REQUEST` at `/request/form`: `regenerate and variations of the <label> form are Later: it is composed whole`. A form with no `repeats` answers as before.
+A form with `repeats` (R-485, [form-performance.md](../form-performance.md)) is composed once and performed in order, written out: its `plans` member, plan file, MIDI file and MusicXML are the performed plan (A A B A1 B A1), and the hearing members are the composed plan's. A row of a performed version is one for each performed section, its `start` and `beats` the performed section's and every other member its source's, so a repeat's row is its source's at its own start. `from` (regenerate) and the variations entry refuse such a form with `URSATZ_ERR_REQUEST` at `/request/form`: `regenerate and variations of the <label> form are Later: it is composed whole`. A form with no `repeats` answers as before.
 
 Progress is reported once for each seed tried (`"seed"`) and for each compose stage of each section; a cancel is
-`COMPOSER_ERR_CANCELLED` with no document and no plan. Refusals have the path of the member at fault (`/request/key`,
+`URSATZ_ERR_CANCELLED` with no document and no plan. Refusals have the path of the member at fault (`/request/key`,
 `/request/sections/<i>/beats`, `/regenerate/section`, `/regenerate/lanes`, `/from`, `/seed`). A piece no seed can compose,
-a motive that does not fit its bar, a request that no seed can satisfy is `COMPOSER_ERR_UNSATISFIABLE` (`no piece could be
+a motive that does not fit its bar, a request that no seed can satisfy is `URSATZ_ERR_UNSATISFIABLE` (`no piece could be
 composed from seeds <a> to <b> (the last was stuck in the loop version, seam stage ...)`). The cadence of a section without
 one is the game loop document's default (an HC at the end of the intro and of the loop, a PAC at the end of the
 ending, an IAC elsewhere), and a request without an ending gets the default ending. The same request and seed give the same
@@ -101,8 +101,8 @@ is kept when its notes differ from the plan's and from every version kept before
 "section", "lane", "brief", "variations": [{"index", "seed", "loop": V, "loop_markers": {"start", "end"}, "musicxml"}],
 "kept", "requested", "seeds_tried"}` (the version of a form with sizes is under `piece` and has no `loop_markers`). `V.plan` is the plan object of the variation. The MIDI file of a variation is
 `composer_api_export` of its plan with its `loop_markers` as `loop`. Progress is reported once for each seed tried
-(`"variations"`) and for each compose stage; a cancel is `COMPOSER_ERR_CANCELLED`. No version that differs from the plan is
-`COMPOSER_ERR_UNSATISFIABLE`. Refusals name `/from`, `/variations/section`, `/variations/lanes`, `/variations/count`.
+(`"variations"`) and for each compose stage; a cancel is `URSATZ_ERR_CANCELLED`. No version that differs from the plan is
+`URSATZ_ERR_UNSATISFIABLE`. Refusals name `/from`, `/variations/section`, `/variations/lanes`, `/variations/count`.
 Schemas: `piece_variations.request.schema.json`, `piece_variations.response.schema.json`.
 
 ## Layers

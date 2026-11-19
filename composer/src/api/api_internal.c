@@ -18,7 +18,7 @@
 #include "structure/request_parse.h"
 #include "util/util.h"
 
-ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char *path, const char *format, ...) {
+UrsatzStatus api_fail(UrsatzError *error, UrsatzStatus status, const char *path, const char *format, ...) {
     if (error) {
         va_list args;
         va_start(args, format);
@@ -29,17 +29,37 @@ ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char 
     return status;
 }
 
-bool api_fail_unsupported_key(ComposerError *error, const char *path, const KnowledgeSnapshot *knowledge, const char *key_text) {
+UrsatzStatus api_seed_failure(CorpusSeedResult result, const char *what, const char *path, UrsatzError *error) {
+    switch (result) {
+    case CORPUS_SEED_ERR_NO_MATCH:
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, path, "no passage of corpus_passages gives %s", what);
+    default:
+        return api_fail(error, URSATZ_ERR_UNSATISFIABLE, path, "%s", corpus_seed_result_name(result));
+    }
+}
+
+UrsatzStatus api_export_failure(UrsatzError *error, PlanExportResult result, const char *path, const char *what,
+                                const PlanExportError *detail) {
+    UrsatzStatus status = result == PLAN_EXPORT_ERR_ALLOC ? URSATZ_ERR_ALLOC
+                            : result == PLAN_EXPORT_ERR_NO_CONTENT || result == PLAN_EXPORT_ERR_NOT_REPRESENTABLE ||
+                                    result == PLAN_EXPORT_ERR_TOO_MANY_VOICES
+                                ? URSATZ_ERR_REQUEST
+                                : URSATZ_ERR_INTERNAL;
+    return api_fail(error, status, status == URSATZ_ERR_REQUEST ? path : "", "%s%s%s", what,
+                    detail && detail->message[0] ? ": " : "", detail ? detail->message : "");
+}
+
+bool api_fail_unsupported_key(UrsatzError *error, const char *path, const KnowledgeSnapshot *knowledge, const char *key_text) {
     char message[REQUEST_KEY_WORD_MAX + 96];
     if (!request_key_refusal(key_text, knowledge, message, sizeof message)) {
         return false;
     }
-    api_fail(error, COMPOSER_ERR_REQUEST, path, "%s", message);
+    api_fail(error, URSATZ_ERR_REQUEST, path, "%s", message);
     return true;
 }
 
 bool api_read_material(const cJSON *object, const char *base, bool required, const char **text, const char **member,
-                       ComposerError *error) {
+                       UrsatzError *error) {
     const cJSON *material = cJSON_GetObjectItemCaseSensitive(object, "material");
     const cJSON *mode = cJSON_GetObjectItemCaseSensitive(object, "mode");
     bool has_material = material && !cJSON_IsNull(material);
@@ -49,7 +69,7 @@ bool api_read_material(const cJSON *object, const char *base, bool required, con
     *member = has_mode && !has_material ? "mode" : "material";
     if (has_material && has_mode) {
         snprintf(path, sizeof path, "%s/mode", base ? base : "");
-        api_fail(error, COMPOSER_ERR_REQUEST, path, "give \"material\" or the old \"mode\", not both");
+        api_fail(error, URSATZ_ERR_REQUEST, path, "give \"material\" or the old \"mode\", not both");
         return false;
     }
     if (base) {
@@ -61,28 +81,28 @@ bool api_read_material(const cJSON *object, const char *base, bool required, con
     }
     if (!present && required) {
         snprintf(path, sizeof path, "/%s", *member);
-        api_fail(error, COMPOSER_ERR_REQUEST, path, "material is required: major or minor");
+        api_fail(error, URSATZ_ERR_REQUEST, path, "material is required: major or minor");
         return false;
     }
     return true;
 }
 
-ComposerStatus api_resolve_material(const KnowledgeSnapshot *knowledge, const char *member, const char *path, const char *text,
-                                    unsigned allow, const PitchMaterial **material, ApiMaterialKind *kind, ComposerError *error) {
+UrsatzStatus api_resolve_material(const KnowledgeSnapshot *knowledge, const char *member, const char *path, const char *text,
+                                    unsigned allow, const PitchMaterial **material, ApiMaterialKind *kind, UrsatzError *error) {
     CommonPracticeMaterials materials;
     char message[256];
     *material = NULL;
     *kind = API_MATERIAL_PICKED;
     if (!knowledge || !common_practice_materials_resolve(knowledge, &materials, message, sizeof message)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "a knowledge snapshot is required");
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "a knowledge snapshot is required");
     }
     if ((allow & API_MATERIAL_ALLOW_STYLE) && request_equals_ignore_case(text, "style")) {
         *kind = API_MATERIAL_STYLE;
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     if ((allow & API_MATERIAL_ALLOW_RANDOM) && request_equals_ignore_case(text, "random")) {
         *kind = API_MATERIAL_RANDOM;
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     bool old = strcmp(member, "mode") == 0;
     if (old) {
@@ -91,38 +111,38 @@ ComposerStatus api_resolve_material(const KnowledgeSnapshot *knowledge, const ch
         } else if (request_equals_ignore_case(text, "minor")) {
             *material = materials.natural_minor;
         } else {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "mode must be %s, not '%s'",
+            return api_fail(error, URSATZ_ERR_REQUEST, path, "mode must be %s, not '%s'",
                             (allow & API_MATERIAL_ALLOW_STYLE) ? "major, minor or style" : "major or minor", text);
         }
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     const PitchMaterial *named = knowledge_snapshot_material_named(knowledge, text);
     if (!named) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path,
+        return api_fail(error, URSATZ_ERR_REQUEST, path,
                         "material must be a material id, name, key word or alias%s, not '%s'",
                         (allow & API_MATERIAL_ALLOW_STYLE) ? " (or style)" : "", text);
     }
     if (!composer_material_supported(&materials, named)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path,
+        return api_fail(error, URSATZ_ERR_REQUEST, path,
                         "the Composer writes major and minor keys; '%s' is not one of them", text);
     }
     *material = named;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_require_knowledge(const ComposerContext *context, CommonPracticeMaterials *materials, ComposerError *error) {
+UrsatzStatus api_require_knowledge(const ComposerContext *context, CommonPracticeMaterials *materials, UrsatzError *error) {
     if (!context || !context->knowledge) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "a knowledge snapshot is required");
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "a knowledge snapshot is required");
     }
     char message[256];
     if (materials && !common_practice_materials_resolve(context->knowledge, materials, message, sizeof(message))) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "%s", message);
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "%s", message);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_fail_alloc(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+UrsatzStatus api_fail_alloc(UrsatzError *error) {
+    return api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory");
 }
 
 bool api_add(cJSON *object, const char *name, cJSON *item) {
@@ -133,36 +153,36 @@ bool api_add(cJSON *object, const char *name, cJSON *item) {
     return true;
 }
 
-ComposerStatus api_parse_request(const char *text, cJSON **out, ComposerError *error) {
+UrsatzStatus api_parse_request(const char *text, cJSON **out, UrsatzError *error) {
     *out = NULL;
     if (!text) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "the request is missing");
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "the request is missing");
     }
     cJSON *root = cJSON_Parse(text);
     if (!root) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "the request is not valid JSON");
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "the request is not valid JSON");
     }
     if (!cJSON_IsObject(root)) {
         cJSON_Delete(root);
-        return api_fail(error, COMPOSER_ERR_REQUEST, "", "the request must be a JSON object");
+        return api_fail(error, URSATZ_ERR_REQUEST, "", "the request must be a JSON object");
     }
     const cJSON *version = cJSON_GetObjectItemCaseSensitive(root, "api_version");
     if (version && (!cJSON_IsNumber(version) || version->valuedouble != (double)COMPOSER_API_VERSION_MAJOR)) {
         cJSON_Delete(root);
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/api_version", "api_version must be %d", COMPOSER_API_VERSION_MAJOR);
+        return api_fail(error, URSATZ_ERR_REQUEST, "/api_version", "api_version must be %d", COMPOSER_API_VERSION_MAJOR);
     }
     *out = root;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_respond_json(ComposerResponse *out, cJSON *value) {
+UrsatzStatus api_respond_json(ComposerResponse *out, cJSON *value) {
     char *text = value ? cJSON_PrintUnformatted(value) : NULL;
     cJSON_Delete(value);
     if (!text) {
-        return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
+        return api_fail(&out->error, URSATZ_ERR_ALLOC, "", "out of memory");
     }
     out->json = text;
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* The member, or NULL (with *present false) when it is absent or null. */
@@ -175,14 +195,14 @@ static const cJSON *member(const cJSON *object, const char *name, bool *present)
     return found ? item : NULL;
 }
 
-static bool member_fail(ComposerError *error, const char *name, const char *what) {
+static bool member_fail(UrsatzError *error, const char *name, const char *what) {
     char path[sizeof error->path];
     snprintf(path, sizeof path, "/%s", name);
-    api_fail(error, COMPOSER_ERR_REQUEST, path, "%s must be %s", name, what);
+    api_fail(error, URSATZ_ERR_REQUEST, path, "%s must be %s", name, what);
     return false;
 }
 
-bool api_member_string(const cJSON *object, const char *name, const char **out, bool *present, ComposerError *error) {
+bool api_member_string(const cJSON *object, const char *name, const char **out, bool *present, UrsatzError *error) {
     const cJSON *item = member(object, name, present);
     if (!item) {
         return true;
@@ -194,7 +214,7 @@ bool api_member_string(const cJSON *object, const char *name, const char **out, 
     return true;
 }
 
-bool api_member_bool(const cJSON *object, const char *name, bool *out, bool *present, ComposerError *error) {
+bool api_member_bool(const cJSON *object, const char *name, bool *out, bool *present, UrsatzError *error) {
     const cJSON *item = member(object, name, present);
     if (!item) {
         return true;
@@ -207,7 +227,7 @@ bool api_member_bool(const cJSON *object, const char *name, bool *out, bool *pre
 }
 
 bool api_member_whole(const cJSON *object, const char *name, unsigned long minimum, unsigned long maximum,
-                      unsigned long *out, bool *present, ComposerError *error) {
+                      unsigned long *out, bool *present, UrsatzError *error) {
     const cJSON *item = member(object, name, present);
     if (!item) {
         return true;
@@ -228,7 +248,7 @@ bool api_member_whole(const cJSON *object, const char *name, unsigned long minim
     if (!source || !request_parse_whole_number(source, maximum, &value) || value < minimum) {
         char path[sizeof error->path];
         snprintf(path, sizeof path, "/%s", name);
-        api_fail(error, COMPOSER_ERR_REQUEST, path, "%s must be a whole number from %lu to %lu, not '%s'", name, minimum,
+        api_fail(error, URSATZ_ERR_REQUEST, path, "%s must be a whole number from %lu to %lu, not '%s'", name, minimum,
                  maximum, source ? source : "?");
         return false;
     }
@@ -240,7 +260,7 @@ unsigned long api_default_seed(void) {
     return ((unsigned long)time(NULL) * 2654435761UL + (unsigned long)clock()) & 4294967295UL;
 }
 
-bool api_member_rational(const cJSON *object, const char *name, Rational *out, bool *present, ComposerError *error) {
+bool api_member_rational(const cJSON *object, const char *name, Rational *out, bool *present, UrsatzError *error) {
     const cJSON *item = member(object, name, present);
     if (!item) {
         return true;
@@ -260,11 +280,11 @@ bool api_member_rational(const cJSON *object, const char *name, Rational *out, b
     return true;
 }
 
-ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, ComposerError *error) {
+UrsatzStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, UrsatzError *error) {
     Rational tempo;
     bool has_tempo = false;
     if (!api_member_rational(request, "tempo", &tempo, &has_tempo, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (has_tempo && (tempo.den == 0 || tempo.num < (long long)API_TEMPO_MIN * tempo.den ||
                       tempo.num > (long long)API_TEMPO_MAX * tempo.den)) {
@@ -275,7 +295,7 @@ ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, 
         } else if (cJSON_IsNumber(item)) {
             snprintf(text, sizeof text, "%g", item->valuedouble);
         }
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/tempo",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/tempo",
                         "tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like 195/2, not '%s'",
                         text);
     }
@@ -283,23 +303,23 @@ ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, 
         options->tempo_numerator = tempo.num;
         options->tempo_denominator = tempo.den;
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
-ComposerStatus api_load_style(const char *path, const char *const *without, size_t without_count, const char *path_file,
-                              const char *path_without, ComposerStyle **out, ComposerError *error) {
+UrsatzStatus api_load_style(const char *path, const char *const *without, size_t without_count, const char *path_file,
+                              const char *path_without, ComposerStyle **out, UrsatzError *error) {
     ComposerStyleResult loaded = composer_style_load_without(path, without, without_count, out);
     if (loaded == COMPOSER_STYLE_OK) {
-        return COMPOSER_OK;
+        return URSATZ_OK;
     }
     bool argument = loaded == COMPOSER_STYLE_ERR_ARGUMENT;
-    return api_fail(error, argument ? COMPOSER_ERR_REQUEST : loaded == COMPOSER_STYLE_ERR_ALLOC ? COMPOSER_ERR_ALLOC
-                                                                                                  : COMPOSER_ERR_UNSATISFIABLE,
+    return api_fail(error, argument ? URSATZ_ERR_REQUEST : loaded == COMPOSER_STYLE_ERR_ALLOC ? URSATZ_ERR_ALLOC
+                                                                                                  : URSATZ_ERR_UNSATISFIABLE,
                     argument ? path_without : path_file, "cannot read style '%s': %s", path,
                     composer_style_result_name(loaded));
 }
 
-ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *out, ComposerError *error) {
+UrsatzStatus api_read_output_options(const cJSON *request, ApiOutputOptions *out, UrsatzError *error) {
     bool present;
     bool plain = false;
     const char *explain = NULL;
@@ -311,7 +331,7 @@ ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *o
         !api_member_bool(request, "plans", &out->plans, &present, error) ||
         !api_member_bool(request, "layers", &out->layers, &present, error) ||
         !api_member_string(request, "explain", &explain, &present, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     if (explain) {
         if (strcmp(explain, "text") == 0) {
@@ -319,14 +339,14 @@ ComposerStatus api_read_output_options(const cJSON *request, ApiOutputOptions *o
         } else if (strcmp(explain, "json") == 0) {
             out->explain = 2;
         } else {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
+            return api_fail(error, URSATZ_ERR_REQUEST, "/explain", "explain must be \"text\" or \"json\", not '%s'", explain);
         }
     }
     if (plain) {
         out->export_options.track_names = false;
         out->export_options.section_markers = false;
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /* Adds the text (one JSON document) parsed as member `name` of document; the text is freed. */
@@ -340,15 +360,15 @@ static bool add_parsed(cJSON *document, const char *name, char *text) {
     return true;
 }
 
-ComposerStatus api_layers_json(const KnowledgeSnapshot *knowledge, const Plan *plan, const PlanExportOptions *options, cJSON *document,
-                               ComposerError *error) {
+UrsatzStatus api_layers_json(const KnowledgeSnapshot *knowledge, const Plan *plan, const PlanExportOptions *options, cJSON *document,
+                               UrsatzError *error) {
     ComposerHearing *hearing = NULL;
     HearingResult heard = hearing_create(plan, knowledge, &hearing);
     if (heard != HEARING_OK) {
-        return heard == HEARING_ERR_ALLOC ? api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory")
-                                          : api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/layers", "cannot render the plan");
+        return heard == HEARING_ERR_ALLOC ? api_fail(error, URSATZ_ERR_ALLOC, "", "out of memory")
+                                          : api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/layers", "cannot render the plan");
     }
-    ComposerStatus status = COMPOSER_OK;
+    UrsatzStatus status = URSATZ_OK;
     Work *work = NULL;
     PlanExportError detail;
     char digest[17];
@@ -356,11 +376,11 @@ ComposerStatus api_layers_json(const KnowledgeSnapshot *knowledge, const Plan *p
     RealizationJsonError realization_error;
     ReadingJsonError reading_error;
     if (rendered_plan_work(hearing_rendered(hearing), options, knowledge, &work, &detail) != PLAN_EXPORT_OK) {
-        status = api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/layers", "cannot write the realization: %s", detail.message);
+        status = api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/layers", "cannot write the realization: %s", detail.message);
     } else if (!realization_digest(work, digest)) {
-        status = api_fail(error, COMPOSER_ERR_INTERNAL, "/layers", "cannot name the realization");
+        status = api_fail(error, URSATZ_ERR_INTERNAL, "/layers", "cannot name the realization");
     } else if (hearing_piece_reading_of(hearing, digest, &reading) != HEARING_OK) {
-        status = api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/layers", "cannot read the piece");
+        status = api_fail(error, URSATZ_ERR_UNSATISFIABLE, "/layers", "cannot read the piece");
     } else if (!add_parsed(document, "realization", realization_work_to_json(work, &realization_error)) ||
                !add_parsed(document, "reading", reading_to_json(reading, &reading_error))) {
         status = api_fail_alloc(error);
@@ -370,7 +390,7 @@ ComposerStatus api_layers_json(const KnowledgeSnapshot *knowledge, const Plan *p
     return status;
 }
 
-bool api_read_preferences(const cJSON *request, ComposerPreferences *out, bool *present, ComposerError *error) {
+bool api_read_preferences(const cJSON *request, ComposerPreferences *out, bool *present, UrsatzError *error) {
     composer_preferences_default(out);
     const cJSON *item = member(request, "preferences", present);
     if (!item) {
@@ -384,7 +404,7 @@ bool api_read_preferences(const cJSON *request, ComposerPreferences *out, bool *
     if (!composer_preferences_read(item, out, path, sizeof path, message, sizeof message)) {
         char full[sizeof error->path];
         snprintf(full, sizeof full, "/preferences%s", path);
-        api_fail(error, COMPOSER_ERR_REQUEST, full, "%s", message);
+        api_fail(error, URSATZ_ERR_REQUEST, full, "%s", message);
         return false;
     }
     return true;

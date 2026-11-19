@@ -185,8 +185,8 @@ int run_lock(int argc, char **argv) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus called = cli_call(composer_api_lock, request, &response);
-    if (called != COMPOSER_OK) {
+    UrsatzStatus called = cli_call(composer_api_lock, request, &response);
+    if (called != URSATZ_OK) {
         status = cli_fail_plan_api(called, &response.error, options.input, &held);
     } else {
         cJSON *document = cJSON_Parse(response.json);
@@ -269,10 +269,10 @@ int run_regenerate(int argc, char **argv) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     ComposerResponse response;
-    ComposerStatus called = cli_call(composer_api_regenerate, request, &response);
-    if (called == COMPOSER_ERR_UNSATISFIABLE && response.json && !response.error.path[0]) {
+    UrsatzStatus called = cli_call(composer_api_regenerate, request, &response);
+    if (called == URSATZ_ERR_UNSATISFIABLE && response.json && !response.error.path[0]) {
         status = cli_report_stuck(&response.error, &response);
-    } else if (called != COMPOSER_OK) {
+    } else if (called != URSATZ_OK) {
         status = cli_fail_plan_api(called, &response.error, options.input, &held);
     } else {
         cJSON *document = cJSON_Parse(response.json);

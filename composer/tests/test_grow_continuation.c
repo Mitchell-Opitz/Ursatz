@@ -348,9 +348,9 @@ static void test_cut_departs(void) {
         setup.tempo_from = "none";
         setup.continuation = &cut;
         GrowRun run;
-        ComposerError error;
+        UrsatzError error;
         memset(&error, 0, sizeof(error));
-        assert(api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1);
+        assert(api_grow_run(&setup, &run, &error) == URSATZ_OK && run.made == 1);
         cJSON *document = api_grow_result_json(&setup, &run, NULL);
         assert(document);
         const cJSON *theme = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(document, "themes"), 0);
@@ -543,9 +543,9 @@ static void test_rates(void) {
                 setup.continuation = &settings;
                 setup.basic_as_written = which == 7;
                 GrowRun run;
-                ComposerError error;
+                UrsatzError error;
                 memset(&error, 0, sizeof(error));
-                composed += api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1 ? 1 : 0;
+                composed += api_grow_run(&setup, &run, &error) == URSATZ_OK && run.made == 1 ? 1 : 0;
                 api_grow_run_destroy(&run);
             }
             printf("%-14s %s: %u of %lu composed\n", NAMES[which], FIXTURES[f].name, composed, seeds);

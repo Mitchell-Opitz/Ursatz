@@ -70,7 +70,7 @@ static void report_skipped(const char *json) {
 }
 
 /* Prints the API's refusal as the export command always has and returns the exit status. */
-static int report_export_error(const ComposerError *error, const char *plan_path, const char *tempo_text) {
+static int report_export_error(const UrsatzError *error, const char *plan_path, const char *tempo_text) {
     static const char READ[] = "cannot read plan";
     static const char RENDER[] = "cannot render plan";
     if (strcmp(error->path, "/tempo") == 0) {
@@ -150,9 +150,9 @@ static int run_export(int argc, char **argv) {
     }
 
     ComposerResponse response;
-    ComposerStatus api_status = composer_api_export(cli_context(), request_text, NULL, &response);
+    UrsatzStatus api_status = composer_api_export(cli_context(), request_text, NULL, &response);
     free(request_text);
-    if (api_status != COMPOSER_OK) {
+    if (api_status != URSATZ_OK) {
         return report_export_error(&response.error, plan_path, tempo_text);
     }
     report_skipped(response.json);
@@ -234,7 +234,7 @@ int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
         ComposerResponse response;
         memset(&response, 0, sizeof response);
-        cJSON *versions = composer_api_versions(&response) == COMPOSER_OK ? cJSON_Parse(response.json) : NULL;
+        cJSON *versions = composer_api_versions(&response) == URSATZ_OK ? cJSON_Parse(response.json) : NULL;
         const cJSON *version = cJSON_GetObjectItemCaseSensitive(versions, "composer_version");
         printf("ursatz-composer %s\n", cJSON_IsString(version) ? version->valuestring : "");
         cJSON_Delete(versions);

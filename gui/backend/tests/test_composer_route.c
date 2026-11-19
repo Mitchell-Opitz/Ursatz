@@ -34,7 +34,7 @@ int main(void) {
         "status reports the Composer version");
   const cJSON *api = cJSON_GetObjectItemCaseSensitive(json, "api_version");
   const cJSON *analyzer = cJSON_GetObjectItemCaseSensitive(json, "analyzer_version");
-  const cJSON *commit = cJSON_GetObjectItemCaseSensitive(json, "ursatz_commit");
+  const cJSON *commit = cJSON_GetObjectItemCaseSensitive(json, "producer_key");
   check(cJSON_IsString(api) && strcmp(api->valuestring, composer_api_version()) == 0,
         "status reports the API version the backend is linked with");
   check(cJSON_IsString(analyzer) && analyzer->valuestring[0] != '\0', "status reports the Analyzer version");

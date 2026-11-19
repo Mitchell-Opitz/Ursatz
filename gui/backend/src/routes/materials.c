@@ -369,7 +369,7 @@ static char *degrees_to_c_notes(const char *degrees, const char *mode, const cha
   if (ursatz_gui_composer_reply_refused(&reply)) {
     to_c_fail_at(failure, ursatz_gui_composer_reply_failure_status(&reply), reply.message[0] ? reply.message : "composer could not read the degrees", reply.path);
   } else {
-    cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+    cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
     const cJSON *text = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "analysis"), "notes_text");
     if (cJSON_IsString(text)) {
       notes = strdup(text->valuestring);
@@ -411,7 +411,7 @@ static int handle_import_motif(struct mg_connection *conn) {
   if (!called) {
     return send_failure(conn, 500, "out of memory");
   }
-  if (reply.status != COMPOSER_OK) {
+  if (reply.status != URSATZ_OK) {
     int failed = send_failure_at(conn, ursatz_gui_composer_reply_failure_status(&reply),
                                  reply.message[0] ? reply.message : "composer could not read the MIDI file",
                                  reply.path);
@@ -565,7 +565,7 @@ static bool render_motif(const RenderInput *in, char **out_xml, uint8_t **out_mi
   if (ursatz_gui_composer_reply_refused(&reply)) {
     render_fail_at(failure, ursatz_gui_composer_reply_failure_status(&reply), reply.message[0] ? reply.message : "composer could not render the motif", reply.path);
   } else {
-    char *xml = reply.status == COMPOSER_OK && reply.musicxml && reply.midi ? strdup(reply.musicxml) : NULL;
+    char *xml = reply.status == URSATZ_OK && reply.musicxml && reply.midi ? strdup(reply.musicxml) : NULL;
     if (xml) {
       *out_xml = xml;
       *out_midi = reply.midi;
@@ -1411,7 +1411,7 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
 static int handle_variant_operations(struct mg_connection *conn) {
   UrsatzGuiComposerReply reply;
   ursatz_gui_motif_variant_operations(&reply);
-  cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (!document) {
     int failed = send_failure_at(conn, 500, reply.message[0] ? reply.message : "composer could not list the operations",
                                  reply.path);
@@ -1468,7 +1468,7 @@ typedef struct {
   double seed; /* negative: from the clock */
 } VariantsJob;
 
-static void variants_job_run(void *input, const ComposerJob *job, UrsatzGuiJobResult *out);
+static void variants_job_run(void *input, const UrsatzJob *job, UrsatzGuiJobResult *out);
 
 static void variants_job_free(void *input) {
   VariantsJob *job = input;
@@ -1749,7 +1749,7 @@ static int handle_recognize(struct mg_connection *conn) {
   if (!called) {
     return send_failure(conn, 500, "out of memory");
   }
-  cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (!document) {
     int failed = send_failure_at(conn, ursatz_gui_composer_reply_failure_status(&reply),
                                  reply.message[0] ? reply.message : "composer could not recognize the motifs", reply.path);
@@ -2328,7 +2328,7 @@ static int handle_link_form(struct mg_connection *conn, const char *id) {
 
 /* Reruns the stored chain of the derived motif id on the source's stored version with a new seed and stores the result
    as a new version (the reroll job). */
-static void reroll_run(const char *id, const ComposerJob *composer_job, UrsatzGuiJobResult *out) {
+static void reroll_run(const char *id, const UrsatzJob *composer_job, UrsatzGuiJobResult *out) {
   cJSON *current = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
   if (result != URSATZ_GUI_MATERIAL_OK) {
@@ -2441,7 +2441,7 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
 }
 
 /* The variants and each-op runs of a job: the answer is the Composer's document plus "ok" and "seed". */
-static void variants_run(const VariantsJob *input, const ComposerJob *composer_job, UrsatzGuiJobResult *out) {
+static void variants_run(const VariantsJob *input, const UrsatzJob *composer_job, UrsatzGuiJobResult *out) {
   bool each_op = input->op == VARIANTS_JOB_EACH_OP;
   const cJSON *chain = cJSON_GetObjectItemCaseSensitive(input->body, "chain");
   const cJSON *functions = cJSON_GetObjectItemCaseSensitive(input->body, "functions");
@@ -2481,7 +2481,7 @@ static void variants_run(const VariantsJob *input, const ComposerJob *composer_j
   ursatz_gui_job_result_json(out, 200, document);
 }
 
-static void variants_job_run(void *input, const ComposerJob *composer_job, UrsatzGuiJobResult *out) {
+static void variants_job_run(void *input, const UrsatzJob *composer_job, UrsatzGuiJobResult *out) {
   const VariantsJob *job = input;
   if (job->op == VARIANTS_JOB_REROLL) {
     reroll_run(job->id, composer_job, out);
@@ -2658,7 +2658,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   if (!called) {
     return send_failure(conn, 500, "out of memory");
   }
-  cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   if (!document) {
     int failed = send_failure_at(conn, ursatz_gui_composer_reply_failure_status(&reply),
                                  reply.message[0] ? reply.message : "composer could not draw the motives", reply.path);
@@ -2760,7 +2760,7 @@ static int handle_validate(struct mg_connection *conn) {
     return send_failure(conn, 500, "out of memory");
   }
   cJSON_Delete(input);
-  cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  cJSON *document = reply.status == URSATZ_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
   cJSON *filled = document ? cJSON_DetachItemFromObjectCaseSensitive(document, "request") : NULL;
   cJSON_Delete(document);
   if (!filled) {

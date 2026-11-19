@@ -41,7 +41,7 @@ static UrsatzGuiJobState wait_finished(const char *id, int timeout_ms, UrsatzGui
 
 /* --- a job that answers ---------------------------------------------------- */
 
-static void answer_job(void *input, const ComposerJob *job, UrsatzGuiJobResult *out) {
+static void answer_job(void *input, const UrsatzJob *job, UrsatzGuiJobResult *out) {
   (void)job;
   out->http_status = *(int *)input;
   out->json = strdup("{\"ok\":true}");
@@ -77,7 +77,7 @@ static void test_answer(void) {
 
 static volatile int g_release = 0;
 
-static void progress_job(void *input, const ComposerJob *job, UrsatzGuiJobResult *out) {
+static void progress_job(void *input, const UrsatzJob *job, UrsatzGuiJobResult *out) {
   (void)input;
   job->progress(job->user, "melody", 6, 9);
   for (int i = 0; i < 500 && !g_release; i++) {
@@ -107,12 +107,12 @@ static void test_progress(void) {
 
 /* --- cancel of a running theme compose ------------------------------------------ */
 
-static void theme_job(void *input, const ComposerJob *job, UrsatzGuiJobResult *out) {
+static void theme_job(void *input, const UrsatzJob *job, UrsatzGuiJobResult *out) {
   const char *request = input;
   ComposerResponse response;
   memset(&response, 0, sizeof(response));
-  ComposerStatus status = composer_api_theme(ursatz_gui_composer_context(), request, job, &response);
-  out->http_status = status == COMPOSER_OK ? 200 : status == COMPOSER_ERR_CANCELLED ? 499 : 500;
+  UrsatzStatus status = composer_api_theme(ursatz_gui_composer_context(), request, job, &response);
+  out->http_status = status == URSATZ_OK ? 200 : status == URSATZ_ERR_CANCELLED ? 499 : 500;
   out->json = strdup("{}");
   composer_response_destroy(&response);
 }
@@ -171,7 +171,7 @@ static pthread_mutex_t g_meet_lock = PTHREAD_MUTEX_INITIALIZER;
 static int g_meeting = 0;
 static int g_met = 0;
 
-static void meet_job(void *input, const ComposerJob *job, UrsatzGuiJobResult *out) {
+static void meet_job(void *input, const UrsatzJob *job, UrsatzGuiJobResult *out) {
   (void)input;
   (void)job;
   pthread_mutex_lock(&g_meet_lock);
@@ -210,7 +210,7 @@ static void test_two_workers(void) {
 
 static volatile int g_stopped_cleanly = 0;
 
-static void endless_job(void *input, const ComposerJob *job, UrsatzGuiJobResult *out) {
+static void endless_job(void *input, const UrsatzJob *job, UrsatzGuiJobResult *out) {
   (void)input;
   while (!job->cancelled(job->user)) {
     test_sleep_ms(5);

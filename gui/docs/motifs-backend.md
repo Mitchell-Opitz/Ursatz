@@ -14,7 +14,7 @@ intervals, rhythm). Meter (`^[0-9]{1,2}/[0-9]{1,2}$`) and key
 (`^[A-Ga-g][#b]? (major|minor)$`) are checked before the request is built.
 
 - A note list or key the Composer refuses is 400 (a malformed request) or 422
-  (`COMPOSER_ERR_UNSATISFIABLE`: a valid request nothing satisfies) with its
+  (`URSATZ_ERR_UNSATISFIABLE`: a valid request nothing satisfies) with its
   message and, as `path`, the request member at fault (`/meter`, `/harmony`,
   `/input/text`); no version is written.
 - A failure of the Composer that is not the request's (out of memory, an

@@ -27,7 +27,7 @@ typedef struct {
 } FillStyle;
 
 /* The style members of a request (fill and the commands that compose a plan again). */
-static ComposerStatus read_style_members(const cJSON *request, FillStyle *out, ComposerError *error) {
+static UrsatzStatus read_style_members(const cJSON *request, FillStyle *out, UrsatzError *error) {
     bool present = false;
     memset(out, 0, sizeof(*out));
     if (!api_member_string(request, "style", &out->style_path, &present, error) ||
@@ -35,42 +35,42 @@ static ComposerStatus read_style_members(const cJSON *request, FillStyle *out, C
         !api_member_string(request, "blend", &out->blend_path, &present, error) ||
         !api_member_string(request, "blend_weight", &out->blend_weight_text, &present, error) ||
         !api_member_string(request, "blend_weights", &out->blend_weights_text, &present, error)) {
-        return COMPOSER_ERR_REQUEST;
+        return URSATZ_ERR_REQUEST;
     }
     const cJSON *without = cJSON_GetObjectItemCaseSensitive(request, "style_without");
     if (without && !cJSON_IsNull(without)) {
         if (!cJSON_IsArray(without)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without must be a list of style categories");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without must be a list of style categories");
         }
         const cJSON *name = NULL;
         cJSON_ArrayForEach(name, without) {
             if (!cJSON_IsString(name)) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without must be a list of style categories");
+                return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without must be a list of style categories");
             }
-            ComposerStatus known = api_style_category_check(name->valuestring, error);
-            if (known != COMPOSER_OK) {
+            UrsatzStatus known = api_style_category_check(name->valuestring, error);
+            if (known != URSATZ_OK) {
                 return known;
             }
             if (out->without_count == PLAN_STYLE_WITHOUT_MAX) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without names at most %d style categories",
+                return api_fail(error, URSATZ_ERR_REQUEST, "/style_without", "style_without names at most %d style categories",
                                 PLAN_STYLE_WITHOUT_MAX);
             }
             out->without[out->without_count++] = name->valuestring;
         }
     }
     if (out->style_weight_text && !request_parse_ratio(out->style_weight_text, &out->style_weight)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/style_weight",
+        return api_fail(error, URSATZ_ERR_REQUEST, "/style_weight",
                         "style_weight must be a fraction like 1/2 or a whole number, not '%s'", out->style_weight_text);
     }
-    return COMPOSER_OK;
+    return URSATZ_OK;
 }
 
 /*
  * The style the run prefers: the request's, else the STYLE constraint on the plan's form node, and the weight from the
  * request, else the constraint's. *style stays NULL when there is none.
  */
-static ComposerStatus resolve_style(const FillStyle *options, const Plan *plan, ComposerStyle **style,
-                                    Rational *weight, ComposerError *error) {
+static UrsatzStatus resolve_style(const FillStyle *options, const Plan *plan, ComposerStyle **style,
+                                    Rational *weight, UrsatzError *error) {
     const PlanStyle *planned = NULL;
     NodeId root = plan_root(plan);
     for (size_t i = 0; root != PLAN_NODE_NONE && i < plan_node_constraint_count(plan, root); i++) {
@@ -103,10 +103,10 @@ static ComposerStatus resolve_style(const FillStyle *options, const Plan *plan, 
     bool weights_given = options->blend_path || options->blend_weight_text || options->blend_weights_text;
     if (!path) {
         if (options->style_weight_text) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/style_weight", "style_weight needs a style: give style or a plan that has one");
+            return api_fail(error, URSATZ_ERR_REQUEST, "/style_weight", "style_weight needs a style: give style or a plan that has one");
         }
         if (options->without_count > 0) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without",
+            return api_fail(error, URSATZ_ERR_REQUEST, "/style_without",
                             "style_without needs a style: give style or a plan that has one");
         }
         return api_read_blend(false, blend_path, options->blend_weight_text, options->blend_weights_text, &blend_weights, error);
@@ -117,14 +117,14 @@ static ComposerStatus resolve_style(const FillStyle *options, const Plan *plan, 
         *weight = options->style_weight;
     }
     if (!blend_path) {
-        ComposerStatus checked =
+        UrsatzStatus checked =
             api_read_blend(true, NULL, options->blend_weight_text, options->blend_weights_text, &blend_weights, error);
-        return checked != COMPOSER_OK ? checked : api_load_style(path, without, without_count, "/style", "/style_without", style, error);
+        return checked != URSATZ_OK ? checked : api_load_style(path, without, without_count, "/style", "/style_without", style, error);
     }
     if (weights_given) {
-        ComposerStatus read =
+        UrsatzStatus read =
             api_read_blend(true, blend_path, options->blend_weight_text, options->blend_weights_text, &blend_weights, error);
-        if (read != COMPOSER_OK) {
+        if (read != URSATZ_OK) {
             return read;
         }
     } else {
@@ -156,11 +156,11 @@ static cJSON *candidates_json(const ComposeCandidates *candidates, unsigned long
     return list;
 }
 
-ComposerStatus composer_api_fill(const ComposerContext *context, const char *request_json,
-                                 const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_fill(const ComposerContext *context, const char *request_json,
+                                 const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, NULL, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *root = NULL;
@@ -171,23 +171,23 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
     unsigned long candidates_wanted = 0;
     bool seeded = false;
     bool present = false;
-    ComposerStatus status = api_parse_request(request_json, &root, &out->error);
+    UrsatzStatus status = api_parse_request(request_json, &root, &out->error);
     bool check = false;
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_read_outputs(root, true, &outputs, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         if (!api_member_whole(root, "seed", 0, API_SEED_MAX, &seed, &seeded, &out->error) ||
             !api_member_whole(root, "candidates", 1, MAX_CANDIDATES, &candidates_wanted, &present, &out->error) ||
             !api_member_bool(root, "check", &check, &present, &out->error)) {
-            status = COMPOSER_ERR_REQUEST;
+            status = URSATZ_ERR_REQUEST;
         }
         seed = seeded ? seed : api_default_seed();
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = read_style_members(root, &style_options, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
 
@@ -203,21 +203,21 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
     memset(&candidates, 0, sizeof(candidates));
     ComposerStyle *style = NULL;
     Rational style_weight = {0, 0};
-    for (unsigned long attempt = 0; attempt < API_SEED_TRIES && !done && status == COMPOSER_OK; attempt++) {
+    for (unsigned long attempt = 0; attempt < API_SEED_TRIES && !done && status == URSATZ_OK; attempt++) {
         if (job_step(job, "seed", (unsigned)attempt, API_SEED_TRIES)) {
-            status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+            status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
             break;
         }
         Plan *fresh = NULL;
         status = api_plan_from_text(context->knowledge, text, "plan", &fresh, &out->error);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             break;
         }
         if (!snapshot) {
             /* What the user gave, kept to show after the run that none of it was changed. */
             snapshot = given_snapshot(fresh);
             status = resolve_style(&style_options, fresh, &style, &style_weight, &out->error);
-            if (status != COMPOSER_OK) {
+            if (status != URSATZ_OK) {
                 plan_destroy(fresh);
                 break;
             }
@@ -235,17 +235,17 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
             PieceResult ran = compose_candidates(fresh, &config, candidates_wanted, &candidates);
             if (job_cancelled(job)) {
                 plan_destroy(fresh);
-                status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+                status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
             } else if (ran == PIECE_ERR_BAD_REQUEST) {
                 plan = fresh;
                 realized = true;
                 done = true;
             } else if (ran != PIECE_OK) {
                 plan_destroy(fresh);
-                status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", piece_result_name(ran));
+                status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "%s", piece_result_name(ran));
             } else if (candidates.count == 0) {
                 plan_destroy(fresh);
-                status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "",
+                status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "",
                                   "no candidate could be completed from seeds %lu to %lu", config.seed,
                                   (config.seed + candidates.tried - 1) & API_SEED_MAX);
             } else {
@@ -270,7 +270,7 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
         outcome = result;
         used = config.seed;
         if (result.cancelled || job_cancelled(job)) {
-            status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+            status = api_fail(&out->error, URSATZ_ERR_CANCELLED, "", "cancelled");
         } else if (ran == PIECE_OK) {
             done = true;
         } else if (ran == PIECE_ERR_BAD_REQUEST) {
@@ -278,31 +278,31 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
             realized = true;
             done = true;
         } else if (ran != PIECE_ERR_STUCK) {
-            status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "%s", piece_result_name(ran));
+            status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "%s", piece_result_name(ran));
         }
     }
     free(text);
-    if (status == COMPOSER_OK && !done) {
+    if (status == URSATZ_OK && !done) {
         status = api_compose_stuck(plan, &outcome, seed, used, out);
     }
     ApiGivenRuns *given = calloc(1, sizeof(*given));
     if (!given) {
-        status = status == COMPOSER_OK ? api_fail_alloc(&out->error) : status;
+        status = status == URSATZ_OK ? api_fail_alloc(&out->error) : status;
     } else {
         given->unchanged = true;
     }
-    if (status == COMPOSER_OK && done && !realized && snapshot) {
+    if (status == URSATZ_OK && done && !realized && snapshot) {
         given->count = given_snapshot_report(snapshot, plan, given->runs, API_MAX_GIVEN_RUNS);
         given->count = given->count > API_MAX_GIVEN_RUNS ? API_MAX_GIVEN_RUNS : given->count;
         for (size_t i = 0; i < given->count; i++) {
             given->unchanged = given->unchanged && given->runs[i].unchanged;
         }
         if (!given->unchanged) {
-            status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "the run changed the given material; nothing is written");
+            status = api_fail(&out->error, URSATZ_ERR_UNSATISFIABLE, "", "the run changed the given material; nothing is written");
         }
     }
     given_snapshot_destroy(snapshot);
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         cJSON *extra = NULL;
         if (candidates.count > 0) {
             extra = cJSON_CreateObject();
@@ -313,17 +313,17 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
                 status = api_fail_alloc(&out->error);
             }
         }
-        cJSON *document = status == COMPOSER_OK ? api_compose_document(plan, used, realized, &outcome, given, extra) : NULL;
-        if (status == COMPOSER_OK && !document) {
+        cJSON *document = status == URSATZ_OK ? api_compose_document(plan, used, realized, &outcome, given, extra) : NULL;
+        if (status == URSATZ_OK && !document) {
             status = api_fail_alloc(&out->error);
         }
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_record_outputs(plan, &outcome, &outputs, document, out);
         }
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_render_outputs(context->knowledge, plan, &outputs, document, out);
         }
-        if (status == COMPOSER_OK) {
+        if (status == URSATZ_OK) {
             status = api_respond_json(out, document);
         } else {
             cJSON_Delete(document);
@@ -337,8 +337,8 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
     }
     composer_style_destroy(style);
     cJSON_Delete(root);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         char *stuck = out->json;
         out->json = NULL;
         composer_response_destroy(out);

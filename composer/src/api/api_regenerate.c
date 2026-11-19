@@ -11,8 +11,8 @@
 
 /* `regenerate` as a composer API entry (docs/cli-regenerate.md): one node of a filled plan written again. */
 
-static ComposerStatus fail_cancelled(ComposerError *error) {
-    return api_fail(error, COMPOSER_ERR_CANCELLED, "", "cancelled");
+static UrsatzStatus fail_cancelled(UrsatzError *error) {
+    return api_fail(error, URSATZ_ERR_CANCELLED, "", "cancelled");
 }
 
 typedef struct {
@@ -62,11 +62,11 @@ static cJSON *reopened_json(const Reopened *reopened) {
     return extra;
 }
 
-ComposerStatus composer_api_regenerate(const ComposerContext *context, const char *request_json,
-                                       const ComposerJob *job, ComposerResponse *out) {
+UrsatzStatus composer_api_regenerate(const ComposerContext *context, const char *request_json,
+                                       const UrsatzJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
-    ComposerStatus context_status = api_require_knowledge(context, NULL, &out->error);
-    if (context_status != COMPOSER_OK) {
+    UrsatzStatus context_status = api_require_knowledge(context, NULL, &out->error);
+    if (context_status != URSATZ_OK) {
         return context_status;
     }
     cJSON *root = NULL;
@@ -75,20 +75,20 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
     ApiOutputs outputs;
     unsigned long seed = 0;
     bool seeded = false;
-    ComposerStatus status = api_parse_request(request_json, &root, &out->error);
-    if (status == COMPOSER_OK) {
+    UrsatzStatus status = api_parse_request(request_json, &root, &out->error);
+    if (status == URSATZ_OK) {
         status = api_read_target(root, &target, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_read_outputs(root, false, &outputs, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         if (!api_member_whole(root, "seed", 0, API_SEED_MAX, &seed, &seeded, &out->error)) {
-            status = COMPOSER_ERR_REQUEST;
+            status = URSATZ_ERR_REQUEST;
         }
         seed = seeded ? seed : api_default_seed();
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_read_plan_text(context->knowledge, root, "plan", &text, &out->error);
     }
 
@@ -99,14 +99,14 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
     memset(&reopened, 0, sizeof reopened);
     FillTarget *targets = NULL;
     size_t target_count = 0;
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_plan_from_text(context->knowledge, text, "plan", &before, &out->error);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         status = api_target_list(before, &target, &targets, &target_count, &out->error);
         api_target_describe(before, &target, what, sizeof what);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         FillTarget *scope = NULL;
         size_t scope_count = 0;
         RegenerateResult scoped = plan_regenerate_scope_all(before, targets, target_count, &scope, &scope_count);
@@ -127,20 +127,20 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
     memset(&outcome, 0, sizeof(outcome));
     bool done = false;
     unsigned long used = seed;
-    for (unsigned long attempt = 0; attempt < API_SEED_TRIES && !done && status == COMPOSER_OK; attempt++) {
+    for (unsigned long attempt = 0; attempt < API_SEED_TRIES && !done && status == URSATZ_OK; attempt++) {
         if (job_step(job, "seed", (unsigned)attempt, API_SEED_TRIES)) {
             status = fail_cancelled(&out->error);
             break;
         }
         Plan *fresh = NULL;
         status = api_plan_from_text(context->knowledge, text, "plan", &fresh, &out->error);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             break;
         }
         FillTarget *again = NULL;
         size_t again_count = 0;
         status = api_target_list(fresh, &target, &again, &again_count, &out->error);
-        if (status != COMPOSER_OK) {
+        if (status != URSATZ_OK) {
             plan_destroy(fresh);
             break;
         }
@@ -169,10 +169,10 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
         }
     }
     free(text);
-    if (status == COMPOSER_OK && !done) {
+    if (status == URSATZ_OK && !done) {
         status = api_compose_stuck(plan, &outcome, seed, used, out);
     }
-    if (status == COMPOSER_OK) {
+    if (status == URSATZ_OK) {
         ApiGivenRuns *given = calloc(1, sizeof(*given));
         cJSON *extra = given ? reopened_json(&reopened) : NULL;
         cJSON *document = extra ? api_compose_document(plan, used, false, &outcome, given, extra) : NULL;
@@ -181,7 +181,7 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
             status = api_fail_alloc(&out->error);
         } else {
             status = api_render_outputs(context->knowledge, plan, &outputs, document, out);
-            if (status == COMPOSER_OK) {
+            if (status == URSATZ_OK) {
                 status = api_respond_json(out, document);
             } else {
                 cJSON_Delete(document);
@@ -193,8 +193,8 @@ ComposerStatus composer_api_regenerate(const ComposerContext *context, const cha
         compose_outcome_destroy(&outcome);
     }
     cJSON_Delete(root);
-    if (status != COMPOSER_OK) {
-        ComposerError error = out->error;
+    if (status != URSATZ_OK) {
+        UrsatzError error = out->error;
         char *stuck = out->json;
         out->json = NULL;
         composer_response_destroy(out);

@@ -260,14 +260,14 @@ int run_fill(int argc, char **argv) {
     cli_read_plan_held(options.input, &plan, &held);
     cJSON *request = build_request(&options, plan);
     ComposerResponse response;
-    ComposerStatus called = request ? cli_call(composer_api_fill, request, &response) : COMPOSER_ERR_ALLOC;
+    UrsatzStatus called = request ? cli_call(composer_api_fill, request, &response) : URSATZ_ERR_ALLOC;
     if (!request) {
         cJSON_Delete(plan);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    if (called == COMPOSER_ERR_UNSATISFIABLE && response.json && !response.error.path[0]) {
+    if (called == URSATZ_ERR_UNSATISFIABLE && response.json && !response.error.path[0]) {
         status = cli_report_stuck(&response.error, &response);
-    } else if (called != COMPOSER_OK) {
+    } else if (called != URSATZ_OK) {
         status = cli_fail_plan_api(called, &response.error, options.input, &held);
     } else {
         cJSON *document = cJSON_Parse(response.json);

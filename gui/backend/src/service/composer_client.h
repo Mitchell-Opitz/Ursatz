@@ -11,10 +11,10 @@
 
 /* What a Composer API call (R-219) answers, owned by the route that made the call. The members are moved out of the
  * ComposerResponse, so the reply outlives it. The refusal text is message and the request member at fault is path
- * ("" when none); both are empty on success. The CLI's exit 1 is COMPOSER_ERR_REQUEST, its exit 2
- * COMPOSER_ERR_UNSATISFIABLE; anything else (ALLOC, INTERNAL, CANCELLED) is a failure of the run. */
+ * ("" when none); both are empty on success. The CLI's exit 1 is URSATZ_ERR_REQUEST, its exit 2
+ * URSATZ_ERR_UNSATISFIABLE; anything else (ALLOC, INTERNAL, CANCELLED) is a failure of the run. */
 typedef struct {
-  ComposerStatus status;
+  UrsatzStatus status;
   char *json;
   char *plan_json;
   uint8_t *midi;
@@ -26,7 +26,7 @@ typedef struct {
 
 /* Moves the members of response into reply, sets reply->status to status and copies the error (message and path),
  * then destroys response. reply is overwritten, not freed first. */
-void ursatz_gui_composer_reply_take(ComposerStatus status, ComposerResponse *response, UrsatzGuiComposerReply *reply);
+void ursatz_gui_composer_reply_take(UrsatzStatus status, ComposerResponse *response, UrsatzGuiComposerReply *reply);
 
 /* The CLI's exit 1 and 2: the Composer read the request and refused it. */
 bool ursatz_gui_composer_reply_refused(const UrsatzGuiComposerReply *reply);

@@ -389,7 +389,7 @@ static bool write_bytes(const char *dir, const char *name, const void *data, siz
  */
 static UrsatzGuiThemeResult run_piece(const char *stage, const char *named, const cJSON *request, bool check, bool use_seed,
                                       long long seed, const cJSON *from, const char *regenerate, const char *lane,
-                                      const ComposerJob *job, cJSON **out_summary, char *message, size_t message_size) {
+                                      const UrsatzJob *job, cJSON **out_summary, char *message, size_t message_size) {
     cJSON *with_plans = NULL;
     UrsatzGuiThemeResult result = request_with_plans(request, &with_plans, message, message_size);
     if (result != URSATZ_GUI_THEME_OK) {
@@ -427,12 +427,12 @@ static UrsatzGuiThemeResult run_piece(const char *stage, const char *named, cons
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = composer_api_piece(ursatz_gui_composer_context(), text, job, &response);
+    UrsatzStatus status = composer_api_piece(ursatz_gui_composer_context(), text, job, &response);
     free(text);
     cJSON *document = NULL;
     ComposerResponse extra;
     memset(&extra, 0, sizeof(extra));
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         result = ursatz_gui_compose_failure(status, &response, message, message_size);
     } else if (!(document = cJSON_Parse(response.json)) || !response.midi || !response.musicxml) {
         common_copy_text(message, message_size, "composer output unreadable");
@@ -647,7 +647,7 @@ UrsatzGuiThemeResult ursatz_gui_piece_validate(const cJSON *body, bool *complete
 }
 
 UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, long long seed, bool update_uses,
-                                                  const ComposerJob *job, cJSON **out_item, char *message,
+                                                  const UrsatzJob *job, cJSON **out_item, char *message,
                                                   size_t message_size) {
     if (out_item) {
         *out_item = NULL;
@@ -912,7 +912,7 @@ static UrsatzGuiThemeResult read_inputs(const char *request_dir, const char *pla
 }
 
 static UrsatzGuiThemeResult regenerate_locked(const char *id, int version, const char *section_id, const char *lane,
-                                              bool has_seed, long long seed, const ComposerJob *job, cJSON **out_item,
+                                              bool has_seed, long long seed, const UrsatzJob *job, cJSON **out_item,
                                               char *message, size_t message_size) {
     Source source;
     UrsatzGuiThemeResult result = open_source(id, version, section_id, lane, &source, message, message_size);
@@ -977,7 +977,7 @@ static UrsatzGuiThemeResult regenerate_locked(const char *id, int version, const
 }
 
 UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, const char *section_id, const char *lane,
-                                                 bool has_seed, long long seed, const ComposerJob *job, cJSON **out_item,
+                                                 bool has_seed, long long seed, const UrsatzJob *job, cJSON **out_item,
                                                  char *message, size_t message_size) {
     if (out_item) {
         *out_item = NULL;
@@ -1088,7 +1088,7 @@ static int make_set_dir(const char *source_dir, const char *id, int current, cha
  */
 static UrsatzGuiThemeResult run_variations(const Source *source, const char *name, const cJSON *request, const cJSON *from, const char *section_id,
                                            const char *lane, int count, bool check, bool has_seed, long long seed,
-                                           const ComposerJob *job, const char *out_dir, cJSON **out_document, char *message,
+                                           const UrsatzJob *job, const char *out_dir, cJSON **out_document, char *message,
                                            size_t message_size) {
     cJSON *with_plans = NULL;
     UrsatzGuiThemeResult result = request_with_plans(request, &with_plans, message, message_size);
@@ -1125,10 +1125,10 @@ static UrsatzGuiThemeResult run_variations(const Source *source, const char *nam
     }
     ComposerResponse response;
     memset(&response, 0, sizeof(response));
-    ComposerStatus status = composer_api_piece_variations(ursatz_gui_composer_context(), text, job, &response);
+    UrsatzStatus status = composer_api_piece_variations(ursatz_gui_composer_context(), text, job, &response);
     free(text);
     cJSON *document = NULL;
-    if (status != COMPOSER_OK) {
+    if (status != URSATZ_OK) {
         result = ursatz_gui_compose_failure(status, &response, message, message_size);
     } else if (!(document = cJSON_Parse(response.json))) {
         common_copy_text(message, message_size, "the variations could not be read");
@@ -1198,7 +1198,7 @@ static UrsatzGuiThemeResult run_variations(const Source *source, const char *nam
 }
 
 static UrsatzGuiThemeResult variations_locked(const char *id, int version, const char *section_id, const char *lane, int count,
-                                              bool has_seed, long long seed, const ComposerJob *job, cJSON **out_result,
+                                              bool has_seed, long long seed, const UrsatzJob *job, cJSON **out_result,
                                               char *message, size_t message_size) {
     if (!lane || count < 1 || count > 8) {
         common_copy_text(message, message_size, "variations need a lane and a count from 1 to 8");
@@ -1249,7 +1249,7 @@ static UrsatzGuiThemeResult variations_locked(const char *id, int version, const
 }
 
 UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, const char *section_id, const char *lane,
-                                                 int count, bool has_seed, long long seed, const ComposerJob *job,
+                                                 int count, bool has_seed, long long seed, const UrsatzJob *job,
                                                  cJSON **out_result, char *message, size_t message_size) {
     if (out_result) {
         *out_result = NULL;
@@ -1266,7 +1266,7 @@ UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, co
     return result;
 }
 
-static UrsatzGuiThemeResult choose_locked(const char *id, int version, int set, int index, const ComposerJob *job,
+static UrsatzGuiThemeResult choose_locked(const char *id, int version, int set, int index, const UrsatzJob *job,
                                           cJSON **out_item, char *message, size_t message_size) {
     Source source;
     UrsatzGuiThemeResult result = open_source(id, version, NULL, NULL, &source, message, message_size);
@@ -1361,7 +1361,7 @@ static UrsatzGuiThemeResult choose_locked(const char *id, int version, int set, 
     return result;
 }
 
-UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int set, int index, const ComposerJob *job,
+UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int set, int index, const UrsatzJob *job,
                                              cJSON **out_item, char *message, size_t message_size) {
     if (out_item) {
         *out_item = NULL;

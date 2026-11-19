@@ -50,7 +50,7 @@ Every command, with an example each, is in [docs/cli.md](docs/cli.md).
 ## Composer API
 
 An application asks the Composer for everything through a versioned in-process C API, `include/ursatz_composer/composer_api.h`:
-JSON text requests, a `ComposerResponse` for every output, a `ComposerJob` for progress and cancel.
+JSON text requests, a `ComposerResponse` for every output, a `UrsatzJob` for progress and cancel.
 
 See [docs/api.md](docs/api.md) for every entry, the job rules and a minimal C client.
 

@@ -35,7 +35,7 @@ int cli_read_plan_file(const char *path, cJSON **plan) {
     return held.failed ? cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", held.message) : 0;
 }
 
-int cli_fail_plan_api(ComposerStatus status, const ComposerError *error, const char *plan_file, const CliHeldFailure *held) {
+int cli_fail_plan_api(UrsatzStatus status, const UrsatzError *error, const char *plan_file, const CliHeldFailure *held) {
     if (held && held->failed && strcmp(error->path, "/plan") == 0) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", held->message);
     }
@@ -46,15 +46,15 @@ int cli_fail_plan_api(ComposerStatus status, const ComposerError *error, const c
     return cli_fail_api(status, error, plan_file);
 }
 
-ComposerStatus cli_call(CliEntry entry, cJSON *request, ComposerResponse *out) {
+UrsatzStatus cli_call(CliEntry entry, cJSON *request, ComposerResponse *out) {
     char *text = request ? cJSON_PrintUnformatted(request) : NULL;
     cJSON_Delete(request);
     if (!text) {
         memset(out, 0, sizeof *out);
         snprintf(out->error.message, sizeof out->error.message, "out of memory");
-        return COMPOSER_ERR_ALLOC;
+        return URSATZ_ERR_ALLOC;
     }
-    ComposerStatus status = entry(cli_context(), text, NULL, out);
+    UrsatzStatus status = entry(cli_context(), text, NULL, out);
     cJSON_free(text);
     return status;
 }
@@ -138,8 +138,8 @@ int cli_export_midi(const cJSON *plan, const char *tempo_text, bool plain_midi, 
         cJSON_Delete(request);
         return cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
     }
-    ComposerStatus status = cli_call(composer_api_export, request, out);
-    return status == COMPOSER_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
+    UrsatzStatus status = cli_call(composer_api_export, request, out);
+    return status == URSATZ_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
 }
 
 int cli_write_alternatives(const CliAlternativePaths *paths, const cJSON *const *entries, size_t entry_count,
@@ -427,7 +427,7 @@ void cli_print_composed_json(cJSON *document, const char *const *files, size_t f
     cJSON_free(text);
 }
 
-int cli_report_stuck(const ComposerError *error, const ComposerResponse *response) {
+int cli_report_stuck(const UrsatzError *error, const ComposerResponse *response) {
     fprintf(stderr, "Error: %s\n", error->message);
     cJSON *document = response && response->json ? cJSON_Parse(response->json) : NULL;
     const cJSON *stuck = cJSON_GetObjectItemCaseSensitive(document, "stuck");

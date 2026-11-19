@@ -9,25 +9,25 @@ command line, read as JSON (library/docs/modules/plan-format.md).
 
 ```
 composer_api_versions(&out)
-json: {"composer_version":"0.4.1","api_version":"3.0","ursatz_commit":"528d5ccae6f72661","plan_format_version":2}
+json: {"composer_version":"0.4.1","api_version":"3.0","producer_key":"528d5ccae6f72661","plan_format_version":2}
 ```
 
 ## Export
 
 ```
 request: {"plan": {…}, "midi": true, "tempo": 120}
-status:  COMPOSER_OK    midi, midi_size filled
+status:  URSATZ_OK    midi, midi_size filled
 json:    {"skipped":[{"span":3,"lane":"melody","reason":"source material"}, …]}
 
 request: {"plan": {…}, "plan_file": true}
-status:  COMPOSER_OK    plan_json filled with the plan file text, nothing rendered
+status:  URSATZ_OK    plan_json filled with the plan file text, nothing rendered
 ```
 
 ## Motive, from MIDI and render
 
 ```
 request: {"input": {"format": "notes", "text": "D4:q E4:q F4:q G4:q"}, "meter": "4/4", "key": "D major"}
-status:  COMPOSER_OK
+status:  URSATZ_OK
 json:    {"motive": {"meter": {"beats_per_bar": 4, "beat_unit": 4, …}, "key": {"tonic_pitch_class": 2, "material": "omt.material.major"},
           "notes": [{"midi_pitch": 62, "offset": {"num": 0, "den": 1}, "duration": {"num": 1, "den": 4}}, …]},
           "analysis": {"notes_text": "D4:q E4:q F4:q G4:q", "degrees_text": "1:q 2:q #2:q 4:q", …}}
@@ -63,7 +63,7 @@ json:    {"seed": 7, "motives": [{"motive": {…}, "analysis": {…}}]}
 
 ```
 request: a theme request v2 (theme-request.md) with "seed": 1, "suggest": 1, "midi": true
-status:  COMPOSER_OK    midi, midi_size and plan_json filled
+status:  URSATZ_OK    midi, midi_size and plan_json filled
 json:    {"key": "D minor", "meter": "4/4", "bars": 8, "into": "sentence", "pairing": "presentation + continuation",
           "cadence": "PAC", "themes": [{"seed": 1, "structure": […], "chords": […], "score": …}], …}
 

@@ -217,7 +217,7 @@ command line prints with the corpus directory (`N stale documents in '<dir>' (..
 
 A corpus with no passage scoring 1/2 or more, or none analyzed, exits 2 with `no passage of the corpus ... is similar to ...`
 and nothing is written (the command line finds that out before the request; a request with no passage, or none with two notes
-in its first bar, is `COMPOSER_ERR_UNSATISFIABLE` at `/corpus_passages`). A passage that is not a MIDI or MusicXML file, or
+in its first bar, is `URSATZ_ERR_UNSATISFIABLE` at `/corpus_passages`). A passage that is not a MIDI or MusicXML file, or
 numerals the Analyzer cannot read, is a usage error; a directory that is not a corpus output is exit 2. Only one bar of melody is
 taken: for more, cut the passage into a file and give it to `plan --given-melody`.
 

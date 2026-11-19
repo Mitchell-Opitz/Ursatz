@@ -219,11 +219,11 @@ int main(int argc, char **argv) {
             setup.development = GROW_DEVELOP_BALANCED;
             setup.seed = seed;
             GrowRun run;
-            ComposerError error;
+            UrsatzError error;
             char label[64];
             memset(&error, 0, sizeof(error));
             snprintf(label, sizeof(label), "%s seed %lu", CASES[c].name, seed);
-            assert(api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1);
+            assert(api_grow_run(&setup, &run, &error) == URSATZ_OK && run.made == 1);
             Plan *plan = run.themes[0].plan;
             checked += check_minimums(plan, &motive, GROW_DEVELOP_BALANCED, label);
             chosen_steps += check_choices(plan, run.themes[0].outcome.records[GROW_STAGE_MELODY], label);

@@ -22,7 +22,7 @@ typedef struct {
     const cJSON *member;
     bool use_seed;
     long long seed;
-    const ComposerJob *job;
+    const UrsatzJob *job;
 } UrsatzGuiComposeRun;
 
 /* What differs between composing a theme and composing a piece. */
@@ -50,7 +50,7 @@ typedef struct {
  * frees); otherwise no folder is left.
  */
 UrsatzGuiThemeResult ursatz_gui_compose_item(const UrsatzGuiComposeKind *kind, const char *id, bool has_seed,
-                                             long long seed, bool update_uses, const ComposerJob *job,
+                                             long long seed, bool update_uses, const UrsatzJob *job,
                                              cJSON **out_item, char *message, size_t message_size);
 
 #define URSATZ_GUI_COMPOSE_PATH_BYTES 800
@@ -75,10 +75,10 @@ void ursatz_gui_compose_stage_discard(const UrsatzGuiComposeStage *stage);
 
 /* Maps a Composer API status to the result of the services: the request refused is INVALID, nothing satisfies it
  * UNPROCESSABLE, a cancel CANCELLED, the rest FAILED (ALLOC for memory). The refusal text goes to message. */
-UrsatzGuiThemeResult ursatz_gui_compose_failure(ComposerStatus status, const ComposerResponse *response, char *message,
+UrsatzGuiThemeResult ursatz_gui_compose_failure(UrsatzStatus status, const ComposerResponse *response, char *message,
                                                 size_t message_size);
 
-/* The request member at fault (ComposerError.path) of the last ursatz_gui_compose_failure on this thread, "" when it had
+/* The request member at fault (UrsatzError.path) of the last ursatz_gui_compose_failure on this thread, "" when it had
  * none. A job reads it after its service call, to answer with "path" as the synchronous routes do. */
 const char *ursatz_gui_compose_failure_path(void);
 
@@ -92,7 +92,7 @@ UrsatzGuiThemeResult ursatz_gui_compose_write_plan(const cJSON *plan, const char
 /* Renders plan once through composer_api_export: midi and/or musicxml, tempo qpm (0 for none), loop markers (or NULL).
  * On OK response holds the files; the caller destroys it. */
 UrsatzGuiThemeResult ursatz_gui_compose_export(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml,
-                                               const cJSON *loop, const ComposerJob *job, ComposerResponse *response,
+                                               const cJSON *loop, const UrsatzJob *job, ComposerResponse *response,
                                                char *message, size_t message_size);
 
 /* Replaces the prefix from by to in every string of tree that starts with it. */
