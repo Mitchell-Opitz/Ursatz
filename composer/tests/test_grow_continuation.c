@@ -73,12 +73,12 @@ static void load_fixtures(void) {
 
 /* The 8-bar sentence of the motive and seed under the continuation settings (NULL for none) and the basic idea as written
    or not: the plan after grow_run. */
-static PiecePlan *grow_with(const Motive *motive, unsigned long seed, const GrowContinuation *continuation,
+static Plan *grow_with(const Motive *motive, unsigned long seed, const GrowContinuation *continuation,
                             bool as_written) {
     GrowRequest request;
     GrowConfig config;
     GrowOutcome outcome;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
     request.key = motive_key(motive);
@@ -101,12 +101,12 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, const Grow
     return plan;
 }
 
-static PiecePlan *grow(const Motive *motive, unsigned long seed, const GrowContinuation *continuation) {
+static Plan *grow(const Motive *motive, unsigned long seed, const GrowContinuation *continuation) {
     return grow_with(motive, seed, continuation, false);
 }
 
 /* The motive_ref of the node `name`. */
-static const PlanMotiveRef *ref_of(const PiecePlan *plan, const char *name) {
+static const PlanMotiveRef *ref_of(const Plan *plan, const char *name) {
     NodeId node = test_find_node(plan, name);
     assert(node != PLAN_NODE_NONE);
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
@@ -120,7 +120,7 @@ static const PlanMotiveRef *ref_of(const PiecePlan *plan, const char *name) {
 }
 
 /* The end of the notes of the motive node `name`, in whole notes. */
-static Rational node_end(const PiecePlan *plan, const char *name) {
+static Rational node_end(const Plan *plan, const char *name) {
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, test_find_node(plan, name), &span, 1) == 1);
     const PlanNotes *held = &plan_lane_span_payload(plan, span)->notes;
@@ -131,7 +131,7 @@ static Rational node_end(const PiecePlan *plan, const char *name) {
     return end;
 }
 
-static bool end_is(const PiecePlan *plan, const char *name, long long num, long long den) {
+static bool end_is(const Plan *plan, const char *name, long long num, long long den) {
     Rational want = {num, den};
     return rational_cmp(node_end(plan, name), want) == 0;
 }
@@ -150,7 +150,7 @@ static size_t segment_notes(const Motive *motive, const char *label) {
 /* Fragment 1 and fragment 2 of the continuation: the nodes m2 and m3. */
 static const char *const FRAGMENTS[2] = {"m2", "m3"};
 
-static char *plan_text(const PiecePlan *plan) {
+static char *plan_text(const Plan *plan) {
     PlanJsonError error;
     char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text);
@@ -170,9 +170,9 @@ static void test_defaults_change_nothing(void) {
             const Motive *motives[2] = {&FIXTURES[f].motive, &CHORD_FIXTURES[f].motive};
             for (size_t m = 0; m < 2; m++) {
                 /* faster_harmony and basic_as_written are set false explicitly: the plan is the same. */
-                PiecePlan *plain = grow(motives[m], seed, NULL);
-                PiecePlan *with_zero = grow_with(motives[m], seed, &zero, false);
-                PiecePlan *with_whole = grow_with(motives[m], seed, &whole, false);
+                Plan *plain = grow(motives[m], seed, NULL);
+                Plan *with_zero = grow_with(motives[m], seed, &zero, false);
+                Plan *with_whole = grow_with(motives[m], seed, &whole, false);
                 char *a = plan_text(plain);
                 char *b = plan_text(with_zero);
                 char *c = plan_text(with_whole);
@@ -196,7 +196,7 @@ static void test_every_segment_uses_both(void) {
     for (size_t f = 0; f < 2; f++) {
         size_t both_a_without = 0;
         for (unsigned long seed = 1; seed <= last_seed(); seed++) {
-            PiecePlan *plan = grow(&FIXTURES[f].motive, seed, &every);
+            Plan *plan = grow(&FIXTURES[f].motive, seed, &every);
             assert(strcmp(ref_of(plan, "m2")->segment, ref_of(plan, "m3")->segment) != 0);
             plan_destroy(plan);
             plan = grow(&FIXTURES[f].motive, seed, NULL);
@@ -211,7 +211,7 @@ static void test_every_segment_uses_both(void) {
 }
 
 /* A cut fragment is its segment's leading notes: a `fragment` leading step of 2 notes or more and fewer than the segment's. */
-static void check_cut(const PiecePlan *plan, const Motive *motive, const char *name) {
+static void check_cut(const Plan *plan, const Motive *motive, const char *name) {
     const PlanMotiveRef *ref = ref_of(plan, name);
     assert(ref->has_step && ref->step.kind == MOTIVE_RELATION_FRAGMENT && ref->step.value[0] == MOTIVE_FRAGMENT_LEADING);
     assert(ref->step.value[1] >= 2 && (size_t)ref->step.value[1] < segment_notes(motive, ref->segment));
@@ -223,7 +223,7 @@ static void test_cut_half_bar(void) {
     cut.fragment_lengths[GROW_FRAGMENT_HALF_BAR] = 1;
     for (size_t f = 0; f < 2; f++) {
         for (unsigned long seed = 1; seed <= last_seed(); seed++) {
-            PiecePlan *plan = grow(&FIXTURES[f].motive, seed, &cut);
+            Plan *plan = grow(&FIXTURES[f].motive, seed, &cut);
             for (size_t k = 0; k < 2; k++) {
                 check_cut(plan, &FIXTURES[f].motive, FRAGMENTS[k]);
                 Rational half = {1, 2};
@@ -242,7 +242,7 @@ static void test_cut_beat(void) {
     cut.fragment_lengths[GROW_FRAGMENT_BEAT] = 1;
     for (size_t f = 0; f < 2; f++) {
         for (unsigned long seed = 1; seed <= last_seed(); seed++) {
-            PiecePlan *plan = grow(&FIXTURES[f].motive, seed, &cut);
+            Plan *plan = grow(&FIXTURES[f].motive, seed, &cut);
             for (size_t k = 0; k < 2; k++) {
                 check_cut(plan, &FIXTURES[f].motive, FRAGMENTS[k]);
                 const PlanMotiveRef *ref = ref_of(plan, FRAGMENTS[k]);
@@ -256,7 +256,7 @@ static void test_cut_beat(void) {
 }
 
 /* The melody notes of the bars [from, to) of the theme (0-based), in whole-note onsets of a 4/4 bar. */
-static size_t melody_notes(const PiecePlan *plan, long from, long to) {
+static size_t melody_notes(const Plan *plan, long from, long to) {
     NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
@@ -284,7 +284,7 @@ static void test_diminish_halves(void) {
         size_t before = 0;
         size_t after = 0;
         for (unsigned long seed = 1; seed <= last_seed(); seed++) {
-            PiecePlan *plan = grow(&FIXTURES[f].motive, seed, &diminish);
+            Plan *plan = grow(&FIXTURES[f].motive, seed, &diminish);
             for (size_t k = 0; k < 2; k++) {
                 const PlanMotiveRef *ref = ref_of(plan, FRAGMENTS[k]);
                 assert(ref->has_step && ref->step.kind == MOTIVE_RELATION_DIMINISH);
@@ -307,7 +307,7 @@ static void test_liquidate_through(void) {
     liquidate.liquidate = true;
     for (size_t f = 0; f < 2; f++) {
         for (unsigned long seed = 1; seed <= last_seed(); seed++) {
-            PiecePlan *plan = grow(&FIXTURES[f].motive, seed, &liquidate);
+            Plan *plan = grow(&FIXTURES[f].motive, seed, &liquidate);
             const PlanMotiveRef *second = ref_of(plan, "m3");
             const PlanMotiveRef *cadential = ref_of(plan, "m4");
             assert(second->steps >= 1 && second->segment[0] != '\0');
@@ -378,7 +378,7 @@ typedef struct {
     char numeral[PLAN_ROMAN_NUMERAL_MAX];
 } Chord;
 
-static size_t chords_of(const PiecePlan *plan, Chord *out, size_t size) {
+static size_t chords_of(const Plan *plan, Chord *out, size_t size) {
     NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, theme), spans, 64);
@@ -407,7 +407,7 @@ static void test_faster_harmony_changes_each_cell(void) {
     static const Rational ONSETS[6] = {{4, 1}, {9, 2}, {5, 1}, {11, 2}, {6, 1}, {13, 2}};
     for (size_t f = 0; f < 2; f++) {
         for (unsigned long seed = 1; seed <= last_seed(); seed++) {
-            PiecePlan *plan = grow(&FIXTURES[f].motive, seed, &faster);
+            Plan *plan = grow(&FIXTURES[f].motive, seed, &faster);
             Chord chords[64];
             size_t count = chords_of(plan, chords, 64);
             const Chord *at[6];
@@ -431,8 +431,8 @@ static void test_faster_harmony_changes_each_cell(void) {
         }
     }
     for (unsigned long seed = 1; seed <= last_seed(); seed++) {
-        PiecePlan *with = grow(&TRIPLE_MOTIVE, seed, &faster);
-        PiecePlan *without = grow(&TRIPLE_MOTIVE, seed, NULL);
+        Plan *with = grow(&TRIPLE_MOTIVE, seed, &faster);
+        Plan *without = grow(&TRIPLE_MOTIVE, seed, NULL);
         char *a = plan_text(with);
         char *b = plan_text(without);
         assert(strcmp(a, b) == 0);
@@ -444,7 +444,7 @@ static void test_faster_harmony_changes_each_cell(void) {
 }
 
 /* Whether the melody of the first two bars of the theme is the motif's notes exactly. */
-static bool basic_idea_is(const PiecePlan *plan, const Motive *motive) {
+static bool basic_idea_is(const Plan *plan, const Motive *motive) {
     NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
@@ -473,14 +473,14 @@ static void test_basic_as_written_keeps_the_motif(void) {
         unsigned off = 0;
         unsigned long seeds = fast_run ? 1 : 16;
         for (unsigned long seed = 1; seed <= seeds; seed++) {
-            PiecePlan *written = grow_with(&CHORD_FIXTURES[f].motive, seed, NULL, true);
-            PiecePlan *plain = grow_with(&CHORD_FIXTURES[f].motive, seed, NULL, false);
+            Plan *written = grow_with(&CHORD_FIXTURES[f].motive, seed, NULL, true);
+            Plan *plain = grow_with(&CHORD_FIXTURES[f].motive, seed, NULL, false);
             on += basic_idea_is(written, &CHORD_FIXTURES[f].motive) ? 1 : 0;
             off += basic_idea_is(plain, &CHORD_FIXTURES[f].motive) ? 1 : 0;
             plan_destroy(written);
             plan_destroy(plain);
-            PiecePlan *no_chords = grow_with(&FIXTURES[f].motive, seed, NULL, true);
-            PiecePlan *no_chords_off = grow_with(&FIXTURES[f].motive, seed, NULL, false);
+            Plan *no_chords = grow_with(&FIXTURES[f].motive, seed, NULL, true);
+            Plan *no_chords_off = grow_with(&FIXTURES[f].motive, seed, NULL, false);
             char *a = plan_text(no_chords);
             char *b = plan_text(no_chords_off);
             assert(strcmp(a, b) == 0);
@@ -555,7 +555,7 @@ static void test_rates(void) {
 }
 
 /* The shortest note of the theme's melody that starts in the bars from `from` up to `to` (whole numbers of whole notes). */
-static Rational shortest_note(const PiecePlan *plan, long from, long to) {
+static Rational shortest_note(const Plan *plan, long from, long to) {
     NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
@@ -590,7 +590,7 @@ static void test_diminish_floor(void) {
     memset(&diminish, 0, sizeof(diminish));
     diminish.diminish = true;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *plan = grow(&DOTTED_MOTIVE, seed, &diminish);
+        Plan *plan = grow(&DOTTED_MOTIVE, seed, &diminish);
         for (size_t k = 0; k < 2; k++) {
             const PlanMotiveRef *ref = ref_of(plan, FRAGMENTS[k]);
             bool diminished = ref->has_step && ref->step.kind == MOTIVE_RELATION_DIMINISH;

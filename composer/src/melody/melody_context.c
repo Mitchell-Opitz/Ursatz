@@ -95,7 +95,7 @@ unsigned melody_need_mask(const MelodyContext *context, const MelodyFillParams *
 }
 
 /* The bass lane over the phrase: every note, from the start of the phrase, tiling it. */
-static bool read_bass(const PiecePlan *plan, MelodyContext *context) {
+static bool read_bass(const Plan *plan, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     size_t found = plan_lane_find(plan, PLAN_LANE_BASS, 0, context->span, ids, HARMONY_MAX_CHORDS);
     Rational origin = context->span.start;
@@ -131,7 +131,7 @@ static bool read_bass(const PiecePlan *plan, MelodyContext *context) {
 }
 
 /* The motive_tones constraint of a node, or NULL. */
-static const PlanMotiveTones *node_tones(const PiecePlan *plan, NodeId node) {
+static const PlanMotiveTones *node_tones(const Plan *plan, NodeId node) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_TONES) {
@@ -155,7 +155,7 @@ static int tone_of_label(const char *label) {
  * transform keeps the notes (a retrograde reverses the labels). A motive with a different number of notes than labels
  * has none.
  */
-static void read_tones(const PiecePlan *plan, NodeId node, MelodyContext *context) {
+static void read_tones(const Plan *plan, NodeId node, MelodyContext *context) {
     bool reversed = false;
     context->motive_tone_count = 0;
     for (size_t depth = 0; depth < 16; depth++) {
@@ -200,7 +200,7 @@ static void read_tones(const PiecePlan *plan, NodeId node, MelodyContext *contex
 }
 
 /* The motive named by the span's motive_ref constraint. */
-static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
+static bool read_motive(const Plan *plan, MelodyContext *context) {
     PlanConstraint constraint;
     LaneSpanId span;
     if (!harmony_find_constraint(plan, context->target, context->owner, PLAN_CONSTRAINT_MOTIVE_REF, &constraint) ||
@@ -243,7 +243,7 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
 }
 
 /* The target's cadence is the last of its section: the span ends where the section node it is in ends (R-478). */
-static bool ends_its_section(const PiecePlan *plan, NodeId owner, PlanSpan span) {
+static bool ends_its_section(const Plan *plan, NodeId owner, PlanSpan span) {
     Rational end;
     if (plan_span_end(span, &end) != PLAN_OK) {
         return false;
@@ -258,7 +258,7 @@ static bool ends_its_section(const PiecePlan *plan, NodeId owner, PlanSpan span)
     return false;
 }
 
-bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, SpelledKey key, MelodyContext *context) {
+bool melody_phrase_read(const Plan *plan, NodeId owner, PlanSpan span, SpelledKey key, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     size_t cells = 0;
     melody_context_zero(context);
@@ -309,7 +309,7 @@ bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, Spel
 /* ---------------------------------------------------------- idea targets */
 
 /* The nearest ancestor of node (itself included) that is a phrase. */
-static NodeId phrase_of(const PiecePlan *plan, NodeId node) {
+static NodeId phrase_of(const Plan *plan, NodeId node) {
     for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
         if (plan_node_kind(plan, node) == PLAN_NODE_PHRASE) {
             return node;
@@ -319,7 +319,7 @@ static NodeId phrase_of(const PiecePlan *plan, NodeId node) {
 }
 
 /* The bass notes under the target, from its start, the first and last clipped to it. */
-static bool read_idea_bass(const PiecePlan *plan, MelodyContext *context) {
+static bool read_idea_bass(const Plan *plan, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     size_t found = plan_lane_find(plan, PLAN_LANE_BASS, 0, context->span, ids, HARMONY_MAX_CHORDS);
     Rational origin = context->span.start;
@@ -363,7 +363,7 @@ static bool read_idea_bass(const PiecePlan *plan, MelodyContext *context) {
 }
 
 /* The chords under the target: the written harmony spans that overlap it, the first and last clipped to it. */
-static bool read_idea_chords(const PiecePlan *plan, MelodyContext *context) {
+static bool read_idea_chords(const Plan *plan, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, context->span, ids, HARMONY_MAX_CHORDS);
     Rational origin = context->span.start;
@@ -415,7 +415,7 @@ static int median_pitch(const PlanNotes *notes) {
 }
 
 /* The pitches of the melody written right before the target, and the highest one written in its phrase. */
-static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, NodeId phrase) {
+static bool read_idea_melody(const Plan *plan, MelodyContext *context, NodeId phrase) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     PlanSpan phrase_span = phrase == PLAN_NODE_NONE ? context->span : plan_node_span(plan, phrase);
     Rational origin = context->span.start;
@@ -502,7 +502,7 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
 #define MELODY_MAX_RESTATED 16
 
 /* The motive a motive node is made from, from its own motive_ref; PLAN_NODE_NONE when it has none. */
-static NodeId motive_source(const PiecePlan *plan, NodeId node) {
+static NodeId motive_source(const Plan *plan, NodeId node) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
@@ -513,7 +513,7 @@ static NodeId motive_source(const PiecePlan *plan, NodeId node) {
 }
 
 /* The motive a chain of motive nodes starts from: the node itself when it has no motive_ref. */
-static NodeId motive_root(const PiecePlan *plan, NodeId node) {
+static NodeId motive_root(const Plan *plan, NodeId node) {
     for (size_t depth = 0; depth < MELODY_MAX_RESTATED; depth++) {
         NodeId source = motive_source(plan, node);
         if (source == PLAN_NODE_NONE || !plan_has_node(plan, source)) {
@@ -525,7 +525,7 @@ static NodeId motive_root(const PiecePlan *plan, NodeId node) {
 }
 
 /* Whether the melody span asks for a motive made from the same motive as the node (not an idea with a motive of its own). */
-static bool span_from_root(const PiecePlan *plan, LaneSpanId span, NodeId root) {
+static bool span_from_root(const Plan *plan, LaneSpanId span, NodeId root) {
     for (size_t k = 0; k < plan_lane_span_constraint_count(plan, span); k++) {
         const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, span, k);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && plan_has_node(plan, constraint->params.motive.motive)) {
@@ -541,7 +541,7 @@ static bool span_from_root(const PiecePlan *plan, LaneSpanId span, NodeId root) 
  * from the same motive (an idea with a motive of its own restates that motive, not the idea before). False when there
  * is none.
  */
-static bool restated_span(const PiecePlan *plan, const MelodyContext *context, LaneSpanId *out) {
+static bool restated_span(const Plan *plan, const MelodyContext *context, LaneSpanId *out) {
     LaneSpanId before[MELODY_MAX_RESTATED];
     Rational tick;
     if (rational_cmp(context->span.start, POSITION_ZERO) <= 0 || !probe_length(&tick)) {
@@ -581,7 +581,7 @@ static bool restated_span(const PiecePlan *plan, const MelodyContext *context, L
  * restated is the basic idea the motive comes from, however far back it is, else the idea right before. Left alone
  * when it is not written or is not as long.
  */
-static void restate_previous(const PiecePlan *plan, MelodyContext *context) {
+static void restate_previous(const Plan *plan, MelodyContext *context) {
     LaneSpanId before;
     if (!context->restated || !restated_span(plan, context, &before)) {
         return;
@@ -617,7 +617,7 @@ static void restate_previous(const PiecePlan *plan, MelodyContext *context) {
 }
 
 /* A target that stands for an idea or a subphrase: it is one of several melody spans in its phrase. */
-static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *context) {
+static bool melody_idea_read(const Plan *plan, LaneSpanId target, MelodyContext *context) {
     NodeId owner = plan_lane_span_owner(plan, target);
     PlanSpan span = plan_lane_span_span(plan, target);
     LaneSpanId meters[2];
@@ -662,7 +662,7 @@ static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyCon
  * The anacrusis before a phrase that starts `pickup` after `start`: shorter than a bar, and over
  * the chord of the harmony span that sounds there, when one is written (none starts a plan).
  */
-static bool read_pickup(const PiecePlan *plan, Rational start, Rational pickup, MelodyContext *context) {
+static bool read_pickup(const Plan *plan, Rational start, Rational pickup, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     PlanSpan under = {start, pickup};
     if (!position_is_positive(pickup) || rational_cmp(pickup, context->metre.bar_length) >= 0) {
@@ -684,7 +684,7 @@ static bool read_pickup(const PiecePlan *plan, Rational start, Rational pickup, 
     return true;
 }
 
-bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *out) {
+bool melody_context_read(const Plan *plan, LaneSpanId target, MelodyContext *out) {
     if (plan && plan_has_lane_span(plan, target) && plan_lane_span_lane(plan, target) == PLAN_LANE_MELODY &&
         plan_lane_span_voice(plan, target) == 0 && plan_lane_span_state(plan, target) == PLAN_STATE_CONSTRAINED &&
         out && (plan_node_kind(plan, plan_lane_span_owner(plan, target)) == PLAN_NODE_IDEA ||
@@ -730,7 +730,7 @@ typedef struct {
 } RepeatNote;
 
 /* The notes of the written melody spans of the section that end at or before `limit`, from the section's start, by onset. */
-static bool read_section_notes(const PiecePlan *plan, PlanSpan section, Rational limit, RepeatNote *list, size_t *count) {
+static bool read_section_notes(const Plan *plan, PlanSpan section, Rational limit, RepeatNote *list, size_t *count) {
     LaneSpanId ids[REPEAT_SPANS];
     PlanSpan before = {section.start, limit};
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, before, ids, REPEAT_SPANS);
@@ -800,7 +800,7 @@ static bool same_bar_rhythm(const Rational *onset_a, const Rational *duration_a,
     return true;
 }
 
-bool melody_context_read_repeats(const PiecePlan *plan, MelodyContext *context) {
+bool melody_context_read_repeats(const Plan *plan, MelodyContext *context) {
     RepeatNote *list = malloc(REPEAT_NOTES * sizeof(*list));
     PlanSpan section = context->span;
     Rational bar = context->metre.bar_length;

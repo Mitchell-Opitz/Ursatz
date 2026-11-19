@@ -53,9 +53,9 @@ typedef struct {
 } CounterpointCandidate;
 
 /* Reads a target; false when it is not one the operator applies to, and then *why is the reason when it is not NULL. */
-bool counterpoint_read(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out, const char **why);
+bool counterpoint_read(const Plan *plan, LaneSpanId target, CounterpointContext *out, const char **why);
 /* The same for a target that is written already (Realized or Given): its counter-melody is read from the span. */
-bool counterpoint_read_written(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out,
+bool counterpoint_read_written(const Plan *plan, LaneSpanId target, CounterpointContext *out,
                                CounterpointCandidate *line, const char **why);
 void counterpoint_context_free(CounterpointContext *context);
 

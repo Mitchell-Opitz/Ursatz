@@ -156,7 +156,7 @@ static void test_same_motive(void) {
 }
 
 /* The melody pitches of the idea named, from the plan; the name of the motive node its melody asks for and how. */
-static size_t idea_melody(const PiecePlan *plan, const char *idea, int *pitches, size_t size, char *node, size_t node_size,
+static size_t idea_melody(const Plan *plan, const char *idea, int *pitches, size_t size, char *node, size_t node_size,
                           bool *restated) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
@@ -189,8 +189,8 @@ static size_t idea_melody(const PiecePlan *plan, const char *idea, int *pitches,
     return 0;
 }
 
-static PiecePlan *read_plan(const char *path) {
-    PiecePlan *plan = NULL;
+static Plan *read_plan(const char *path) {
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
     return plan;
@@ -210,7 +210,7 @@ static void test_idea_motives(void) {
         slot_line(out, "fragment 1", line, sizeof(line));
         assert(strstr(line, "motive A,") != NULL);
         free(out);
-        PiecePlan *plan = read_plan("theme_idea.json");
+        Plan *plan = read_plan("theme_idea.json");
         int basic[64];
         int repetition[64];
         char node[32];
@@ -311,7 +311,7 @@ static void write_request_with_style(const char *fixture, const char *path) {
 
 /* The melody notes of the theme, from the plan the command wrote. */
 static size_t melody_attacks(const char *plan_path) {
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file(plan_path, &plan, &error) == PLAN_OK);
     NodeId theme = PLAN_NODE_NONE;
@@ -378,7 +378,7 @@ static void write_chords(const char *chords, const char *path) {
 
 /* The Given harmony spans of the theme in the plan the command wrote: their numerals in order, as "start:numeral" lines. */
 static size_t given_harmony(const char *plan_path, char numerals[][32], Rational *starts, size_t capacity) {
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file(plan_path, &plan, &error) == PLAN_OK);
     NodeId theme = PLAN_NODE_NONE;
@@ -493,7 +493,7 @@ static void test_tone_roles(void) {
         char arguments[256];
         snprintf(arguments, sizeof(arguments), "theme_tones_chords.json --seed %d --out theme_tones_plan.json", seed);
         free(theme_output(arguments));
-        PiecePlan *plan = read_plan("theme_tones_plan.json");
+        Plan *plan = read_plan("theme_tones_plan.json");
         int basic[64];
         int repetition[64];
         char node[32];

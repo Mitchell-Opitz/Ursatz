@@ -592,7 +592,7 @@ static Rational whole(long num, long long den) {
 }
 
 static void test_attach_as_given(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form;
     NodeId section;
     NodeId phrase;
@@ -661,7 +661,7 @@ static void test_attach_as_given(void) {
     PlanJsonError json_error;
     char *json = plan_to_json(plan, test_plan_producer(), &json_error);
     assert(json);
-    PiecePlan *copy = NULL;
+    Plan *copy = NULL;
     assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &copy, &json_error) == PLAN_OK);
     assert(plan_node_kind(copy, node) == PLAN_NODE_MOTIVE && plan_node_state(copy, node) == PLAN_STATE_GIVEN);
     assert(plan_lane_span_state(copy, span) == PLAN_STATE_GIVEN && plan_lane_span_lane(copy, span) == PLAN_LANE_MELODY);

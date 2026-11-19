@@ -40,11 +40,11 @@ static Motive make_motive(void) {
     return motive;
 }
 
-static PiecePlan *grow(const Motive *motive, GrowDevelopment development, unsigned long seed) {
+static Plan *grow(const Motive *motive, GrowDevelopment development, unsigned long seed) {
     GrowRequest request;
     GrowConfig config;
     GrowOutcome outcome;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
     request.key = test_key(0, "major");
@@ -65,7 +65,7 @@ static PiecePlan *grow(const Motive *motive, GrowDevelopment development, unsign
     return plan;
 }
 
-static size_t written_notes(const PiecePlan *plan, const char *name, const PlanNote **notes) {
+static size_t written_notes(const Plan *plan, const char *name, const PlanNote **notes) {
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, test_find_node(plan, name), &span, 1) == 1);
     const PlanNotes *held = &plan_lane_span_payload(plan, span)->notes;
@@ -74,7 +74,7 @@ static size_t written_notes(const PiecePlan *plan, const char *name, const PlanN
 }
 
 /* The relation the motive node's motive_ref asks for, or NULL for none. */
-static const PlanMotiveRef *ref_of(const PiecePlan *plan, const char *name) {
+static const PlanMotiveRef *ref_of(const Plan *plan, const char *name) {
     NodeId node = test_find_node(plan, name);
     assert(node != PLAN_NODE_NONE);
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
@@ -87,7 +87,7 @@ static const PlanMotiveRef *ref_of(const PiecePlan *plan, const char *name) {
 }
 
 /* Whether the repetition (m1) is a sequence: the basic idea transposed a step. */
-static bool is_sequence(const PiecePlan *plan, const char *name) {
+static bool is_sequence(const Plan *plan, const char *name) {
     const PlanMotiveRef *ref = ref_of(plan, name);
     return ref && ref->has_step && ref->step.kind == MOTIVE_RELATION_TRANSPOSE;
 }
@@ -118,7 +118,7 @@ static void count_pairs(const PlanNote *motif, size_t motif_count, const PlanNot
  * The share of the note pairs of the continuation's two fragments (m2 and m3) that quote the motif. The cadential idea is
  * left out: liquidation shortens it, which would raise a share of pairs; its steps are counted below.
  */
-static double matched_share(const PiecePlan *plan) {
+static double matched_share(const Plan *plan) {
     const PlanNote *motif;
     size_t motif_count = written_notes(plan, "m0", &motif);
     size_t matched = 0;
@@ -145,7 +145,7 @@ static void test_ordered_by_setting(void) {
         size_t least_steps = SEEDS;
         size_t most_steps = 0;
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-            PiecePlan *plan = grow(&motive, ORDER[s], seed);
+            Plan *plan = grow(&motive, ORDER[s], seed);
             sum += matched_share(plan);
             sequences += is_sequence(plan, "m1") ? 1 : 0;
             fragment_sequences += is_sequence(plan, "m3") ? 1 : 0;

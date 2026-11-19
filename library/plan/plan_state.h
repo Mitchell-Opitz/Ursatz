@@ -25,18 +25,18 @@ typedef enum {
 bool plan_state_transition_allowed(PlanState from, PlanState to);
 
 /* Returns PLAN_STATE_CONSTRAINED for an unknown id. */
-PlanState plan_node_state(const PiecePlan *plan, NodeId id);
-PlanState plan_lane_span_state(const PiecePlan *plan, LaneSpanId id);
+PlanState plan_node_state(const Plan *plan, NodeId id);
+PlanState plan_lane_span_state(const Plan *plan, LaneSpanId id);
 
 /* Setting the state a node or span is already in succeeds without change, even for Given. */
-PlanResult plan_node_set_state(PiecePlan *plan, NodeId id, PlanState state);
-PlanResult plan_lane_span_set_state(PiecePlan *plan, LaneSpanId id, PlanState state);
+PlanResult plan_node_set_state(Plan *plan, NodeId id, PlanState state);
+PlanResult plan_lane_span_set_state(Plan *plan, LaneSpanId id, PlanState state);
 
 /*
  * Replaces a lane span's payload and marks it Realized. Refused with
  * PLAN_ERR_GIVEN_LOCKED on a Given span, leaving it untouched. A payload the
  * lane cannot hold fails with PLAN_ERR_BAD_PAYLOAD and changes nothing.
  */
-PlanResult plan_lane_span_write(PiecePlan *plan, LaneSpanId id, const PlanLanePayload *payload);
+PlanResult plan_lane_span_write(Plan *plan, LaneSpanId id, const PlanLanePayload *payload);
 
 #endif

@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-bool plan_in_subtree(const PiecePlan *plan, NodeId node, NodeId root) {
+bool plan_in_subtree(const Plan *plan, NodeId node, NodeId root) {
     for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
         if (node == root) {
             return true;
@@ -11,7 +11,7 @@ bool plan_in_subtree(const PiecePlan *plan, NodeId node, NodeId root) {
     return false;
 }
 
-bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) {
+bool plan_melody_span_of(const Plan *plan, NodeId node, LaneSpanId *out) {
     LaneSpanId ids[16];
     size_t found = plan_node_lane_spans(plan, node, ids, 16);
     for (size_t i = 0; i < found && i < 16; i++) {
@@ -24,7 +24,7 @@ bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) {
     return false;
 }
 
-bool plan_section_function_of(const PiecePlan *plan, NodeId node, SectionFunction *out) {
+bool plan_section_function_of(const Plan *plan, NodeId node, SectionFunction *out) {
     const SectionDescription *section = plan_node_section(plan, node);
     if (!section || !section->has_function) {
         return false;
@@ -37,7 +37,7 @@ PieceResult piece_result_of_plan(PlanResult result) {
     return result == PLAN_OK ? PIECE_OK : (result == PLAN_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST);
 }
 
-bool plan_add_given_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, NodeId *out) {
+bool plan_add_given_node(Plan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, NodeId *out) {
     return plan_add_node(plan, parent, kind, span, NULL, out) == PLAN_OK &&
            plan_node_set_state(plan, *out, PLAN_STATE_GIVEN) == PLAN_OK;
 }

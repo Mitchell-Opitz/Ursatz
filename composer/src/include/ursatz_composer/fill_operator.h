@@ -78,13 +78,13 @@ typedef struct {
     Generator generator; /* name and version are required; the strings are borrowed and must outlive the registry */
     FillOperatorKind kind;
     /* Can this operator propose anything for the target? Required. */
-    bool (*applies)(const PiecePlan *plan, FillTarget target, void *context);
+    bool (*applies)(const Plan *plan, FillTarget target, void *context);
     /* Proposes candidates into out. Returns false on failure. Required. */
-    bool (*generate)(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context, FillCandidateList *out);
+    bool (*generate)(const Plan *plan, FillTarget target, FillRng *rng, void *context, FillCandidateList *out);
     /* Applies one candidate to the plan. PLAN_OK on success. Required. */
-    PlanResult (*apply)(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context);
+    PlanResult (*apply)(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context);
     /* Adds constraints to the target's relatives (its parent, children and neighbours) after apply. May be NULL. */
-    void (*propagate)(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context);
+    void (*propagate)(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context);
     void *context; /* passed to every hook; may be NULL */
 } FillOperator;
 

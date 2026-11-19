@@ -39,7 +39,7 @@ typedef struct {
     bool removed; /* as for a node */
 } LaneSpan;
 
-struct PiecePlan {
+struct Plan {
     PlanNode *nodes;
     size_t node_count;
     size_t node_capacity;
@@ -59,30 +59,30 @@ struct PiecePlan {
  * has just been, the payload of the span; `replacing` is the span it replaces (PLAN_LANE_SPAN_NONE for a new span), whose old
  * notes do not count as holders of an id.
  */
-void plan_note_ids_assign(PiecePlan *plan, PlanNote *notes, size_t count, LaneSpanId replacing);
+void plan_note_ids_assign(Plan *plan, PlanNote *notes, size_t count, LaneSpanId replacing);
 
 /* Sets the next note id (a plan file names it); it only rises: a value at or below the current one changes nothing. */
-void plan_note_next_id_set(PiecePlan *plan, PlanNoteId next);
+void plan_note_next_id_set(Plan *plan, PlanNoteId next);
 
 void constraint_list_free(ConstraintList *list);
 
 /* Frees every lane span and the note arrays they own. */
-void plan_lanes_free(PiecePlan *plan);
+void plan_lanes_free(Plan *plan);
 
 /* True when payload is a legal payload for lane over span. */
 bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload);
 
 /* NULL for LANE_SPAN_NONE, an unknown id or a removed span. */
-LaneSpan *plan_lane_span_at(const PiecePlan *plan, LaneSpanId id);
+LaneSpan *plan_lane_span_at(const Plan *plan, LaneSpanId id);
 
 /* NULL for PLAN_NODE_NONE, an unknown id or a removed node. */
-PlanNode *plan_node_at(const PiecePlan *plan, NodeId id);
+PlanNode *plan_node_at(const Plan *plan, NodeId id);
 
 /*
  * The number a live node or lane span is given when the plan is written: its place among the ones that were not
  * removed, so a file's ids run from 1 without gaps. The id itself when nothing was removed.
  */
-NodeId plan_node_rank(const PiecePlan *plan, NodeId id);
-LaneSpanId plan_lane_span_rank(const PiecePlan *plan, LaneSpanId id);
+NodeId plan_node_rank(const Plan *plan, NodeId id);
+LaneSpanId plan_lane_span_rank(const Plan *plan, LaneSpanId id);
 
 #endif

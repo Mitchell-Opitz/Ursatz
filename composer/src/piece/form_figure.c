@@ -23,7 +23,7 @@ static int compare_notes(const void *a, const void *b) {
 }
 
 /* The melody of the section the target returns, read as FigureSourceNote, in order of onset. NULL when it holds no note. */
-FigureSourceNote *form_figure_read_melody(const PiecePlan *plan, NodeId source, int shift, bool mode_change, int tonic,
+FigureSourceNote *form_figure_read_melody(const Plan *plan, NodeId source, int shift, bool mode_change, int tonic,
                                           const PitchMaterial *to_material, size_t *count) {
     PlanSpan span = plan_node_span(plan, source);
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
@@ -67,7 +67,7 @@ FigureSourceNote *form_figure_read_melody(const PiecePlan *plan, NodeId source, 
 }
 
 /* The key of the section: its key lane holds one span over it. */
-static bool section_key(const PiecePlan *plan, PlanSpan span, SpelledKey *key) {
+static bool section_key(const Plan *plan, PlanSpan span, SpelledKey *key) {
     LaneSpanId ids[2];
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 2) != 1) {
         return false;
@@ -128,7 +128,7 @@ bool form_figure_cell_bounds(const FigureReading *reading, size_t cell, Rational
            rational_add(*start, reading->cell_length, end) == RATIONAL_OK;
 }
 
-FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section) {
+FigureReading *form_figure_read_section(const Plan *plan, NodeId section) {
     ReturnRef ret;
     int shift;
     if (!plan || !return_target(plan, section, &ret) || ret.variation != SECTION_RETURN_FIGURATE) {
@@ -226,7 +226,7 @@ FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section) {
     return reading;
 }
 
-bool form_figure_skeleton(const PiecePlan *plan, NodeId section, FormSkeleton *out) {
+bool form_figure_skeleton(const Plan *plan, NodeId section, FormSkeleton *out) {
     FigureReading *reading = out ? form_figure_read_section(plan, section) : NULL;
     if (!reading) {
         return false;
@@ -238,7 +238,7 @@ bool form_figure_skeleton(const PiecePlan *plan, NodeId section, FormSkeleton *o
 
 /* ------------------------------------------------------------- the figure */
 
-bool form_figure_find(const PiecePlan *plan, NodeId section, SectionFigure *out) {
+bool form_figure_find(const Plan *plan, NodeId section, SectionFigure *out) {
     const SectionDescription *described = plan_section_or_empty(plan, section);
     if (described->has_figure) {
         *out = described->figure;
@@ -475,7 +475,7 @@ static bool build_melody(const FigureReading *reading, const SectionFigure *figu
 }
 
 /* Writes the notes into the melody spans of the section: each span holds the notes whose onsets lie in it. */
-static bool write_spans(PiecePlan *plan, NodeId section, const FigureNote *list, size_t count) {
+static bool write_spans(Plan *plan, NodeId section, const FigureNote *list, size_t count) {
     PlanSpan span = plan_node_span(plan, section);
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
     LaneSpanId *ids = spans ? calloc(spans, sizeof(LaneSpanId)) : NULL;
@@ -510,7 +510,7 @@ static bool write_spans(PiecePlan *plan, NodeId section, const FigureNote *list,
     return ok && written == count;
 }
 
-bool form_figure_write(PiecePlan *plan, NodeId section, const MelodyFillParams *range, FillRng *rng) {
+bool form_figure_write(Plan *plan, NodeId section, const MelodyFillParams *range, FillRng *rng) {
     MelodyFillParams defaults = melody_fill_params_default();
     SectionFigure figure;
     if (!plan || !rng || !form_figure_find(plan, section, &figure)) {

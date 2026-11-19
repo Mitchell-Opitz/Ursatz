@@ -1089,7 +1089,7 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
 
 /* ----------------------------------------------------------------- attach */
 
-static PlanResult attach(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+static PlanResult attach(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                          const PlanSource *source, PlanState state, NodeId *out_node, LaneSpanId *out_span) {
     if (!plan || !motive) {
         return PLAN_ERR_NULL;
@@ -1162,17 +1162,17 @@ static PlanResult attach(PiecePlan *plan, NodeId parent, Rational start, const M
     return PLAN_OK;
 }
 
-PlanResult motive_attach(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+PlanResult motive_attach(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                          NodeId *out_node, LaneSpanId *out_span) {
     return attach(plan, parent, start, motive, name, NULL, PLAN_STATE_GIVEN, out_node, out_span);
 }
 
-PlanResult motive_attach_as(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+PlanResult motive_attach_as(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                             PlanState state, NodeId *out_node, LaneSpanId *out_span) {
     return attach(plan, parent, start, motive, name, NULL, state, out_node, out_span);
 }
 
-PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+PlanResult motive_attach_sourced(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                                  const PlanSource *source, NodeId *out_node, LaneSpanId *out_span) {
     return attach(plan, parent, start, motive, name, source, PLAN_STATE_GIVEN, out_node, out_span);
 }

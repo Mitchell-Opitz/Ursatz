@@ -41,7 +41,7 @@ typedef struct {
 } Chord;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId form;
     NodeId owner; /* what the lanes belong to: a section of the form */
     PlanSpan span; /* the melody target's span, the pickup included */
@@ -64,7 +64,7 @@ static SpelledKey c_major(void) {
     return key;
 }
 
-static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span, int pitch,
+static LaneSpanId add_notes(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span, int pitch,
                             PlanState state) {
     PlanNote note;
     PlanLanePayload payload;
@@ -450,7 +450,7 @@ static void test_pickup_json(void) {
     add_melody_target(&piece, span, motive, 8);
     char *text = plan_to_json(piece.plan, test_plan_producer(), &error);
     assert(text && strstr(text, "\"kind\": \"pickup\"") && strstr(text, "\"length\": \"1/4\""));
-    PiecePlan *parsed = NULL;
+    Plan *parsed = NULL;
     assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &parsed, &error) == PLAN_OK);
     char *again = plan_to_json(parsed, test_plan_producer(), &error);
     assert(again && strcmp(text, again) == 0);
@@ -470,7 +470,7 @@ static void test_pickup_json(void) {
     char *at = broken ? strstr(broken, "\"length\": \"1/4\"") : NULL;
     assert(at);
     at[12] = 'x';
-    PiecePlan *rejected = NULL;
+    Plan *rejected = NULL;
     assert(plan_from_json(test_knowledge(), broken, composer_plan_read_hooks(), &rejected, &error) != PLAN_OK && rejected == NULL);
     free(broken);
     free(again);
@@ -481,7 +481,7 @@ static void test_pickup_json(void) {
 
 /* ----------------------------------------------------------- texture */
 
-static FillOutcome accompany(PiecePlan *plan, unsigned long seed) {
+static FillOutcome accompany(Plan *plan, unsigned long seed) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;
@@ -598,7 +598,7 @@ static void test_accompaniment_short_chord(void) {
     assert(completed > 0);
 }
 
-static FillOutcome voice(PiecePlan *plan, unsigned long seed) {
+static FillOutcome voice(Plan *plan, unsigned long seed) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;

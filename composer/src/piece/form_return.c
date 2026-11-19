@@ -17,8 +17,8 @@
 
 /* ------------------------------------------------------------- the copy */
 
-static PlanConstraint *copy_constraints(size_t count, const PlanConstraint *(*at)(const PiecePlan *, size_t, size_t),
-                                        const PiecePlan *plan, size_t id) {
+static PlanConstraint *copy_constraints(size_t count, const PlanConstraint *(*at)(const Plan *, size_t, size_t),
+                                        const Plan *plan, size_t id) {
     PlanConstraint *out = count ? calloc(count, sizeof(PlanConstraint)) : NULL;
     for (size_t i = 0; out && i < count; i++) {
         out[i] = *at(plan, id, i);
@@ -26,11 +26,11 @@ static PlanConstraint *copy_constraints(size_t count, const PlanConstraint *(*at
     return out;
 }
 
-static const PlanConstraint *node_constraint_at(const PiecePlan *plan, size_t id, size_t index) {
+static const PlanConstraint *node_constraint_at(const Plan *plan, size_t id, size_t index) {
     return plan_node_constraint_at(plan, (NodeId)id, index);
 }
 
-static const PlanConstraint *span_constraint_at(const PiecePlan *plan, size_t id, size_t index) {
+static const PlanConstraint *span_constraint_at(const Plan *plan, size_t id, size_t index) {
     return plan_lane_span_constraint_at(plan, (LaneSpanId)id, index);
 }
 
@@ -50,7 +50,7 @@ void return_copy_destroy(ReturnCopy *copy) {
     }
 }
 
-static size_t subtree_size(const PiecePlan *plan, NodeId id) {
+static size_t subtree_size(const Plan *plan, NodeId id) {
     size_t size = 1;
     for (size_t i = 0; i < plan_node_child_count(plan, id); i++) {
         size += subtree_size(plan, plan_node_child_at(plan, id, i));
@@ -59,7 +59,7 @@ static size_t subtree_size(const PiecePlan *plan, NodeId id) {
 }
 
 /* Reads the children of id (and theirs) into copy->nodes after the ones there, their node ids into ids. */
-static bool collect_nodes(const PiecePlan *plan, NodeId id, size_t parent, ReturnCopy *copy, NodeId *ids) {
+static bool collect_nodes(const Plan *plan, NodeId id, size_t parent, ReturnCopy *copy, NodeId *ids) {
     for (size_t i = 0; i < plan_node_child_count(plan, id); i++) {
         NodeId child = plan_node_child_at(plan, id, i);
         size_t at = copy->node_count;
@@ -90,7 +90,7 @@ static bool is_written_lane(PlanLaneKind lane) {
 }
 
 /* Reads the written lane spans an owner holds, in the order they were added. */
-static bool collect_spans(const PiecePlan *plan, NodeId owner, size_t index, ReturnCopy *copy) {
+static bool collect_spans(const Plan *plan, NodeId owner, size_t index, ReturnCopy *copy) {
     size_t count = plan_node_lane_spans(plan, owner, NULL, 0);
     LaneSpanId *ids = count ? calloc(count, sizeof(LaneSpanId)) : NULL;
     if (count && !ids) {
@@ -145,7 +145,7 @@ static bool collect_spans(const PiecePlan *plan, NodeId owner, size_t index, Ret
     return ok;
 }
 
-bool return_copy_read(const PiecePlan *plan, NodeId section, ReturnCopy *out) {
+bool return_copy_read(const Plan *plan, NodeId section, ReturnCopy *out) {
     memset(out, 0, sizeof(*out));
     size_t size = subtree_size(plan, section) - 1;
     NodeId *ids = calloc(size + 1, sizeof(NodeId));
@@ -299,7 +299,7 @@ int return_mode_pitch(const ReturnPayload *payload, int pitch) {
     return payload->mode_change ? return_map_pitch(spelled_key_tonic_pitch_class(&payload->key), payload->to_material, pitch) : pitch;
 }
 
-PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy, PlanNoteOperation operation) {
+PlanResult return_copy_write(Plan *plan, NodeId section, const ReturnCopy *copy, PlanNoteOperation operation) {
     NodeId *ids = calloc(copy->node_count + 1, sizeof(NodeId));
     if (!ids) {
         return PLAN_ERR_ALLOC;
@@ -369,7 +369,7 @@ void return_payload_destroy(void *payload) {
 
 /* ------------------------------------------------------------- the target */
 
-static bool find_return(const PiecePlan *plan, NodeId section, ReturnRef *out) {
+static bool find_return(const Plan *plan, NodeId section, ReturnRef *out) {
     const SectionDescription *description = plan_section_or_empty(plan, section);
     NodeId source = description->returns[0] != '\0' ? plan_section_named(plan, description->returns) : PLAN_NODE_NONE;
     if (source == PLAN_NODE_NONE) {
@@ -383,7 +383,7 @@ static bool find_return(const PiecePlan *plan, NodeId section, ReturnRef *out) {
     return true;
 }
 
-bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out) {
+bool return_meter_over(const Plan *plan, PlanSpan span, PlanMeter *out) {
     LaneSpanId ids[2];
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, ids, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, ids[0]), span)) {
@@ -400,7 +400,7 @@ typedef struct {
     SpelledKey key;
 } KeyPiece;
 
-static bool key_pieces(const PiecePlan *plan, PlanSpan span, KeyPiece *out, size_t *count) {
+static bool key_pieces(const Plan *plan, PlanSpan span, KeyPiece *out, size_t *count) {
     LaneSpanId ids[MAX_KEY_PIECES];
     Rational end;
     size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, MAX_KEY_PIECES);
@@ -427,7 +427,7 @@ static bool key_pieces(const PiecePlan *plan, PlanSpan span, KeyPiece *out, size
 }
 
 /* The key difference, in semitones from -5 to 6, a section returned in another is transposed by; false when the shapes differ. */
-bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+bool return_key_shift(const Plan *source_plan, PlanSpan source, const Plan *target_plan, PlanSpan target,
                       int *shift) {
     KeyPiece a[MAX_KEY_PIECES];
     KeyPiece b[MAX_KEY_PIECES];
@@ -449,7 +449,7 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
     return true;
 }
 
-bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+bool return_mode_shift_by(const Plan *source_plan, PlanSpan source, const Plan *target_plan, PlanSpan target,
                           int *shift, const PitchMaterial **to_material) {
     KeyPiece a[MAX_KEY_PIECES];
     KeyPiece b[MAX_KEY_PIECES];
@@ -473,7 +473,7 @@ bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const P
 }
 
 /* The copy across modes on one tonic (a figurate return, R-499): the shift must be 0. */
-bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+bool return_mode_shift(const Plan *source_plan, PlanSpan source, const Plan *target_plan, PlanSpan target,
                        const PitchMaterial **to_material) {
     int shift;
     return return_mode_shift_by(source_plan, source, target_plan, target, &shift, to_material) && shift == 0;
@@ -487,7 +487,7 @@ static bool variation_offered(SectionReturnVariation variation) {
 }
 
 /* Whether the section's RETURN names another section of the piece that is as long, in the same meter and in keys of the same shape. */
-static bool return_geometry(const PiecePlan *plan, NodeId section, ReturnRef *ret) {
+static bool return_geometry(const Plan *plan, NodeId section, ReturnRef *ret) {
     PlanMeter source_meter;
     PlanMeter target_meter;
     int shift;
@@ -512,16 +512,16 @@ static bool return_geometry(const PiecePlan *plan, NodeId section, ReturnRef *re
              return_mode_shift_by(plan, from, plan, to, &shift, &to_material)));
 }
 
-bool return_target(const PiecePlan *plan, NodeId section, ReturnRef *ret) {
+bool return_target(const Plan *plan, NodeId section, ReturnRef *ret) {
     return return_geometry(plan, section, ret);
 }
 
-bool form_return_copies(const PiecePlan *plan, NodeId section) {
+bool form_return_copies(const Plan *plan, NodeId section) {
     ReturnRef ret;
     return return_geometry(plan, section, &ret);
 }
 
-bool form_return_mode_change(const PiecePlan *plan, NodeId section, const PitchMaterial **to) {
+bool form_return_mode_change(const Plan *plan, NodeId section, const PitchMaterial **to) {
     ReturnRef ret;
     int shift;
     const PitchMaterial *to_material = NULL;
@@ -537,7 +537,7 @@ bool form_return_mode_change(const PiecePlan *plan, NodeId section, const PitchM
     return true;
 }
 
-bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, SectionReturnVariation *variation) {
+bool form_return_source(const Plan *plan, NodeId section, NodeId *source, SectionReturnVariation *variation) {
     ReturnRef ret;
     if (!plan_has_node(plan, section) || plan_node_kind(plan, section) != PLAN_NODE_SECTION ||
         plan_node_state(plan, section) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, section) != 0 ||
@@ -554,12 +554,12 @@ bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, S
     return true;
 }
 
-bool form_return_handles(const PiecePlan *plan, NodeId section) {
+bool form_return_handles(const Plan *plan, NodeId section) {
     return form_return_source(plan, section, NULL, NULL);
 }
 
 /* Every lane span under the node, and the node's descendants', is written; the lanes seen are bits of *seen. */
-static bool lanes_written(const PiecePlan *plan, NodeId node, unsigned *seen) {
+static bool lanes_written(const Plan *plan, NodeId node, unsigned *seen) {
     size_t count = plan_node_lane_spans(plan, node, NULL, 0);
     LaneSpanId *ids = count ? calloc(count, sizeof(LaneSpanId)) : NULL;
     bool written = count == 0 || ids;
@@ -581,7 +581,7 @@ static bool lanes_written(const PiecePlan *plan, NodeId node, unsigned *seen) {
 }
 
 /* The returned section is Realized and its harmony, bass and melody are all written. */
-bool return_source_ready(const PiecePlan *plan, NodeId source) {
+bool return_source_ready(const Plan *plan, NodeId source) {
     unsigned seen = 0;
     unsigned needed = (1u << PLAN_LANE_HARMONY) | (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_MELODY);
     return plan_node_state(plan, source) != PLAN_STATE_CONSTRAINED && lanes_written(plan, source, &seen) &&
@@ -599,7 +599,7 @@ static bool on_cell(Rational time, Rational cell, size_t *index) {
     return true;
 }
 
-bool form_return_melody_fits(const PiecePlan *plan, NodeId section) {
+bool form_return_melody_fits(const Plan *plan, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
     KeyPiece pieces[MAX_KEY_PIECES];
     size_t piece_count;
@@ -663,7 +663,7 @@ typedef struct {
     char roman[PLAN_ROMAN_NUMERAL_MAX];
 } ChordAt;
 
-static ChordAt *read_chords(const PiecePlan *plan, NodeId section, size_t *count) {
+static ChordAt *read_chords(const Plan *plan, NodeId section, size_t *count) {
     PlanSpan span = plan_node_span(plan, section);
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, NULL, 0);
     LaneSpanId *ids = found ? calloc(found, sizeof(LaneSpanId)) : NULL;
@@ -701,7 +701,7 @@ static bool chord_in_source(const ChordAt *chord, const ChordAt *source, size_t 
     return false;
 }
 
-bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *changed, size_t *total) {
+bool form_return_chords_changed(const Plan *plan, NodeId section, size_t *changed, size_t *total) {
     ReturnRef ret;
     size_t count;
     size_t source_count;
@@ -724,7 +724,7 @@ bool form_return_chords_changed(const PiecePlan *plan, NodeId section, size_t *c
     return ok;
 }
 
-bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *changed) {
+bool form_return_cadence_changed(const Plan *plan, NodeId section, bool *changed) {
     ReturnRef ret;
     size_t count;
     size_t source_count;
@@ -752,7 +752,7 @@ bool form_return_cadence_changed(const PiecePlan *plan, NodeId section, bool *ch
     return ok;
 }
 
-bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar, bool *changed) {
+bool form_return_bar_changed(const Plan *plan, NodeId section, unsigned bar, bool *changed) {
     ReturnRef ret;
     PlanMeter meter;
     size_t count;
@@ -787,7 +787,7 @@ bool form_return_bar_changed(const PiecePlan *plan, NodeId section, unsigned bar
 }
 
 /* The numerals of the chords that start in the last quarter of the section, space separated. */
-static bool cadence_numerals(const PiecePlan *plan, NodeId section, char *out, size_t size) {
+static bool cadence_numerals(const Plan *plan, NodeId section, char *out, size_t size) {
     size_t count;
     ChordAt *chords = read_chords(plan, section, &count);
     Rational length = plan_node_span(plan, section).length;
@@ -807,13 +807,13 @@ static bool cadence_numerals(const PiecePlan *plan, NodeId section, char *out, s
     return ok;
 }
 
-bool form_return_cadence_numerals(const PiecePlan *plan, NodeId section, char *from, char *to, size_t size) {
+bool form_return_cadence_numerals(const Plan *plan, NodeId section, char *from, char *to, size_t size) {
     ReturnRef ret;
     return plan_has_node(plan, section) && find_return(plan, section, &ret) && plan_has_node(plan, ret.section) &&
            cadence_numerals(plan, ret.section, from, size) && cadence_numerals(plan, section, to, size);
 }
 
-bool form_return_edge_numerals(const PiecePlan *plan, NodeId section, char *first, char *last, size_t size) {
+bool form_return_edge_numerals(const Plan *plan, NodeId section, char *first, char *last, size_t size) {
     size_t count;
     ChordAt *chords = plan_has_node(plan, section) && size >= PLAN_ROMAN_NUMERAL_MAX ? read_chords(plan, section, &count) : NULL;
     if (!chords || count == 0) {
@@ -828,7 +828,7 @@ bool form_return_edge_numerals(const PiecePlan *plan, NodeId section, char *firs
 
 /* ------------------------------------------------------------- the operator */
 
-static bool return_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool return_applies(const Plan *plan, FillTarget target, void *context) {
     NodeId source;
     (void)context;
     return target.kind == FILL_TARGET_NODE && form_return_source(plan, target.id, &source, NULL) &&
@@ -836,7 +836,7 @@ static bool return_applies(const PiecePlan *plan, FillTarget target, void *conte
 }
 
 /* Builds the payload of a return of the target: the returned section moved onto it, before the variation. */
-static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId source, SectionReturnVariation variation) {
+static ReturnPayload *make_payload(const Plan *plan, NodeId target, NodeId source, SectionReturnVariation variation) {
     KeyPiece pieces[MAX_KEY_PIECES];
     size_t count;
     ReturnPayload *payload = calloc(1, sizeof(*payload));
@@ -892,7 +892,7 @@ static bool add_payload(FillCandidateList *out, const char *label, ReturnPayload
     return fill_candidates_add(out, label, payload, return_payload_destroy);
 }
 
-static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool return_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     const MelodyFillParams *range = context;
     MelodyFillParams defaults = melody_fill_params_default();
@@ -954,7 +954,7 @@ static bool return_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     return true;
 }
 
-static PlanResult return_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult return_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const ReturnPayload *payload = candidate ? candidate->payload : NULL;
     (void)context;
     if (!payload || payload->magic != RETURN_PAYLOAD_MAGIC || target.kind != FILL_TARGET_NODE ||
@@ -971,8 +971,8 @@ FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFill
     }
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = FORM_RETURN_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan theme section with a RETURN to a realized section";
-    operator_.generator.supported_outputs = "PiecePlan copy of the returned section's nodes and lane spans";
+    operator_.generator.supported_inputs = "Plan theme section with a RETURN to a realized section";
+    operator_.generator.supported_outputs = "Plan copy of the returned section's nodes and lane spans";
     operator_.generator.configuration_description = "the melody range a re-registered return keeps to";
     operator_.generator.constraints_description = "the returned section, shifted";
     operator_.generator.deterministic = true;
@@ -1061,7 +1061,7 @@ static void reject(FillCheck *out, const char *reason) {
     strncpy(out->reason, reason, sizeof(out->reason) - 1);
 }
 
-bool form_return_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool form_return_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;

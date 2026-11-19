@@ -40,7 +40,7 @@ typedef struct {
  * not such a return, the harmony or the returned melody cannot be read, the section does not start on a barline, or it
  * has more than FORM_SKELETON_MAX cells.
  */
-bool form_figure_skeleton(const PiecePlan *plan, NodeId section, FormSkeleton *out);
+bool form_figure_skeleton(const Plan *plan, NodeId section, FormSkeleton *out);
 
 /*
  * Rewrites the melody spans of a section (voice 0) from its skeleton and its FIGURE constraint. Each cell not kept holds
@@ -62,6 +62,6 @@ bool form_figure_skeleton(const PiecePlan *plan, NodeId section, FormSkeleton *o
  * a note length that does not divide the cell, a span the notes do not fit, or a Given melody span; the plan may then be
  * partly written.
  */
-bool form_figure_write(PiecePlan *plan, NodeId section, const MelodyFillParams *range, FillRng *rng);
+bool form_figure_write(Plan *plan, NodeId section, const MelodyFillParams *range, FillRng *rng);
 
 #endif

@@ -17,6 +17,6 @@
  */
 
 /* The plan the files are written from; NULL on failure. Caller frees with plan_destroy. */
-PiecePlan *motive_render_plan(const Motive *motive);
+Plan *motive_render_plan(const Motive *motive);
 
 #endif

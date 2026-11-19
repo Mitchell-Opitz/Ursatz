@@ -843,7 +843,7 @@ size_t grow_construction_describe(const SectionConstruction *construction, const
     return used;
 }
 
-size_t grow_section_describe(const PiecePlan *plan, NodeId section, char *text, size_t size) {
+size_t grow_section_describe(const Plan *plan, NodeId section, char *text, size_t size) {
     const SectionDescription *description = plan ? plan_node_section(plan, section) : NULL;
     if (text && size > 0) {
         text[0] = '\0';

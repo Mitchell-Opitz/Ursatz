@@ -93,14 +93,14 @@ typedef struct FormFamily FormFamily;
    the sonatina forms: the enum above gives the parts, and `major_recap` says B1 and C3 return in the tonic major. */
 struct FormFamily {
     const char *name;
-    void (*check)(const PiecePlan *plan, const FormFamily *family, const Row *row);
+    void (*check)(const Plan *plan, const FormFamily *family, const Row *row);
     size_t count;
     size_t a, b, r, a1, b1, r1, r2, set, reh, c, p, s, k;
     bool major_recap;
 };
 
-static void check_rondo(const PiecePlan *plan, const FormFamily *family, const Row *row);
-static void check_sonatina(const PiecePlan *plan, const FormFamily *family, const Row *row);
+static void check_rondo(const Plan *plan, const FormFamily *family, const Row *row);
+static void check_sonatina(const Plan *plan, const FormFamily *family, const Row *row);
 
 static const FormFamily FAMILIES[] = {
     {"andante-aba", check_rondo, 6, 0, 2, 3, 4, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, 5, false},
@@ -138,7 +138,7 @@ static bool equal(Rational a, Rational b) {
 }
 
 /* The chords, or the notes, of a lane over a section, with their time from the section's start. */
-static size_t events(const PiecePlan *plan, NodeId section, PlanLaneKind lane, int voice, Event *out) {
+static size_t events(const Plan *plan, NodeId section, PlanLaneKind lane, int voice, Event *out) {
     PlanSpan span = plan_node_span(plan, section);
     LaneSpanId ids[MAX_EVENTS];
     size_t spans = plan_lane_find(plan, lane, voice, span, ids, MAX_EVENTS);
@@ -183,7 +183,7 @@ static bool same_events(const Event *a, size_t an, const Event *b, size_t bn, in
     return true;
 }
 
-static size_t sections_of(const PiecePlan *plan, NodeId *out) {
+static size_t sections_of(const Plan *plan, NodeId *out) {
     NodeId form = plan_root(plan);
     size_t count = plan_node_child_count(plan, form) - 1;
     for (size_t i = 0; i < count; i++) {
@@ -199,7 +199,7 @@ typedef struct {
     size_t count;
 } KeyLane;
 
-static KeyLane read_lane(const PiecePlan *plan) {
+static KeyLane read_lane(const Plan *plan) {
     KeyLane lane;
     LaneSpanId ids[32];
     PlanSpan all = {{0, 1}, {100000, 1}};
@@ -235,7 +235,7 @@ static int shift_between(SpelledKey from, SpelledKey to) {
 }
 
 /* The return a section holds, as a small record in a slot that stays valid through the next three calls; NULL for a section that returns none. */
-static const ReturnRef *return_of(const PiecePlan *plan, NodeId section) {
+static const ReturnRef *return_of(const Plan *plan, NodeId section) {
     static ReturnRef slots[4];
     static size_t next = 0;
     const SectionDescription *described = plan_section_or_empty(plan, section);
@@ -254,7 +254,7 @@ static const ReturnRef *return_of(const PiecePlan *plan, NodeId section) {
 
 /* A1 (rondo) or E (sonatina) keeps every melody note of its source at its onset, moved by the key difference (none for A1), and
    has more notes. */
-static void check_embellished(const PiecePlan *plan, NodeId source, NodeId section, int shift) {
+static void check_embellished(const Plan *plan, NodeId source, NodeId section, int shift) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
     size_t an = events(plan, source, PLAN_LANE_MELODY, 0, a);
@@ -271,7 +271,7 @@ static void check_embellished(const PiecePlan *plan, NodeId source, NodeId secti
 }
 
 /* A2 has A's harmony, bass and melody, and an inner voice 1 with notes where A has none. */
-static void check_setting(const PiecePlan *plan, NodeId source, NodeId section) {
+static void check_setting(const Plan *plan, NodeId source, NodeId section) {
     static Event a[MAX_EVENTS];
     static Event b[MAX_EVENTS];
     static const PlanLaneKind LANES[] = {PLAN_LANE_HARMONY, PLAN_LANE_BASS, PLAN_LANE_MELODY};
@@ -286,7 +286,7 @@ static void check_setting(const PiecePlan *plan, NodeId source, NodeId section) 
 }
 
 /* B1's melody is B's, moved by the key difference. */
-static void check_moved(const PiecePlan *plan, NodeId b, NodeId b1, int shift) {
+static void check_moved(const Plan *plan, NodeId b, NodeId b1, int shift) {
     static Event x[MAX_EVENTS];
     static Event y[MAX_EVENTS];
     size_t xn = events(plan, b, PLAN_LANE_MELODY, 0, x);
@@ -298,7 +298,7 @@ static void check_moved(const PiecePlan *plan, NodeId b, NodeId b1, int shift) {
 }
 
 /* C is in one key throughout, one of the second region's: vi or IV in major, VI or iv in minor. */
-static void check_second(const PiecePlan *plan, const KeyLane *lane, NodeId section, const Row *row) {
+static void check_second(const Plan *plan, const KeyLane *lane, NodeId section, const Row *row) {
     PlanSpan span = plan_node_span(plan, section);
     Rational end;
     assert(plan_span_end(span, &end) == PLAN_OK);
@@ -316,7 +316,7 @@ static void check_second(const PiecePlan *plan, const KeyLane *lane, NodeId sect
 }
 
 /* One key throughout, the given one. */
-static void check_one_key(const PiecePlan *plan, const KeyLane *lane, NodeId section, int tonic, HarmonyMode mode) {
+static void check_one_key(const Plan *plan, const KeyLane *lane, NodeId section, int tonic, HarmonyMode mode) {
     PlanSpan span = plan_node_span(plan, section);
     Rational end;
     assert(plan_span_end(span, &end) == PLAN_OK);
@@ -331,7 +331,7 @@ static void check_one_key(const PiecePlan *plan, const KeyLane *lane, NodeId sec
 }
 
 /* K ends on the tonic: its last bass note and its last chord. */
-static void check_ends_on_tonic(const PiecePlan *plan, NodeId section, const Row *row) {
+static void check_ends_on_tonic(const Plan *plan, NodeId section, const Row *row) {
     static Event bass[MAX_EVENTS];
     static Event chords[MAX_EVENTS];
     size_t bn = events(plan, section, PLAN_LANE_BASS, 0, bass);
@@ -344,7 +344,7 @@ static void check_ends_on_tonic(const PiecePlan *plan, NodeId section, const Row
 
 /* The melody of `section` against `source`: the same onsets and durations, each pitch the source's moved by `shift` and, when
    `to` is the minor, lowered on the degrees 4 and 9 semitones above the tonic as a copy into the minor is (R-524). */
-static void check_copy(const PiecePlan *plan, NodeId source, NodeId section, int shift, bool minor_map, int tonic) {
+static void check_copy(const Plan *plan, NodeId source, NodeId section, int shift, bool minor_map, int tonic) {
     static Event x[MAX_EVENTS];
     static Event y[MAX_EVENTS];
     size_t xn = events(plan, source, PLAN_LANE_MELODY, 0, x);
@@ -362,7 +362,7 @@ static void check_copy(const PiecePlan *plan, NodeId source, NodeId section, int
 }
 
 /* Everything the rondo branches say of a composed piece. */
-static void check_rondo(const PiecePlan *plan, const FormFamily *family, const Row *row) {
+static void check_rondo(const Plan *plan, const FormFamily *family, const Row *row) {
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     assert(sections_of(plan, sections) == family->count);
     const KeyLane lane = read_lane(plan);
@@ -425,7 +425,7 @@ static void check_rondo(const PiecePlan *plan, const FormFamily *family, const R
 }
 
 /* Everything the sonatina branches say of a composed piece. */
-static void check_sonatina(const PiecePlan *plan, const FormFamily *family, const Row *row) {
+static void check_sonatina(const Plan *plan, const FormFamily *family, const Row *row) {
     NodeId s[SONATINA_SECTIONS];
     assert(sections_of(plan, s) == family->count);
     const KeyLane lane = read_lane(plan);
@@ -477,7 +477,7 @@ static void check_sonatina(const PiecePlan *plan, const FormFamily *family, cons
 /* One try: the plan of the form in the row from the seed, composed; true when it completes (and then it is checked). */
 static bool compose_try(const FormFamily *family, const Row *row, unsigned long seed) {
     PieceRequest request;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     ComposeOutcome outcome;
     ComposeConfig config;
     memset(&request, 0, sizeof(request));

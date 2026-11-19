@@ -190,7 +190,7 @@ static void test_files(void) {
            strstr(out, "wrote grow_cli.xml") != NULL);
     free(out);
 
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file("grow_cli.json", &plan, &error) == PLAN_OK);
     NodeId theme = PLAN_NODE_NONE;
@@ -252,7 +252,7 @@ static void test_suggest(void) {
     for (int k = 1; k <= 3; k++) {
         char path[64];
         snprintf(path, sizeof(path), "grow_cli_s-%d.json", k);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         PlanJsonError error;
         assert(test_read_plan_file(path, &plan, &error) == PLAN_OK);
         plan_destroy(plan);
@@ -374,7 +374,7 @@ static void test_accompaniment(void) {
     assert(occurrences("grow_cli_plain.mid", "MTrk") == 2 && occurrences("grow_cli_alberti.mid", "MTrk") == 2);
     assert(occurrences("grow_cli_plain.xml", "<part id=") == 1 && occurrences("grow_cli_alberti.xml", "<part id=") == 1);
 
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file("grow_cli_alberti.json", &plan, &error) == PLAN_OK);
     PlanSpan all = plan_node_span(plan, plan_root(plan));
@@ -464,7 +464,7 @@ static GrowRequest library_request(const Motive *basic, SectionBeginning beginni
     return request;
 }
 
-static NodeId library_find(const PiecePlan *plan, const char *name) {
+static NodeId library_find(const Plan *plan, const char *name) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *found = plan_node_name(plan, id);
         if (found && strcmp(found, name) == 0) {
@@ -475,7 +475,7 @@ static NodeId library_find(const PiecePlan *plan, const char *name) {
 }
 
 /* Whether the melody lane span of a motive node holds exactly these notes. */
-static bool node_holds(const PiecePlan *plan, NodeId node, const Motive *motive) {
+static bool node_holds(const Plan *plan, NodeId node, const Motive *motive) {
     LaneSpanId spans[8];
     size_t found = plan_node_lane_spans(plan, node, spans, 8);
     for (size_t i = 0; i < found; i++) {
@@ -501,7 +501,7 @@ static void test_library_slots_and_pool(void) {
     Motive contrast = notes_motive("A4:e G4:e F4:e E4:e D4:h");
     Motive continuation = notes_motive("F4:e G4:e A4:e Bb4:e A4:h");
     Motive cadential = notes_motive("A4:e F4:e E4:e F4:e D4:h");
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
 
     /* A period with a contrasting motive: the node s1 holds it, the antecedent's contrasting idea m1 restates it and the
        consequent's contrasting idea m3 is made from it, not from the basic motive. */
@@ -582,7 +582,7 @@ static void test_library_slots_and_pool(void) {
 static void test_library_bad_slots(void) {
     Motive basic = notes_motive("D4:q F4:e A4:e D5:h");
     Motive fits = notes_motive("A4:e G4:e F4:e E4:e D4:h");
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowRequest request = library_request(&basic, SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION);
     /* A slot the pairing has no idea for: no contrasting idea in a sentence, no continuation in a period. */
     request.slot_motives[GROW_SLOT_CONTRASTING] = &fits;

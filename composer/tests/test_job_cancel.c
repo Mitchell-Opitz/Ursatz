@@ -55,8 +55,8 @@ static bool on_cancelled(void *user) {
     return watch->cancel_at != 0 && watch->steps >= watch->cancel_at;
 }
 
-static PiecePlan *theme_fill_plan(void) {
-    PiecePlan *plan = NULL;
+static Plan *theme_fill_plan(void) {
+    Plan *plan = NULL;
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
@@ -70,7 +70,7 @@ static PiecePlan *theme_fill_plan(void) {
 }
 
 static void test_cancel(void) {
-    PiecePlan *plan = theme_fill_plan();
+    Plan *plan = theme_fill_plan();
     Watch watch;
     memset(&watch, 0, sizeof watch);
     watch.cancel_at = 3;
@@ -109,7 +109,7 @@ static void test_cancel(void) {
 }
 
 static void test_progress(void) {
-    PiecePlan *plan = theme_fill_plan();
+    Plan *plan = theme_fill_plan();
     Watch watch;
     memset(&watch, 0, sizeof watch);
     ComposerJob job = {on_progress, on_cancelled, &watch};
@@ -143,7 +143,7 @@ static void test_same_plan(void) {
     ComposerJob watching = {on_progress, on_cancelled, &watch};
     const ComposerJob *jobs[3] = {NULL, &none, &watching};
     for (int i = 0; i < 3; i++) {
-        PiecePlan *plan = theme_fill_plan();
+        Plan *plan = theme_fill_plan();
         config.job = jobs[i];
         assert(compose_run(plan, &config, &outcome) == PIECE_OK);
         texts[i] = plan_to_json(plan, test_plan_producer(), NULL);
@@ -160,7 +160,7 @@ static void test_same_plan(void) {
 
 static void test_fill_job(void) {
     /* The fill loop alone: one report per target, a cancel is FILL_STATUS_ERROR with the flag. */
-    PiecePlan *plan = theme_fill_plan();
+    Plan *plan = theme_fill_plan();
     FillOperatorRegistry *registry = fill_registry_create();
     assert(registry);
     Watch watch;

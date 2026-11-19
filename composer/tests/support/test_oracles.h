@@ -23,14 +23,14 @@
  * reason of its own to be there. True when the lane could be read, with *violation NULL if nothing is broken and otherwise
  * the rule that is.
  */
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
+bool harmony_check_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
                         const char **violation);
 
 /*
  * The same check for a lane that need not end in a cadence nor explain every inverted chord, such as the harmony under a
  * bass: only the phrase model, the applied chords resolving, and that every chord is readable are asked.
  */
-bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode,
+bool harmony_check_lane_without_cadence(const Plan *plan, PlanSpan span, HarmonyMode mode,
                                         const char **violation);
 
 /*
@@ -42,7 +42,7 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Ha
  * or phrase begins. Ursatz reads a V before such a start as a half cadence, with the authentic cadence into the tonic as
  * its competing reading; without one, a V to I6 is an evaded cadence (R-090, R-091).
  */
-bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, const int *soprano,
+bool harmony_hear_lane_cadences(const Plan *plan, PlanSpan span, HarmonyMode mode, const int *soprano,
                                 size_t count, const Rational *section_starts, size_t section_count,
                                 HarmonyCadences *out);
 
@@ -58,7 +58,7 @@ bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, siz
  * written, and tile the span), in key, with params (NULL for the defaults). The same rules the checker applies. True when
  * the lane could be read, with *violation NULL if nothing is broken and otherwise the rule that is.
  */
-bool melody_check_lane(const PiecePlan *plan, PlanSpan span, SpelledKey key, const MelodyFillParams *params,
+bool melody_check_lane(const Plan *plan, PlanSpan span, SpelledKey key, const MelodyFillParams *params,
                        const char **violation);
 
 /*
@@ -69,6 +69,6 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, SpelledKey key, con
  * notes of the returned section, moved (an octave up for a raised climax). On false, reason (size bytes) holds the first
  * fault.
  */
-bool form_figure_check(const PiecePlan *plan, NodeId section, char *reason, size_t size);
+bool form_figure_check(const Plan *plan, NodeId section, char *reason, size_t size);
 
 #endif

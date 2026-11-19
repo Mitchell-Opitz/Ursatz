@@ -325,7 +325,7 @@ static bool verdict_to_check(const HeardPhrase *phrase, FillCheck *out) {
     return true;
 }
 
-bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool harmony_phrase_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                             const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;

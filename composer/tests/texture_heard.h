@@ -52,7 +52,7 @@ static inline void heard_add(AnalysisNote **notes, size_t *note_count, size_t tr
 }
 
 /* The texture of every measure of span, and how many of them are the texture asked for. */
-static inline TextureHeard texture_heard(const PiecePlan *plan, PlanSpan span, PlanMeter meter, int asked) {
+static inline TextureHeard texture_heard(const Plan *plan, PlanSpan span, PlanMeter meter, int asked) {
     TextureHeard result = {0, 0, {0}};
     NoteValue *unit = NULL;
     TimeSignature *signature = NULL;

@@ -24,7 +24,7 @@ static Rational time_of(long numerator, unsigned long denominator) {
     return time;
 }
 
-static NodeId section_a(const PiecePlan *plan) {
+static NodeId section_a(const Plan *plan) {
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId node = plan_node_child_at(plan, root, i);
@@ -36,9 +36,9 @@ static NodeId section_a(const PiecePlan *plan) {
     return PLAN_NODE_NONE;
 }
 
-static PiecePlan *new_plan(NodeId *section) {
+static Plan *new_plan(NodeId *section) {
     PieceRequest request;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
     request.key = test_key(0, "major");
@@ -52,11 +52,11 @@ static PiecePlan *new_plan(NodeId *section) {
     return plan;
 }
 
-static size_t harmony_spans(const PiecePlan *plan, NodeId section, LaneSpanId *ids, size_t capacity) {
+static size_t harmony_spans(const Plan *plan, NodeId section, LaneSpanId *ids, size_t capacity) {
     return plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, section), ids, capacity);
 }
 
-static void expect_span(const PiecePlan *plan, LaneSpanId id, Rational start, Rational length, const char *numeral) {
+static void expect_span(const Plan *plan, LaneSpanId id, Rational start, Rational length, const char *numeral) {
     PlanSpan span = plan_lane_span_span(plan, id);
     assert(rational_cmp(span.start, start) == 0);
     assert(rational_cmp(span.length, length) == 0);
@@ -66,7 +66,7 @@ static void expect_span(const PiecePlan *plan, LaneSpanId id, Rational start, Ra
 
 static void test_exact(void) {
     NodeId section;
-    PiecePlan *plan = new_plan(&section);
+    Plan *plan = new_plan(&section);
     Rational start = plan_node_span(plan, section).start;
     /* Bar 1 of 4/4: I for two beats, IV for a beat and a half, V on the "and" of beat 3 for the rest. */
     GivenChord chords[3] = {{"I", time_of(1, 1), time_of(1, 2)},
@@ -87,7 +87,7 @@ static void test_exact(void) {
 
 static void test_refused(void) {
     NodeId section;
-    PiecePlan *plan = new_plan(&section);
+    Plan *plan = new_plan(&section);
     PlanSpan span = plan_node_span(plan, section);
     LaneSpanId ids[8];
     GivenChord overlap[2] = {{"I", time_of(0, 1), time_of(1, 2)}, {"V", time_of(3, 8), time_of(1, 2)}};

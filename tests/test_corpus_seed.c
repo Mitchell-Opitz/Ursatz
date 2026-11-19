@@ -222,7 +222,7 @@ static bool error_contains(const char *needle) {
 }
 
 /* Whether the plan has a SOURCE constraint on a node, and on which kind of node it is, and the piece it names. */
-static bool source_of(const PiecePlan *plan, NodeId *node_out, char piece[PLAN_SOURCE_PIECE_MAX]) {
+static bool source_of(const Plan *plan, NodeId *node_out, char piece[PLAN_SOURCE_PIECE_MAX]) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         for (size_t c = 0; c < plan_node_constraint_count(plan, id); c++) {
             const PlanConstraint *constraint = plan_node_constraint_at(plan, id, c);
@@ -242,7 +242,7 @@ static int test_plan(void) {
                "\" --like \"" PASSAGE "\" --seed 3 --out seed_plan.json") == 0);
     assert(output_contains("motive from Mozart 545.mid m."));
     assert(output_contains(", score "));
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file("seed_plan.json", &plan, &error) == PLAN_OK);
     NodeId node;
@@ -300,7 +300,7 @@ static int test_progression(void) {
     assert(run("plan --form rounded-binary --key \"D major\" --meter 4/4 --from-corpus \"" COMPOSER_SONATINAS_CORPUS
                "\" --like-progression \"I IV V I\" --at B --seed 2 --out seed_progression.json") == 0);
     assert(output_contains("progression from "));
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file("seed_progression.json", &plan, &error) == PLAN_OK);
     NodeId node;

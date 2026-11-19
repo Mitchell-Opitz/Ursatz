@@ -41,7 +41,7 @@ typedef GrowThemeRequest ThemeRequest;
  * key lane has a span that ends where the section starts, the key before it. Spans are contiguous. False when the
  * lane does not tile the section that way.
  */
-bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request) {
+bool grow_read_keys(const Plan *plan, GrowThemeRequest *request) {
     LaneSpanId spans[MAX_KEY_SPANS];
     Rational end;
     Rational half;
@@ -99,7 +99,7 @@ bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request) {
 }
 
 /* Whether the section starts in the first key of the plan, the home key. */
-static bool starts_in_home_key(const PiecePlan *plan, const GrowThemeRequest *request) {
+static bool starts_in_home_key(const Plan *plan, const GrowThemeRequest *request) {
     LaneSpanId spans[MAX_KEY_SPANS];
     Rational end;
     PlanSpan whole = {{0, 1}, {0, 1}};
@@ -112,7 +112,7 @@ static bool starts_in_home_key(const PiecePlan *plan, const GrowThemeRequest *re
            composer_key_is_minor(home) == composer_key_is_minor(&request->key);
 }
 
-static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest *out) {
+static bool read_request(const Plan *plan, FillTarget target, ThemeRequest *out) {
     ThemeRequest request;
     memset(&request, 0, sizeof(request));
     if (target.kind != FILL_TARGET_NODE || !plan_has_node(plan, target.id) ||
@@ -240,7 +240,7 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
     return true;
 }
 
-static bool grow_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool grow_applies(const Plan *plan, FillTarget target, void *context) {
     ThemeRequest request;
     (void)context;
     return read_request(plan, target, &request) || grow_free_applies(plan, target) || grow_liquidate_applies(plan, target) ||
@@ -972,7 +972,7 @@ static size_t derived_bars(const GrowThemeSpec *spec, Rational bar) {
 static size_t count_bars(PlanSpan material_span, Rational bar);
 
 /* Whether the material has bars after the motives for the fragments' segments (a plan made before them may not). */
-static bool material_has_room(const PiecePlan *plan, const ThemeRequest *request, const GrowThemeSpec *spec) {
+static bool material_has_room(const Plan *plan, const ThemeRequest *request, const GrowThemeSpec *spec) {
     NodeId material = plan_node_parent(plan, request->source);
     PlanSpan span = plan_node_span(plan, material);
     size_t wanted = ((spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1) * derived_bars(spec, request->bar) + GROW_MADE_NODES;
@@ -988,7 +988,7 @@ static bool material_has_room(const PiecePlan *plan, const ThemeRequest *request
  * fragments' segments and a liquidation for each idea that has one, which the estimate before the draw (GROW_MADE_NODES) can
  * fall short of.
  */
-static bool made_nodes_fit(const PiecePlan *plan, const ThemeRequest *request, const GrowThemeSpec *spec) {
+static bool made_nodes_fit(const Plan *plan, const ThemeRequest *request, const GrowThemeSpec *spec) {
     NodeId material = plan_node_parent(plan, request->source);
     PlanSpan span = plan_node_span(plan, material);
     size_t made = (spec->fragment_from_segment[0] ? 1 : 0) + (spec->fragment_from_segment[1] ? 1 : 0);
@@ -1068,7 +1068,7 @@ static void draw_liquid_base(const GrowContext *shared, GrowThemeSpec *spec) {
 }
 
 /* Draws every choice of one candidate from rng. False when the draw does not make a sentence the motive fits. */
-static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, const GrowContext *shared, FillRng *rng,
+static bool draw_spec(const Plan *plan, const ThemeRequest *request, const GrowContext *shared, FillRng *rng,
                       GrowThemeSpec *spec) {
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_PAYLOAD_MAGIC;
@@ -1303,7 +1303,7 @@ static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {
     snprintf(label, size, "%.*s%s%s", (int)head, base, extensions, base + head);
 }
 
-static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool grow_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                           FillCandidateList *out) {
     const GrowContext *shared = context;
     ThemeRequest request;
@@ -1516,7 +1516,7 @@ static PlanHarmonyShape gap_shape(const PlanHarmonyShape *shape, bool at_start, 
 /* The chords of an owner: open targets asking for the shape, or, with a degree, that one diatonic chord written whole. */
 static PlanResult add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarmonyShape *shape,
                                     const PlanConstraint *cadence, int degree, const PlanSpan *over) {
-    PiecePlan *plan = build->plan;
+    Plan *plan = build->plan;
     PhraseChord fixed;
     if (degree > 0 && !harmony_make_chord(harmony_key_mode(&build->request->key), degree, 0, false, false, 1, &fixed)) {
         return PLAN_ERR_BAD_PAYLOAD;
@@ -1626,7 +1626,7 @@ static size_t material_bars(const GrowBuild *build) {
  * span's first bar has no note or the material has no bar free.
  */
 static NodeId given_motive(GrowBuild *build, PlanSpan idea_span) {
-    PiecePlan *plan = build->plan;
+    Plan *plan = build->plan;
     LaneSpanId ids[8];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, idea_span, ids, 8);
     LaneSpanId given = PLAN_LANE_SPAN_NONE;
@@ -1697,7 +1697,7 @@ static NodeId given_motive(GrowBuild *build, PlanSpan idea_span) {
 
 PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref,
                                   const PlanConstraint *cadence) {
-    PiecePlan *plan = build->plan;
+    Plan *plan = build->plan;
     /* A voicing that writes the soprano takes the place of the melody: its spans are made with the chords. */
     if (build->request->has_voicing && build->request->voicing.write_soprano) {
         return PLAN_OK;
@@ -1750,7 +1750,7 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
 }
 
 PlanResult grow_add_melody_written(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref, const Motive *motive) {
-    PiecePlan *plan = build->plan;
+    Plan *plan = build->plan;
     /* A voicing that writes the soprano takes the place of the melody (grow_add_melody_target). */
     if (build->request->has_voicing && build->request->voicing.write_soprano) {
         return PLAN_OK;
@@ -1781,7 +1781,7 @@ PlanResult grow_add_melody_written(GrowBuild *build, NodeId idea, const PlanMoti
  * where its motives were: the first gap of the bars wanted is taken, and when there is none, the bar after the last
  * motive, which is where the motives of a piece nothing was removed from always go.
  */
-size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, Rational bar,
+size_t grow_first_free_bar(const Plan *plan, NodeId material, PlanSpan material_span, Rational bar,
                           size_t wanted) {
     size_t free_bar = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, material); i++) {
@@ -1838,7 +1838,7 @@ static PlanResult add_section_motive(GrowBuild *build, size_t bar_index, NodeId 
     return result == PLAN_OK ? plan_node_add_constraint(build->plan, *out, &constraint) : result;
 }
 
-static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult grow_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const GrowThemeSpec *spec = candidate ? candidate->payload : NULL;
     ThemeRequest request;
     (void)context;
@@ -1976,8 +1976,8 @@ FillResult grow_register(FillOperatorRegistry *registry, const GrowContext *cont
     }
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = GROW_THEME_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan section with an archetype and a theme pairing";
-    operator_.generator.supported_outputs = "PiecePlan phrase, ideas, motive nodes and open lane spans";
+    operator_.generator.supported_inputs = "Plan section with an archetype and a theme pairing";
+    operator_.generator.supported_outputs = "Plan phrase, ideas, motive nodes and open lane spans";
     operator_.generator.configuration_description = "the number of candidates";
     operator_.generator.constraints_description = "standard-form sentence rules";
     operator_.generator.deterministic = true;

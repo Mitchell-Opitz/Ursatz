@@ -37,7 +37,7 @@ static PlanSpan span_of(long start, long length) {
 }
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId form;
     NodeId section;
     NodeId bass_node;
@@ -69,7 +69,7 @@ static Fixture make_fixture(void) {
     return f;
 }
 
-static const PlanNote *note_at(const PiecePlan *plan, LaneSpanId span, size_t index) {
+static const PlanNote *note_at(const Plan *plan, LaneSpanId span, size_t index) {
     const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
     assert(index < notes->note_count);
     return &notes->notes[index];
@@ -189,7 +189,7 @@ static void test_ids_are_not_reused_after_removal(void) {
     PlanJsonError error;
     char *text = plan_to_json(f.plan, test_plan_producer(), &error);
     assert(text != NULL && strstr(text, "\"next_note_id\": 7") != NULL);
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &read, &error) == PLAN_OK && plan_next_note_id(read) == 7 && plan_note_by_id(read, 6, NULL) != NULL);
     plan_destroy(read);
     free(text);
@@ -197,7 +197,7 @@ static void test_ids_are_not_reused_after_removal(void) {
 }
 
 /* Every note of the plan's note lanes, in span order, into out (at most max); the count. */
-static size_t all_notes(const PiecePlan *plan, PlanNote *out, size_t max) {
+static size_t all_notes(const Plan *plan, PlanNote *out, size_t max) {
     size_t count = 0;
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         PlanLaneKind lane = plan_lane_span_lane(plan, id);
@@ -226,7 +226,7 @@ static void test_json_round_trip(void) {
     char *text = plan_to_json(f.plan, test_plan_producer(), &error);
     assert(text != NULL && strstr(text, "\"format_version\": 5") != NULL && strstr(text, "\"next_note_id\": 9") != NULL);
     assert(strstr(text, "\"source\": 1") != NULL && strstr(text, "\"operation\": \"copy\"") != NULL);
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     assert(plan_next_note_id(read) == 9);
     PlanNote before[16], after[16];
@@ -251,7 +251,7 @@ static void test_format_three_reads_ids_in_file_order(void) {
     assert(four != NULL);
     char *three = test_plan_text_as_format_three(four);
     assert(three != NULL && strstr(three, "\"format_version\": 3") != NULL && strstr(three, "next_note_id") == NULL);
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     assert(plan_from_json(test_knowledge(), three, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     PlanNote notes[16];
     size_t n = all_notes(read, notes, 16);
@@ -299,7 +299,7 @@ static void test_refusals(void) {
     PlanJsonError error;
     char *text = plan_to_json(f.plan, test_plan_producer(), &error);
     assert(text != NULL);
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     /* a repeated id */
     char *repeated = with_changes(text, 1, "id", 1, false);
     assert(plan_from_json(test_knowledge(), repeated, composer_plan_read_hooks(), &read, &error) == PLAN_ERR_FORMAT && read == NULL);
@@ -336,8 +336,8 @@ static void test_refusals(void) {
 }
 
 /* The plan of a request through composer_api_piece or composer_api_theme. */
-static PiecePlan *plan_of_response(const ComposerResponse *response) {
-    PiecePlan *plan = NULL;
+static Plan *plan_of_response(const ComposerResponse *response) {
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(response->plan_json != NULL && plan_from_json(test_knowledge(), response->plan_json, composer_plan_read_hooks(), &plan, &error) == PLAN_OK);
     return plan;
@@ -352,7 +352,7 @@ static void test_a_return_names_its_source(void) {
         fprintf(stderr, "%s (%s)\n", response.error.message, response.error.path);
     }
     assert(status == COMPOSER_OK);
-    PiecePlan *plan = plan_of_response(&response);
+    Plan *plan = plan_of_response(&response);
     composer_response_destroy(&response);
     PlanNote notes[4096];
     size_t n = all_notes(plan, notes, 4096);
@@ -382,7 +382,7 @@ static void test_a_given_theme_has_fresh_ids_and_no_source(void) {
     ComposerResponse theme;
     assert(composer_api_theme(test_context(), printed, NULL, &theme) == COMPOSER_OK);
     free(printed);
-    PiecePlan *theme_plan = plan_of_response(&theme);
+    Plan *theme_plan = plan_of_response(&theme);
     PlanNote theme_notes[1024];
     size_t theme_count = all_notes(theme_plan, theme_notes, 1024);
 
@@ -415,7 +415,7 @@ static void test_a_given_theme_has_fresh_ids_and_no_source(void) {
         fprintf(stderr, "%s (%s)\n", built.error.message, built.error.path);
     }
     assert(status == COMPOSER_OK);
-    PiecePlan *plan = plan_of_response(&built);
+    Plan *plan = plan_of_response(&built);
     composer_response_destroy(&built);
     /* every Given note (the theme, copied in) is made from nothing here: a fresh id and no source */
     size_t given = 0;
@@ -448,7 +448,7 @@ static void test_a_theme_links_melody_notes_to_its_motive(void) {
     ComposerResponse response;
     assert(composer_api_theme(test_context(), printed, NULL, &response) == COMPOSER_OK);
     free(printed);
-    PiecePlan *plan = plan_of_response(&response);
+    Plan *plan = plan_of_response(&response);
     composer_response_destroy(&response);
     size_t linked = 0;
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {

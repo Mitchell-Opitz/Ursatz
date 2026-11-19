@@ -220,7 +220,7 @@ static void test_build(void) {
     const Scenario *scenario = &SCENARIOS[0];
     Motive one = make_motive(scenario, scenario->one);
     GrowRequest request = request_of(scenario, &one, 9, SENTENCE);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     const SectionDescription *constraint = plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction ? plan_node_section(plan, test_find_node(plan, "theme")) : NULL;
     assert(constraint);
@@ -257,7 +257,7 @@ static void test_build(void) {
 }
 
 static void expect_refusal(const GrowRequest *request, const char *message) {
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowRefusal refusal;
     GrowResult result = grow_build_plan_checked(request, &plan, &refusal);
     if (result != GROW_ERR_BAD_REQUEST || strcmp(refusal.path, "/bars") != 0 || strcmp(refusal.message, message) != 0) {
@@ -281,7 +281,7 @@ static void test_refusals(void) {
     expect_refusal(&request, "no construction makes a 6-bar hybrid from this motif");
     /* 4 and 8 bars with no construction are as before: no refusal of the length. */
     request = request_of(scenario, &one, 8, SENTENCE);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     assert(!plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction);
     plan_destroy(plan);

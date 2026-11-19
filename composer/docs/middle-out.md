@@ -5,11 +5,11 @@ section and from any bar of it, and the stages grow the form around it and fill 
 changed (R-071). `<ursatz_composer/given.h>`. Back to the [docs index](README.md).
 
 ```c
-GivenResult plan_give_melody(PiecePlan *, NodeId section, size_t bar, const PlanNote *notes, size_t count);
-GivenResult plan_give_progression(PiecePlan *, NodeId section, size_t bar, const char *const *numerals, size_t count,
+GivenResult plan_give_melody(Plan *, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+GivenResult plan_give_progression(Plan *, NodeId section, size_t bar, const char *const *numerals, size_t count,
                                   size_t cells_per_chord);
-GivenResult plan_give_bass(PiecePlan *, NodeId section, size_t bar, const PlanNote *notes, size_t count);
-GivenResult plan_give_section(PiecePlan *, NodeId section, const PiecePlan *source, NodeId source_section);
+GivenResult plan_give_bass(Plan *, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+GivenResult plan_give_section(Plan *, NodeId section, const Plan *source, NodeId source_section);
 ```
 
 From the command line: `plan --given-melody <file> --at B:1`, `--given-progression "I IV V I" --at A:1 --cells 2` and

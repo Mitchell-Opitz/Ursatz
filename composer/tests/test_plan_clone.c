@@ -40,8 +40,8 @@ static char *read_file(const char *path) {
     return text;
 }
 
-static PiecePlan *read_plan(const char *text) {
-    PiecePlan *plan = NULL;
+static Plan *read_plan(const char *text) {
+    Plan *plan = NULL;
     PlanJsonError error;
     if (plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &plan, &error) != PLAN_OK) {
         fprintf(stderr, "cannot read plan: %s at %s\n", error.message, error.path);
@@ -50,16 +50,16 @@ static PiecePlan *read_plan(const char *text) {
     return plan;
 }
 
-static char *write_plan(const PiecePlan *plan) {
+static char *write_plan(const Plan *plan) {
     char *text = plan_to_json(plan, test_plan_producer(), NULL);
     assert(text != NULL);
     return text;
 }
 
 /* The text of a plan after a round trip through JSON: what plan_clone has to give. */
-static char *round_trip_text(const PiecePlan *plan) {
+static char *round_trip_text(const Plan *plan) {
     char *first = write_plan(plan);
-    PiecePlan *again = read_plan(first);
+    Plan *again = read_plan(first);
     char *second = write_plan(again);
     plan_destroy(again);
     free(first);
@@ -85,9 +85,9 @@ static void test_clone_of_every_stored_plan(void) {
         char path[1024];
         snprintf(path, sizeof(path), COMPOSER_SNAPSHOT_DIR "/%s", entry->d_name);
         char *text = read_file(path);
-        PiecePlan *plan = read_plan(text);
+        Plan *plan = read_plan(text);
         char *expected = round_trip_text(plan);
-        PiecePlan *clone = NULL;
+        Plan *clone = NULL;
         assert(plan_clone(plan, &clone) == PLAN_OK && clone != NULL);
         char *cloned = write_plan(clone);
         if (strcmp(expected, cloned) != 0) {
@@ -109,7 +109,7 @@ static void test_clone_of_every_stored_plan(void) {
 
 static void test_clone_of_a_plan_with_a_removed_subtree(void) {
     char *text = read_file(COMPOSER_SNAPSHOT_DIR "/grow-period.plan.json");
-    PiecePlan *plan = read_plan(text);
+    Plan *plan = read_plan(text);
     free(text);
     size_t nodes = plan_node_count(plan);
     bool removed = false;
@@ -124,7 +124,7 @@ static void test_clone_of_a_plan_with_a_removed_subtree(void) {
     assert(gap);
 
     char *expected = round_trip_text(plan);
-    PiecePlan *clone = NULL;
+    Plan *clone = NULL;
     assert(plan_clone(plan, &clone) == PLAN_OK);
     char *cloned = write_plan(clone);
     assert(strcmp(expected, cloned) == 0);
@@ -141,11 +141,11 @@ static void test_clone_of_a_plan_with_a_removed_subtree(void) {
 
 static void test_copy_into(void) {
     char *text = read_file(COMPOSER_SNAPSHOT_DIR "/piece-loop-and-ending.plan.json");
-    PiecePlan *source = read_plan(text);
+    Plan *source = read_plan(text);
     free(text);
     char *expected = round_trip_text(source);
 
-    PiecePlan *target = plan_create();
+    Plan *target = plan_create();
     assert(plan_copy_into(target, source) == PLAN_OK);
     char *copied = write_plan(target);
     assert(strcmp(expected, copied) == 0);
@@ -153,7 +153,7 @@ static void test_copy_into(void) {
 
     /* A plan that holds something else is replaced whole, and the source is not touched by what follows. */
     text = read_file(COMPOSER_SNAPSHOT_DIR "/grow-sentence.plan.json");
-    PiecePlan *other = read_plan(text);
+    Plan *other = read_plan(text);
     free(text);
     assert(plan_copy_into(other, source) == PLAN_OK);
     copied = write_plan(other);
@@ -162,7 +162,7 @@ static void test_copy_into(void) {
     char *source_after = write_plan(source);
     assert(strcmp(expected, source_after) == 0);
     assert(plan_copy_into(NULL, source) == PLAN_ERR_NULL && plan_copy_into(other, NULL) == PLAN_ERR_NULL);
-    PiecePlan *none = (PiecePlan *)1;
+    Plan *none = (Plan *)1;
     assert(plan_clone(NULL, &none) == PLAN_ERR_NULL && none == NULL);
     free(source_after);
     free(copied);
@@ -182,7 +182,7 @@ static PlanSpan span_of(long start, long length) {
 }
 
 static void test_reopen(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form;
     NodeId first;
     NodeId second;
@@ -213,7 +213,7 @@ static void test_reopen(void) {
 
 static void test_stamp(void) {
     char *text = read_file(COMPOSER_SNAPSHOT_DIR "/fill.plan.json");
-    PiecePlan *plan = read_plan(text);
+    Plan *plan = read_plan(text);
     free(text);
     PlanProducer producer;
     memset(&producer, 0, sizeof(producer));
@@ -253,7 +253,7 @@ static void test_hooks(void) {
     char *text = read_file(COMPOSER_SNAPSHOT_DIR "/fill.plan.json");
     int asked = 0;
     PlanReadHooks refusing = {refuse_every_material, NULL, &asked};
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(plan_from_json(test_knowledge(), text, &refusing, &plan, &error) == PLAN_ERR_FORMAT);
     assert(plan == NULL && asked > 0);

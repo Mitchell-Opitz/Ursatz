@@ -37,9 +37,9 @@ typedef enum { SHAPE_REPEAT = 0, SHAPE_CONTRAST, SHAPE_REPEAT_CONTRAST, SHAPE_KI
 typedef struct {
     size_t count;
     int degrees[SEGMENT_MAX];
-} Plan;
-static const Plan PLANS_TWO[] = {{2, {1, 5, 0}}, {2, {1, 4, 0}}, {2, {1, 1, 0}}};
-static const Plan PLANS_THREE[] = {{3, {1, 5, 1}}, {3, {1, 4, 1}}};
+} SegmentPlan;
+static const SegmentPlan PLANS_TWO[] = {{2, {1, 5, 0}}, {2, {1, 4, 0}}, {2, {1, 1, 0}}};
+static const SegmentPlan PLANS_THREE[] = {{3, {1, 5, 1}}, {3, {1, 4, 1}}};
 #define PLAN_KINDS_TWO (sizeof(PLANS_TWO) / sizeof(PLANS_TWO[0]))
 #define PLAN_KINDS_THREE (sizeof(PLANS_THREE) / sizeof(PLANS_THREE[0]))
 
@@ -595,7 +595,7 @@ typedef struct {
     size_t first[SEGMENT_MAX];
     size_t last[SEGMENT_MAX];
     bool repeats[SEGMENT_MAX]; /* the segment repeats segment a's rhythm */
-    Plan plan;
+    SegmentPlan plan;
     size_t cell_start; /* the first note of segment a's cell: after the pickup note, if any */
     Grid grid;
     long start[SEGMENT_MAX];     /* ticks from the motive's start, the pickup included, to where each segment's cell starts */
@@ -625,7 +625,7 @@ typedef struct {
     long bars;
     long pickup;
     Shape shape;
-    Plan plan;
+    SegmentPlan plan;
     bool placed; /* a given plan whose chords are at a bar and beat, not one to a segment */
 } Setup;
 

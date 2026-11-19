@@ -79,7 +79,7 @@ static long ticks(Rational time) {
 }
 
 /* The lane spans of a lane over the theme, in time order, tiling it and all written. */
-static size_t tiling(const PiecePlan *plan, PlanLaneKind lane, PlanSpan theme, LaneSpanId *out, size_t capacity) {
+static size_t tiling(const Plan *plan, PlanLaneKind lane, PlanSpan theme, LaneSpanId *out, size_t capacity) {
     size_t count = plan_lane_find(plan, lane, 0, theme, out, capacity);
     assert(count > 0 && count <= capacity);
     long at = ticks(theme.start);
@@ -93,7 +93,7 @@ static size_t tiling(const PiecePlan *plan, PlanLaneKind lane, PlanSpan theme, L
     return count;
 }
 
-static void check_structure(const PiecePlan *plan, const Scenario *scenario, size_t bars) {
+static void check_structure(const Plan *plan, const Scenario *scenario, size_t bars) {
     Rational bar;
     assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
@@ -148,7 +148,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
     }
 }
 
-static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t bars) {
+static void check_lanes(const Plan *plan, const Scenario *scenario, size_t bars) {
     LaneSpanId ids[64];
     NodeId theme_node = test_find_node(plan, "theme");
     PlanSpan theme = plan_node_span(plan, theme_node);
@@ -216,7 +216,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
 }
 
 /* The material is not part of the piece: it is skipped, and the piece ends with the theme. */
-static void check_render(const PiecePlan *plan, size_t bars, const Scenario *scenario) {
+static void check_render(const Plan *plan, size_t bars, const Scenario *scenario) {
     RenderedPlan rendered;
     Rational bar;
     assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
@@ -257,7 +257,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     config.knowledge = test_knowledge();
     config.seed = seed;
     for (int round = 0; round < 2; round++) {
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         GrowResult result = grow_run(plan, &config, &outcome);
@@ -303,7 +303,7 @@ static void test_seeds_vary(void) {
     Motive motive = make_motive(&SCENARIOS[0]);
     GrowRequest request = make_request(&SCENARIOS[0], &motive, 8);
     for (unsigned long seed = 1; seed <= 10; seed++) {
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
@@ -333,7 +333,7 @@ static void test_seeds_vary(void) {
 static void test_bad_requests(void) {
     Motive motive = make_motive(&SCENARIOS[0]);
     GrowRequest request = make_request(&SCENARIOS[0], &motive, 8);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(NULL, &plan, NULL) == GROW_ERR_NULL);
     assert(grow_build_plan_checked(&request, NULL, NULL) == GROW_ERR_NULL);
 
@@ -390,7 +390,7 @@ static void test_bad_requests(void) {
 static void test_built_plan(void) {
     Motive motive = make_motive(&SCENARIOS[1]);
     GrowRequest request = make_request(&SCENARIOS[1], &motive, 8);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     NodeId theme = test_find_node(plan, "theme");
     NodeId material = test_find_node(plan, "material");
@@ -409,7 +409,7 @@ static void test_built_plan(void) {
 
     /* The plan survives its own JSON. */
     char *json = plan_to_json(plan, test_plan_producer(), NULL);
-    PiecePlan *again = NULL;
+    Plan *again = NULL;
     assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
@@ -420,7 +420,7 @@ static void test_built_plan(void) {
 }
 
 /* The pitches and the length of the motive written on the motive node `name`. */
-static Motive written_motive(const PiecePlan *plan, const char *name, const Motive *template_motive) {
+static Motive written_motive(const Plan *plan, const char *name, const Motive *template_motive) {
     Motive motive = *template_motive;
     SpelledKey motive_key_value = test_key_mode(SCENARIOS[0].tonic, SCENARIOS[0].mode);
     motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
@@ -457,7 +457,7 @@ static void test_motive_forms(bool smoke) {
     size_t dominant = 0;
     /* Seeds 1 to 10, and on to 30 until a dominant form has been drawn (the repetition is drawn by weight, B1 of P34). */
     for (unsigned long seed = 1; seed <= 30 && (smoke ? seed <= 1 : seed <= 10 || dominant == 0); seed++) {
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
@@ -504,7 +504,7 @@ static void test_motive_forms(bool smoke) {
         assert(ticks(m3.length) < ticks(m0.length) && ticks(m2.length) < ticks(m0.length));
 
         /* The same seed gives the same theme, motives and records. */
-        PiecePlan *again = NULL;
+        Plan *again = NULL;
         GrowOutcome second;
         assert(grow_build_plan_checked(&request, &again, NULL) == GROW_OK && grow_run(again, &config, &second) == GROW_OK);
         char *first_json = plan_to_json(plan, test_plan_producer(), NULL);

@@ -147,7 +147,7 @@ Rational melody_climax_position(const MelodyContext *context, const MelodyFillPa
 MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *params);
 
 /* Reads the bars before the target that share one rhythm into repeat_run (phase L4, R-479). False only on a plan error. */
-bool melody_context_read_repeats(const PiecePlan *plan, MelodyContext *context);
+bool melody_context_read_repeats(const Plan *plan, MelodyContext *context);
 
 /* How many times the closure rules count for the target (phase L4, R-478): 0 when it ends no cadence. */
 unsigned melody_closure_weight(const MelodyContext *context, const MelodyFillParams *params);
@@ -199,14 +199,14 @@ size_t melody_chord_at(const MelodyContext *context, Rational position);
  * Reads the harmony and bass under a phrase: the chord spans must tile the span exactly, none of them open, and
  * the bass spans must tile it. The target and the motive are not read. False when the phrase cannot be read.
  */
-bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, SpelledKey key, MelodyContext *out);
+bool melody_phrase_read(const Plan *plan, NodeId owner, PlanSpan span, SpelledKey key, MelodyContext *out);
 
 /*
  * Reads the harmony, bass and motive under a Constrained melody span: the chord spans must tile the span exactly,
  * none of them open, the bass spans must tile it, and a motive_ref constraint must name a motive with a melody.
  * False when the span is not one the melody operator applies to.
  */
-bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *out);
+bool melody_context_read(const Plan *plan, LaneSpanId target, MelodyContext *out);
 
 /*
  * The pitch classes a note must be one of: those the chords it sounds through share, so that a note that is

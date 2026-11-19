@@ -172,7 +172,7 @@ ComposerStatus composer_api_piece_variations(const ComposerContext *context, con
     if (status == COMPOSER_OK) {
         plan_text = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(root, "from"));
         edit.text = plan_text;
-        PiecePlan *original = NULL;
+        Plan *original = NULL;
         PlanJsonError plan_error;
         if (!plan_text) {
             status = api_fail_alloc(&out->error);

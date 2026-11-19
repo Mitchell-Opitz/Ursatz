@@ -6,7 +6,7 @@
 #include <plan/plan_state.h>
 
 /* The nodes of the subtree under id, id first, into out (room for every node of the plan). */
-static size_t collect_subtree(const PiecePlan *plan, NodeId id, NodeId *out, size_t count) {
+static size_t collect_subtree(const Plan *plan, NodeId id, NodeId *out, size_t count) {
     out[count++] = id;
     for (size_t i = 0; i < plan_node_child_count(plan, id); i++) {
         count = collect_subtree(plan, plan_node_child_at(plan, id, i), out, count);
@@ -14,7 +14,7 @@ static size_t collect_subtree(const PiecePlan *plan, NodeId id, NodeId *out, siz
     return count;
 }
 
-PlanResult plan_lock(PiecePlan *plan, FillTarget target) {
+PlanResult plan_lock(Plan *plan, FillTarget target) {
     if (!plan) {
         return PLAN_ERR_NULL;
     }

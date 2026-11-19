@@ -38,13 +38,13 @@ static PlanSpan bars(long start, long length) {
     return span;
 }
 
-static NodeId add_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span) {
+static NodeId add_node(Plan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span) {
     NodeId id = PLAN_NODE_NONE;
     assert(plan_add_node(plan, parent, kind, span, NULL, &id) == PLAN_OK);
     return id;
 }
 
-static void add_constraint(PiecePlan *plan, FillTarget target, int bars_value) {
+static void add_constraint(Plan *plan, FillTarget target, int bars_value) {
     PlanConstraint constraint = {PLAN_CONSTRAINT_LENGTH_BARS, {0}};
     constraint.params.bars = bars_value;
     if (target.kind == FILL_TARGET_NODE) {
@@ -54,7 +54,7 @@ static void add_constraint(PiecePlan *plan, FillTarget target, int bars_value) {
     }
 }
 
-static LaneSpanId add_melody(PiecePlan *plan, NodeId owner, PlanSpan span, int pitch) {
+static LaneSpanId add_melody(Plan *plan, NodeId owner, PlanSpan span, int pitch) {
     PlanNote note = plan_note(pitch, fraction(0, 1), span.length);
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
@@ -65,15 +65,15 @@ static LaneSpanId add_melody(PiecePlan *plan, NodeId owner, PlanSpan span, int p
     return id;
 }
 
-static PiecePlan *top_down_plan(void) {
-    PiecePlan *plan = plan_create();
+static Plan *top_down_plan(void) {
+    Plan *plan = plan_create();
     NodeId form = add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8));
     FillTarget target = {FILL_TARGET_NODE, form};
     add_constraint(plan, target, 8);
     return plan;
 }
 
-static char *plan_text(const PiecePlan *plan) {
+static char *plan_text(const Plan *plan) {
     PlanJsonError error;
     char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text != NULL);
@@ -90,7 +90,7 @@ static bool next_kind(PlanNodeKind kind, PlanNodeKind *out) {
     return true;
 }
 
-static bool split_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool split_applies(const Plan *plan, FillTarget target, void *context) {
     (void)context;
     PlanNodeKind unused;
     return target.kind == FILL_TARGET_NODE && plan_node_child_count(plan, (NodeId)target.id) == 0 &&
@@ -110,7 +110,7 @@ static bool add_int_candidate(FillCandidateList *out, const char *label, int val
     return fill_candidates_add(out, label, payload, free_int);
 }
 
-static bool split_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool split_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                            FillCandidateList *out) {
     (void)rng;
     (void)context;
@@ -121,7 +121,7 @@ static bool split_generate(const PiecePlan *plan, FillTarget target, FillRng *rn
     return (kind != PLAN_NODE_FORM && kind != PLAN_NODE_SECTION) || add_int_candidate(out, "split-4", 4);
 }
 
-static PlanResult split_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult split_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)context;
     int parts = *(const int *)candidate->payload;
     NodeId parent = (NodeId)target.id;
@@ -145,7 +145,7 @@ static PlanResult split_apply(PiecePlan *plan, FillTarget target, const FillCand
     return result;
 }
 
-static void split_propagate(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static void split_propagate(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)candidate;
     (void)context;
     for (size_t i = 0; i < plan_node_child_count(plan, (NodeId)target.id); i++) {
@@ -154,7 +154,7 @@ static void split_propagate(PiecePlan *plan, FillTarget target, const FillCandid
     }
 }
 
-static bool close_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool close_applies(const Plan *plan, FillTarget target, void *context) {
     (void)context;
     if (target.kind != FILL_TARGET_NODE) {
         return false;
@@ -182,7 +182,7 @@ static bool close_applies(const PiecePlan *plan, FillTarget target, void *contex
     return true;
 }
 
-static bool close_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool close_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                            FillCandidateList *out) {
     (void)plan;
     (void)target;
@@ -191,19 +191,19 @@ static bool close_generate(const PiecePlan *plan, FillTarget target, FillRng *rn
     return fill_candidates_add(out, "close", NULL, NULL);
 }
 
-static PlanResult close_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult close_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)candidate;
     (void)context;
     PlanConstraint mark = {PLAN_CONSTRAINT_EMBELLISH, {0}};
     return plan_node_add_constraint(plan, (NodeId)target.id, &mark);
 }
 
-static bool melody_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool melody_applies(const Plan *plan, FillTarget target, void *context) {
     (void)context;
     return target.kind == FILL_TARGET_LANE_SPAN && plan_lane_span_lane(plan, (LaneSpanId)target.id) == PLAN_LANE_MELODY;
 }
 
-static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool melody_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     (void)plan;
     (void)target;
@@ -213,7 +213,7 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
            add_int_candidate(out, "pitch-64", 64);
 }
 
-static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult melody_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)context;
     LaneSpanId id = (LaneSpanId)target.id;
     PlanNote note = plan_note(*(const int *)candidate->payload, fraction(0, 1), plan_lane_span_span(plan, id).length);
@@ -224,7 +224,7 @@ static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCan
     return plan_lane_span_write(plan, id, &payload);
 }
 
-static bool failing_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool failing_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
     (void)plan;
     (void)target;
@@ -234,14 +234,14 @@ static bool failing_generate(const PiecePlan *plan, FillTarget target, FillRng *
     return false;
 }
 
-static bool any_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool any_applies(const Plan *plan, FillTarget target, void *context) {
     (void)plan;
     (void)target;
     (void)context;
     return true;
 }
 
-static PlanResult no_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult no_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)plan;
     (void)target;
     (void)candidate;
@@ -281,7 +281,7 @@ static FillOperatorRegistry *fake_registry(void) {
 }
 
 /* Prefers splitting in 2 to 4, and rejects pitch 64. */
-static bool fake_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+static bool fake_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out) {
     (void)plan;
     (void)target;
@@ -301,7 +301,7 @@ static bool fake_checker(const PiecePlan *plan, FillTarget target, const FillOpe
     return true;
 }
 
-static bool reject_all_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+static bool reject_all_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                                const FillCandidate *candidate, void *context, FillCheck *out) {
     (void)plan;
     (void)target;
@@ -323,7 +323,7 @@ static FillConfig config_with(unsigned long seed) {
     return config;
 }
 
-static size_t count_open(const PiecePlan *plan) {
+static size_t count_open(const Plan *plan) {
     size_t open = 0;
     for (size_t id = 1; id <= plan_node_count(plan); id++) {
         open += plan_node_state(plan, id) == PLAN_STATE_CONSTRAINED;
@@ -337,7 +337,7 @@ static size_t count_open(const PiecePlan *plan) {
 /* ----------------------------------------------------------------- picking */
 
 static void test_pick(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8));
     assert(plan_node_set_state(plan, form, PLAN_STATE_GIVEN) == PLAN_OK);
     NodeId a = add_node(plan, form, PLAN_NODE_SECTION, bars(0, 4));
@@ -406,7 +406,7 @@ static void test_registry_validation(void) {
 /* ---------------------------------------------------------- filling a plan */
 
 static void test_top_down_fill(void) {
-    PiecePlan *plan = top_down_plan();
+    Plan *plan = top_down_plan();
     FillOperatorRegistry *registry = fake_registry();
     FillConfig config = config_with(42);
     FillOutcome outcome;
@@ -478,7 +478,7 @@ static void test_top_down_fill(void) {
 }
 
 static char *run_to_text(unsigned long seed, char **record_text) {
-    PiecePlan *plan = top_down_plan();
+    Plan *plan = top_down_plan();
     FillOperatorRegistry *registry = fake_registry();
     FillConfig config = config_with(seed);
     FillOutcome outcome;
@@ -535,7 +535,7 @@ static void test_reproducible_from_seed(void) {
 /* ------------------------------------------------------------ Given, bottom-up */
 
 static void test_given_is_never_modified(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8));
     FillTarget form_target = {FILL_TARGET_NODE, form};
     add_constraint(plan, form_target, 8);
@@ -573,7 +573,7 @@ static void test_given_is_never_modified(void) {
 
 static void test_unfillable_targets_end_cleanly(void) {
     /* No operator applies. */
-    PiecePlan *plan = top_down_plan();
+    Plan *plan = top_down_plan();
     FillOperatorRegistry *empty = fill_registry_create();
     FillOutcome outcome;
     FillRecord *record = NULL;
@@ -621,7 +621,7 @@ static void test_unfillable_targets_end_cleanly(void) {
     bad.generate = failing_generate;
     bad.apply = no_apply;
     assert(fill_registry_register(failing, &bad) == FILL_OK);
-    PiecePlan *fresh = top_down_plan();
+    Plan *fresh = top_down_plan();
     assert(fill_run(fresh, failing, &config, &outcome, &record) == FILL_ERR_OPERATOR_FAILED);
     assert(outcome.status == FILL_STATUS_ERROR);
     assert(record != NULL && record->status == FILL_STATUS_ERROR);
@@ -637,7 +637,7 @@ static void test_unfillable_targets_end_cleanly(void) {
 /* ---------------------------------------------------------------- suggestions */
 
 static void test_suggestions(void) {
-    PiecePlan *plan = top_down_plan();
+    Plan *plan = top_down_plan();
     FillOperatorRegistry *registry = fake_registry();
     FillConfig config = config_with(3);
     FillTarget root = {FILL_TARGET_NODE, 1};
@@ -669,7 +669,7 @@ static void test_suggestions(void) {
     fill_suggestions_destroy(suggestions);
 
     /* Top 1, and a target that is not open. */
-    PiecePlan *fresh = top_down_plan();
+    Plan *fresh = top_down_plan();
     assert(fill_suggest(fresh, registry, &config, root, 1, &suggestions) == FILL_OK);
     assert(fill_suggestions_count(suggestions) == 1);
     fill_suggestions_destroy(suggestions);
@@ -679,7 +679,7 @@ static void test_suggestions(void) {
     plan_destroy(fresh);
 
     /* A rejected candidate is never suggested. */
-    PiecePlan *melody_plan = plan_create();
+    Plan *melody_plan = plan_create();
     NodeId form = add_node(melody_plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 1));
     assert(plan_node_set_state(melody_plan, form, PLAN_STATE_GIVEN) == PLAN_OK);
     LaneSpanId span = add_melody(melody_plan, form, bars(0, 1), 60);

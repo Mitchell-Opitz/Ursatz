@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
         GrowRequest request = make_request(&SCENARIOS[s], &motive, write_soprano);
         size_t scenario_dirty = 0;
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-            PiecePlan *plan = NULL;
+            Plan *plan = NULL;
             GrowOutcome outcome;
             GrowConfig config;
             VoiceHeard heard;

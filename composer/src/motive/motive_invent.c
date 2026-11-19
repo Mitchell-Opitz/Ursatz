@@ -53,7 +53,7 @@ typedef struct {
     Rational bar;
 } InventRequest;
 
-static bool has_invent_constraint(const PiecePlan *plan, LaneSpanId id) {
+static bool has_invent_constraint(const Plan *plan, LaneSpanId id) {
     for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
         if (plan_lane_span_constraint_at(plan, id, i)->kind == PLAN_CONSTRAINT_INVENT_MOTIVE) {
             return true;
@@ -66,7 +66,7 @@ static bool has_invent_constraint(const PiecePlan *plan, LaneSpanId id) {
  * The target must be an open melody span (voice 0) of a motive node, with an invent_motive constraint, one bar of
  * its meter long and starting on a barline of it. The meter and key are the plan's lanes over it, else the context's.
  */
-static bool read_invent_request(const PiecePlan *plan, FillTarget target, const MotiveDevelopContext *context,
+static bool read_invent_request(const Plan *plan, FillTarget target, const MotiveDevelopContext *context,
                                 InventRequest *out) {
     LaneSpanId id = (LaneSpanId)target.id;
     if (target.kind != FILL_TARGET_LANE_SPAN || !plan_has_lane_span(plan, id) ||
@@ -295,7 +295,7 @@ static bool invent_score(const Motive *motive, const MotiveScoreWeights *weights
 
 /* -------------------------------------------------------------- operator */
 
-static bool invent_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool invent_applies(const Plan *plan, FillTarget target, void *context) {
     InventRequest request;
     MotiveDevelopContext shared = invent_context(context);
     return read_invent_request(plan, target, &shared, &request);
@@ -322,7 +322,7 @@ static void invent_label(const Motive *motive, char *label, size_t size) {
     }
 }
 
-static bool invent_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool invent_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     MotiveDevelopContext shared_value = invent_context(context);
     const MotiveDevelopContext *shared = &shared_value;
@@ -362,7 +362,7 @@ static bool invent_generate(const PiecePlan *plan, FillTarget target, FillRng *r
 }
 
 /* The span takes the notes and is Realized; the motive node it belongs to is complete with it, so it is too. */
-static PlanResult invent_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult invent_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const InventPayload *payload = candidate ? candidate->payload : NULL;
     InventRequest request;
     if (!payload || payload->magic != INVENT_PAYLOAD_MAGIC) {
@@ -392,8 +392,8 @@ FillResult motive_invent_register(FillOperatorRegistry *registry, const MotiveDe
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = MOTIVE_INVENT_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan one-bar melody lane span of a motive node with invent_motive";
-    operator_.generator.supported_outputs = "PiecePlan melody lane span";
+    operator_.generator.supported_inputs = "Plan one-bar melody lane span of a motive node with invent_motive";
+    operator_.generator.supported_outputs = "Plan melody lane span";
     operator_.generator.configuration_description = "candidates per call, default meter and key";
     operator_.generator.constraints_description = "3 to 6 notes filling the bar, opening on degree 1, 3 or 5, C4 to C6, standard-counterpoint melodic rules";
     operator_.generator.deterministic = true;
@@ -406,7 +406,7 @@ FillResult motive_invent_register(FillOperatorRegistry *registry, const MotiveDe
     return fill_registry_register(registry, &operator_);
 }
 
-bool motive_invent_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool motive_invent_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out) {
     (void)plan;
     (void)target;

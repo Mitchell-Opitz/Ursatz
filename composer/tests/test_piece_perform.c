@@ -61,7 +61,7 @@ static Rational whole(long long numerator) {
     return (Rational){numerator, 1};
 }
 
-static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutcome *outcome, PieceResult *ran) {
+static Plan *compose(const FormSpec *form, unsigned long seed, ComposeOutcome *outcome, PieceResult *ran) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
@@ -70,7 +70,7 @@ static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutco
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.seed = seed;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
@@ -82,7 +82,7 @@ static PiecePlan *compose(const FormSpec *form, unsigned long seed, ComposeOutco
 }
 
 /* The lane spans of one lane and voice inside a section, in order: their start from the section's, and their payload. */
-static void same_lane(const PiecePlan *source_plan, NodeId source, const PiecePlan *performed, NodeId node, PlanLaneKind lane,
+static void same_lane(const Plan *source_plan, NodeId source, const Plan *performed, NodeId node, PlanLaneKind lane,
                       int voice) {
     LaneSpanId a[32];
     LaneSpanId b[32];
@@ -114,7 +114,7 @@ static void same_lane(const PiecePlan *source_plan, NodeId source, const PiecePl
     }
 }
 
-static size_t composed_sections(const PiecePlan *plan, NodeId *out) {
+static size_t composed_sections(const Plan *plan, NodeId *out) {
     size_t count = 0;
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -126,7 +126,7 @@ static size_t composed_sections(const PiecePlan *plan, NodeId *out) {
     return count;
 }
 
-static size_t render_count(const PiecePlan *plan, Rational *end, size_t *sections) {
+static size_t render_count(const Plan *plan, Rational *end, size_t *sections) {
     RenderedPlan rendered;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     size_t count = rendered.count;
@@ -136,7 +136,7 @@ static size_t render_count(const PiecePlan *plan, Rational *end, size_t *section
     return count;
 }
 
-static void check_performance(const FormSpec *form, const PiecePlan *plan) {
+static void check_performance(const FormSpec *form, const Plan *plan) {
     static const char *const NAMES[6] = {"A", "A (repeat)", "B", "A'", "B (repeat)", "A' (repeat)"};
     static const size_t SOURCE[6] = {0, 0, 1, 2, 1, 2};
     PiecePerformPart part = {form, &form->sizes[0], plan, true, NULL};
@@ -178,7 +178,7 @@ static void check_performance(const FormSpec *form, const PiecePlan *plan) {
 }
 
 /* A performance of parts in two meters is refused, and so is a plan that does not match its size. */
-static void check_refusals(const FormSpec *form, const PiecePlan *plan) {
+static void check_refusals(const FormSpec *form, const Plan *plan) {
     PiecePerformance performance;
     PiecePerformPart part = {form, &form->sizes[0], plan, true, NULL};
     assert(piece_perform(NULL, 1, &performance) == PIECE_ERR_NULL && piece_perform(&part, 0, &performance) == PIECE_ERR_NULL);
@@ -194,7 +194,7 @@ static void check_refusals(const FormSpec *form, const PiecePlan *plan) {
 static const char *const PART_NAMES[6] = {"A", "B", "Second A", "Second B", "First again A", "First again B"};
 
 /* The notes of the first lane span of the motive m0 of a plan. */
-static const PlanLanePayload *m0_notes(const PiecePlan *plan) {
+static const PlanLanePayload *m0_notes(const Plan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
         if (plan_node_kind(plan, id) == PLAN_NODE_MOTIVE && name && strcmp(name, "m0") == 0) {
@@ -229,7 +229,7 @@ static void check_parts_performance(const FormSpec *form, unsigned long seed, co
     static const size_t SOURCE_PART[6] = {0, 0, 1, 1, 0, 0};
     for (size_t i = 0; i < 6; i++) {
         const PiecePerformedSection *section = &performance.sections[i];
-        const PiecePlan *source_plan = parts->plans[SOURCE_PART[i]];
+        const Plan *source_plan = parts->plans[SOURCE_PART[i]];
         assert(strcmp(section->name, PART_NAMES[i]) == 0 && !section->repeat);
         assert(section->part == (i < 2 ? 0u : i < 4 ? 1u : 2u));
         assert(rational_cmp(section->start, whole((long long)i * 8)) == 0);
@@ -383,7 +383,7 @@ static void check_part_bars_performance(const FormSpec *form, size_t bars, const
         in_part[section->part]++;
         assert(rational_cmp(plan_node_span(performance.plan, section->node).length, in_bars(section->part == 1 ? 4 : first)) == 0);
         /* Its source in the part's own plan is as long: the Trio's plan is composed at 12 bars, the others at the size's. */
-        const PiecePlan *source_plan = parts->plans[section->part == 2 ? 0 : section->part];
+        const Plan *source_plan = parts->plans[section->part == 2 ? 0 : section->part];
         assert(rational_cmp(plan_node_span(source_plan, section->source).length, in_bars(section->part == 1 ? 4 : first)) == 0);
     }
     assert(in_part[0] == 6 && in_part[1] == 6 && in_part[2] == 3);
@@ -467,8 +467,8 @@ int main(int argc, char **argv) {
         ComposeOutcome plain_outcome;
         PieceResult ran;
         PieceResult plain_ran;
-        PiecePlan *plan = compose(form, seed, &outcome, &ran);
-        PiecePlan *plain = compose(plain_form, seed, &plain_outcome, &plain_ran);
+        Plan *plan = compose(form, seed, &outcome, &ran);
+        Plan *plain = compose(plain_form, seed, &plain_outcome, &plain_ran);
         /* Repeats do not change composing. */
         assert(ran == plain_ran);
         PlanJsonError detail;

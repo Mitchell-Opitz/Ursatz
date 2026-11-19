@@ -33,7 +33,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     LaneSpanId target;
     PlanSpan span;

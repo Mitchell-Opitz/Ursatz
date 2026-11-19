@@ -521,7 +521,7 @@ static ComposerStatus seed_source(const CorpusSeed *seed, PlanSource *out, Compo
     return COMPOSER_OK;
 }
 
-static ComposerStatus add_source(PiecePlan *plan, NodeId node, const CorpusSeed *seed, ComposerError *error) {
+static ComposerStatus add_source(Plan *plan, NodeId node, const CorpusSeed *seed, ComposerError *error) {
     PlanConstraint constraint;
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = PLAN_CONSTRAINT_SOURCE;
@@ -556,7 +556,7 @@ static ComposerStatus read_motive(const PlanBuild *state, const cJSON *motive, c
 /* --- the given material ---------------------------------------------------------------------------- */
 
 /* The node of the section with the letter, or PLAN_NODE_NONE; the letters are listed into names when it has none. */
-static NodeId section_named(const PiecePlan *plan, const char *letter, char *names, size_t size) {
+static NodeId section_named(const Plan *plan, const char *letter, char *names, size_t size) {
     ApiSection sections[API_MAX_SECTIONS];
     size_t count = api_plan_sections(plan, sections, API_MAX_SECTIONS);
     names[0] = '\0';
@@ -571,7 +571,7 @@ static NodeId section_named(const PiecePlan *plan, const char *letter, char *nam
 }
 
 /* Places the given material in the plan. */
-static ComposerStatus place_given(PlanBuild *state, PiecePlan *plan, ComposerError *error) {
+static ComposerStatus place_given(PlanBuild *state, Plan *plan, ComposerError *error) {
     for (size_t i = 0; i < state->given_count; i++) {
         const Given *given = &state->given[i];
         char names[128];
@@ -650,7 +650,7 @@ static cJSON *given_document(const PlanBuild *state) {
     return list;
 }
 
-static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
+static cJSON *plan_document(const PlanBuild *state, const Plan *plan) {
     ApiSection sections[API_MAX_SECTIONS];
     size_t count = api_plan_sections(plan, sections, API_MAX_SECTIONS);
     if (count > API_MAX_SECTIONS) {
@@ -729,7 +729,7 @@ static cJSON *plan_document(const PlanBuild *state, const PiecePlan *plan) {
 
 /* --- the entry ------------------------------------------------------------------------------------- */
 
-static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerError *error) {
+static ComposerStatus build_plan(PlanBuild *state, Plan **out, ComposerError *error) {
     Motive *motive = calloc(1, sizeof(*motive));
     bool has_motive = false;
     ComposerStatus status = motive ? COMPOSER_OK : api_fail_alloc(error);
@@ -847,7 +847,7 @@ static ComposerStatus build_plan(PlanBuild *state, PiecePlan **out, ComposerErro
             }
         }
     }
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PieceResult built = piece_build_plan(&request, &plan);
     if (built != PIECE_OK) {
         size_t theme_bars = 8;
@@ -887,7 +887,7 @@ ComposerStatus composer_api_plan(const ComposerContext *context, const char *req
         return context_status;
     }
     PlanBuild *state = calloc(1, sizeof(*state));
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     if (state) {
         state->knowledge = context->knowledge;
     }

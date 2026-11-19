@@ -44,14 +44,14 @@ typedef struct {
 } FigureNote;
 
 /* The melody of the section the target returns, moved by shift (and mapped into to_material when mode_change), in order of onset. NULL when it holds no note. */
-FigureSourceNote *form_figure_read_melody(const PiecePlan *plan, NodeId source, int shift, bool mode_change, int tonic,
+FigureSourceNote *form_figure_read_melody(const Plan *plan, NodeId source, int shift, bool mode_change, int tonic,
                                           const PitchMaterial *to_material, size_t *count);
 bool form_figure_has_pitch_class(unsigned mask, int pitch);
 /* The section as the figure reads it; NULL when it is not a figurate return or cannot be read. */
-FigureReading *form_figure_read_section(const PiecePlan *plan, NodeId section);
+FigureReading *form_figure_read_section(const Plan *plan, NodeId section);
 void form_figure_reading_free(FigureReading *reading);
 bool form_figure_cell_bounds(const FigureReading *reading, size_t cell, Rational *start, Rational *end);
-bool form_figure_find(const PiecePlan *plan, NodeId section, SectionFigure *out);
+bool form_figure_find(const Plan *plan, NodeId section, SectionFigure *out);
 /* The notes a figure has per cell; 0 when it is not a whole number from 2 to 8. */
 size_t form_figure_notes_per_cell(const FigureReading *reading, SectionFigureRhythm rhythm, Rational *length);
 /* The notes a kept cell holds, added to out. */

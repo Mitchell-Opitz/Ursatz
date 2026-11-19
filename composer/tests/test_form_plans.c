@@ -165,7 +165,7 @@ static uint64_t plan_hash(const Size *size, const Scenario *scenario, int beats,
     request.count = size->count;
     request.modulate = modulate;
     request.seed = seed;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PieceResult built = piece_build_plan(&request, &plan);
     if (built != PIECE_OK || !plan) {
         fprintf(stderr, "%s %zu %zu %s modulate %d seed %lu: %s\n", size->kind, size->bars,
@@ -324,7 +324,7 @@ static uint64_t piece_hash(const char *name, const char *theme) {
         fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);
         exit(1);
     }
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PieceResult built = piece_build_plan(&spec->request, &plan);
     if (built != PIECE_OK || !plan) {
         fprintf(stderr, "%s: %s\n", name, piece_result_name(built));

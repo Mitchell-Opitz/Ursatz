@@ -44,7 +44,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     NodeId source;      /* the Given motive */
     NodeId developed;   /* the open motive node a development is written to */
@@ -67,7 +67,7 @@ static Rational time_plus(Rational a, Rational b) {
     return sum;
 }
 
-static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, int pitch) {
+static LaneSpanId add_notes(Plan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, int pitch) {
     PlanNote note;
     PlanLanePayload payload;
     LaneSpanId id;
@@ -630,7 +630,7 @@ static void test_needs_harmony_and_bass(void) {
  *     chord tone.
  */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId phrase;
     NodeId source;
     LaneSpanId first;
@@ -831,7 +831,7 @@ static void test_ideas_in_order(void) {
  * A motive with no key has no tones, and its plan carries no motive_tones constraint.
  */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId source;
     LaneSpanId first;
     LaneSpanId second;

@@ -84,7 +84,7 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     GrowRequest request;
     GrowConfig config;
     GrowOutcome outcome;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     FormHeard heard;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();

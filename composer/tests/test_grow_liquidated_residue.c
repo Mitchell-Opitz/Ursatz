@@ -59,7 +59,7 @@ static Motive load_motive(const char *path) {
     return motive;
 }
 
-static const PlanMotiveRef *ref_of(const PiecePlan *plan, NodeId node) {
+static const PlanMotiveRef *ref_of(const Plan *plan, NodeId node) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
@@ -70,7 +70,7 @@ static const PlanMotiveRef *ref_of(const PiecePlan *plan, NodeId node) {
 }
 
 /* The melody notes a node owns (its melody span), or 0. */
-static size_t melody_of(const PiecePlan *plan, NodeId node, const PlanNote **notes) {
+static size_t melody_of(const Plan *plan, NodeId node, const PlanNote **notes) {
     LaneSpanId spans[8];
     size_t count = plan_node_lane_spans(plan, node, spans, 8);
     for (size_t i = 0; i < count && i < 8; i++) {
@@ -119,7 +119,7 @@ static bool same_durations(const PlanNote *notes, const Motive *motive, size_t f
 }
 
 /* Checks one cadential idea of a composed theme; the motive node is m<slot>. */
-static void check_idea(const PiecePlan *plan, const Motive *motive, const MotiveAnalysis *analysis, const char *idea,
+static void check_idea(const Plan *plan, const Motive *motive, const MotiveAnalysis *analysis, const char *idea,
                        const char *motive_name, int tonic, bool is_minor, Rational shortest) {
     NodeId node = test_find_node(plan, motive_name);
     NodeId idea_node = test_find_node(plan, idea);
@@ -191,7 +191,7 @@ static void test_cadential_ideas(void) {
             SpelledKey key = motive_key(&motive);
             int tonic = spelled_key_tonic_pitch_class(&key);
             bool is_minor = harmony_key_mode(&key) == HARMONY_MODE_MINOR;
-            const PiecePlan *plan = run.themes[0].plan;
+            const Plan *plan = run.themes[0].plan;
             if (test->ending == SECTION_ENDING_CONTINUATION) {
                 check_idea(plan, &motive, &analysis, "cadential", "m4", tonic, is_minor, shortest);
                 ideas++;
@@ -214,7 +214,7 @@ static void test_head_residue(void) {
     GrowRun run;
     Motive motive;
     compose(&CASES[2], 1, &run, &motive);
-    const PiecePlan *plan = run.themes[0].plan;
+    const Plan *plan = run.themes[0].plan;
     NodeId node = test_find_node(plan, "liquidated 3");
     assert(node != PLAN_NODE_NONE);
     const PlanNote *notes = NULL;

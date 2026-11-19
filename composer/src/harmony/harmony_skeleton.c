@@ -9,7 +9,7 @@
 
 #define PREFERENCE_SCALE 1000
 
-bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonContext *out) {
+bool harmony_skeleton_read(const Plan *plan, LaneSpanId target, SkeletonContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY ||
         plan_lane_span_voice(plan, target) != 0 ||
         plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) != NULL) {
@@ -225,14 +225,14 @@ bool harmony_skeleton_check(const void *payload, FillCheck *out) {
     return true;
 }
 
-PlanResult harmony_add_chord(PiecePlan *plan, NodeId owner, const PhraseChord *chord, PlanSpan span, LaneSpanId *id) {
+PlanResult harmony_add_chord(Plan *plan, NodeId owner, const PhraseChord *chord, PlanSpan span, LaneSpanId *id) {
     PlanLanePayload payload;
     harmony_chord_payload(chord, &payload);
     PlanResult result = plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, span, &payload, id);
     return result == PLAN_OK ? plan_lane_span_set_state(plan, *id, PLAN_STATE_REALIZED) : result;
 }
 
-static PlanResult add_schema_stage(PiecePlan *plan, LaneSpanId id, int schema, size_t stage) {
+static PlanResult add_schema_stage(Plan *plan, LaneSpanId id, int schema, size_t stage) {
     PlanConstraint constraint = {PLAN_CONSTRAINT_SCHEMA, {0}};
     constraint.params.schema.schema = schema;
     constraint.params.schema.stage = (int)stage;
@@ -240,7 +240,7 @@ static PlanResult add_schema_stage(PiecePlan *plan, LaneSpanId id, int schema, s
 }
 
 /* Writes the harmony of the skeleton and the span left over; the first chord takes the target span. */
-static PlanResult write_harmony(PiecePlan *plan, const SkeletonCandidate *skeleton, const SkeletonContext *read) {
+static PlanResult write_harmony(Plan *plan, const SkeletonCandidate *skeleton, const SkeletonContext *read) {
     Rational cell = read->metre.cell_length;
     LaneSpanId first = read->target;
     LaneSpanId last = first;
@@ -287,7 +287,7 @@ static PlanResult write_harmony(PiecePlan *plan, const SkeletonCandidate *skelet
     return skeleton->count > 1 ? harmony_move_cadence(plan, first, last) : PLAN_OK;
 }
 
-static PlanResult write_bass(PiecePlan *plan, const SkeletonCandidate *skeleton, const SkeletonContext *read) {
+static PlanResult write_bass(Plan *plan, const SkeletonCandidate *skeleton, const SkeletonContext *read) {
     Rational cell = read->metre.cell_length;
     PlanResult result = PLAN_OK;
     size_t offset = 0;
@@ -345,7 +345,7 @@ static PlanResult write_bass(PiecePlan *plan, const SkeletonCandidate *skeleton,
     return result;
 }
 
-PlanResult harmony_skeleton_apply(PiecePlan *plan, const SkeletonCandidate *skeleton) {
+PlanResult harmony_skeleton_apply(Plan *plan, const SkeletonCandidate *skeleton) {
     SkeletonContext read;
     if (!plan || !skeleton || skeleton->count == 0) {
         return PLAN_ERR_NULL;

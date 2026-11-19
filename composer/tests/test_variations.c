@@ -65,19 +65,19 @@ static FillTarget node_target(NodeId id) {
     return target;
 }
 
-static char *json_of(const PiecePlan *plan) {
+static char *json_of(const Plan *plan) {
     char *text = plan_to_json(plan, test_plan_producer(), NULL);
     assert(text);
     return text;
 }
 
-static NodeId section(const PiecePlan *plan, size_t index) {
+static NodeId section(const Plan *plan, size_t index) {
     return plan_node_child_at(plan, plan_root(plan), index);
 }
 
 /* A filled rounded binary. */
-static PiecePlan *filled(unsigned long seed) {
-    PiecePlan *plan = NULL;
+static Plan *filled(unsigned long seed) {
+    Plan *plan = NULL;
     PieceRequest asked = request("rounded-binary");
     ComposeConfig config = config_of(seed);
     ComposeOutcome outcome;
@@ -88,7 +88,7 @@ static PiecePlan *filled(unsigned long seed) {
 }
 
 /* The lane spans of a lane over a section as text: where they are, their state and what they hold. */
-static char *lane_text(const PiecePlan *plan, NodeId node, PlanLaneKind lane) {
+static char *lane_text(const Plan *plan, NodeId node, PlanLaneKind lane) {
     size_t capacity = 1 << 16;
     char *text = calloc(capacity, 1);
     size_t used = 0;
@@ -115,7 +115,7 @@ static char *lane_text(const PiecePlan *plan, NodeId node, PlanLaneKind lane) {
     return text;
 }
 
-static char *section_text(const PiecePlan *plan, NodeId node) {
+static char *section_text(const Plan *plan, NodeId node) {
     PlanLaneKind lanes[4] = {PLAN_LANE_HARMONY, PLAN_LANE_BASS, PLAN_LANE_MELODY, PLAN_LANE_INNER_VOICE};
     char *text = calloc(4 * (1 << 16) + 8, 1);
     for (int i = 0; i < 4; i++) {
@@ -130,7 +130,7 @@ static char *section_text(const PiecePlan *plan, NodeId node) {
 /* --- distinct ------------------------------------------------------------------------ */
 
 static void distinct(void) {
-    PiecePlan *plan = filled(3);
+    Plan *plan = filled(3);
     NodeId a = section(plan, 0);
     NodeId b = section(plan, 1);
     char *before = json_of(plan);
@@ -188,7 +188,7 @@ static void distinct(void) {
 /* --- refused ------------------------------------------------------------------------- */
 
 static void refused(void) {
-    PiecePlan *plan = filled(3);
+    Plan *plan = filled(3);
     NodeId a = section(plan, 0);
     NodeId b = section(plan, 1);
     FillTarget target = node_target(b);
@@ -225,11 +225,11 @@ static void refused(void) {
 
 /* --- harmonize ----------------------------------------------------------------------- */
 
-static PiecePlan *with_given_melody(unsigned long seed) {
+static Plan *with_given_melody(unsigned long seed) {
     PieceRequest asked = request("binary");
     asked.given_melodies = 1;
     asked.seed = seed;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     MotiveOptions options;
     Motive melody;
     MotiveError error;
@@ -251,7 +251,7 @@ static PiecePlan *with_given_melody(unsigned long seed) {
 }
 
 static void harmonize(void) {
-    PiecePlan *plan = with_given_melody(1);
+    Plan *plan = with_given_melody(1);
     NodeId a = section(plan, 0);
     NodeId b = section(plan, 1);
     ComposeConfig config = config_of(1);
@@ -296,7 +296,7 @@ static void harmonize(void) {
 /* --- the sweep ----------------------------------------------------------------------- */
 
 static void sweep(unsigned long last, size_t baseline) {
-    PiecePlan *plan = filled(3);
+    Plan *plan = filled(3);
     FillTarget target = node_target(section(plan, 1));
     size_t kept = 0;
     for (unsigned long seed = 1; seed <= last; seed++) {

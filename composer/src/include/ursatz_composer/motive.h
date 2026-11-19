@@ -335,7 +335,7 @@ const char *motive_role_name(bool accompaniment);
  * PLAN_ERR_BAD_PAYLOAD for a motive that is not valid. name may be NULL.
  * out_node and out_span may be NULL.
  */
-PlanResult motive_attach(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+PlanResult motive_attach(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                          NodeId *out_node, LaneSpanId *out_span);
 
 /*
@@ -343,7 +343,7 @@ PlanResult motive_attach(PiecePlan *plan, NodeId parent, Rational start, const M
  * corpus (corpus_seed.h). It is added before the node becomes Given, which is the only time it can be. source may be
  * NULL, which is motive_attach.
  */
-PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+PlanResult motive_attach_sourced(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                                  const PlanSource *source, NodeId *out_node, LaneSpanId *out_span);
 
 #endif

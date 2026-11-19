@@ -31,7 +31,7 @@
 #define SEEDS 8
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     PlanSpan span;
     PlanMeter meter;
@@ -78,7 +78,7 @@ static const int BASS[8] = {48, 41, 43, 48, 48, 50, 43, 48};
  * 72 to 76, or, steady, of one held note a bar, so the room between the bass and the melody never changes.
  */
 /* The accompaniment motive of the tests, C4:e G4:e E4:e G4:e, as the node "acc" in a bar after the eight. */
-static void add_motive_node(PiecePlan *plan, NodeId form) {
+static void add_motive_node(Plan *plan, NodeId form) {
     Motive motive;
     NodeId section;
     NodeId phrase;
@@ -211,7 +211,7 @@ static PlanAccompaniment ask(PlanAccompanimentPattern pattern, int texture) {
     return accompaniment;
 }
 
-static FillOutcome accompany(PiecePlan *plan, unsigned long seed) {
+static FillOutcome accompany(Plan *plan, unsigned long seed) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;
@@ -391,7 +391,7 @@ static void test_unused_voices_are_written_empty(void) {
     }
     /* An empty voice survives the plan file. */
     char *json = plan_to_json(piece.plan, test_plan_producer(), NULL);
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     PlanJsonError error;
     assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     char *again = plan_to_json(read, test_plan_producer(), NULL);
@@ -487,7 +487,7 @@ static void test_constraint(void) {
     char *json = plan_to_json(piece.plan, test_plan_producer(), NULL);
     assert(json && strstr(json, "\"kind\": \"accompaniment\"") && strstr(json, "\"pattern\": \"alberti\"") &&
            strstr(json, "\"texture\": \"melody and accompaniment\"") && strstr(json, "\"pattern\": \"oom-pah\""));
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     PlanJsonError error;
     assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     LaneSpanId read_target;
@@ -509,7 +509,7 @@ static void test_constraint(void) {
     char *at = strstr(bad, "\"alberti\"");
     assert(at);
     memcpy(at, "\"albertz\"", 9);
-    PiecePlan *refused = NULL;
+    Plan *refused = NULL;
     assert(plan_from_json(test_knowledge(), bad, composer_plan_read_hooks(), &refused, &error) == PLAN_ERR_FORMAT && !refused);
     free(bad);
     bad = strdup(json);

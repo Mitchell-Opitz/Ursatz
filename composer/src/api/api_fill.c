@@ -68,7 +68,7 @@ static ComposerStatus read_style_members(const cJSON *request, FillStyle *out, C
  * The style the run prefers: the request's, else the STYLE constraint on the plan's form node, and the weight from the
  * request, else the constraint's. *style stays NULL when there is none.
  */
-static ComposerStatus resolve_style(const FillStyle *options, const PiecePlan *plan, ComposerStyle **style,
+static ComposerStatus resolve_style(const FillStyle *options, const Plan *plan, ComposerStyle **style,
                                     ComposerRatio *weight, ComposerError *error) {
     const PlanStyle *planned = NULL;
     NodeId root = plan_root(plan);
@@ -191,7 +191,7 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
     }
 
     /* The seeds are tried one after another, each from a new copy of the plan; only a stuck run can be mended by the next. */
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     ComposeOutcome outcome;
     memset(&outcome, 0, sizeof(outcome));
     GivenSnapshot *snapshot = NULL;
@@ -207,7 +207,7 @@ ComposerStatus composer_api_fill(const ComposerContext *context, const char *req
             status = api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
             break;
         }
-        PiecePlan *fresh = NULL;
+        Plan *fresh = NULL;
         status = api_plan_from_text(context->knowledge, text, "plan", &fresh, &out->error);
         if (status != COMPOSER_OK) {
             break;

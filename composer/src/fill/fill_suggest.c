@@ -110,7 +110,7 @@ static FillResult build_set(FillSuggestions *suggestions, unsigned long seed) {
     return FILL_OK;
 }
 
-FillResult fill_suggest(const PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
+FillResult fill_suggest(const Plan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
                         FillTarget target, size_t top_n, FillSuggestions **out) {
     if (!plan || !registry || !out) {
         return FILL_ERR_NULL;
@@ -166,7 +166,7 @@ FillResult fill_suggest(const PiecePlan *plan, const FillOperatorRegistry *regis
     return FILL_OK;
 }
 
-FillResult fill_apply_suggestion(PiecePlan *plan, const FillSuggestions *suggestions, size_t index) {
+FillResult fill_apply_suggestion(Plan *plan, const FillSuggestions *suggestions, size_t index) {
     if (!plan || !suggestions || index >= suggestions->count) {
         return FILL_ERR_NULL;
     }

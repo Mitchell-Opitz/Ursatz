@@ -31,7 +31,7 @@ typedef struct {
 } HeardSpan;
 
 struct ComposerHearing {
-    const PiecePlan *plan;
+    const Plan *plan;
     RenderedPlan rendered;
     int *midi;
     Rational *starts; /* parallel to the rendered events: where each starts, in whole notes */
@@ -69,7 +69,7 @@ void hearing_destroy(ComposerHearing *hearing) {
     free(hearing);
 }
 
-HearingResult hearing_create(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, ComposerHearing **out) {
+HearingResult hearing_create(const Plan *plan, const KnowledgeSnapshot *knowledge, ComposerHearing **out) {
     if (!out) {
         return HEARING_ERR_NULL;
     }
@@ -104,7 +104,7 @@ HearingResult hearing_create(const PiecePlan *plan, const KnowledgeSnapshot *kno
     return HEARING_OK;
 }
 
-const PiecePlan *hearing_plan(const ComposerHearing *hearing) {
+const Plan *hearing_plan(const ComposerHearing *hearing) {
     return hearing ? hearing->plan : NULL;
 }
 
@@ -113,7 +113,7 @@ const RenderedPlan *hearing_rendered(const ComposerHearing *hearing) {
 }
 
 /* The key lane's key under the span's start. */
-static bool key_under(const PiecePlan *plan, PlanSpan span, SpelledKey *out) {
+static bool key_under(const Plan *plan, PlanSpan span, SpelledKey *out) {
     LaneSpanId first;
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &first, 1) == 0 ||
         rational_cmp(plan_lane_span_span(plan, first).start, span.start) > 0) {

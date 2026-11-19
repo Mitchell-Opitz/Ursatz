@@ -31,7 +31,7 @@ static PlanSpan bars(long start, long length) {
     return span;
 }
 
-static NodeId add(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, const char *name) {
+static NodeId add(Plan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, const char *name) {
     NodeId id = PLAN_NODE_NONE;
     assert(plan_add_node(plan, parent, kind, span, name, &id) == PLAN_OK);
     assert(id != PLAN_NODE_NONE);
@@ -56,7 +56,7 @@ static PlanLanePayload harmony_payload(const char *roman, int function) {
     return payload;
 }
 
-static LaneSpanId add_lane(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
+static LaneSpanId add_lane(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
                            const PlanLanePayload *payload) {
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     assert(plan_add_lane_span(plan, owner, lane, voice, span, payload, &id) == PLAN_OK);
@@ -64,7 +64,7 @@ static LaneSpanId add_lane(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int
 }
 
 int main(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     assert(plan != NULL);
 
     /* Tree */

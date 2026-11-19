@@ -8,7 +8,7 @@ melody, and, when asked, an accompaniment or a four-part voicing, each through t
 GrowRequest request = {.motive = &motive, .key = key, .meter = meter, .bars = 8,
                        .pairing = {PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONTINUATION},
                        .cadence = PLAN_CADENCE_PAC};
-PiecePlan *plan;
+Plan *plan;
 GrowConfig config = {.seed = 7};
 GrowOutcome outcome;
 if (grow_build_plan_checked(&request, &plan, NULL) == GROW_OK && grow_run(plan, &config, &outcome) == GROW_OK) {

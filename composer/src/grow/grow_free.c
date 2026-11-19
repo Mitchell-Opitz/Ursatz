@@ -121,7 +121,7 @@ static bool lay_ideas(const GrowThemeRequest *theme, Rational meter_start, FreeR
     return true;
 }
 
-static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out) {
+static bool read_free(const Plan *plan, FillTarget target, FreeRequest *out) {
     FreeRequest request;
     GrowThemeRequest *theme = &request.theme;
     memset(&request, 0, sizeof(request));
@@ -199,7 +199,7 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
     return true;
 }
 
-bool grow_free_applies(const PiecePlan *plan, FillTarget target) {
+bool grow_free_applies(const Plan *plan, FillTarget target) {
     FreeRequest request;
     return read_free(plan, target, &request);
 }
@@ -276,7 +276,7 @@ static bool draw_cadential(const Motive *source, Rational room, FillRng *rng, Mo
     return drop >= 1 && motive_develop(source, dev, result) == MOTIVE_DEV_OK && rational_cmp(result->length, room) <= 0;
 }
 
-static bool draw_free(const PiecePlan *plan, const FreeRequest *request, FillRng *rng, GrowFreeSpec *spec) {
+static bool draw_free(const Plan *plan, const FreeRequest *request, FillRng *rng, GrowFreeSpec *spec) {
     const GrowThemeRequest *theme = &request->theme;
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_FREE_MAGIC;
@@ -321,7 +321,7 @@ static void free_label(const GrowFreeSpec *spec, char *label, size_t size) {
     }
 }
 
-bool grow_free_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_free_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out) {
     FreeRequest request;
     if (!read_free(plan, target, &request)) {
@@ -400,7 +400,7 @@ static const char *idea_name(size_t index, size_t count) {
     return index % 2 == 1 ? "fragment 1" : "fragment 2";
 }
 
-PlanResult grow_free_apply(PiecePlan *plan, FillTarget target, const GrowFreeSpec *spec) {
+PlanResult grow_free_apply(Plan *plan, FillTarget target, const GrowFreeSpec *spec) {
     FreeRequest request;
     if (!spec || spec->magic != GROW_FREE_MAGIC || !read_free(plan, target, &request) ||
         request.idea_count != spec->count) {

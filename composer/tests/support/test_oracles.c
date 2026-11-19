@@ -12,7 +12,7 @@
 
 /* The tests' check oracles, moved unchanged from the operators' files (see test_oracles.h). */
 
-bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode,
+bool harmony_check_lane_without_cadence(const Plan *plan, PlanSpan span, HarmonyMode mode,
                                          const char **violation) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -30,7 +30,7 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Ha
 }
 
 /* Marks the chords of the lane over span that a schema made: they need no reason of their own to be there. */
-static void mark_schema_chords(const PiecePlan *plan, PlanSpan span, size_t count, bool *exempt) {
+static void mark_schema_chords(const Plan *plan, PlanSpan span, size_t count, bool *exempt) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
     for (size_t i = 0; i < count; i++) {
@@ -38,7 +38,7 @@ static void mark_schema_chords(const PiecePlan *plan, PlanSpan span, size_t coun
     }
 }
 
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
+bool harmony_check_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
                         const char **violation) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -57,7 +57,7 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, 
     return true;
 }
 
-bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, const int *soprano,
+bool harmony_hear_lane_cadences(const Plan *plan, PlanSpan span, HarmonyMode mode, const int *soprano,
                                 size_t count, const Rational *section_starts, size_t section_count,
                                 HarmonyCadences *out) {
     PhraseMetre metre;
@@ -117,7 +117,7 @@ bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, siz
     return true;
 }
 
-bool melody_check_lane(const PiecePlan *plan, PlanSpan span, SpelledKey key, const MelodyFillParams *params,
+bool melody_check_lane(const Plan *plan, PlanSpan span, SpelledKey key, const MelodyFillParams *params,
                        const char **violation) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     MelodyCandidate *melody = calloc(1, sizeof(*melody));
@@ -229,7 +229,7 @@ static bool is_scale_step(const SpelledKey *key, int from, int to) {
     return (move >= 1 && move <= 2) || (move == 3 && composer_key_is_minor(key));
 }
 
-bool form_figure_check(const PiecePlan *plan, NodeId section, char *reason, size_t size) {
+bool form_figure_check(const Plan *plan, NodeId section, char *reason, size_t size) {
     SectionFigure figure;
     FigureReading *reading = plan && form_figure_find(plan, section, &figure) ? form_figure_read_section(plan, section) : NULL;
     size_t own_count = 0;

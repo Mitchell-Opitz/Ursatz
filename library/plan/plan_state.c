@@ -9,17 +9,17 @@ bool plan_state_transition_allowed(PlanState from, PlanState to) {
     return from == to || from != PLAN_STATE_GIVEN;
 }
 
-PlanState plan_node_state(const PiecePlan *plan, NodeId id) {
+PlanState plan_node_state(const Plan *plan, NodeId id) {
     const PlanNode *node = plan_node_at(plan, id);
     return node ? node->state : PLAN_STATE_CONSTRAINED;
 }
 
-PlanState plan_lane_span_state(const PiecePlan *plan, LaneSpanId id) {
+PlanState plan_lane_span_state(const Plan *plan, LaneSpanId id) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     return entry ? entry->state : PLAN_STATE_CONSTRAINED;
 }
 
-PlanResult plan_node_set_state(PiecePlan *plan, NodeId id, PlanState state) {
+PlanResult plan_node_set_state(Plan *plan, NodeId id, PlanState state) {
     PlanNode *node = plan_node_at(plan, id);
     if (!node) {
         return PLAN_ERR_NOT_FOUND;
@@ -31,7 +31,7 @@ PlanResult plan_node_set_state(PiecePlan *plan, NodeId id, PlanState state) {
     return PLAN_OK;
 }
 
-PlanResult plan_lane_span_set_state(PiecePlan *plan, LaneSpanId id, PlanState state) {
+PlanResult plan_lane_span_set_state(Plan *plan, LaneSpanId id, PlanState state) {
     LaneSpan *entry = plan_lane_span_at(plan, id);
     if (!entry) {
         return PLAN_ERR_NOT_FOUND;
@@ -43,7 +43,7 @@ PlanResult plan_lane_span_set_state(PiecePlan *plan, LaneSpanId id, PlanState st
     return PLAN_OK;
 }
 
-PlanResult plan_lane_span_write(PiecePlan *plan, LaneSpanId id, const PlanLanePayload *payload) {
+PlanResult plan_lane_span_write(Plan *plan, LaneSpanId id, const PlanLanePayload *payload) {
     LaneSpan *entry = plan_lane_span_at(plan, id);
     if (!entry || !payload) {
         return entry ? PLAN_ERR_NULL : PLAN_ERR_NOT_FOUND;

@@ -76,7 +76,7 @@ ComposerStatus api_piece_refuse_performed(const PieceSpec *request, ComposerErro
     return COMPOSER_OK;
 }
 
-const PiecePlan *api_piece_version_output_plan(const PieceVersion *version) {
+const Plan *api_piece_version_output_plan(const PieceVersion *version) {
     return version->performed ? version->performance.plan : version->plan;
 }
 
@@ -261,7 +261,7 @@ static PieceFillKind request_fill(const PieceSpec *request, const char *id) {
 }
 
 /* The section of a plan a form with sizes has, by the name of its node: "A", "B'", "variation 2". */
-static NodeId sized_section_find(const PiecePlan *plan, const char *name) {
+static NodeId sized_section_find(const Plan *plan, const char *name) {
     ApiSection sections[API_MAX_SECTIONS];
     size_t count = api_plan_sections(plan, sections, API_MAX_SECTIONS);
     for (size_t i = 0; i < count && i < API_MAX_SECTIONS; i++) {
@@ -287,10 +287,10 @@ static bool is_node_target(const FillTarget *targets, size_t count, NodeId node)
  * seam's copy of that bar dropped and the sections the loop's end holds back reopened, so the seam stage copies the new bar
  * and writes the end against it.
  */
-static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit, PiecePlan **out, FillTarget **targets,
+static ComposerStatus open_edit(const PieceSpec *request, const PieceEdit *edit, Plan **out, FillTarget **targets,
                                 size_t *count, char *what, size_t what_size, ComposerError *error) {
     PlanJsonError plan_error;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     bool sized = !request->form->request_sections;
     *out = NULL;
     *targets = NULL;
@@ -413,7 +413,7 @@ ComposerStatus api_piece_regenerate_loop(const PieceSpec *request, const PieceEd
         }
         return COMPOSER_OK;
     }
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     FillTarget *targets = NULL;
     size_t count = 0;
     char what[96];
@@ -457,7 +457,7 @@ static ComposerStatus regenerate_piece(const PieceSpec *request, const PieceEdit
 
 /* ------------------------------------------------------------- reading the plans */
 
-bool api_piece_loop_region(const PiecePlan *plan, Rational *start, Rational *end) {
+bool api_piece_loop_region(const Plan *plan, Rational *start, Rational *end) {
     bool found = false;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
@@ -493,7 +493,7 @@ static cJSON *time_json(Rational time) {
     return cJSON_CreateString(text);
 }
 
-cJSON *api_piece_loop_json(const PiecePlan *plan) {
+cJSON *api_piece_loop_json(const Plan *plan) {
     Rational start;
     Rational end;
     if (!api_piece_loop_region(plan, &start, &end)) {
@@ -508,7 +508,7 @@ cJSON *api_piece_loop_json(const PiecePlan *plan) {
     return object;
 }
 
-cJSON *api_piece_plan_object(const KnowledgeSnapshot *knowledge, const PiecePlan *plan) {
+cJSON *api_piece_plan_object(const KnowledgeSnapshot *knowledge, const Plan *plan) {
     PlanJsonError error;
     PlanProducer producer = composer_plan_producer(knowledge);
     char *text = plan_to_json(plan, &producer, &error);
@@ -527,7 +527,7 @@ typedef struct {
     bool has_cadence;
     CadenceType cadence;
     const char *heard; /* the cadence the Analyzer heard, NULL without a check */
-    const PiecePlan *plan; /* a form with sizes: the plan and the section's node, for the pedal and the changes */
+    const Plan *plan; /* a form with sizes: the plan and the section's node, for the pedal and the changes */
     NodeId node;
     char key_heard[16]; /* the key the Analyzer heard at the section's start over the whole piece, "" when none */
     char key[16];       /* the key the plan gives the section's start (R-493), "" when the plan has none */
@@ -609,7 +609,7 @@ static const char *last_bar_cadence(const PieceSpec *request, const PieceVersion
 }
 
 /* Whether a harmony span in the first half of the section was written over a pedal. */
-static bool section_pedal(const PiecePlan *plan, PlanSpan span) {
+static bool section_pedal(const Plan *plan, PlanSpan span) {
     Rational half;
     if (rational_make(span.length.num, span.length.den * 2, &half) != RATIONAL_OK) {
         return false;
@@ -646,7 +646,7 @@ static void key_heard_at(const FormHeardKey *keys, size_t key_count, Rational st
 }
 
 /* The key the plan's key lane gives at the start of a span, as "C major"; "" when the lane has none there. */
-static void planned_key_at(const PiecePlan *plan, PlanSpan section, char *out, size_t size, bool *flats) {
+static void planned_key_at(const Plan *plan, PlanSpan section, char *out, size_t size, bool *flats) {
     PlanSpan up_to = {{0, 1}, {0, 1}};
     Rational start = section.start;
     Rational end_of_section;
@@ -698,7 +698,7 @@ static void harmony_text(const SectionHarmony *harmony, char *out, size_t size) 
 /* The sections of a size of a form with sizes, each matched to the plan's section of its name, in order. */
 static size_t collect_composed_rows(const PieceSpec *request, const PieceVersion *version, const FormSpecSize *size, Row *rows) {
     const AnalyzerCheck *check = version->outcome.analyzer_check_count > 0 ? &version->outcome.analyzer_checks[0] : NULL;
-    const PiecePlan *plan = version->plan;
+    const Plan *plan = version->plan;
     size_t next_item = 0;
     size_t count = 0;
     FormHeardKey *keys = NULL;
@@ -837,7 +837,7 @@ static size_t collect_rows(const PieceSpec *request, const PieceVersion *version
     const AnalyzerCheck *check = version->outcome.analyzer_check_count > 0 ? &version->outcome.analyzer_checks[0] : NULL;
     size_t next_item = 0;
     size_t count = 0;
-    const PiecePlan *plan = version->plan;
+    const Plan *plan = version->plan;
     PieceRegion loop_regions[PIECE_STRUCTURE_MAX_SECTIONS];
     size_t loop_refused = 0;
     char loop_why[64];
@@ -957,7 +957,7 @@ static bool add_construction_text(cJSON *entry, const Row *row) {
 }
 
 /* The key the plan's key lane gives near the end of a section, as "C major"; "" when the lane has none there. */
-static void planned_key_near_end(const PiecePlan *plan, PlanSpan section, char *out, size_t size) {
+static void planned_key_near_end(const Plan *plan, PlanSpan section, char *out, size_t size) {
     Rational offset;
     Rational at;
     PlanSpan last = section;
@@ -1041,7 +1041,7 @@ static double span_beats(const PieceSpec *request, Rational length) {
 }
 
 /* The melody notes written over a section. */
-static size_t melody_notes(const PiecePlan *plan, NodeId section) {
+static size_t melody_notes(const Plan *plan, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
     LaneSpanId *ids = found ? calloc(found, sizeof(*ids)) : NULL;
@@ -1145,7 +1145,7 @@ static cJSON *changes_json(const Row *row) {
 }
 
 /* The midi pitch of the melody note that starts at onset (from the start of the section's span); false when none does. */
-static bool melody_note_at(const PiecePlan *plan, NodeId section, Rational onset, int *midi) {
+static bool melody_note_at(const Plan *plan, NodeId section, Rational onset, int *midi) {
     PlanSpan span = plan_node_span(plan, section);
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, NULL, 0);
     LaneSpanId *ids = spans ? calloc(spans, sizeof(*ids)) : NULL;
@@ -1457,7 +1457,7 @@ static ComposerStatus render_loop(const KnowledgeSnapshot *knowledge, const Piec
     PlanExportOptions loop_options = request->export_options;
     Rational start;
     Rational end;
-    const PiecePlan *output = api_piece_version_output_plan(&piece->versions[0]);
+    const Plan *output = api_piece_version_output_plan(&piece->versions[0]);
     if (api_piece_loop_region(output, &start, &end)) {
         loop_options.loop_markers = true;
         loop_options.loop_start = start;
@@ -1481,7 +1481,7 @@ static ComposerStatus render_loop(const KnowledgeSnapshot *knowledge, const Piec
     return status;
 }
 
-ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PiecePlan *plan, char **out, ComposerError *error) {
+ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const Plan *plan, char **out, ComposerError *error) {
     RenderedPlan rendered;
     PlanExportError detail;
     *out = NULL;

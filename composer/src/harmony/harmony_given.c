@@ -19,7 +19,7 @@
  */
 
 /* The state of a lane span is Given. */
-static bool given(const PiecePlan *plan, LaneSpanId id) {
+static bool given(const Plan *plan, LaneSpanId id) {
     return plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN;
 }
 
@@ -29,7 +29,7 @@ static bool on_bar(Rational time, Rational bar_length) {
 }
 
 /* The pitch class of the Given note of a lane sounding at the time, or -1; with start_only, only one that starts there. */
-static int given_pitch_class(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, Rational at, bool start_only) {
+static int given_pitch_class(const Plan *plan, PlanLaneKind lane, PlanSpan span, Rational at, bool start_only) {
     LaneSpanId ids[32];
     Rational tick = {1, 4096};
     PlanSpan here = {at, tick};
@@ -58,7 +58,7 @@ static int given_pitch_class(const PiecePlan *plan, PlanLaneKind lane, PlanSpan 
 }
 
 /* The Given chords in a row that end where `from` is, and the ones that start where it is. */
-static size_t read_chain(const PiecePlan *plan, const PhraseRequest *request, Rational from, bool before,
+static size_t read_chain(const Plan *plan, const PhraseRequest *request, Rational from, bool before,
                          PhraseChord *out) {
     PlanSpan window = {from, request->bar_length};
     LaneSpanId ids[HARMONY_JOIN_CHORDS * 2 + 4];
@@ -136,7 +136,7 @@ static size_t read_chain(const PiecePlan *plan, const PhraseRequest *request, Ra
 }
 
 /* Whether a phrase or a section of the plan starts (or ends) where the target does. */
-static bool at_boundary(const PiecePlan *plan, const PhraseRequest *request, bool start) {
+static bool at_boundary(const Plan *plan, const PhraseRequest *request, bool start) {
     Rational target_end;
     if (plan_span_end(request->span, &target_end) != PLAN_OK) {
         return false;
@@ -153,7 +153,7 @@ static bool at_boundary(const PiecePlan *plan, const PhraseRequest *request, boo
     return false;
 }
 
-void harmony_given_read(const PiecePlan *plan, PhraseRequest *request) {
+void harmony_given_read(const Plan *plan, PhraseRequest *request) {
     request->has_given = false;
     request->before_count = 0;
     request->after_count = 0;

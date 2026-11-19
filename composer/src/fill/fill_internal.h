@@ -22,14 +22,14 @@ typedef struct {
 void fill_entries_destroy(FillEntries *entries);
 
 /* Collects and checks the candidates of every applicable operator. */
-FillResult fill_gather(const PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
+FillResult fill_gather(const Plan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
                        FillTarget target, FillRng *rng, FillEntries *out);
 
 /* True when a scores higher than b. */
 bool fill_check_scores_higher(const FillCheck *a, const FillCheck *b);
 
 /* Applies an entry's candidate, marks the target Realized if it is still open, and propagates. */
-FillResult fill_apply_entry(PiecePlan *plan, const FillOperatorRegistry *registry, FillTarget target,
+FillResult fill_apply_entry(Plan *plan, const FillOperatorRegistry *registry, FillTarget target,
                             const FillEntry *entry);
 
 /* Starts a record for a run with this seed. */

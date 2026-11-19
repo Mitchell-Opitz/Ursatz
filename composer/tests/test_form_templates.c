@@ -477,7 +477,7 @@ static PieceRequest scenario_request(const Scenario *scenario, const char *kind,
     return request;
 }
 
-static const PlanConstraint *find(const PiecePlan *plan, NodeId id, PlanConstraintKind kind, size_t nth) {
+static const PlanConstraint *find(const Plan *plan, NodeId id, PlanConstraintKind kind, size_t nth) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
         if (constraint->kind == kind && nth-- == 0) {
@@ -496,7 +496,7 @@ static long bars_of(Rational time, int beats) {
     return quarters / beats;
 }
 
-static void check_structure(const PiecePlan *plan, const Scenario *scenario, const char *kind, Size size) {
+static void check_structure(const Plan *plan, const Scenario *scenario, const char *kind, Size size) {
     Expected expected[MAX_EXPECTED];
     size_t count = expected_sections(kind, size, expected);
     NodeId form = plan_root(plan);
@@ -652,7 +652,7 @@ static void check_refused(const char *kind, const Scenario *scenario, const Moti
             continue;
         }
         PieceRequest request = scenario_request(scenario, kind, size, motive);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_ERR_BAD_SIZE && plan == NULL);
     }
 }
@@ -664,7 +664,7 @@ static void test_structure(const char *kind) {
         Motive motive = scenario_motive(&SCENARIOS[s]);
         for (size_t z = 0; z < size_count; z++) {
             PieceRequest request = scenario_request(&SCENARIOS[s], kind, sizes[z], &motive);
-            PiecePlan *plan = NULL;
+            Plan *plan = NULL;
             PieceResult built = piece_build_plan(&request, &plan);
             if (built != PIECE_OK) {
                 fprintf(stderr, "%s %zu bars, %s: %s\n", kind, sizes[z].bars, SCENARIOS[s].name,
@@ -726,7 +726,7 @@ static void compose_all(const char *kind, Tally *total) {
             memset(&tally, 0, sizeof(tally));
             for (unsigned long seed = 1; seed <= SEEDS; seed++) {
                 PieceRequest request = scenario_request(&SCENARIOS[s], kind, sizes[z], &motive);
-                PiecePlan *plan = NULL;
+                Plan *plan = NULL;
                 assert(piece_build_plan(&request, &plan) == PIECE_OK);
                 ComposeConfig config;
                 ComposeOutcome outcome;
@@ -881,7 +881,7 @@ static int test_smoke(const char *kind) {
     }
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         PieceRequest request = scenario_request(&SCENARIOS[0], kind, smallest, &motive);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
         ComposeConfig config;
         ComposeOutcome outcome;

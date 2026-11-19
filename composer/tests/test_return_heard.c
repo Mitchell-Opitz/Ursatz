@@ -49,7 +49,7 @@ static PieceRequest request_of(const Scenario *scenario) {
 }
 
 /* The section a section returns, else PLAN_NODE_NONE. */
-static NodeId returned(const PiecePlan *plan, NodeId section) {
+static NodeId returned(const Plan *plan, NodeId section) {
     const SectionDescription *described = plan_section_or_empty(plan, section);
     return described->returns[0] != '\0' ? plan_section_named(plan, described->returns) : PLAN_NODE_NONE;
 }
@@ -57,7 +57,7 @@ static NodeId returned(const PiecePlan *plan, NodeId section) {
 /* Runs one seed; the planned and the heard returns of a completed run are added, and true is returned. */
 static bool run(const Scenario *scenario, unsigned long seed, size_t *planned, size_t *heard) {
     PieceRequest request = request_of(scenario);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     ComposeOutcome outcome;
     ComposeConfig config;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);

@@ -194,7 +194,7 @@ typedef struct {
  * Builds the plan of the request into *out, which the caller destroys with plan_destroy. When refusal is not NULL and the
  * result is not GROW_OK, it holds the result, the path of the field and a message. Only the first refusal is reported.
  */
-GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, GrowRefusal *refusal);
+GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowRefusal *refusal);
 
 /*
  * The construction of a theme of `bars` bars that has none given (R-469), chosen without a draw from the idea or the
@@ -283,7 +283,7 @@ FillResult grow_register(FillOperatorRegistry *registry, const GrowContext *cont
  * the presentation of the usual length, the continuation balancing it, the repetition reading as one (its contour
  * the basic idea's). A candidate of any other operator goes to harmony_phrase_checker.
  */
-bool grow_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool grow_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                   const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* --- running the stages -------------------------------------------------- */
@@ -364,6 +364,6 @@ void grow_outcome_destroy(GrowOutcome *outcome);
  * stage that failed in outcome->stuck_stage (the plan is then partly filled). After a complete run the theme is
  * heard (form_hear_in): heard as the requested form adds to the score; a mismatch is reported, not rejected.
  */
-GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outcome);
+GrowResult grow_run(Plan *plan, const GrowConfig *config, GrowOutcome *outcome);
 
 #endif

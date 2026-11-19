@@ -79,7 +79,7 @@ static void theme_destroy(Theme *theme) {
 }
 
 /* Every melody note that starts inside range, in order: its pitch and its duration. False on allocation failure. */
-static bool read_notes(const PiecePlan *plan, PlanSpan range, int **pitches, Rational **durations, size_t *count) {
+static bool read_notes(const Plan *plan, PlanSpan range, int **pitches, Rational **durations, size_t *count) {
     Rational end;
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, range, NULL, 0);
     LaneSpanId *ids = spans ? calloc(spans, sizeof(LaneSpanId)) : NULL;
@@ -179,7 +179,7 @@ static bool make_window(Theme *theme, const int *pitches, const Rational *durati
 }
 
 /* The bar of the meter under a section, in whole notes. */
-static bool bar_length(const PiecePlan *plan, PlanSpan span, Rational *bar) {
+static bool bar_length(const Plan *plan, PlanSpan span, Rational *bar) {
     LaneSpanId id;
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &id, 1) < 1) {
         return false;
@@ -189,7 +189,7 @@ static bool bar_length(const PiecePlan *plan, PlanSpan span, Rational *bar) {
 }
 
 /* Adds the themes heard in a section to themes; form_hear_in counts bars from the start of the plan. */
-static ReturnHearResult read_section(ComposerHearing *hearing, const PiecePlan *plan, NodeId section, Theme *themes, size_t *count) {
+static ReturnHearResult read_section(ComposerHearing *hearing, const Plan *plan, NodeId section, Theme *themes, size_t *count) {
     FormHeard heard;
     PlanSpan span = plan_node_span(plan, section);
     Rational bar;
@@ -238,7 +238,7 @@ static ReturnHearResult read_section(ComposerHearing *hearing, const PiecePlan *
 }
 
 /* The section a section with a FIGURE returns (R-497); false for a section with no FIGURE or no RETURN. */
-static bool figured_return(const PiecePlan *plan, NodeId section, NodeId *source) {
+static bool figured_return(const Plan *plan, NodeId section, NodeId *source) {
     const SectionDescription *described = plan_section_or_empty(plan, section);
     *source = described->returns[0] != '\0' ? plan_section_named(plan, described->returns) : PLAN_NODE_NONE;
     return described->has_figure && *source != PLAN_NODE_NONE;
@@ -256,7 +256,7 @@ typedef struct {
  * cell (a cell with no note sounding is left out). The cells are the beats the figure is made on (form_figure.h), from the
  * start of the section: a quarter, a dotted quarter in 6/8. False on allocation failure or a meter without cells.
  */
-static bool read_skeleton(const PiecePlan *plan, NodeId section, int **pitches, Rational **durations, size_t *count) {
+static bool read_skeleton(const Plan *plan, NodeId section, int **pitches, Rational **durations, size_t *count) {
     PlanSpan span = plan_node_span(plan, section);
     PlanMeter meter;
     Rational cell;
@@ -331,7 +331,7 @@ static bool read_skeleton(const PiecePlan *plan, NodeId section, int **pitches, 
 }
 
 /* Adds the skeleton of a section to themes, heard for the figured section; the skeleton is one window of the whole section. */
-static ReturnHearResult add_skeleton(const PiecePlan *plan, NodeId section, NodeId figured, Theme *themes, size_t *count) {
+static ReturnHearResult add_skeleton(const Plan *plan, NodeId section, NodeId figured, Theme *themes, size_t *count) {
     int *pitches;
     Rational *durations;
     size_t notes;
@@ -393,7 +393,7 @@ static bool add_pair(ReturnHeard *out, size_t *capacity, const ReturnHeardPair *
     return true;
 }
 
-ReturnHearResult return_hear_in(ComposerHearing *hearing, const PiecePlan *plan, ReturnHeard *out) {
+ReturnHearResult return_hear_in(ComposerHearing *hearing, const Plan *plan, ReturnHeard *out) {
     if (!hearing || !plan || !out) {
         return RETURN_HEAR_ERR_NULL;
     }

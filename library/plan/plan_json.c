@@ -120,7 +120,7 @@ static bool key_payload_json(cJSON *object, const SpelledKey *key, const PlanKey
                           plan_json_add(object, "anchor", cJSON_CreateString(key_anchor_text(relation)))));
 }
 
-static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *constraint) {
+static cJSON *constraint_json(const Plan *plan, const PlanConstraint *constraint) {
     const ConstraintKindRow *row = constraint_kind_row(constraint->kind);
     cJSON *object = row ? cJSON_CreateObject() : NULL;
     if (!object) {
@@ -133,7 +133,7 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     return object;
 }
 
-static cJSON *node_constraints_json(const PiecePlan *plan, NodeId id) {
+static cJSON *node_constraints_json(const Plan *plan, NodeId id) {
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < plan_node_constraint_count(plan, id); i++) {
         if (!plan_json_append(array, constraint_json(plan, plan_node_constraint_at(plan, id, i)))) {
@@ -144,7 +144,7 @@ static cJSON *node_constraints_json(const PiecePlan *plan, NodeId id) {
     return array;
 }
 
-static cJSON *span_constraints_json(const PiecePlan *plan, LaneSpanId id) {
+static cJSON *span_constraints_json(const Plan *plan, LaneSpanId id) {
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < plan_lane_span_constraint_count(plan, id); i++) {
         if (!plan_json_append(array, constraint_json(plan, plan_lane_span_constraint_at(plan, id, i)))) {
@@ -180,7 +180,7 @@ static cJSON *form_record_json(const PlanFormRecord *record) {
     return object;
 }
 
-static cJSON *node_json(const PiecePlan *plan, NodeId id) {
+static cJSON *node_json(const Plan *plan, NodeId id) {
     cJSON *object = cJSON_CreateObject();
     cJSON *composer = cJSON_CreateObject();
     cJSON *children = cJSON_CreateArray();
@@ -308,7 +308,7 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload, co
 }
 
 /* The label of a key span: the key's, or for a span not yet resolved the relation and its anchor. */
-static void key_span_label(const PiecePlan *plan, LaneSpanId id, char *out, size_t size) {
+static void key_span_label(const Plan *plan, LaneSpanId id, char *out, size_t size) {
     const PlanKeyRelation *relation = plan_lane_span_key_relation(plan, id);
     if (relation && !relation->resolved) {
         snprintf(out, size, "%s from %s", relation->relation, KEY_ANCHOR_NAMES[relation->anchor]);
@@ -318,7 +318,7 @@ static void key_span_label(const PiecePlan *plan, LaneSpanId id, char *out, size
 }
 
 /* The label of the key span that covers the start of span, or "no match". */
-static void enclosing_plan_key_label(const PiecePlan *plan, PlanSpan span, char *out, size_t size) {
+static void enclosing_plan_key_label(const Plan *plan, PlanSpan span, char *out, size_t size) {
     LaneSpanId found = PLAN_LANE_SPAN_NONE;
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &found, 1) > 0) {
         key_span_label(plan, found, out, size);
@@ -327,7 +327,7 @@ static void enclosing_plan_key_label(const PiecePlan *plan, PlanSpan span, char 
     }
 }
 
-static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
+static cJSON *lane_entry_json(const Plan *plan, LaneSpanId id) {
     PlanLaneKind lane = plan_lane_span_lane(plan, id);
     PlanSpan span = plan_lane_span_span(plan, id);
     const PlanLanePayload *payload = plan_lane_span_payload(plan, id);
@@ -371,7 +371,7 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
 }
 
 /* The claims for every lane span whose lane is in mask, in id order. */
-static cJSON *lane_array_json(const PiecePlan *plan, unsigned mask) {
+static cJSON *lane_array_json(const Plan *plan, unsigned mask) {
     cJSON *array = cJSON_CreateArray();
     for (LaneSpanId id = 1; array && id <= plan_lane_span_count(plan); id++) {
         if (plan_has_lane_span(plan, id) && (mask & (1u << plan_lane_span_lane(plan, id))) && !plan_json_append(array, lane_entry_json(plan, id))) {
@@ -382,7 +382,7 @@ static cJSON *lane_array_json(const PiecePlan *plan, unsigned mask) {
     return array;
 }
 
-static cJSON *meter_json(const PiecePlan *plan) {
+static cJSON *meter_json(const Plan *plan) {
     cJSON *spans = lane_array_json(plan, 1u << PLAN_LANE_METER);
     if (!spans) {
         return NULL;
@@ -403,7 +403,7 @@ static cJSON *meter_json(const PiecePlan *plan) {
 }
 
 /* The program that wrote the file (the stamp the caller gives), the build it came from and, for a plan loaded from an analysis, the Analyzer. */
-static cJSON *metadata_json(const PiecePlan *plan, const PlanProducer *producer) {
+static cJSON *metadata_json(const Plan *plan, const PlanProducer *producer) {
     cJSON *object = cJSON_CreateObject();
     const char *analyzer = plan_analyzer_version(plan);
     if (object && !(plan_json_add(object, "composer_version", cJSON_CreateString(producer->version)) &&
@@ -415,7 +415,7 @@ static cJSON *metadata_json(const PiecePlan *plan, const PlanProducer *producer)
     return object;
 }
 
-static cJSON *document_json(const PiecePlan *plan, const PlanProducer *producer) {
+static cJSON *document_json(const Plan *plan, const PlanProducer *producer) {
     cJSON *document = cJSON_CreateObject();
     if (!document) {
         return NULL;
@@ -475,7 +475,7 @@ char *json_indent_with_spaces(const char *printed) {
     return out;
 }
 
-char *plan_to_json(const PiecePlan *plan, const PlanProducer *producer, PlanJsonError *error) {
+char *plan_to_json(const Plan *plan, const PlanProducer *producer, PlanJsonError *error) {
     if (!plan) {
         json_set_error(error, -1, "", "plan is NULL");
         return NULL;
@@ -1143,7 +1143,7 @@ static int old_constraint_kind(const cJSON *item) {
 
 static const char *result_name(PlanResult result);
 
-static bool apply_old_constraint(JsonReader *reader, const PiecePlan *plan, const cJSON *item, const char *path, int legacy,
+static bool apply_old_constraint(JsonReader *reader, const Plan *plan, const cJSON *item, const char *path, int legacy,
                                  SectionDescription *d) {
     int value;
     long number;
@@ -1331,17 +1331,17 @@ static const char *result_name(PlanResult result) {
 }
 
 /* Reads composer.constraints and adds each one through add. */
-typedef PlanResult (*AddConstraintFn)(PiecePlan *plan, size_t id, const PlanConstraint *constraint);
+typedef PlanResult (*AddConstraintFn)(Plan *plan, size_t id, const PlanConstraint *constraint);
 
-static PlanResult add_node_constraint(PiecePlan *plan, size_t id, const PlanConstraint *constraint) {
+static PlanResult add_node_constraint(Plan *plan, size_t id, const PlanConstraint *constraint) {
     return plan_node_add_constraint(plan, (NodeId)id, constraint);
 }
 
-static PlanResult add_span_constraint(PiecePlan *plan, size_t id, const PlanConstraint *constraint) {
+static PlanResult add_span_constraint(Plan *plan, size_t id, const PlanConstraint *constraint) {
     return plan_lane_span_add_constraint(plan, (LaneSpanId)id, constraint);
 }
 
-static bool read_constraints(JsonReader *reader, PiecePlan *plan, const cJSON *composer, const char *composer_path,
+static bool read_constraints(JsonReader *reader, Plan *plan, const cJSON *composer, const char *composer_path,
                              size_t id, AddConstraintFn add_constraint) {
     const cJSON *list = plan_json_member(reader, composer, composer_path, "constraints", true);
     if (!list) {
@@ -1424,7 +1424,7 @@ static bool read_constraints(JsonReader *reader, PiecePlan *plan, const cJSON *c
 }
 
 /* Format 5: a section node's "section" member is its description. */
-static bool read_section_member(JsonReader *reader, PiecePlan *plan, const cJSON *composer, const char *composer_path, size_t id) {
+static bool read_section_member(JsonReader *reader, Plan *plan, const cJSON *composer, const char *composer_path, size_t id) {
     const cJSON *item = plan_json_member(reader, composer, composer_path, "section", true);
     if (!item) {
         return false;
@@ -1446,7 +1446,7 @@ static bool read_section_member(JsonReader *reader, PiecePlan *plan, const cJSON
 }
 
 /* Format 5: the form node's optional "form" member is the record of the form the plan was built from. */
-static bool read_form_record(JsonReader *reader, PiecePlan *plan, const cJSON *composer, const char *composer_path) {
+static bool read_form_record(JsonReader *reader, Plan *plan, const cJSON *composer, const char *composer_path) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(composer, "form");
     if (!item) {
         return true;
@@ -1580,7 +1580,7 @@ static bool collect_nodes(JsonReader *reader, const cJSON *node, const char *pat
     return true;
 }
 
-static bool build_nodes(JsonReader *reader, PiecePlan *plan, const cJSON *form) {
+static bool build_nodes(JsonReader *reader, Plan *plan, const cJSON *form) {
     size_t count = 0;
     if (!count_nodes(reader, form, "form", &count)) {
         return false;
@@ -1873,7 +1873,7 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
     return false;
 }
 
-static bool build_lane_span(JsonReader *reader, PiecePlan *plan, const ParsedLane *parsed, size_t expected_id) {
+static bool build_lane_span(JsonReader *reader, Plan *plan, const ParsedLane *parsed, size_t expected_id) {
     const cJSON *composer = cJSON_GetObjectItemCaseSensitive(parsed->json, "composer");
     char composer_path[PLAN_JSON_PATH_MAX];
     json_child_path(composer_path, parsed->path, "composer");
@@ -1920,7 +1920,7 @@ static bool build_lane_span(JsonReader *reader, PiecePlan *plan, const ParsedLan
     return ok;
 }
 
-static bool build_lane_spans(JsonReader *reader, PiecePlan *plan, const cJSON *document) {
+static bool build_lane_spans(JsonReader *reader, Plan *plan, const cJSON *document) {
     static const struct {
         const char *name;
         unsigned lanes;
@@ -1963,7 +1963,7 @@ static bool build_lane_spans(JsonReader *reader, PiecePlan *plan, const cJSON *d
     return ok;
 }
 
-static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *document) {
+static bool apply_states(JsonReader *reader, Plan *plan, const cJSON *document) {
     /* Nodes: walk the form tree; the ids were validated while building. */
     size_t node_count = plan_node_count(plan);
     ParsedNode *table = node_count ? calloc(node_count, sizeof(ParsedNode)) : NULL;
@@ -2033,7 +2033,7 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
  * Analyzer result). A version 1 file wrote the
  * Composer's own version under that key (B-A-10), so it says nothing about an analysis and is ignored.
  */
-static bool read_metadata(JsonReader *reader, const cJSON *document, PiecePlan *plan) {
+static bool read_metadata(JsonReader *reader, const cJSON *document, Plan *plan) {
     const cJSON *metadata = cJSON_GetObjectItemCaseSensitive(document, "metadata");
     if (reader->version == 1 || !metadata) {
         return true;
@@ -2055,7 +2055,7 @@ static bool read_metadata(JsonReader *reader, const cJSON *document, PiecePlan *
 }
 
 /* Everything after the version: the metadata, the form, the lane spans and, from version 4, the next note id. */
-static PlanResult read_document_body(JsonReader *reader, const cJSON *document, PiecePlan *plan) {
+static PlanResult read_document_body(JsonReader *reader, const cJSON *document, Plan *plan) {
     if (!read_metadata(reader, document, plan)) {
         return reader->result;
     }
@@ -2086,7 +2086,7 @@ static PlanResult read_document_body(JsonReader *reader, const cJSON *document, 
     return PLAN_OK;
 }
 
-static PlanResult read_document(const cJSON *document, PiecePlan *plan, const CommonPracticeMaterials *materials,
+static PlanResult read_document(const cJSON *document, Plan *plan, const CommonPracticeMaterials *materials,
                                 const KnowledgeSnapshot *knowledge, const PlanReadHooks *hooks, PlanJsonError *error) {
     JsonReader reader = {error, PLAN_OK, 0, materials, knowledge, NULL, hooks};
     if (!cJSON_IsObject(document)) {
@@ -2117,7 +2117,7 @@ static PlanResult read_document(const cJSON *document, PiecePlan *plan, const Co
     return result;
 }
 
-PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, PiecePlan **out,
+PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, Plan **out,
                                    PlanJsonError *error) {
     PlanResult result = plan_from_json(knowledge, text, hooks, out, error);
     if (result != PLAN_OK) {
@@ -2131,7 +2131,7 @@ PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const cha
     return result;
 }
 
-PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, PiecePlan **out,
+PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, Plan **out,
                           PlanJsonError *error) {
     if (!text || !out) {
         json_set_error(error, -1, "", "text or out is NULL");
@@ -2149,7 +2149,7 @@ PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, 
         json_set_error(error, end ? (long)(end - text) : -1, "", "not valid JSON");
         return PLAN_ERR_PARSE;
     }
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     if (!plan) {
         cJSON_Delete(document);
         json_set_error(error, -1, "", "out of memory");

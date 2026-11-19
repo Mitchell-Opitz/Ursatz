@@ -215,7 +215,7 @@ static bool layout_schema(const SkeletonContext *context, const GalantPrototype 
 
 /* --- the operator -------------------------------------------------------- */
 
-static bool schema_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool schema_applies(const Plan *plan, FillTarget target, void *context) {
     SkeletonContext read;
     (void)context;
     return target.kind == FILL_TARGET_LANE_SPAN && harmony_skeleton_read(plan, (LaneSpanId)target.id, &read) &&
@@ -250,7 +250,7 @@ static bool role_fits(unsigned role, const SkeletonContext *context, size_t rema
     }
 }
 
-static bool schema_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool schema_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     HarmonySchemaParams params_value = params_of(context);
     const HarmonySchemaParams *params = &params_value;
@@ -310,7 +310,7 @@ static bool schema_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     return ok;
 }
 
-static PlanResult schema_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult schema_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const SkeletonCandidate *skeleton = candidate ? candidate->payload : NULL;
     (void)context;
     if (target.kind != FILL_TARGET_LANE_SPAN || !skeleton || skeleton->context.target != (LaneSpanId)target.id) {
@@ -323,8 +323,8 @@ FillResult harmony_schema_register(FillOperatorRegistry *registry, const Harmony
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_SCHEMA_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan harmony lane span with the chords before it";
-    operator_.generator.supported_outputs = "PiecePlan harmony and bass lane spans";
+    operator_.generator.supported_inputs = "Plan harmony lane span with the chords before it";
+    operator_.generator.supported_outputs = "Plan harmony and bass lane spans";
     operator_.generator.configuration_description = "enabled schemas, enabled roles, preference, bass parameters";
     operator_.generator.constraints_description = "galant-schemas prototypes, standard-harmony, standard-counterpoint";
     operator_.generator.deterministic = true;

@@ -18,7 +18,7 @@ HarmonyEmbellishParams harmony_embellish_params_default(void) {
     return params;
 }
 
-PlanResult harmony_embellish_open(PiecePlan *plan, PlanSpan range) {
+PlanResult harmony_embellish_open(Plan *plan, PlanSpan range) {
     if (!plan) {
         return PLAN_ERR_NULL;
     }
@@ -50,7 +50,7 @@ static const HarmonyEmbellishParams *params_of(void *context) {
     return context ? context : &defaults;
 }
 
-static bool embellish_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool embellish_applies(const Plan *plan, FillTarget target, void *context) {
     PhraseContext phrase;
     (void)context;
     return target.kind == FILL_TARGET_LANE_SPAN && harmony_context_read(plan, (LaneSpanId)target.id, &phrase);
@@ -95,7 +95,7 @@ static void edit_label(const Edit *edit, char *label, size_t size) {
  * and judged by standard-harmony before it is proposed, so only ones that pass are offered, in an
  * order drawn from rng and at most MAX_PROPOSALS of them. None proposed leaves the chord as it is.
  */
-static bool propose_edits(const PiecePlan *plan, const PhraseContext *phrase, const HarmonyEmbellishParams *params,
+static bool propose_edits(const Plan *plan, const PhraseContext *phrase, const HarmonyEmbellishParams *params,
                           FillRng *rng, FillCandidateList *out) {
     OptionList *options = calloc(1, sizeof(*options));
     EmbellishCandidate *scratch = malloc(sizeof(*scratch));
@@ -141,7 +141,7 @@ static bool propose_edits(const PiecePlan *plan, const PhraseContext *phrase, co
     return ok;
 }
 
-static bool embellish_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool embellish_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                                FillCandidateList *out) {
     const HarmonyEmbellishParams *params = params_of(context);
     PhraseContext phrase;
@@ -158,7 +158,7 @@ static bool embellish_generate(const PiecePlan *plan, FillTarget target, FillRng
     return out->count > 0 || add_plain(out);
 }
 
-static PlanResult clear_marker(PiecePlan *plan, LaneSpanId id) {
+static PlanResult clear_marker(Plan *plan, LaneSpanId id) {
     size_t count = plan_lane_span_constraint_count(plan, id);
     for (size_t i = 0; i < count; i++) {
         if (plan_lane_span_constraint_at(plan, id, i)->kind == PLAN_CONSTRAINT_EMBELLISH) {
@@ -169,7 +169,7 @@ static PlanResult clear_marker(PiecePlan *plan, LaneSpanId id) {
 }
 
 /* Applies an edit: the lead chords go into the end of the chord before, the pieces replace the marked chord. */
-static PlanResult apply_edit(PiecePlan *plan, const PhraseContext *phrase, const EmbellishCandidate *candidate) {
+static PlanResult apply_edit(Plan *plan, const PhraseContext *phrase, const EmbellishCandidate *candidate) {
     const Edit *edit = &candidate->edit;
     size_t t = phrase->target;
     size_t lead_cells = 0;
@@ -240,7 +240,7 @@ static PlanResult apply_edit(PiecePlan *plan, const PhraseContext *phrase, const
     return result;
 }
 
-static PlanResult embellish_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult embellish_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const EmbellishCandidate *edit = candidate ? candidate->payload : NULL;
     PhraseContext phrase;
     (void)context;
@@ -263,8 +263,8 @@ FillResult harmony_embellish_register(FillOperatorRegistry *registry, const Harm
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_EMBELLISH_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan harmony lane span marked for embellishment";
-    operator_.generator.supported_outputs = "PiecePlan harmony lane spans";
+    operator_.generator.supported_inputs = "Plan harmony lane span marked for embellishment";
+    operator_.generator.supported_outputs = "Plan harmony lane spans";
     operator_.generator.configuration_description = "density in thousandths, and the families that are on";
     operator_.generator.constraints_description = "standard-harmony chord function, prolongation and tonicization";
     operator_.generator.deterministic = true;

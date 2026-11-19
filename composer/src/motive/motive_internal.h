@@ -43,7 +43,7 @@ typedef struct {
  * The motive of a motive node's Given or Realized melody lane span: its notes, and the meter and key of the lanes over
  * it, else the context's. False when the node has no such span. Shared with the motive-form operator.
  */
-bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out);
+bool motive_develop_read_node(const Plan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out);
 
 /* Records the first problem only. error may be NULL. */
 void motive_set_error(MotiveError *error, const char *location, const char *format, ...);
@@ -174,7 +174,7 @@ static inline void motive_payload_destroy(void *payload) {
  * motive_attach in another state: a motive node and its melody span written as `state` (Given for motive_attach). The motives
  * grow-theme makes are the run's own and Realized, so a regenerated section can remove them (R-346).
  */
-PlanResult motive_attach_as(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
+PlanResult motive_attach_as(Plan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                             PlanState state, NodeId *out_node, LaneSpanId *out_span);
 
 #endif

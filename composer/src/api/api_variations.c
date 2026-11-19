@@ -12,7 +12,7 @@
 /* `variations` and `harmonize` as composer API entries (docs/cli-variations.md): several distinct versions of a node. */
 
 /* The MusicXML of a version as it is in memory (its ids are the ones a plan file renumbers). */
-static ComposerStatus variation_musicxml(const KnowledgeSnapshot *knowledge, const PiecePlan *plan, const ApiOutputs *outputs, char **text, ComposerError *error) {
+static ComposerStatus variation_musicxml(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, char **text, ComposerError *error) {
     RenderedPlan rendered;
     PlanExportError detail;
     *text = NULL;
@@ -82,7 +82,7 @@ static ComposerStatus run_variations(const ComposerContext *context, const char 
     }
     cJSON *root = NULL;
     char *text = NULL;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     ApiTarget target;
     ApiOutputs outputs;
     FillTarget *targets = NULL;

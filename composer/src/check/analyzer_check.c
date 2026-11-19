@@ -31,7 +31,7 @@ void analyzer_check_destroy(AnalyzerCheck *check) {
 /* ------------------------------------------------------------- the plan */
 
 /* Whether a lane span the section holds and a run needs is still open. */
-static bool section_open(const PiecePlan *plan, PlanSpan section) {
+static bool section_open(const Plan *plan, PlanSpan section) {
     Rational end;
     if (plan_span_end(section, &end) != PLAN_OK) {
         return true;
@@ -52,7 +52,7 @@ static bool section_open(const PiecePlan *plan, PlanSpan section) {
 }
 
 /* The meter and the key of the lane span that is in force at the section's start. */
-static bool lane_at_start(const PiecePlan *plan, PlanLaneKind lane, PlanSpan section, LaneSpanId *out) {
+static bool lane_at_start(const Plan *plan, PlanLaneKind lane, PlanSpan section, LaneSpanId *out) {
     size_t count = plan_lane_find(plan, lane, 0, section, NULL, 0);
     LaneSpanId *ids = count ? calloc(count, sizeof(LaneSpanId)) : NULL;
     if (!ids) {
@@ -154,7 +154,7 @@ static size_t entry_bar(const ChainEntry *entry, Rational origin, const PlanMete
     return bar_of(from_origin, meter);
 }
 
-static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars, Rational origin, const PlanMeter *meter,
+static void compare_cadences(const Plan *plan, NodeId section, size_t bars, Rational origin, const PlanMeter *meter,
                              const ChainResult *report, Items *items) {
     CadenceType planned[MAX_CADENCES];
     size_t count = 0;
@@ -229,7 +229,7 @@ static AnalyzerCheckResult result_of(HearingResult status) {
 /* The hard faults the plan's own notes take part in, added to the items; first_bar is the heard span's first bar. */
 static bool add_violations(ComposerHearing *hearing, const AnalysisChain *chain, size_t first_bar, Items *items,
                            bool *contradicts) {
-    const PiecePlan *plan = hearing_plan(hearing);
+    const Plan *plan = hearing_plan(hearing);
     const RenderedPlan *rendered = hearing_rendered(hearing);
     ChainVoiceFault *violations = NULL;
     size_t violation_count = 0;
@@ -253,7 +253,7 @@ static bool add_violations(ComposerHearing *hearing, const AnalysisChain *chain,
     return true;
 }
 
-AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, NodeId section,
+AnalyzerCheckResult analyzer_check_section(const Plan *plan, const KnowledgeSnapshot *knowledge, NodeId section,
                                            AnalyzerCheck *out) {
     if (!out) {
         return ANALYZER_CHECK_ERR_NULL;
@@ -276,7 +276,7 @@ AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId s
         return ANALYZER_CHECK_ERR_NULL;
     }
     memset(out, 0, sizeof(*out));
-    const PiecePlan *plan = hearing_plan(hearing);
+    const Plan *plan = hearing_plan(hearing);
     if (!plan || !plan_has_node(plan, section)) {
         return ANALYZER_CHECK_ERR_NULL;
     }
@@ -343,7 +343,7 @@ static bool within_a_beat(Rational a, Rational b, const PlanMeter *meter) {
 }
 
 /* The section a node is, as the structure plan builds them: one with a piece part, which is not the seam. */
-static bool is_part_section(const PiecePlan *plan, NodeId id) {
+static bool is_part_section(const Plan *plan, NodeId id) {
     return plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
            plan_section_part_of(plan, id, NULL) &&
            !plan_section_has_role(plan, id, SECTION_ROLE_SEAM);
@@ -382,7 +382,7 @@ static bool cadence_at(const ChainResult *report, const AnalysisCadence *cadence
     return rational_cmp(start, last_bar) >= 0 && rational_cmp(start, section_end) <= 0;
 }
 
-static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter, const ChainResult *report,
+static void compare_piece_cadences(const Plan *plan, const PlanMeter *meter, const ChainResult *report,
                                    Rational fragment_end, Items *items) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!is_part_section(plan, id)) {
@@ -445,7 +445,7 @@ AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCh
         return ANALYZER_CHECK_ERR_NULL;
     }
     memset(out, 0, sizeof(*out));
-    const PiecePlan *plan = hearing_plan(hearing);
+    const Plan *plan = hearing_plan(hearing);
     if (!plan) {
         return ANALYZER_CHECK_ERR_NULL;
     }

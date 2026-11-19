@@ -80,7 +80,7 @@ bool accomp_chord_tones(const SpelledKey *key, const PhraseChord *chord, int pcs
 }
 
 /* The notes of a lane over the target that sound inside it, from its start. False if any span there is open. */
-bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, Rational origin,
+bool accomp_read_line(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span, Rational origin,
                       Rational length, AccompLine *out, size_t *count) {
     LaneSpanId ids[ACCOMP_MAX_LINE];
     size_t found = plan_lane_find(plan, lane, voice, span, ids, ACCOMP_MAX_LINE);
@@ -119,7 +119,7 @@ bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
 }
 
 /* The span of voice (2 or 3) that is to be written with the target: none, or an open one over the same time. */
-bool accomp_read_voice(const PiecePlan *plan, int voice, PlanSpan span, LaneSpanId *out) {
+bool accomp_read_voice(const Plan *plan, int voice, PlanSpan span, LaneSpanId *out) {
     LaneSpanId ids[2];
     size_t found = plan_lane_find(plan, PLAN_LANE_INNER_VOICE, voice, span, ids, 2);
     *out = PLAN_LANE_SPAN_NONE;
@@ -136,7 +136,7 @@ bool accomp_read_voice(const PiecePlan *plan, int voice, PlanSpan span, LaneSpan
 }
 
 /* The Given melody span of the node named `name`, read as the accompaniment motive; false when there is none. */
-static bool read_motive(const PiecePlan *plan, const char *name, AccompContext *out) {
+static bool read_motive(const Plan *plan, const char *name, AccompContext *out) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *found = plan_node_name(plan, id);
         LaneSpanId ids[4];
@@ -174,7 +174,7 @@ static bool read_motive(const PiecePlan *plan, const char *name, AccompContext *
  * Where the last bar of the section the target is in begins, from the target's start; of the target itself
  * when it is in no section.
  */
-static Rational liquidation_start(const PiecePlan *plan, const AccompContext *context, Rational origin) {
+static Rational liquidation_start(const Plan *plan, const AccompContext *context, Rational origin) {
     NodeId section = plan_section_of(plan, context->owner);
     if (section == PLAN_NODE_NONE) {
         return position_sub(context->length, context->bar);
@@ -187,7 +187,7 @@ static Rational liquidation_start(const PiecePlan *plan, const AccompContext *co
     return position_sub(position_sub(end, origin), context->bar);
 }
 
-bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
+bool accomp_read(const Plan *plan, LaneSpanId target, AccompContext *out) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
@@ -352,7 +352,7 @@ void accomp_judge(const AccompContext *context, const KnowledgeSnapshot *knowled
 
 /* ------------------------------------------------------- the operator */
 
-static bool operator_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool operator_applies(const Plan *plan, FillTarget target, void *context) {
     AccompContext *read;
     bool applies = false;
     (void)context;
@@ -398,7 +398,7 @@ static void candidate_label(const AccompCandidate *candidate, char *label, size_
     }
 }
 
-static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
     const AccompanimentParams *params = context;
     size_t wanted = params && params->candidates > 0 ? params->candidates : ACCOMPANIMENT_DEFAULT_CANDIDATES;
@@ -473,7 +473,7 @@ static PlanResult voice_payload(const AccompCandidate *candidate, size_t voice, 
 }
 
 /* The target keeps its id and takes voice 1; voices 2 and 3 are written in the spans over the same time. */
-static PlanResult operator_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult operator_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const AccompCandidate *accompaniment = candidate ? candidate->payload : NULL;
     AccompContext *read;
     PlanNote *notes;
@@ -514,7 +514,7 @@ static PlanResult operator_apply(PiecePlan *plan, FillTarget target, const FillC
     return result;
 }
 
-bool accompaniment_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool accompaniment_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;
@@ -548,8 +548,8 @@ FillResult accompaniment_register(FillOperatorRegistry *registry, const Accompan
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = ACCOMPANIMENT_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan inner voice lane span over a written harmony, bass and melody";
-    operator_.generator.supported_outputs = "PiecePlan inner voice lane spans";
+    operator_.generator.supported_inputs = "Plan inner voice lane span over a written harmony, bass and melody";
+    operator_.generator.supported_outputs = "Plan inner voice lane spans";
     operator_.generator.configuration_description = "the number of candidates";
     operator_.generator.constraints_description = "chord tones above the bass and below the melody, in range";
     operator_.generator.deterministic = true;

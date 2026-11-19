@@ -650,13 +650,13 @@ static void test_for_plan(void) {
         request.knowledge = test_knowledge();
         request.meter.beats_per_bar = FORMS[f].meters > 0 ? 3 : 4;
         request.meter.beat_unit = 4;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
         const PlanFormRecord *record = plan_form_record(plan);
         assert(record && strcmp(record->name, FORMS[f].name) == 0);
         plan_destroy(plan);
     }
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     assert(plan_form_record(plan) == NULL);
     plan_destroy(plan);
 }
@@ -906,7 +906,7 @@ static int test_meters(void) {
     free(text);
     assert(form->meter_count == 1 && form->meters[0].beats_per_bar == 3 && form->meters[0].beat_unit == 4 && form->tempo == 112);
     PieceRequest request;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
     request.key = test_key(0, "major");
@@ -1127,7 +1127,7 @@ static void test_sizes(void) {
 #define CUSTOM_SEEDS 10
 
 /* Composes the form's piece with the seed; the plan is returned (the caller destroys it), the result in *ran. */
-static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, ComposeOutcome *outcome, PieceResult *ran) {
+static Plan *compose_custom(const FormSpec *form, unsigned long seed, ComposeOutcome *outcome, PieceResult *ran) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form->name;
@@ -1135,7 +1135,7 @@ static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, Compo
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PieceResult built = form_build_plan(form, &request, &plan);
     assert(built == PIECE_OK && plan);
     ComposeConfig config;
@@ -1148,7 +1148,7 @@ static PiecePlan *compose_custom(const FormSpec *form, unsigned long seed, Compo
 }
 
 /* Every melody span in the section is written by the Composer, and there is at least one. */
-static bool section_written(const PiecePlan *plan, NodeId section) {
+static bool section_written(const Plan *plan, NodeId section) {
     LaneSpanId ids[16];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, section), ids, 16);
     for (size_t i = 0; i < found && i < 16; i++) {
@@ -1161,7 +1161,7 @@ static bool section_written(const PiecePlan *plan, NodeId section) {
 
 /* ------------------------------------------------------------------ the form record of a plan (R-608) */
 
-static PiecePlan *built_plan(const char *form) {
+static Plan *built_plan(const char *form) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form;
@@ -1169,13 +1169,13 @@ static PiecePlan *built_plan(const char *form) {
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK && plan);
     return plan;
 }
 
 /* The sections of a plan that are not its material, in time order. */
-static size_t record_sections(const PiecePlan *plan, NodeId *out) {
+static size_t record_sections(const Plan *plan, NodeId *out) {
     size_t count = 0;
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -1190,7 +1190,7 @@ static size_t record_sections(const PiecePlan *plan, NodeId *out) {
 
 /* A plan built from a form carries its record, and the record is kept by a plan file and refused when it is malformed. */
 static void test_form_record(void) {
-    PiecePlan *plan = built_plan("ternary");
+    Plan *plan = built_plan("ternary");
     const PlanFormRecord *record = plan_form_record(plan);
     assert(record && strcmp(record->name, "ternary") == 0 && record->version == FORM_SPEC_VERSION);
     assert(strlen(record->hash) == PLAN_FORM_HASH_LEN && record->checks == FORM_CHECK_ALL && record->closing);
@@ -1205,7 +1205,7 @@ static void test_form_record(void) {
     }
     char *text = plan_to_json(plan, test_plan_producer(), NULL);
     assert(text && strstr(text, "\"form\": {") != NULL && strstr(text, "\"checks\": [\"sections\"") != NULL);
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     PlanJsonError error;
     assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     assert(plan_form_record(read) && memcmp(plan_form_record(read), record, sizeof(*record)) == 0);
@@ -1221,7 +1221,7 @@ static void test_form_record(void) {
         size_t before = (size_t)(at - text);
         char *edited = NULL;
         assert(asprintf(&edited, "%.*s%s%s", (int)before, text, bad[i][1], at + strlen(bad[i][0])) > 0);
-        PiecePlan *refused = NULL;
+        Plan *refused = NULL;
         assert(plan_from_json(test_knowledge(), edited, composer_plan_read_hooks(), &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
         assert(strstr(error.path, "composer/form") != NULL || strstr(error.path, "form") != NULL);
         free(edited);
@@ -1244,7 +1244,7 @@ static void test_form_record(void) {
 
 /* A plan of format 4 has no record: it reads with the record and the closed sections of its built-in form. */
 static void test_form_record_migration(void) {
-    PiecePlan *plan = built_plan("ternary");
+    Plan *plan = built_plan("ternary");
     char *v5 = plan_to_json(plan, test_plan_producer(), NULL);
     assert(v5);
     cJSON *document = cJSON_Parse(v5);
@@ -1265,7 +1265,7 @@ static void test_form_record_migration(void) {
     char *v4 = cJSON_Print(document);
     cJSON_Delete(document);
     assert(v4);
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     PlanJsonError error;
     assert(plan_from_json(test_knowledge(), v4, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     assert(plan_form_record(read) && memcmp(plan_form_record(read), plan_form_record(plan), sizeof(PlanFormRecord)) == 0);
@@ -1278,9 +1278,9 @@ static void test_form_record_migration(void) {
     }
     assert(plan_section_or_empty(read, migrated[0])->closed);
     /* a plan of no built-in form has no record */
-    PiecePlan *empty = plan_create();
+    Plan *empty = plan_create();
     char *empty_text = plan_to_json(empty, test_plan_producer(), NULL);
-    PiecePlan *empty_read = NULL;
+    Plan *empty_read = NULL;
     assert(empty_text && plan_from_json(test_knowledge(), empty_text, composer_plan_read_hooks(), &empty_read, &error) == PLAN_OK);
     assert(plan_form_record(empty_read) == NULL);
     free(empty_text);
@@ -1294,7 +1294,7 @@ static void test_form_record_migration(void) {
 
 /* The cadence check reads the record and the descriptions: a record that does not close has nothing to check. */
 static void test_form_record_cadences(void) {
-    PiecePlan *plan = built_plan("ternary");
+    Plan *plan = built_plan("ternary");
     PieceCadenceCheck check;
     assert(piece_check_cadences(plan, &check) && check.ok);
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
@@ -1309,7 +1309,7 @@ static void test_form_record_cadences(void) {
     assert(piece_check_cadences(plan, &check) && check.ok);
     plan_destroy(plan);
     /* a plan that records no form has nothing to check */
-    PiecePlan *none = plan_create();
+    Plan *none = plan_create();
     assert(piece_check_cadences(none, &check) && check.ok);
     plan_destroy(none);
 }
@@ -1317,7 +1317,7 @@ static void test_form_record_cadences(void) {
 /* A plan composes with the checks it records, whether or not its form is the built-in one any more (its hash differs). */
 static void test_recorded_checks(void) {
     for (unsigned long seed = 1; seed <= 5; seed++) {
-        PiecePlan *plan = built_plan("ternary");
+        Plan *plan = built_plan("ternary");
         PlanFormRecord record = *plan_form_record(plan);
         record.checks = FORM_CHECK_SECTIONS;
         snprintf(record.hash, sizeof(record.hash), "0000000000000000");
@@ -1364,7 +1364,7 @@ static int test_custom(void) {
     for (unsigned long seed = 1; seed <= CUSTOM_SEEDS && !first; seed++) {
         ComposeOutcome outcome;
         PieceResult ran;
-        PiecePlan *plan = compose_custom(form, seed, &outcome, &ran);
+        Plan *plan = compose_custom(form, seed, &outcome, &ran);
         if (ran == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             size_t count = 0;
@@ -1403,7 +1403,7 @@ static int test_custom(void) {
     sections_only->checks = FORM_CHECK_SECTIONS;
     ComposeOutcome outcome;
     PieceResult ran;
-    PiecePlan *plan = compose_custom(sections_only, first, &outcome, &ran);
+    Plan *plan = compose_custom(sections_only, first, &outcome, &ran);
     assert(ran == PIECE_OK);
     /* The plan records the checks of the form it was built from; the written notes are the same. */
     PlanFormRecord recorded = *plan_form_record(plan);
@@ -1448,7 +1448,7 @@ static int test_uneven_form(void) {
     for (unsigned long seed = 1; seed <= CUSTOM_SEEDS; seed++) {
         ComposeOutcome outcome;
         PieceResult ran;
-        PiecePlan *plan = compose_custom(form, seed, &outcome, &ran);
+        Plan *plan = compose_custom(form, seed, &outcome, &ran);
         if (ran == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             size_t count = 0;
@@ -1640,7 +1640,7 @@ static void test_construction(void) {
 #define PEDAL_COMPOSED_LEAST 9
 
 /* In B's first half every chord is V, its seventh or the neighbor six-four, and every bass note is the dominant. */
-static void check_pedal_half(const PiecePlan *plan, NodeId section) {
+static void check_pedal_half(const Plan *plan, NodeId section) {
     PlanSpan half = plan_node_span(plan, section);
     assert(rational_div_int(half.length, 2, &half.length) == RATIONAL_OK);
     PhraseChord chords[16];
@@ -1686,7 +1686,7 @@ static int test_pedal_form(void) {
     for (unsigned long seed = 1; seed <= PEDAL_SEEDS; seed++) {
         ComposeOutcome outcome;
         PieceResult ran;
-        PiecePlan *plan = compose_custom(form, seed, &outcome, &ran);
+        Plan *plan = compose_custom(form, seed, &outcome, &ran);
         if (ran == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             size_t count = 0;
@@ -2281,7 +2281,7 @@ static void test_parts_reader(void) {
     request.knowledge = test_knowledge();
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     static const struct {
         const char *name;
@@ -2589,7 +2589,7 @@ static void test_lead_ins(void) {
     }
 }
 
-static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
+static size_t piece_sections(const Plan *plan, NodeId *sections) {
     size_t count = 0;
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -2602,7 +2602,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *sections) {
 }
 
 /* The numeral of the chord sounding at `time`; "" when none is written. */
-static const char *chord_at(const PiecePlan *plan, Rational time) {
+static const char *chord_at(const Plan *plan, Rational time) {
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     PlanSpan range = {time, {1, 4096}};
     if (plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, &id, 1) == 0) {
@@ -2624,7 +2624,7 @@ typedef struct {
     Rational duration;
 } HeardNote;
 
-static size_t melody_notes(const PiecePlan *plan, Rational from, Rational to, HeardNote *out, size_t cap) {
+static size_t melody_notes(const Plan *plan, Rational from, Rational to, HeardNote *out, size_t cap) {
     LaneSpanId ids[16];
     PlanSpan range = {from, {0, 1}};
     assert(rational_sub(to, from, &range.length) == RATIONAL_OK);
@@ -2658,7 +2658,7 @@ static bool pitch_in_scale(int tonic, bool is_minor, int pitch) {
     return false;
 }
 
-static PiecePlan *compose_lead(const FormSpec *form, unsigned long seed, int pitch_class, HarmonyMode mode,
+static Plan *compose_lead(const FormSpec *form, unsigned long seed, int pitch_class, HarmonyMode mode,
                                ComposeOutcome *outcome, PieceResult *ran) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
@@ -2668,7 +2668,7 @@ static PiecePlan *compose_lead(const FormSpec *form, unsigned long seed, int pit
     request.meter.beats_per_bar = 3;
     request.meter.beat_unit = 4;
     request.seed = seed;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
@@ -2701,8 +2701,8 @@ static void lead_sweep(const char *text, int pitch_class, HarmonyMode mode, int 
         ComposeOutcome plain_outcome;
         PieceResult ran;
         PieceResult plain_ran;
-        PiecePlan *plan = compose_lead(form, seed, pitch_class, mode, &outcome, &ran);
-        PiecePlan *plain = compose_lead(plain_form, seed, pitch_class, mode, &plain_outcome, &plain_ran);
+        Plan *plan = compose_lead(form, seed, pitch_class, mode, &outcome, &ran);
+        Plan *plain = compose_lead(plain_form, seed, pitch_class, mode, &plain_outcome, &plain_ran);
         if (ran == PIECE_OK) {
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             assert(piece_sections(plan, sections) == 3);
@@ -2787,7 +2787,7 @@ static void lead_sometimes(const char *text) {
             request.meter.beats_per_bar = 3;
             request.meter.beat_unit = 4;
             request.seed = seed;
-            PiecePlan *plan = NULL;
+            Plan *plan = NULL;
             assert(form_build_plan(form, &request, &plan) == PIECE_OK && plan);
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             assert(piece_sections(plan, sections) == 3);
@@ -2849,7 +2849,7 @@ static int test_leads(void) {
 #define MODULATES_COMPOSED_LEAST 9
 
 /* The key on the key lane at the start of section `section`. */
-static SpelledKey key_at_start(const PiecePlan *plan, NodeId section) {
+static SpelledKey key_at_start(const Plan *plan, NodeId section) {
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     PlanSpan range = {plan_node_span(plan, section).start, {1, 4096}};
     assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, range, &id, 1) == 1);
@@ -2881,7 +2881,7 @@ static int test_modulates(void) {
             ComposeOutcome outcome;
             PieceResult ran;
             /* The request does not ask to modulate (compose_lead leaves it false). */
-            PiecePlan *plan = compose_lead(form, seed, KEYS[k].pitch_class, KEYS[k].mode, &outcome, &ran);
+            Plan *plan = compose_lead(form, seed, KEYS[k].pitch_class, KEYS[k].mode, &outcome, &ran);
             if (ran == PIECE_OK) {
                 NodeId sections[FORM_SPEC_MAX_SECTIONS];
                 assert(piece_sections(plan, sections) == 4);

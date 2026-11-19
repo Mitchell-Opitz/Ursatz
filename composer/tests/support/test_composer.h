@@ -23,28 +23,28 @@
  */
 
 /* The plan in the JSON file at path: test_must_read_file, then plan_from_json. */
-PlanResult test_read_plan_file(const char *path, PiecePlan **out, PlanJsonError *error);
+PlanResult test_read_plan_file(const char *path, Plan **out, PlanJsonError *error);
 
 /* The motive in the file at path: test_must_read_file, then motive_load. */
 MotiveResult test_load_motive_file(const char *path, MotiveFormat format, const MotiveOptions *options, Motive *out,
                                    MotiveError *error);
 
 /* The first node of the plan (in id order) with this name, or PLAN_NODE_NONE. */
-NodeId test_find_node(const PiecePlan *plan, const char *name);
+NodeId test_find_node(const Plan *plan, const char *name);
 
 /* The first node under `node` (any depth, depth first) with this name, or PLAN_NODE_NONE. */
-NodeId test_find_named(const PiecePlan *plan, NodeId node, const char *name);
+NodeId test_find_named(const Plan *plan, NodeId node, const char *name);
 
 /*
  * The hearing checks over a plan, each making one hearing of its own (hearing_create) and calling the check over it
  * (form_hear_in, return_hear_in, piece_check_keys_in, analyzer_check_piece_in, composer_style_measure_in). A hearing that
  * cannot be made maps to the check's own result as the compose run does.
  */
-FormHearResult test_form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out);
-ReturnHearResult test_return_hear(const PiecePlan *plan, ReturnHeard *out);
-bool test_piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out);
-AnalyzerCheckResult test_analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *out);
-ComposerMeasureResult test_style_measure(const PiecePlan *plan, const ComposerStyle *style, StyleComparison *out);
+FormHearResult test_form_hear(const Plan *plan, PlanSpan span, FormHeard *out);
+ReturnHearResult test_return_hear(const Plan *plan, ReturnHeard *out);
+bool test_piece_check_keys(const Plan *plan, PieceKeyCheck *out);
+AnalyzerCheckResult test_analyzer_check_piece(const Plan *plan, AnalyzerCheck *out);
+ComposerMeasureResult test_style_measure(const Plan *plan, const ComposerStyle *style, StyleComparison *out);
 
 /* The name of a Composer API status, for a message. */
 const char *test_status_name(ComposerStatus status);

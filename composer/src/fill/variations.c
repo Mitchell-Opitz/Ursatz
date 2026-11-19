@@ -54,7 +54,7 @@ static int compare_harmony(const void *left, const void *right) {
 }
 
 /* The harmony lane of the plan in time order: where each span is and its numeral. */
-static uint64_t hash_harmony(uint64_t hash, const PiecePlan *plan) {
+static uint64_t hash_harmony(uint64_t hash, const Plan *plan) {
     size_t count = 0;
     HarmonySpan *spans = calloc(plan_lane_span_count(plan) + 1, sizeof(HarmonySpan));
     if (!spans) {
@@ -79,7 +79,7 @@ static uint64_t hash_harmony(uint64_t hash, const PiecePlan *plan) {
     return hash;
 }
 
-static uint64_t signature_of(const PiecePlan *plan, bool harmony_only) {
+static uint64_t signature_of(const Plan *plan, bool harmony_only) {
     if (plan && harmony_only) {
         return hash_harmony(FNV_OFFSET, plan);
     }
@@ -100,12 +100,12 @@ static uint64_t signature_of(const PiecePlan *plan, bool harmony_only) {
     return hash;
 }
 
-uint64_t plan_signature(const PiecePlan *plan) {
+uint64_t plan_signature(const Plan *plan) {
     return signature_of(plan, false);
 }
 
 /* A clone numbers its nodes and lane spans from 1 with no gaps; a copy of a plan without gaps then keeps every id. */
-static bool ids_are_stable(const PiecePlan *plan) {
+static bool ids_are_stable(const Plan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!plan_has_node(plan, id)) {
             return false;
@@ -131,7 +131,7 @@ void plan_variations_destroy(PlanVariations *variations) {
     memset(variations, 0, sizeof(*variations));
 }
 
-static RegenerateResult vary(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+static RegenerateResult vary(const Plan *plan, const FillTarget *targets, size_t target_count,
                              const ComposeConfig *config, size_t count, bool with_harmony, PlanVariations *out) {
     if (!plan || !targets || !config || !out) {
         return REGENERATE_ERR_NULL;
@@ -159,7 +159,7 @@ static RegenerateResult vary(const PiecePlan *plan, const FillTarget *targets, s
     size_t seeds = 4 * count;
     for (size_t k = 0; k < seeds && out->count < count && result == REGENERATE_OK; k++) {
         out->seeds_tried = k + 1;
-        PiecePlan *copy = NULL;
+        Plan *copy = NULL;
         if (plan_clone(plan, &copy) != PLAN_OK) {
             result = REGENERATE_ERR_ALLOC;
             break;
@@ -193,12 +193,12 @@ static RegenerateResult vary(const PiecePlan *plan, const FillTarget *targets, s
     return result;
 }
 
-RegenerateResult plan_variations(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+RegenerateResult plan_variations(const Plan *plan, const FillTarget *targets, size_t target_count,
                                  const ComposeConfig *config, size_t count, PlanVariations *out) {
     return vary(plan, targets, target_count, config, count, false, out);
 }
 
-RegenerateResult plan_harmonizations(const PiecePlan *plan, NodeId section, const ComposeConfig *config, size_t count,
+RegenerateResult plan_harmonizations(const Plan *plan, NodeId section, const ComposeConfig *config, size_t count,
                                      PlanVariations *out) {
     if (!plan || !config || !out) {
         return REGENERATE_ERR_NULL;

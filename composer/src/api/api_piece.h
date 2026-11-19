@@ -57,7 +57,7 @@ typedef struct {
     const cJSON *motive_json[PIECE_STRUCTURE_MAX_SECTIONS + 1]; /* a motif fill's own motive */
     const cJSON *forms_json[PIECE_STRUCTURE_MAX_SECTIONS + 1];  /* a motif fill's saved forms */
     Motive *section_motive[PIECE_STRUCTURE_MAX_SECTIONS + 1];   /* owned */
-    PiecePlan *theme_plan[PIECE_STRUCTURE_MAX_SECTIONS + 1];    /* owned */
+    Plan *theme_plan[PIECE_STRUCTURE_MAX_SECTIONS + 1];    /* owned */
     char source[PIECE_STRUCTURE_MAX_SECTIONS + 1][PLAN_STYLE_PATH_MAX]; /* where a section's material came from */
     const cJSON *piece_motive_json;
     Motive *piece_motive; /* owned */
@@ -106,7 +106,7 @@ ComposerStatus api_piece_validate(const KnowledgeSnapshot *knowledge, const Comm
 
 /* A version of the piece: its plan and what composing it reported. */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     ComposeOutcome outcome;
     bool composed;
     /* A form with repeats or parts (form_spec_performed): the plan performed in order, what is rendered and answered (R-485). */
@@ -120,7 +120,7 @@ typedef struct {
 } PieceVersion;
 
 /* The plan a version is rendered and written out from: its performance when it is performed, else its plan. */
-const PiecePlan *api_piece_version_output_plan(const PieceVersion *version);
+const Plan *api_piece_version_output_plan(const PieceVersion *version);
 
 /* The most versions a piece has: the loop and the ending of a game loop (api_piece_version_names). */
 #define API_PIECE_VERSIONS_MAX 2
@@ -175,18 +175,18 @@ PieceResult api_piece_compose_ending(const PieceSpec *request, bool check, unsig
 cJSON *api_piece_version_json(const PieceSpec *request, const PieceVersion *version);
 
 /* The loop's region: from the start of the first body section to the end of the last section of the loop. */
-bool api_piece_loop_region(const PiecePlan *plan, Rational *start, Rational *end);
+bool api_piece_loop_region(const Plan *plan, Rational *start, Rational *end);
 /* {"start": "2/1", "end": "14/1"} of the region of the plan, or NULL when it has none. */
-cJSON *api_piece_loop_json(const PiecePlan *plan);
+cJSON *api_piece_loop_json(const Plan *plan);
 
 /*
  * The MusicXML of a version's plan, made from the plan in memory (its span ids are the ones the notes' xml:id carry; a plan
  * file renumbers them). The caller frees *out.
  */
-ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const PiecePlan *plan, char **out, ComposerError *error);
+ComposerStatus api_piece_musicxml(const KnowledgeSnapshot *knowledge, const PieceSpec *request, const Plan *plan, char **out, ComposerError *error);
 
 /* The plan as a cJSON object, or NULL when it cannot be written. */
-cJSON *api_piece_plan_object(const KnowledgeSnapshot *knowledge, const PiecePlan *plan);
+cJSON *api_piece_plan_object(const KnowledgeSnapshot *knowledge, const Plan *plan);
 
 /* The failure of a piece no seed composed: what the last try ran into. */
 ComposerStatus api_piece_fail_compose(const PieceSpec *request, PieceResult result, const PieceMade *last,

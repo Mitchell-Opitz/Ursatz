@@ -11,7 +11,7 @@
 #include "ursatz_test.h"
 #include <ursatz_composer/piece_plan_keys.h>
 
-PlanResult test_read_plan_file(const char *path, PiecePlan **out, PlanJsonError *error) {
+PlanResult test_read_plan_file(const char *path, Plan **out, PlanJsonError *error) {
     char *text = test_must_read_file(path, NULL);
     PlanResult result = plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), out, error);
     free(text);
@@ -35,7 +35,7 @@ MotiveResult test_load_motive_file(const char *path, MotiveFormat format, const 
     return result;
 }
 
-NodeId test_find_node(const PiecePlan *plan, const char *name) {
+NodeId test_find_node(const Plan *plan, const char *name) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *found = plan_node_name(plan, id);
         if (found && strcmp(found, name) == 0) {
@@ -45,7 +45,7 @@ NodeId test_find_node(const PiecePlan *plan, const char *name) {
     return PLAN_NODE_NONE;
 }
 
-NodeId test_find_named(const PiecePlan *plan, NodeId node, const char *name) {
+NodeId test_find_named(const Plan *plan, NodeId node, const char *name) {
     for (size_t i = 0; i < plan_node_child_count(plan, node); i++) {
         NodeId child = plan_node_child_at(plan, node, i);
         if (strcmp(plan_node_name(plan, child), name) == 0) {
@@ -59,7 +59,7 @@ NodeId test_find_named(const PiecePlan *plan, NodeId node, const char *name) {
     return PLAN_NODE_NONE;
 }
 
-FormHearResult test_form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out) {
+FormHearResult test_form_hear(const Plan *plan, PlanSpan span, FormHeard *out) {
     if (!out) {
         return FORM_HEAR_ERR_NULL;
     }
@@ -94,7 +94,7 @@ FormHearResult test_form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *o
     return status;
 }
 
-ReturnHearResult test_return_hear(const PiecePlan *plan, ReturnHeard *out) {
+ReturnHearResult test_return_hear(const Plan *plan, ReturnHeard *out) {
     ComposerHearing *hearing = NULL;
     if (!plan || !out) {
         return RETURN_HEAR_ERR_NULL;
@@ -109,7 +109,7 @@ ReturnHearResult test_return_hear(const PiecePlan *plan, ReturnHeard *out) {
     return status;
 }
 
-bool test_piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
+bool test_piece_check_keys(const Plan *plan, PieceKeyCheck *out) {
     ComposerHearing *hearing = NULL;
     if (!plan || !out || hearing_create(plan, test_knowledge(), &hearing) != HEARING_OK) {
         return false;
@@ -119,7 +119,7 @@ bool test_piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
     return read;
 }
 
-AnalyzerCheckResult test_analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *out) {
+AnalyzerCheckResult test_analyzer_check_piece(const Plan *plan, AnalyzerCheck *out) {
     if (!out) {
         return ANALYZER_CHECK_ERR_NULL;
     }
@@ -154,7 +154,7 @@ AnalyzerCheckResult test_analyzer_check_piece(const PiecePlan *plan, AnalyzerChe
     return result;
 }
 
-ComposerMeasureResult test_style_measure(const PiecePlan *plan, const ComposerStyle *style, StyleComparison *out) {
+ComposerMeasureResult test_style_measure(const Plan *plan, const ComposerStyle *style, StyleComparison *out) {
     if (!out) {
         return COMPOSER_MEASURE_ERR_ARGUMENT;
     }

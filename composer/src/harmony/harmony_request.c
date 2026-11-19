@@ -18,7 +18,7 @@ static PlanResult time_scaled(Rational time, size_t count, Rational *out) {
     return plan_result_of_rational(rational_mul_int(time, (long long)count, out));
 }
 
-bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanConstraintKind kind,
+bool harmony_find_constraint(const Plan *plan, LaneSpanId id, NodeId owner, PlanConstraintKind kind,
                              PlanConstraint *out) {
     const PlanConstraint *found = plan_lane_span_find_constraint(plan, id, kind);
     CadenceType cadence;
@@ -38,7 +38,7 @@ bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner,
     return found != NULL;
 }
 
-bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, SpelledKey *out) {
+bool harmony_find_key(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, SpelledKey *out) {
     LaneSpanId keys[2];
     size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, keys, 2);
     if (found == 1) {
@@ -59,7 +59,7 @@ bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSp
 /* The most key spans looked through before a point of the piece. */
 #define MAX_KEY_SPANS 32
 
-bool harmony_key_before(const PiecePlan *plan, Rational start, SpelledKey *out) {
+bool harmony_key_before(const Plan *plan, Rational start, SpelledKey *out) {
     LaneSpanId spans[MAX_KEY_SPANS];
     PlanSpan before = {{0, 1}, {0, 1}};
     if (start.num <= 0 || rational_make(start.num, start.den, &before.length) != RATIONAL_OK) {
@@ -154,7 +154,7 @@ bool harmony_pivot_chord_valid(SpelledKey from, SpelledKey to, const HarmonyChor
     return false;
 }
 
-bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, HarmonyMode *out) {
+bool harmony_find_mode(const Plan *plan, LaneSpanId id, NodeId owner, PlanSpan span, HarmonyMode *out) {
     SpelledKey key;
     if (!harmony_find_key(plan, id, owner, span, &key)) {
         return false;
@@ -178,7 +178,7 @@ static size_t times_in(Rational time, Rational unit) {
     return (size_t)((time.num * (long)unit.den) / ((long)time.den * unit.num));
 }
 
-bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out) {
+bool harmony_read_metre(const Plan *plan, PlanSpan span, PhraseMetre *out) {
     PhraseMetre metre;
     LaneSpanId meters[2];
     if (!plan || !out || plan_lane_find(plan, PLAN_LANE_METER, 0, span, meters, 2) != 1) {
@@ -386,7 +386,7 @@ size_t harmony_metre_last_cell(const PhraseMetre *metre) {
     return first;
 }
 
-static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolongation, bool around_given,
+static bool read_request(const Plan *plan, LaneSpanId target, bool prolongation, bool around_given,
                          PhraseRequest *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY) {
         return false;
@@ -464,15 +464,15 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
     return true;
 }
 
-bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
+bool harmony_phrase_read_request(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
     return read_request(plan, target, false, false, out);
 }
 
-bool harmony_phrase_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
+bool harmony_phrase_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
     return read_request(plan, target, false, true, out);
 }
 
-bool harmony_prolong_read_request_given(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out) {
+bool harmony_prolong_read_request_given(const Plan *plan, LaneSpanId target, PhraseRequest *out) {
     return read_request(plan, target, true, true, out);
 }
 
@@ -501,7 +501,7 @@ bool harmony_count_cells_or_zero(Rational cell_length, Rational length, size_t *
     return length.num > 0 && harmony_count_cells(cell_length, length, cells);
 }
 
-bool harmony_read_cells(const PiecePlan *plan, PlanSpan span, CellMetre *out) {
+bool harmony_read_cells(const Plan *plan, PlanSpan span, CellMetre *out) {
     LaneSpanId meters[2];
     CellMetre metre;
     if (!plan || !out || plan_lane_find(plan, PLAN_LANE_METER, 0, span, meters, 2) != 1) {

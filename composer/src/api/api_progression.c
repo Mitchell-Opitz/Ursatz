@@ -173,7 +173,7 @@ static ComposerStatus read_request(const cJSON *request, const KnowledgeSnapshot
 /* --- building the plan ------------------------------------------------------------------------------------ */
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     PlanSpan span;
     Rational bar_length;
 } Built;
@@ -361,7 +361,7 @@ static FillConfig config_for(unsigned long seed) {
 }
 
 /* One run of the fill loop with the operators of a stage. False only if the loop itself fails. */
-static bool run_stage(PiecePlan *plan, const Options *options, unsigned long seed, Stage stage, const Parameters *parameters,
+static bool run_stage(Plan *plan, const Options *options, unsigned long seed, Stage stage, const Parameters *parameters,
                       FillRecord **record) {
     FillOperatorRegistry *registry = registry_for(options, parameters, stage);
     FillConfig config = config_for(seed);
@@ -390,7 +390,7 @@ static bool chose(const FillRecord *record, const char *label_prefix) {
     return false;
 }
 
-static bool any_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span) {
+static bool any_open(const Plan *plan, PlanLaneKind lane, PlanSpan span) {
     LaneSpanId ids[MAX_CHORDS];
     size_t count = plan_lane_find(plan, lane, 0, span, ids, MAX_CHORDS);
     for (size_t i = 0; i < count && i < MAX_CHORDS; i++) {
@@ -402,7 +402,7 @@ static bool any_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span) {
 }
 
 /* Reopens, for embellishment, the chords that have no bass written under them. */
-static bool open_for_embellishment(PiecePlan *plan, PlanSpan span) {
+static bool open_for_embellishment(Plan *plan, PlanSpan span) {
     LaneSpanId ids[MAX_CHORDS];
     size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, MAX_CHORDS);
     for (size_t i = 0; i < count && i < MAX_CHORDS; i++) {

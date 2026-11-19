@@ -111,7 +111,7 @@ typedef struct {
 } RenderedPlan;
 
 /* Renders plan into *out, which the caller destroys. On failure *out is empty and safe to destroy. */
-PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out);
+PlanRenderResult plan_render(const Plan *plan, RenderedPlan *out);
 
 /* Frees everything and zeroes the struct. Safe on a zeroed struct. */
 void rendered_plan_destroy(RenderedPlan *rendered);

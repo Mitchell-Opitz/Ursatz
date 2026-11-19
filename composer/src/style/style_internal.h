@@ -48,7 +48,7 @@ typedef struct {
     bool texture;             /* the texture stage: only the accompaniment's candidates gain a style term (R-163) */
 } StyleCheckContext;
 
-bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool style_stage_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* Adds weight * closeness to a check's score, in lowest terms and small enough for the loop to compare (below 2^32). */

@@ -85,7 +85,7 @@ static long ticks(Rational time) {
 }
 
 /* The lane spans of a lane over a span, in time order, tiling it and all written. */
-static size_t tiling(const PiecePlan *plan, PlanLaneKind lane, PlanSpan within, LaneSpanId *out, size_t capacity) {
+static size_t tiling(const Plan *plan, PlanLaneKind lane, PlanSpan within, LaneSpanId *out, size_t capacity) {
     size_t count = plan_lane_find(plan, lane, 0, within, out, capacity);
     assert(count > 0 && count <= capacity);
     long at = ticks(within.start);
@@ -175,7 +175,7 @@ static size_t expected_nodes(SectionBeginning beginning, SectionEnding ending, E
     return count;
 }
 
-static SectionPairing theme_pairing(const PiecePlan *plan, NodeId theme) {
+static SectionPairing theme_pairing(const Plan *plan, NodeId theme) {
     SectionPairing pairing = {SECTION_BEGINNING_PRESENTATION, SECTION_ENDING_CONTINUATION};
     const SectionDescription *section = plan_node_section(plan, theme);
     assert(section && section->has_pairing);
@@ -183,7 +183,7 @@ static SectionPairing theme_pairing(const PiecePlan *plan, NodeId theme) {
     return pairing;
 }
 
-static bool node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out) {
+static bool node_cadence(const Plan *plan, NodeId node, CadenceType *out) {
     if (plan_node_section(plan, node) && plan_node_section(plan, node)->has_cadence) {
         *out = plan_node_section(plan, node)->cadence;
         return true;
@@ -227,7 +227,7 @@ static bool same_pitches(const PlanNotes *a, const PlanNotes *b) {
     return true;
 }
 
-static const PlanNotes *motive_notes(const PiecePlan *plan, const char *name) {
+static const PlanNotes *motive_notes(const Plan *plan, const char *name) {
     NodeId node = test_find_node(plan, name);
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(node != PLAN_NODE_NONE && plan_node_lane_spans(plan, node, &span, 1) == 1);
@@ -236,7 +236,7 @@ static const PlanNotes *motive_notes(const PiecePlan *plan, const char *name) {
 }
 
 /* The motive_ref of a motive node. */
-static const PlanMotiveRef *motive_ref(const PiecePlan *plan, const char *name) {
+static const PlanMotiveRef *motive_ref(const Plan *plan, const char *name) {
     NodeId node = test_find_node(plan, name);
     assert(node != PLAN_NODE_NONE);
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
@@ -250,7 +250,7 @@ static const PlanMotiveRef *motive_ref(const PiecePlan *plan, const char *name) 
 }
 
 /* The length of a motive node's melody, in ticks. */
-static long motive_length(const PiecePlan *plan, const char *name) {
+static long motive_length(const Plan *plan, const char *name) {
     NodeId node = test_find_node(plan, name);
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(node != PLAN_NODE_NONE && plan_node_lane_spans(plan, node, &span, 1) == 1);
@@ -259,7 +259,7 @@ static long motive_length(const PiecePlan *plan, const char *name) {
 
 /* ------------------------------------------------------------------ checks */
 
-static void check_structure(const PiecePlan *plan, const Scenario *scenario, size_t bars, SectionBeginning beginning,
+static void check_structure(const Plan *plan, const Scenario *scenario, size_t bars, SectionBeginning beginning,
                             SectionEnding ending) {
     Rational bar;
     assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
@@ -365,17 +365,17 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
 }
 
 /* The chord a harmony span writes, and whether its roman numeral names a dominant. */
-static bool is_dominant(const PiecePlan *plan, LaneSpanId span) {
+static bool is_dominant(const Plan *plan, LaneSpanId span) {
     const char *roman = plan_lane_span_payload(plan, span)->harmony.roman_numeral;
     return roman[0] == 'V' && (roman[1] == '\0' || roman[1] == '7');
 }
 
-static bool is_tonic(const PiecePlan *plan, LaneSpanId span) {
+static bool is_tonic(const Plan *plan, LaneSpanId span) {
     const char *roman = plan_lane_span_payload(plan, span)->harmony.roman_numeral;
     return (strcmp(roman, "I") == 0 || strcmp(roman, "i") == 0);
 }
 
-static LaneSpanId last_in(const LaneSpanId *ids, size_t count, const PiecePlan *plan, PlanSpan within) {
+static LaneSpanId last_in(const LaneSpanId *ids, size_t count, const Plan *plan, PlanSpan within) {
     LaneSpanId last = PLAN_LANE_SPAN_NONE;
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
@@ -386,7 +386,7 @@ static LaneSpanId last_in(const LaneSpanId *ids, size_t count, const PiecePlan *
     return last;
 }
 
-static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t bars, SectionBeginning beginning,
+static void check_lanes(const Plan *plan, const Scenario *scenario, size_t bars, SectionBeginning beginning,
                         SectionEnding ending) {
     LaneSpanId ids[96];
     NodeId theme_node = test_find_node(plan, "theme");
@@ -492,7 +492,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
 }
 
 /* The material is not part of the piece: it is skipped, and the piece ends with the theme. */
-static void check_render(const PiecePlan *plan, size_t bars, const Scenario *scenario) {
+static void check_render(const Plan *plan, size_t bars, const Scenario *scenario) {
     RenderedPlan rendered;
     Rational bar;
     assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
@@ -536,7 +536,7 @@ static void run_scenario(const Scenario *scenario, size_t bars, unsigned long se
     config.knowledge = test_knowledge();
     config.seed = seed;
     for (int round = 0; round < rounds; round++) {
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         GrowResult result = grow_run(plan, &config, &outcome);
@@ -587,7 +587,7 @@ static void test_first_cadence(void) {
                                        SECTION_ENDING_CONSEQUENT);
     request.first_cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
     for (unsigned long seed = 1; seed <= 3; seed++) {
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));
@@ -616,7 +616,7 @@ static void test_first_cadence(void) {
 static void test_bad_requests(void) {
     const Scenario *scenario = &SCENARIOS[0];
     Motive motive = make_motive(scenario);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowRequest period = make_request(scenario, &motive, 8, SECTION_BEGINNING_ANTECEDENT,
                                       SECTION_ENDING_CONSEQUENT);
     GrowRequest changed = period;

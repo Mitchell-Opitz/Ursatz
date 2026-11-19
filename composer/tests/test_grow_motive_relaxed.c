@@ -47,7 +47,7 @@ int main(void) {
         request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
         request.pairing.ending = SECTION_ENDING_CONTINUATION;
         request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowOutcome outcome;
         GrowConfig config;
         memset(&config, 0, sizeof(config));

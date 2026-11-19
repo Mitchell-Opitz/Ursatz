@@ -9,17 +9,17 @@
 /* The operator's context is non-NULL when it works around Given material (harmony_phrase_register_given). */
 static const char AROUND_GIVEN = 1;
 
-static bool read_request(const PiecePlan *plan, LaneSpanId target, bool around_given, PhraseRequest *out) {
+static bool read_request(const Plan *plan, LaneSpanId target, bool around_given, PhraseRequest *out) {
     return around_given ? harmony_phrase_read_request_given(plan, target, out)
                         : harmony_phrase_read_request(plan, target, out);
 }
 
-static bool phrase_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool phrase_applies(const Plan *plan, FillTarget target, void *context) {
     PhraseRequest request;
     return harmony_is_target(target) && read_request(plan, (LaneSpanId)target.id, context != NULL, &request);
 }
 
-static bool phrase_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool phrase_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     PhraseRequest request;
     if (!harmony_is_target(target) || !read_request(plan, (LaneSpanId)target.id, context != NULL, &request)) {
@@ -36,7 +36,7 @@ void harmony_chord_payload(const PhraseChord *chord, PlanLanePayload *payload) {
 }
 
 /* Moves the target's cadence constraint to the final chord's span, where the cadence arrives. */
-PlanResult harmony_move_cadence(PiecePlan *plan, LaneSpanId from, LaneSpanId to) {
+PlanResult harmony_move_cadence(Plan *plan, LaneSpanId from, LaneSpanId to) {
     size_t count = plan_lane_span_constraint_count(plan, from);
     for (size_t i = 0; i < count; i++) {
         const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, from, i);
@@ -53,7 +53,7 @@ PlanResult harmony_move_cadence(PiecePlan *plan, LaneSpanId from, LaneSpanId to)
  * The target span becomes the first chord (it keeps its id) and one span is
  * added after it for each chord that follows, so the chords tile the phrase.
  */
-PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate,
+PlanResult harmony_progression_apply(Plan *plan, FillTarget target, const FillCandidate *candidate,
                                      ReadRequestFn read_request) {
     const PhraseProgression *progression = candidate ? candidate->payload : NULL;
     PhraseRequest request;
@@ -100,7 +100,7 @@ PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const F
     return result == PLAN_OK ? harmony_move_cadence(plan, first, last) : result;
 }
 
-static PlanResult phrase_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult phrase_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     return harmony_progression_apply(plan, target, candidate,
                                      context ? harmony_phrase_read_request_given : harmony_phrase_read_request);
 }
@@ -109,8 +109,8 @@ static FillResult register_phrase(FillOperatorRegistry *registry, bool around_gi
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_PHRASE_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan harmony lane span";
-    operator_.generator.supported_outputs = "PiecePlan harmony lane spans";
+    operator_.generator.supported_inputs = "Plan harmony lane span";
+    operator_.generator.supported_outputs = "Plan harmony lane spans";
     operator_.generator.configuration_description = "none";
     operator_.generator.constraints_description = "standard-harmony phrase model and cadence rules";
     operator_.generator.deterministic = true;

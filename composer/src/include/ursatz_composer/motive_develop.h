@@ -178,7 +178,7 @@ FillResult motive_develop_register(FillOperatorRegistry *registry, const MotiveD
  * GenerationRecord and the suggestions carry. A candidate below the context's floor is a hard violation. A
  * candidate of any other operator is accepted at 0/1, as the default checker does.
  */
-bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool motive_develop_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                             const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* The motive and the step of a candidate one of these operators proposed. NULL for any other candidate. */
@@ -207,7 +207,7 @@ FillResult motive_invent_register(FillOperatorRegistry *registry, const MotiveDe
  * (a tonal inversion, a diminution, the first interval widened by a semitone), a development that cannot be made
  * counting 0, with the context's weights. A candidate of any other operator is accepted at 0/1.
  */
-bool motive_invent_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool motive_invent_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out);
 
 #endif

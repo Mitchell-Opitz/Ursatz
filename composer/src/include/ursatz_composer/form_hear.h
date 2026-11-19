@@ -72,7 +72,7 @@ typedef struct {
  * Analyzer's chain (analysis_chain_key_regions), in order. *out is owned by the caller (free), NULL with *count 0 when
  * none were heard. knowledge is the snapshot the Analyzer hears with (the call context's). The same errors as form_hear_in.
  */
-FormHearResult form_hear_keys(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, PlanSpan span, FormHeardKey **out,
+FormHearResult form_hear_keys(const Plan *plan, const KnowledgeSnapshot *knowledge, PlanSpan span, FormHeardKey **out,
                               size_t *count);
 
 /* standard-form's own name of a PhraseLevelForm ("sentence", "period", ...). */

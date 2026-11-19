@@ -18,7 +18,7 @@
 /* The leap, in semitones, that a step the other way must follow. */
 #define SEAM_LEAP 7
 
-NodeId seam_section_at(const PiecePlan *plan, Rational time) {
+NodeId seam_section_at(const Plan *plan, Rational time) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
             rational_cmp(plan_node_span(plan, id).start, time) == 0 &&
@@ -195,7 +195,7 @@ static Rational before_tick(Rational time) {
 }
 
 /* The lane span of a lane and voice that sounds over the tick starting at `at`, or none. */
-static LaneSpanId span_at(const PiecePlan *plan, PlanLaneKind lane, int voice, Rational at) {
+static LaneSpanId span_at(const Plan *plan, PlanLaneKind lane, int voice, Rational at) {
     LaneSpanId ids[8];
     Rational tick = {1, 4096};
     PlanSpan range = {at, tick};
@@ -208,7 +208,7 @@ static LaneSpanId span_at(const PiecePlan *plan, PlanLaneKind lane, int voice, R
     return PLAN_LANE_SPAN_NONE;
 }
 
-static bool copy_roman(const PiecePlan *plan, LaneSpanId id, char *roman, HarmonicFunction *function,
+static bool copy_roman(const Plan *plan, LaneSpanId id, char *roman, HarmonicFunction *function,
                        bool *has_function) {
     if (id == PLAN_LANE_SPAN_NONE) {
         return false;
@@ -220,7 +220,7 @@ static bool copy_roman(const PiecePlan *plan, LaneSpanId id, char *roman, Harmon
     return true;
 }
 
-SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out) {
+SeamHearResult seam_hear(const Plan *plan, NodeId seam, SeamHeard *out) {
     SeamNotes notes;
     if (!plan || !out) {
         return SEAM_HEAR_ERR_NULL;

@@ -66,9 +66,9 @@ typedef enum {
  * Hears the seam of a plan: the lanes right before the seam section starts, and the ones it holds. The key is the one
  * the key lane has at the seam.
  */
-SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out);
+SeamHearResult seam_hear(const Plan *plan, NodeId seam, SeamHeard *out);
 
 /* The seam section that starts at the time, or PLAN_NODE_NONE. */
-NodeId seam_section_at(const PiecePlan *plan, Rational time);
+NodeId seam_section_at(const Plan *plan, Rational time);
 
 #endif

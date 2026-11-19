@@ -19,7 +19,7 @@ static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant", "pivot"};
 
 /* The meter the plan starts in, from its first meter lane span; 4/4 while it has none (a pickup on 1/32 is on every
    meter's grid, so only a triplet pickup depends on which meter is chosen). */
-static PlanMeter first_meter(const PiecePlan *plan) {
+static PlanMeter first_meter(const Plan *plan) {
     LaneSpanId id;
     PlanSpan whole = plan_node_span(plan, plan_root(plan));
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, whole, &id, 1) == 0) {
@@ -297,12 +297,12 @@ static bool read_motive_tones_members(JsonReader *reader, const cJSON *item, con
 
 /* ------------------------------------------------------------------ the kinds */
 
-static bool valid_length_bars(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_length_bars(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     return constraint->params.bars > 0;
 }
 
-static bool write_length_bars(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_length_bars(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     ok = ok && plan_json_add(object, "bars", json_number(constraint->params.bars));
@@ -318,12 +318,12 @@ static bool read_length_bars(JsonReader *reader, const cJSON *item, const char *
     return true;
 }
 
-static bool valid_cadence(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_cadence(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     return plan_cadence_index(constraint->params.cadence, NULL);
 }
 
-static bool write_cadence(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_cadence(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     size_t cadence_index = 0;
@@ -341,13 +341,13 @@ static bool read_cadence(JsonReader *reader, const cJSON *item, const char *path
     return true;
 }
 
-static bool valid_motive_ref(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_motive_ref(const Plan *plan, const PlanConstraint *constraint) {
     const PlanMotiveRef *ref = &constraint->params.motive;
     return plan_has_node(plan, ref->motive) && plan_node_kind(plan, ref->motive) == PLAN_NODE_MOTIVE &&
            (!ref->has_step || (ref->step.kind >= 0 && ref->step.kind < MOTIVE_RELATION_KIND_COUNT));
 }
 
-static bool write_motive_ref(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_motive_ref(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     ok = ok && plan_json_add(object, "motive", json_number((long)plan_node_rank(plan, constraint->params.motive.motive)));
     if (ok && constraint->params.motive.has_step) {
@@ -368,13 +368,13 @@ static bool read_motive_ref(JsonReader *reader, const cJSON *item, const char *p
     return read_motive_ref_members(reader, item, path, &out->params.motive);
 }
 
-static bool valid_key(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_key(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     return spelled_key_tonic_pitch_class(&constraint->params.key) >= 0 && spelled_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
            plan_key_valid(&constraint->params.key);
 }
 
-static bool write_key(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_key(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     ok = ok && json_key_members(object, &constraint->params.key);
@@ -385,13 +385,13 @@ static bool read_key(JsonReader *reader, const cJSON *item, const char *path, Pl
     return json_read_key_members(reader, item, path, &out->params.key);
 }
 
-static bool valid_embellish(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_embellish(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     (void)constraint;
     return true;
 }
 
-static bool write_embellish(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_embellish(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     (void)constraint;
@@ -407,14 +407,14 @@ static bool read_embellish(JsonReader *reader, const cJSON *item, const char *pa
     return true;
 }
 
-static bool valid_schema(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_schema(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     const GalantPrototype *prototype = galant_prototype((GalantSchemaId)constraint->params.schema.schema);
     return prototype && constraint->params.schema.stage >= 0 &&
            (size_t)constraint->params.schema.stage < prototype->stage_count;
 }
 
-static bool write_schema(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_schema(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     ok = ok && plan_json_add(object, "schema", cJSON_CreateString(galant_schema_name(
@@ -453,7 +453,7 @@ static bool read_schema(JsonReader *reader, const cJSON *item, const char *path,
     return true;
 }
 
-static bool valid_harmony_shape(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_harmony_shape(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     const PlanHarmonyShape *shape = &constraint->params.harmony_shape;
     return shape->kind >= PLAN_HARMONY_SHAPE_PROLONGATION && shape->kind <= PLAN_HARMONY_SHAPE_CADENTIAL &&
@@ -465,7 +465,7 @@ static bool valid_harmony_shape(const PiecePlan *plan, const PlanConstraint *con
                               shape->ends_on == PLAN_HARMONY_ANCHOR_DOMINANT));
 }
 
-static bool write_harmony_shape(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_harmony_shape(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     const PlanHarmonyShape *shape = &constraint->params.harmony_shape;
@@ -510,7 +510,7 @@ static bool read_harmony_shape(JsonReader *reader, const cJSON *item, const char
            json_read_optional_bool(reader, item, path, "pedal", &shape->pedal);
 }
 
-static bool valid_accompaniment(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_accompaniment(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
     int low = accompaniment->low ? accompaniment->low : PLAN_ACCOMPANIMENT_DEFAULT_LOW;
@@ -523,7 +523,7 @@ static bool valid_accompaniment(const PiecePlan *plan, const PlanConstraint *con
            accompaniment->high <= 127 && low < high;
 }
 
-static bool write_accompaniment(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_accompaniment(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     const PlanAccompaniment *accompaniment = &constraint->params.accompaniment;
@@ -579,13 +579,13 @@ static bool read_accompaniment(JsonReader *reader, const cJSON *item, const char
            json_read_optional_int(reader, item, path, "high", 0, 127, &accompaniment->high);
 }
 
-static bool valid_voicing(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_voicing(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     (void)constraint;
     return true;
 }
 
-static bool write_voicing(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_voicing(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     ok = ok && plan_json_add(object, "write_soprano", cJSON_CreateBool(constraint->params.voicing.write_soprano));
@@ -596,12 +596,12 @@ static bool read_voicing(JsonReader *reader, const cJSON *item, const char *path
     return json_read_optional_bool(reader, item, path, "write_soprano", &out->params.voicing.write_soprano);
 }
 
-static bool valid_counterpoint(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_counterpoint(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     return constraint->params.counterpoint.species >= 1 && constraint->params.counterpoint.species <= 4;
 }
 
-static bool write_counterpoint(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_counterpoint(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     ok = ok && plan_json_add(object, "species", json_number(constraint->params.counterpoint.species)) &&
@@ -619,13 +619,13 @@ static bool read_counterpoint(JsonReader *reader, const cJSON *item, const char 
            json_read_optional_bool(reader, item, path, "above", &out->params.counterpoint.above);
 }
 
-static bool valid_invent_motive(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_invent_motive(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     (void)constraint;
     return true;
 }
 
-static bool write_invent_motive(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_invent_motive(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     (void)constraint;
@@ -641,7 +641,7 @@ static bool read_invent_motive(JsonReader *reader, const cJSON *item, const char
     return true;
 }
 
-static bool valid_style(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_style(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     const PlanStyle *style = &constraint->params.style;
     size_t length = strnlen(style->path, PLAN_STYLE_PATH_MAX);
@@ -668,7 +668,7 @@ static bool valid_style(const PiecePlan *plan, const PlanConstraint *constraint)
     return true;
 }
 
-static bool write_style(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_style(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     const PlanStyle *style = &constraint->params.style;
@@ -792,7 +792,7 @@ static bool read_style(JsonReader *reader, const cJSON *item, const char *path, 
     return true;
 }
 
-static bool valid_source(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_source(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     const PlanSource *source = &constraint->params.source;
     size_t length = strnlen(source->piece, PLAN_SOURCE_PIECE_MAX);
@@ -800,7 +800,7 @@ static bool valid_source(const PiecePlan *plan, const PlanConstraint *constraint
            source->score_numerator <= source->score_denominator;
 }
 
-static bool write_source(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_source(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     const PlanSource *source = &constraint->params.source;
@@ -852,14 +852,14 @@ static bool read_source(JsonReader *reader, const cJSON *item, const char *path,
     return true;
 }
 
-static bool valid_pickup(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_pickup(const Plan *plan, const PlanConstraint *constraint) {
     /* The bar it must be shorter than is the meter's, which the melody operator reads; no bar is as long as two wholes. */
     Rational pickup = constraint->params.pickup;
     return pickup.den > 0 && pickup.num > 0 && pickup.num < 2 * pickup.den &&
            plan_meter_pickup_on_grid(first_meter(plan), pickup);
 }
 
-static bool write_pickup(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_pickup(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     char length[64];
@@ -886,7 +886,7 @@ static bool read_pickup(JsonReader *reader, const cJSON *item, const char *path,
     return true;
 }
 
-static bool valid_motive_tones(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool valid_motive_tones(const Plan *plan, const PlanConstraint *constraint) {
     (void)plan;
     const PlanMotiveTones *tones = &constraint->params.motive_tones;
     if (tones->chord_count == 0 || tones->chord_count > PLAN_TONES_MAX_CHORDS || tones->label_count == 0 ||
@@ -910,7 +910,7 @@ static bool valid_motive_tones(const PiecePlan *plan, const PlanConstraint *cons
     return true;
 }
 
-static bool write_motive_tones(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool write_motive_tones(cJSON *object, const Plan *plan, const PlanConstraint *constraint) {
     bool ok = true;
     (void)plan;
     const PlanMotiveTones *tones = &constraint->params.motive_tones;

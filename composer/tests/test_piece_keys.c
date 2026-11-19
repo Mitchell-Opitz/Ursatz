@@ -105,7 +105,7 @@ typedef struct {
     size_t count;
 } KeyLane;
 
-static KeyLane read_lane(const PiecePlan *plan) {
+static KeyLane read_lane(const Plan *plan) {
     KeyLane lane;
     LaneSpanId ids[32];
     PlanSpan all = {{0, 1}, {100000, 1}};
@@ -120,7 +120,7 @@ static KeyLane read_lane(const PiecePlan *plan) {
 }
 
 /* The key lane tiles the plan from 0 to the end of the form, and neighbours differ (they are one span otherwise). */
-static void check_lane_tiles(const PiecePlan *plan, const KeyLane *lane) {
+static void check_lane_tiles(const Plan *plan, const KeyLane *lane) {
     Rational at = {0, 1};
     for (size_t i = 0; i < lane->count; i++) {
         assert(rational_cmp(lane->span[i].start, at) == 0);
@@ -153,7 +153,7 @@ static SpelledKey key_at(const KeyLane *lane, Rational time) {
     return lane->key[0];
 }
 
-static const PlanConstraint *find(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
+static const PlanConstraint *find(const Plan *plan, NodeId id, PlanConstraintKind kind) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
         if (plan_node_constraint_at(plan, id, i)->kind == kind) {
             return plan_node_constraint_at(plan, id, i);
@@ -163,7 +163,7 @@ static const PlanConstraint *find(const PiecePlan *plan, NodeId id, PlanConstrai
 }
 
 /* The sections of a plan, not the material. */
-static size_t sections_of(const PiecePlan *plan, NodeId *out) {
+static size_t sections_of(const Plan *plan, NodeId *out) {
     size_t count = 0;
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
@@ -177,7 +177,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
 
 /* ------------------------------------------------------------- the plans */
 
-static void check_plan(const PiecePlan *plan, const Scenario *scenario, const char *kind) {
+static void check_plan(const Plan *plan, const Scenario *scenario, const char *kind) {
     KeyLane lane = read_lane(plan);
     check_lane_tiles(plan, &lane);
     SpelledKey home = test_key_mode(scenario->tonic, scenario->mode);
@@ -259,7 +259,7 @@ static int test_plans(void) {
             size_t modulated = 0;
             for (unsigned long seed = 1; seed <= SEEDS; seed++) {
                 PieceRequest request = request_of(&SCENARIOS[s], k, seed);
-                PiecePlan *plan = NULL;
+                Plan *plan = NULL;
                 assert(piece_build_plan(&request, &plan) == PIECE_OK);
                 check_plan(plan, &SCENARIOS[s], k);
                 KeyLane planned = read_lane(plan);
@@ -295,7 +295,7 @@ static int test_plans(void) {
 /* ------------------------------------------------------------ the pieces */
 
 /* Whether the chord at the start of a key change is a pivot chord between the two keys, by standard-harmony. */
-static bool opens_with_pivot(const PiecePlan *plan, SpelledKey from, SpelledKey to, Rational at) {
+static bool opens_with_pivot(const Plan *plan, SpelledKey from, SpelledKey to, Rational at) {
     PlanSpan around = {at, {1, 1000}};
     LaneSpanId chord;
     HarmonyRelatedKey key;
@@ -321,7 +321,7 @@ static double as_double(Rational time) {
 }
 
 /* Whether an authentic cadence heard in `span` arrives in [start, end). */
-static bool authentic_in_part(const PiecePlan *plan, PlanSpan span, Rational start, Rational end) {
+static bool authentic_in_part(const Plan *plan, PlanSpan span, Rational start, Rational end) {
     FormHeard heard;
     assert(test_form_hear(plan, span, &heard) == FORM_HEAR_OK);
     for (size_t i = 0; i < heard.cadence_count; i++) {
@@ -344,7 +344,7 @@ static bool authentic_in_part(const PiecePlan *plan, PlanSpan span, Rational sta
  * Whether an authentic cadence arrives in [start, end), heard as piece_check_keys hears it: each section whole, and the
  * part of a section after a key change inside it, from the change, in its new key.
  */
-static bool authentic_inside(const PiecePlan *plan, const KeyLane *lane, const NodeId *sections, size_t count, Rational start,
+static bool authentic_inside(const Plan *plan, const KeyLane *lane, const NodeId *sections, size_t count, Rational start,
                              Rational end) {
     for (size_t s = 0; s < count; s++) {
         PlanSpan whole = plan_node_span(plan, sections[s]);
@@ -369,7 +369,7 @@ static bool authentic_inside(const PiecePlan *plan, const KeyLane *lane, const N
 
 /* Whether a retransition starts at `at`: it opens the home key straight from any region, over the arrival on V, with no
    pivot chord (R-505); V is one in the main and subordinate themes' V region and none in the small rondo's IV or vi. */
-static bool opens_retransition(const PiecePlan *plan, const NodeId *sections, size_t count, Rational at) {
+static bool opens_retransition(const Plan *plan, const NodeId *sections, size_t count, Rational at) {
     for (size_t s = 0; s < count; s++) {
         const SectionDescription *function = plan_section_or_empty(plan, sections[s]);
         if (function->has_function && function->function.function == SECTION_FUNCTION_RETRANSITION &&
@@ -382,7 +382,7 @@ static bool opens_retransition(const PiecePlan *plan, const NodeId *sections, si
 
 /* Whether a sequence starts at `at`: a section that returns the one just before it, moved into another key, opens that key
    with its pattern's own first chord and no pivot (the sonata rondo's S after P, vi to ii, R-520). */
-static bool opens_sequence(const PiecePlan *plan, const NodeId *sections, size_t count, Rational at) {
+static bool opens_sequence(const Plan *plan, const NodeId *sections, size_t count, Rational at) {
     for (size_t s = 0; s < count; s++) {
         NodeId back = plan_section_named(plan, plan_section_or_empty(plan, sections[s])->returns);
         Rational source_end;
@@ -395,7 +395,7 @@ static bool opens_sequence(const PiecePlan *plan, const NodeId *sections, size_t
     return false;
 }
 
-static void check_piece(const PiecePlan *plan, const char *kind) {
+static void check_piece(const Plan *plan, const char *kind) {
     KeyLane lane = read_lane(plan);
     NodeId sections[FORM_SPEC_MAX_SECTIONS];
     size_t count = sections_of(plan, sections);
@@ -452,7 +452,7 @@ typedef struct {
 
 static bool compose_one(const Scenario *scenario, const char *kind, unsigned long seed, Tally *tally) {
     PieceRequest request = request_of(scenario, kind, seed);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     ComposeConfig config;
     ComposeOutcome outcome;
@@ -519,7 +519,7 @@ static int test_smoke_always(void) {
     for (unsigned long seed = 1; seed <= 5; seed++) {
         PieceRequest request = request_of(&SCENARIOS[0], "scherzo", seed);
         request.modulate = false;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
         ComposeConfig config;
         ComposeOutcome outcome;
@@ -578,7 +578,7 @@ typedef struct {
 } Note;
 
 /* The melody notes of a section, voice 0, with their offsets from the section's start. */
-static size_t melody_of(const PiecePlan *plan, NodeId section, Note *out) {
+static size_t melody_of(const Plan *plan, NodeId section, Note *out) {
     PlanSpan span = plan_node_span(plan, section);
     LaneSpanId ids[MAJOR_MELODY_MAX];
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, MAJOR_MELODY_MAX);
@@ -620,7 +620,7 @@ static int test_tonic_major(bool smoke) {
         size_t composed = 0;
         for (unsigned long seed = 1; seed <= (smoke ? 1 : MAJOR_SEEDS); seed++) {
             PieceRequest request;
-            PiecePlan *plan = NULL;
+            Plan *plan = NULL;
             NodeId sections[FORM_SPEC_MAX_SECTIONS];
             memset(&request, 0, sizeof(request));
             request.form = form->name;

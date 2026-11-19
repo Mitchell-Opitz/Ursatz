@@ -39,9 +39,9 @@ typedef struct {
 } ApiSection;
 
 /* The sections of the piece in order, material left out; returns how many there are (at most capacity are written). */
-size_t api_plan_sections(const PiecePlan *plan, ApiSection *out, size_t capacity);
+size_t api_plan_sections(const Plan *plan, ApiSection *out, size_t capacity);
 /* The bars in a length of the plan's meter, rounded; 0 when the plan has no meter. */
-size_t api_bars_in(const PiecePlan *plan, Rational length);
+size_t api_bars_in(const Plan *plan, Rational length);
 /* {"letter", "bars", "key", "cadences", "pairing", "returns"}, as the plan command lists a section. */
 cJSON *api_section_json(const ApiSection *section);
 /* The key as "D minor". */
@@ -56,7 +56,7 @@ const char *api_key_name(const SpelledKey *key, char *out, size_t size);
  */
 ComposerStatus api_read_plan_text(const KnowledgeSnapshot *knowledge, const cJSON *request, const char *name, char **text, ComposerError *error);
 /* The plan of the text above. */
-ComposerStatus api_plan_from_text(const KnowledgeSnapshot *knowledge, const char *text, const char *name, PiecePlan **out, ComposerError *error);
+ComposerStatus api_plan_from_text(const KnowledgeSnapshot *knowledge, const char *text, const char *name, Plan **out, ComposerError *error);
 
 /* --- what a request asks to have made -------------------------------------------------------------- */
 
@@ -72,9 +72,9 @@ typedef struct {
 /* "midi", "musicxml", "plain_midi", "tempo" and, with workflow, "record" and "explain" ("text" or "json"). */
 ComposerStatus api_read_outputs(const cJSON *request, bool workflow, ApiOutputs *out, ComposerError *error);
 /* Fills plan_json, and midi and musicxml when asked, from the plan as it is in memory. */
-ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const PiecePlan *plan, const ApiOutputs *outputs, ComposerResponse *out);
+ComposerStatus api_render_outputs(const KnowledgeSnapshot *knowledge, const Plan *plan, const ApiOutputs *outputs, ComposerResponse *out);
 /* Fills record and the "explanation" member of document (a string) when asked; outcome may be NULL. */
-ComposerStatus api_record_outputs(const PiecePlan *plan, const ComposeOutcome *outcome, const ApiOutputs *outputs,
+ComposerStatus api_record_outputs(const Plan *plan, const ComposeOutcome *outcome, const ApiOutputs *outputs,
                                   cJSON *document, ComposerResponse *out);
 
 /* --- the result of a compose ----------------------------------------------------------------------- */
@@ -88,18 +88,18 @@ typedef struct {
 } ApiGivenRuns;
 
 /* The "sections" array: [{"letter", "heard", ["in_scope": false,] "heard_as_requested", "cadences"}]. */
-cJSON *api_heard_json(const PiecePlan *plan, const ComposeOutcome *outcome);
+cJSON *api_heard_json(const Plan *plan, const ComposeOutcome *outcome);
 /*
  * What fill prints with --format json (without "files"): {"seed", "realized", <the members of extra>, "sections",
  * ["analyzer",] ["style_distance",] "returns", ["given"]}. extra (may be NULL) is an object whose members are moved in.
  */
-cJSON *api_compose_document(const PiecePlan *plan, unsigned long seed, bool realized, const ComposeOutcome *outcome,
+cJSON *api_compose_document(const Plan *plan, unsigned long seed, bool realized, const ComposeOutcome *outcome,
                             const ApiGivenRuns *given, cJSON *extra);
 /*
  * No seed from first to last completed the plan: COMPOSER_ERR_UNSATISFIABLE, and out->json is {"stuck": {"first", "last",
  * "stage", "key_rejected", "open": [{"what", "reason"}], "more"}}.
  */
-ComposerStatus api_compose_stuck(const PiecePlan *plan, const ComposeOutcome *outcome, unsigned long first,
+ComposerStatus api_compose_stuck(const Plan *plan, const ComposeOutcome *outcome, unsigned long first,
                                  unsigned long last, ComposerResponse *out);
 
 /* --- the node and lane a request works on ---------------------------------------------------------- */
@@ -115,12 +115,12 @@ typedef struct {
 /* "node" (a node id) or "section" (a form letter), exactly one, and optionally "lane". */
 ComposerStatus api_read_target(const cJSON *request, ApiTarget *out, ComposerError *error);
 /* The node the target names; COMPOSER_ERR_UNSATISFIABLE when the plan has none. */
-ComposerStatus api_target_node(const PiecePlan *plan, const ApiTarget *target, NodeId *out, ComposerError *error);
+ComposerStatus api_target_node(const Plan *plan, const ApiTarget *target, NodeId *out, ComposerError *error);
 /* The targets: the node, or with a lane every span of it under the node. Into a new array the caller frees. */
-ComposerStatus api_target_list(const PiecePlan *plan, const ApiTarget *target, FillTarget **out, size_t *count,
+ComposerStatus api_target_list(const Plan *plan, const ApiTarget *target, FillTarget **out, size_t *count,
                                ComposerError *error);
 /* The target in words: "section B", "node 12", "the harmony of section B". */
-void api_target_describe(const PiecePlan *plan, const ApiTarget *target, char *out, size_t size);
+void api_target_describe(const Plan *plan, const ApiTarget *target, char *out, size_t size);
 
 /*
  * The sizes the form has, for the message about one it has not: the bars its sizes come in, then their counts when they have

@@ -33,7 +33,7 @@ static inline long check_ticks(Rational time) {
 }
 
 /* The notes of a lane voice over span, in ticks of the plan, in time order of their spans. */
-static inline size_t check_notes(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, CheckNote *out) {
+static inline size_t check_notes(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span, CheckNote *out) {
     LaneSpanId ids[256];
     size_t found = plan_lane_find(plan, lane, voice, span, ids, 256);
     size_t count = 0;
@@ -54,7 +54,7 @@ static inline size_t check_notes(const PiecePlan *plan, PlanLaneKind lane, int v
 }
 
 /* Checks every inner voice over span against the rules above; returns how many notes it checked. */
-static inline size_t check_accompaniment(const PiecePlan *plan, PlanSpan span, SpelledKey key, int low, int high) {
+static inline size_t check_accompaniment(const Plan *plan, PlanSpan span, SpelledKey key, int low, int high) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
     LaneSpanId chord_ids[HARMONY_MAX_CHORDS];

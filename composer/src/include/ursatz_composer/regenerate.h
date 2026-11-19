@@ -16,7 +16,7 @@
  * would leave a hole nothing may fill. The call is then refused with PLAN_ERR_BAD_PAYLOAD and nothing is changed.
  * PLAN_ERR_NOT_FOUND for a target that does not exist.
  */
-PlanResult plan_lock(PiecePlan *plan, FillTarget target);
+PlanResult plan_lock(Plan *plan, FillTarget target);
 
 /*
  * What is written from a target (its direct dependents; Given ones are left out), into a new array the caller frees
@@ -32,10 +32,10 @@ PlanResult plan_lock(PiecePlan *plan, FillTarget target);
  *   a material motive node    every melody span whose MOTIVE_REF names it
  * An inner voice, meter or key span has none. PLAN_ERR_NOT_FOUND for a target that does not exist.
  */
-PlanResult plan_dependents(const PiecePlan *plan, FillTarget target, FillTarget **out, size_t *count);
+PlanResult plan_dependents(const Plan *plan, FillTarget target, FillTarget **out, size_t *count);
 
 /* The section a node is in (the node itself for a section), PLAN_NODE_NONE for the form. */
-NodeId plan_section_of(const PiecePlan *plan, NodeId node);
+NodeId plan_section_of(const Plan *plan, NodeId node);
 
 /*
  * Regenerating one target (R-072): what depends on it is written again and nothing else is.
@@ -81,14 +81,14 @@ const char *regenerate_result_name(RegenerateResult result);
  * the lane spans reopened one by one (those inside a section reopened whole are not listed), into a new array the
  * caller frees with free (NULL when empty). The errors are plan_regenerate_all's, for the first target that has one.
  */
-RegenerateResult plan_regenerate_scope_all(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+RegenerateResult plan_regenerate_scope_all(const Plan *plan, const FillTarget *targets, size_t target_count,
                                            FillTarget **out, size_t *count);
 
 /*
  * Reopens what depends on any of the targets (every harmony span of a section, say) and composes it once. A single
  * target is a list of one.
  */
-RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets, size_t target_count,
+RegenerateResult plan_regenerate_all(Plan *plan, const FillTarget *targets, size_t target_count,
                                      const ComposeConfig *config, ComposeOutcome *outcome);
 
 #endif

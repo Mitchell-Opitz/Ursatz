@@ -41,14 +41,14 @@ static Rational time_of(long num, unsigned long den) {
 }
 
 /* A form of one bar of piece and one of material, with m0's melody open and asking to be invented. */
-static PiecePlan *build_plan(const Scenario *scenario, LaneSpanId *open) {
+static Plan *build_plan(const Scenario *scenario, LaneSpanId *open) {
     Rational bar = time_of(scenario->beats, (unsigned long)scenario->unit);
     Rational two;
     assert(rational_add(bar, bar, &two) == RATIONAL_OK);
     PlanSpan form_span = {time_of(0, 1), two};
     PlanSpan piece_span = {time_of(0, 1), bar};
     PlanSpan material_span = {bar, bar};
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form;
     NodeId piece;
     NodeId section;
@@ -85,8 +85,8 @@ static PiecePlan *build_plan(const Scenario *scenario, LaneSpanId *open) {
 }
 
 /* Runs motive-invent alone on a fresh plan; the caller destroys the plan and the record. */
-static PiecePlan *invent(const Scenario *scenario, unsigned long seed, LaneSpanId *open, FillRecord **record) {
-    PiecePlan *plan = build_plan(scenario, open);
+static Plan *invent(const Scenario *scenario, unsigned long seed, LaneSpanId *open, FillRecord **record) {
+    Plan *plan = build_plan(scenario, open);
     FillOperatorRegistry *registry = fill_registry_create();
     assert(motive_invent_register(registry, NULL) == FILL_OK);
     FillConfig config;
@@ -114,7 +114,7 @@ static int degree_of(const Scenario *scenario, int pitch) {
     return 0;
 }
 
-static void check_motive(const Scenario *scenario, const PiecePlan *plan, LaneSpanId open, const FillRecord *record) {
+static void check_motive(const Scenario *scenario, const Plan *plan, LaneSpanId open, const FillRecord *record) {
     Rational bar = time_of(scenario->beats, (unsigned long)scenario->unit);
     assert(plan_lane_span_state(plan, open) == PLAN_STATE_REALIZED);
     assert(plan_node_state(plan, plan_lane_span_owner(plan, open)) == PLAN_STATE_REALIZED);
@@ -153,7 +153,7 @@ static void check_motive(const Scenario *scenario, const PiecePlan *plan, LaneSp
     assert(applied);
 }
 
-static bool same_notes(const PiecePlan *a, const PiecePlan *b, LaneSpanId id) {
+static bool same_notes(const Plan *a, const Plan *b, LaneSpanId id) {
     const PlanNotes *x = &plan_lane_span_payload(a, id)->notes;
     const PlanNotes *y = &plan_lane_span_payload(b, id)->notes;
     if (x->note_count != y->note_count) {
@@ -171,18 +171,18 @@ static bool same_notes(const PiecePlan *a, const PiecePlan *b, LaneSpanId id) {
 
 static void test_scenario(const Scenario *scenario) {
     size_t distinct = 0;
-    PiecePlan *previous = NULL;
+    Plan *previous = NULL;
     LaneSpanId previous_open = PLAN_LANE_SPAN_NONE;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         LaneSpanId open;
         LaneSpanId again_open;
         FillRecord *record = NULL;
         FillRecord *again_record = NULL;
-        PiecePlan *plan = invent(scenario, seed, &open, &record);
+        Plan *plan = invent(scenario, seed, &open, &record);
         check_motive(scenario, plan, open, record);
 
         /* The same seed gives the same motive and the same record. */
-        PiecePlan *again = invent(scenario, seed, &again_open, &again_record);
+        Plan *again = invent(scenario, seed, &again_open, &again_record);
         assert(open == again_open && same_notes(plan, again, open));
         char *text = fill_record_to_json(record);
         char *again_text = fill_record_to_json(again_record);

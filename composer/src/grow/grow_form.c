@@ -117,7 +117,7 @@ unsigned grow_slot_function_bit(GrowSlot slot) {
 }
 
 /* The motive_ref of the idea's melody span (voice 0), and that span's. False when the idea has none. */
-static bool idea_melody(const PiecePlan *plan, NodeId idea, PlanMotiveRef *ref, PlanSpan *span,
+static bool idea_melody(const Plan *plan, NodeId idea, PlanMotiveRef *ref, PlanSpan *span,
                         const CadenceType **cadence) {
     LaneSpanId ids[FORM_IDEAS];
     size_t found = plan_node_lane_spans(plan, idea, ids, FORM_IDEAS);
@@ -144,7 +144,7 @@ static bool idea_melody(const PiecePlan *plan, NodeId idea, PlanMotiveRef *ref, 
 }
 
 /* m0 with the harmony, features and role of the context's basic motive, when its notes are m0's. */
-static void with_extras(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *motive) {
+static void with_extras(const Plan *plan, NodeId node, const MotiveDevelopContext *context, Motive *motive) {
     const Motive *basic = context->basic;
     if (!basic || node != grow_find_source(plan) || basic->note_count != motive->note_count) {
         return;
@@ -165,7 +165,7 @@ static void with_extras(const PiecePlan *plan, NodeId node, const MotiveDevelopC
 }
 
 /* A motive node's motive, with the extras m0 has. */
-static bool read_node(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out) {
+static bool read_node(const Plan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out) {
     if (!motive_develop_read_node(plan, node, context, out)) {
         return false;
     }
@@ -173,7 +173,7 @@ static bool read_node(const PiecePlan *plan, NodeId node, const MotiveDevelopCon
     return true;
 }
 
-static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveDevelopContext *context, Request *out) {
+static bool read_request(const Plan *plan, FillTarget target, const MotiveDevelopContext *context, Request *out) {
     if (target.kind != FILL_TARGET_NODE || !plan_has_node(plan, target.id) ||
         plan_node_kind(plan, target.id) != PLAN_NODE_MOTIVE ||
         plan_node_state(plan, target.id) != PLAN_STATE_CONSTRAINED) {
@@ -525,13 +525,13 @@ static bool offer_developed(Proposal *proposal, bool contrast) {
     return grow_develop_chain(&proposal->request->ref, &chain) ? offer(proposal, &chain, GROW_DEVELOP_SEED, NULL, contrast) : true;
 }
 
-static bool form_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool form_applies(const Plan *plan, FillTarget target, void *context) {
     Request request;
     MotiveDevelopContext shared = context_or_default(context);
     return read_request(plan, target, &shared, &request);
 }
 
-static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool form_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                           FillCandidateList *out) {
     (void)rng;
     Request request;
@@ -574,7 +574,7 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
  * operation's was written): the node's MOTIVE_REF then names the step that was applied. A pool form of several steps keeps
  * the ref (its chain is the payload's pool_chain).
  */
-static PlanResult name_applied_step(PiecePlan *plan, NodeId node, const Payload *payload) {
+static PlanResult name_applied_step(Plan *plan, NodeId node, const Payload *payload) {
     if (payload->pool_bonus > 0 || payload->record.step_count != 1) {
         return PLAN_OK;
     }
@@ -612,7 +612,7 @@ static PlanResult name_applied_step(PiecePlan *plan, NodeId node, const Payload 
     return PLAN_OK;
 }
 
-static PlanResult form_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult form_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)context;
     const Payload *payload = candidate->payload;
     if (!payload || payload->magic != FORM_MAGIC) {
@@ -642,8 +642,8 @@ FillResult grow_form_register(FillOperatorRegistry *registry, const MotiveDevelo
     }
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = GROW_FORM_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan motive node of a grown theme's idea";
-    operator_.generator.supported_outputs = "PiecePlan melody lane span of the motive node";
+    operator_.generator.supported_inputs = "Plan motive node of a grown theme's idea";
+    operator_.generator.supported_outputs = "Plan melody lane span of the motive node";
     operator_.generator.configuration_description = "none";
     operator_.generator.constraints_description = "the slot of the idea whose melody asks for the motive";
     operator_.generator.deterministic = true;
@@ -656,7 +656,7 @@ FillResult grow_form_register(FillOperatorRegistry *registry, const MotiveDevelo
     return fill_registry_register(registry, &operator_);
 }
 
-bool grow_motives_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool grow_motives_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                           const FillCandidate *candidate, void *context, FillCheck *out) {
     const Payload *payload = candidate ? candidate->payload : NULL;
     if (!payload || payload->magic != FORM_MAGIC) {

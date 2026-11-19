@@ -14,7 +14,7 @@ void constraint_list_free(ConstraintList *list) {
     memset(list, 0, sizeof(*list));
 }
 
-static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *constraint) {
+static bool constraint_is_valid(const Plan *plan, const PlanConstraint *constraint) {
     const ConstraintKindRow *row = constraint_kind_row(constraint->kind);
     return row && row->valid(plan, constraint);
 }
@@ -48,12 +48,12 @@ static const PlanConstraint *list_at(const ConstraintList *list, size_t index) {
 
 /* ------------------------------------------------------------- the description of a section node */
 
-const SectionDescription *plan_node_section(const PiecePlan *plan, NodeId id) {
+const SectionDescription *plan_node_section(const Plan *plan, NodeId id) {
     const PlanNode *node = plan_node_at(plan, id);
     return node && node->kind == PLAN_NODE_SECTION ? &node->section : NULL;
 }
 
-PlanResult plan_node_set_section(PiecePlan *plan, NodeId id, const SectionDescription *description) {
+PlanResult plan_node_set_section(Plan *plan, NodeId id, const SectionDescription *description) {
     if (!plan || !description) {
         return PLAN_ERR_NULL;
     }
@@ -76,18 +76,18 @@ PlanResult plan_node_set_section(PiecePlan *plan, NodeId id, const SectionDescri
     return PLAN_OK;
 }
 
-const SectionDescription *plan_section_or_empty(const PiecePlan *plan, NodeId node) {
+const SectionDescription *plan_section_or_empty(const Plan *plan, NodeId node) {
     static const SectionDescription EMPTY;
     const SectionDescription *section = plan_node_section(plan, node);
     return section ? section : &EMPTY;
 }
 
-bool plan_section_has_role(const PiecePlan *plan, NodeId node, SectionRole role) {
+bool plan_section_has_role(const Plan *plan, NodeId node, SectionRole role) {
     const SectionDescription *section = plan_node_section(plan, node);
     return section && section->has_role && section->role == role;
 }
 
-bool plan_section_part_of(const PiecePlan *plan, NodeId node, int *part) {
+bool plan_section_part_of(const Plan *plan, NodeId node, int *part) {
     const SectionDescription *section = plan_node_section(plan, node);
     if (!section || !section->has_role || section->role < SECTION_ROLE_INTRO || section->role > SECTION_ROLE_ENDING) {
         return false;
@@ -98,7 +98,7 @@ bool plan_section_part_of(const PiecePlan *plan, NodeId node, int *part) {
     return true;
 }
 
-NodeId plan_section_named(const PiecePlan *plan, const char *name) {
+NodeId plan_section_named(const Plan *plan, const char *name) {
     for (NodeId id = 1; name && id <= plan_node_count(plan); id++) {
         const char *node_name = plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION ? plan_node_name(plan, id) : NULL;
         if (node_name && strcmp(node_name, name) == 0) {
@@ -108,7 +108,7 @@ NodeId plan_section_named(const PiecePlan *plan, const char *name) {
     return PLAN_NODE_NONE;
 }
 
-bool plan_node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out) {
+bool plan_node_cadence(const Plan *plan, NodeId node, CadenceType *out) {
     const SectionDescription *section = plan_node_section(plan, node);
     if (section) {
         if (section->has_cadence) {
@@ -126,7 +126,7 @@ bool plan_node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out) {
     return false;
 }
 
-PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {
+PlanResult plan_node_add_constraint(Plan *plan, NodeId id, const PlanConstraint *constraint) {
     if (!plan || !constraint) {
         return PLAN_ERR_NULL;
     }
@@ -144,17 +144,17 @@ PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstr
     return list_add(&node->constraints, constraint);
 }
 
-size_t plan_node_constraint_count(const PiecePlan *plan, NodeId id) {
+size_t plan_node_constraint_count(const Plan *plan, NodeId id) {
     const PlanNode *node = plan_node_at(plan, id);
     return node ? node->constraints.count : 0;
 }
 
-const PlanConstraint *plan_node_constraint_at(const PiecePlan *plan, NodeId id, size_t index) {
+const PlanConstraint *plan_node_constraint_at(const Plan *plan, NodeId id, size_t index) {
     const PlanNode *node = plan_node_at(plan, id);
     return node ? list_at(&node->constraints, index) : NULL;
 }
 
-PlanResult plan_node_remove_constraint(PiecePlan *plan, NodeId id, size_t index) {
+PlanResult plan_node_remove_constraint(Plan *plan, NodeId id, size_t index) {
     PlanNode *node = plan_node_at(plan, id);
     if (!node) {
         return PLAN_ERR_NOT_FOUND;
@@ -165,7 +165,7 @@ PlanResult plan_node_remove_constraint(PiecePlan *plan, NodeId id, size_t index)
     return list_remove(&node->constraints, index);
 }
 
-PlanResult plan_lane_span_add_constraint(PiecePlan *plan, LaneSpanId id, const PlanConstraint *constraint) {
+PlanResult plan_lane_span_add_constraint(Plan *plan, LaneSpanId id, const PlanConstraint *constraint) {
     if (!plan || !constraint) {
         return PLAN_ERR_NULL;
     }
@@ -182,17 +182,17 @@ PlanResult plan_lane_span_add_constraint(PiecePlan *plan, LaneSpanId id, const P
     return list_add(&entry->constraints, constraint);
 }
 
-size_t plan_lane_span_constraint_count(const PiecePlan *plan, LaneSpanId id) {
+size_t plan_lane_span_constraint_count(const Plan *plan, LaneSpanId id) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     return entry ? entry->constraints.count : 0;
 }
 
-const PlanConstraint *plan_lane_span_constraint_at(const PiecePlan *plan, LaneSpanId id, size_t index) {
+const PlanConstraint *plan_lane_span_constraint_at(const Plan *plan, LaneSpanId id, size_t index) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     return entry ? list_at(&entry->constraints, index) : NULL;
 }
 
-PlanResult plan_lane_span_remove_constraint(PiecePlan *plan, LaneSpanId id, size_t index) {
+PlanResult plan_lane_span_remove_constraint(Plan *plan, LaneSpanId id, size_t index) {
     LaneSpan *entry = plan_lane_span_at(plan, id);
     if (!entry) {
         return PLAN_ERR_NOT_FOUND;
@@ -203,7 +203,7 @@ PlanResult plan_lane_span_remove_constraint(PiecePlan *plan, LaneSpanId id, size
     return list_remove(&entry->constraints, index);
 }
 
-const PlanConstraint *plan_node_find_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
+const PlanConstraint *plan_node_find_constraint(const Plan *plan, NodeId id, PlanConstraintKind kind) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
         if (constraint->kind == kind) {
@@ -213,7 +213,7 @@ const PlanConstraint *plan_node_find_constraint(const PiecePlan *plan, NodeId id
     return NULL;
 }
 
-const PlanConstraint *plan_lane_span_find_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind) {
+const PlanConstraint *plan_lane_span_find_constraint(const Plan *plan, LaneSpanId id, PlanConstraintKind kind) {
     for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
         const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, id, i);
         if (constraint->kind == kind) {

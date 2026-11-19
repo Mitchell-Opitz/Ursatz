@@ -72,7 +72,7 @@ typedef struct {
 } ReturnPayload;
 
 /* Reads the subtree and written lane spans of section into out. False on allocation failure. */
-bool return_copy_read(const PiecePlan *plan, NodeId section, ReturnCopy *out);
+bool return_copy_read(const Plan *plan, NodeId section, ReturnCopy *out);
 bool return_copy_clone(const ReturnCopy *from, ReturnCopy *out);
 void return_copy_destroy(ReturnCopy *copy);
 /* Moves the copy from a section starting at from to one starting at to, its pitches by transpose semitones. */
@@ -94,7 +94,7 @@ int return_mode_pitch(const ReturnPayload *payload, int pitch);
  * with PLAN_NOTE_FROM_NONE its id, source and operation are cleared (a copy from another plan has no source here, so the plan
  * gives it a fresh id).
  */
-PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy, PlanNoteOperation operation);
+PlanResult return_copy_write(Plan *plan, NodeId section, const ReturnCopy *copy, PlanNoteOperation operation);
 
 void return_payload_destroy(void *payload);
 
@@ -102,27 +102,27 @@ void return_payload_destroy(void *payload);
  * The key difference in semitones, from -5 to 6, between a section of one plan and a section of another (or the same)
  * plan, whose key lanes must have the same shape and mode; false when they differ.
  */
-bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+bool return_key_shift(const Plan *source_plan, PlanSpan source, const Plan *target_plan, PlanSpan target,
                       int *shift);
 /*
  * Whether the key lanes of the two sections have the same shape, every target span is in the other mode from the
  * source's at the same place, all target spans are in one mode, and the tonic moves by one step throughout (R-524);
  * *shift is that step in semitones, from -5 to 6, and *to_material the target's material.
  */
-bool return_mode_shift_by(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+bool return_mode_shift_by(const Plan *source_plan, PlanSpan source, const Plan *target_plan, PlanSpan target,
                           int *shift, const PitchMaterial **to_material);
 /*
  * return_mode_shift_by with the shift required to be 0: every target span is on the same tonic as the source's at the
  * same place in the other mode (R-499). A copy across modes of a figurate return is moved by 0.
  */
-bool return_mode_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+bool return_mode_shift(const Plan *source_plan, PlanSpan source, const Plan *target_plan, PlanSpan target,
                        const PitchMaterial **to_material);
 /* The return of a section that form_return_copies holds (the returned section, the variation); false otherwise. */
-bool return_target(const PiecePlan *plan, NodeId section, ReturnRef *ret);
+bool return_target(const Plan *plan, NodeId section, ReturnRef *ret);
 /* The meter lane span that holds the span whole; false when none does. */
-bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out);
+bool return_meter_over(const Plan *plan, PlanSpan span, PlanMeter *out);
 /* Whether the section is not Constrained and its harmony, bass and melody are all written. */
-bool return_source_ready(const PiecePlan *plan, NodeId section);
+bool return_source_ready(const Plan *plan, NodeId section);
 
 /* What a variation may change in a copy that is otherwise the returned section moved onto the target. */
 typedef struct {

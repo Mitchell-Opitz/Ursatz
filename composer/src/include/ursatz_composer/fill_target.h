@@ -29,11 +29,11 @@ typedef struct {
 bool fill_target_equals(FillTarget a, FillTarget b);
 
 /* True when the target exists in the plan. */
-bool fill_target_exists(const PiecePlan *plan, FillTarget target);
+bool fill_target_exists(const Plan *plan, FillTarget target);
 /* The accessors below return PLAN_STATE_CONSTRAINED, 0 or an empty span for a target that does not exist. */
-PlanState fill_target_state(const PiecePlan *plan, FillTarget target);
-size_t fill_target_constraint_count(const PiecePlan *plan, FillTarget target);
-PlanSpan fill_target_span(const PiecePlan *plan, FillTarget target);
+PlanState fill_target_state(const Plan *plan, FillTarget target);
+size_t fill_target_constraint_count(const Plan *plan, FillTarget target);
+PlanSpan fill_target_span(const Plan *plan, FillTarget target);
 
 /*
  * Picks the next target to fill: the open (Constrained) node or lane span with
@@ -49,7 +49,7 @@ PlanSpan fill_target_span(const PiecePlan *plan, FillTarget target);
  * Returns true and sets *out, or false when nothing is open: the plan is
  * finished.
  */
-bool fill_pick_open_target(const PiecePlan *plan, const FillTarget *excluded, size_t excluded_count,
+bool fill_pick_open_target(const Plan *plan, const FillTarget *excluded, size_t excluded_count,
                            FillTarget *out);
 
 #endif

@@ -295,7 +295,7 @@ static bool section_construction(const PieceRequest *request, const PieceSection
 }
 
 /* The key over the start of a span, when one key span holds it. */
-static bool key_over(const PiecePlan *plan, PlanSpan span, SpelledKey *out) {
+static bool key_over(const Plan *plan, PlanSpan span, SpelledKey *out) {
     LaneSpanId ids[2];
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, ids[0]), span)) {
@@ -310,7 +310,7 @@ static bool key_over(const PiecePlan *plan, PlanSpan span, SpelledKey *out) {
  * theme's lanes do (plan_give_section). False when the plan has no theme section, no m0, or is in another mode.
  */
 static bool theme_motive(const PieceRequest *request, const PieceSection *section, Motive *out) {
-    const PiecePlan *theme_plan = section->theme_plan;
+    const Plan *theme_plan = section->theme_plan;
     NodeId theme = theme_plan ? grow_find_theme(theme_plan, false) : PLAN_NODE_NONE;
     NodeId source = theme_plan ? grow_find_source(theme_plan) : PLAN_NODE_NONE;
     PlanSpan span;
@@ -357,7 +357,7 @@ static const Motive *basic_motive(const PieceRequest *request, Motive *storage) 
 }
 
 /* The section of a plan that a piece part and id name, or PLAN_NODE_NONE. */
-static NodeId find_part_section(const PiecePlan *plan, const PieceSection *section) {
+static NodeId find_part_section(const Plan *plan, const PieceSection *section) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
             continue;
@@ -372,7 +372,7 @@ static NodeId find_part_section(const PiecePlan *plan, const PieceSection *secti
 }
 
 /* The piece's basic motive as the realized loop plan holds it (m0, in the request's key). */
-static bool loop_motive(const PieceRequest *request, const PiecePlan *loop_plan, Motive *out) {
+static bool loop_motive(const PieceRequest *request, const Plan *loop_plan, Motive *out) {
     NodeId source = grow_find_source(loop_plan);
     PlanMeter meter;
     SpelledKey key;
@@ -429,13 +429,13 @@ static bool is_held(const FormSpec *form, const PieceRequest *request, size_t in
     return true;
 }
 
-static PieceResult add_request_section(PiecePlan *plan, const PieceRequest *request, const SpelledKey *key, const PieceSection *section,
+static PieceResult add_request_section(Plan *plan, const PieceRequest *request, const SpelledKey *key, const PieceSection *section,
                                        size_t start_beats, const Motive *motive, NodeId form, PlanSpan span, NodeId *out) {
     PlanConstraint constraint;
     SectionPairing pairing;
     SectionConstruction construction;
     /* A theme fill is the theme it was composed as: its archetype, pairing and cadences, not the request's. */
-    const PiecePlan *theme_plan = section->fill == PIECE_FILL_THEME ? section->theme_plan : NULL;
+    const Plan *theme_plan = section->fill == PIECE_FILL_THEME ? section->theme_plan : NULL;
     NodeId given = theme_plan ? grow_find_theme(theme_plan, false) : PLAN_NODE_NONE;
     if (section->fill == PIECE_FILL_THEME && given == PLAN_NODE_NONE) {
         return PIECE_ERR_BAD_REQUEST;
@@ -562,7 +562,7 @@ typedef struct {
  * span for each run of sections in one key, the seam in the first body section's key and the material in the home key (R-610). A
  * span reached by a relation is named by it and its anchor.
  */
-static PieceResult add_key_lane(PiecePlan *plan, const FormSpec *form, NodeId form_id, const PieceRequest *request,
+static PieceResult add_key_lane(Plan *plan, const FormSpec *form, NodeId form_id, const PieceRequest *request,
                                 const PieceRegion *regions, bool regional, size_t laid, bool loop_plan, Rational bar, PlanSpan span_form,
                                 PlanSpan material) {
     PlanLanePayload payload;
@@ -639,8 +639,8 @@ static PieceResult add_key_lane(PiecePlan *plan, const FormSpec *form, NodeId fo
  * The plan of the request. With a loop plan it is the ending version (R-172): the intro and the body Given from the
  * realized loop, the turnaround and the seam left out, the ending laid out open after the body.
  */
-PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *request, const PiecePlan *loop_plan,
-                                    PiecePlan **out) {
+PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *request, const Plan *loop_plan,
+                                    Plan **out) {
     if (!form || !request || !out) {
         return PIECE_ERR_NULL;
     }
@@ -736,7 +736,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     if (motive && !grow_motive_fits_idea(motive, bar, basic_bars)) {
         return PIECE_ERR_MOTIVE_TOO_LONG;
     }
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
@@ -865,7 +865,7 @@ PieceResult form_build_request_plan(const FormSpec *form, const PieceRequest *re
     return PIECE_OK;
 }
 
-PieceResult piece_build_ending(const PiecePlan *loop_plan, const PieceRequest *request, PiecePlan **out) {
+PieceResult piece_build_ending(const Plan *loop_plan, const PieceRequest *request, Plan **out) {
     if (!loop_plan || !request || !out) {
         if (out) {
             *out = NULL;

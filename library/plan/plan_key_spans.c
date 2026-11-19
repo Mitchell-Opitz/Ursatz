@@ -23,7 +23,7 @@
  */
 
 /* The index of key span `id` among the key spans in id order, which is its place in the "keys" array of the plan file. */
-static size_t key_array_index(const PiecePlan *plan, LaneSpanId id) {
+static size_t key_array_index(const Plan *plan, LaneSpanId id) {
     size_t index = 0;
     for (LaneSpanId other = 1; other < id; other++) {
         if (plan_has_lane_span(plan, other) && plan_lane_span_lane(plan, other) == PLAN_LANE_KEY) {
@@ -33,7 +33,7 @@ static size_t key_array_index(const PiecePlan *plan, LaneSpanId id) {
     return index;
 }
 
-static PlanResult refuse(PlanJsonError *error, const PiecePlan *plan, LaneSpanId id, const char *member, const char *format, ...) {
+static PlanResult refuse(PlanJsonError *error, const Plan *plan, LaneSpanId id, const char *member, const char *format, ...) {
     char message[PLAN_JSON_MESSAGE_MAX];
     char path[PLAN_JSON_PATH_MAX];
     va_list args;
@@ -50,7 +50,7 @@ static Region key_region(const SpelledKey *key, const CommonPracticeMaterials *m
     return region_tonal(spelled_key_tonic_pitch_class(key), key->material ? key->material : materials->major);
 }
 
-PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const PlanReadHooks *hooks, PlanJsonError *error) {
+PlanResult plan_resolve_key_spans(Plan *plan, const KnowledgeSnapshot *knowledge, const PlanReadHooks *hooks, PlanJsonError *error) {
     CommonPracticeMaterials materials;
     if (!plan || !common_practice_materials_resolve(knowledge, &materials, NULL, 0)) {
         json_set_error(error, -1, "", "a plan and a knowledge snapshot are required");

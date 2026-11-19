@@ -51,7 +51,7 @@ typedef struct {
 } PlanProducer;
 
 /* Returns the plan as pretty-printed JSON (2-space indent, trailing newline), or NULL with error set (a NULL plan or producer too). Caller frees. */
-char *plan_to_json(const PiecePlan *plan, const PlanProducer *producer, PlanJsonError *error);
+char *plan_to_json(const Plan *plan, const PlanProducer *producer, PlanJsonError *error);
 
 /*
  * What a program that reads plans adds to the reader (R-625): `material_supported` says whether a key may be made of a material (a
@@ -63,7 +63,7 @@ char *plan_to_json(const PiecePlan *plan, const PlanProducer *producer, PlanJson
  */
 typedef struct {
     bool (*material_supported)(const PitchMaterial *material, void *data);
-    PlanResult (*form_record_migrate)(PiecePlan *plan, void *data);
+    PlanResult (*form_record_migrate)(Plan *plan, void *data);
     void *data;
 } PlanReadHooks;
 
@@ -73,7 +73,7 @@ typedef struct {
  * PLAN_ERR_NULL (no text, no out, or no snapshot with the four materials), PLAN_ERR_PARSE (not JSON), PLAN_ERR_FORMAT (JSON
  * that is not a valid plan) or PLAN_ERR_ALLOC.
  */
-PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, PiecePlan **out,
+PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, Plan **out,
                           PlanJsonError *error);
 
 /*
@@ -86,10 +86,10 @@ PlanResult plan_from_json(const KnowledgeSnapshot *knowledge, const char *text, 
  * message), or it reaches a material the Composer does not compose in (a key is major or natural minor). A refusal leaves the plan
  * as it was.
  */
-PlanResult plan_resolve_key_spans(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const PlanReadHooks *hooks, PlanJsonError *error);
+PlanResult plan_resolve_key_spans(Plan *plan, const KnowledgeSnapshot *knowledge, const PlanReadHooks *hooks, PlanJsonError *error);
 
 /* plan_from_json, then plan_resolve_key_spans: the plan a caller composes from. On failure *out is NULL. */
-PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, PiecePlan **out,
+PlanResult plan_from_json_resolved(const KnowledgeSnapshot *knowledge, const char *text, const PlanReadHooks *hooks, Plan **out,
                                    PlanJsonError *error);
 
 #endif

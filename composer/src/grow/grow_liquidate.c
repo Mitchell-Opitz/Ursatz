@@ -67,7 +67,7 @@ typedef struct {
     size_t bar_run;                  /* eighths in a bar: the retransition's scale line */
 } LiquidateRequest;
 
-static bool read_liquidate(const PiecePlan *plan, FillTarget target, LiquidateRequest *out) {
+static bool read_liquidate(const Plan *plan, FillTarget target, LiquidateRequest *out) {
     LiquidateRequest request;
     GrowThemeRequest *theme = &request.theme;
     memset(&request, 0, sizeof(request));
@@ -161,7 +161,7 @@ static bool read_liquidate(const PiecePlan *plan, FillTarget target, LiquidateRe
     return true;
 }
 
-bool grow_liquidate_applies(const PiecePlan *plan, FillTarget target) {
+bool grow_liquidate_applies(const Plan *plan, FillTarget target) {
     LiquidateRequest request;
     return read_liquidate(plan, target, &request);
 }
@@ -361,7 +361,7 @@ static bool draw_retransition(const LiquidateRequest *request, FillRng *rng, Gro
     return make_runs(spec, &theme->key, request->run, request->bar_run);
 }
 
-static bool draw_liquidate(const PiecePlan *plan, const LiquidateRequest *request, FillRng *rng, GrowLiquidateSpec *spec) {
+static bool draw_liquidate(const Plan *plan, const LiquidateRequest *request, FillRng *rng, GrowLiquidateSpec *spec) {
     const GrowThemeRequest *theme = &request->theme;
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_LIQUIDATE_MAGIC;
@@ -417,7 +417,7 @@ static void liquidate_label(const GrowLiquidateSpec *spec, char *label, size_t s
              spec->down ? "down" : "up");
 }
 
-bool grow_liquidate_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_liquidate_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                              FillCandidateList *out) {
     LiquidateRequest request;
     if (!read_liquidate(plan, target, &request)) {
@@ -498,7 +498,7 @@ const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, 
 
 static const char *const IDEA_NAMES[IDEAS] = {"basic idea", "repetition", "fragment 1", "fragment 2", "cadential"};
 
-PlanResult grow_liquidate_apply(PiecePlan *plan, FillTarget target, const GrowLiquidateSpec *spec) {
+PlanResult grow_liquidate_apply(Plan *plan, FillTarget target, const GrowLiquidateSpec *spec) {
     LiquidateRequest request;
     if (!spec || spec->magic != GROW_LIQUIDATE_MAGIC || !read_liquidate(plan, target, &request)) {
         return PLAN_ERR_BAD_PAYLOAD;

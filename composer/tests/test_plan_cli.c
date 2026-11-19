@@ -80,7 +80,7 @@ static void test_every_form(void) {
         assert(strstr(out, "sections") != NULL);
         free(out);
 
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         char path[256];
         snprintf(path, sizeof(path), "plan_cli_%s.json", FORMS[f]);
         PlanJsonError error;
@@ -357,7 +357,7 @@ static void test_given(void) {
     assert(strstr(out, "\"given\":[{\"kind\":\"melody\"") != NULL);
     assert(strstr(out, "\"section\":\"B\",\"bar\":1}") != NULL);
     free(out);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     assert(test_read_plan_file("plan_cli_given.json", &plan, &error) == PLAN_OK);
     plan_destroy(plan);

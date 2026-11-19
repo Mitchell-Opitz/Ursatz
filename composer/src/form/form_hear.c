@@ -65,7 +65,7 @@ static FormHearResult result_of(HearingResult status) {
 }
 
 /* True when a span of the lane over range is Constrained. */
-static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan range) {
+static bool lane_open(const Plan *plan, PlanLaneKind lane, PlanSpan range) {
     size_t count = plan_lane_find(plan, lane, 0, range, NULL, 0);
     if (count == 0) {
         return false;
@@ -138,7 +138,7 @@ static FormHearResult copy_themes(const AnalysisChain *chain, const MeterMap *me
     return FORM_HEAR_OK;
 }
 
-FormHearResult form_hear_in(ComposerHearing *hearing, const PiecePlan *plan, PlanSpan span, FormHeard *out) {
+FormHearResult form_hear_in(ComposerHearing *hearing, const Plan *plan, PlanSpan span, FormHeard *out) {
     if (!out) {
         return FORM_HEAR_ERR_NULL;
     }
@@ -193,7 +193,7 @@ static FormHearResult copy_keys(const AnalysisChain *chain, const CommonPractice
     return FORM_HEAR_OK;
 }
 
-FormHearResult form_hear_keys(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, PlanSpan span, FormHeardKey **out,
+FormHearResult form_hear_keys(const Plan *plan, const KnowledgeSnapshot *knowledge, PlanSpan span, FormHeardKey **out,
                               size_t *count) {
     if (!out || !count) {
         return FORM_HEAR_ERR_NULL;

@@ -127,7 +127,7 @@ bool harmony_bass_check(const void *payload, FillCheck *out) {
     return true;
 }
 
-bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, SpelledKey key, const HarmonyBassParams *params,
+bool harmony_check_bass(const Plan *plan, PlanSpan span, SpelledKey key, const HarmonyBassParams *params,
                         const char **violation) {
     BassCandidate *line = calloc(1, sizeof(*line));
     if (!line || !violation) {

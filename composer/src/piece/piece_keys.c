@@ -198,7 +198,7 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
 }
 
 /* The KEY constraint of the section, replaced by the key it ends in. */
-static PieceResult set_section_key(PiecePlan *plan, NodeId section, SpelledKey key) {
+static PieceResult set_section_key(Plan *plan, NodeId section, SpelledKey key) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_KEY) {
             PlanConstraint constraint;
@@ -212,7 +212,7 @@ static PieceResult set_section_key(PiecePlan *plan, NodeId section, SpelledKey k
     return PIECE_ERR_BAD_REQUEST;
 }
 
-PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *spec, const FormSpecSize *size,
+PieceResult piece_plan_keys(Plan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *spec, const FormSpecSize *size,
                             FillRng *rng, const PieceRegion *regions, PieceKeyPlan *out) {
     if (!plan || !spec || !size || !out) {
         return PIECE_ERR_NULL;
@@ -456,7 +456,7 @@ typedef struct {
     size_t count;
 } KeyLane;
 
-static bool read_key_lane(const PiecePlan *plan, KeyLane *lane) {
+static bool read_key_lane(const Plan *plan, KeyLane *lane) {
     LaneSpanId ids[MAX_SEGMENTS];
     PlanSpan everything = {{0, 1}, {1000000, 1}};
     lane->count = plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, ids, MAX_SEGMENTS);
@@ -493,7 +493,7 @@ static bool related_to_home(SpelledKey home, SpelledKey key) {
 }
 
 /* Adds the authentic arrivals heard in `span`. False when the span is not readable. */
-static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanSpan span, Rational *arrivals,
+static bool hear_arrivals(ComposerHearing *hearing, const Plan *plan, PlanSpan span, Rational *arrivals,
                           size_t *arrival_count) {
     FormHeard heard;
     if (form_hear_in(hearing, plan, span, &heard) != FORM_HEAR_OK) {
@@ -515,7 +515,7 @@ static bool hear_arrivals(ComposerHearing *hearing, const PiecePlan *plan, PlanS
  * gives the Analyzer the key at the span's start, so the part of a section after a key change inside it is heard again
  * from the change, in its new key. False when a section is not readable.
  */
-static bool authentic_arrivals(ComposerHearing *hearing, const PiecePlan *plan, const KeyLane *lane, const NodeId *sections,
+static bool authentic_arrivals(ComposerHearing *hearing, const Plan *plan, const KeyLane *lane, const NodeId *sections,
                                size_t count, Rational *arrivals, size_t *arrival_count) {
     *arrival_count = 0;
     for (size_t s = 0; s < count; s++) {
@@ -538,7 +538,7 @@ static bool authentic_arrivals(ComposerHearing *hearing, const PiecePlan *plan, 
     return true;
 }
 
-static bool constraint_key(const PiecePlan *plan, NodeId section, SpelledKey *out) {
+static bool constraint_key(const Plan *plan, NodeId section, SpelledKey *out) {
     const PlanConstraint *constraint = plan_node_find_constraint(plan, section, PLAN_CONSTRAINT_KEY);
     if (constraint) {
         *out = constraint->params.key;
@@ -546,7 +546,7 @@ static bool constraint_key(const PiecePlan *plan, NodeId section, SpelledKey *ou
     return constraint != NULL;
 }
 
-static size_t chords_between(const PiecePlan *plan, Rational start, Rational end) {
+static size_t chords_between(const Plan *plan, Rational start, Rational end) {
     PlanSpan range = {start, {0, 1}};
     Rational negative = {-start.num, start.den};
     if (rational_cmp(end, start) <= 0 || rational_add(end, negative, &range.length) != RATIONAL_OK) {
@@ -555,7 +555,7 @@ static size_t chords_between(const PiecePlan *plan, Rational start, Rational end
     return plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, NULL, 0);
 }
 
-bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceKeyCheck *out) {
+bool piece_check_keys_in(ComposerHearing *hearing, const Plan *plan, PieceKeyCheck *out) {
     if (!hearing || !plan || !out) {
         return false;
     }

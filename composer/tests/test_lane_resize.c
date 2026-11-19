@@ -15,7 +15,7 @@ static PlanSpan bars(long start, long length) {
     return span;
 }
 
-static LaneSpanId add_harmony(PiecePlan *plan, NodeId owner, PlanSpan span, const char *numeral) {
+static LaneSpanId add_harmony(Plan *plan, NodeId owner, PlanSpan span, const char *numeral) {
     PlanLanePayload payload;
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     memset(&payload, 0, sizeof(payload));
@@ -27,7 +27,7 @@ static LaneSpanId add_harmony(PiecePlan *plan, NodeId owner, PlanSpan span, cons
 
 /* A resized span frees room for a neighbor, and the lane still refuses overlaps. */
 static void test_resize_frees_room(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 4), NULL, &form) == PLAN_OK);
     LaneSpanId whole = add_harmony(plan, form, bars(0, 4), "I");
@@ -46,7 +46,7 @@ static void test_resize_frees_room(void) {
 }
 
 static void test_resize_refusals(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 4), NULL, &form) == PLAN_OK);
     LaneSpanId span = add_harmony(plan, form, bars(0, 4), "I");
@@ -64,7 +64,7 @@ static void test_resize_refusals(void) {
 }
 
 static void test_resize_checks_notes(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 4), NULL, &form) == PLAN_OK);
     PlanNote note = plan_note(60, fraction(2, 1), fraction(1, 1));

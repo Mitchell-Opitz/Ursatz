@@ -49,7 +49,7 @@ static void run(const Scenario *scenario, unsigned long seed) {
     request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_HALF;
 
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));

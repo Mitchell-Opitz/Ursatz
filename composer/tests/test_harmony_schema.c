@@ -42,7 +42,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     LaneSpanId target;
     LaneSpanId bass_target;
@@ -73,7 +73,7 @@ static Rational bars_of(const Fixture *fixture, long bars) {
     return fraction(bars * (long)fixture->bar_length.num, fixture->bar_length.den);
 }
 
-static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, int pitch) {
+static LaneSpanId add_bass(Plan *plan, NodeId owner, PlanSpan span, int pitch) {
     PlanNote note = plan_note(pitch, fraction(0, 1), span.length);
     PlanLanePayload payload;
     LaneSpanId id;
@@ -84,7 +84,7 @@ static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, int pit
     return id;
 }
 
-static LaneSpanId add_harmony(PiecePlan *plan, NodeId owner, PlanSpan span, const char *roman,
+static LaneSpanId add_harmony(Plan *plan, NodeId owner, PlanSpan span, const char *roman,
                               int function) {
     PlanLanePayload payload;
     LaneSpanId id;

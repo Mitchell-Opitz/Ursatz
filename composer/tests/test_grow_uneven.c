@@ -122,7 +122,7 @@ static size_t whole_bars(Rational time, const Scenario *scenario) {
 }
 
 /* The section is as long as all the ideas and each idea node lies where the construction puts it, in whole bars. */
-static void check_spans(const PiecePlan *plan, const Scenario *scenario, const Case *item) {
+static void check_spans(const Plan *plan, const Scenario *scenario, const Case *item) {
     NodeId theme = test_find_node(plan, "theme");
     assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
     assert(whole_bars(plan_node_span(plan, theme).length, scenario) == bars_of(item));
@@ -163,7 +163,7 @@ static void check_spans(const PiecePlan *plan, const Scenario *scenario, const C
 }
 
 /* The plan carries the construction as given. */
-static void check_constraint(const PiecePlan *plan, const SectionConstruction *wanted) {
+static void check_constraint(const Plan *plan, const SectionConstruction *wanted) {
     const SectionDescription *constraint = plan_section_or_empty(plan, test_find_node(plan, "theme"))->has_construction ? plan_node_section(plan, test_find_node(plan, "theme")) : NULL;
     assert(constraint);
     assert(memcmp(constraint->construction.idea_bars, wanted->idea_bars, sizeof(wanted->idea_bars)) == 0);
@@ -177,7 +177,7 @@ static bool run_case(const Scenario *scenario, const Case *item, unsigned long s
     SectionConstruction construction = construction_of(item);
     GrowRequest request = make_request(scenario, &motive, item, &construction);
     GrowConfig config;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
@@ -217,7 +217,7 @@ static void test_rates(void) {
 
 /* A request refused: its result, the field to blame and the message. */
 static void expect_refusal(const GrowRequest *request, const char *path, const char *message) {
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     GrowRefusal refusal;
     GrowResult result = grow_build_plan_checked(request, &plan, &refusal);
     if (result != GROW_ERR_BAD_REQUEST || strcmp(refusal.path, path) != 0 || strcmp(refusal.message, message) != 0) {
@@ -232,7 +232,7 @@ static void test_refusals(void) {
     Motive motive = make_motive(scenario, scenario->motive);
     SectionConstruction construction = construction_of(&CASES[0]);
     GrowRequest request = make_request(scenario, &motive, &CASES[0], &construction);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     plan_destroy(plan);
 
@@ -282,7 +282,7 @@ static void test_refusals(void) {
     changed = request;
     Motive longer = make_motive(scenario, scenario->long_motive);
     changed.idea_motives[GROW_IDEA_CONTRASTING] = &longer;
-    PiecePlan *refused = NULL;
+    Plan *refused = NULL;
     GrowRefusal refusal;
     assert(grow_build_plan_checked(&changed, &refused, &refusal) == GROW_ERR_BAD_REQUEST && refused == NULL);
     assert(strcmp(refusal.path, "/ideas/contrasting idea") == 0);
@@ -297,12 +297,12 @@ static void test_round_trip(void) {
         SectionConstruction construction = construction_of(&CASES[c]);
         construction.reason = (SectionConstructionReason)(c % 3);
         GrowRequest request = make_request(scenario, &motive, &CASES[c], &construction);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
         PlanJsonError error;
         char *text = plan_to_json(plan, test_plan_producer(), &error);
         assert(text && strstr(text, "\"construction\""));
-        PiecePlan *again = NULL;
+        Plan *again = NULL;
         assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
         char *text_again = plan_to_json(again, test_plan_producer(), &error);
         assert(text_again && strcmp(text, text_again) == 0);
@@ -316,7 +316,7 @@ static void test_round_trip(void) {
     }
 
     /* Extensions round trip too, and a constraint on anything but a section, or a refused idea, is not read. */
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     Motive motive = make_motive(scenario, scenario->motive);
     SectionConstruction construction = construction_of(&CASES[3]);
     GrowRequest request = make_request(scenario, &motive, &CASES[3], &construction);
@@ -329,14 +329,14 @@ static void test_round_trip(void) {
     extended.construction.extensions[0] = (SectionExtension){SECTION_EXTENSION_STRETCH, GROW_IDEA_CADENTIAL, 1, false};
     extended.construction.extensions[1] = (SectionExtension){SECTION_EXTENSION_REPEAT, GROW_IDEA_FRAGMENT_2, 2, true};
     extended.construction.reason = SECTION_CONSTRUCTION_FROM_LENGTH;
-    PiecePlan *scratch = NULL;
+    Plan *scratch = NULL;
     assert(grow_build_plan_checked(&request, &scratch, NULL) == GROW_OK);
     NodeId scratch_theme = test_find_node(scratch, "theme");
     assert(plan_node_set_section(scratch, scratch_theme, &extended) == PLAN_OK);
     PlanJsonError error;
     char *text = plan_to_json(scratch, test_plan_producer(), &error);
     assert(text && strstr(text, "\"stretch\"") && strstr(text, "\"cadential\""));
-    PiecePlan *again = NULL;
+    Plan *again = NULL;
     assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
     char *text_again = plan_to_json(again, test_plan_producer(), &error);
     assert(text_again && strcmp(text, text_again) == 0);
@@ -364,7 +364,7 @@ static void test_round_trip(void) {
 
     /* A plan with an unknown idea in a construction is refused with its path. */
     const char *marker = "\"basic idea\"";
-    PiecePlan *good = NULL;
+    Plan *good = NULL;
     assert(grow_build_plan_checked(&request, &good, NULL) == GROW_OK);
     char *good_text = plan_to_json(good, test_plan_producer(), &error);
     assert(good_text);
@@ -372,7 +372,7 @@ static void test_round_trip(void) {
     assert(at && strstr(at, marker));
     char *name = strstr(at, marker);
     memcpy(name + 1, "basic idxa", 10);
-    PiecePlan *broken = NULL;
+    Plan *broken = NULL;
     assert(plan_from_json(test_knowledge(), good_text, composer_plan_read_hooks(), &broken, &error) == PLAN_ERR_FORMAT && broken == NULL);
     assert(strstr(error.path, "ideas") != NULL);
     free(good_text);

@@ -8,17 +8,17 @@
 #include "motive/motive_internal.h"
 #include "util/plan_util.h"
 
-static bool add_given_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
+static bool add_given_span(Plan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
     LaneSpanId id;
     return plan_add_lane_span(plan, owner, lane, 0, span, payload, &id) == PLAN_OK &&
            plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
 }
 
-PiecePlan *motive_render_plan(const Motive *motive) {
+Plan *motive_render_plan(const Motive *motive) {
     if (!motive || motive->note_count == 0) {
         return NULL;
     }
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     if (!plan) {
         return NULL;
     }

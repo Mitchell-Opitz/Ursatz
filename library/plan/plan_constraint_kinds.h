@@ -18,9 +18,9 @@
 typedef struct {
     PlanConstraintKind kind;
     const char *name;
-    bool (*write)(cJSON *object, const PiecePlan *plan, const PlanConstraint *constraint);
+    bool (*write)(cJSON *object, const Plan *plan, const PlanConstraint *constraint);
     bool (*read)(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out);
-    bool (*valid)(const PiecePlan *plan, const PlanConstraint *constraint);
+    bool (*valid)(const Plan *plan, const PlanConstraint *constraint);
 } ConstraintKindRow;
 
 /* The row of a kind, or NULL for a value that is no kind. */

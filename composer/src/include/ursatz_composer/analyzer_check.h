@@ -60,7 +60,7 @@ typedef enum {
  * Checks the section into *out, which the caller destroys. On failure *out is empty and safe to destroy. knowledge is the snapshot
  * the Analyzer hears the section with (the call context's); ANALYZER_CHECK_ERR_NULL for NULL.
  */
-AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, const KnowledgeSnapshot *knowledge, NodeId section,
+AnalyzerCheckResult analyzer_check_section(const Plan *plan, const KnowledgeSnapshot *knowledge, NodeId section,
                                            AnalyzerCheck *out);
 
 /*

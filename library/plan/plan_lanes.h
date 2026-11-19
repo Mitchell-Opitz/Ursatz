@@ -143,7 +143,7 @@ typedef union {
  * PLAN_ERR_LANE_OVERLAP when it overlaps a span in the same lane and voice,
  * and PLAN_ERR_BAD_PAYLOAD for a payload the lane cannot hold.
  */
-PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
+PlanResult plan_add_lane_span(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
                               const PlanLanePayload *payload, LaneSpanId *out_id);
 
 /*
@@ -154,18 +154,18 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
  * for a Given span, PLAN_ERR_BAD_SPAN for any other length, and
  * PLAN_ERR_BAD_PAYLOAD when the payload no longer fits (notes past the new end).
  */
-PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, Rational new_length);
+PlanResult plan_lane_span_resize(Plan *plan, LaneSpanId id, Rational new_length);
 
-bool plan_has_lane_span(const PiecePlan *plan, LaneSpanId id);
+bool plan_has_lane_span(const Plan *plan, LaneSpanId id);
 /* The last id given out: ids run 1 to this count, and an id removed with its node (plan_remove_subtree) is not a span. */
-size_t plan_lane_span_count(const PiecePlan *plan);
+size_t plan_lane_span_count(const Plan *plan);
 
 /* The accessors below return a zero value or NULL for an unknown id. */
-PlanLaneKind plan_lane_span_lane(const PiecePlan *plan, LaneSpanId id);
-int plan_lane_span_voice(const PiecePlan *plan, LaneSpanId id);
-NodeId plan_lane_span_owner(const PiecePlan *plan, LaneSpanId id);
-PlanSpan plan_lane_span_span(const PiecePlan *plan, LaneSpanId id);
-const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId id);
+PlanLaneKind plan_lane_span_lane(const Plan *plan, LaneSpanId id);
+int plan_lane_span_voice(const Plan *plan, LaneSpanId id);
+NodeId plan_lane_span_owner(const Plan *plan, LaneSpanId id);
+PlanSpan plan_lane_span_span(const Plan *plan, LaneSpanId id);
+const PlanLanePayload *plan_lane_span_payload(const Plan *plan, LaneSpanId id);
 
 /*
  * Note ids (R-601). plan_next_note_id is the id the next new note gets (1 in a new plan; it only rises). plan_note_by_id finds the
@@ -178,15 +178,15 @@ const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId 
  * note keeps its id, and the next id stays above it. So a rewrite keeps the ids of the notes it passes through, a copy within the
  * plan gets fresh ones, and an id is never held by two live notes.
  */
-PlanNoteId plan_next_note_id(const PiecePlan *plan);
-const PlanNote *plan_note_by_id(const PiecePlan *plan, PlanNoteId id, LaneSpanId *span_out);
+PlanNoteId plan_next_note_id(const Plan *plan);
+const PlanNote *plan_note_by_id(const Plan *plan, PlanNoteId id, LaneSpanId *span_out);
 
 /*
  * Finds the spans of one lane and voice that overlap range, ordered by start.
  * Writes up to capacity ids to out_ids (which may be NULL when capacity is 0)
  * and returns how many matched in all.
  */
-size_t plan_lane_find(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan range, LaneSpanId *out_ids,
+size_t plan_lane_find(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan range, LaneSpanId *out_ids,
                       size_t capacity);
 
 /*
@@ -196,13 +196,13 @@ size_t plan_lane_find(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
  * anchor_section names the section node of a PLAN_KEY_ANCHOR_SECTION anchor (1 to PLAN_KEY_ANCHOR_SECTION_MAX - 1 characters) and is NULL
  * for any other, else PLAN_ERR_BAD_PAYLOAD.
  */
-PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor,
+PlanResult plan_lane_span_set_key_relation(Plan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor,
                                            const char *anchor_section, bool resolved);
 
 /* The relation a key span is named by, or NULL for a span with none (or an unknown id). */
-const PlanKeyRelation *plan_lane_span_key_relation(const PiecePlan *plan, LaneSpanId id);
+const PlanKeyRelation *plan_lane_span_key_relation(const Plan *plan, LaneSpanId id);
 
 /* The spans owned by a node, in the order they were added. Same out_ids rules as plan_lane_find. */
-size_t plan_node_lane_spans(const PiecePlan *plan, NodeId owner, LaneSpanId *out_ids, size_t capacity);
+size_t plan_node_lane_spans(const Plan *plan, NodeId owner, LaneSpanId *out_ids, size_t capacity);
 
 #endif

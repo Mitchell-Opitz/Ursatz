@@ -93,7 +93,7 @@ FillResult harmony_phrase_register_given(FillOperatorRegistry *registry);
  * always accepted. Candidates from any other operator are accepted at 0/1, as the
  * default checker does.
  */
-bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool harmony_phrase_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                             const FillCandidate *candidate, void *context, FillCheck *out);
 
 /*
@@ -105,7 +105,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
  * when the cadence arrives on the last chord. False when the lane cannot be
  * read, or the recognizer hears no cadence.
  */
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
+bool harmony_hear_cadence(const Plan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end);
 
 /*

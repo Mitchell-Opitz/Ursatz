@@ -70,7 +70,7 @@ FillResult grow_form_register(FillOperatorRegistry *registry, const MotiveDevelo
  * outranks the P13 operators, whose recognizability is at most 1, and the part after the 1 is the connection); a
  * candidate of the P13 operators is checked by motive_develop_checker.
  */
-bool grow_motives_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool grow_motives_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                           const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* The motive a motive-form candidate proposes, NULL for any other candidate. */

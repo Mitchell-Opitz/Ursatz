@@ -4,17 +4,17 @@ bool fill_target_equals(FillTarget a, FillTarget b) {
     return a.kind == b.kind && a.id == b.id;
 }
 
-bool fill_target_exists(const PiecePlan *plan, FillTarget target) {
+bool fill_target_exists(const Plan *plan, FillTarget target) {
     return target.kind == FILL_TARGET_NODE ? plan_has_node(plan, (NodeId)target.id)
                                            : plan_has_lane_span(plan, (LaneSpanId)target.id);
 }
 
-PlanState fill_target_state(const PiecePlan *plan, FillTarget target) {
+PlanState fill_target_state(const Plan *plan, FillTarget target) {
     return target.kind == FILL_TARGET_NODE ? plan_node_state(plan, (NodeId)target.id)
                                            : plan_lane_span_state(plan, (LaneSpanId)target.id);
 }
 
-size_t fill_target_constraint_count(const PiecePlan *plan, FillTarget target) {
+size_t fill_target_constraint_count(const Plan *plan, FillTarget target) {
     if (target.kind != FILL_TARGET_NODE) {
         return plan_lane_span_constraint_count(plan, (LaneSpanId)target.id);
     }
@@ -25,7 +25,7 @@ size_t fill_target_constraint_count(const PiecePlan *plan, FillTarget target) {
                 : 0u);
 }
 
-PlanSpan fill_target_span(const PiecePlan *plan, FillTarget target) {
+PlanSpan fill_target_span(const Plan *plan, FillTarget target) {
     return target.kind == FILL_TARGET_NODE ? plan_node_span(plan, (NodeId)target.id)
                                            : plan_lane_span_span(plan, (LaneSpanId)target.id);
 }
@@ -40,7 +40,7 @@ static bool is_excluded(FillTarget target, const FillTarget *excluded, size_t ex
 }
 
 /* True when candidate should be picked over the current best. Callers visit nodes before lane spans, by id. */
-static bool beats(const PiecePlan *plan, FillTarget candidate, FillTarget best) {
+static bool beats(const Plan *plan, FillTarget candidate, FillTarget best) {
     size_t candidate_constraints = fill_target_constraint_count(plan, candidate);
     size_t best_constraints = fill_target_constraint_count(plan, best);
     if (candidate_constraints != best_constraints) {
@@ -56,7 +56,7 @@ static bool beats(const PiecePlan *plan, FillTarget candidate, FillTarget best) 
     return candidate.id < best.id;
 }
 
-bool fill_pick_open_target(const PiecePlan *plan, const FillTarget *excluded, size_t excluded_count,
+bool fill_pick_open_target(const Plan *plan, const FillTarget *excluded, size_t excluded_count,
                            FillTarget *out) {
     if (!plan || !out) {
         return false;

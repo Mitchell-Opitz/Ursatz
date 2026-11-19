@@ -65,7 +65,7 @@ static void melody_label(const MelodyCandidate *melody, char *label, size_t size
     }
 }
 
-static bool melody_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool melody_applies(const Plan *plan, FillTarget target, void *context) {
     MelodyContext *read;
     bool applies;
     (void)context;
@@ -81,7 +81,7 @@ static bool melody_applies(const PiecePlan *plan, FillTarget target, void *conte
     return applies;
 }
 
-static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool melody_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     const MelodyFillParams *params = params_of(context);
     MelodyContext *read = malloc(sizeof(*read));
@@ -160,7 +160,7 @@ static void link_to_motive(PlanNote *out, const MelodyNote *note, const MelodyCo
 }
 
 /* The target keeps its id and takes the notes, as one Realized span over the phrase. */
-static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult melody_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const MelodyCandidate *melody = candidate ? candidate->payload : NULL;
     MelodyContext *read;
     PlanNote *notes;
@@ -245,8 +245,8 @@ FillResult melody_fill_register(FillOperatorRegistry *registry, const MelodyFill
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = MELODY_FILL_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan melody lane span over a written harmony and bass lane";
-    operator_.generator.supported_outputs = "PiecePlan melody lane span";
+    operator_.generator.supported_inputs = "Plan melody lane span over a written harmony and bass lane";
+    operator_.generator.supported_outputs = "Plan melody lane span";
     operator_.generator.configuration_description = "melody range, motive start cell, non-chord tone types and density";
     operator_.generator.constraints_description = "chord tones on strong beats, NonChordTone figures, standard-counterpoint melodic and harmonic rules";
     operator_.generator.deterministic = true;

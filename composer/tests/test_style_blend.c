@@ -223,7 +223,7 @@ static unsigned long long fnv(const char *text) {
 }
 
 /* A sentence in C major 4/4 grown from a motive, 8 bars, ending in a PAC. */
-static PiecePlan *sentence_plan(Motive *motive) {
+static Plan *sentence_plan(Motive *motive) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();
@@ -240,7 +240,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
     request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;
 }
@@ -260,7 +260,7 @@ static double dimension_distance(const StyleComparison *comparison, StyleDimensi
 /* A sentence composed under style (NULL for none), measured against both pure styles. */
 static Run compose_sentence(unsigned long seed, const ComposerStyle *style, const ComposerStyle *measured[2]) {
     Motive motive;
-    PiecePlan *plan = sentence_plan(&motive);
+    Plan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();

@@ -80,7 +80,7 @@ static Rational minus(Rational a, Rational b) {
 }
 
 /* The phrases and ideas under two sections have the same names and lengths at the same offsets. */
-static bool same_shape(const PiecePlan *plan, NodeId a, NodeId b, NodeId root_a, NodeId root_b) {
+static bool same_shape(const Plan *plan, NodeId a, NodeId b, NodeId root_a, NodeId root_b) {
     if (plan_node_child_count(plan, a) != plan_node_child_count(plan, b)) {
         return false;
     }
@@ -101,7 +101,7 @@ static bool same_shape(const PiecePlan *plan, NodeId a, NodeId b, NodeId root_a,
 }
 
 /* The highest melody pitch of a section. */
-static int highest(const PiecePlan *plan, NodeId section) {
+static int highest(const Plan *plan, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
     LaneSpanId ids[64];
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, 64);
@@ -124,7 +124,7 @@ typedef struct {
     size_t returns;
 } Counts;
 
-static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *counts) {
+static void check_plan(Plan *plan, const ComposeOutcome *outcome, Counts *counts) {
     NodeId sections[MAX_SECTIONS];
     NodeId root = plan_root(plan);
     size_t count = 0;
@@ -162,7 +162,7 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
     counts->raised += highest(plan, sections[3]) > highest(plan, theme);
     /* The plan round-trips through plan JSON. */
     char *json = plan_to_json(plan, test_plan_producer(), NULL);
-    PiecePlan *again = NULL;
+    Plan *again = NULL;
     assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
@@ -172,14 +172,14 @@ static void check_plan(PiecePlan *plan, const ComposeOutcome *outcome, Counts *c
 }
 
 /* The key of the section: its one key lane span. */
-static SpelledKey key_of(const PiecePlan *plan, NodeId section) {
+static SpelledKey key_of(const Plan *plan, NodeId section) {
     LaneSpanId ids[2];
     assert(plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, section), ids, 2) == 1);
     return plan_lane_span_payload(plan, ids[0])->key;
 }
 
 /* Every melody note of the section is in the scale of the key: in minor the natural minor's and the harmonic minor's (the figures use the raised seventh over V and vii only). */
-static bool melody_in_scale(const PiecePlan *plan, NodeId section, SpelledKey key) {
+static bool melody_in_scale(const Plan *plan, NodeId section, SpelledKey key) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
     static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
     LaneSpanId ids[64];
@@ -197,7 +197,7 @@ static bool melody_in_scale(const PiecePlan *plan, NodeId section, SpelledKey ke
     return true;
 }
 
-static void check_parallel_plan(PiecePlan *plan) {
+static void check_parallel_plan(Plan *plan) {
     NodeId sections[MAX_SECTIONS];
     NodeId root = plan_root(plan);
     size_t count = 0;
@@ -227,7 +227,7 @@ static void check_parallel_plan(PiecePlan *plan) {
     memset(&keys, 0, sizeof(keys));
     assert(test_piece_check_keys(plan, &keys) && keys.ok && keys.changes == 0);
     char *json = plan_to_json(plan, test_plan_producer(), NULL);
-    PiecePlan *again = NULL;
+    Plan *again = NULL;
     assert(json && plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     char *second = plan_to_json(again, test_plan_producer(), NULL);
     assert(second && strcmp(json, second) == 0);
@@ -241,7 +241,7 @@ static int run_row(const FormSpec *form, const Row *row, unsigned long seeds, bo
     memset(&counts, 0, sizeof(counts));
     for (unsigned long seed = 1; seed <= seeds; seed++) {
         PieceRequest request;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         ComposeOutcome outcome;
         ComposeConfig config;
         memset(&request, 0, sizeof(request));

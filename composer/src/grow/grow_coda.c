@@ -84,7 +84,7 @@ static Rational bar_offset(Rational start, size_t count, Rational bar) {
     return rational_add(start, grow_scaled(bar, count), &out) == RATIONAL_OK ? out : start;
 }
 
-static bool read_coda(const PiecePlan *plan, FillTarget target, CodaRequest *out) {
+static bool read_coda(const Plan *plan, FillTarget target, CodaRequest *out) {
     CodaRequest request;
     GrowThemeRequest *theme = &request.theme;
     memset(&request, 0, sizeof(request));
@@ -161,7 +161,7 @@ static bool read_coda(const PiecePlan *plan, FillTarget target, CodaRequest *out
     return true;
 }
 
-bool grow_coda_applies(const PiecePlan *plan, FillTarget target) {
+bool grow_coda_applies(const Plan *plan, FillTarget target) {
     CodaRequest request;
     return read_coda(plan, target, &request);
 }
@@ -215,7 +215,7 @@ static bool make_tone(const Motive *base, const SpelledKey *key, Rational bar, i
 
 /* ------------------------------------------------------------- candidates */
 
-static bool draw_coda(const PiecePlan *plan, const CodaRequest *request, FillRng *rng, GrowCodaSpec *spec) {
+static bool draw_coda(const Plan *plan, const CodaRequest *request, FillRng *rng, GrowCodaSpec *spec) {
     const GrowThemeRequest *theme = &request->theme;
     memset(spec, 0, sizeof(*spec));
     spec->magic = GROW_CODA_MAGIC;
@@ -280,7 +280,7 @@ static void coda_label(const GrowCodaSpec *spec, char *label, size_t size) {
     snprintf(label, size, "coda %zu dropped", spec->drop);
 }
 
-bool grow_coda_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_coda_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out) {
     CodaRequest request;
     if (!read_coda(plan, target, &request)) {
@@ -377,7 +377,7 @@ static PlanResult add_node_motive(GrowBuild *build, size_t bar, size_t bars, con
     return result == PLAN_OK ? plan_node_add_constraint(build->plan, *out, &constraint) : result;
 }
 
-PlanResult grow_coda_apply(PiecePlan *plan, FillTarget target, const GrowCodaSpec *spec) {
+PlanResult grow_coda_apply(Plan *plan, FillTarget target, const GrowCodaSpec *spec) {
     CodaRequest request;
     if (!spec || spec->magic != GROW_CODA_MAGIC || !read_coda(plan, target, &request)) {
         return PLAN_ERR_BAD_PAYLOAD;

@@ -58,7 +58,7 @@ static Rational fraction(long num, unsigned long den) {
 }
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     LaneSpanId target;
     PlanSpan span;
 } Piece;
@@ -118,7 +118,7 @@ static Piece build(const Cantus *cantus, int species, bool above) {
     return piece;
 }
 
-static FillOutcome write(PiecePlan *plan, unsigned long seed) {
+static FillOutcome write(Plan *plan, unsigned long seed) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;

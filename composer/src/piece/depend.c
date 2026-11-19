@@ -26,7 +26,7 @@ static bool list_has(const DependentList *list, FillTarget target) {
 }
 
 /* Adds a target that is not Given and is not there yet; true when it was added. */
-static bool list_add(DependentList *list, const PiecePlan *plan, FillTarget target) {
+static bool list_add(DependentList *list, const Plan *plan, FillTarget target) {
     if (list->failed || fill_target_state(plan, target) == PLAN_STATE_GIVEN || list_has(list, target)) {
         return false;
     }
@@ -44,14 +44,14 @@ static bool list_add(DependentList *list, const PiecePlan *plan, FillTarget targ
     return true;
 }
 
-NodeId plan_section_of(const PiecePlan *plan, NodeId node) {
+NodeId plan_section_of(const Plan *plan, NodeId node) {
     while (node != PLAN_NODE_NONE && plan_node_kind(plan, node) != PLAN_NODE_SECTION) {
         node = plan_node_parent(plan, node);
     }
     return node;
 }
 
-static bool names_motive(const PiecePlan *plan, LaneSpanId id, NodeId motive) {
+static bool names_motive(const Plan *plan, LaneSpanId id, NodeId motive) {
     for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
         const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, id, i);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && constraint->params.motive.motive == motive) {
@@ -61,13 +61,13 @@ static bool names_motive(const PiecePlan *plan, LaneSpanId id, NodeId motive) {
     return false;
 }
 
-static bool returns_section(const PiecePlan *plan, NodeId node, NodeId section) {
+static bool returns_section(const Plan *plan, NodeId node, NodeId section) {
     const char *name = plan_node_name(plan, section);
     return name && name[0] != '\0' && strcmp(plan_section_or_empty(plan, node)->returns, name) == 0;
 }
 
 /* The lane spans a node owns. */
-static void add_owned_spans(DependentList *list, const PiecePlan *plan, NodeId owner) {
+static void add_owned_spans(DependentList *list, const Plan *plan, NodeId owner) {
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         if (plan_has_lane_span(plan, id) && plan_lane_span_owner(plan, id) == owner) {
             FillTarget target = {FILL_TARGET_LANE_SPAN, id};
@@ -77,7 +77,7 @@ static void add_owned_spans(DependentList *list, const PiecePlan *plan, NodeId o
 }
 
 /* The nodes under id and the lane spans they and id own. */
-static void add_subtree(DependentList *list, const PiecePlan *plan, NodeId id, bool with_node) {
+static void add_subtree(DependentList *list, const Plan *plan, NodeId id, bool with_node) {
     if (with_node) {
         FillTarget target = {FILL_TARGET_NODE, id};
         list_add(list, plan, target);
@@ -89,7 +89,7 @@ static void add_subtree(DependentList *list, const PiecePlan *plan, NodeId id, b
 }
 
 /* The sections that return section, and what is written from them, and the sections that return those. */
-static void add_returns(DependentList *list, const PiecePlan *plan, NodeId section) {
+static void add_returns(DependentList *list, const Plan *plan, NodeId section) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         FillTarget target = {FILL_TARGET_NODE, id};
         if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION && returns_section(plan, id, section) &&
@@ -100,7 +100,7 @@ static void add_returns(DependentList *list, const PiecePlan *plan, NodeId secti
     }
 }
 
-static void node_dependents(DependentList *list, const PiecePlan *plan, NodeId id) {
+static void node_dependents(DependentList *list, const Plan *plan, NodeId id) {
     PlanNodeKind kind = plan_node_kind(plan, id);
     if (kind == PLAN_NODE_MOTIVE) {
         for (LaneSpanId span = 1; span <= plan_lane_span_count(plan); span++) {
@@ -119,7 +119,7 @@ static void node_dependents(DependentList *list, const PiecePlan *plan, NodeId i
 }
 
 /* Every span of a lane (any voice) over the time of span, in the section of span only when same_section. */
-static void add_over(DependentList *list, const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, bool only_texture) {
+static void add_over(DependentList *list, const Plan *plan, PlanLaneKind lane, PlanSpan span, bool only_texture) {
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         if (!plan_has_lane_span(plan, id) || plan_lane_span_lane(plan, id) != lane ||
             !plan_spans_overlap(plan_lane_span_span(plan, id), span)) {
@@ -135,7 +135,7 @@ static void add_over(DependentList *list, const PiecePlan *plan, PlanLaneKind la
 }
 
 /* The span of the lane (voice 0) that starts first at or after the end of id, in the same section: the one that joins it. */
-static void add_next(DependentList *list, const PiecePlan *plan, LaneSpanId id) {
+static void add_next(DependentList *list, const Plan *plan, LaneSpanId id) {
     PlanLaneKind lane = plan_lane_span_lane(plan, id);
     NodeId section = plan_section_of(plan, plan_lane_span_owner(plan, id));
     Rational end;
@@ -161,7 +161,7 @@ static void add_next(DependentList *list, const PiecePlan *plan, LaneSpanId id) 
     }
 }
 
-static void span_dependents(DependentList *list, const PiecePlan *plan, LaneSpanId id) {
+static void span_dependents(DependentList *list, const Plan *plan, LaneSpanId id) {
     PlanSpan span = plan_lane_span_span(plan, id);
     switch (plan_lane_span_lane(plan, id)) {
     case PLAN_LANE_HARMONY:
@@ -195,7 +195,7 @@ static int by_kind_then_id(const void *a, const void *b) {
     return (x->id > y->id) - (x->id < y->id);
 }
 
-PlanResult plan_dependents(const PiecePlan *plan, FillTarget target, FillTarget **out, size_t *count) {
+PlanResult plan_dependents(const Plan *plan, FillTarget target, FillTarget **out, size_t *count) {
     if (!plan || !out || !count) {
         return PLAN_ERR_NULL;
     }

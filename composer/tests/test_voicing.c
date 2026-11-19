@@ -69,7 +69,7 @@ static const Progression PROGRESSIONS[] = {
 };
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     PlanSpan span;
     LaneSpanId alto;
@@ -153,7 +153,7 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
     return piece;
 }
 
-static FillOutcome voice(PiecePlan *plan, unsigned long seed) {
+static FillOutcome voice(Plan *plan, unsigned long seed) {
     FillOperatorRegistry *registry = fill_registry_create();
     FillConfig config;
     FillOutcome outcome;

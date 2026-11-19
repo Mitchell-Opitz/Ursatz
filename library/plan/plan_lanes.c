@@ -21,7 +21,7 @@ SpelledKey plan_key_of_pitch_class(int pitch_class, const PitchMaterial *materia
     return key;
 }
 
-void plan_lanes_free(PiecePlan *plan) {
+void plan_lanes_free(Plan *plan) {
     for (size_t i = 0; i < plan->lane_span_count; i++) {
         constraint_list_free(&plan->lane_spans[i].constraints);
         if (!plan->lane_spans[i].removed && plan_is_note_lane(plan->lane_spans[i].lane)) {
@@ -35,14 +35,14 @@ void plan_lanes_free(PiecePlan *plan) {
     plan->removed_lane_span_count = 0;
 }
 
-LaneSpan *plan_lane_span_at(const PiecePlan *plan, LaneSpanId id) {
+LaneSpan *plan_lane_span_at(const Plan *plan, LaneSpanId id) {
     if (!plan || id == PLAN_LANE_SPAN_NONE || id > plan->lane_span_count || plan->lane_spans[id - 1].removed) {
         return NULL;
     }
     return &plan->lane_spans[id - 1];
 }
 
-LaneSpanId plan_lane_span_rank(const PiecePlan *plan, LaneSpanId id) {
+LaneSpanId plan_lane_span_rank(const Plan *plan, LaneSpanId id) {
     if (!plan_lane_span_at(plan, id) || plan->removed_lane_span_count == 0) {
         return id;
     }
@@ -53,7 +53,7 @@ LaneSpanId plan_lane_span_rank(const PiecePlan *plan, LaneSpanId id) {
     return rank;
 }
 
-static void remove_entry(PiecePlan *plan, LaneSpan *entry) {
+static void remove_entry(Plan *plan, LaneSpan *entry) {
     if (plan_is_note_lane(entry->lane)) {
         free((void *)entry->payload.notes.notes);
     }
@@ -64,7 +64,7 @@ static void remove_entry(PiecePlan *plan, LaneSpan *entry) {
     plan->removed_lane_span_count++;
 }
 
-PlanResult plan_lane_span_remove_owned(PiecePlan *plan, NodeId owner) {
+PlanResult plan_lane_span_remove_owned(Plan *plan, NodeId owner) {
     for (size_t i = 0; plan && i < plan->lane_span_count; i++) {
         if (!plan->lane_spans[i].removed && plan->lane_spans[i].owner == owner) {
             remove_entry(plan, &plan->lane_spans[i]);
@@ -73,7 +73,7 @@ PlanResult plan_lane_span_remove_owned(PiecePlan *plan, NodeId owner) {
     return PLAN_OK;
 }
 
-PlanResult plan_lane_span_remove(PiecePlan *plan, LaneSpanId id) {
+PlanResult plan_lane_span_remove(Plan *plan, LaneSpanId id) {
     LaneSpan *entry = plan_lane_span_at(plan, id);
     if (!entry) {
         return plan ? PLAN_ERR_NOT_FOUND : PLAN_ERR_NULL;
@@ -130,7 +130,7 @@ bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePaylo
 }
 
 /* True when a note of a live note span other than `except` has this id. */
-static bool id_held_elsewhere(const PiecePlan *plan, PlanNoteId id, LaneSpanId except) {
+static bool id_held_elsewhere(const Plan *plan, PlanNoteId id, LaneSpanId except) {
     for (size_t i = 0; i < plan->lane_span_count; i++) {
         const LaneSpan *span = &plan->lane_spans[i];
         if (i + 1 == except || span->removed || !plan_is_note_lane(span->lane)) {
@@ -145,7 +145,7 @@ static bool id_held_elsewhere(const PiecePlan *plan, PlanNoteId id, LaneSpanId e
     return false;
 }
 
-void plan_note_ids_assign(PiecePlan *plan, PlanNote *notes, size_t count, LaneSpanId replacing) {
+void plan_note_ids_assign(Plan *plan, PlanNote *notes, size_t count, LaneSpanId replacing) {
     for (size_t i = 0; i < count; i++) {
         PlanNote *note = &notes[i];
         if (note->id == PLAN_NOTE_NONE) {
@@ -169,17 +169,17 @@ void plan_note_ids_assign(PiecePlan *plan, PlanNote *notes, size_t count, LaneSp
     }
 }
 
-void plan_note_next_id_set(PiecePlan *plan, PlanNoteId next) {
+void plan_note_next_id_set(Plan *plan, PlanNoteId next) {
     if (plan && next > plan->next_note_id) {
         plan->next_note_id = next;
     }
 }
 
-PlanNoteId plan_next_note_id(const PiecePlan *plan) {
+PlanNoteId plan_next_note_id(const Plan *plan) {
     return plan ? plan->next_note_id : 0;
 }
 
-const PlanNote *plan_note_by_id(const PiecePlan *plan, PlanNoteId id, LaneSpanId *span_out) {
+const PlanNote *plan_note_by_id(const Plan *plan, PlanNoteId id, LaneSpanId *span_out) {
     if (!plan || id == PLAN_NOTE_NONE) {
         return NULL;
     }
@@ -200,7 +200,7 @@ const PlanNote *plan_note_by_id(const PiecePlan *plan, PlanNoteId id, LaneSpanId
     return NULL;
 }
 
-PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
+PlanResult plan_add_lane_span(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
                               const PlanLanePayload *payload, LaneSpanId *out_id) {
     if (!plan || !payload || !out_id) {
         return PLAN_ERR_NULL;
@@ -267,7 +267,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     return PLAN_OK;
 }
 
-PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, Rational new_length) {
+PlanResult plan_lane_span_resize(Plan *plan, LaneSpanId id, Rational new_length) {
     LaneSpan *entry = plan_lane_span_at(plan, id);
     if (!entry) {
         return plan ? PLAN_ERR_NOT_FOUND : PLAN_ERR_NULL;
@@ -286,41 +286,41 @@ PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, Rational new_le
     return PLAN_OK;
 }
 
-bool plan_has_lane_span(const PiecePlan *plan, LaneSpanId id) {
+bool plan_has_lane_span(const Plan *plan, LaneSpanId id) {
     return plan_lane_span_at(plan, id) != NULL;
 }
 
-size_t plan_lane_span_count(const PiecePlan *plan) {
+size_t plan_lane_span_count(const Plan *plan) {
     return plan ? plan->lane_span_count : 0;
 }
 
-PlanLaneKind plan_lane_span_lane(const PiecePlan *plan, LaneSpanId id) {
+PlanLaneKind plan_lane_span_lane(const Plan *plan, LaneSpanId id) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     return entry ? entry->lane : PLAN_LANE_METER;
 }
 
-int plan_lane_span_voice(const PiecePlan *plan, LaneSpanId id) {
+int plan_lane_span_voice(const Plan *plan, LaneSpanId id) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     return entry ? entry->voice : 0;
 }
 
-NodeId plan_lane_span_owner(const PiecePlan *plan, LaneSpanId id) {
+NodeId plan_lane_span_owner(const Plan *plan, LaneSpanId id) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     return entry ? entry->owner : PLAN_NODE_NONE;
 }
 
-PlanSpan plan_lane_span_span(const PiecePlan *plan, LaneSpanId id) {
+PlanSpan plan_lane_span_span(const Plan *plan, LaneSpanId id) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     PlanSpan empty = {{0, 1}, {0, 1}};
     return entry ? entry->span : empty;
 }
 
-const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId id) {
+const PlanLanePayload *plan_lane_span_payload(const Plan *plan, LaneSpanId id) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     return entry ? &entry->payload : NULL;
 }
 
-PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor,
+PlanResult plan_lane_span_set_key_relation(Plan *plan, LaneSpanId id, const char *relation, PlanKeyAnchor anchor,
                                            const char *anchor_section, bool resolved) {
     if (!relation) {
         return PLAN_ERR_NULL;
@@ -346,7 +346,7 @@ PlanResult plan_lane_span_set_key_relation(PiecePlan *plan, LaneSpanId id, const
     return PLAN_OK;
 }
 
-const PlanKeyRelation *plan_lane_span_key_relation(const PiecePlan *plan, LaneSpanId id) {
+const PlanKeyRelation *plan_lane_span_key_relation(const Plan *plan, LaneSpanId id) {
     const LaneSpan *entry = plan_lane_span_at(plan, id);
     return entry && entry->key_relation.relation[0] != '\0' ? &entry->key_relation : NULL;
 }
@@ -356,12 +356,12 @@ static bool matches_lane(const LaneSpan *entry, PlanLaneKind lane, int voice, Pl
 }
 
 /* Orders spans by start, then by id. */
-static bool comes_before(const PiecePlan *plan, LaneSpanId a, LaneSpanId b) {
+static bool comes_before(const Plan *plan, LaneSpanId a, LaneSpanId b) {
     int by_start = rational_cmp(plan->lane_spans[a - 1].span.start, plan->lane_spans[b - 1].span.start);
     return by_start < 0 || (by_start == 0 && a < b);
 }
 
-size_t plan_lane_find(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan range, LaneSpanId *out_ids,
+size_t plan_lane_find(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan range, LaneSpanId *out_ids,
                       size_t capacity) {
     if (!plan) {
         return 0;
@@ -399,7 +399,7 @@ size_t plan_lane_find(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
     return matches;
 }
 
-size_t plan_node_lane_spans(const PiecePlan *plan, NodeId owner, LaneSpanId *out_ids, size_t capacity) {
+size_t plan_node_lane_spans(const Plan *plan, NodeId owner, LaneSpanId *out_ids, size_t capacity) {
     if (!plan) {
         return 0;
     }

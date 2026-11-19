@@ -71,7 +71,7 @@ static void grid_free(Grid *grid) {
 }
 
 /* True when a span of the lane and voice over range is Constrained. */
-static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan range) {
+static bool lane_open(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan range) {
     LaneSpanId ids[ACCOMP_MAX_LINE];
     size_t found = plan_lane_find(plan, lane, voice, range, ids, ACCOMP_MAX_LINE);
     for (size_t i = 0; i < found && i < ACCOMP_MAX_LINE; i++) {
@@ -157,7 +157,7 @@ static VoiceHearResult count_violations(const StandardCounterpointVoiceGrid *cou
     return result;
 }
 
-VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out) {
+VoiceHearResult voice_hear(const Plan *plan, PlanSpan span, VoiceHeard *out) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
     LaneSpanId harmony[HARMONY_MAX_CHORDS];

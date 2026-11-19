@@ -30,7 +30,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     LaneSpanId target;
     PlanSpan span;
@@ -493,7 +493,7 @@ static void test_given_tonic_downbeats(void) {
 static void test_pivot_into_the_dominant(void) {
     for (unsigned long seed = 0; seed < 8; seed++) {
         Scenario scenario = {4, 4, HARMONY_MODE_MAJOR, 7, 4, CADENCE_TYPE_HALF, seed};
-        PiecePlan *plan = plan_create();
+        Plan *plan = plan_create();
         Rational bar = fraction(1, 1);
         PlanSpan whole = {fraction(0, 1), fraction(8, 1)};
         PlanSpan first = {fraction(0, 1), fraction(4, 1)};

@@ -33,7 +33,7 @@
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 
-NodeId api_find_node(const PiecePlan *plan, const char *name) {
+NodeId api_find_node(const Plan *plan, const char *name) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *found = plan_node_name(plan, id);
         if (found && strcmp(found, name) == 0) {
@@ -578,7 +578,7 @@ static bool text_append(Text *text, const char *format, ...) {
 }
 
 /* Everything the harmony, the bass and the melody say over the theme, as text: two themes with the same text are one. */
-static char *signature_of(const PiecePlan *plan, NodeId theme_node) {
+static char *signature_of(const Plan *plan, NodeId theme_node) {
     static const PlanLaneKind LANES[3] = {PLAN_LANE_HARMONY, PLAN_LANE_BASS, PLAN_LANE_MELODY};
     PlanSpan span = plan_node_span(plan, theme_node);
     Text text = {0};
@@ -624,7 +624,7 @@ static long bar_at(Rational time, PlanSpan theme, Rational bar) {
  * The bar (from 0) of a chord Given by the request that the earliest span the theme still has open lies in or beside, else
  * -1: the chords are what the stage could not write around.
  */
-static long open_bar_with_chords(const PiecePlan *plan, NodeId theme_node, const PlanMeter *meter,
+static long open_bar_with_chords(const Plan *plan, NodeId theme_node, const PlanMeter *meter,
                                  const GrowMaterial *material, GrowStage stage) {
     Rational bar;
     PlanSpan theme;
@@ -962,7 +962,7 @@ static void describe_ref(const PlanMotiveRef *ref, char *out, size_t size) {
     }
 }
 
-static cJSON *structure_json(const PiecePlan *plan, NodeId theme_node, Rational bar) {
+static cJSON *structure_json(const Plan *plan, NodeId theme_node, Rational bar) {
     cJSON *list = cJSON_CreateArray();
     /* A depth-first walk with an explicit stack (the plan is a tree of a handful of levels). */
     struct {
@@ -1009,7 +1009,7 @@ static cJSON *structure_json(const PiecePlan *plan, NodeId theme_node, Rational 
     return list;
 }
 
-static cJSON *chords_json(const PiecePlan *plan, NodeId theme_node, const PlanMeter *meter) {
+static cJSON *chords_json(const Plan *plan, NodeId theme_node, const PlanMeter *meter) {
     cJSON *list = cJSON_CreateArray();
     PlanSpan span = plan_node_span(plan, theme_node);
     Rational bar;
@@ -1069,7 +1069,7 @@ typedef struct {
 static cJSON *string_or_null(const char *text);
 
 /* The motive the ideas are made from, in words: a segment, a slot's own motif, else the basic idea. */
-static void source_words(const PiecePlan *plan, const PlanMotiveRef *ref, char *out, size_t size) {
+static void source_words(const Plan *plan, const PlanMotiveRef *ref, char *out, size_t size) {
     static const char *const SLOT_WORDS[] = {"basic idea", "contrasting motif", "continuation motif", "cadential motif"};
     const char *name = plan_has_node(plan, ref->motive) ? plan_node_name(plan, ref->motive) : NULL;
     if (ref->segment[0] != '\0') {
@@ -1097,7 +1097,7 @@ static void source_words(const PiecePlan *plan, const PlanMotiveRef *ref, char *
  * as the plan names it; `how` is describe_ref's text, without the word it starts with when the operation is a restatement or
  * a sequence (the operation says it).
  */
-static void summarize_development(const PiecePlan *plan, const PlanMotiveRef *ref, const char *idea, const char *how,
+static void summarize_development(const Plan *plan, const PlanMotiveRef *ref, const char *idea, const char *how,
                                   char *out, size_t size) {
     char source[48];
     char operation[96];
@@ -1122,7 +1122,7 @@ static double score_fraction(MotiveScore score) {
  * (grow_idea_fidelity), with the minimum of the idea's role under the development setting. An idea whose ref makes it differ
  * from its source (grow_ref_departs) has no minimum: it is ranked, never refused. Left unmeasured when the plan cannot say.
  */
-static void measure_development(const PiecePlan *plan, LaneSpanId span, const Motive *basic, const GrowFidelityTable *table,
+static void measure_development(const Plan *plan, LaneSpanId span, const Motive *basic, const GrowFidelityTable *table,
                                 GrowDevelopment development,
                                 Development *out) {
     MotiveFidelity fidelity;
@@ -1149,7 +1149,7 @@ static void measure_development(const PiecePlan *plan, LaneSpanId span, const Mo
  * The motives made from m0 (every motive node with a motive_ref) and the idea each one is the melody of, with the idea's
  * fidelity when it has a melody span (basic is the motive the run was made from, development its setting).
  */
-static size_t collect_developments(const PiecePlan *plan, NodeId theme, const Motive *basic, const GrowFidelityTable *fidelity,
+static size_t collect_developments(const Plan *plan, NodeId theme, const Motive *basic, const GrowFidelityTable *fidelity,
                                    GrowDevelopment development,
                                    Development *out) {
     size_t count = 0;
@@ -1196,7 +1196,7 @@ static size_t collect_developments(const PiecePlan *plan, NodeId theme, const Mo
     return count;
 }
 
-static cJSON *developments_json(const PiecePlan *plan, NodeId theme, const Motive *basic, const GrowFidelityTable *fidelity,
+static cJSON *developments_json(const Plan *plan, NodeId theme, const Motive *basic, const GrowFidelityTable *fidelity,
                                 GrowDevelopment development) {
     Development developments[MAX_DEVELOPMENTS];
     size_t count = collect_developments(plan, theme, basic, fidelity, development, developments);
@@ -1331,7 +1331,7 @@ static void describe_row(const GrowOutcome *outcome, NodeId motive_node, SlotRow
 }
 
 /* The ideas of the theme, in order, with the motive each is made from and how its motive was made. */
-static size_t collect_slot_rows(const PiecePlan *plan, const GrowOutcome *outcome, SlotRow *rows) {
+static size_t collect_slot_rows(const Plan *plan, const GrowOutcome *outcome, SlotRow *rows) {
     NodeId theme = api_find_node(plan, "theme");
     size_t count = 0;
     if (theme == PLAN_NODE_NONE) {
@@ -1407,7 +1407,7 @@ static cJSON *string_or_null(const char *text) {
     return text && text[0] ? cJSON_CreateString(text) : cJSON_CreateNull();
 }
 
-static cJSON *slots_json(const GrowThemeInfo *info, const PiecePlan *plan, const GrowOutcome *outcome) {
+static cJSON *slots_json(const GrowThemeInfo *info, const Plan *plan, const GrowOutcome *outcome) {
     SlotRow rows[SLOT_ROWS];
     size_t count = collect_slot_rows(plan, outcome, rows);
     cJSON *list = cJSON_CreateArray();
@@ -1588,7 +1588,7 @@ cJSON *api_grow_construction_json(const SectionConstruction *given, const Sectio
 }
 
 /* The construction of the theme (R-468) as the response gives it, null for a theme without one. */
-static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
+static cJSON *construction_json(const Plan *plan, NodeId node) {
     const SectionDescription *section = plan_section_or_empty(plan, node);
     if (!section->has_construction || !section->has_pairing) {
         return cJSON_CreateNull();
@@ -1599,7 +1599,7 @@ static cJSON *construction_json(const PiecePlan *plan, NodeId node) {
 }
 
 static cJSON *theme_json(const GrowSetup *setup, const GrowTheme *theme, const GrowThemeInfo *info, Rational bar) {
-    const PiecePlan *plan = theme->plan;
+    const Plan *plan = theme->plan;
     NodeId node = api_find_node(plan, "theme");
     cJSON *object = cJSON_CreateObject();
     char heard_form[96];

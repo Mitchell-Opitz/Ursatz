@@ -202,7 +202,7 @@ static void motive_text(const Motive *motive, char *out, size_t size) {
 
 /* A plan that holds the source Given, then an open motive node after it that asks for the development. */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId source;
     NodeId target;
 } Scene;
@@ -482,7 +482,7 @@ static ComposerStatus read_flags(const cJSON *request, Flags *flags, char (*buff
 /* The notes written on the target once suggestion index is applied to a copy of the plan. */
 static bool suggestion_motive(const Scene *scene, const FillSuggestions *suggestions, size_t index, const Motive *source,
                               Motive *out) {
-    PiecePlan *copy = NULL;
+    Plan *copy = NULL;
     bool ok = plan_clone(scene->plan, &copy) == PLAN_OK && fill_apply_suggestion(copy, suggestions, index) == FILL_OK;
     LaneSpanId ids[4];
     if (ok && plan_node_lane_spans(copy, scene->target, ids, 4) == 1) {

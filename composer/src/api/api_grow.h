@@ -134,7 +134,7 @@ typedef struct {
 
 /* A theme made, with what the output of it needs. */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     GrowOutcome outcome;
     unsigned long seed;
     char *signature;
@@ -235,7 +235,7 @@ ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, Composer
 void api_seed_stale_notice(const CorpusSeed *seed, char *out, size_t size);
 
 /* The first node of the plan with the name, or PLAN_NODE_NONE. */
-NodeId api_find_node(const PiecePlan *plan, const char *name);
+NodeId api_find_node(const Plan *plan, const char *name);
 
 /* --- the result ------------------------------------------------------------------------------------ */
 

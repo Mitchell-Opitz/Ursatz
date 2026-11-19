@@ -59,7 +59,7 @@ static bool read_spellings(const SpelledKey *key, CounterpointContext *out) {
 }
 
 /* The given line over the target: written notes that follow one another from its start to its end. */
-static bool read_line(const PiecePlan *plan, CounterpointContext *out, const char **why) {
+static bool read_line(const Plan *plan, CounterpointContext *out, const char **why) {
     AccompLine lines[ACCOMP_MAX_LINE];
     size_t count = 0;
     out->length = out->span.length;
@@ -97,7 +97,7 @@ static bool read_line(const PiecePlan *plan, CounterpointContext *out, const cha
 }
 
 /* The bar of the meter under the target, and whether the given line is a cantus firmus in it. */
-static bool read_cantus(const PiecePlan *plan, CounterpointContext *out, const char **why) {
+static bool read_cantus(const Plan *plan, CounterpointContext *out, const char **why) {
     LaneSpanId meters[2];
     Rational origin = out->span.start;
     Rational meter_start;
@@ -136,7 +136,7 @@ static bool read_cantus(const PiecePlan *plan, CounterpointContext *out, const c
     return true;
 }
 
-static bool read_target(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out, const char **why,
+static bool read_target(const Plan *plan, LaneSpanId target, CounterpointContext *out, const char **why,
                         bool written) {
     PlanConstraint constraint;
     const char *reason = "";
@@ -215,11 +215,11 @@ static bool read_target(const PiecePlan *plan, LaneSpanId target, CounterpointCo
     return true;
 }
 
-bool counterpoint_read(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out, const char **why) {
+bool counterpoint_read(const Plan *plan, LaneSpanId target, CounterpointContext *out, const char **why) {
     return read_target(plan, target, out, why, false);
 }
 
-bool counterpoint_read_written(const PiecePlan *plan, LaneSpanId target, CounterpointContext *out,
+bool counterpoint_read_written(const Plan *plan, LaneSpanId target, CounterpointContext *out,
                                CounterpointCandidate *line, const char **why) {
     const PlanNotes *notes;
     const char *reason = "";
@@ -250,7 +250,7 @@ bool counterpoint_read_written(const PiecePlan *plan, LaneSpanId target, Counter
     return true;
 }
 
-const char *counterpoint_why_not(const PiecePlan *plan, LaneSpanId target) {
+const char *counterpoint_why_not(const Plan *plan, LaneSpanId target) {
     CounterpointContext *read = calloc(1, sizeof(*read));
     const char *why = NULL;
     if (!read) {
@@ -266,7 +266,7 @@ const char *counterpoint_why_not(const PiecePlan *plan, LaneSpanId target) {
 
 /* ------------------------------------------------------- the operator */
 
-static bool operator_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool operator_applies(const Plan *plan, FillTarget target, void *context) {
     (void)context;
     return target.kind == FILL_TARGET_LANE_SPAN && counterpoint_why_not(plan, (LaneSpanId)target.id) == NULL;
 }
@@ -283,7 +283,7 @@ static void candidate_label(const CounterpointCandidate *candidate, char *label,
     }
 }
 
-static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool operator_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
     const CounterpointParams *params = context;
     size_t wanted = params && params->candidates > 0 ? params->candidates : COUNTERPOINT_DEFAULT_CANDIDATES;
@@ -348,7 +348,7 @@ static PlanResult slot_notes(const CounterpointContext *context, const Counterpo
 }
 
 /* The target keeps its id and takes the counter-melody. */
-static PlanResult operator_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult operator_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     const CounterpointCandidate *line = candidate ? candidate->payload : NULL;
     CounterpointContext *read;
     PlanNote *notes;
@@ -390,8 +390,8 @@ FillResult counterpoint_register(FillOperatorRegistry *registry, const Counterpo
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = COUNTERPOINT_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan inner voice lane span over a written melody or bass";
-    operator_.generator.supported_outputs = "PiecePlan inner voice lane span";
+    operator_.generator.supported_inputs = "Plan inner voice lane span over a written melody or bass";
+    operator_.generator.supported_outputs = "Plan inner voice lane span";
     operator_.generator.configuration_description = "the number of candidates and the width of the beam";
     operator_.generator.constraints_description =
         "standard-counterpoint for the pair and the species, the given line as the cantus firmus";

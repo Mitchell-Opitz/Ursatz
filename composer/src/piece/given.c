@@ -56,7 +56,7 @@ typedef struct {
     Rational start;     /* where the material starts */
 } Placement;
 
-static bool is_material(const PiecePlan *plan, NodeId section) {
+static bool is_material(const Plan *plan, NodeId section) {
     return plan_section_has_role(plan, section, SECTION_ROLE_MATERIAL);
 }
 
@@ -69,7 +69,7 @@ static Rational times(Rational unit, size_t count) {
     return out;
 }
 
-static GivenResult read_placement(const PiecePlan *plan, NodeId section, size_t bar, Placement *out) {
+static GivenResult read_placement(const Plan *plan, NodeId section, size_t bar, Placement *out) {
     LaneSpanId meters[2];
     if (!plan || !out) {
         return GIVEN_ERR_NULL;
@@ -101,7 +101,7 @@ static GivenResult read_placement(const PiecePlan *plan, NodeId section, size_t 
 }
 
 /* Whether span lies in the section, in one key span, and clear of every span of the lane and voice already there. */
-static GivenResult check_room(const PiecePlan *plan, const Placement *placement, PlanLaneKind lane, int voice,
+static GivenResult check_room(const Plan *plan, const Placement *placement, PlanLaneKind lane, int voice,
                               PlanSpan span, SpelledKey *key) {
     LaneSpanId keys[2];
     if (!plan_span_contains(placement->section, span)) {
@@ -159,7 +159,7 @@ static GivenResult note_span(const Placement *placement, const PlanNote *notes, 
     return GIVEN_OK;
 }
 
-static GivenResult give_notes(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count,
+static GivenResult give_notes(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count,
                               PlanLaneKind lane) {
     Placement placement;
     PlanSpan span;
@@ -185,11 +185,11 @@ static GivenResult give_notes(PiecePlan *plan, NodeId section, size_t bar, const
     return GIVEN_OK;
 }
 
-GivenResult plan_give_melody(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count) {
+GivenResult plan_give_melody(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count) {
     return give_notes(plan, section, bar, notes, count, PLAN_LANE_MELODY);
 }
 
-GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count) {
+GivenResult plan_give_bass(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count) {
     return give_notes(plan, section, bar, notes, count, PLAN_LANE_BASS);
 }
 
@@ -218,7 +218,7 @@ static bool numeral_payload(HarmonyMode mode, const char *numeral, PlanHarmony *
 }
 
 /* One Given harmony span with the payload of a numeral. */
-static GivenResult add_given_harmony(PiecePlan *plan, NodeId section, PlanSpan span, const PlanHarmony *harmony) {
+static GivenResult add_given_harmony(Plan *plan, NodeId section, PlanSpan span, const PlanHarmony *harmony) {
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
@@ -230,7 +230,7 @@ static GivenResult add_given_harmony(PiecePlan *plan, NodeId section, PlanSpan s
     return GIVEN_OK;
 }
 
-GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, const char *const *numerals, size_t count,
+GivenResult plan_give_progression(Plan *plan, NodeId section, size_t bar, const char *const *numerals, size_t count,
                                   size_t cells_per_chord) {
     Placement placement;
     size_t cells;
@@ -273,7 +273,7 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
     return result;
 }
 
-GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *chords, size_t count) {
+GivenResult plan_give_chords(Plan *plan, NodeId section, const GivenChord *chords, size_t count) {
     Placement placement;
     GivenResult result = read_placement(plan, section, 0, &placement);
     if (result != GIVEN_OK) {
@@ -340,7 +340,7 @@ static void drop_motive_refs(PlanConstraint *constraints, size_t *count) {
 }
 
 /* The pickup of a section: the length of its PICKUP constraint, else nothing. */
-static Rational section_pickup(const PiecePlan *plan, NodeId section) {
+static Rational section_pickup(const Plan *plan, NodeId section) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
         if (constraint->kind == PLAN_CONSTRAINT_PICKUP) {
@@ -351,7 +351,7 @@ static Rational section_pickup(const PiecePlan *plan, NodeId section) {
 }
 
 /* Whether the copy's spans lie from the pickup before the section to its end, and hold pitches a note can have. */
-static GivenResult copy_fits(const PiecePlan *plan, NodeId section, const ReturnCopy *copy) {
+static GivenResult copy_fits(const Plan *plan, NodeId section, const ReturnCopy *copy) {
     PlanSpan span = plan_node_span(plan, section);
     PlanSpan room = span;
     Rational pickup = section_pickup(plan, section);
@@ -378,7 +378,7 @@ static GivenResult copy_fits(const PiecePlan *plan, NodeId section, const Return
     return GIVEN_OK;
 }
 
-GivenResult plan_give_section(PiecePlan *plan, NodeId section, const PiecePlan *source, NodeId source_section) {
+GivenResult plan_give_section(Plan *plan, NodeId section, const Plan *source, NodeId source_section) {
     Placement placement;
     GivenResult result = read_placement(plan, section, 0, &placement);
     if (result != GIVEN_OK) {
@@ -446,7 +446,7 @@ static PlanSpan between(Rational from, Rational to) {
     return span;
 }
 
-bool given_touches(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span) {
+bool given_touches(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span) {
     LaneSpanId ids[MAX_GIVEN_SPANS];
     size_t found = plan_lane_find(plan, lane, voice, span, ids, MAX_GIVEN_SPANS);
     for (size_t i = 0; i < found && i < MAX_GIVEN_SPANS; i++) {
@@ -457,7 +457,7 @@ bool given_touches(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan
     return false;
 }
 
-size_t given_gaps(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, PlanSpan *out, size_t capacity) {
+size_t given_gaps(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span, PlanSpan *out, size_t capacity) {
     LaneSpanId ids[MAX_GIVEN_SPANS];
     size_t found = plan_lane_find(plan, lane, voice, span, ids, MAX_GIVEN_SPANS);
     Rational end;
@@ -526,7 +526,7 @@ void given_snapshot_destroy(GivenSnapshot *snapshot) {
 }
 
 /* Whether a lane span is material the user placed: Given, in a lane the user fills, owned by a section. */
-static bool placed(const PiecePlan *plan, LaneSpanId id) {
+static bool placed(const Plan *plan, LaneSpanId id) {
     PlanLaneKind lane = plan_lane_span_lane(plan, id);
     return plan_has_lane_span(plan, id) && plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN &&
            (lane == PLAN_LANE_HARMONY || lane == PLAN_LANE_BASS || lane == PLAN_LANE_MELODY ||
@@ -534,7 +534,7 @@ static bool placed(const PiecePlan *plan, LaneSpanId id) {
            plan_node_kind(plan, plan_lane_span_owner(plan, id)) == PLAN_NODE_SECTION;
 }
 
-GivenSnapshot *given_snapshot(const PiecePlan *plan) {
+GivenSnapshot *given_snapshot(const Plan *plan) {
     GivenSnapshot *snapshot = calloc(1, sizeof(*snapshot));
     size_t found = 0;
     if (!snapshot || !plan) {
@@ -579,7 +579,7 @@ static bool same_time(Rational a, Rational b) {
 }
 
 /* Whether the plan has a Given span like the entry: same lane, voice, owner and span, and the same payload. */
-static bool entry_unchanged(const SnapshotEntry *entry, const PiecePlan *plan) {
+static bool entry_unchanged(const SnapshotEntry *entry, const Plan *plan) {
     LaneSpanId ids[8];
     size_t found = plan_lane_find(plan, entry->lane, entry->voice, entry->span, ids, 8);
     for (size_t i = 0; i < found && i < 8; i++) {
@@ -610,7 +610,7 @@ static bool entry_unchanged(const SnapshotEntry *entry, const PiecePlan *plan) {
     return false;
 }
 
-size_t given_snapshot_report(const GivenSnapshot *snapshot, const PiecePlan *plan, GivenReport *out, size_t capacity) {
+size_t given_snapshot_report(const GivenSnapshot *snapshot, const Plan *plan, GivenReport *out, size_t capacity) {
     size_t runs = 0;
     for (size_t i = 0; snapshot && plan && i < snapshot->count; i++) {
         const SnapshotEntry *entry = &snapshot->entries[i];

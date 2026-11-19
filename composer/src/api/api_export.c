@@ -118,7 +118,7 @@ ComposerStatus composer_api_export(const ComposerContext *context, const char *r
     if (!plan_text) {
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError load_error;
     PlanResult loaded = plan_from_json_resolved(context->knowledge, plan_text, composer_plan_read_hooks(), &plan, &load_error);
     free(plan_text);

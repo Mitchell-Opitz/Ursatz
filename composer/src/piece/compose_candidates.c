@@ -37,7 +37,7 @@ static bool ranks_before(const ComposeCandidate *a, const ComposeCandidate *b) {
     return a->seed < b->seed;
 }
 
-PieceResult compose_candidates(const PiecePlan *plan, const ComposeConfig *config, size_t count,
+PieceResult compose_candidates(const Plan *plan, const ComposeConfig *config, size_t count,
                                ComposeCandidates *candidates) {
     if (!candidates) {
         return PIECE_ERR_NULL;

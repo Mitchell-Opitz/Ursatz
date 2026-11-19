@@ -106,7 +106,7 @@ static ComposerStatus render_motive(const cJSON *request, const KnowledgeSnapsho
     if (status != COMPOSER_OK || (!want_midi && !want_musicxml)) {
         return status;
     }
-    PiecePlan *plan = motive_render_plan(rendered);
+    Plan *plan = motive_render_plan(rendered);
     RenderedPlan plan_rendered;
     PlanExportError detail;
     memset(&detail, 0, sizeof detail);

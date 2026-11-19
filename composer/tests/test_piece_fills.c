@@ -39,8 +39,8 @@ static void write_theme_plan(unsigned long seed) {
 }
 
 /* The theme plan the command wrote, read back. */
-static PiecePlan *read_theme_plan(unsigned long seed) {
-    PiecePlan *plan = NULL;
+static Plan *read_theme_plan(unsigned long seed) {
+    Plan *plan = NULL;
     PlanJsonError error;
     write_theme_plan(seed);
     assert(test_read_plan_file(THEME_PLAN, &plan, &error) == PLAN_OK);
@@ -48,7 +48,7 @@ static PiecePlan *read_theme_plan(unsigned long seed) {
 }
 
 /* The theme section of a plan: the first section node that is not the material. */
-static NodeId theme_section(const PiecePlan *plan) {
+static NodeId theme_section(const Plan *plan) {
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
@@ -61,7 +61,7 @@ static NodeId theme_section(const PiecePlan *plan) {
 }
 
 static void test_fixture(void) {
-    PiecePlan *plan = read_theme_plan(1);
+    Plan *plan = read_theme_plan(1);
     NodeId theme = theme_section(plan);
     assert(theme != PLAN_NODE_NONE);
     assert(plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
@@ -102,7 +102,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
 }
 
 /* The section nodes of the piece (not the material or the seam), in time order. */
-static size_t piece_sections(const PiecePlan *plan, NodeId *out, size_t max) {
+static size_t piece_sections(const Plan *plan, NodeId *out, size_t max) {
     size_t count = 0;
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form) && count < max; i++) {
@@ -116,7 +116,7 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *out, size_t max) {
 }
 
 /* The lane spans of a lane and voice 0 inside the span, in time order; up to max. */
-static size_t lane_spans(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, LaneSpanId *out, size_t max) {
+static size_t lane_spans(const Plan *plan, PlanLaneKind lane, PlanSpan span, LaneSpanId *out, size_t max) {
     size_t found = plan_lane_find(plan, lane, 0, span, out, max);
     assert(found <= max);
     return found;
@@ -129,7 +129,7 @@ typedef struct {
     Rational duration;
 } Sounded;
 
-static size_t sounded(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, Sounded *out, size_t max) {
+static size_t sounded(const Plan *plan, PlanLaneKind lane, PlanSpan span, Sounded *out, size_t max) {
     LaneSpanId ids[64];
     size_t spans = lane_spans(plan, lane, span, ids, 64);
     size_t count = 0;
@@ -148,7 +148,7 @@ static size_t sounded(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, S
 }
 
 /* Whether every Given run the snapshot found is still there, and how many runs there were. */
-static size_t runs_unchanged(const GivenSnapshot *snapshot, const PiecePlan *plan) {
+static size_t runs_unchanged(const GivenSnapshot *snapshot, const Plan *plan) {
     GivenReport reports[64];
     size_t runs = given_snapshot_report(snapshot, plan, reports, 64);
     assert(runs <= 64);
@@ -158,7 +158,7 @@ static size_t runs_unchanged(const GivenSnapshot *snapshot, const PiecePlan *pla
     return runs;
 }
 
-static bool has_run(const GivenSnapshot *snapshot, const PiecePlan *plan, PlanLaneKind lane) {
+static bool has_run(const GivenSnapshot *snapshot, const Plan *plan, PlanLaneKind lane) {
     GivenReport reports[64];
     size_t runs = given_snapshot_report(snapshot, plan, reports, 64);
     for (size_t i = 0; i < runs && i < 64; i++) {
@@ -170,7 +170,7 @@ static bool has_run(const GivenSnapshot *snapshot, const PiecePlan *plan, PlanLa
 }
 
 /* The m0 node's melody notes of a plan. */
-static size_t motive_notes(const PiecePlan *plan, Sounded *out, size_t max) {
+static size_t motive_notes(const Plan *plan, Sounded *out, size_t max) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
         if (plan_node_kind(plan, id) == PLAN_NODE_MOTIVE && name && strcmp(name, "m0") == 0) {
@@ -181,7 +181,7 @@ static size_t motive_notes(const PiecePlan *plan, Sounded *out, size_t max) {
 }
 
 /* A piece in E minor: the D minor theme as an 8-bar body section, then a 2-bar turnaround from the piece's motive. */
-static void theme_structure(Fixture *fixture, const PiecePlan *theme) {
+static void theme_structure(Fixture *fixture, const Plan *theme) {
     fixture_init(fixture, 4, HARMONY_MODE_MINOR);
     PieceSection *body = add_section(fixture, "a", "A", PIECE_PART_BODY, 32, PIECE_FILL_THEME);
     body->theme_plan = theme;
@@ -189,7 +189,7 @@ static void theme_structure(Fixture *fixture, const PiecePlan *theme) {
 }
 
 static void test_theme(void) {
-    PiecePlan *theme = read_theme_plan(1);
+    Plan *theme = read_theme_plan(1);
     NodeId theme_node = theme_section(theme);
     PlanSpan theme_span = plan_node_span(theme, theme_node);
     Sounded was_melody[512];
@@ -203,7 +203,7 @@ static void test_theme(void) {
 
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         Fixture fixture;
-        PiecePlan *plan;
+        Plan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
         theme_structure(&fixture, theme);
@@ -264,8 +264,8 @@ static void test_theme(void) {
 }
 
 /* Builds the structure's plan with an empty body of this many beats, in this key. */
-static PiecePlan *empty_body(Fixture *fixture, int tonic, HarmonyMode mode, size_t beats) {
-    PiecePlan *plan;
+static Plan *empty_body(Fixture *fixture, int tonic, HarmonyMode mode, size_t beats) {
+    Plan *plan;
     fixture_init(fixture, tonic, mode);
     add_section(fixture, "a", "A", PIECE_PART_BODY, beats, PIECE_FILL_EMPTY);
     assert(piece_build_plan(&fixture->request, &plan) == PIECE_OK);
@@ -273,13 +273,13 @@ static PiecePlan *empty_body(Fixture *fixture, int tonic, HarmonyMode mode, size
 }
 
 static void test_refused(void) {
-    PiecePlan *theme = read_theme_plan(1);
+    Plan *theme = read_theme_plan(1);
     NodeId theme_node = theme_section(theme);
     Fixture fixture;
     NodeId sections[4];
 
     /* Another length: the theme is 8 bars, the section 4. */
-    PiecePlan *plan = empty_body(&fixture, 4, HARMONY_MODE_MINOR, 16);
+    Plan *plan = empty_body(&fixture, 4, HARMONY_MODE_MINOR, 16);
     assert(piece_sections(plan, sections, 4) == 1);
     assert(plan_give_section(plan, sections[0], theme, theme_node) == GIVEN_ERR_LENGTH);
     assert(plan_node_state(plan, sections[0]) == PLAN_STATE_CONSTRAINED);
@@ -291,7 +291,7 @@ static void test_refused(void) {
     assert(piece_build_plan(&fixture.request, &plan) == PIECE_ERR_BAD_REQUEST);
 
     /* A plan whose section is not realized yet. */
-    PiecePlan *open = empty_body(&fixture, 2, HARMONY_MODE_MINOR, 32);
+    Plan *open = empty_body(&fixture, 2, HARMONY_MODE_MINOR, 32);
     NodeId open_node;
     assert(piece_sections(open, &open_node, 1) == 1);
     plan = empty_body(&fixture, 4, HARMONY_MODE_MINOR, 32);
@@ -300,7 +300,7 @@ static void test_refused(void) {
     plan_destroy(open);
 
     /* Another mode: the key lanes differ in shape. */
-    PiecePlan *major = empty_body(&fixture, 4, HARMONY_MODE_MAJOR, 32);
+    Plan *major = empty_body(&fixture, 4, HARMONY_MODE_MAJOR, 32);
     NodeId major_node;
     assert(piece_sections(major, &major_node, 1) == 1);
     assert(plan_give_section(major, major_node, theme, theme_node) == GIVEN_ERR_KEY);
@@ -335,7 +335,7 @@ static void test_progression(void) {
     size_t on_downbeat = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         Fixture fixture;
-        PiecePlan *plan;
+        Plan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
         fixture_init(&fixture, 0, HARMONY_MODE_MAJOR);
@@ -412,7 +412,7 @@ static void test_partial(void) {
     size_t stuck = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         Fixture fixture;
-        PiecePlan *plan;
+        Plan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
         fixture_init(&fixture, 0, HARMONY_MODE_MAJOR);

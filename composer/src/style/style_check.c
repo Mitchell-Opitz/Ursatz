@@ -35,7 +35,7 @@
  * The numeral of the chord written right before a span: a span of the harmony lane, not open, that ends where the
  * span starts. False when the span starts the plan or the chord before is still open.
  */
-static bool chord_before(const PiecePlan *plan, PlanSpan span, Rational bar, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+static bool chord_before(const Plan *plan, PlanSpan span, Rational bar, char out[PLAN_ROMAN_NUMERAL_MAX]) {
     if (span.start.num <= 0 || bar.num <= 0) {
         return false;
     }
@@ -72,7 +72,7 @@ static bool chord_before(const PiecePlan *plan, PlanSpan span, Rational bar, cha
     return true;
 }
 
-static bool harmony_labels(const PiecePlan *plan, const PhraseProgression *progression, ComposerStyleLabels *labels) {
+static bool harmony_labels(const Plan *plan, const PhraseProgression *progression, ComposerStyleLabels *labels) {
     const char *numerals[HARMONY_MAX_CHORDS];
     char before[PLAN_ROMAN_NUMERAL_MAX];
     if (!progression || progression->count > HARMONY_MAX_CHORDS) {
@@ -161,7 +161,7 @@ static bool melody_labels(const ComposerStyle *style, const MelodyCandidate *mel
 }
 
 /* The key the plan starts in, for a motive that carries none. */
-static int plan_tonic(const PiecePlan *plan) {
+static int plan_tonic(const Plan *plan) {
     PlanSpan everything = {{0, 1}, {1000000, 1}};
     LaneSpanId first;
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, &first, 1) == 0) {
@@ -171,7 +171,7 @@ static int plan_tonic(const PiecePlan *plan) {
 }
 
 /* The motive labels of a motive-form or development candidate the motives stage offers. */
-static bool motive_labels(const PiecePlan *plan, const FillCandidate *candidate, ComposerStyleLabels *labels) {
+static bool motive_labels(const Plan *plan, const FillCandidate *candidate, ComposerStyleLabels *labels) {
     const Motive *motive = grow_form_candidate_motive(candidate);
     if (!motive) {
         motive = motive_develop_candidate_motive(candidate);
@@ -187,7 +187,7 @@ static bool motive_labels(const PiecePlan *plan, const FillCandidate *candidate,
  * Whether the plan fixes the form of the section: a theme pairing constraint says how it begins and ends. A free phrase
  * (R-170), a liquidation (R-494), a retransition and a coda (R-503) have no form of a theme to prefer, so the style leaves them alone.
  */
-static bool form_fixed(const PiecePlan *plan, FillTarget target) {
+static bool form_fixed(const Plan *plan, FillTarget target) {
     if (target.kind != FILL_TARGET_NODE) {
         return true;
     }
@@ -309,7 +309,7 @@ static unsigned long pattern_halves(PlanAccompanimentPattern pattern, Rational b
  * The accompaniment's closeness to the style's note density: min(rate, d) / max(rate, d), rate the pattern's attacks per
  * beat and d the style's. False when the style has no density or the run did not leave the pattern to the operator.
  */
-static bool accompaniment_closeness(const ComposerStyle *style, const PiecePlan *plan, FillTarget target,
+static bool accompaniment_closeness(const ComposerStyle *style, const Plan *plan, FillTarget target,
                                     const FillCandidate *candidate, ComposerRatio *out) {
     ComposerRatio density;
     const AccompCandidate *accompaniment = candidate->payload;
@@ -334,7 +334,7 @@ static bool accompaniment_closeness(const ComposerStyle *style, const PiecePlan 
 
 /* --------------------------------------------------------------- checker */
 
-bool style_stage_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool style_stage_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out) {
     const StyleCheckContext *style = context;
     if (!style || !style->inner || !style->style || !plan || !operator_ || !candidate || !out) {

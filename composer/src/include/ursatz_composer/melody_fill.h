@@ -153,7 +153,7 @@ MelodyFillParams melody_fill_params_default(void);
  * notes score. The strong beats must carry chord tones, and every note must be in the range. A candidate of
  * another operator goes to harmony_phrase_checker.
  */
-bool melody_fill_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool melody_fill_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                          const FillCandidate *candidate, void *context, FillCheck *out);
 
 /*

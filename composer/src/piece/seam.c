@@ -18,7 +18,7 @@
 /* The inner voices a texture writes. */
 #define SEAM_INNER_VOICES 3
 
-bool piece_is_structure_plan(const PiecePlan *plan) {
+bool piece_is_structure_plan(const Plan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
             plan_section_part_of(plan, id, NULL)) {
@@ -28,7 +28,7 @@ bool piece_is_structure_plan(const PiecePlan *plan) {
     return false;
 }
 
-NodeId piece_seam_find(const PiecePlan *plan) {
+NodeId piece_seam_find(const Plan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
             plan_section_has_role(plan, id, SECTION_ROLE_SEAM)) {
@@ -38,7 +38,7 @@ NodeId piece_seam_find(const PiecePlan *plan) {
     return PLAN_NODE_NONE;
 }
 
-bool piece_seam_body_start(const PiecePlan *plan, Rational *out) {
+bool piece_seam_body_start(const Plan *plan, Rational *out) {
     bool found = false;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
@@ -102,7 +102,7 @@ static size_t clip_notes(const PlanNotes *notes, PlanSpan from, PlanSpan to, Pla
 }
 
 /* Adds the written spans of a lane and voice that sound in the bar to the slice section. */
-static bool add_lane(const PiecePlan *plan, PiecePlan *slice, NodeId section, PlanLaneKind lane, int voice, PlanSpan bar) {
+static bool add_lane(const Plan *plan, Plan *slice, NodeId section, PlanLaneKind lane, int voice, PlanSpan bar) {
     LaneSpanId ids[SEAM_MAX_SPANS];
     size_t found = plan_lane_find(plan, lane, voice, bar, ids, SEAM_MAX_SPANS);
     if (found > SEAM_MAX_SPANS) {
@@ -144,8 +144,8 @@ static bool add_lane(const PiecePlan *plan, PiecePlan *slice, NodeId section, Pl
 }
 
 /* The slice: a plan holding one section, the bar, with the meter, the key and the written lane spans over it. */
-static PiecePlan *make_slice(const PiecePlan *plan, PlanSpan bar, NodeId *section) {
-    PiecePlan *slice = plan_create();
+static Plan *make_slice(const Plan *plan, PlanSpan bar, NodeId *section) {
+    Plan *slice = plan_create();
     PlanSpan whole = {{0, 1}, {0, 1}};
     NodeId form;
     LaneSpanId added;
@@ -189,10 +189,10 @@ static PiecePlan *make_slice(const PiecePlan *plan, PlanSpan bar, NodeId *sectio
     return slice;
 }
 
-GivenResult piece_seam_give(PiecePlan *plan, NodeId seam, Rational body_start) {
+GivenResult piece_seam_give(Plan *plan, NodeId seam, Rational body_start) {
     PlanSpan bar = {body_start, plan_node_span(plan, seam).length};
     NodeId section;
-    PiecePlan *slice = make_slice(plan, bar, &section);
+    Plan *slice = make_slice(plan, bar, &section);
     if (!slice) {
         return GIVEN_ERR_PLAN;
     }

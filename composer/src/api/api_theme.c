@@ -724,7 +724,7 @@ ComposerStatus api_theme_validate(const KnowledgeSnapshot *knowledge, const Comm
     if (status == COMPOSER_OK) {
         /* Build the plan as Compose would, without seeding: the first refusal is the answer. */
         GrowRequest grow;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         GrowRefusal refusal;
         api_grow_request_for(&state.setup, state.setup.seed, &grow);
         GrowResult built = grow_build_plan_checked(&grow, &plan, &refusal);

@@ -61,11 +61,11 @@ static Motive load_motive(const char *path) {
 }
 
 /* The 8-bar period or sentence of the motive and seed under the contrast settings (NULL for none): the plan after grow_run. */
-static PiecePlan *grow_with(const Motive *motive, unsigned long seed, bool period, const GrowContrast *contrast) {
+static Plan *grow_with(const Motive *motive, unsigned long seed, bool period, const GrowContrast *contrast) {
     GrowRequest request;
     GrowConfig config;
     GrowOutcome outcome;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
     request.key = motive_key(motive);
@@ -93,7 +93,7 @@ static PiecePlan *grow_with(const Motive *motive, unsigned long seed, bool perio
     return plan;
 }
 
-static char *plan_text(const PiecePlan *plan) {
+static char *plan_text(const Plan *plan) {
     PlanJsonError error;
     char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text);
@@ -108,9 +108,9 @@ static void test_defaults_change_nothing(void) {
     for (size_t f = 0; f < 2; f++) {
         for (int period = 0; period < 2; period++) {
             for (unsigned long seed = 1; seed <= seeds(); seed++) {
-                PiecePlan *plain = grow_with(&FIXTURES[f].motive, seed, period, NULL);
-                PiecePlan *with_similar = grow_with(&FIXTURES[f].motive, seed, period, &similar);
-                PiecePlan *with_zero = grow_with(&FIXTURES[f].motive, seed, period, &zero);
+                Plan *plain = grow_with(&FIXTURES[f].motive, seed, period, NULL);
+                Plan *with_similar = grow_with(&FIXTURES[f].motive, seed, period, &similar);
+                Plan *with_zero = grow_with(&FIXTURES[f].motive, seed, period, &zero);
                 assert((plain == NULL) == (with_similar == NULL) && (plain == NULL) == (with_zero == NULL));
                 if (plain) {
                     char *a = plan_text(plain);
@@ -136,7 +136,7 @@ typedef struct {
 } Beat;
 
 /* The notes of the theme's melody that start in the bars [from, to) of the 4/4 theme (0-based), their onsets counted from bar from. */
-static size_t melody_rhythm(const PiecePlan *plan, long from, long to, Beat *out, size_t size) {
+static size_t melody_rhythm(const Plan *plan, long from, long to, Beat *out, size_t size) {
     NodeId theme = test_find_node(plan, "theme");
     LaneSpanId spans[64];
     size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, plan_node_span(plan, theme), spans, 64);
@@ -199,7 +199,7 @@ static void test_distant_changes_rhythm(void) {
         size_t composed[3] = {0, 0, 0};
         for (int period = 0; period < 2; period++) {
             for (unsigned long seed = 1; seed <= seeds(); seed++) {
-                PiecePlan *plan = grow_with(&FIXTURES[f].motive, seed, period, &distant);
+                Plan *plan = grow_with(&FIXTURES[f].motive, seed, period, &distant);
                 if (!plan) {
                     continue;
                 }
@@ -287,7 +287,7 @@ static void test_distant_composes(void) {
 }
 
 /* The motive node an idea's melody span asks for, or PLAN_NODE_NONE. */
-static NodeId melody_motive(const PiecePlan *plan, const char *idea_name) {
+static NodeId melody_motive(const Plan *plan, const char *idea_name) {
     NodeId idea = test_find_node(plan, idea_name);
     LaneSpanId spans[16];
     size_t count = idea == PLAN_NODE_NONE ? 0 : plan_node_lane_spans(plan, idea, spans, 16);
@@ -305,7 +305,7 @@ static NodeId melody_motive(const PiecePlan *plan, const char *idea_name) {
 }
 
 /* The motive node the node `from` is made from (its motive_ref), or PLAN_NODE_NONE. */
-static NodeId made_from(const PiecePlan *plan, NodeId from) {
+static NodeId made_from(const Plan *plan, NodeId from) {
     for (size_t c = 0; from != PLAN_NODE_NONE && c < plan_node_constraint_count(plan, from); c++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, from, c);
         if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
@@ -327,7 +327,7 @@ static void test_new_material_recorded(void) {
         size_t unlike = 0;
         size_t sentence_made = 0;
         for (unsigned long seed = 1; seed <= seeds(); seed++) {
-            PiecePlan *plan = grow_with(&FIXTURES[f].motive, seed, true, &fresh);
+            Plan *plan = grow_with(&FIXTURES[f].motive, seed, true, &fresh);
             if (plan) {
                 composed++;
                 NodeId node = test_find_node(plan, "new material");
@@ -374,7 +374,7 @@ static void test_one_bar_motif_composes(void) {
     unsigned made = 0;
     for (int period = 0; period < 2; period++) {
         for (unsigned long seed = 1; seed <= seeds(); seed++) {
-            PiecePlan *plan = grow_with(&motive, seed, period, &distant);
+            Plan *plan = grow_with(&motive, seed, period, &distant);
             if (!plan) {
                 continue;
             }

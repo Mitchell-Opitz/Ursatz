@@ -273,7 +273,7 @@ bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at
 }
 
 /* The key of the key lane over a chord, when one span holds it. */
-static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id, SpelledKey *key) {
+static bool key_under(const Plan *plan, PlanSpan chord_span, LaneSpanId *id, SpelledKey *key) {
     LaneSpanId keys[2];
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, chord_span, keys, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, keys[0]), chord_span)) {
@@ -284,7 +284,7 @@ static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id
     return true;
 }
 
-bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
+bool harmony_read_lane_keys(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                             PhraseMetre *metre, HarmonyMode *modes, unsigned *keys) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     if (!plan || !chords || !count || !metre || !harmony_read_metre(plan, span, metre)) {
@@ -323,12 +323,12 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, HarmonyMode mo
     return true;
 }
 
-bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
+bool harmony_read_lane(const Plan *plan, PlanSpan span, HarmonyMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre) {
     return harmony_read_lane_keys(plan, span, mode, chords, count, metre, NULL, NULL);
 }
 
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
+bool harmony_hear_cadence(const Plan *plan, PlanSpan span, HarmonyMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];

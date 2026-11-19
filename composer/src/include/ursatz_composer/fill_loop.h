@@ -55,11 +55,11 @@ typedef struct {
  * Checks one candidate for target against the plan. Real rule checking plugs in
  * here. Returns false only on failure (not for a rejected candidate).
  */
-typedef bool (*FillCheckerFn)(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+typedef bool (*FillCheckerFn)(const Plan *plan, FillTarget target, const FillOperator *operator_,
                               const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* Accepts everything at score 0/1. This is the checker when none is given. */
-bool fill_default_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool fill_default_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                           const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* --- running ------------------------------------------------------------ */
@@ -117,7 +117,7 @@ typedef struct FillRecord FillRecord;
  * is set to the run's record (also after an error, if one was started), which
  * the caller destroys with fill_record_destroy.
  */
-FillResult fill_run(PiecePlan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
+FillResult fill_run(Plan *plan, const FillOperatorRegistry *registry, const FillConfig *config,
                     FillOutcome *outcome, FillRecord **record);
 
 #endif

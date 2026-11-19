@@ -94,7 +94,7 @@ static void candidate_from(const FillConsidered *from, ExplainCandidate *to) {
 }
 
 /* The meter in force at the start of the piece, for the bars of a target; false when the plan has none. */
-static bool first_meter(const PiecePlan *plan, PlanMeter *out) {
+static bool first_meter(const Plan *plan, PlanMeter *out) {
     PlanSpan everything = {{0, 1}, {1000000, 1}};
     LaneSpanId first = PLAN_LANE_SPAN_NONE;
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, everything, &first, 1) == 0 || first == PLAN_LANE_SPAN_NONE) {
@@ -121,11 +121,11 @@ static void bars_of(bool have_meter, const PlanMeter *meter, PlanSpan span, size
     *last = end_whole > *first ? end_whole : *first;
 }
 
-static NodeId owner_of(const PiecePlan *plan, FillTarget target) {
+static NodeId owner_of(const Plan *plan, FillTarget target) {
     return target.kind == FILL_TARGET_NODE ? (NodeId)target.id : plan_lane_span_owner(plan, (LaneSpanId)target.id);
 }
 
-static void letter_of(const PiecePlan *plan, NodeId section, char *out) {
+static void letter_of(const Plan *plan, NodeId section, char *out) {
     snprintf(out, PLAN_SECTION_LETTER_MAX, "%s", plan_section_or_empty(plan, section)->letter);
 }
 
@@ -170,7 +170,7 @@ static void runner_up_insert(const FillConsidered *considered, size_t *top, size
     }
 }
 
-static bool add_step(const PiecePlan *plan, bool have_meter, const PlanMeter *meter, const char *stage, size_t step_index,
+static bool add_step(const Plan *plan, bool have_meter, const PlanMeter *meter, const char *stage, size_t step_index,
                      const FillStep *step, TargetList *list) {
     ExplainTarget target;
     memset(&target, 0, sizeof(target));
@@ -254,7 +254,7 @@ static bool add_step(const PiecePlan *plan, bool have_meter, const PlanMeter *me
     return true;
 }
 
-static bool add_record(const PiecePlan *plan, bool have_meter, const PlanMeter *meter, const char *stage,
+static bool add_record(const Plan *plan, bool have_meter, const PlanMeter *meter, const char *stage,
                        const FillRecord *record, TargetList *list) {
     for (size_t s = 0; record && s < record->step_count; s++) {
         /* A step no operator applied to weighed nothing: a target set aside until something makes an operator apply. */
@@ -282,7 +282,7 @@ static bool copy_check(const AnalyzerCheck *from, AnalyzerCheck *to) {
     return true;
 }
 
-static void section_fill(const PiecePlan *plan, NodeId id, ExplainSection *section) {
+static void section_fill(const Plan *plan, NodeId id, ExplainSection *section) {
     memset(section, 0, sizeof(*section));
     section->section = id;
     const char *name = plan_node_name(plan, id);
@@ -336,7 +336,7 @@ static bool add_rejections(Explanation *out, const ComposeRejection *rejections,
     return true;
 }
 
-ExplainResult explain_build(const PiecePlan *plan, const ComposeOutcome *outcome, Explanation *out) {
+ExplainResult explain_build(const Plan *plan, const ComposeOutcome *outcome, Explanation *out) {
     if (!out) {
         return EXPLAIN_ERR_NULL;
     }
@@ -379,7 +379,7 @@ ExplainResult explain_build(const PiecePlan *plan, const ComposeOutcome *outcome
     return EXPLAIN_OK;
 }
 
-ExplainResult explain_build_grow(const PiecePlan *plan, NodeId theme, const GrowOutcome *outcome,
+ExplainResult explain_build_grow(const Plan *plan, NodeId theme, const GrowOutcome *outcome,
                                  const AnalyzerCheck *check, const ComposeRejection *extra, size_t extra_count,
                                  Explanation *out) {
     if (!out) {
@@ -422,7 +422,7 @@ ExplainResult explain_build_grow(const PiecePlan *plan, NodeId theme, const Grow
     return EXPLAIN_OK;
 }
 
-ExplainResult explain_analyzer_rejection(const PiecePlan *plan, NodeId section, const AnalyzerCheck *check, size_t round,
+ExplainResult explain_analyzer_rejection(const Plan *plan, NodeId section, const AnalyzerCheck *check, size_t round,
                                          unsigned long seed, ComposeRejection *out) {
     if (!plan || !check || !out) {
         return EXPLAIN_ERR_NULL;

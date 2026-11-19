@@ -112,7 +112,7 @@ PlanExportResult rendered_plan_musicxml_text(const KnowledgeSnapshot *knowledge,
     return from_movement(result, message, error);
 }
 
-PlanExportResult plan_export_render(const PiecePlan *plan, RenderedPlan *rendered, PlanExportError *error) {
+PlanExportResult plan_export_render(const Plan *plan, RenderedPlan *rendered, PlanExportError *error) {
     switch (plan_render(plan, rendered)) {
     case PLAN_RENDER_OK:
         return PLAN_EXPORT_OK;

@@ -109,12 +109,12 @@ static Motive load_source(const Source *source) {
 /* ------------------------------------------------------------------- scenes */
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId source;
     NodeId target;
 } Scene;
 
-static NodeId add_given(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span) {
+static NodeId add_given(Plan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span) {
     NodeId id = PLAN_NODE_NONE;
     PlanResult added = plan_add_node(plan, parent, kind, span, NULL, &id);
     assert(added == PLAN_OK);
@@ -880,7 +880,7 @@ static void test_degenerate_cases(void) {
     }
 
     /* The development must fit the room it is given: the target is too short for a doubled motive. */
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     PlanSpan all = {tmake(0, 1), tmake(16, 1)};
     NodeId form = add_given(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all);
     NodeId section = add_given(plan, form, PLAN_NODE_SECTION, all);
@@ -1088,7 +1088,7 @@ static void test_constraint_json(void) {
     scene = make_scene(&source, full);
     json = plan_to_json(scene.plan, test_plan_producer(), NULL);
     assert(json && strstr(json, "\"step\": \"interval-change interval=2 amount=-1 keep-contour=1\"") != NULL);
-    PiecePlan *copy = NULL;
+    Plan *copy = NULL;
     PlanJsonError error;
     assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &copy, &error) == PLAN_OK);
     const PlanConstraint *read = plan_node_constraint_at(copy, scene.target, 0);

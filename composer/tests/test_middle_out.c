@@ -105,7 +105,7 @@ static Line notes_of(const char *text) {
     return line;
 }
 
-static NodeId section_with_letter(const PiecePlan *plan, const char *letter) {
+static NodeId section_with_letter(const Plan *plan, const char *letter) {
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId node = plan_node_child_at(plan, root, i);
@@ -130,13 +130,13 @@ static PieceRequest request_of(const char *form, unsigned long seed) {
 }
 
 /* The plan of a scenario with its material placed. */
-static PiecePlan *plan_of(ScenarioKind kind, unsigned long seed) {
+static Plan *plan_of(ScenarioKind kind, unsigned long seed) {
     const char *form = kind == SCENARIO_MELODY ? "binary"
                             : kind == SCENARIO_PROGRESSION ? "rounded-binary"
                                                            : "binary";
     PieceRequest request = request_of(form, seed);
     request.given_melodies = kind == SCENARIO_MELODY;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     NodeId section = section_with_letter(plan, kind == SCENARIO_PROGRESSION ? "A" : "B");
     assert(section != PLAN_NODE_NONE);
@@ -160,7 +160,7 @@ static Rational bars(long count) {
     return time;
 }
 
-static size_t given_count(const PiecePlan *plan, PlanLaneKind lane) {
+static size_t given_count(const Plan *plan, PlanLaneKind lane) {
     size_t count = 0;
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         count += plan_lane_span_lane(plan, id) == lane && plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN &&
@@ -171,7 +171,7 @@ static size_t given_count(const PiecePlan *plan, PlanLaneKind lane) {
 
 static void test_refusals(void) {
     PieceRequest request = request_of("binary", 1);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     NodeId b = section_with_letter(plan, "B");
     Line melody = notes_of(MELODY);
@@ -232,7 +232,7 @@ static void test_refusals(void) {
 
 static void test_placing(void) {
     PieceRequest request = request_of("binary", 1);
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     NodeId b = section_with_letter(plan, "B");
     Line melody = notes_of("E5:h G5:h G5:q F5:q E5:h E5:h C5:h A4:q B4:q C5:h"); /* 4 bars */
@@ -293,7 +293,7 @@ static void test_placing(void) {
     }
     assert(runs[0].lane == PLAN_LANE_MELODY && runs[0].spans == 2);
     assert(runs[1].lane == PLAN_LANE_HARMONY && runs[1].spans == 4);
-    PiecePlan *bare = NULL;
+    Plan *bare = NULL;
     assert(piece_build_plan(&request, &bare) == PIECE_OK);
     run_count = given_snapshot_report(snapshot, bare, runs, 8);
     assert(run_count == 2);
@@ -310,7 +310,7 @@ static void test_key_change(void) {
     bool found = false;
     for (unsigned long seed = 1; seed <= 20 && !found; seed++) {
         PieceRequest request = request_of("binary", seed);
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         request.modulate = true;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
         NodeId root = plan_root(plan);
@@ -346,7 +346,7 @@ static void test_give(void) {
 /* --- the runs ----------------------------------------------------------------------------- */
 
 /* Whether the last cadence heard in a section is the one planned for it and arrives in its last bar. */
-static bool cadence_as_planned(const PiecePlan *plan, const ComposeHeard *heard) {
+static bool cadence_as_planned(const Plan *plan, const ComposeHeard *heard) {
     CadenceType planned = CADENCE_TYPE_PERFECT_AUTHENTIC;
     bool has_planned = false;
     if (plan_node_section(plan, heard->section)->has_cadence) {
@@ -367,7 +367,7 @@ static bool cadence_as_planned(const PiecePlan *plan, const ComposeHeard *heard)
 }
 
 /* The melody's notes that start a bar are tones of the chord there; the chords at the bass notes stand on them. */
-static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
+static void check_given_fits(const Plan *plan, ScenarioKind kind) {
     PlanLaneKind lane = kind == SCENARIO_MELODY ? PLAN_LANE_MELODY : PLAN_LANE_BASS;
     SpelledKey key = test_key_of((TestKeySpec){PITCH_LETTER_C, 0, HARMONY_MODE_MAJOR});
     Rational half = {1, 2}; /* a harmony cell of 4/4 */
@@ -419,7 +419,7 @@ static Share run_scenario(ScenarioKind kind, unsigned long first, unsigned long 
     Share share;
     memset(&share, 0, sizeof(share));
     for (unsigned long seed = first; seed <= last; seed++) {
-        PiecePlan *plan = plan_of(kind, seed);
+        Plan *plan = plan_of(kind, seed);
         GivenSnapshot *snapshot = given_snapshot(plan);
         ComposeConfig config;
         ComposeOutcome outcome;
@@ -472,7 +472,7 @@ static void test_partial(void) {
     for (unsigned long seed = 1; seed <= 10 && !composed; seed++) {
         PieceRequest request = request_of("binary", seed);
         request.given_melodies = 1;
-        PiecePlan *plan = NULL;
+        Plan *plan = NULL;
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
         NodeId b = section_with_letter(plan, "B");
         /* Bars 4 to 7: its downbeats are tones of the tonic, the tonic, a predominant and the dominant. */

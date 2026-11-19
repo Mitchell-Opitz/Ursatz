@@ -61,11 +61,11 @@ static GrowRequest make_request(const Motive *motive) {
     return request;
 }
 
-static PiecePlan *grow(const Motive *motive, unsigned long seed) {
+static Plan *grow(const Motive *motive, unsigned long seed) {
     GrowRequest request = make_request(motive);
     GrowConfig config;
     GrowOutcome outcome;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
     config.seed = seed;
@@ -77,7 +77,7 @@ static PiecePlan *grow(const Motive *motive, unsigned long seed) {
 }
 
 /* The motive_ref of the node `name`. */
-static const PlanMotiveRef *ref_of(const PiecePlan *plan, const char *name) {
+static const PlanMotiveRef *ref_of(const Plan *plan, const char *name) {
     NodeId node = test_find_node(plan, name);
     assert(node != PLAN_NODE_NONE);
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
@@ -90,7 +90,7 @@ static const PlanMotiveRef *ref_of(const PiecePlan *plan, const char *name) {
     return NULL;
 }
 
-static size_t written_notes(const PiecePlan *plan, const char *name, const PlanNote **notes) {
+static size_t written_notes(const Plan *plan, const char *name, const PlanNote **notes) {
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, test_find_node(plan, name), &span, 1) == 1);
     const PlanNotes *held = &plan_lane_span_payload(plan, span)->notes;
@@ -125,7 +125,7 @@ static void test_fragments_are_segments(void) {
     Motive motive = make_motive(true);
     size_t with_b = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *plan = grow(&motive, seed);
+        Plan *plan = grow(&motive, seed);
         bool has_b = false;
         for (int k = 2; k <= 3; k++) {
             char name[4];
@@ -155,7 +155,7 @@ static void test_proposed_segments(void) {
     assert(motive.feature_count == 0);
     size_t named = 0;
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *plan = grow(&motive, seed);
+        Plan *plan = grow(&motive, seed);
         for (int k = 2; k <= 3; k++) {
             char name[4];
             snprintf(name, sizeof(name), "m%d", k);
@@ -174,7 +174,7 @@ static void test_proposed_segments(void) {
 static void test_liquidation_steps(void) {
     Motive motive = make_motive(true);
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
-        PiecePlan *plan = grow(&motive, seed);
+        Plan *plan = grow(&motive, seed);
         const PlanMotiveRef *ref = ref_of(plan, "m4");
         assert(ref->steps >= 1 && ref->steps <= 2);
         assert(strcmp(ref->segment, "a") == 0 || strcmp(ref->segment, "b") == 0);
@@ -185,11 +185,11 @@ static void test_liquidation_steps(void) {
 /* The plan's JSON keeps the segment and the steps, and reads them back. */
 static void test_plan_round_trip(void) {
     Motive motive = make_motive(true);
-    PiecePlan *plan = grow(&motive, 1);
+    Plan *plan = grow(&motive, 1);
     PlanJsonError error;
     char *text = plan_to_json(plan, test_plan_producer(), &error);
     assert(text && strstr(text, "\"segment\"") && strstr(text, "\"steps\""));
-    PiecePlan *again = NULL;
+    Plan *again = NULL;
     assert(plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
     for (int k = 2; k <= 4; k++) {
         char name[4];

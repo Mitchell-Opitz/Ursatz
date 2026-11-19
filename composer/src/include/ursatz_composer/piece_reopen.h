@@ -28,10 +28,10 @@
  * plan_regenerate_all can write them again (the lanes of a theme fill or a progression are Given). The number reopened. This
  * is the one way out of Given: it is for a plan that is about to be regenerated, never for the user's own material.
  */
-NodeId piece_section_find(const PiecePlan *plan, const char *id);
-size_t piece_held_sections(const PiecePlan *plan, NodeId *out, size_t capacity);
-bool piece_section_holds_body_start(const PiecePlan *plan, NodeId section);
-PieceResult piece_seam_reset(PiecePlan *plan);
-size_t piece_reopen_lane(PiecePlan *plan, NodeId section, PlanLaneKind lane);
+NodeId piece_section_find(const Plan *plan, const char *id);
+size_t piece_held_sections(const Plan *plan, NodeId *out, size_t capacity);
+bool piece_section_holds_body_start(const Plan *plan, NodeId section);
+PieceResult piece_seam_reset(Plan *plan);
+size_t piece_reopen_lane(Plan *plan, NodeId section, PlanLaneKind lane);
 
 #endif

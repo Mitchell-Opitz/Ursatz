@@ -28,7 +28,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     LaneSpanId target;
     PlanSpan span;
 } Fixture;

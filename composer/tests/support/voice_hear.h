@@ -43,6 +43,6 @@ typedef enum {
 const char *voice_hear_result_name(VoiceHearResult result);
 
 /* Hears the voice leading of plan over span into *out. On failure *out is all zero. */
-VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out);
+VoiceHearResult voice_hear(const Plan *plan, PlanSpan span, VoiceHeard *out);
 
 #endif

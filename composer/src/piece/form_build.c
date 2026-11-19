@@ -118,7 +118,7 @@ static bool piece_accompaniment(const FormSpec *form, const PieceRequest *reques
  * One section as grow-theme builds it, with its letter, its return and its layers; its motive comes after m0. A section
  * that leads in is held (R-486), and a connective is asked for when `connective` (a "sometimes" is drawn by the caller).
  */
-static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, const FormSpecSize *size,
+static PieceResult add_section(Plan *plan, const PieceRequest *request, const FormSpecSize *size,
                                const SectionDescription *section, const SectionConstruction *construction, PlanSpan span, NodeId form, const NodeId *sections,
                                const PlanAccompaniment *accompaniment, bool connective, NodeId *out) {
     PlanConstraint constraint;
@@ -206,7 +206,7 @@ static bool section_motive(const FormSpecSize *size, size_t index, MotiveRelatio
 }
 
 /* A section whose motive is not m0 itself asks for it as a MOTIVE_REF to m0. */
-static PieceResult add_section_motive(PiecePlan *plan, const FormSpecSize *size, size_t index, NodeId id, NodeId source) {
+static PieceResult add_section_motive(Plan *plan, const FormSpecSize *size, size_t index, NodeId id, NodeId source) {
     PlanConstraint constraint;
     MotiveRelationStep step;
     if (!section_motive(size, index, &step)) {
@@ -221,7 +221,7 @@ static PieceResult add_section_motive(PiecePlan *plan, const FormSpecSize *size,
 }
 
 /* m0 with no motive given: a Constrained one-bar motive node whose melody span motive-invent writes. */
-static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) {
+static PieceResult add_open_motive(Plan *plan, NodeId idea, PlanSpan span) {
     NodeId node;
     LaneSpanId melody;
     PlanLanePayload payload;
@@ -251,7 +251,7 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
  * An independent transition's motive (R-504): an open motive node of its own in the material's idea, at `bar_index` bars
  * from the material's start, named for the section, with the invent stage's melody span as m0's has.
  */
-static PieceResult add_independent_motive(PiecePlan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index,
+static PieceResult add_independent_motive(Plan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index,
                                           const SectionDescription *section, NodeId *out) {
     char name[64];
     PlanSpan span = {{0, 1}, bar};
@@ -289,7 +289,7 @@ static PieceResult add_independent_motive(PiecePlan *plan, NodeId idea, PlanSpan
  * A motive of its own for a section (R-610): its notes, in a motive node named `own <section>` in the material at the bar
  * `bar_index` from the material's start (the bars the motive's layout takes are the material's).
  */
-PieceResult piece_add_own_motive(PiecePlan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index, const char *section,
+PieceResult piece_add_own_motive(Plan *plan, NodeId idea, PlanSpan material, Rational bar, size_t bar_index, const char *section,
                                  const Motive *motive, NodeId *out) {
     char name[64];
     Rational start;
@@ -299,7 +299,7 @@ PieceResult piece_add_own_motive(PiecePlan *plan, NodeId idea, PlanSpan material
 }
 
 /* An independent transition asks for its own motive as a MOTIVE_REF with no step: the motive itself, not m0 made over. */
-PieceResult piece_add_own_ref(PiecePlan *plan, NodeId id, NodeId motive) {
+PieceResult piece_add_own_ref(Plan *plan, NodeId id, NodeId motive) {
     PlanConstraint constraint;
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
@@ -309,7 +309,7 @@ PieceResult piece_add_own_ref(PiecePlan *plan, NodeId id, NodeId motive) {
 }
 
 /* The material section, its phrase and its idea, Realized, with m0 in it; the source node in *out. */
-PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
+PieceResult piece_add_material(Plan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
                                PlanSpan material, Rational bar, NodeId *out) {
     NodeId section;
     NodeId phrase;
@@ -442,7 +442,7 @@ bool piece_basic_idea(const PieceRequest *request, size_t *theme_bars, size_t *i
     return true;
 }
 
-PieceResult piece_set_form_record(PiecePlan *plan, const FormSpec *form) {
+PieceResult piece_set_form_record(Plan *plan, const FormSpec *form) {
     PlanFormRecord record;
     memset(&record, 0, sizeof(record));
     snprintf(record.name, sizeof(record.name), "%s", form->name);
@@ -458,7 +458,7 @@ PieceResult piece_set_form_record(PiecePlan *plan, const FormSpec *form) {
     return piece_result_of_plan(plan_set_form_record(plan, &record));
 }
 
-PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, PiecePlan **out) {
+PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, Plan **out) {
     if (!form || !request || !out) {
         return PIECE_ERR_NULL;
     }
@@ -540,7 +540,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
         independent_count += size->sections[i].function.independent ? 1 : 0;
     }
 
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
@@ -675,7 +675,7 @@ PieceResult form_build_plan(const FormSpec *form, const PieceRequest *request, P
     return PIECE_OK;
 }
 
-PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
+PieceResult piece_build_plan(const PieceRequest *request, Plan **out) {
     if (!request || !out) {
         return PIECE_ERR_NULL;
     }

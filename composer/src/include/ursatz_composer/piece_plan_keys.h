@@ -70,7 +70,7 @@ bool piece_region_key(const KnowledgeSnapshot *knowledge, SpelledKey home, const
  * entry for each section of the size, the keys a request's overlays ask for (R-610): after the draws, a section with a region
  * starts and ends in it, so the draws and every other section's key are as they were.
  */
-PieceResult piece_plan_keys(PiecePlan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size,
+PieceResult piece_plan_keys(Plan *plan, const KnowledgeSnapshot *knowledge, const FormSpec *form, const FormSpecSize *size,
                             FillRng *rng, const PieceRegion *regions, PieceKeyPlan *out);
 
 typedef struct {
@@ -101,7 +101,7 @@ typedef struct {
  * A form that does not close (loop, layered) ends open on purpose and is left as its document has it. Only the first CADENCE constraint of
  * a section, the one it ends in, is changed.
  */
-PieceResult piece_plan_cadences(PiecePlan *plan, const FormSpec *form, const FormSpecSize *size, const PieceKeyPlan *keys);
+PieceResult piece_plan_cadences(Plan *plan, const FormSpec *form, const FormSpecSize *size, const PieceKeyPlan *keys);
 
 typedef struct {
     bool ok;
@@ -116,14 +116,14 @@ typedef struct {
  * True when the plan could be read; the result is in out. A form that does not close (loop, layered), and a plan that records no form (plan_form_record), have nothing to
  * check: `closing` is read from the record and each section's `closed` from its description.
  */
-bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out);
+bool piece_check_cadences(const Plan *plan, PieceCadenceCheck *out);
 
 /*
  * A plan of a format before 5 has no form record: this gives it the record of the built-in form whose plan name is its root node's
  * name, and each section's `closed` from that form's size (the first size with the plan's sections in its proportions). A plan of
  * no built-in form is left as it is. False only when out of memory; nothing is Given yet when the plan reader calls it.
  */
-bool piece_form_record_migrate(PiecePlan *plan);
+bool piece_form_record_migrate(Plan *plan);
 
 /*
  * What the Composer adds to the plan reader (plan_json.h): its keys are made of the major and the natural minor only, and a plan of

@@ -101,7 +101,7 @@ static PlanNote note(int pitch, Rational offset, Rational duration) {
     return result;
 }
 
-static void add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span, const PlanNote *notes,
+static void add_notes(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span, const PlanNote *notes,
                       size_t count) {
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
@@ -112,7 +112,7 @@ static void add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voic
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 }
 
-static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
+static void add_meter_and_key(Plan *plan, NodeId owner, PlanSpan span) {
     PlanLanePayload meter;
     memset(&meter, 0, sizeof(meter));
     meter.meter.beats_per_bar = 4;
@@ -146,8 +146,8 @@ static const BlockChord BLOCK[] = {
 static const char *const BLOCK_NUMERALS[BLOCK_COUNT] = {"I", "IV", "V7", "I"};
 
 /* The hand-written progression: I IV V7 I, three bars of C major in 4/4, in four voices, a chord starting every note. */
-static PiecePlan *block_plan(void) {
-    PiecePlan *plan = plan_create();
+static Plan *block_plan(void) {
+    Plan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 3), "form", &form) == PLAN_OK);
     add_meter_and_key(plan, form, bars(0, 3));
@@ -185,7 +185,7 @@ typedef struct {
 } Heard;
 
 /* Renders and hears a whole plan in C major through the library chain; the caller destroys *heard. */
-static void analyze(const PiecePlan *plan, Heard *heard) {
+static void analyze(const Plan *plan, Heard *heard) {
     memset(heard, 0, sizeof(*heard));
     assert(plan_render(plan, &heard->rendered) == PLAN_RENDER_OK);
     heard->midi = calloc(heard->rendered.count ? heard->rendered.count : 1, sizeof(int));
@@ -328,7 +328,7 @@ static bool ratio_is(ComposerRatio ratio, unsigned long numerator, unsigned long
 
 /* The labels of the hand-written progression and its soprano, against the Analyzer's of the same material. */
 static void test_block_labels(void) {
-    PiecePlan *plan = block_plan();
+    Plan *plan = block_plan();
     Heard analysis;
     analyze(plan, &analysis);
     ComposerStyleNote soprano[BLOCK_COUNT];
@@ -431,7 +431,7 @@ static void test_before(void) {
 /* ----------------------------------------------------------------- closeness */
 
 static void write_style(const char *path) {
-    PiecePlan *plan = block_plan();
+    Plan *plan = block_plan();
     Heard analysis;
     analyze(plan, &analysis);
     StyleProfile *profile = heard_profile(&analysis);
@@ -535,7 +535,7 @@ static unsigned long long fnv(const char *text) {
 }
 
 /* A sentence in C major 4/4 grown from a motive, 8 bars, ending in a PAC. */
-static PiecePlan *sentence_plan(Motive *motive) {
+static Plan *sentence_plan(Motive *motive) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.knowledge = test_knowledge();
@@ -552,7 +552,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     request.pairing.beginning = SECTION_BEGINNING_PRESENTATION;
     request.pairing.ending = SECTION_ENDING_CONTINUATION;
     request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     assert(grow_build_plan_checked(&request, &plan, NULL) == GROW_OK);
     return plan;
 }
@@ -568,7 +568,7 @@ typedef struct {
 
 static Run compose_sentence(unsigned long seed, const ComposerStyle *style, ComposerRatio weight) {
     Motive motive;
-    PiecePlan *plan = sentence_plan(&motive);
+    Plan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
@@ -756,7 +756,7 @@ static int test_motive_labels(void) {
 static void repetition_degrees(unsigned long seed, const ComposerStyle *style, char out[64]) {
     static const char *const DEGREES[12] = {"1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"};
     Motive motive;
-    PiecePlan *plan = sentence_plan(&motive);
+    Plan *plan = sentence_plan(&motive);
     GrowConfig config;
     GrowOutcome outcome;
     memset(&config, 0, sizeof(config));
@@ -812,7 +812,7 @@ static int test_motive_preference(void) {
 }
 
 /* A plan keeps the without list of its style; a plan with none reads back with none (old plans load). */
-static const PlanStyle *style_of(const PiecePlan *plan) {
+static const PlanStyle *style_of(const Plan *plan) {
     const PlanStyle *found = NULL;
     for (size_t i = 0; i < plan_node_constraint_count(plan, plan_root(plan)); i++) {
         const PlanConstraint *item = plan_node_constraint_at(plan, plan_root(plan), i);
@@ -824,7 +824,7 @@ static const PlanStyle *style_of(const PiecePlan *plan) {
 }
 
 static char *plan_json_with(size_t without_count) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 3), "form", &form) == PLAN_OK);
     PlanConstraint constraint;
@@ -844,7 +844,7 @@ static char *plan_json_with(size_t without_count) {
 static int test_plan_without(void) {
     char *json = plan_json_with(2);
     assert(strstr(json, "\"without\": [") && strstr(json, "motive-rhythm"));
-    PiecePlan *again = NULL;
+    Plan *again = NULL;
     assert(plan_from_json(test_knowledge(), json, composer_plan_read_hooks(), &again, NULL) == PLAN_OK);
     const PlanStyle *read = style_of(again);
     assert(read && read->without_count == 2 && strcmp(read->without[0], "motive-degrees") == 0 &&
@@ -870,7 +870,7 @@ static int test_measure_without_motives(void) {
     assert(composer_style_load_without(CHORALES_MOTIVES, NULL, 0, &kept) == COMPOSER_STYLE_OK);
     assert(composer_style_load_without(CHORALES_MOTIVES, MOTIVE_CATEGORIES, 4, &cut) == COMPOSER_STYLE_OK);
     Motive motive;
-    PiecePlan *plan = sentence_plan(&motive);
+    Plan *plan = sentence_plan(&motive);
     ComposeConfig config;
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();

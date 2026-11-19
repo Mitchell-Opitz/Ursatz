@@ -224,7 +224,7 @@ typedef struct {
 
 /* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     const GrowThemeSpec *spec;
     const GrowThemeRequest *request;
     GrowLayout layout;       /* the spec's layout */
@@ -268,7 +268,7 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
 PlanResult grow_add_melody_written(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref, const Motive *motive);
 
 /* The key lane over the section: see grow_theme.c. False when the lane does not tile the section. */
-bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request);
+bool grow_read_keys(const Plan *plan, GrowThemeRequest *request);
 /* The first bar of the material section a run of `wanted` motive bars can go in (see grow_theme.c). */
 /*
  * The most motives grow-theme makes in the material, one bar each: the two segments of the fragments and a liquidation for each of
@@ -276,7 +276,7 @@ bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request);
  */
 #define GROW_MADE_NODES 5
 
-size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, Rational bar, size_t wanted);
+size_t grow_first_free_bar(const Plan *plan, NodeId material, PlanSpan material_span, Rational bar, size_t wanted);
 
 /*
  * Free phrases (R-170): a section with a FREE_PHRASE constraint is a phrase of any length in beats, laid out as one
@@ -284,10 +284,10 @@ size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan mate
  */
 #define GROW_FREE_MAGIC 0x47465231UL
 typedef struct GrowFreeSpec GrowFreeSpec;
-bool grow_free_applies(const PiecePlan *plan, FillTarget target);
-bool grow_free_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_free_applies(const Plan *plan, FillTarget target);
+bool grow_free_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out);
-PlanResult grow_free_apply(PiecePlan *plan, FillTarget target, const GrowFreeSpec *spec);
+PlanResult grow_free_apply(Plan *plan, FillTarget target, const GrowFreeSpec *spec);
 /* The checker's verdict on a free phrase candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
 const char *grow_free_judge(const GrowFreeSpec *spec, unsigned *held, unsigned *total);
 
@@ -297,10 +297,10 @@ const char *grow_free_judge(const GrowFreeSpec *spec, unsigned *held, unsigned *
  */
 #define GROW_LIQUIDATE_MAGIC 0x474C5131UL
 typedef struct GrowLiquidateSpec GrowLiquidateSpec;
-bool grow_liquidate_applies(const PiecePlan *plan, FillTarget target);
-bool grow_liquidate_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_liquidate_applies(const Plan *plan, FillTarget target);
+bool grow_liquidate_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                              FillCandidateList *out);
-PlanResult grow_liquidate_apply(PiecePlan *plan, FillTarget target, const GrowLiquidateSpec *spec);
+PlanResult grow_liquidate_apply(Plan *plan, FillTarget target, const GrowLiquidateSpec *spec);
 /* The checker's verdict on a liquidation candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
 const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, unsigned *total);
 
@@ -311,10 +311,10 @@ const char *grow_liquidate_judge(const GrowLiquidateSpec *spec, unsigned *held, 
  */
 #define GROW_CODA_MAGIC 0x47434F31UL
 typedef struct GrowCodaSpec GrowCodaSpec;
-bool grow_coda_applies(const PiecePlan *plan, FillTarget target);
-bool grow_coda_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+bool grow_coda_applies(const Plan *plan, FillTarget target);
+bool grow_coda_generate(const Plan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
                         FillCandidateList *out);
-PlanResult grow_coda_apply(PiecePlan *plan, FillTarget target, const GrowCodaSpec *spec);
+PlanResult grow_coda_apply(Plan *plan, FillTarget target, const GrowCodaSpec *spec);
 /* The checker's verdict on a coda candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
 const char *grow_coda_judge(const GrowCodaSpec *spec, unsigned *held, unsigned *total);
 /* The main theme head: m0's leading notes that fit `half` (a half bar), 3 at most and 2 at least, as a literal motive with V for its own harmony. */
@@ -384,7 +384,7 @@ size_t grow_construction_extra_bars(const SectionPairing *pairing, const Section
  * The sentence grow_construction_describe writes for the theme section's CONSTRUCTION and THEME_PAIRING constraints, ""
  * (and 0) for a section without a construction.
  */
-size_t grow_section_describe(const PiecePlan *plan, NodeId section, char *text, size_t size);
+size_t grow_section_describe(const Plan *plan, NodeId section, char *text, size_t size);
 /* The bars a construction's repeats and additions need in the material at most: a bar each at least, else their own. */
 size_t grow_extension_material_bars(const SectionPairing *pairing, const SectionConstruction *construction);
 /*
@@ -448,7 +448,7 @@ bool grow_idea_place(const SectionPairing *pairing, GrowIdea idea, GrowPlace *pl
 /* The eighths of the theme the idea at a place has. */
 size_t grow_place_units(const SectionPairing *pairing, GrowPlace place);
 /* The material node of an idea's own motive ("i<k>"), else PLAN_NODE_NONE. */
-NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea);
+NodeId grow_find_idea_node(const Plan *plan, GrowIdea idea);
 /* The name of the idea's material node. */
 const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size);
 /* Whether the idea is a segment of m0 (a continuation's fragment, ch. VIII), and the segment when it is. */
@@ -458,7 +458,7 @@ const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea);
 /* The motive node an idea's motive ref names: its slot's own node, else the build's source. */
 NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea);
 /* The material node of the slot's motive ("s1" to "s3"), else PLAN_NODE_NONE. */
-NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot);
+NodeId grow_find_slot_node(const Plan *plan, GrowSlot slot);
 /* The name of the slot's material node; NULL for the basic slot. */
 const char *grow_slot_node_name(GrowSlot slot);
 
@@ -519,9 +519,9 @@ bool grow_part_basic_idea(const Motive *motive, Rational bar, size_t part_bars, 
 size_t grow_motive_layout_bars(const Motive *motive, Rational bar);
 
 /* The node named "m0" of the plan (its Given source motive), else PLAN_NODE_NONE. */
-NodeId grow_find_source(const PiecePlan *plan);
+NodeId grow_find_source(const Plan *plan);
 /* Reads the motive on a motive node's Given or Realized melody lane span, with the meter and key given. */
-bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const SpelledKey *key, Motive *out);
+bool grow_read_motive(const Plan *plan, NodeId node, const PlanMeter *meter, const SpelledKey *key, Motive *out);
 
 /*
  * One segment of a motive as a motive of its own: its notes from time 0 (no pickup), with the source's meter and key, the
@@ -568,15 +568,15 @@ MotiveScore grow_fidelity_minimum_in(const GrowFidelityTable *table, GrowDevelop
  * feature of basic when its notes are m0's, else the proposal) and sets *from_segment; a liquidation by segments is made
  * from m0 whole. basic may be NULL. False when the span has no MOTIVE_REF or its nodes cannot be read.
  */
-bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, Motive *source,
+bool grow_idea_fidelity_source(const Plan *plan, LaneSpanId melody, const Motive *basic, Motive *source,
                                PlanMotiveRef *ref, bool *from_segment);
 /*
  * The notes the idea's melody span holds inside its motive node's length (onsets from the span's start, the pickup part of
  * the length), as a motive in the key and meter of the lanes over the span. False when no note falls inside.
  */
-bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out);
+bool grow_idea_realized(const Plan *plan, LaneSpanId melody, Motive *out);
 /* The two above and motive_fidelity. */
-bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out);
+bool grow_idea_fidelity(const Plan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out);
 
 /*
  * Whether the ref itself makes the idea differ from its source (a liquidation, a fragment by notes, an inversion, any relation
@@ -622,10 +622,10 @@ typedef struct {
  * A cadential idea is for its cadence: it is refused under its minimum (its score only; the search never reaches its residue)
  * but ranked by the melody rules alone, which put the cadence tone first.
  */
-bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool grow_fidelity_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out);
 
 /* The first section that asks for an archetype and a theme pairing; with open_only, a Constrained one. */
-NodeId grow_find_theme(const PiecePlan *plan, bool open_only);
+NodeId grow_find_theme(const Plan *plan, bool open_only);
 
 #endif

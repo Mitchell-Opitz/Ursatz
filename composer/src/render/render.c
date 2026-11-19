@@ -69,17 +69,17 @@ void rendered_plan_destroy(RenderedPlan *rendered) {
 
 /* ----------------------------------------------------------------- material */
 
-static bool section_is_material(const PiecePlan *plan, NodeId id) {
+static bool section_is_material(const Plan *plan, NodeId id) {
     return plan_section_has_role(plan, id, SECTION_ROLE_MATERIAL);
 }
 
 /* Whether the section is the seam: the copy of the body's first bar after the loop's end, which is not part of the piece. */
-static bool section_is_seam(const PiecePlan *plan, NodeId id) {
+static bool section_is_seam(const Plan *plan, NodeId id) {
     return plan_section_has_role(plan, id, SECTION_ROLE_SEAM);
 }
 
 /* True for a node that is, or sits under, the seam section. */
-static bool node_is_seam(const PiecePlan *plan, NodeId id) {
+static bool node_is_seam(const Plan *plan, NodeId id) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
         if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && section_is_seam(plan, id)) {
             return true;
@@ -89,7 +89,7 @@ static bool node_is_seam(const PiecePlan *plan, NodeId id) {
 }
 
 /* True for a node that is, or sits under, a section marked MATERIAL. */
-static bool node_is_material(const PiecePlan *plan, NodeId id) {
+static bool node_is_material(const Plan *plan, NodeId id) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
         if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && section_is_material(plan, id)) {
             return true;
@@ -102,7 +102,7 @@ static bool node_is_material(const PiecePlan *plan, NodeId id) {
  * Whether the lane sounds where the node is: false only when the section the node is in carries a LAYERS constraint
  * whose mask leaves the lane out (a layer of a layered form). A section with no LAYERS sounds every lane.
  */
-static bool lane_sounds_in(const PiecePlan *plan, NodeId id, PlanLaneKind lane) {
+static bool lane_sounds_in(const Plan *plan, NodeId id, PlanLaneKind lane) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
         if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
             continue;
@@ -114,7 +114,7 @@ static bool lane_sounds_in(const PiecePlan *plan, NodeId id, PlanLaneKind lane) 
 }
 
 /* The end of the last section that is not material or the seam; zero when the form has no such section. */
-static Rational piece_end_of(const PiecePlan *plan) {
+static Rational piece_end_of(const Plan *plan) {
     Rational end = {0, 1};
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -371,7 +371,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
 
 /* ------------------------------------------------------------------ meter */
 
-static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t count, const PiecePlan *plan,
+static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t count, const Plan *plan,
                                         const PlanSpan *range, MeterMap **out) {
     *out = NULL;
     if (count == 0) {
@@ -447,7 +447,7 @@ static bool add_skip(RenderSkip **skipped, size_t *count, size_t *capacity, Lane
 }
 
 /* Sorts span ids by the start of their spans. */
-static void sort_by_start(const PiecePlan *plan, LaneSpanId *ids, size_t count) {
+static void sort_by_start(const Plan *plan, LaneSpanId *ids, size_t count) {
     for (size_t i = 1; i < count; i++) {
         LaneSpanId moving = ids[i];
         size_t position = i;
@@ -473,7 +473,7 @@ static PlanRenderResult tuning_create(TuningSystem **out) {
     return PLAN_RENDER_OK;
 }
 
-static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
+static PlanRenderResult render_into(const Plan *plan, const PlanSpan *range, RenderedPlan *out) {
     size_t span_count = plan_lane_span_count(plan);
     size_t skipped_capacity = 0;
     LaneSpanId *meter_spans = calloc(span_count + 1, sizeof(LaneSpanId));
@@ -715,13 +715,13 @@ PlanRenderResult render_notes(const RenderNote *notes, size_t count, const Spell
 
 /* ----------------------------------------------------------------- sections */
 
-static const char *section_label(const PiecePlan *plan, NodeId id) {
+static const char *section_label(const Plan *plan, NodeId id) {
     const SectionDescription *section = plan_node_section(plan, id);
     return section && section->letter[0] ? section->letter : plan_node_name(plan, id);
 }
 
 /* The sections that are not material and start inside the range (all of them without one), earliest first. */
-static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
+static PlanRenderResult render_sections(const Plan *plan, const PlanSpan *range, RenderedPlan *out) {
     NodeId root = plan_root(plan);
     size_t child_count = root == PLAN_NODE_NONE ? 0 : plan_node_child_count(plan, root);
     if (child_count == 0) {
@@ -777,7 +777,7 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
     return result;
 }
 
-static PlanRenderResult render_checked(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
+static PlanRenderResult render_checked(const Plan *plan, const PlanSpan *range, RenderedPlan *out) {
     if (!out) {
         return PLAN_RENDER_ERR_NULL;
     }
@@ -804,6 +804,6 @@ static PlanRenderResult render_checked(const PiecePlan *plan, const PlanSpan *ra
     return result;
 }
 
-PlanRenderResult plan_render(const PiecePlan *plan, RenderedPlan *out) {
+PlanRenderResult plan_render(const Plan *plan, RenderedPlan *out) {
     return render_checked(plan, NULL, out);
 }

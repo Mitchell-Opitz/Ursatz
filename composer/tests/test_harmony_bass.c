@@ -33,7 +33,7 @@ typedef struct {
 } Scenario;
 
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     NodeId owner;
     LaneSpanId target;
     LaneSpanId given_bass; /* a Given bass span after the phrase, which nothing may change */
@@ -54,7 +54,7 @@ static Rational time_plus(Rational a, Rational b) {
     return sum;
 }
 
-static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, const int *pitches, int count) {
+static LaneSpanId add_bass(Plan *plan, NodeId owner, PlanSpan span, const int *pitches, int count) {
     PlanNote notes[8];
     PlanLanePayload payload;
     LaneSpanId id;

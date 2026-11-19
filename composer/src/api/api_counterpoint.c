@@ -37,7 +37,7 @@ typedef struct {
 
 /* One counter-melody written: its plan, the target and the verdict of the library. */
 typedef struct {
-    PiecePlan *plan;
+    Plan *plan;
     LaneSpanId target;
     unsigned long seed;
     CounterpointReport report;
@@ -163,8 +163,8 @@ static Rational fraction(long num, unsigned long den) {
  * The plan the operator works on: a form over the length of the line, the meter and the key given, the line as the melody
  * (below) or the bass (above), and an open inner voice span over the same time with the counterpoint constraint.
  */
-static PiecePlan *build_plan(const Options *options, const Motive *motive, LaneSpanId *target) {
-    PiecePlan *plan = plan_create();
+static Plan *build_plan(const Options *options, const Motive *motive, LaneSpanId *target) {
+    Plan *plan = plan_create();
     PlanSpan all = {fraction(0, 1), motive->length};
     PlanLanePayload payload;
     PlanConstraint constraint;
@@ -217,7 +217,7 @@ static void result_destroy(Result *result) {
 }
 
 /* The notes of the counter-melody as text, to tell two results apart. */
-static void sign(const PiecePlan *plan, LaneSpanId target, char *out, size_t size) {
+static void sign(const Plan *plan, LaneSpanId target, char *out, size_t size) {
     const PlanNotes *notes = &plan_lane_span_payload(plan, target)->notes;
     size_t used = 0;
     out[0] = '\0';
@@ -257,7 +257,7 @@ static bool write_one(const Options *options, const Motive *motive, unsigned lon
 
 /* --- the result ------------------------------------------------------------------------------------------- */
 
-static cJSON *notes_json(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span) {
+static cJSON *notes_json(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span) {
     LaneSpanId ids[512];
     size_t found = plan_lane_find(plan, lane, voice, span, ids, 512);
     cJSON *list = cJSON_CreateArray();
@@ -389,7 +389,7 @@ ComposerStatus composer_api_counterpoint(const ComposerContext *context, const c
     /* Whether the line is one the species can be written against, before any seed is tried. */
     if (status == COMPOSER_OK) {
         LaneSpanId target;
-        PiecePlan *plan = build_plan(&options, &motive, &target);
+        Plan *plan = build_plan(&options, &motive, &target);
         const char *why = plan ? counterpoint_why_not(plan, target) : "the plan could not be built";
         if (why) {
             status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot be written as asked: %s", why);

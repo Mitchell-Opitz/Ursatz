@@ -155,7 +155,7 @@ const char *api_lane_label(PlanLaneKind lane);
  * The targets under node: the node itself, or with a lane every span of it under the node (all the voices for inner), into
  * a new array the caller frees. COMPOSER_ERR_UNSATISFIABLE when the node has no span of the lane.
  */
-ComposerStatus api_lane_targets(const PiecePlan *plan, NodeId node, bool has_lane, PlanLaneKind lane, FillTarget **out,
+ComposerStatus api_lane_targets(const Plan *plan, NodeId node, bool has_lane, PlanLaneKind lane, FillTarget **out,
                                 size_t *count, ComposerError *error);
 /* Why a regenerate result refused the target (what names it: "section B"): COMPOSER_ERR_UNSATISFIABLE with the message. */
 ComposerStatus api_refused(RegenerateResult result, const char *what, ComposerError *error);

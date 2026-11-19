@@ -100,7 +100,7 @@ static size_t scan_tracks(const unsigned char *data, size_t size, TrackMeta *tra
     return track;
 }
 
-static PiecePlan *filled_rounded_binary(void) {
+static Plan *filled_rounded_binary(void) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = "rounded-binary";
@@ -113,7 +113,7 @@ static PiecePlan *filled_rounded_binary(void) {
     memset(&config, 0, sizeof(config));
     config.knowledge = test_knowledge();
     config.seed = 3;
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     ComposeOutcome outcome;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     assert(compose_run(plan, &config, &outcome) == PIECE_OK);
@@ -137,7 +137,7 @@ static bool has_name(const TrackMeta *track, const char *name) {
     return false;
 }
 
-static void test_midi(const RenderedPlan *rendered, const PiecePlan *plan) {
+static void test_midi(const RenderedPlan *rendered, const Plan *plan) {
     PlanExportOptions options = plan_export_options_default();
     assert(options.track_names && options.section_markers);
     assert(options.tempo_numerator == 0 && options.tempo_denominator == 0);
@@ -329,7 +329,7 @@ static void test_loop_markers(const RenderedPlan *rendered) {
 }
 
 int main(void) {
-    PiecePlan *plan = filled_rounded_binary();
+    Plan *plan = filled_rounded_binary();
     RenderedPlan rendered;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     assert(rendered.section_count == 3);

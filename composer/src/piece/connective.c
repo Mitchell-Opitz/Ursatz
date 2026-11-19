@@ -49,14 +49,14 @@ static Rational tick_before(Rational time) {
     return position_sub(time, tick);
 }
 
-static LaneSpanId span_at(const PiecePlan *plan, PlanLaneKind lane, Rational at) {
+static LaneSpanId span_at(const Plan *plan, PlanLaneKind lane, Rational at) {
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     PlanSpan range = {at, {1, 4096}};
     return plan_lane_find(plan, lane, 0, range, &id, 1) > 0 ? id : PLAN_LANE_SPAN_NONE;
 }
 
 /* The section that starts where this one ends; PLAN_NODE_NONE when there is none (material is not a section of the piece). */
-static NodeId next_section(const PiecePlan *plan, NodeId section) {
+static NodeId next_section(const Plan *plan, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
     Rational end = position_add(span.start, span.length);
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -71,7 +71,7 @@ static NodeId next_section(const PiecePlan *plan, NodeId section) {
 }
 
 /* The pitch of the first melody note of the section that sounds from its start; false when there is none. */
-static bool first_note(const PiecePlan *plan, NodeId section, int *out) {
+static bool first_note(const Plan *plan, NodeId section, int *out) {
     PlanSpan span = plan_node_span(plan, section);
     LaneSpanId id = span_at(plan, PLAN_LANE_MELODY, span.start);
     if (id == PLAN_LANE_SPAN_NONE) {
@@ -93,7 +93,7 @@ static bool first_note(const PiecePlan *plan, NodeId section, int *out) {
 }
 
 /* The lowest and highest melody pitch of the section outside its last bar; false when it has none. */
-static bool melody_range(const PiecePlan *plan, NodeId section, Rational bar_start, int *low, int *high) {
+static bool melody_range(const Plan *plan, NodeId section, Rational bar_start, int *low, int *high) {
     PlanSpan span = plan_node_span(plan, section);
     LaneSpanId ids[CONNECTIVE_MAX_SPANS];
     size_t count = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, CONNECTIVE_MAX_SPANS);
@@ -116,7 +116,7 @@ static bool melody_range(const PiecePlan *plan, NodeId section, Rational bar_sta
 }
 
 /* The connective's written flag, set on the section's description. */
-static PieceResult mark_written(PiecePlan *plan, NodeId section) {
+static PieceResult mark_written(Plan *plan, NodeId section) {
     if (plan_section_or_empty(plan, section)->connective == SECTION_CONNECTIVE_NONE) {
         return PIECE_OK;
     }
@@ -125,7 +125,7 @@ static PieceResult mark_written(PiecePlan *plan, NodeId section) {
     return piece_result_of_plan(plan_node_set_section(plan, section, &description));
 }
 
-PieceResult piece_connective_write(PiecePlan *plan, NodeId section) {
+PieceResult piece_connective_write(Plan *plan, NodeId section) {
     if (!plan || !plan_has_node(plan, section) || plan_section_or_empty(plan, section)->connective == SECTION_CONNECTIVE_NONE) {
         return PIECE_ERR_NULL;
     }

@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
                     /* Not buildable: the pairing cannot be built, or the plan refuses the motif before any seeding. */
                     GrowRequest request;
                     GrowRefusal refusal;
-                    PiecePlan *plan = NULL;
+                    Plan *plan = NULL;
                     memset(&refusal, 0, sizeof(refusal));
                     api_grow_request_for(&setup, 1, &request);
                     bool buildable = grow_theme_buildable(&setup.meter, bars, &setup.pairing, setup.cadence, setup.first_cadence) &&

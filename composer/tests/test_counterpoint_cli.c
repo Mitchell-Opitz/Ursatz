@@ -91,7 +91,7 @@ static void test_suggest(void) {
 
 static void test_files(void) {
     char *text = output_of(BASE " --species 2 --seed 3 --out cp_cli.json --midi cp_cli.mid --musicxml cp_cli.xml");
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     char *midi;
     LaneSpanId ids[4];

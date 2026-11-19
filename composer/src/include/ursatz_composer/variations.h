@@ -27,7 +27,7 @@
  * out->count between 0 and count: the caller decides what none kept means. out->seeds_tried is the seeds run.
  */
 typedef struct {
-    PiecePlan *plan;       /* owned */
+    Plan *plan;       /* owned */
     unsigned long seed;    /* the seed that made it */
     uint64_t signature;
     ComposeOutcome outcome; /* owned */
@@ -41,7 +41,7 @@ typedef struct {
 
 #define PLAN_VARIATIONS_MAX 16
 
-RegenerateResult plan_variations(const PiecePlan *plan, const FillTarget *targets, size_t target_count,
+RegenerateResult plan_variations(const Plan *plan, const FillTarget *targets, size_t target_count,
                                  const ComposeConfig *config, size_t count, PlanVariations *out);
 
 void plan_variations_destroy(PlanVariations *variations);
@@ -54,10 +54,10 @@ void plan_variations_destroy(PlanVariations *variations);
  * numeral), so a harmonization is kept only when its chords differ from the plan's and from those kept before. The melody is never changed, so every
  * variation keeps every melody note.
  */
-RegenerateResult plan_harmonizations(const PiecePlan *plan, NodeId section, const ComposeConfig *config, size_t count,
+RegenerateResult plan_harmonizations(const Plan *plan, NodeId section, const ComposeConfig *config, size_t count,
                                      PlanVariations *out);
 
 /* The signature of a plan's rendering, described above. 0 when the plan cannot be rendered. */
-uint64_t plan_signature(const PiecePlan *plan);
+uint64_t plan_signature(const Plan *plan);
 
 #endif

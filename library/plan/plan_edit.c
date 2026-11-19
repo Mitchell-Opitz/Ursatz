@@ -28,7 +28,7 @@ static bool constraints_clone(const ConstraintList *from, ConstraintList *to, co
 }
 
 /* The ids of the live nodes, 1 to n in id order; 0 for a removed node. */
-static NodeId *node_map_make(const PiecePlan *plan, size_t *live) {
+static NodeId *node_map_make(const Plan *plan, size_t *live) {
     NodeId *map = calloc(plan->node_count + 1, sizeof(NodeId));
     *live = 0;
     for (size_t i = 0; map && i < plan->node_count; i++) {
@@ -39,7 +39,7 @@ static NodeId *node_map_make(const PiecePlan *plan, size_t *live) {
     return map;
 }
 
-static PlanResult nodes_clone(const PiecePlan *plan, PiecePlan *copy, const NodeId *node_map, size_t live) {
+static PlanResult nodes_clone(const Plan *plan, Plan *copy, const NodeId *node_map, size_t live) {
     if (live == 0) {
         return PLAN_OK;
     }
@@ -85,7 +85,7 @@ static PlanResult nodes_clone(const PiecePlan *plan, PiecePlan *copy, const Node
     return PLAN_OK;
 }
 
-static PlanResult lane_spans_clone(const PiecePlan *plan, PiecePlan *copy, const NodeId *node_map) {
+static PlanResult lane_spans_clone(const Plan *plan, Plan *copy, const NodeId *node_map) {
     size_t live = plan->lane_span_count - plan->removed_lane_span_count;
     if (live == 0) {
         return PLAN_OK;
@@ -123,7 +123,7 @@ static PlanResult lane_spans_clone(const PiecePlan *plan, PiecePlan *copy, const
     return PLAN_OK;
 }
 
-PlanResult plan_clone(const PiecePlan *plan, PiecePlan **out) {
+PlanResult plan_clone(const Plan *plan, Plan **out) {
     if (!out) {
         return PLAN_ERR_NULL;
     }
@@ -131,7 +131,7 @@ PlanResult plan_clone(const PiecePlan *plan, PiecePlan **out) {
     if (!plan) {
         return PLAN_ERR_NULL;
     }
-    PiecePlan *copy = plan_create();
+    Plan *copy = plan_create();
     size_t live = 0;
     NodeId *node_map = copy ? node_map_make(plan, &live) : NULL;
     if (!copy || !node_map) {
@@ -156,23 +156,23 @@ PlanResult plan_clone(const PiecePlan *plan, PiecePlan **out) {
     return PLAN_OK;
 }
 
-PlanResult plan_copy_into(PiecePlan *plan, const PiecePlan *source) {
+PlanResult plan_copy_into(Plan *plan, const Plan *source) {
     if (!plan || !source) {
         return PLAN_ERR_NULL;
     }
-    PiecePlan *copy = NULL;
+    Plan *copy = NULL;
     PlanResult result = plan_clone(source, &copy);
     if (result != PLAN_OK) {
         return result;
     }
-    PiecePlan old = *plan;
+    Plan old = *plan;
     *plan = *copy;
     *copy = old;
     plan_destroy(copy);
     return PLAN_OK;
 }
 
-PlanResult plan_lane_span_reopen(PiecePlan *plan, LaneSpanId span, NodeId owner) {
+PlanResult plan_lane_span_reopen(Plan *plan, LaneSpanId span, NodeId owner) {
     if (!plan) {
         return PLAN_ERR_NULL;
     }

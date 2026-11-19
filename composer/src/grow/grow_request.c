@@ -50,7 +50,7 @@ const char *grow_slot_node_name(GrowSlot slot) {
     return row ? row->node_name : NULL;
 }
 
-NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot) {
+NodeId grow_find_slot_node(const Plan *plan, GrowSlot slot) {
     const char *wanted = grow_slot_node_name(slot);
     for (NodeId id = 1; wanted && id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
@@ -87,7 +87,7 @@ const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size) {
     return buffer;
 }
 
-NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea) {
+NodeId grow_find_idea_node(const Plan *plan, GrowIdea idea) {
     char wanted[8];
     grow_idea_node_name(idea, wanted, sizeof(wanted));
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -608,7 +608,7 @@ GrowResult grow_check_given_cadences(const GrowRequest *request, CadenceType fir
     return result;
 }
 
-GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, GrowRefusal *refusal) {
+GrowResult grow_build_plan_checked(const GrowRequest *request, Plan **out, GrowRefusal *refusal) {
     if (refusal) {
         memset(refusal, 0, sizeof(*refusal));
     }
@@ -768,7 +768,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     segment_bars += request->contrast.new_material > 0 ? 2 : 0;
     size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count + extra_bars + segment_bars;
 
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     if (!plan) {
         return GROW_ERR_ALLOC;
     }
@@ -933,7 +933,7 @@ GrowResult grow_build_plan_checked(const GrowRequest *request, PiecePlan **out, 
     return GROW_OK;
 }
 
-NodeId grow_find_source(const PiecePlan *plan) {
+NodeId grow_find_source(const Plan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
         if (plan_node_kind(plan, id) == PLAN_NODE_MOTIVE && name && strcmp(name, GROW_SOURCE_NAME) == 0) {
@@ -943,7 +943,7 @@ NodeId grow_find_source(const PiecePlan *plan) {
     return PLAN_NODE_NONE;
 }
 
-bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const SpelledKey *key, Motive *out) {
+bool grow_read_motive(const Plan *plan, NodeId node, const PlanMeter *meter, const SpelledKey *key, Motive *out) {
     LaneSpanId ids[16];
     size_t found = plan_node_lane_spans(plan, node, ids, 16);
     for (size_t i = 0; i < found && i < 16; i++) {
@@ -968,7 +968,7 @@ bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter
     return false;
 }
 
-NodeId grow_find_theme(const PiecePlan *plan, bool open_only) {
+NodeId grow_find_theme(const Plan *plan, bool open_only) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_node_kind(plan, id) != PLAN_NODE_SECTION ||
             (open_only && plan_node_state(plan, id) != PLAN_STATE_CONSTRAINED)) {

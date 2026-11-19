@@ -48,13 +48,13 @@ typedef enum {
 const char *given_result_name(GivenResult result);
 
 /* A melody span, as long as the notes need in whole bars, Given. */
-GivenResult plan_give_melody(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+GivenResult plan_give_melody(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);
 
 /*
  * The numerals, one chord each, cells_per_chord cells long, from the bar. Chords may begin anywhere a cell does, so a
  * progression may end inside a bar.
  */
-GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, const char *const *numerals, size_t count,
+GivenResult plan_give_progression(Plan *plan, NodeId section, size_t bar, const char *const *numerals, size_t count,
                                   size_t cells_per_chord);
 
 /* One chord at an exact place: onset from the section's start, length to its end. */
@@ -70,7 +70,7 @@ typedef struct {
  * and of the harmony already there; the meter must be one the harmony operators support. A refused call leaves the
  * plan as it was.
  */
-GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *chords, size_t count);
+GivenResult plan_give_chords(Plan *plan, NodeId section, const GivenChord *chords, size_t count);
 
 /*
  * The length of a harmony cell in the meter, in whole notes: the grid the harmony and bass operators write chords on (a
@@ -80,7 +80,7 @@ GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *
 bool given_cell_length(const PlanMeter *meter, Rational *length);
 
 /* A bass span, as long as the notes need in whole bars, Given. */
-GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+GivenResult plan_give_bass(Plan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);
 
 /*
  * A realized section of another plan (a theme the theme command composed) given to a section of this one: its harmony,
@@ -94,17 +94,17 @@ GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const Pl
  * span that would start before the section's pickup) and in the same meter (GIVEN_ERR_METER). A refused call leaves
  * the plan as it was.
  */
-GivenResult plan_give_section(PiecePlan *plan, NodeId section, const PiecePlan *source, NodeId source_section);
+GivenResult plan_give_section(Plan *plan, NodeId section, const Plan *source, NodeId source_section);
 
 /*
  * The parts of span that no Given span of the lane and voice covers, in time order: *out receives up to capacity
  * spans, and the count in all is returned. A span nothing Given touches is its own single gap; a span covered wholly
  * has none. The operators that open targets (grow-theme) open them only over the gaps.
  */
-size_t given_gaps(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, PlanSpan *out, size_t capacity);
+size_t given_gaps(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span, PlanSpan *out, size_t capacity);
 
 /* Whether a Given span of the lane and voice overlaps the span. */
-bool given_touches(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span);
+bool given_touches(const Plan *plan, PlanLaneKind lane, int voice, PlanSpan span);
 
 /*
  * A copy of the Given material of a plan that the user placed (harmony, bass, melody and inner voice spans owned by a
@@ -113,7 +113,7 @@ bool given_touches(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan
 typedef struct GivenSnapshot GivenSnapshot;
 
 /* NULL when out of memory; a plan with no such material gives a snapshot of none. */
-GivenSnapshot *given_snapshot(const PiecePlan *plan);
+GivenSnapshot *given_snapshot(const Plan *plan);
 void given_snapshot_destroy(GivenSnapshot *snapshot);
 
 /* One run of Given spans in a row (a progression is a span a chord), as the snapshot found it and as the plan holds it now. */
@@ -127,6 +127,6 @@ typedef struct {
 } GivenReport;
 
 /* The runs in the snapshot, in the order of their spans; up to capacity are written, the count in all is returned. */
-size_t given_snapshot_report(const GivenSnapshot *snapshot, const PiecePlan *plan, GivenReport *out, size_t capacity);
+size_t given_snapshot_report(const GivenSnapshot *snapshot, const Plan *plan, GivenReport *out, size_t capacity);
 
 #endif

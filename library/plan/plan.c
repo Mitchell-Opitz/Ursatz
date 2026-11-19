@@ -19,19 +19,19 @@ bool plan_span_contains(PlanSpan outer, PlanSpan inner) {
     return rational_cmp(inner.start, outer.start) >= 0 && rational_cmp(inner_end, outer_end) <= 0;
 }
 
-PiecePlan *plan_create(void) {
-    PiecePlan *plan = calloc(1, sizeof(PiecePlan));
+Plan *plan_create(void) {
+    Plan *plan = calloc(1, sizeof(Plan));
     if (plan) {
         plan->next_note_id = 1;
     }
     return plan;
 }
 
-const char *plan_analyzer_version(const PiecePlan *plan) {
+const char *plan_analyzer_version(const Plan *plan) {
     return plan ? plan->analyzer_version : "";
 }
 
-PlanResult plan_set_form_record(PiecePlan *plan, const PlanFormRecord *record) {
+PlanResult plan_set_form_record(Plan *plan, const PlanFormRecord *record) {
     if (!plan || !record) {
         return PLAN_ERR_NULL;
     }
@@ -49,11 +49,11 @@ PlanResult plan_set_form_record(PiecePlan *plan, const PlanFormRecord *record) {
     return PLAN_OK;
 }
 
-const PlanFormRecord *plan_form_record(const PiecePlan *plan) {
+const PlanFormRecord *plan_form_record(const Plan *plan) {
     return plan && plan->has_form_record ? &plan->form_record : NULL;
 }
 
-PlanResult plan_set_analyzer_version(PiecePlan *plan, const char *version) {
+PlanResult plan_set_analyzer_version(Plan *plan, const char *version) {
     if (!plan || !version) {
         return PLAN_ERR_NULL;
     }
@@ -64,7 +64,7 @@ PlanResult plan_set_analyzer_version(PiecePlan *plan, const char *version) {
     return PLAN_OK;
 }
 
-void plan_destroy(PiecePlan *plan) {
+void plan_destroy(Plan *plan) {
     if (!plan) {
         return;
     }
@@ -78,14 +78,14 @@ void plan_destroy(PiecePlan *plan) {
     free(plan);
 }
 
-PlanNode *plan_node_at(const PiecePlan *plan, NodeId id) {
+PlanNode *plan_node_at(const Plan *plan, NodeId id) {
     if (!plan || id == PLAN_NODE_NONE || id > plan->node_count || plan->nodes[id - 1].removed) {
         return NULL;
     }
     return &plan->nodes[id - 1];
 }
 
-NodeId plan_node_rank(const PiecePlan *plan, NodeId id) {
+NodeId plan_node_rank(const Plan *plan, NodeId id) {
     if (!plan_node_at(plan, id) || plan->removed_node_count == 0) {
         return id;
     }
@@ -142,7 +142,7 @@ static PlanResult append_child(PlanNode *parent, NodeId child) {
     return PLAN_OK;
 }
 
-PlanResult plan_add_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, const char *name,
+PlanResult plan_add_node(Plan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, const char *name,
                          NodeId *out_id) {
     if (!plan || !out_id) {
         return PLAN_ERR_NULL;
@@ -217,45 +217,45 @@ PlanResult plan_add_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, Plan
     return PLAN_OK;
 }
 
-bool plan_has_node(const PiecePlan *plan, NodeId id) {
+bool plan_has_node(const Plan *plan, NodeId id) {
     return plan_node_at(plan, id) != NULL;
 }
 
-size_t plan_node_count(const PiecePlan *plan) {
+size_t plan_node_count(const Plan *plan) {
     return plan ? plan->node_count : 0;
 }
 
-NodeId plan_root(const PiecePlan *plan) {
+NodeId plan_root(const Plan *plan) {
     return plan && plan->node_count > 0 ? 1 : PLAN_NODE_NONE;
 }
 
-PlanNodeKind plan_node_kind(const PiecePlan *plan, NodeId id) {
+PlanNodeKind plan_node_kind(const Plan *plan, NodeId id) {
     const PlanNode *node = plan_node_at(plan, id);
     return node ? node->kind : PLAN_NODE_FORM;
 }
 
-NodeId plan_node_parent(const PiecePlan *plan, NodeId id) {
+NodeId plan_node_parent(const Plan *plan, NodeId id) {
     const PlanNode *node = plan_node_at(plan, id);
     return node ? node->parent : PLAN_NODE_NONE;
 }
 
-PlanSpan plan_node_span(const PiecePlan *plan, NodeId id) {
+PlanSpan plan_node_span(const Plan *plan, NodeId id) {
     const PlanNode *node = plan_node_at(plan, id);
     PlanSpan empty = {{0, 1}, {0, 1}};
     return node ? node->span : empty;
 }
 
-const char *plan_node_name(const PiecePlan *plan, NodeId id) {
+const char *plan_node_name(const Plan *plan, NodeId id) {
     const PlanNode *node = plan_node_at(plan, id);
     return node ? node->name : NULL;
 }
 
-size_t plan_node_child_count(const PiecePlan *plan, NodeId id) {
+size_t plan_node_child_count(const Plan *plan, NodeId id) {
     const PlanNode *node = plan_node_at(plan, id);
     return node ? node->child_count : 0;
 }
 
-NodeId plan_node_child_at(const PiecePlan *plan, NodeId id, size_t index) {
+NodeId plan_node_child_at(const Plan *plan, NodeId id, size_t index) {
     const PlanNode *node = plan_node_at(plan, id);
     if (!node || index >= node->child_count) {
         return PLAN_NODE_NONE;
@@ -280,7 +280,7 @@ static bool set_has(const NodeSet *set, NodeId id) {
 }
 
 /* Every descendant of id (not id), into set, which has room for all of them. */
-static void collect_descendants(const PiecePlan *plan, NodeId id, NodeSet *set) {
+static void collect_descendants(const Plan *plan, NodeId id, NodeSet *set) {
     const PlanNode *node = plan_node_at(plan, id);
     for (size_t i = 0; node && i < node->child_count; i++) {
         set->ids[set->count++] = node->children[i];
@@ -323,7 +323,7 @@ static void free_node(PlanNode *node) {
 }
 
 /* Takes the node out of its parent's children. */
-static void detach_child(PiecePlan *plan, NodeId id) {
+static void detach_child(Plan *plan, NodeId id) {
     PlanNode *parent = plan_node_at(plan, plan->nodes[id - 1].parent);
     for (size_t i = 0; parent && i < parent->child_count; i++) {
         if (parent->children[i] == id) {
@@ -335,7 +335,7 @@ static void detach_child(PiecePlan *plan, NodeId id) {
 }
 
 /* Whether a section node's description returns one of the removed sections (it names it). */
-static bool section_returns_removed(const PiecePlan *plan, const PlanNode *node, const NodeSet *set) {
+static bool section_returns_removed(const Plan *plan, const PlanNode *node, const NodeSet *set) {
     if (node->kind != PLAN_NODE_SECTION || node->section.returns[0] == '\0') {
         return false;
     }
@@ -349,7 +349,7 @@ static bool section_returns_removed(const PiecePlan *plan, const PlanNode *node,
 }
 
 /* Removes the nodes of set, which holds whole subtrees, and what goes with them; nothing is changed on a refusal. */
-static PlanResult remove_nodes(PiecePlan *plan, const NodeSet *set) {
+static PlanResult remove_nodes(Plan *plan, const NodeSet *set) {
     /* Nothing is changed until every part of the removal is known to be allowed. */
     PlanResult result = PLAN_OK;
     for (size_t i = 0; result == PLAN_OK && i < set->count; i++) {
@@ -410,7 +410,7 @@ static PlanResult remove_nodes(PiecePlan *plan, const NodeSet *set) {
     return PLAN_OK;
 }
 
-PlanResult plan_remove_subtree(PiecePlan *plan, NodeId id) {
+PlanResult plan_remove_subtree(Plan *plan, NodeId id) {
     if (!plan) {
         return PLAN_ERR_NULL;
     }
@@ -428,7 +428,7 @@ PlanResult plan_remove_subtree(PiecePlan *plan, NodeId id) {
     return result;
 }
 
-PlanResult plan_node_remove_leaf(PiecePlan *plan, NodeId id) {
+PlanResult plan_node_remove_leaf(Plan *plan, NodeId id) {
     if (!plan) {
         return PLAN_ERR_NULL;
     }

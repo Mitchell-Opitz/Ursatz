@@ -78,7 +78,7 @@ is part of what makes a run reproducible.
 `FillCheckerFn` is called once per candidate:
 
 ```c
-bool checker(const PiecePlan *plan, FillTarget target, const FillOperator *op,
+bool checker(const Plan *plan, FillTarget target, const FillOperator *op,
              const FillCandidate *candidate, void *context, FillCheck *out);
 ```
 
@@ -113,19 +113,19 @@ not suggested. `fill_apply_suggestion` applies one, by its index in the set, the
 A Fill operator that writes the same pitch into every melody span:
 
 ```c
-static bool applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool applies(const Plan *plan, FillTarget target, void *context) {
     (void)context;
     return target.kind == FILL_TARGET_LANE_SPAN &&
            plan_lane_span_lane(plan, (LaneSpanId)target.id) == PLAN_LANE_MELODY;
 }
 
-static bool generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                      FillCandidateList *out) {
     (void)plan; (void)target; (void)rng; (void)context;
     return fill_candidates_add(out, "middle C", NULL, NULL);
 }
 
-static PlanResult apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate,
+static PlanResult apply(Plan *plan, FillTarget target, const FillCandidate *candidate,
                         void *context) {
     (void)candidate; (void)context;
     LaneSpanId id = (LaneSpanId)target.id;

@@ -258,7 +258,7 @@ void voicing_judge(const VoicingContext *context, const VoicingCandidate *candid
     }
 }
 
-bool voicing_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool voicing_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                      const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;

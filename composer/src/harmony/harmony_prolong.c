@@ -93,7 +93,7 @@ static const Figure PEDAL_FIGURES[] = {
 #define FIGURE_COUNT (sizeof(FIGURES) / sizeof(FIGURES[0]))
 #define PEDAL_FIGURE_COUNT (sizeof(PEDAL_FIGURES) / sizeof(PEDAL_FIGURES[0]))
 
-static bool prolong_applies(const PiecePlan *plan, FillTarget target, void *context) {
+static bool prolong_applies(const Plan *plan, FillTarget target, void *context) {
     (void)context;
     PhraseRequest request;
     return harmony_is_target(target) && harmony_prolong_read_request_given(plan, (LaneSpanId)target.id, &request);
@@ -180,7 +180,7 @@ static bool same_shape(const PlanHarmonyShape *a, const PlanHarmonyShape *b) {
  * the same shape as the request's: a prolongation that goes on as the one before it did repeats it. False when there
  * is nothing to repeat. The chords come back as the cells the request has, ready to be written again.
  */
-static bool previous_chords(const PiecePlan *plan, const PhraseRequest *request, PhraseChord *chords, size_t *count) {
+static bool previous_chords(const Plan *plan, const PhraseRequest *request, PhraseChord *chords, size_t *count) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     Rational before;
     /* The cells of a span with part cells are not those of the span before it. */
@@ -219,7 +219,7 @@ static bool previous_chords(const PiecePlan *plan, const PhraseRequest *request,
     return true;
 }
 
-static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
+static bool prolong_generate(const Plan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
     (void)context;
     PhraseRequest request;
@@ -301,7 +301,7 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
     return true;
 }
 
-static PlanResult prolong_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
+static PlanResult prolong_apply(Plan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)context;
     return harmony_progression_apply(plan, target, candidate, harmony_prolong_read_request_given);
 }
@@ -310,8 +310,8 @@ FillResult harmony_prolong_register_given(FillOperatorRegistry *registry) {
     FillOperator operator_;
     memset(&operator_, 0, sizeof(operator_));
     operator_.generator.name = HARMONY_PROLONG_OPERATOR_NAME;
-    operator_.generator.supported_inputs = "PiecePlan harmony lane span with a prolongation shape";
-    operator_.generator.supported_outputs = "PiecePlan harmony lane spans";
+    operator_.generator.supported_inputs = "Plan harmony lane span with a prolongation shape";
+    operator_.generator.supported_outputs = "Plan harmony lane spans";
     operator_.generator.configuration_description = "none";
     operator_.generator.constraints_description = "standard-harmony prolongation figures, no cadence";
     operator_.generator.deterministic = true;
@@ -338,7 +338,7 @@ static size_t changed_motive_cell(const PhraseProgression *progression) {
     return request->cells;
 }
 
-bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool harmony_prolong_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                              const FillCandidate *candidate, void *context, FillCheck *out) {
     if (!plan || !operator_ || !candidate || !out) {
         return false;

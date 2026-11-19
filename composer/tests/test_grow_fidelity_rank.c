@@ -63,7 +63,7 @@ static bool below(unsigned long a, unsigned long b, unsigned long c, unsigned lo
 }
 
 /* Every idea with a role is at or above its minimum, its fidelity read from the written plan (grow_idea_fidelity's score). Returns how many were checked. */
-static size_t check_minimums(const PiecePlan *plan, const Motive *basic, GrowDevelopment development, const char *label) {
+static size_t check_minimums(const Plan *plan, const Motive *basic, GrowDevelopment development, const char *label) {
     size_t checked = 0;
     for (NodeId idea = 1; idea <= plan_node_count(plan); idea++) {
         LaneSpanId span;
@@ -97,7 +97,7 @@ static size_t check_minimums(const PiecePlan *plan, const Motive *basic, GrowDev
 }
 
 /* Every melody-fill step that chose a candidate chose one no better candidate that was not rejected beats. Returns the steps read. */
-static size_t check_choices(const PiecePlan *plan, const FillRecord *record, const char *label) {
+static size_t check_choices(const Plan *plan, const FillRecord *record, const char *label) {
     size_t read = 0;
     assert(record);
     for (size_t s = 0; s < record->step_count; s++) {
@@ -133,7 +133,7 @@ static size_t check_choices(const PiecePlan *plan, const FillRecord *record, con
  * minimum raised to 1: the raised one refuses what is not exact, with the fidelity reason, and a candidate that stands is
  * scored as R-355 says. Returns how many candidates the raised minimum refused.
  */
-static size_t check_refusal(PiecePlan *plan, const Motive *basic, LaneSpanId span, const char *label) {
+static size_t check_refusal(Plan *plan, const Motive *basic, LaneSpanId span, const char *label) {
     assert(plan_lane_span_set_state(plan, span, PLAN_STATE_CONSTRAINED) == PLAN_OK);
     FillOperatorRegistry *registry = fill_registry_create();
     assert(registry && melody_fill_register(registry, NULL) == FILL_OK);
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
             memset(&error, 0, sizeof(error));
             snprintf(label, sizeof(label), "%s seed %lu", CASES[c].name, seed);
             assert(api_grow_run(&setup, &run, &error) == COMPOSER_OK && run.made == 1);
-            PiecePlan *plan = run.themes[0].plan;
+            Plan *plan = run.themes[0].plan;
             checked += check_minimums(plan, &motive, GROW_DEVELOP_BALANCED, label);
             chosen_steps += check_choices(plan, run.themes[0].outcome.records[GROW_STAGE_MELODY], label);
 

@@ -46,7 +46,7 @@ static GrowResult from_piece(PieceResult result) {
  * grow's seeds, and the plan has m0 Given, so there is nothing to invent. The outcome takes the records of those
  * stages and what the theme was heard as.
  */
-GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outcome) {
+GrowResult grow_run(Plan *plan, const GrowConfig *config, GrowOutcome *outcome) {
     if (!plan || !config || !outcome) {
         return GROW_ERR_NULL;
     }

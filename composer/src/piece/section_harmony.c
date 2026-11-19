@@ -40,7 +40,7 @@ static void refuse(char *message, size_t size, const char *format, ...) {
     }
 }
 
-PieceResult piece_give_harmony(PiecePlan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
+PieceResult piece_give_harmony(Plan *plan, NodeId section, const SectionHarmony *harmony, const PlanMeter *meter,
                                const SpelledKey *key, char *message, size_t message_size) {
     if (!plan || !harmony || !meter || !key) {
         return PIECE_ERR_NULL;
@@ -127,7 +127,7 @@ bool piece_check_harmony(const PlanMeter *meter, const SpelledKey *key, Rational
         return true;
     }
     /* The harmony is given to a scratch plan of one section as long as the section, in its key and meter, as the build gives it. */
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     NodeId section = PLAN_NODE_NONE;
     PlanSpan span = {{0, 1}, length};

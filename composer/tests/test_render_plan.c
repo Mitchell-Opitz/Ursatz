@@ -39,7 +39,7 @@ static Rational time_of(long num, unsigned long den) {
     return time;
 }
 
-static NodeId add(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, const char *name) {
+static NodeId add(Plan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, const char *name) {
     NodeId id = PLAN_NODE_NONE;
     assert(plan_add_node(plan, parent, kind, span, name, &id) == PLAN_OK);
     return id;
@@ -49,7 +49,7 @@ static PlanNote note(int pitch, Rational offset, Rational duration) {
     return plan_note(pitch, offset, duration);
 }
 
-static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
+static LaneSpanId add_notes(Plan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
                             const PlanNote *notes, size_t count) {
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
@@ -60,7 +60,7 @@ static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, in
     return id;
 }
 
-static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
+static void add_meter_and_key(Plan *plan, NodeId owner, PlanSpan span) {
     PlanLanePayload meter;
     memset(&meter, 0, sizeof(meter));
     meter.meter.beats_per_bar = 4;
@@ -79,8 +79,8 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
 
 #define EXPECTED_NOTES 13
 
-static PiecePlan *build_sentence_plan(void) {
-    PiecePlan *plan = plan_create();
+static Plan *build_sentence_plan(void) {
+    Plan *plan = plan_create();
     NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "form");
     NodeId section = add(plan, form, PLAN_NODE_SECTION, bars(0, 8), "A");
     NodeId phrase = add(plan, section, PLAN_NODE_PHRASE, bars(0, 8), "sentence");
@@ -128,7 +128,7 @@ static PiecePlan *build_sentence_plan(void) {
 /* ---------------------------------------------------------------- rendering */
 
 static void test_render(void) {
-    PiecePlan *plan = build_sentence_plan();
+    Plan *plan = build_sentence_plan();
     RenderedPlan rendered;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
 
@@ -236,7 +236,7 @@ static void assert_same_notes(const RenderedPlan *rendered, NoteEvent *const *ev
 }
 
 static void test_midi_round_trip(void) {
-    PiecePlan *plan = build_sentence_plan();
+    Plan *plan = build_sentence_plan();
     RenderedPlan rendered;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
 
@@ -271,7 +271,7 @@ static void test_midi_round_trip(void) {
 }
 
 static void test_musicxml_round_trip(void) {
-    PiecePlan *plan = build_sentence_plan();
+    Plan *plan = build_sentence_plan();
     RenderedPlan rendered;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
 
@@ -321,8 +321,8 @@ static void test_musicxml_round_trip(void) {
 
 /* ------------------------------------------------------------- skipped, errors */
 
-static PiecePlan *plan_with_one_melody(const PlanNote *notes, size_t count, PlanState state) {
-    PiecePlan *plan = plan_create();
+static Plan *plan_with_one_melody(const PlanNote *notes, size_t count, PlanState state) {
+    Plan *plan = plan_create();
     NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 4), "form");
     LaneSpanId span = add_notes(plan, form, PLAN_LANE_MELODY, 0, bars(0, 4), notes, count);
     assert(plan_lane_span_set_state(plan, span, state) == PLAN_OK);
@@ -331,7 +331,7 @@ static PiecePlan *plan_with_one_melody(const PlanNote *notes, size_t count, Plan
 
 static void test_constrained_is_skipped(void) {
     PlanNote notes[] = {note(60, time_of(0, 1), time_of(1, 1))};
-    PiecePlan *plan = plan_with_one_melody(notes, 1, PLAN_STATE_CONSTRAINED);
+    Plan *plan = plan_with_one_melody(notes, 1, PLAN_STATE_CONSTRAINED);
     RenderedPlan rendered;
     PlanExportError error;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
@@ -355,7 +355,7 @@ static void test_export_errors(void) {
 
     /* Two notes of one pitch overlapping in one voice. */
     PlanNote overlapping[] = {note(60, time_of(0, 1), time_of(1, 2)), note(60, time_of(1, 4), time_of(1, 2))};
-    PiecePlan *plan = plan_with_one_melody(overlapping, 2, PLAN_STATE_REALIZED);
+    Plan *plan = plan_with_one_melody(overlapping, 2, PLAN_STATE_REALIZED);
     RenderedPlan rendered;
     unsigned char *bytes = NULL;
     size_t byte_count = 0;
@@ -390,7 +390,7 @@ static void test_export_errors(void) {
 static void test_division_is_exact(void) {
     /* A seventh of a whole note is not a whole tick at 480, so the division is 7. */
     PlanNote sevenths[] = {note(60, time_of(1, 7), time_of(1, 7))};
-    PiecePlan *plan = plan_with_one_melody(sevenths, 1, PLAN_STATE_REALIZED);
+    Plan *plan = plan_with_one_melody(sevenths, 1, PLAN_STATE_REALIZED);
     RenderedPlan rendered;
     unsigned char *data = NULL;
     size_t size = 0;
@@ -428,7 +428,7 @@ static void write_bytes(const char *path, const void *data, size_t size) {
 }
 
 static void test_files_and_cli(void) {
-    PiecePlan *plan = build_sentence_plan();
+    Plan *plan = build_sentence_plan();
     PlanExportError error;
     PlanJsonError json_error;
 
@@ -481,7 +481,7 @@ static void test_files_and_cli(void) {
  * its lane and state, and the piece ends where the theme does, in the exports as well.
  */
 static void test_material_is_left_out(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "form");
     NodeId theme = add(plan, form, PLAN_NODE_SECTION, bars(0, 4), "theme");
     NodeId theme_phrase = add(plan, theme, PLAN_NODE_PHRASE, bars(0, 4), "phrase");
@@ -544,7 +544,7 @@ static void test_material_is_left_out(void) {
  * full layer sounds them all, and a section with no mask sounds everything.
  */
 static void test_layers_are_masked(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 12), "layered");
     NodeId sections[3];
     LaneSpanId spans[3][3];
@@ -585,7 +585,7 @@ static void test_layers_are_masked(void) {
 
 /* A note the plan spells is written as spelled; the same pitch unspelled takes the key's spelling (D minor: a flat). */
 static void test_spelled_notes(void) {
-    PiecePlan *plan = plan_create();
+    Plan *plan = plan_create();
     NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 2), "form");
     add_meter_and_key(plan, form, bars(0, 2));
     PlanNote notes[2] = {note(61, time_of(0, 1), time_of(1, 1)), note(61, time_of(1, 1), time_of(1, 1))};

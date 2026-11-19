@@ -62,6 +62,6 @@ FillResult harmony_embellish_register(FillOperatorRegistry *registry, const Harm
  * overlaps range becomes Constrained with an embellish constraint. Given spans
  * and spans that are already open are left alone.
  */
-PlanResult harmony_embellish_open(PiecePlan *plan, PlanSpan range);
+PlanResult harmony_embellish_open(Plan *plan, PlanSpan range);
 
 #endif

@@ -58,7 +58,7 @@ GrowIdeaRole grow_idea_role(const char *idea_name) {
 }
 
 /* The meter and key of the lanes over the span. */
-static bool read_meter_key(const PiecePlan *plan, PlanSpan span, PlanMeter *meter, SpelledKey *key) {
+static bool read_meter_key(const Plan *plan, PlanSpan span, PlanMeter *meter, SpelledKey *key) {
     LaneSpanId id;
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &id, 1) < 1) {
         return false;
@@ -80,7 +80,7 @@ static bool notes_end(const PlanNotes *notes, size_t count, Rational *out) {
  * The theme's motive m0 as the plan holds it, with the compose run's basic motive's features and pickup when m0 is its
  * first notes (grow_theme.c's draw_segments does the same), so its segments are the run's.
  */
-static bool read_m0(const PiecePlan *plan, const Motive *basic, const PlanMeter *meter, const SpelledKey *key, Motive *m0) {
+static bool read_m0(const Plan *plan, const Motive *basic, const PlanMeter *meter, const SpelledKey *key, Motive *m0) {
     NodeId node = grow_find_source(plan);
     if (node == PLAN_NODE_NONE || !grow_read_motive(plan, node, meter, key, m0)) {
         return false;
@@ -116,7 +116,7 @@ static bool read_segment(const Motive *m0, const char *label, Motive *out) {
     return false;
 }
 
-bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, Motive *source,
+bool grow_idea_fidelity_source(const Plan *plan, LaneSpanId melody, const Motive *basic, Motive *source,
                                PlanMotiveRef *ref, bool *from_segment) {
     if (!plan || !source || !ref || !from_segment || !plan_has_lane_span(plan, melody)) {
         return false;
@@ -151,7 +151,7 @@ bool grow_idea_fidelity_source(const PiecePlan *plan, LaneSpanId melody, const M
 }
 
 /* The notes as a motive in the meter and key of the lanes over the span; its length is the end of its last note. */
-static bool realized_motive(const PiecePlan *plan, LaneSpanId melody, const PlanNote *notes, size_t count, Motive *out) {
+static bool realized_motive(const Plan *plan, LaneSpanId melody, const PlanNote *notes, size_t count, Motive *out) {
     PlanMeter meter;
     SpelledKey key;
     Rational length;
@@ -170,7 +170,7 @@ static bool realized_motive(const PiecePlan *plan, LaneSpanId melody, const Plan
 }
 
 /* The length of the idea's motive node: the end of its last note, the pickup part of it (R-319). */
-static bool node_length_of(const PiecePlan *plan, LaneSpanId melody, Rational *length) {
+static bool node_length_of(const Plan *plan, LaneSpanId melody, Rational *length) {
     const PlanConstraint *asked = plan_lane_span_find_constraint(plan, melody, PLAN_CONSTRAINT_MOTIVE_REF);
     LaneSpanId node_span;
     if (!asked || !plan_has_node(plan, asked->params.motive.motive) ||
@@ -190,7 +190,7 @@ static size_t notes_inside(const PlanNote *notes, size_t count, Rational node_le
     return inside;
 }
 
-bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out) {
+bool grow_idea_realized(const Plan *plan, LaneSpanId melody, Motive *out) {
     Rational node_length;
     if (!plan || !out || !plan_has_lane_span(plan, melody) || plan_lane_span_lane(plan, melody) != PLAN_LANE_MELODY ||
         !node_length_of(plan, melody, &node_length)) {
@@ -200,7 +200,7 @@ bool grow_idea_realized(const PiecePlan *plan, LaneSpanId melody, Motive *out) {
     return realized_motive(plan, melody, written->notes, notes_inside(written->notes, written->note_count, node_length), out);
 }
 
-bool grow_idea_fidelity(const PiecePlan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out) {
+bool grow_idea_fidelity(const Plan *plan, LaneSpanId melody, const Motive *basic, MotiveFidelity *out) {
     Motive source;
     Motive realized;
     PlanMotiveRef ref;
@@ -305,7 +305,7 @@ bool grow_ref_departs(const PlanMotiveRef *ref, bool from_segment) {
 }
 
 /* The idea's fidelity for these realized notes: from the cache, else measured. *departs says its ref makes the idea differ from its source. */
-static bool measure(const PiecePlan *plan, LaneSpanId span, const PlanNote *notes, size_t count, GrowIdeaRole role,
+static bool measure(const Plan *plan, LaneSpanId span, const PlanNote *notes, size_t count, GrowIdeaRole role,
                     const GrowFidelityContext *context, MotiveFidelity *out, bool *departs) {
     unsigned long long key = measurement_key(span, notes, count);
     if (cache_find(context->cache, key, out, departs)) {
@@ -354,7 +354,7 @@ static void set_reduced(unsigned long *numerator_out, unsigned long *denominator
     *denominator_out = denominator ? (unsigned long)denominator : 1ul;
 }
 
-bool grow_fidelity_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
+bool grow_fidelity_checker(const Plan *plan, FillTarget target, const FillOperator *operator_,
                            const FillCandidate *candidate, void *context, FillCheck *out) {
     const GrowFidelityContext *fidelity_context = context;
     if (!fidelity_context || !fidelity_context->inner || !plan || !operator_ || !candidate || !out) {

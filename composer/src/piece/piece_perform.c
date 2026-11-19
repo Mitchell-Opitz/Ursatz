@@ -23,7 +23,7 @@
 #define PERFORM_MAX_KEY_SPANS 8
 
 /* The sections of the composed plan in order, the material left out. */
-static size_t composed_sections(const PiecePlan *plan, NodeId *out, size_t capacity) {
+static size_t composed_sections(const Plan *plan, NodeId *out, size_t capacity) {
     NodeId root = plan_root(plan);
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
@@ -39,7 +39,7 @@ static size_t composed_sections(const PiecePlan *plan, NodeId *out, size_t capac
 }
 
 /* The meter of the composed plan over its first bar. */
-static bool plan_meter(const PiecePlan *plan, PlanMeter *meter) {
+static bool plan_meter(const Plan *plan, PlanMeter *meter) {
     LaneSpanId id;
     PlanSpan first = {{0, 1}, {1, 64}};
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, first, &id, 1) < 1) {
@@ -50,7 +50,7 @@ static bool plan_meter(const PiecePlan *plan, PlanMeter *meter) {
 }
 
 /* The key lane over the source section, cut to it and moved to start, added to the performed plan under its form. */
-static PieceResult copy_keys(PiecePlan *performed, NodeId form, const PiecePlan *plan, PlanSpan source, Rational start) {
+static PieceResult copy_keys(Plan *performed, NodeId form, const Plan *plan, PlanSpan source, Rational start) {
     LaneSpanId ids[PERFORM_MAX_KEY_SPANS];
     size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, source, ids, PERFORM_MAX_KEY_SPANS);
     Rational source_end;
@@ -87,7 +87,7 @@ static PieceResult copy_keys(PiecePlan *performed, NodeId form, const PiecePlan 
 }
 
 /* The constraints a performed section holds: the source's letter, cadences and key. */
-static PieceResult copy_constraints(PiecePlan *performed, NodeId node, const PiecePlan *plan, NodeId source) {
+static PieceResult copy_constraints(Plan *performed, NodeId node, const Plan *plan, NodeId source) {
     const SectionDescription *from = plan_section_or_empty(plan, source);
     SectionDescription description = *plan_node_section(performed, node);
     snprintf(description.letter, sizeof(description.letter), "%s", from->letter);
@@ -266,7 +266,7 @@ static PieceResult perform(const PiecePerformPart *parts, size_t part_count, con
             return PIECE_ERR_BAD_REQUEST;
         }
     }
-    PiecePlan *performed = plan_create();
+    Plan *performed = plan_create();
     if (!performed) {
         return PIECE_ERR_ALLOC;
     }

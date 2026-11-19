@@ -273,7 +273,7 @@ static int expected_staff(const Line *line) {
 
 /* One stored plan, as text: renders into the piano part and agrees with the voice-track layout. */
 static void check_plan_text(const char *text, const char *name, bool *saw_motive_link) {
-    PiecePlan *plan = NULL;
+    Plan *plan = NULL;
     PlanJsonError error;
     if (plan_from_json(test_knowledge(), text, composer_plan_read_hooks(), &plan, &error) != PLAN_OK) {
         fprintf(stderr, "%s: %s (%s)\n", name, error.message, error.path);

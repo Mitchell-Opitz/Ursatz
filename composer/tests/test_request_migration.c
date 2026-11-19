@@ -384,7 +384,7 @@ static void test_plan_formats(void) {
         snprintf(path, sizeof(path), COMPOSER_FIXTURE_DIR "/%s", FIXTURES[i]);
         char *v1 = test_must_read_file(path, NULL);
         assert(strstr(v1, "\"schema_version\": 1") != NULL || strstr(v1, "\"schema_version\":1") != NULL);
-        PiecePlan *read = NULL;
+        Plan *read = NULL;
         PlanJsonError error;
         assert(plan_from_json(test_knowledge(), v1, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
         char *v4 = plan_to_json(read, test_plan_producer(), &error);
@@ -422,7 +422,7 @@ static void test_plan_formats(void) {
         composer_response_destroy(&from_v4);
 
         /* every format writes back as the format 4 text (a format 1 to 3 file gets its note ids 1 to n in file order) */
-        PiecePlan *again = NULL;
+        Plan *again = NULL;
         assert(plan_from_json(test_knowledge(), v2, composer_plan_read_hooks(), &again, &error) == PLAN_OK);
         char *written = plan_to_json(again, test_plan_producer(), &error);
         assert(written && strcmp(written, v4) == 0);
@@ -466,7 +466,7 @@ static char *dominant_plan(unsigned long *seed_out, int *span_out) {
             request.meter.beat_unit = 4;
             request.modulate = true;
             request.seed = seed;
-            PiecePlan *plan = NULL;
+            Plan *plan = NULL;
             if (piece_build_plan(&request, &plan) != PIECE_OK) {
                 continue;
             }
@@ -544,7 +544,7 @@ static void test_relation_named_span_composes(void) {
     assert(strstr(by_key, "\"relation\"") == NULL && strstr(by_relation, "\"tonic\": \"G\"") == NULL);
 
     /* the relation-named plan is read unresolved, and written resolved once it is composed from */
-    PiecePlan *read = NULL;
+    Plan *read = NULL;
     PlanJsonError error;
     assert(plan_from_json(test_knowledge(), by_relation, composer_plan_read_hooks(), &read, &error) == PLAN_OK);
     plan_destroy(read);
