@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <analysis/motive/motive_relation.h>
+#include <theory/vocabulary/motive_relation_step.h>
 #include <plan/section.h>
 #include <theory/vocabulary/cadence_type.h>
 
