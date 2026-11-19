@@ -68,7 +68,6 @@ Both are owned by the result (the reading is freed before the chain). A failure 
 ## Exports
 
 `analysis_document_build_from_result` and `analysis_document_render_result` (`analysis_document.h`) render from the
-result: the same bytes as `analysis_document_build` over the same notes and report. `analysis_document_build` takes the knowledge
-snapshot the report was made with (the labels of a notated key signature are spelled with its major and natural minor materials).
+result: they call `analysis_document_build_from_reading` over the result's reading, notes and knowledge snapshot (the labels of a notated key signature are spelled with its major and natural minor materials). The report form `analysis_document_build(path, notes, report, knowledge)` is gone (P62 B10).
 
-The wrapper `run_analysis_pipeline` (and `analysis_pipeline.h`) is gone (P61 B9): the GUI calls `analyzer_analyze` and `analysis_document_build_from_result`, and the Analyzer's tests call `analyzer_analyze` through `test_analyze_report` (`tests/support/test_support.h`).
+The wrapper `run_analysis_pipeline` (and `analysis_pipeline.h`) is gone (P61 B9): the GUI calls `analyzer_analyze` and `analysis_document_build_from_result`, and the Analyzer's tests call `analyzer_analyze` through `test_analyze_report` (`tests/support/test_support.h`: it keeps the result and gives the test a shallow copy of its report view, released with `test_release_report`).
