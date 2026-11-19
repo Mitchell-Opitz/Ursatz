@@ -6,7 +6,7 @@
 
 #include <cJSON.h>
 
-#include "plan/plan_json_internal.h"
+#include "util/composer_json.h"
 
 #include "ursatz_test.h"
 
@@ -44,7 +44,7 @@ char *test_plan_text_as_format_three(const char *text) {
     strip_note_identity(document);
     char *printed = cJSON_Print(document);
     cJSON_Delete(document);
-    char *out = printed ? json_indent_with_spaces(printed) : NULL; /* the project's layout: 2 spaces and "key": value */
+    char *out = printed ? composer_json_indent(printed) : NULL; /* the project's layout: 2 spaces and "key": value */
     cJSON_free(printed);
     return out;
 }

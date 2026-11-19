@@ -29,6 +29,7 @@ add_library(ursatz_composer STATIC
     api/api_validate.c
     util/job.c
     util/util.c
+    util/composer_json.c
     util/plan_util.c
     style/style.c
     style/style_blend.c

@@ -10,7 +10,7 @@
 #include <theory/tonality/roman_numeral_rules.h>
 
 #include "motive/motive_internal.h"
-#include "plan/plan_json_internal.h"
+#include "util/composer_json.h"
 #include "util/plan_util.h"
 
 /*
@@ -906,11 +906,11 @@ int variant_operation_param_index(const VariantOperation *operation, const char 
 
 static cJSON *param_json(const VariantParam *param) {
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && plan_json_add(object, "name", cJSON_CreateString(param->name)) &&
-              plan_json_add(object, "kind", cJSON_CreateString(variant_param_kind_name(param->kind))) &&
-              plan_json_add(object, "min", json_number(param->min)) && plan_json_add(object, "max", json_number(param->max)) &&
-              plan_json_add(object, "description", cJSON_CreateString(param->description)) &&
-              plan_json_add(object, "optional", cJSON_CreateBool(param->optional));
+    bool ok = object && composer_json_add(object, "name", cJSON_CreateString(param->name)) &&
+              composer_json_add(object, "kind", cJSON_CreateString(variant_param_kind_name(param->kind))) &&
+              composer_json_add(object, "min", composer_json_number(param->min)) && composer_json_add(object, "max", composer_json_number(param->max)) &&
+              composer_json_add(object, "description", cJSON_CreateString(param->description)) &&
+              composer_json_add(object, "optional", cJSON_CreateBool(param->optional));
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
@@ -921,26 +921,26 @@ static cJSON *param_json(const VariantParam *param) {
 /* Adds an empty array under key and returns it; the object owns it. NULL on failure. */
 static cJSON *add_array(cJSON *object, const char *key) {
     cJSON *array = cJSON_CreateArray();
-    return plan_json_add(object, key, array) ? array : NULL;
+    return composer_json_add(object, key, array) ? array : NULL;
 }
 
 static cJSON *operation_json(const VariantOperation *operation) {
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && plan_json_add(object, "name", cJSON_CreateString(operation->name)) &&
-              plan_json_add(object, "label", cJSON_CreateString(operation->label)) &&
-              plan_json_add(object, "category", cJSON_CreateString(variant_category_name(operation->category))) &&
-              plan_json_add(object, "citation", cJSON_CreateString(operation->citation)) &&
-              plan_json_add(object, "relation", cJSON_CreateString(motive_relation_name((MotiveRelationKind)operation->relation)));
+    bool ok = object && composer_json_add(object, "name", cJSON_CreateString(operation->name)) &&
+              composer_json_add(object, "label", cJSON_CreateString(operation->label)) &&
+              composer_json_add(object, "category", cJSON_CreateString(variant_category_name(operation->category))) &&
+              composer_json_add(object, "citation", cJSON_CreateString(operation->citation)) &&
+              composer_json_add(object, "relation", cJSON_CreateString(motive_relation_name((MotiveRelationKind)operation->relation)));
     cJSON *params = ok ? add_array(object, "params") : NULL;
     cJSON *forms = ok ? add_array(object, "forms") : NULL;
     ok = ok && params && forms;
     for (size_t i = 0; ok && i < operation->param_count; i++) {
         VariantParam param;
-        ok = variant_operation_param(operation, i, &param) && plan_json_append(params, param_json(&param));
+        ok = variant_operation_param(operation, i, &param) && composer_json_append(params, param_json(&param));
     }
     for (int form = MOTIVE_SKETCH_FORM_FULL; ok && form <= MOTIVE_SKETCH_FORM_CONTOUR; form++) {
         if ((operation->forms & VARIANT_FORM_BIT(form)) != 0) {
-            ok = plan_json_append(forms, cJSON_CreateString(motive_form_name((MotiveSketchForm)form)));
+            ok = composer_json_append(forms, cJSON_CreateString(motive_form_name((MotiveSketchForm)form)));
         }
     }
     if (!ok) {
@@ -955,7 +955,7 @@ char *variant_registry_to_json(void) {
     cJSON *operations = document ? add_array(document, "operations") : NULL;
     bool ok = operations != NULL;
     for (size_t i = 0; ok && i < variant_registry_count(); i++) {
-        ok = plan_json_append(operations, operation_json(variant_registry_at(i)));
+        ok = composer_json_append(operations, operation_json(variant_registry_at(i)));
     }
     if (!ok) {
         cJSON_Delete(document);
