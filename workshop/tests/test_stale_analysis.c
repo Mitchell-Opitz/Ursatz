@@ -32,6 +32,7 @@
 #include "items/subjects.h"
 #include <common/files.h>
 #include "items/layout.h"
+#include "jobs/job_queue.h"
 #include "ursatz_check.h"
 #include "test_knowledge.h"
 
@@ -230,13 +231,13 @@ static void test_link(const char *id, const char *other) {
     WorkshopLinkScope scope = {0};
     scope.kind = WORKSHOP_LINK_SCOPE_ALL;
     char *run_id = NULL;
-    check_quiet(workshop_link_run_start(&scope, &run_id) == URSATZ_OK && run_id, "the link run starts");
+    check_quiet(workshop_link_run_start(&scope, &run_id, NULL) == URSATZ_OK && run_id, "the link run starts");
     for (int waited = 0; run_id && waited < 600000; waited += 50) {
         cJSON *run = NULL;
         if (workshop_link_run_get(run_id, &run) != URSATZ_OK) {
             break;
         }
-        bool running = strcmp(str(run, "status"), "running") == 0;
+        bool running = strcmp(str(run, "status"), "running") == 0 || strcmp(str(run, "status"), "queued") == 0;
         cJSON_Delete(run);
         if (!running) {
             break;
@@ -254,6 +255,7 @@ static void test_link(const char *id, const char *other) {
 
 int main(void) {
   test_knowledge();
+    check_quiet(workshop_jobs_start(2), "the job queue starts");
     snprintf(g_materials, sizeof(g_materials), "materials_%d", (int)time(NULL));
     snprintf(g_subjects, sizeof(g_subjects), "subjects_%d", (int)time(NULL));
 #ifdef _WIN32
@@ -280,6 +282,7 @@ int main(void) {
         check_quiet(false, "import the fixtures");
     }
 
+    workshop_jobs_stop();
     workshop_link_service_shutdown();
     workshop_subject_service_shutdown();
     workshop_material_service_shutdown();

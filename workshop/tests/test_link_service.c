@@ -31,6 +31,7 @@
 #include "items/subjects.h"
 #include <common/files.h>
 #include "items/layout.h"
+#include "jobs/job_queue.h"
 #include "ursatz_check.h"
 #include "test_knowledge.h"
 #include "test_http.h"
@@ -229,13 +230,8 @@ static void test_scopes(void) {
 /* Starts a run and waits for it to end. Returns the run (caller frees), or NULL. */
 static cJSON *run_and_wait(const WorkshopLinkScope *scope, char *out_id, size_t out_size) {
     char *id = NULL;
-    UrsatzStatus started = workshop_link_run_start(scope, &id);
-    /* A run reports "done" a moment before its worker frees the slot, so on a busy machine the next start can
-       still see the slot taken. Start again until it is free. */
-    for (int tries = 0; started == URSATZ_ERR_CONFLICT && tries < 200; tries++) {
-        test_sleep_ms(50);
-        started = workshop_link_run_start(scope, &id);
-    }
+    char job[WORKSHOP_JOB_ID_BYTES];
+    UrsatzStatus started = workshop_link_run_start(scope, &id, job);
     check_quiet(started == URSATZ_OK && id, "run starts");
     if (started != URSATZ_OK || !id) {
         return NULL;
@@ -248,7 +244,7 @@ static cJSON *run_and_wait(const WorkshopLinkScope *scope, char *out_id, size_t 
         if (workshop_link_run_get(id, &run) != URSATZ_OK) {
             break;
         }
-        if (strcmp(str(run, "status"), "running") != 0) {
+        if (strcmp(str(run, "status"), "running") != 0 && strcmp(str(run, "status"), "queued") != 0) {
             break;
         }
         test_sleep_ms(50);
@@ -451,6 +447,7 @@ static void test_interrupted(void) {
 
 int main(void) {
   test_knowledge();
+    check_quiet(workshop_jobs_start(2), "the job queue starts");
     snprintf(g_materials, sizeof(g_materials), "materials_%d", (int)time(NULL));
     snprintf(g_subjects, sizeof(g_subjects), "subjects_%d", (int)time(NULL));
 
@@ -481,6 +478,7 @@ int main(void) {
         test_interrupted();
     }
 
+    workshop_jobs_stop();
     workshop_link_service_shutdown();
     workshop_subject_service_shutdown();
     workshop_material_service_shutdown();

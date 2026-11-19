@@ -8,6 +8,8 @@
 
 #include <cJSON.h>
 
+#include "jobs/job_queue.h"
+
 /*
  * Link service: links the motive families of a set of Library pieces through the Analyzer's motive links (R-154,
  * R-156). This module is the only caller of ursatz_analyzer/analyzer_api.h.
@@ -69,11 +71,12 @@ bool workshop_link_service_init(void);
 void workshop_link_service_shutdown(void);
 
 /*
- * Starts a run over the scope on a worker thread. On OK, *out_id (may be NULL) is the new run's id, caller-owned. The
- * scope is resolved first: INVALID_SCOPE, NOT_FOUND, EMPTY as workshop_link_scope_resolve; BUSY while another run
- * is in progress.
+ * Queues a run over the scope on the job queue (kind "links", one at a time: a second run waits, R-645). Its record is committed with the
+ * status "queued" (a transaction, links.start) before the job is submitted; the job writes the run as it ends in another. On OK, *out_id (may be NULL) is
+ * the new run's id, caller-owned, and out_job (may be NULL) the id of its job. The scope is resolved first: INVALID_SCOPE, NOT_FOUND, EMPTY as
+ * workshop_link_scope_resolve.
  */
-UrsatzStatus workshop_link_run_start(const WorkshopLinkScope *scope, char **out_id);
+UrsatzStatus workshop_link_run_start(const WorkshopLinkScope *scope, char **out_id, char out_job[WORKSHOP_JOB_ID_BYTES]);
 
 /*
  * Lists every run, newest first (then id), as {id, scope, status, created_at, finished_at, done, total} objects.

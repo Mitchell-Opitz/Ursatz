@@ -394,9 +394,12 @@ typedef struct {
     /* Optional: called with (0, total) when the pairs are known and after each pair, compared or cached. */
     void (*progress)(size_t done, size_t total, void *context);
     void *progress_context;
+    /* Optional: asked before each pair is compared; true stops the run with URSATZ_ERR_CANCELLED (nothing is returned). */
+    bool (*cancelled)(void *user);
+    void *cancel_user;
 } MotiveLinksOptions;
 
-/* link as motive_link_options_default, 4 candidates, no progress callback. */
+/* link as motive_link_options_default, 4 candidates, no progress or cancel callback. */
 void analyzer_links_options_default(MotiveLinksOptions *options);
 
 /* One end of a link: a family of a piece. degrees is the prototype's, joined by spaces. */

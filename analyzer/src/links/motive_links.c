@@ -580,6 +580,10 @@ UrsatzStatus analyzer_links_run(const MotiveLinkScope *scope, MotiveLinkCache *c
     }
     size_t link_count = 0;
     for (size_t p = 0; result == URSATZ_OK && p < pair_count; p++) {
+        if (options->cancelled && options->cancelled(options->cancel_user)) {
+            result = URSATZ_ERR_CANCELLED;
+            break;
+        }
         const Family *earlier = &scope->families[pairs[p].low];
         const Family *later = &scope->families[pairs[p].high];
         const MotiveLinkCachePair *pair = motive_link_cache_find(use, earlier->fingerprint, later->fingerprint);

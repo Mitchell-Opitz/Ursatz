@@ -2,6 +2,7 @@
 #include "items/formats.h"
 #include "items/layout.h"
 #include "items/txn.h"
+#include "jobs/job_queue.h"
 #include "base/last_error.h"
 #include "items/lock.h"
 
@@ -299,11 +300,50 @@ static WorkshopLock g_lock = WORKSHOP_LOCK_INIT;
 
 static struct {
     bool ready;
-    bool active; /* a worker is running */
-    char id[64]; /* the active run */
-    size_t done;
-    size_t total;
 } g_state;
+
+/* The runs that are queued or running and the queue job of each (R-645): deleting a run cancels its job first. */
+#define MAX_ACTIVE 64
+static struct {
+    char run[64];
+    char job[WORKSHOP_JOB_ID_BYTES];
+} g_active[MAX_ACTIVE];
+static size_t g_active_count = 0;
+
+static void active_add(const char *run, const char *job) {
+    LOCK();
+    if (g_active_count < MAX_ACTIVE) {
+        snprintf(g_active[g_active_count].run, sizeof(g_active[0].run), "%s", run);
+        snprintf(g_active[g_active_count].job, sizeof(g_active[0].job), "%s", job);
+        g_active_count++;
+    }
+    UNLOCK();
+}
+
+static void active_remove(const char *run) {
+    LOCK();
+    for (size_t i = 0; i < g_active_count; i++) {
+        if (strcmp(g_active[i].run, run) == 0) {
+            g_active[i] = g_active[--g_active_count];
+            break;
+        }
+    }
+    UNLOCK();
+}
+
+/* The job id of the run when it is queued or running; false otherwise. */
+static bool active_job_of(const char *run, char *job, size_t size) {
+    bool found = false;
+    LOCK();
+    for (size_t i = 0; i < g_active_count && !found; i++) {
+        if (strcmp(g_active[i].run, run) == 0) {
+            snprintf(job, size, "%s", g_active[i].job);
+            found = true;
+        }
+    }
+    UNLOCK();
+    return found;
+}
 
 static bool runs_dir_path(char *out, size_t out_size) {
     return snprintf(out, out_size, "%s", WORKSHOP_DIR_LINKS) < (int)out_size;
@@ -567,10 +607,11 @@ static cJSON *scope_json(const WorkshopLinkScope *scope) {
 
 typedef struct {
     char id[64];
-    cJSON *run;  /* the run.json object, owned by the worker */
+    cJSON *run;  /* the run.json object, owned by the job */
     char **ids;  /* the scope's piece ids */
     size_t count;
     time_t last_write;
+    const UrsatzJob *handle; /* the queue's job handle: progress and cancel, while the job runs */
 } Job;
 
 static void job_free(Job *job) {
@@ -632,18 +673,22 @@ static bool job_set_progress(Job *job, size_t done, size_t total) {
            set_member(job->run, "total", cJSON_CreateNumber((double)total));
 }
 
-/* Called by the Analyzer when the pairs are known and after each pair. run.json follows at most once a second. */
+/* Called by the Analyzer when the pairs are known and after each pair: the queue's progress follows at once, run.json and the index at most once a second. */
 static void job_progress(size_t done, size_t total, void *context) {
     Job *job = context;
-    LOCK();
-    g_state.done = done;
-    g_state.total = total;
-    UNLOCK();
+    if (job->handle && job->handle->progress) {
+        job->handle->progress(job->handle->user, "pairs", (unsigned)done, (unsigned)total);
+    }
     time_t now = time(NULL);
     if (now != job->last_write && job_set_progress(job, done, total)) {
         job->last_write = now;
         job_write(job);
     }
+}
+
+static bool job_cancelled(void *context) {
+    const Job *job = context;
+    return ursatz_job_cancelled(job->handle);
 }
 
 /* Why a piece cannot be added, or NULL when it was. */
@@ -710,16 +755,20 @@ static void job_fail(Job *job, const char *message) {
 }
 
 /* The run itself, on the worker thread. */
-static void job_run(Job *job) {
+static UrsatzStatus job_run(Job *job) {
     cJSON *skipped = cJSON_GetObjectItemCaseSensitive(job->run, "skipped");
     MotiveLinkScope *scope = analyzer_links_scope_create(workshop_knowledge_snapshot());
     if (!scope) {
         job_fail(job, "out of memory");
-        return;
+        return URSATZ_OK;
     }
     size_t used = 0;
     bool ok = true;
     for (size_t i = 0; ok && i < job->count; i++) {
+        if (ursatz_job_cancelled(job->handle)) {
+            analyzer_links_scope_destroy(scope);
+            return URSATZ_ERR_CANCELLED;
+        }
         const char *reason = add_piece(scope, job->ids[i]);
         if (!reason) {
             used++;
@@ -730,12 +779,12 @@ static void job_run(Job *job) {
     if (!ok) {
         analyzer_links_scope_destroy(scope);
         job_fail(job, "out of memory");
-        return;
+        return URSATZ_OK;
     }
     if (used == 0) {
         analyzer_links_scope_destroy(scope);
         job_fail(job, "no analyzable pieces");
-        return;
+        return URSATZ_OK;
     }
 
     char cache_path[PATH_BYTES + 64];
@@ -748,7 +797,7 @@ static void job_run(Job *job) {
         if (analyzer_links_cache_load(cache_path, &cache) != URSATZ_OK) {
             analyzer_links_scope_destroy(scope);
             job_fail(job, "cache unreadable");
-            return;
+            return URSATZ_OK;
         }
     }
 
@@ -756,6 +805,8 @@ static void job_run(Job *job) {
     analyzer_links_options_default(&options);
     options.progress = job_progress;
     options.progress_context = job;
+    options.cancelled = job_cancelled;
+    options.cancel_user = job;
 
     MotiveLinks links;
     memset(&links, 0, sizeof(links));
@@ -775,40 +826,47 @@ static void job_run(Job *job) {
 
     cJSON *result = rendered ? cJSON_Parse(rendered) : NULL;
     free(rendered);
+    if (run == URSATZ_ERR_CANCELLED) {
+        cJSON_Delete(result);
+        return URSATZ_ERR_CANCELLED; /* nothing is written: the run is deleted, or marked interrupted at the next open */
+    }
     if (run != URSATZ_OK || !result) {
         cJSON_Delete(result);
         job_fail(job, "linking failed");
-        return;
+        return URSATZ_OK;
     }
     job_set_progress(job, pairs, pairs);
     job_finish(job, "done", "", result);
+    return URSATZ_OK;
 }
 
-static void job_main(Job *job) {
-    job_run(job);
-    LOCK();
-    g_state.active = false;
-    g_state.id[0] = '\0';
-    UNLOCK();
-    job_free(job);
-}
-
-static void *job_entry(void *argument) {
-    job_main(argument);
-    return NULL;
-}
-
-static bool job_spawn(Job *job) {
-    pthread_t thread;
-    if (pthread_create(&thread, NULL, job_entry, job) != 0) {
-        return false;
+/* The queue's job: runs the link run and answers {"ok": true, "run": <the run as it ended>}. */
+static UrsatzStatus link_job_run(void *input, const UrsatzJob *handle, WorkshopJobResult *out) {
+    Job *job = input;
+    job->handle = handle;
+    set_member(job->run, "status", cJSON_CreateString("running"));
+    job_write(job);
+    UrsatzStatus status = job_run(job);
+    active_remove(job->id);
+    if (status == URSATZ_OK) {
+        cJSON *answer = cJSON_CreateObject();
+        if (answer && cJSON_AddBoolToObject(answer, "ok", 1) && cJSON_AddItemToObject(answer, "run", cJSON_Duplicate(job->run, 1))) {
+            out->http_status = 200;
+            out->tree = answer;
+        } else {
+            cJSON_Delete(answer);
+            out->http_status = 500;
+            out->tree = cJSON_Parse("{\"ok\":false,\"error\":\"out of memory\"}");
+        }
+    } else {
+        out->http_status = 499;
+        out->tree = cJSON_Parse("{\"ok\":false,\"error\":\"Cancelled\"}");
     }
-    pthread_detach(thread);
-    return true;
+    return status;
 }
 
-static void sleep_ms(unsigned ms) {
-    usleep(ms * 1000u);
+static void link_job_free(void *input) {
+    job_free(input);
 }
 
 /* --- service -------------------------------------------------------------- */
@@ -827,7 +885,7 @@ static void mark_interrupted(void) {
         cJSON *run = NULL;
         workshop_format_read(path, WORKSHOP_FORMAT_LINK_RUN, true, &run, NULL);
         const cJSON *status = cJSON_GetObjectItemCaseSensitive(run, "status");
-        if (cJSON_IsString(status) && strcmp(status->valuestring, "running") == 0) {
+        if (cJSON_IsString(status) && (strcmp(status->valuestring, "running") == 0 || strcmp(status->valuestring, "queued") == 0)) {
             char now[40];
             iso_utc_now(now, sizeof(now));
             set_member(run, "status", cJSON_CreateString("failed"));
@@ -858,24 +916,17 @@ bool workshop_link_service_init(void) {
 }
 
 void workshop_link_service_shutdown(void) {
-    for (;;) {
-        LOCK();
-        bool active = g_state.active;
-        if (!active) {
-            g_state.ready = false;
-        }
-        UNLOCK();
-        if (!active) {
-            workshop_lock_acquire(&g_index_lock);
-            index_clear_locked();
-            workshop_lock_release(&g_index_lock);
-            return;
-        }
-        sleep_ms(10);
-    }
+    /* The jobs are stopped by workshop_jobs_stop, which the server calls first. */
+    LOCK();
+    g_state.ready = false;
+    g_active_count = 0;
+    UNLOCK();
+    workshop_lock_acquire(&g_index_lock);
+    index_clear_locked();
+    workshop_lock_release(&g_index_lock);
 }
 
-UrsatzStatus workshop_link_run_start(const WorkshopLinkScope *scope, char **out_id) {
+UrsatzStatus workshop_link_run_start(const WorkshopLinkScope *scope, char **out_id, char out_job[WORKSHOP_JOB_ID_BYTES]) {
     if (out_id) {
         *out_id = NULL;
     }
@@ -906,44 +957,44 @@ UrsatzStatus workshop_link_run_start(const WorkshopLinkScope *scope, char **out_
                  cJSON_AddItemToObject(job->run, "scope", scope_json(scope)) &&
                  cJSON_AddStringToObject(job->run, "created_at", now) &&
                  cJSON_AddNullToObject(job->run, "finished_at") &&
-                 cJSON_AddStringToObject(job->run, "status", "running") &&
+                 cJSON_AddStringToObject(job->run, "status", "queued") &&
                  cJSON_AddStringToObject(job->run, "message", "") && cJSON_AddNumberToObject(job->run, "done", 0) &&
                  cJSON_AddNumberToObject(job->run, "total", 0) && cJSON_AddArrayToObject(job->run, "skipped");
     if (!built) {
         job_free(job);
         return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
     }
-
-    /* The worker owns job once it starts and may free it at once: keep the id here. */
     char run_id[sizeof(job->id)];
     snprintf(run_id, sizeof(run_id), "%s", job->id);
 
     LOCK();
-    if (!g_state.ready) {
+    bool ready = g_state.ready;
+    UNLOCK();
+    char job_id[WORKSHOP_JOB_ID_BYTES];
+    if (!ready) {
         result = workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
-    } else if (g_state.active) {
-        result = workshop_fail(URSATZ_ERR_CONFLICT, "a run is in progress");
+    } else if (!job_commit(job, true)) { /* the record of a queued run is a transaction: links.start */
+        result = workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
     } else {
-        char dir[PATH_BYTES];
-        result = run_dir_path(job->id, dir, sizeof(dir)) && job_commit(job, true) ? URSATZ_OK
-                                                                                   : workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
-        if (result == URSATZ_OK) {
-            g_state.active = true;
-            g_state.done = 0;
-            g_state.total = 0;
-            snprintf(g_state.id, sizeof(g_state.id), "%s", job->id);
-            if (!job_spawn(job)) {
-                g_state.active = false;
-                g_state.id[0] = '\0';
-                result = workshop_fail(URSATZ_ERR_INTERNAL, "link operation failed");
-                if (run_dir_path(job->id, dir, sizeof(dir))) {
-                    common_dir_remove(dir, NULL);
-                }
+        /* A second run waits in the queue: the "links" kind runs one job at a time. The queue owns the job from here and frees it. */
+        active_add(run_id, "");
+        Job *submitted = job;
+        job = NULL;
+        if (!workshop_job_submit("links", link_job_run, submitted, link_job_free, job_id)) {
+            char dir[PATH_BYTES];
+            active_remove(run_id);
+            if (run_dir_path(run_id, dir, sizeof(dir))) {
+                common_dir_remove(dir, NULL);
             }
+            index_remove(run_id);
+            return workshop_fail(URSATZ_ERR_INTERNAL, "the job queue is not running");
+        }
+        active_remove(run_id);
+        active_add(run_id, job_id);
+        if (out_job) {
+            snprintf(out_job, WORKSHOP_JOB_ID_BYTES, "%s", job_id);
         }
     }
-    UNLOCK();
-
     if (result != URSATZ_OK) {
         job_free(job);
         return result;
@@ -971,11 +1022,6 @@ UrsatzStatus workshop_link_run_list(cJSON **out_runs) {
         cJSON *entry = cJSON_CreateObject();
         double done = run->done;
         double total = run->total;
-        /* A running run reports what the worker has now, not what it last wrote. */
-        if (g_state.active && strcmp(run->id, g_state.id) == 0) {
-            done = (double)g_state.done;
-            total = (double)g_state.total;
-        }
         bool ok = entry && cJSON_AddStringToObject(entry, "id", run->id) &&
                   cJSON_AddItemToObject(entry, "scope", run->scope ? cJSON_Duplicate(run->scope, 1) : cJSON_CreateObject()) &&
                   cJSON_AddStringToObject(entry, "status", run->status) && cJSON_AddStringToObject(entry, "created_at", run->created_at) &&
@@ -1009,16 +1055,6 @@ UrsatzStatus workshop_link_run_get(const char *id, cJSON **out_run) {
     if (!run) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
-    LOCK();
-    bool live = g_state.active && strcmp(g_state.id, id) == 0;
-    size_t done = g_state.done;
-    size_t total = g_state.total;
-    UNLOCK();
-    if (live && (!set_member(run, "done", cJSON_CreateNumber((double)done)) ||
-                 !set_member(run, "total", cJSON_CreateNumber((double)total)))) {
-        cJSON_Delete(run);
-        return workshop_fail(URSATZ_ERR_ALLOC, "out of memory");
-    }
     *out_run = run;
     return URSATZ_OK;
 }
@@ -1028,11 +1064,27 @@ UrsatzStatus workshop_link_run_delete(const char *id) {
     if (!id || !run_dir_path(id, dir, sizeof(dir))) {
         return workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     }
+    /* A run that is queued or running is cancelled first: its job stops between pieces and pairs and leaves no half-written file. */
+    char job_id[WORKSHOP_JOB_ID_BYTES];
+    if (active_job_of(id, job_id, sizeof(job_id))) {
+        if (job_id[0] != '\0') {
+            workshop_job_cancel(job_id);
+            for (int waited = 0; waited < 3000; waited++) {
+                WorkshopJobInfo info;
+                bool known = workshop_job_get(job_id, &info);
+                bool done = !known || (info.state != WORKSHOP_JOB_QUEUED && info.state != WORKSHOP_JOB_RUNNING);
+                workshop_job_info_destroy(&info);
+                if (done) {
+                    break;
+                }
+                usleep(10 * 1000);
+            }
+        }
+        active_remove(id);
+    }
     LOCK();
     UrsatzStatus result = URSATZ_OK;
-    if (g_state.active && strcmp(g_state.id, id) == 0) {
-        result = workshop_fail(URSATZ_ERR_CONFLICT, "a run is in progress");
-    } else if (!common_path_is_dir(dir)) {
+    if (!common_path_is_dir(dir)) {
         result = workshop_fail(URSATZ_ERR_NOT_FOUND, "not found");
     } else {
         /* the lock of this file is taken first, as at the start of a run, so the order against the transaction is the same */

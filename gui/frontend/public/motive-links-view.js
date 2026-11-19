@@ -207,30 +207,6 @@ async function renderMotiveLinksView() {
     skippedEl.textContent = MotiveLinksModel.skippedLines(runData).join("; ");
   }
 
-  async function poll(id) {
-    const answer = await fetchJsonResult(`/api/links/runs/${id}`);
-    if (!progressEl.isConnected) {
-      stopMotiveLinksPolling();
-      return;
-    }
-    if (!answer.ok || !answer.data || !answer.data.run) {
-      stopMotiveLinksPolling();
-      progressEl.textContent = (answer.data && (answer.data.message || answer.data.error)) || "Could not read the run";
-      progressEl.classList.add("error");
-      run.disabled = false;
-      return;
-    }
-    showRun(answer.data.run);
-    if (answer.data.run.status !== "running") {
-      stopMotiveLinksPolling();
-      run.disabled = false;
-      if (answer.data.run.status === "done") {
-        renderMotiveLinksResult(resultEl, answer.data.run.result);
-      }
-      loadRuns();
-    }
-  }
-
   async function openRun(id) {
     const answer = await fetchJsonResult(`/api/links/runs/${id}`);
     if (!answer.ok || !answer.data || !answer.data.run) {
@@ -292,20 +268,27 @@ async function renderMotiveLinksView() {
     progressEl.classList.remove("error");
     progressEl.textContent = "Starting...";
     skippedEl.textContent = "";
-    const answer = await fetchJsonResult("/api/links/runs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!answer.ok || !answer.data || !answer.data.run) {
-      progressEl.textContent = (answer.data && (answer.data.message || answer.data.error)) || "Could not start the run";
-      progressEl.classList.add("error");
-      run.disabled = false;
+    /* The run is a job on the backend queue (R-645): a second run waits behind the first. runJob polls the job and answers {"ok", "run"} when it ends. */
+    const outcome = await BackendJobs.runJob(
+      { method: "POST", url: "/api/links/runs", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+      { onProgress: (progress) => { if (progressEl.isConnected) { progressEl.textContent = BackendJobs.progressText(progress); } } },
+    );
+    if (!progressEl.isConnected) {
       return;
     }
-    const id = answer.data.run.id;
-    showRun(answer.data.run);
-    stopMotiveLinksPolling();
-    motiveLinksState.timer = setInterval(() => poll(id), 1000);
+    const finished = outcome.body && outcome.body.run;
+    if (outcome.status < 200 || outcome.status >= 300 || !finished) {
+      progressEl.textContent = (outcome.body && (outcome.body.message || outcome.body.error)) || "Could not run the comparison";
+      progressEl.classList.add("error");
+      run.disabled = false;
+      loadRuns();
+      return;
+    }
+    showRun(finished);
+    run.disabled = false;
+    if (finished.status === "done") {
+      renderMotiveLinksResult(resultEl, finished.result);
+    }
+    loadRuns();
   });
 }

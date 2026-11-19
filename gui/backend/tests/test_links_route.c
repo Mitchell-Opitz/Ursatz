@@ -76,7 +76,7 @@ static cJSON *wait_for_run(const char *id) {
     int status = 0;
     cJSON_Delete(answer);
     answer = test_http_json(PORT, "GET", path, NULL, &status);
-    if (status != 200 || strcmp(string_of(run_of(answer), "status"), "running") != 0) {
+    if (status != 200 || (strcmp(string_of(run_of(answer), "status"), "running") != 0 && strcmp(string_of(run_of(answer), "status"), "queued") != 0)) {
       break;
     }
     test_sleep_ms(100);
@@ -179,15 +179,21 @@ int main(void) {
   snprintf(first_id, sizeof(first_id), "%s", string_of(run, "id"));
   cJSON_Delete(answer);
 
+  /* A second run waits in the queue (one run at a time): 202, queued, behind a job of its own. Deleting it cancels its job and removes it. */
   answer = start_run("{\"kind\":\"all\"}", &status);
-  check(status == 409 && !ok_true(answer), "a second start while a run runs answers 409");
+  check(status == 202 && ok_true(answer) && cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(answer, "job")), "a second start answers 202 with its job");
+  char second_path[128];
+  snprintf(second_path, sizeof(second_path), "/api/links/runs/%s", string_of(run_of(answer), "id"));
+  cJSON_Delete(answer);
+  answer = test_http_json(PORT, "DELETE", second_path, NULL, &status);
+  check(status == 200 && ok_true(answer), "deleting a run that waits cancels it and answers 200");
+  cJSON_Delete(answer);
+  answer = test_http_json(PORT, "GET", second_path, NULL, &status);
+  check(status == 404, "the cancelled run is gone");
   cJSON_Delete(answer);
 
   char first_path[128];
   snprintf(first_path, sizeof(first_path), "/api/links/runs/%s", first_id);
-  answer = test_http_json(PORT, "DELETE", first_path, NULL, &status);
-  check(status == 409, "deleting a run that runs answers 409");
-  cJSON_Delete(answer);
 
   answer = wait_for_run(first_id);
   run = run_of(answer);

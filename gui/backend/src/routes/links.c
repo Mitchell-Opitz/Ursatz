@@ -43,7 +43,8 @@ static int handle_start_run(struct mg_connection *conn) {
     return ursatz_gui_send_failure(conn, 400, "invalid scope");
   }
   char *id = NULL;
-  UrsatzStatus result = workshop_link_run_start(&scope, &id);
+  char job_id[WORKSHOP_JOB_ID_BYTES];
+  UrsatzStatus result = workshop_link_run_start(&scope, &id, job_id);
   cJSON_Delete(body);
   if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
@@ -54,7 +55,19 @@ static int handle_start_run(struct mg_connection *conn) {
   if (result != URSATZ_OK) {
     return send_link_failure(conn, result);
   }
-  return send_ok_with(conn, 202, "run", run);
+  /* 202 {"ok", "run", "job"}: the page follows the job (BackendJobs.runJob) and gets {"ok", "run"} when it ends. */
+  cJSON *object = cJSON_CreateObject();
+  cJSON *job = object ? cJSON_AddObjectToObject(object, "job") : NULL;
+  if (!job || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, "run", run) ||
+      !cJSON_AddStringToObject(job, "id", job_id) || !cJSON_AddStringToObject(job, "kind", "links") ||
+      !cJSON_AddStringToObject(job, "state", workshop_job_state_name(WORKSHOP_JOB_QUEUED))) {
+    cJSON_Delete(object);
+    if (!object) {
+      cJSON_Delete(run);
+    }
+    return ursatz_gui_send_failure(conn, 500, "out of memory");
+  }
+  return ursatz_gui_send_object(conn, 202, object);
 }
 
 static int handle_list_runs(struct mg_connection *conn) {
