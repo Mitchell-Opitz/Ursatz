@@ -1,4 +1,4 @@
-#include <ursatz_composer/regenerate.h>
+#include <ursatz_composer/locks.h>
 
 #include <stdlib.h>
 

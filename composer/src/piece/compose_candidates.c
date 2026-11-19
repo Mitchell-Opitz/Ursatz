@@ -1,4 +1,5 @@
 #include <ursatz_composer/compose.h>
+#include <ursatz_composer/compose_candidates.h>
 
 #include <stdlib.h>
 #include <string.h>

@@ -1,7 +1,7 @@
 #ifndef URSATZ_COMPOSER_GROW_INTERNAL_H
 #define URSATZ_COMPOSER_GROW_INTERNAL_H
 
-#include <ursatz_composer/grow.h>
+#include <ursatz_composer/grow_types.h>
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/variant_registry.h>
 

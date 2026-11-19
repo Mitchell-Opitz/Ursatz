@@ -20,7 +20,7 @@
 #include <ursatz_composer/motive_connect.h>
 #include <ursatz_composer/motive_develop.h>
 #include <plan/plan_edit.h>
-#include <ursatz_composer/regenerate.h>
+#include <ursatz_composer/locks.h>
 #include <plan/plan_state.h>
 #include <ursatz_composer/texture_check.h>
 #include <ursatz_composer/voicing.h>

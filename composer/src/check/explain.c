@@ -9,7 +9,7 @@
 
 #include <plan/plan_constraint.h>
 #include <plan/plan_lanes.h>
-#include <ursatz_composer/regenerate.h>
+#include <ursatz_composer/locks.h>
 
 #include "util/shaping.h"
 #include "util/composer_json.h"

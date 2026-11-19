@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include <plan/plan_state.h>
-#include <ursatz_composer/regenerate.h>
+#include <ursatz_composer/locks.h>
 
 #include "texture/texture_internal.h"
 #include "util/plan_util.h"

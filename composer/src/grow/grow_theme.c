@@ -1,4 +1,4 @@
-#include <ursatz_composer/grow.h>
+#include <ursatz_composer/grow_types.h>
 
 #include <stdio.h>
 #include <stdlib.h>

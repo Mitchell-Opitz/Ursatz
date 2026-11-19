@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <ursatz_composer/compose.h>
+#include <ursatz_composer/compose_candidates.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/form_spec.h>
 #include <ursatz_composer/grow.h>
